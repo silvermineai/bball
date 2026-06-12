@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "dev", "--port", "3210"],
+      "cwd": "frontend",
+      "port": 3210,
+      "autoPort": false
+    },
+    {
+      "name": "spa",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "dist/client", "-l", "3211"],
+      "cwd": "frontend",
+      "port": 3211,
+      "autoPort": false
+    }
+  ]
+}

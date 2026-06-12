@@ -5,6 +5,11 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        display: ["Fraunces", "Georgia", "serif"],
+        stat: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
+        sans: ["Archivo", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
         ink: "#17211b",
         graphite: "#3d4641",
