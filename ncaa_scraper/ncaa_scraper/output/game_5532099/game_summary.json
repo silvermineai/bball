@@ -1,0 +1,75 @@
+{
+  "gameId": "5532099",
+  "teams": {
+    "home": {
+      "name": "Home",
+      "score": 0,
+      "stats": {
+        "name": "Home",
+        "fgm": 0,
+        "fga": 0,
+        "3pm": 0,
+        "3pa": 0,
+        "ftm": 0,
+        "fta": 0,
+        "oreb": 0,
+        "dreb": 0,
+        "reb": 0,
+        "ast": 0,
+        "stl": 0,
+        "blk": 0,
+        "to": 0,
+        "pf": 0,
+        "pts": 0,
+        "fg_pct": 0,
+        "3p_pct": 0,
+        "ft_pct": 0
+      },
+      "advanced": {
+        "possessions": 0.0,
+        "pace": 0.0,
+        "offensive_reb_pct": 0,
+        "turnover_pct": 0,
+        "free_throw_rate": 0,
+        "effective_fg_pct": 0,
+        "true_shooting_pct": 0
+      }
+    },
+    "away": {
+      "name": "Away",
+      "score": 0,
+      "stats": {
+        "name": "Away",
+        "fgm": 0,
+        "fga": 0,
+        "3pm": 0,
+        "3pa": 0,
+        "ftm": 0,
+        "fta": 0,
+        "oreb": 0,
+        "dreb": 0,
+        "reb": 0,
+        "ast": 0,
+        "stl": 0,
+        "blk": 0,
+        "to": 0,
+        "pf": 0,
+        "pts": 0,
+        "fg_pct": 0,
+        "3p_pct": 0,
+        "ft_pct": 0
+      },
+      "advanced": {
+        "possessions": 0.0,
+        "pace": 0.0,
+        "offensive_reb_pct": 0,
+        "turnover_pct": 0,
+        "free_throw_rate": 0,
+        "effective_fg_pct": 0,
+        "true_shooting_pct": 0
+      }
+    }
+  },
+  "players": [],
+  "shots": []
+}

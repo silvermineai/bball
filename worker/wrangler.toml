@@ -1,0 +1,20 @@
+name = "bball-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-20"
+account_id = "b4b569137989cce8a4c9167553dae954"
+workers_dev = true
+
+[[routes]]
+pattern = "bball.silvermine.dev"
+custom_domain = true
+
+[assets]
+directory = "../frontend/dist/client"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bball-silvermine"
+database_id = "2828733f-c393-4e9d-9f3e-c5e4c9debddd"
+migrations_dir = "migrations"

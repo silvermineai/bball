@@ -1,0 +1,10 @@
+bs4>=0.0.2
+ipdb>=0.13.13
+lxml>=5.4.0
+numpy>=2.2.6
+pandas>=2.2.3
+plotly>=6.1.0
+polars>=1.29.0
+pyarrow>=20.0.0
+requests>=2.32.3
+streamlit>=1.45.1
