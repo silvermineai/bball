@@ -2,8 +2,8 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Printer, RefreshCcw } from "lucide-react";
 import { useMemo } from "react";
-import { SectionTitle, TeamMark, TeamPicker } from "@/components/Annual";
-import { buildGameKeys, insights, pctColor, projectMatchup } from "@/lib/insights";
+import { SectionTitle, TeamMark, TeamPicker, TierBadge } from "@/components/Annual";
+import { buildGameKeys, commonOpponents, insights, pctColor, projectMatchup } from "@/lib/insights";
 import type { ScoutReport, TeamIndexEntry, Venue } from "@/lib/insights";
 
 type GameplanSearch = { a?: number; b?: number; venue?: Venue };
@@ -51,6 +51,8 @@ function GamePlanPage() {
 
   const projection = scoutA && scoutB && meta ? projectMatchup(scoutA, scoutB, venue, meta) : null;
   const keys = scoutA && scoutB ? buildGameKeys(scoutA, scoutB) : [];
+  const common = scoutA && scoutB ? commonOpponents(scoutA, scoutB) : [];
+  const headToHead = scoutA && scoutB ? scoutA.schedule.filter((g) => g.opponentId === scoutB.identity.id) : [];
 
   function setTeam(side: "a" | "b", team: TeamIndexEntry) {
     navigate({ search: (prev) => ({ ...prev, [side]: team.id }), resetScroll: false });
@@ -208,6 +210,74 @@ function GamePlanPage() {
               Bars extend toward the better national percentile. Turnover rate bars show ball security (longer = fewer turnovers).
             </p>
           </section>
+
+          {/* head-to-head + common opponents */}
+          {(headToHead.length || common.length) ? (
+            <section className="rise rise-4 print-block">
+              <SectionTitle kicker="Shared resume" title="Head-to-head & common opponents" />
+              {headToHead.length ? (
+                <div className="mt-3 space-y-2">
+                  {headToHead.map((g) => (
+                    <div key={g.gameId} className="flex items-center gap-3 rounded-md border-l-2 border-brass bg-white px-4 py-3 shadow-panel">
+                      <span className="font-stat text-[11px] text-graphite">{g.date}</span>
+                      <span className="text-sm font-medium">
+                        {scoutA.identity.shortName} {g.result === "W" ? "beat" : "lost to"} {scoutB.identity.shortName}{" "}
+                        <b className="font-stat">{g.score}</b>
+                      </span>
+                      <span className="font-stat text-[11px] uppercase text-graphite">
+                        {g.venueTag === "home" ? `at ${scoutA.identity.abbrev}` : g.venueTag === "away" ? `at ${scoutB.identity.abbrev}` : "neutral"}
+                      </span>
+                      {g.note ? <span className="ml-auto font-stat text-[10px] text-brass">{g.note}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {common.length ? (
+                <div className="mt-4 overflow-hidden rounded-lg border border-line bg-white shadow-panel">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center bg-paper px-4 py-2.5">
+                    <span className="font-stat text-[11px] font-semibold">{scoutA.identity.abbrev}</span>
+                    <span className="font-stat text-[10px] uppercase tracking-widest text-graphite">
+                      {common.length} common opponents
+                    </span>
+                    <span className="justify-self-end font-stat text-[11px] font-semibold">{scoutB.identity.abbrev}</span>
+                  </div>
+                  {common.map((c) => (
+                    <div key={c.opponentId} className="rule-thin grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2">
+                      <span className="font-stat text-[12.5px]">
+                        {c.aGames.map((g) => `${g.result} ${g.score}`).join(" · ")}
+                        <span className={`ml-2 text-[11px] ${c.aNet > c.bNet ? "font-bold text-make" : "text-graphite"}`}>
+                          ({c.aNet > 0 ? "+" : ""}{c.aNet})
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center justify-center gap-1.5 text-[12.5px] font-medium">
+                        {c.opponentLogo ? <img src={c.opponentLogo} alt="" width={16} height={16} loading="lazy" /> : null}
+                        {c.opponent}
+                        <TierBadge rank={c.oppSrsRank} />
+                      </span>
+                      <span className="justify-self-end font-stat text-[12.5px]">
+                        <span className={`mr-2 text-[11px] ${c.bNet > c.aNet ? "font-bold text-make" : "text-graphite"}`}>
+                          ({c.bNet > 0 ? "+" : ""}{c.bNet})
+                        </span>
+                        {c.bGames.map((g) => `${g.result} ${g.score}`).join(" · ")}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="bg-paper px-4 py-2 text-center font-stat text-[11px] text-graphite">
+                    Net vs common opponents: {scoutA.identity.abbrev}{" "}
+                    <b className="text-ink">
+                      {common.reduce((s, c) => s + c.aNet, 0) > 0 ? "+" : ""}
+                      {common.reduce((s, c) => s + c.aNet, 0)}
+                    </b>{" "}
+                    · {scoutB.identity.abbrev}{" "}
+                    <b className="text-ink">
+                      {common.reduce((s, c) => s + c.bNet, 0) > 0 ? "+" : ""}
+                      {common.reduce((s, c) => s + c.bNet, 0)}
+                    </b>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {/* personnel watchlist */}
           <section className="rise rise-5 print-block grid gap-6 md:grid-cols-2">

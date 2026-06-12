@@ -15,6 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/rankings", label: "Ratings", icon: TrendingUp },
   ];
   const dataItems = [
+    { to: "/conferences", label: "Conferences" },
     { to: "/teams", label: "Teams" },
     { to: "/games", label: "Games" },
     { to: "/players", label: "Players" },

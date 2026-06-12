@@ -15,6 +15,7 @@ import { Route as PressroomRouteImport } from './routes/pressroom'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GameplanRouteImport } from './routes/gameplan'
 import { Route as FilmRouteImport } from './routes/film'
+import { Route as ConferencesRouteImport } from './routes/conferences'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TeamsIndexRouteImport } from './routes/teams/index'
@@ -54,6 +55,11 @@ const GameplanRoute = GameplanRouteImport.update({
 const FilmRoute = FilmRouteImport.update({
   id: '/film',
   path: '/film',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConferencesRoute = ConferencesRouteImport.update({
+  id: '/conferences',
+  path: '/conferences',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -110,6 +116,7 @@ const GamesContestIdRoute = GamesContestIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
   '/login': typeof LoginRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
   '/login': typeof LoginRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
   '/login': typeof LoginRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/conferences'
     | '/film'
     | '/gameplan'
     | '/login'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/conferences'
     | '/film'
     | '/gameplan'
     | '/login'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/conferences'
     | '/film'
     | '/gameplan'
     | '/login'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ConferencesRoute: typeof ConferencesRoute
   FilmRoute: typeof FilmRoute
   GameplanRoute: typeof GameplanRoute
   LoginRoute: typeof LoginRoute
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/film'
       fullPath: '/film'
       preLoaderRoute: typeof FilmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conferences': {
+      id: '/conferences'
+      path: '/conferences'
+      fullPath: '/conferences'
+      preLoaderRoute: typeof ConferencesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -358,6 +378,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ConferencesRoute: ConferencesRoute,
   FilmRoute: FilmRoute,
   GameplanRoute: GameplanRoute,
   LoginRoute: LoginRoute,

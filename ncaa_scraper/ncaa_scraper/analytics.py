@@ -667,6 +667,36 @@ def build(conn: sqlite3.Connection) -> None:
         json.dump({"season": SEASON_LABEL, "teams": recruiting}, f, separators=(",", ":"))
     print(f"recruiting.json: {len(recruiting)} teams")
 
+    # ---- conferences.json
+    conf_teams = defaultdict(list)
+    for tid, st in data["standings"].items():
+        if st.get("conference_id") and tid in identities:
+            conf_teams[(st["conference_id"], st["conference_name"])].append((tid, st))
+    conferences = []
+    for (cid, cname), members in conf_teams.items():
+        rows = []
+        for tid, st in members:
+            ident = identities[tid]
+            m = metrics[tid]
+            rows.append({
+                "id": tid, "name": ident["name"], "shortName": ident["shortName"],
+                "logo": ident["logo"], "seed": st.get("playoff_seed"),
+                "confRecord": ident["confRecord"], "record": ident["record"],
+                "srs": m["srs"], "srsRank": ident["srsRank"], "apRank": ident["apRank"],
+            })
+        rows.sort(key=lambda r: (r["seed"] if r["seed"] is not None else 99, -(r["srs"] or 0)))
+        srs_vals = [r["srs"] for r in rows if r["srs"] is not None]
+        conferences.append({
+            "id": cid, "name": cname, "teams": rows,
+            "avgSrs": rnd(sum(srs_vals) / len(srs_vals), 2) if srs_vals else None,
+        })
+    conferences.sort(key=lambda c: -(c["avgSrs"] if c["avgSrs"] is not None else -99))
+    for i, c in enumerate(conferences):
+        c["strengthRank"] = i + 1
+    with open(OUT_DIR / "conferences.json", "w") as f:
+        json.dump({"season": SEASON_LABEL, "conferences": conferences}, f, separators=(",", ":"))
+    print(f"conferences.json: {len(conferences)} leagues")
+
     # ---- news.json
     news_rows = [
         {
