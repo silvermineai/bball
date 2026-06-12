@@ -1,0 +1,53 @@
+{
+ "season": "2025-26",
+ "generated": "2026-06-12T22:47:18.411502+00:00",
+ "completedGames": 6300,
+ "teamsTracked": 362,
+ "model": {
+  "homeCourtAdvantage": 3.2,
+  "marginCap": 28,
+  "sigma": 11.0
+ },
+ "leagueAverages": {
+  "pace": 68.23,
+  "ppg": 75.67,
+  "efg": 51.88,
+  "fgPct": 45.15,
+  "threePct": 33.97,
+  "ftPct": 72.35,
+  "twoPct": 52.51,
+  "tovPct": 16.93,
+  "orbPct": 33.51,
+  "ftRate": 34.95,
+  "threeRate": 39.52,
+  "astRate": 52.87,
+  "astToRatio": 1.24,
+  "fastBreakPerGame": 10.34,
+  "secondChancePerGame": 0.0,
+  "ptsOffTovPerGame": 13.67,
+  "stealsPerGame": 6.73,
+  "blocksPerGame": 3.37,
+  "drbPerGame": 24.51,
+  "foulsPerGame": 17.42,
+  "papg": 74.01,
+  "offEff": 110.88,
+  "defEff": 108.45,
+  "srs": 0.0,
+  "sos": 0.29,
+  "netMargin": 1.66
+ },
+ "sources": [
+  {
+   "name": "ESPN",
+   "kind": "scores, rosters, season statistics, rankings, news"
+  },
+  {
+   "name": "stats.ncaa.org",
+   "kind": "play-by-play, shot locations, box scores"
+  },
+  {
+   "name": "YouTube (official channels)",
+   "kind": "game film and highlights"
+  }
+ ]
+}
