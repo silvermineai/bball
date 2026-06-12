@@ -710,6 +710,89 @@ def build(conn: sqlite3.Connection) -> None:
         json.dump({"articles": news_rows}, f, separators=(",", ":"))
     print(f"news.json: {len(news_rows)} articles")
 
+    # ---- season_review.json (upsets, marquee games, conference champions)
+    def game_row(g):
+        home, away = teams.get(g["home_id"]), teams.get(g["away_id"])
+        return {
+            "id": g["id"], "date": (g["game_date"] or "")[:10],
+            "home": home["short_name"] if home else "?", "homeId": g["home_id"],
+            "homeLogo": home["logo"] if home else None, "homeScore": g["home_score"],
+            "away": away["short_name"] if away else "?", "awayId": g["away_id"],
+            "awayLogo": away["logo"] if away else None, "awayScore": g["away_score"],
+            "venue": g.get("venue"), "note": g.get("notes"), "attendance": g.get("attendance"),
+            "homeRank": srs_rank.get(g["home_id"]), "awayRank": srs_rank.get(g["away_id"]),
+        }
+
+    upsets, thrillers = [], []
+    for g in games:
+        h, a = g["home_id"], g["away_id"]
+        if h not in srs or a not in srs:
+            continue
+        margin = g["home_score"] - g["away_score"]
+        winner, loser = (h, a) if margin > 0 else (a, h)
+        gap = srs[loser] - srs[winner]
+        if gap > 6 and srs_rank.get(loser, 999) <= 75:
+            upsets.append((gap, g))
+        if abs(margin) <= 2 and min(srs_rank.get(h, 999), srs_rank.get(a, 999)) <= 25:
+            thrillers.append((min(srs_rank.get(h, 999), srs_rank.get(a, 999)), g))
+    upsets.sort(key=lambda x: -x[0])
+    thrillers.sort(key=lambda x: x[0])
+
+    champions = []
+    for c in conferences:
+        top = c["teams"][0] if c["teams"] else None
+        if top:
+            champions.append({
+                "conference": c["name"], "strengthRank": c["strengthRank"],
+                **{k: top[k] for k in ("id", "name", "shortName", "logo", "confRecord", "record", "srsRank")},
+            })
+    champions.sort(key=lambda x: x["strengthRank"])
+
+    big_crowds = sorted(
+        (g for g in games if g.get("attendance")), key=lambda g: -g["attendance"]
+    )[:10]
+
+    season_review = {
+        "season": SEASON_LABEL,
+        "upsets": [dict(game_row(g), srsGap=rnd(gap, 1)) for gap, g in upsets[:15]],
+        "thrillers": [game_row(g) for _, g in thrillers[:15]],
+        "champions": champions,
+        "biggestCrowds": [game_row(g) for g in big_crowds],
+    }
+    with open(OUT_DIR / "season_review.json", "w") as f:
+        json.dump(season_review, f, separators=(",", ":"))
+    print(f"season_review.json: {len(upsets)} upsets, {len(thrillers)} thrillers")
+
+    # ---- leaders.json (national statistical leaders)
+    LEADER_CATS = {
+        "pointsPerGame": "Points", "reboundsPerGame": "Rebounds", "assistsPerGame": "Assists",
+        "stealsPerGame": "Steals", "blocksPerGame": "Blocks", "3PointMadePerGame": "Threes made",
+        "PER": "Player efficiency",
+    }
+    national = {}
+    for cat, label in LEADER_CATS.items():
+        rows = []
+        for tid in teams_with_stats:
+            for l in data["leaders"].get(tid, []):
+                if l["category"] != cat or l["value"] is None:
+                    continue
+                ath = data["athlete_by_id"].get(l["athlete_id"])
+                ident = identities[tid]
+                rows.append({
+                    "athleteId": l["athlete_id"],
+                    "name": ath["full_name"] if ath else f"#{l['athlete_id']}",
+                    "position": ath.get("position") if ath else None,
+                    "classYear": ath.get("class_year") if ath else None,
+                    "value": rnd(l["value"], 1),
+                    "teamId": tid, "team": ident["shortName"], "teamLogo": ident["logo"],
+                    "conference": ident["conference"],
+                })
+        rows.sort(key=lambda r: -(r["value"] or 0))
+        national[cat] = {"label": label, "rows": rows[:25]}
+    with open(OUT_DIR / "leaders.json", "w") as f:
+        json.dump({"season": SEASON_LABEL, "categories": national}, f, separators=(",", ":"))
+    print("leaders.json written")
+
     # ---- meta.json
     meta = {
         "season": SEASON_LABEL,

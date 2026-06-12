@@ -9,10 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SeasonRouteImport } from './routes/season'
 import { Route as RecruitingRouteImport } from './routes/recruiting'
 import { Route as RankingsRouteImport } from './routes/rankings'
 import { Route as PressroomRouteImport } from './routes/pressroom'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LeadersRouteImport } from './routes/leaders'
 import { Route as GameplanRouteImport } from './routes/gameplan'
 import { Route as FilmRouteImport } from './routes/film'
 import { Route as ConferencesRouteImport } from './routes/conferences'
@@ -27,6 +29,11 @@ import { Route as ScoutTeamIdRouteImport } from './routes/scout/$teamId'
 import { Route as PlayersPlayerIdRouteImport } from './routes/players/$playerId'
 import { Route as GamesContestIdRouteImport } from './routes/games/$contestId'
 
+const SeasonRoute = SeasonRouteImport.update({
+  id: '/season',
+  path: '/season',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecruitingRoute = RecruitingRouteImport.update({
   id: '/recruiting',
   path: '/recruiting',
@@ -45,6 +52,11 @@ const PressroomRoute = PressroomRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadersRoute = LeadersRouteImport.update({
+  id: '/leaders',
+  path: '/leaders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GameplanRoute = GameplanRouteImport.update({
@@ -119,10 +131,12 @@ export interface FileRoutesByFullPath {
   '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
+  '/leaders': typeof LeadersRoute
   '/login': typeof LoginRoute
   '/pressroom': typeof PressroomRoute
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
+  '/season': typeof SeasonRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -138,10 +152,12 @@ export interface FileRoutesByTo {
   '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
+  '/leaders': typeof LeadersRoute
   '/login': typeof LoginRoute
   '/pressroom': typeof PressroomRoute
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
+  '/season': typeof SeasonRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -158,10 +174,12 @@ export interface FileRoutesById {
   '/conferences': typeof ConferencesRoute
   '/film': typeof FilmRoute
   '/gameplan': typeof GameplanRoute
+  '/leaders': typeof LeadersRoute
   '/login': typeof LoginRoute
   '/pressroom': typeof PressroomRoute
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
+  '/season': typeof SeasonRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -179,10 +197,12 @@ export interface FileRouteTypes {
     | '/conferences'
     | '/film'
     | '/gameplan'
+    | '/leaders'
     | '/login'
     | '/pressroom'
     | '/rankings'
     | '/recruiting'
+    | '/season'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -198,10 +218,12 @@ export interface FileRouteTypes {
     | '/conferences'
     | '/film'
     | '/gameplan'
+    | '/leaders'
     | '/login'
     | '/pressroom'
     | '/rankings'
     | '/recruiting'
+    | '/season'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -217,10 +239,12 @@ export interface FileRouteTypes {
     | '/conferences'
     | '/film'
     | '/gameplan'
+    | '/leaders'
     | '/login'
     | '/pressroom'
     | '/rankings'
     | '/recruiting'
+    | '/season'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -237,10 +261,12 @@ export interface RootRouteChildren {
   ConferencesRoute: typeof ConferencesRoute
   FilmRoute: typeof FilmRoute
   GameplanRoute: typeof GameplanRoute
+  LeadersRoute: typeof LeadersRoute
   LoginRoute: typeof LoginRoute
   PressroomRoute: typeof PressroomRoute
   RankingsRoute: typeof RankingsRoute
   RecruitingRoute: typeof RecruitingRoute
+  SeasonRoute: typeof SeasonRoute
   GamesContestIdRoute: typeof GamesContestIdRoute
   PlayersPlayerIdRoute: typeof PlayersPlayerIdRoute
   ScoutTeamIdRoute: typeof ScoutTeamIdRoute
@@ -253,6 +279,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/season': {
+      id: '/season'
+      path: '/season'
+      fullPath: '/season'
+      preLoaderRoute: typeof SeasonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recruiting': {
       id: '/recruiting'
       path: '/recruiting'
@@ -279,6 +312,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaders': {
+      id: '/leaders'
+      path: '/leaders'
+      fullPath: '/leaders'
+      preLoaderRoute: typeof LeadersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gameplan': {
@@ -381,10 +421,12 @@ const rootRouteChildren: RootRouteChildren = {
   ConferencesRoute: ConferencesRoute,
   FilmRoute: FilmRoute,
   GameplanRoute: GameplanRoute,
+  LeadersRoute: LeadersRoute,
   LoginRoute: LoginRoute,
   PressroomRoute: PressroomRoute,
   RankingsRoute: RankingsRoute,
   RecruitingRoute: RecruitingRoute,
+  SeasonRoute: SeasonRoute,
   GamesContestIdRoute: GamesContestIdRoute,
   PlayersPlayerIdRoute: PlayersPlayerIdRoute,
   ScoutTeamIdRoute: ScoutTeamIdRoute,

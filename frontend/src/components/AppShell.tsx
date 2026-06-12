@@ -1,11 +1,15 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, ChevronDown, ClipboardList, Database, Film, LogIn, LogOut, Newspaper, Shield, Target, TrendingUp, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
+import { TeamPicker } from "@/components/Annual";
 import { api } from "@/lib/api";
+import { insights } from "@/lib/insights";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data } = useQuery({ queryKey: ["auth", "me"], queryFn: api.me, staleTime: 60_000, retry: false });
+  const { data: teamsData } = useQuery({ queryKey: ["insights", "teams"], queryFn: insights.teams, staleTime: Infinity });
+  const navigate = useNavigate();
   const navItems = [
     { to: "/scout", label: "Scout", icon: ClipboardList },
     { to: "/gameplan", label: "Game Plan", icon: Target },
@@ -15,6 +19,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/rankings", label: "Ratings", icon: TrendingUp },
   ];
   const dataItems = [
+    { to: "/season", label: "Season Review" },
+    { to: "/leaders", label: "Nat'l Leaders" },
     { to: "/conferences", label: "Conferences" },
     { to: "/teams", label: "Teams" },
     { to: "/games", label: "Games" },
@@ -75,6 +81,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             </div>
           </nav>
+          <div className="hidden w-56 xl:block">
+            <TeamPicker
+              teams={teamsData?.teams ?? []}
+              value={null}
+              placeholder="Jump to a team…"
+              onChange={(t) => navigate({ to: "/scout/$teamId", params: { teamId: String(t.id) } })}
+            />
+          </div>
           {data?.user ? (
             <button
               type="button"

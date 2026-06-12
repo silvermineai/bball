@@ -118,6 +118,12 @@ function CommandCenter() {
             </Link>
           ))}
         </div>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-graphite">
+          <span className="font-stat text-[10px] uppercase tracking-[0.2em] text-court">Also in the annual</span>
+          <Link to="/season" className="font-medium hover:text-court">Season in Review →</Link>
+          <Link to="/leaders" className="font-medium hover:text-court">National Leaders →</Link>
+          <Link to="/conferences" className="font-medium hover:text-court">Conference Standings →</Link>
+        </div>
       </section>
 
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
