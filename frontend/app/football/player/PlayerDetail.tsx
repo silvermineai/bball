@@ -46,7 +46,10 @@ export default function PlayerDetail() {
   }, [id, season, page]);
   return (
     <>
-      <Link className="eyebrow" href="/football/players/">
+      <Link
+        className="eyebrow"
+        href={`/football/players/?season=${encodeURIComponent(season)}`}
+      >
         ← Player index
       </Link>
       <div className="page-title">

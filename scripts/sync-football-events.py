@@ -25,4 +25,9 @@ for file in ["migrations/0014_football_events.sql", "../.local/football-events.s
             stderr=subprocess.STDOUT,
             check=True,
         )
-print("Football event editions synced to Cloudflare D1")
+subprocess.run(
+    [sys.executable, str(ROOT / "scripts/verify-football-events.py")],
+    cwd=ROOT,
+    check=True,
+)
+print("Football event editions synced and verified in Cloudflare D1")

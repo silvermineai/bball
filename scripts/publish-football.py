@@ -40,6 +40,19 @@ run(
         str(ROOT / ".local/football.sql"),
     ]
 )
+run([PY, "-m", "ncaa_scraper.football_player_history"])
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_player_history.py",
+    ]
+)
 run(
     [
         PY,
@@ -181,6 +194,7 @@ with (ROOT / ".local/d1-publish.log").open("w") as log:
         check=True,
     )
 run([PY, "scripts/sync-ledger.py"])
+run([PY, "scripts/sync-football-player-history.py"])
 run([PY, "scripts/sync-football-events.py"])
 run([PY, "scripts/sync-football-history.py"])
 run([PY, "scripts/sync-football-efficiency.py"])

@@ -120,3 +120,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
 - Add recurring ingestion/deployment with monitored job state; no recurring job is installed yet.
+
+## Historical player expansion
+
+The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2022–2026: 259,017 raw player box rows, 43,344 athlete/program/season records and 57,909 name-attributed defensive/specialist events. The expansion adds 18 source files and 230,947 raw D1 records, excludes retained team placeholders from all player indexes, exposes per-season coverage and verifies source/asset hashes. The earlier 2025/2026 player counts above predate that identity correction.

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import PlayerBrowser from "./PlayerBrowser";
 export const metadata = {
@@ -22,7 +24,17 @@ export default function Page() {
         exposes additional name-attributed game records that cannot be joined to
         these profiles by athlete ID.
       </p>
-      <PlayerBrowser />
+      <PlayerBrowser
+        catalog={JSON.parse(
+          fs.readFileSync(
+            path.join(
+              process.cwd(),
+              "public/data/football/player-catalog.json",
+            ),
+            "utf8",
+          ),
+        )}
+      />
     </>
   );
 }

@@ -32,11 +32,9 @@ export default function Page() {
         <p>
           Explore {records.toLocaleString("en-US")} defensive and special-teams
           records across{" "}
-          {Array.from(new Set(index.editions.map((e) => e.season))).join(
-            " and ",
-          )}
-          . Find game-level evidence of sacks, turnovers, punts and returns,
-          then inspect exactly what the source recorded.
+          {Array.from(new Set(index.editions.map((e) => e.season))).join(", ")}.
+          Find game-level evidence of sacks, turnovers, punts and returns, then
+          inspect exactly what the source recorded.
         </p>
       </div>
       <aside className="event-identity">
