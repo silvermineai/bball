@@ -1,0 +1,9 @@
+{
+  "signature": "ce498438a721a6cb1cc436fafee288f126364675a660450990751a2340683b0b",
+  "files": {
+    "summary.json": "ee1fb036229adceb156fe4301ad87782209f35541ebb4707836ccd728e041f1a",
+    "games.json": "90658fee834256d773270efa337159bdb7f80e45ca10a599e51ea9362a4abfc9",
+    "calibration-games.json": "d378ad430d359a84f6961ff1418bee464948ac39854438bc5c68be8cead1396b",
+    "fits.json": "78ce8a41afb004caefe1503a8f044a8f1beab9f55923d9b4153426f76c1d4381"
+  }
+}

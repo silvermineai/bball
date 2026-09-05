@@ -109,6 +109,19 @@ run(
     ]
 )
 run([PY, "-m", "ncaa_scraper.basketball_careers", "--sql"])
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_basketball_evaluation.py",
+    ]
+)
+run([PY, "-m", "ncaa_scraper.basketball_evaluation"])
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
@@ -147,4 +160,5 @@ run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
 run([PY, "scripts/sync-recruiting.py"])
 run([PY, "scripts/sync-careers.py"])
+run([PY, "scripts/archive-evaluation.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])

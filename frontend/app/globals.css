@@ -1646,3 +1646,204 @@ summary {
   flex: 0 1 270px;
   min-width: 220px;
 }
+.evaluation-verdict {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 48px;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 32px 0;
+}
+.evaluation-verdict h2 {
+  font-size: clamp(32px, 4vw, 50px);
+  margin: 12px 0;
+}
+.evaluation-timeline {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--ink);
+  margin-bottom: 18px;
+}
+.evaluation-timeline > div {
+  padding: 26px;
+  border-right: 1px solid var(--line);
+}
+.evaluation-timeline > div:first-child {
+  padding-left: 0;
+}
+.evaluation-timeline > div:last-child {
+  border-right: none;
+}
+.evaluation-timeline span {
+  color: var(--orange);
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.evaluation-timeline h3 {
+  margin: 18px 0 10px;
+}
+.evaluation-timeline p {
+  font-size: 14px;
+}
+.evaluation-controls .button {
+  align-self: flex-end;
+}
+.evaluation-metrics {
+  margin: 18px 0;
+}
+.evaluation-metrics td:first-child {
+  min-width: 200px;
+}
+.evaluation-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 9px;
+}
+.evaluation-key.preseason {
+  background: var(--muted);
+}
+.evaluation-key.weekly {
+  background: var(--orange);
+}
+.evaluation-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 32px;
+}
+.evaluation-charts > div {
+  min-width: 0;
+}
+.evaluation-month {
+  display: grid;
+  grid-template-columns: 83px 1fr;
+  width: 100%;
+  text-align: left;
+  gap: 14px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  padding: 16px 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+.evaluation-month > span {
+  font-size: 12px;
+  padding-top: 9px;
+}
+.evaluation-month[aria-pressed="true"] {
+  box-shadow: -4px 0 var(--orange);
+  padding-left: 8px;
+}
+.evaluation-month:hover {
+  background: var(--paper);
+}
+.evaluation-month-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 43px;
+  position: relative;
+  height: 18px;
+  margin-bottom: 4px;
+}
+.evaluation-month-bar i {
+  display: block;
+  height: 10px;
+  background: var(--muted);
+}
+.evaluation-month-bar.weekly i {
+  background: var(--orange);
+}
+.evaluation-month-bar strong {
+  position: absolute;
+  right: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.evaluation-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-top: 18px;
+}
+.evaluation-calibration {
+  width: 100%;
+  display: block;
+  overflow: visible;
+  margin-top: 16px;
+}
+.evaluation-calibration text {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.evaluation-calibration circle {
+  cursor: pointer;
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+.evaluation-calibration circle.preseason {
+  fill: var(--muted);
+}
+.evaluation-calibration circle.weekly {
+  fill: var(--orange);
+}
+.evaluation-calibration circle:focus {
+  outline: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.evaluation-bin-detail {
+  min-height: 50px;
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.evaluation-sort {
+  max-width: 340px;
+  margin-bottom: 18px;
+}
+.evaluation-game-table td:first-child {
+  min-width: 220px;
+}
+.evaluation-game-table td:last-child {
+  min-width: 170px;
+  max-width: 260px;
+  white-space: normal;
+}
+.evaluation-game-table details p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.evaluation-downloads {
+  display: grid;
+  gap: 12px;
+  margin: 22px 0;
+}
+.evaluation-id {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 780px) {
+  .evaluation-calibration text {
+    font-size: 16px;
+  }
+  .evaluation-verdict,
+  .evaluation-charts,
+  .evaluation-timeline {
+    grid-template-columns: 1fr;
+  }
+  .evaluation-verdict {
+    gap: 12px;
+  }
+  .evaluation-timeline > div,
+  .evaluation-timeline > div:first-child {
+    padding: 22px 0;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}

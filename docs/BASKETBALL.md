@@ -26,6 +26,8 @@ Public roster profiles retain basketball-relevant fields. Age and birth date are
 
 ## Independent efficiency model
 
+The [weekly model experiment](BASKETBALL_EVALUATION.md) adds a chronological 2024–25 calibration replay and a same-game 2025–26 comparison against the preseason baseline. It publishes every prediction, weekly coefficient set and training cutoff, with interactive diagnostics and a verified R2 evidence archive. It remains separate from live forecasts and the prospective ledger.
+
 `basketball_model.py` trains a ridge model on offensive efficiency for both sides of each eligible game. Estimated possessions are the average of each side's `FGA + 0.475 × FTA − ORB + TO`. Points per 100 estimated possessions are the response. Separate team offense, opponent defense and home-floor features are used. A second ridge model fits tempo from both team identities.
 
 Efficiency regularization is fixed at 12; tempo regularization at 8. Older seasons receive weights of `0.6 ** age_in_seasons`. A program must have at least ten observed games in the latest fitting season to enter the model. The fitted field currently has 366 programs. This empirical eligibility rule is disclosed rather than represented as a verified complete Division I membership list.
@@ -79,7 +81,7 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
 - Expand historical player-game and play-by-play seasons, add possession/lineup analysis, and improve location validation beyond the new 2025–26 shooting lab.
-- Add dated roster/efficiency features and rolling evaluations. The [shared ledger](RESEARCH_LEDGER.md) now implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
+- Add dated roster features and extend the weekly experiment to additional seasons and prospective operation. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Finish migrating remaining basketball archive tools to Next.js.
 - Install monitored recurring ingestion/publishing and validate freshness against expected source coverage.

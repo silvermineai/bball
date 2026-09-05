@@ -1,5 +1,6 @@
 import { getBasketball } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
+import Link from "next/link";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
@@ -22,6 +23,14 @@ export default function Page() {
           out-of-sample evaluation before generating the 2026–27 slate.
         </p>
       </div>
+      <p className="note" style={{ marginBottom: 28 }}>
+        <Link href="/basketball/evaluation/">
+          Inspect the weekly updating challenger →
+        </Link>{" "}
+        Compare both methods on the same historical games, explore calibration
+        and download each prediction’s training evidence. The experiment remains
+        separate from live preseason forecasts.
+      </p>
       <div className="two-col">
         <section className="paper-panel">
           <h2>How a score becomes efficiency.</h2>

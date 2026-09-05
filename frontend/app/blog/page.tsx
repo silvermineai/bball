@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
 export const metadata = {
-  title: "The journal: college football matchup previews and analysis",
+  title: "The journal: college basketball and football analysis",
 };
 const guides = [
   [
@@ -48,6 +48,16 @@ export default function Page() {
           <Link href="/basketball/matchups/">All basketball matchups →</Link>
         </div>
         <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">Basketball / Model experiment</div>
+            <h2>Does another week make a better forecast?</h2>
+            <p>
+              Compare a weekly updating basketball model with its preseason
+              baseline. Inspect monthly errors, probability calibration and the
+              games behind the results.
+            </p>
+            <Link href="/basketball/evaluation/">Explore the experiment →</Link>
+          </article>
           {getBasketball()
             .upcoming.filter((g) => g.prediction)
             .slice(0, 6)

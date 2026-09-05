@@ -54,14 +54,20 @@ def game_features(game, boxes):
     }
 
 
-def fit(games):
+def fit(games, *, teams=None):
     if len(games) < 100:
         raise ValueError("At least 100 paired completed games are required")
     latest = max(g["season"] for g in games)
     counts = Counter(
         t for g in games if g["season"] == latest for t in [g["home_id"], g["away_id"]]
     )
-    teams = sorted(t for t, n in counts.items() if n >= 10)
+    # Rolling experiments freeze membership before the season begins. The
+    # default production fit continues to infer its field from the latest year.
+    teams = (
+        sorted(t for t, n in counts.items() if n >= 10)
+        if teams is None
+        else sorted(set(teams))
+    )
     games = [g for g in games if g["home_id"] in teams and g["away_id"] in teams]
     n = len(teams)
     if n < 2 or len(games) < 100:
@@ -126,6 +132,11 @@ def raw_predict(model, game):
 def calibrate(games, model):
     pairs = [(g, raw_predict(model, g)) for g in games]
     pairs = [(g, p) for g, p in pairs if p is not None]
+    return calibrate_predictions(pairs)
+
+
+def calibrate_predictions(pairs):
+    """Calibrate held-out raw predictions, including chronological rolling fits."""
     if len(pairs) < 100:
         raise ValueError("At least 100 independent calibration games required")
     x = np.asarray([[1, p["home_margin"]] for _, p in pairs])
@@ -156,7 +167,10 @@ def forecast(model, game):
     p = raw_predict(model, game)
     if p is None:
         return None
-    calibration = model["calibration"]
+    return apply_calibration(p, model["calibration"])
+
+
+def apply_calibration(p, calibration):
     intercept, slope = calibration["logistic_coefficients"]
     probability = 1 / (
         1 + math.exp(-max(-30, min(30, intercept + slope * p["home_margin"])))

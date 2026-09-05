@@ -20,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/recruiting/",
     "/basketball/impact/",
     "/basketball/model/",
+    "/basketball/evaluation/",
     "/basketball/matchups/",
     ...getBasketball()
       .upcoming.filter((g) => g.prediction)
@@ -35,7 +36,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
   ].map((path) => ({
     url: base + path,
-    lastModified: d.generated_at,
+    lastModified:
+      path === "/basketball/evaluation/" ? undefined : d.generated_at,
     changeFrequency: path.startsWith("/blog/") ? "weekly" : "daily",
   }));
 }
