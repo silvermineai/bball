@@ -335,6 +335,20 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
                 Download filtered CSV
               </button>
             </div>
+            <div
+              className="board-shortlist-summary"
+              aria-label="Shortlist status"
+            >
+              <span>
+                <strong>{selected.length} of 3 shortlisted</strong>
+                {picks.length > 0 && (
+                  <small>{picks.map((r) => r.player.name).join(" · ")}</small>
+                )}
+              </span>
+              <a className="hero-link" href="#player-shortlist">
+                Review shortlist ↓
+              </a>
+            </div>
             <div className="table-scroll">
               <table className="data-table board-results">
                 <thead>
@@ -515,6 +529,7 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
         )}
       </section>
       <section
+        id="player-shortlist"
         className="board-shortlist section"
         aria-label="Player shortlist"
       >

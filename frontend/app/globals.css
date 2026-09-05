@@ -3290,3 +3290,29 @@ summary {
   color: var(--muted);
   margin-top: 6px;
 }
+.board-shortlist-summary {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.board-shortlist-summary small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.board-shortlist-summary .hero-link {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+#player-shortlist {
+  scroll-margin-top: 24px;
+}
