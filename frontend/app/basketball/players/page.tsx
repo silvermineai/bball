@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import Link from "next/link";
 import Players from "./Players";
 export const metadata = { title: "College basketball player statistics" };
 export default function Page() {
@@ -15,6 +16,11 @@ export default function Page() {
           current recruiting availability.
         </p>
       </div>
+      <p className="note">
+        <Link className="hero-link" href="/basketball/scouting-board/">
+          Combine statistics into a scouting board →
+        </Link>
+      </p>
       <Players
         catalog={JSON.parse(
           fs.readFileSync(

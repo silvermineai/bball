@@ -69,3 +69,5 @@ The first production release passed all 37 Python, frontend and Worker tests, Wo
 ## Comparing historical players
 
 The [player comparison desk](BASKETBALL_PLAYER_COMPARISON.md) uses these same season indices and D1 profiles to compare three exact player/program/season records. It adds per-40 production, pooled shooting denominators, season-relative qualified percentiles, shareable selections and CSV export. It preserves archive editions and does not change source records or identity mappings.
+
+The [scouting board](BASKETBALL_SCOUTING_BOARD.md) adds editable multi-stat production priorities to the same 24-season archive. Rankings retain the season-wide qualified reference group through filtering, expose every percentile contribution, and link an exact three-record shortlist into the comparison desk.

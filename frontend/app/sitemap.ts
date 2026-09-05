@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...getScoutIndex().teams.map((t) => `/basketball/programs/${t.id}/`),
     "/basketball/players/",
     "/basketball/compare-players/",
+    "/basketball/scouting-board/",
     "/basketball/recruiting/",
     "/basketball/impact/",
     "/basketball/model/",
