@@ -1516,3 +1516,133 @@ summary {
     padding-left: 16px;
   }
 }
+
+.career-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 2fr;
+  align-items: center;
+  gap: 28px;
+  margin: 30px 0;
+}
+.career-development {
+  background: #eae6da;
+  padding: 30px;
+  border-top: 1px solid var(--ink);
+}
+.career-bars {
+  display: grid;
+  gap: 8px;
+  margin: 30px 0 20px;
+}
+.career-bar {
+  display: grid;
+  grid-template-columns: 85px 1fr 64px;
+  gap: 12px 20px;
+  padding: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  align-items: center;
+}
+.career-bar[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+.career-bar-season {
+  font-size: 13px;
+}
+.career-bar-track {
+  height: 18px;
+  display: block;
+  background: var(--line);
+}
+.career-bar-track > span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+.career-bar[aria-pressed="true"] .career-bar-track > span {
+  background: var(--orange);
+}
+.career-bar strong {
+  text-align: right;
+  font:
+    26px/1 "Libre Caslon Display",
+    Georgia,
+    serif;
+}
+.career-bar small {
+  grid-column: 2/4;
+  font-size: 11px;
+  color: var(--muted);
+}
+.career-selected-row {
+  background: #e9eddc;
+}
+.career-season-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.career-game-table {
+  font-size: 12px;
+}
+.career-game-table details {
+  min-width: 130px;
+}
+.career-game-fields {
+  min-width: 230px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.career-game-fields dt {
+  font-size: 10px;
+  color: var(--muted);
+}
+.career-game-fields dd {
+  margin: 4px 0;
+}
+.career-name-note,
+.career-coverage-warning {
+  border-left: 3px solid var(--orange);
+  padding: 14px 18px;
+  line-height: 1.7;
+  font-size: 13px;
+  margin: 22px 0;
+}
+.career-coverage-details {
+  margin: 24px 0;
+}
+.career-coverage-details summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .career-toolbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .career-development {
+    padding: 18px;
+  }
+  .career-bar {
+    grid-template-columns: 65px 1fr 45px;
+    gap: 8px;
+    padding: 12px 7px;
+  }
+  .career-bar strong {
+    font-size: 22px;
+  }
+}
+.career-development .section-heading {
+  align-items: flex-end;
+  gap: 24px;
+}
+.career-development .section-heading .control {
+  flex: 0 1 270px;
+  min-width: 220px;
+}

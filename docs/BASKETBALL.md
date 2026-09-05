@@ -43,6 +43,10 @@ Possession pace is normalized to 40 minutes using the final period count, includ
 
 ## Player and team statistics
 
+The [historical player archive](BASKETBALL_CAREERS.md) adds 24 published seasons, annual stat rankings, season/program production histories and 3.68 million retained identified box-score rows. Per-season coverage and source-identity warnings are explicit; early seasons are sparse. The existing 2025–26 figures above describe the original core warehouse.
+
+The [school announcement board](BASKETBALL_RECRUITING.md) adds dated recruiting evidence with historical-stat links and later availability statements. It is a partial editorial review, separate from unconfirmed source rosters.
+
 The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from 2.9 million bulk play-by-play events, with program/player court maps, shot labels, event logs and exact box-score reconciliation. Its source release is archived in R2; versioned shot evidence is served from D1.
 
 The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.

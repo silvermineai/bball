@@ -3,179 +3,490 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
-type Data = {
-  player: { id: string; name: string; position: string | null };
-  season: number;
-  total: number;
-  rows: {
-    game_id: string;
-    starts_at: string | null;
-    home_name: string | null;
-    away_name: string | null;
-    team_id: string;
-    stats: Record<string, number | string | null>;
-  }[];
-  rosters: {
-    season: number;
-    team_id: string;
-    profile: Record<string, string>;
-  }[];
-  seasonStats: {
-    team_id: string;
-    stats: Record<
-      string,
-      Record<
-        string,
-        {
-          value: number | null;
-          display: string;
-          label: string;
-          description: string;
-        }
-      >
-    >;
-  }[];
-  participation: {
-    season: number;
-    team_id: string;
-    games: number;
-    minutes: number;
-  }[];
+import {
+  careerPoints,
+  identityReview,
+  historyMetricLabels,
+  seasonLabel,
+  sourceNames,
+  type CareerData,
+  type CareerCatalog,
+  type StatKey,
+} from "../../_lib/careers";
+import LegacyRecords from "./LegacyRecords";
+const statLabels: Record<StatKey, string> = {
+  min: "Minutes",
+  pts: "Points",
+  fgm: "Field goals made",
+  fga: "Field goals attempted",
+  tpm: "Threes made",
+  tpa: "Threes attempted",
+  ftm: "Free throws made",
+  fta: "Free throws attempted",
+  orb: "Offensive rebounds",
+  drb: "Defensive rebounds",
+  reb: "Rebounds",
+  ast: "Assists",
+  stl: "Steals",
+  blk: "Blocks",
+  tov: "Turnovers",
+  pf: "Fouls",
 };
-export default function Player() {
+export default function Player({ catalog }: { catalog: CareerCatalog }) {
   const params = useSearchParams(),
-    id = params.get("id");
-  const [page, setPage] = useState(0),
-    [data, setData] = useState<Data | null>(null),
-    [error, setError] = useState("");
+    id = params.get("id"),
+    requested = params.get("season");
+  const [season, setSeason] = useState(requested || ""),
+    [data, setData] = useState<CareerData | null>(null),
+    [error, setError] = useState(""),
+    [missing, setMissing] = useState(false),
+    [metric, setMetric] = useState<keyof typeof historyMetricLabels>("ppg"),
+    [filter, setFilter] = useState("all"),
+    [page, setPage] = useState(0),
+    [legacy, setLegacy] = useState(false);
+  useEffect(() => {
+    setSeason(requested || "");
+    setPage(0);
+    setFilter("all");
+  }, [id, requested]);
   useEffect(() => {
     if (!id) return;
-    const c = new AbortController();
+    const controller = new AbortController();
     setData(null);
     setError("");
+    setMissing(false);
     fetch(
-      `/api/basketball/research/players/${encodeURIComponent(id)}?season=2026&page=${page}`,
-      { signal: c.signal },
+      `/api/basketball/research/careers/${encodeURIComponent(id)}${season ? `?season=${encodeURIComponent(season)}` : ""}`,
+      { signal: controller.signal },
     )
-      .then((r) => {
-        if (!r.ok)
+      .then(async (r) => {
+        if (!r.ok) {
+          setMissing(r.status === 404);
           throw Error(
             r.status === 404
-              ? "No imported records found for this player."
-              : "The player record is temporarily unavailable.",
+              ? "No box-score history is available for this source identity in the imported archive."
+              : "The historical player file could not be loaded. Please reload.",
           );
+        }
         return r.json();
       })
       .then(setData)
       .catch((e) => {
         if (e.name !== "AbortError") setError(e.message);
       });
-    return () => c.abort();
-  }, [id, page]);
+    return () => controller.abort();
+  }, [id, season]);
+  const selected = data?.profiles.find((p) => p.season === data.season),
+    totals = selected?.overall;
+  const identityNeedsReview = !!data && identityReview(data.profiles);
+  const points =
+      data && !identityNeedsReview ? careerPoints(data.profiles, metric) : [],
+    max = Math.max(1, ...points.map((p) => p.value ?? 0));
+  const rows = (data?.rows || []).filter(
+    (r) =>
+      filter === "all" ||
+      (filter === "played"
+        ? r.appearance
+        : filter === "dnp"
+          ? r.dnp === true
+          : !r.appearance),
+  );
+  const changeSeason = (value: string) => {
+    setSeason(value);
+    const url = new URL(window.location.href);
+    url.searchParams.set("season", value);
+    window.history.replaceState(null, "", url);
+    setFilter("all");
+    setPage(0);
+  };
   return (
     <>
-      <Link className="eyebrow" href="/basketball/players/">
-        ← Player index
+      <Link
+        className="eyebrow"
+        href={`/basketball/players/${season ? `?season=${season}` : ""}`}
+      >
+        ← Historical player index
       </Link>
       <div className="page-title">
         <div className="eyebrow" style={{ marginTop: 20 }}>
-          ESPN source identity · {id || "No player selected"}
+          The player file / Source identity {id || "not selected"}
         </div>
-        <h1>{data?.player.name || "Player record"}</h1>
-        {id && (
-          <Link className="button" href={`/basketball/shooting/?player=${id}`}>
-            Explore shooting evidence ↗
-          </Link>
-        )}
+        <h1>{selected?.name || data?.profiles[0]?.name || "Player history"}</h1>
         <p>
-          Game-by-game source statistics, published season totals and roster
-          observations. A future-season listing is not confirmation of current
-          eligibility or transfer status.
+          Follow recorded production across seasons and programs. Compare
+          workload and shooting, then inspect the games behind every season
+          total. A historical appearance is not a current roster or eligibility
+          claim.
         </p>
+        {data && (
+          <div className="hero-actions">
+            {data.profiles.some((p) => p.season === 2026) && (
+              <Link
+                className="button"
+                href={`/basketball/shooting/?player=${id}`}
+              >
+                2025–26 shooting lab ↗
+              </Link>
+            )}
+            {data.profiles.some(
+              (p) => p.season >= 2025 && p.overall.games > 0,
+            ) && (
+              <Link
+                className="hero-link"
+                href={`/basketball/recruiting/?q=${encodeURIComponent(selected?.name || data.profiles[0].name)}`}
+              >
+                Search school announcements →
+              </Link>
+            )}
+          </div>
+        )}
       </div>
       {!id ? (
-        <p className="empty">Choose a player from the index or roster board.</p>
+        <p className="empty">
+          Choose a player from the historical index or a program dossier.
+        </p>
       ) : error ? (
-        <p role="alert" className="status-error">
+        <p className="empty" role="alert">
           {error}
         </p>
       ) : !data ? (
         <p className="empty" role="status">
-          Loading the D1 player record…
+          Loading historical game evidence…
         </p>
       ) : (
         <>
-          <section className="paper-panel">
-            <h2>Roster observations.</h2>
-            {data.rosters.length ? (
-              data.rosters.map((r) => (
-                <p key={`${r.season}-${r.team_id}`}>
-                  <strong>
-                    {r.season - 1}–{String(r.season).slice(-2)}
-                  </strong>{" "}
-                  · {r.profile.team_display_name} ·{" "}
-                  {r.profile.position_abbreviation || "Position unavailable"}
-                  <br />
-                  {[
-                    r.profile.height,
-                    r.profile.weight,
-                    r.profile.experience_display_value,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  <br />
-                  <small>
-                    {r.season === 2027
-                      ? "Unconfirmed future-season source listing."
-                      : "Source season label; roster records may change after the season."}
-                  </small>
-                </p>
-              ))
-            ) : (
-              <p>No roster profile is present in the imported releases.</p>
+          {sourceNames(data.profiles).length > 1 && (
+            <p className="note career-name-note">
+              Names reported under this source ID:{" "}
+              {sourceNames(data.profiles).join(" · ")}. Each season retains its
+              own reported name; identity is joined by source ID.
+            </p>
+          )}
+          <div className="career-toolbar">
+            <label className="control">
+              <span>STAT SEASON</span>
+              <select
+                value={data.season}
+                onChange={(e) => changeSeason(e.target.value)}
+              >
+                {catalog.seasons.map((s) => (
+                  <option key={s.season} value={s.season}>
+                    {seasonLabel(s.season)}
+                    {data.profiles.some((p) => p.season === s.season)
+                      ? " · source records"
+                      : " · no records for this ID"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="note">
+              {data.coverage.appearance_games.toLocaleString()} games with
+              recorded player appearances /{" "}
+              {data.coverage.completed_schedule_games.toLocaleString()}{" "}
+              completed schedule entries in this season’s source coverage.
+            </p>
+          </div>
+          <div className="strip">
+            <div>
+              <strong>{totals?.games ?? 0}</strong>
+              <span>Games with recorded playing time</span>
+            </div>
+            <div>
+              <strong>{fmt(totals?.ppg)}</strong>
+              <span>Points per recorded game</span>
+            </div>
+            <div>
+              <strong>{fmt(totals?.mpg)}</strong>
+              <span>Minutes per recorded game</span>
+            </div>
+            <div>
+              <strong>
+                {totals?.ts == null ? "—" : fmt(totals.ts * 100) + "%"}
+              </strong>
+              <span>Estimated true shooting</span>
+            </div>
+          </div>
+          <section className="section career-development">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">Development / Recorded seasons</div>
+                <h2>How the workload changed.</h2>
+              </div>
+              <label className="control">
+                <span>CHART MEASURE</span>
+                <select
+                  value={metric}
+                  onChange={(e) => setMetric(e.target.value as typeof metric)}
+                >
+                  {Object.entries(historyMetricLabels).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {identityNeedsReview && (
+              <p className="empty">
+                This source ID has differing reported names or a span longer
+                than eight years. Identity review is needed before treating
+                these records as one player’s development. Inspect the
+                separately labeled season records below; the combined chart is
+                withheld.
+              </p>
             )}
+            <div className="career-bars">
+              {points.map((p) => (
+                <button
+                  key={p.season}
+                  aria-pressed={data.season === p.season}
+                  onClick={() => changeSeason(String(p.season))}
+                  className="career-bar"
+                  aria-label={`${seasonLabel(p.season)}, ${historyMetricLabels[metric]} ${p.value === null ? "unavailable" : fmt(p.value * (metric === "ts" ? 100 : 1))}, ${p.games} games`}
+                >
+                  <span className="career-bar-season">
+                    {seasonLabel(p.season)}
+                  </span>
+                  <span className="career-bar-track">
+                    <span
+                      style={{
+                        width: `${p.value == null ? 0 : (p.value / max) * 100}%`,
+                      }}
+                    />
+                  </span>
+                  <strong>
+                    {p.value === null
+                      ? "—"
+                      : fmt(p.value * (metric === "ts" ? 100 : 1)) +
+                        (metric === "ts" ? "%" : "")}
+                  </strong>
+                  <small>
+                    {p.games} GP · {p.teams || "No recorded playing time"}
+                  </small>
+                </button>
+              ))}
+            </div>
+            <p className="note">
+              Choose a season to inspect its games. Values pool recorded
+              appearances, including across multiple programs in a season. Small
+              samples and changing opponents can explain apparent development;
+              these are descriptive statistics.
+            </p>
           </section>
           <section className="section">
             <div className="section-heading">
               <div>
-                <div className="eyebrow">2025–26 / Game logs</div>
-                <h2>The full box-score trail.</h2>
+                <div className="eyebrow">
+                  All imported seasons / Individual program records
+                </div>
+                <h2>The production trail.</h2>
               </div>
-              <span className="note">{data.total} source records</span>
             </div>
-            {data.rows.length ? (
-              data.rows.map((r, i) => (
-                <details key={`${r.game_id}-${r.team_id}`} open={i === 0}>
-                  <summary>
-                    {r.starts_at ? date(r.starts_at) : "Date unavailable"} ·{" "}
-                    {r.away_name} at {r.home_name}
-                    {r.stats.did_not_play === "true" ? " · DNP" : ""}
-                  </summary>
-                  <dl className="raw-stat-grid">
-                    {Object.entries(r.stats).map(([k, v]) => (
-                      <div key={k}>
-                        <dt>{k.replaceAll("_", " ")}</dt>
-                        <dd>
-                          {v === null
-                            ? "—"
-                            : typeof v === "number"
-                              ? fmt(v, Number.isInteger(v) ? 0 : 1)
-                              : v}
-                        </dd>
-                      </div>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {[
+                      "Season / program",
+                      "GP",
+                      "MIN/G",
+                      "PTS/G",
+                      "REB/G",
+                      "AST/G",
+                      "eFG%",
+                      "TS%",
+                      "3PM/A",
+                    ].map((k) => (
+                      <th key={k}>{k}</th>
                     ))}
-                  </dl>
-                </details>
-              ))
-            ) : (
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.profiles.flatMap((p) =>
+                    p.teams.map((t) => (
+                      <tr
+                        key={`${p.season}-${t.team_id}`}
+                        className={
+                          p.season === data.season ? "career-selected-row" : ""
+                        }
+                      >
+                        <td>
+                          <button
+                            className="career-season-link"
+                            onClick={() => changeSeason(String(p.season))}
+                          >
+                            {seasonLabel(p.season)} · {t.team} →
+                          </button>
+                          <small>
+                            {p.name}
+                            {!t.qualified
+                              ? " · below full-sample qualification"
+                              : ""}
+                          </small>
+                        </td>
+                        {[
+                          t.games,
+                          t.mpg,
+                          t.ppg,
+                          t.rpg,
+                          t.apg,
+                          t.efg == null ? null : t.efg * 100,
+                          t.ts == null ? null : t.ts * 100,
+                        ].map((v, i) => (
+                          <td className="numeric" key={i}>
+                            {fmt(v, i === 0 ? 0 : 1)}
+                          </td>
+                        ))}
+                        <td className="numeric">
+                          {fmt(t.totals.tpm, 0)}/{fmt(t.totals.tpa, 0)}
+                        </td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="section">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">
+                  {seasonLabel(data.season)} / Game evidence
+                </div>
+                <h2>Open the box score.</h2>
+              </div>
+              <label className="control">
+                <span>GAME RECORDS</span>
+                <select
+                  value={filter}
+                  onChange={(e) => {
+                    setFilter(e.target.value);
+                    setPage(0);
+                  }}
+                >
+                  <option value="all">All source records</option>
+                  <option value="played">Included playing appearances</option>
+                  <option value="dnp">Reported DNP</option>
+                  <option value="excluded">
+                    Excluded from season averages
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p className="note">
+              {data.rows.length} source rows · {totals?.dnp_records ?? 0}{" "}
+              reported DNP · {totals?.excluded_records ?? 0} rows excluded from
+              averages. Positive minutes and a completed schedule match are
+              required. Missing minutes and DNP flags are preserved.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table career-game-table">
+                <thead>
+                  <tr>
+                    {[
+                      "Date / opponent",
+                      "Status",
+                      "MIN",
+                      "PTS",
+                      "FG",
+                      "3P",
+                      "FT",
+                      "REB",
+                      "AST",
+                      "TO",
+                      "Full record",
+                    ].map((k) => (
+                      <th key={k}>{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(page * 30, page * 30 + 30).map((r) => (
+                    <tr key={`${r.id}-${r.team_id}`}>
+                      <td>
+                        {r.date ? date(r.date) : "Date unavailable"}
+                        <small>
+                          {r.team}{" "}
+                          {r.venue === "away"
+                            ? "at"
+                            : r.venue === "neutral"
+                              ? "vs (neutral)"
+                              : "vs"}{" "}
+                          {r.opponent || r.opponent_id || "Unresolved opponent"}
+                        </small>
+                        {r.score_for != null && r.score_against != null && (
+                          <small>
+                            Final {r.score_for}–{r.score_against} · game {r.id}
+                          </small>
+                        )}
+                      </td>
+                      <td>
+                        {r.appearance
+                          ? "Played"
+                          : r.dnp === true
+                            ? "DNP"
+                            : !r.schedule_matched
+                              ? "Unmatched schedule"
+                              : !r.completed
+                                ? "Not a confirmed final"
+                                : "No positive minutes"}
+                      </td>
+                      <td>{fmt(r.stats.min, 0)}</td>
+                      <td>{fmt(r.stats.pts, 0)}</td>
+                      <td>
+                        {fmt(r.stats.fgm, 0)}/{fmt(r.stats.fga, 0)}
+                      </td>
+                      <td>
+                        {fmt(r.stats.tpm, 0)}/{fmt(r.stats.tpa, 0)}
+                      </td>
+                      <td>
+                        {fmt(r.stats.ftm, 0)}/{fmt(r.stats.fta, 0)}
+                      </td>
+                      <td>{fmt(r.stats.reb, 0)}</td>
+                      <td>{fmt(r.stats.ast, 0)}</td>
+                      <td>{fmt(r.stats.tov, 0)}</td>
+                      <td>
+                        <details>
+                          <summary>All fields</summary>
+                          <dl className="career-game-fields">
+                            {Object.entries(statLabels).map(([k, label]) => (
+                              <div key={k}>
+                                <dt>{label}</dt>
+                                <dd>{fmt(r.stats[k as StatKey], 0)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          <p>
+                            Starter:{" "}
+                            {r.starter === null
+                              ? "unreported"
+                              : r.starter
+                                ? "yes"
+                                : "no"}
+                          </p>
+                          {r.issues.length > 0 && (
+                            <p>
+                              Source issues: {r.issues.join(", ")}. Invalid
+                              fields are withheld from aggregates.
+                            </p>
+                          )}
+                        </details>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!rows.length && (
               <p className="empty">
-                No 2025–26 game logs were imported for this player. A roster
-                listing does not establish prior playing time.
+                No source records match this season and filter. The archive does
+                not establish whether the player competed elsewhere.
               </p>
             )}
             <div className="pagination">
               <span>
-                Page {page + 1} of {Math.max(1, Math.ceil(data.total / 40))}
+                {rows.length} records · page {page + 1} of{" "}
+                {Math.max(1, Math.ceil(rows.length / 30))}
               </span>
               <div>
                 <button
@@ -187,7 +498,7 @@ export default function Player() {
                 </button>
                 <button
                   className="button secondary"
-                  disabled={(page + 1) * 40 >= data.total}
+                  disabled={(page + 1) * 30 >= rows.length}
                   onClick={() => setPage(page + 1)}
                 >
                   Next →
@@ -195,42 +506,73 @@ export default function Player() {
               </div>
             </div>
           </section>
-          <section className="section">
-            <div className="section-heading">
-              <h2>Published season statistics.</h2>
-            </div>
-            {!data.seasonStats.length && (
-              <p className="empty">
-                No published season aggregates in this import.
-              </p>
+          <section className="section paper-panel">
+            <h2>Read the sample before the rate.</h2>
+            <p>
+              Per-game statistics divide complete observed totals by games with
+              recorded minutes. A missing field makes its affected total or rate
+              unavailable; unrelated complete statistics remain usable. True
+              shooting uses PTS / [2 × (FGA + 0.475 × FTA)]. eFG uses (FGM + 0.5
+              × 3PM) / FGA. Zero attempts yield an unavailable percentage.
+            </p>
+            {totals && (
+              <details>
+                <summary>Field coverage for {seasonLabel(data.season)}</summary>
+                <dl className="raw-stat-grid">
+                  {Object.entries(statLabels).map(([k, label]) => (
+                    <div key={k}>
+                      <dt>{label}</dt>
+                      <dd>
+                        {totals.samples[k as StatKey]} / {totals.games}{" "}
+                        appearances
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
             )}
-            {data.seasonStats.map((s) => (
-              <div key={s.team_id}>
-                {Object.entries(s.stats).map(([category, stats]) => (
-                  <details key={category}>
-                    <summary>
-                      {category} · team ID {s.team_id}
-                    </summary>
-                    <dl className="raw-stat-grid">
-                      {Object.entries(stats).map(([key, v]) => (
-                        <div key={key}>
-                          <dt title={v.description}>{v.label || key}</dt>
-                          <dd>{v.display || fmt(v.value)}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </details>
-                ))}
-              </div>
-            ))}
+            <p>
+              The archive is a retrospective source snapshot. It does not update
+              current roster status or add historical knowledge to the forecast
+              ledger. The earliest and latest records here may not span a full
+              college career.
+            </p>
+            <details>
+              <summary>Source receipts and coverage</summary>
+              {data.sources.map((s) => (
+                <p key={s.dataset}>
+                  <a href={s.url}>
+                    {s.dataset} / {s.season} · SportsDataverse ↗
+                  </a>
+                  <br />
+                  <small>Retrieved {date(s.fetched_at)}</small>
+                  <br />
+                  <small className="source-hash">SHA-256 {s.sha256}</small>
+                </p>
+              ))}
+              <p>
+                CC BY 4.0, as stated by the publisher. Silvermine normalizes
+                fields and calculates the displayed summaries.
+              </p>
+            </details>
           </section>
-          <p className="note">
-            Source: SportsDataverse bulk releases (CC BY 4.0). NBA-style,
-            publisher-computed metrics in the season table retain their source
-            labels; they may use formulas that differ from our displayed college
-            estimates.
-          </p>
         </>
+      )}
+      {id && (
+        <section className="section">
+          <button
+            className="button secondary"
+            aria-expanded={legacy || missing}
+            onClick={() => setLegacy(!legacy)}
+          >
+            Publisher season stats & roster observations {legacy ? "−" : "+"}
+          </button>
+          {(legacy || missing) && (
+            <div className="section">
+              <LegacyRecords />
+            </div>
+          )}
+        </section>
       )}
     </>
   );

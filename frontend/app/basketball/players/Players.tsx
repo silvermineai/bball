@@ -1,32 +1,83 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { BBPlayer } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
-export default function Players() {
-  const { data, error } = useBasketballRelease<{ players: BBPlayer[] }>(
-    "players",
-  );
+import {
+  rankProduction,
+  seasonLabel,
+  type CareerCatalog,
+} from "../../_lib/careers";
+export default function Players({ catalog }: { catalog: CareerCatalog }) {
+  const [season, setSeason] = useState("2026");
+  useEffect(() => {
+    setSeason(
+      new URLSearchParams(window.location.search).get("season") || "2026",
+    );
+  }, []);
+  const coverage = catalog.seasons.find((s) => String(s.season) === season);
+  const { data, error } = useBasketballRelease<{
+    season: number;
+    players: BBPlayer[];
+  }>(`history/players-${coverage ? season : "unsupported"}`);
   const [q, setQ] = useState(""),
     [sort, setSort] = useState("ppg"),
     [qualified, setQualified] = useState(true),
     [page, setPage] = useState(0);
-  const rows = (data?.players || [])
-    .filter(
-      (p) =>
-        (p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()) &&
-        (!qualified || p.qualified),
-    )
-    .sort((a, b) => {
-      const key = sort as "ppg" | "rpg" | "apg" | "ts" | "mpg";
-      return (
-        (b[key] ?? -999) - (a[key] ?? -999) || a.name.localeCompare(b.name)
-      );
-    });
+  const sortKey = sort as "ppg" | "rpg" | "apg" | "ts" | "mpg";
+  const rows = rankProduction(
+    (data?.season === +season ? data.players : []).filter(
+      (p) => !qualified || p.qualified,
+    ),
+    (p) => p[sortKey],
+  ).filter((p) =>
+    (p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()),
+  );
   return (
     <>
+      <div className="strip">
+        <div>
+          <strong>{catalog.seasons.length}</strong>
+          <span>Source seasons · coverage varies</span>
+        </div>
+        <div>
+          <strong>{catalog.player_ids.toLocaleString()}</strong>
+          <span>Distinct archived source identities</span>
+        </div>
+        <div>
+          <strong>{coverage?.appearance_games.toLocaleString() ?? "—"}</strong>
+          <span>Selected season · games with playing records</span>
+        </div>
+        <div>
+          <strong>
+            {coverage?.completed_schedule_games.toLocaleString() ?? "—"}
+          </strong>
+          <span>Selected season · completed schedule entries</span>
+        </div>
+      </div>
       <div className="toolbar">
+        <label className="control">
+          <span>STAT SEASON</span>
+          <select
+            value={season}
+            onChange={(e) => {
+              setSeason(e.target.value);
+              const url = new URL(window.location.href);
+              url.searchParams.set("season", e.target.value);
+              window.history.replaceState(null, "", url);
+              setPage(0);
+            }}
+          >
+            {!coverage && <option value={season}>Unsupported season</option>}
+            {catalog.seasons.map((s) => (
+              <option key={s.season} value={s.season}>
+                {seasonLabel(s.season)} ·{" "}
+                {s.player_team_entries.toLocaleString()} player/program records
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="control">
           <span>PLAYER OR PROGRAM</span>
           <input
@@ -70,13 +121,53 @@ export default function Players() {
       <p className="note" style={{ marginBottom: 20 }}>
         TS uses PTS / [2 × (FGA + 0.475 FTA)]. This is an estimate; the college
         free-throw coefficient differs from the commonly used NBA 0.44.
-        Incomplete totals remain unavailable.
+        Incomplete totals remain unavailable. Stat ranks use this season and
+        qualification setting before search filters; ties share rank. The source
+        includes some opponents outside Division I.
       </p>
+      {coverage &&
+        coverage.appearance_games < coverage.completed_schedule_games * 0.8 && (
+          <p className="career-coverage-warning">
+            Sparse source coverage: only{" "}
+            {coverage.appearance_games.toLocaleString()} games with recorded
+            player appearances against{" "}
+            {coverage.completed_schedule_games.toLocaleString()} completed
+            schedule entries. Treat these as partial samples, not full-season
+            rankings.
+          </p>
+        )}
+      <details className="career-coverage-details">
+        <summary>Archive coverage by season</summary>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Season</th>
+                <th>Identified box rows</th>
+                <th>Games with playing records</th>
+                <th>Completed schedule</th>
+                <th>Missing identities</th>
+              </tr>
+            </thead>
+            <tbody>
+              {catalog.seasons.map((s) => (
+                <tr key={s.season}>
+                  <td>{seasonLabel(s.season)}</td>
+                  <td>{s.identified_rows.toLocaleString()}</td>
+                  <td>{s.appearance_games.toLocaleString()}</td>
+                  <td>{s.completed_schedule_games.toLocaleString()}</td>
+                  <td>{s.missing_identity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
       {error ? (
         <p role="alert" className="status-error">
           {error}
         </p>
-      ) : !data ? (
+      ) : !data || data.season !== +season ? (
         <p role="status" className="empty">
           Loading player statistics…
         </p>
@@ -86,6 +177,7 @@ export default function Players() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>Stat rank</th>
                   <th>Player / program</th>
                   <th>Pos.</th>
                   {[
@@ -109,8 +201,11 @@ export default function Players() {
               <tbody>
                 {rows.slice(page * 40, page * 40 + 40).map((p) => (
                   <tr key={`${p.id}-${p.team_id}`}>
+                    <td className="rank-number">{p.statRank ?? "—"}</td>
                     <td>
-                      <Link href={`/basketball/player/?id=${p.id}`}>
+                      <Link
+                        href={`/basketball/player/?id=${p.id}&season=${season}`}
+                      >
                         {p.name}
                       </Link>
                       <small>{p.team}</small>
@@ -142,8 +237,8 @@ export default function Players() {
           )}
           <div className="pagination">
             <span>
-              {rows.length.toLocaleString()} players · page {page + 1} of{" "}
-              {Math.max(1, Math.ceil(rows.length / 40))}
+              {rows.length.toLocaleString()} player/program records · page{" "}
+              {page + 1} of {Math.max(1, Math.ceil(rows.length / 40))}
             </span>
             <div>
               <button

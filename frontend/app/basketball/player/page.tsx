@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { Suspense } from "react";
 import Player from "./Player";
 export const metadata = {
@@ -7,7 +9,17 @@ export const metadata = {
 export default function Page() {
   return (
     <Suspense fallback={<p>Loading player…</p>}>
-      <Player />
+      <Player
+        catalog={JSON.parse(
+          fs.readFileSync(
+            path.join(
+              process.cwd(),
+              "public/data/basketball/history/index.json",
+            ),
+            "utf8",
+          ),
+        )}
+      />
     </Suspense>
   );
 }
