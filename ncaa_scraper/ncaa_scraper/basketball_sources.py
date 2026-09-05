@@ -4,6 +4,7 @@ from .football_sources import ATTRIBUTION, ROOT, ReleaseClient
 
 PREFIX = "espn_mens_college_basketball_"
 DATASETS = {
+    "pbp": (PREFIX + "pbp", "play_by_play_{year}.parquet"),
     "schedule": (PREFIX + "schedules", "mbb_schedule_{year}.parquet"),
     "team_box": (PREFIX + "team_boxscores", "team_box_{year}.parquet"),
     "player_box": (PREFIX + "player_boxscores", "player_box_{year}.parquet"),

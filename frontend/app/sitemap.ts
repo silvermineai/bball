@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/ratings/",
     "/basketball/programs/",
     "/basketball/compare/",
+    "/basketball/shooting/",
     ...getScoutIndex().teams.map((t) => `/basketball/programs/${t.id}/`),
     "/basketball/players/",
     "/basketball/recruiting/",

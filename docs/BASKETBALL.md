@@ -43,6 +43,8 @@ Possession pace is normalized to 40 minutes using the final period count, includ
 
 ## Player and team statistics
 
+The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from 2.9 million bulk play-by-play events, with program/player court maps, shot labels, event logs and exact box-score reconciliation. Its source release is archived in R2; versioned shot evidence is served from D1.
+
 The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.
 
 The player index exposes PPG, RPG, APG, steals, blocks, turnovers, minutes, eFG%, estimated TS% and 3P%. Default qualification is 15 games and 400 recorded minutes, with complete fields. DNP rows remain accessible in game logs. TS uses the same disclosed 0.475 college free-throw coefficient.
@@ -72,7 +74,7 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 ## Remaining full-goal work
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
-- Expand and audit historical player-game coverage, play-by-play, shot locations and lineup statistics; extend the new program dossiers and comparisons with those sources.
+- Expand historical player-game and play-by-play seasons, add possession/lineup analysis, and improve location validation beyond the new 2025–26 shooting lab.
 - Add dated roster/efficiency features and rolling evaluations. The [shared ledger](RESEARCH_LEDGER.md) now implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Finish migrating remaining basketball archive tools to Next.js.

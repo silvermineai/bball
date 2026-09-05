@@ -50,6 +50,12 @@ export default async function Page({
             </Link>
             <Link
               className="hero-link"
+              href={`/basketball/shooting/?team=${p.id}`}
+            >
+              Shooting lab →
+            </Link>
+            <Link
+              className="hero-link"
               href={`/basketball/matchups/?team=${encodeURIComponent(p.name)}`}
             >
               Upcoming schedule →

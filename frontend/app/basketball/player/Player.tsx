@@ -82,6 +82,11 @@ export default function Player() {
           ESPN source identity · {id || "No player selected"}
         </div>
         <h1>{data?.player.name || "Player record"}</h1>
+        {id && (
+          <Link className="button" href={`/basketball/shooting/?player=${id}`}>
+            Explore shooting evidence ↗
+          </Link>
+        )}
         <p>
           Game-by-game source statistics, published season totals and roster
           observations. A future-season listing is not confirmation of current
