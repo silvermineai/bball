@@ -74,10 +74,13 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           <div className="recruiting-scope">
             <span className="eyebrow">Coverage / Selected announcements</span>
             <p>
-              Arizona, Houston, Kentucky, Michigan and UConn. This is a growing
-              research file; even these programs’ classes may be incomplete. An
-              absent player or school means no reviewed record here. Additions
-              are not a count of available players.
+              {[...data.programs]
+                .map((p) => p.name)
+                .sort((a, b) => a.localeCompare(b))
+                .join(", ")}
+              . This is a growing research file; even these programs’ classes
+              may be incomplete. An absent player or school means no reviewed
+              record here. Additions are not a count of available players.
             </p>
             <small>
               Source review: {publicationDate(data.reviewed_at)} · These
@@ -158,19 +161,18 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     {publicationDate(p.latest.source.published_on)}
                   </time>
                 </div>
+                <p className="recruiting-eligibility">{p.latest.summary}</p>
                 {p.latest.kind === "addition" && (
                   <p className="recruiting-eligibility">
                     School-announced addition for 2026–27. Current eligibility
                     and availability are not verified here.
                   </p>
                 )}
-                {p.latest.kind !== "addition" && (
-                  <p className="recruiting-eligibility">{p.latest.summary}</p>
-                )}
                 {p.stats ? (
                   <div className="recruiting-history">
                     <span className="eyebrow">
-                      2025–26 / {p.stats.team} / {p.stats.games} recorded games
+                      2025–26 / {p.stats.team} / {p.stats.games} recorded{" "}
+                      {p.stats.games === 1 ? "game" : "games"}
                     </span>
                     <div className="recruiting-metrics">
                       <div>
@@ -190,6 +192,12 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         <span>MIN / G</span>
                       </div>
                     </div>
+                    {p.stats.games < 10 && (
+                      <small>
+                        Limited sample: fewer than 10 recorded games. These
+                        averages do not establish a full-season role.
+                      </small>
+                    )}
                     <Link href={`/basketball/player/?id=${p.stats.id}`}>
                       Historical player file →
                     </Link>

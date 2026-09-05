@@ -17,6 +17,9 @@ PRIOR_ALIASES = {
     "Jacksonville State": "Jax State",
     "Northern Arizona": "N Arizona",
     "Purdue Fort Wayne": "Purdue FW",
+    "Arizona State": "Arizona St",
+    "Seattle": "Seattle U",
+    "College of Charleston": "Charleston",
 }
 KINDS = {"addition", "redshirt_announced", "season_unavailable"}
 

@@ -23,7 +23,7 @@ class RecruitingTests(unittest.TestCase):
 
     def test_reviewed_links_and_missing_stats(self):
         release = build(self.doc, self.box, self.programs)
-        self.assertEqual(release["coverage"]["historical_links"], 17)
+        self.assertEqual(release["coverage"]["historical_links"], 28)
         self.assertFalse(release["coverage"]["complete_national_coverage"])
         self.assertTrue(
             all(
@@ -32,6 +32,26 @@ class RecruitingTests(unittest.TestCase):
                 if p["category"] != "transfer"
             )
         )
+
+    def test_redshirt_and_same_name_prep_do_not_inherit_college_production(self):
+        release = build(self.doc, self.box, self.programs)
+        people = {p["key"]: p for p in release["people"]}
+        self.assertIsNone(people["2509-caden-pierce"]["stats"])
+        self.assertIsNone(people["2305-trent-perry"]["stats"])
+        self.assertEqual(people["2305-trent-perry"]["category"], "freshman")
+        self.assertIsNone(people["62-jaden-matingou"]["stats"])
+        hampton = people["62-kellen-hampton"]["stats"]
+        self.assertEqual((hampton["games"], hampton["mpg"]), (1, 1.0))
+        self.assertEqual(hampton["team_id"], "279")
+
+    def test_reviewed_school_spellings_still_require_exact_player_and_team_ids(self):
+        for key in ["62-marcus-adams-jr", "62-houran-dan", "2305-christian-reeves"]:
+            with self.subTest(key=key):
+                doc = copy.deepcopy(self.doc)
+                person = next(p for p in doc["people"] if p["key"] == key)
+                person["stats_ref"]["team_id"] = "999"
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    build(doc, self.box, self.programs)
 
     def test_name_alone_cannot_join_and_duplicate_identity_fails(self):
         box = copy.deepcopy(self.box)

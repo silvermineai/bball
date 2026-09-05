@@ -4,7 +4,7 @@ The native `/basketball/recruiting/` board combines selected school announcement
 
 ## Coverage and claims
 
-The initial September 2026 review contains 27 announced additions across Arizona, Houston, Kentucky, Michigan and UConn: 17 college transfers, seven prep additions and three international additions. It also includes Michigan's planned redshirt announcement for Lincoln Cosby and subsequent season-unavailable announcement for Brandon McCoy Jr. There are 29 events from 20 school articles. Coverage is partial, including within those five programs. Counts are announced additions, not current eligible or available players. Missing records are not departures or evidence of no recruiting activity.
+The September 2026 review contains 53 announced additions across Arizona, Hawaiʻi, Houston, Kansas, Kentucky, Michigan, Purdue and UConn: 30 college transfers, 20 prep additions and three international additions. It also includes Michigan's planned redshirt announcement for Lincoln Cosby and subsequent season-unavailable announcement for Brandon McCoy Jr. There are 55 events from 31 school articles. Coverage is partial, including within those eight programs. Counts are announced additions, not current eligible or available players. Missing records are not departures or evidence of no recruiting activity.
 
 The board does not contain proprietary recruiting grades, stars, rankings, valuations, contact information, article bodies, photographs or copied biographies. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
 
@@ -14,18 +14,21 @@ The board does not contain proprietary recruiting grades, stars, rankings, valua
 
 The reviewed SIDEARM terms do not provide permission for bulk republication of school pages: https://sidearmsports.com/sports/2022/12/7/terms-of-service. Robots permission alone is not a content license. Restricted direct ESPN and NCAA automated extraction remain disabled. Historical box statistics come from the separately attributed SportsDataverse bulk releases, labeled CC BY 4.0 by the publisher.
 
-Publication dates come from displayed article dates or explicit publication metadata, not inferred transfer dates. Two source-specific issues are documented in the input and visible in expanded evidence:
+Publication dates come from displayed article dates or explicit publication metadata, not inferred transfer dates. Source-specific issues are documented in the input and visible in expanded evidence:
 
 - Michigan's J.P. Estrella URL has April 26, but the displayed publication date and announcement text say April 28, 2026. The latter is used.
 - Kentucky's Momcilovic signing article has an inconsistent closing season label. Its June 15 schedule announcement explicitly identifies him as a 2026–27 addition. UK publication dates were checked against `article:published_time` metadata.
+- Hawaiʻi's June 9 update lists arrivals whose commitments may have occurred earlier. The board records the update date. Kellen Hampton has one recorded minute in one Pacific game in the box archive; the school describes a prior redshirt season. That tiny sample is retained with a visible caveat, not treated as a full-season role or eligibility ruling. Point Loma transfer Jaden Matingou has no matching profile in the linked release.
+- Purdue's Caden Pierce announcement identifies a 2025–26 redshirt year at Princeton. No last-season stat link is manufactured from his 2024–25 production. The April 16 [Jamyn Sondrup announcement](https://purduesports.com/news/2026/04/16/sondrup-signs-with-the-boilermakers) explicitly defers his arrival until 2028–29, so he is outside this 2026–27 release.
+- Kansas's May 1 Mordini article also identifies four previously signed freshmen. Their event summaries explicitly describe that update rather than claim May 1 as the original signing date; prior schools remain unrecorded where the cited article does not supply them. Freshman Trent Perry receives no college-stat link despite sharing a name with a college player.
 
 Keep a signing and later availability statements as separate events. A planned redshirt is a school announcement, not an NCAA eligibility ruling. Current role, eligibility and availability cannot be inferred from a signing. The board shows the most recent reviewed statement; this is not a promise of real-time monitoring or an exhaustive availability review.
 
 ## Identities and history
 
-Local person keys group editorial records for one announced player/program relationship. They are not global player IDs and are never joined to NCAA or ESPN IDs automatically. A historical stats reference must explicitly identify the reviewed player, prior team and season. The publisher requires exactly one normalized full-name AND prior-program match, matching the explicit IDs. Only punctuation/diacritics and three enumerated program spelling aliases are normalized. No fuzzy names, name-only joins or new-school roster inference are used. Ambiguity or a changed source identity stops publication.
+Local person keys group editorial records for one announced player/program relationship. They are not global player IDs and are never joined to NCAA or ESPN IDs automatically. A historical stats reference must explicitly identify the reviewed player, prior team and season. The publisher requires exactly one normalized full-name AND prior-program match, matching the explicit IDs. Only punctuation/diacritics and six enumerated program spelling aliases are normalized. No fuzzy names, name-only joins or new-school roster inference are used. Ambiguity or a changed source identity stops publication.
 
-Historical per-game statistics retain season, previous team, game count and incomplete-box count. They describe recorded appearances in 2025–26; they are not predicted production at the destination school. The public release includes a canonical JSON hash (sorted keys, compact separators, UTF-8) of the whole historical player release to identify the exact linked edition.
+There are 28 reviewed historical links. Historical per-game statistics retain season, previous team, game count and incomplete-box count. These statistics describe recorded appearances in 2025–26; they are not predicted production at the destination school. The board highlights samples below ten games and shows each latest statement without requiring the evidence drawer to be opened. The public release includes a canonical JSON hash (sorted keys, compact separators, UTF-8) of the whole historical player release to identify the exact linked edition.
 
 ## Storage and publishing
 

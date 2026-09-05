@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "season": 2027,
-  "reviewed_at": "2026-09-05T06:47:40.047960+00:00",
+  "reviewed_at": "2026-09-05T08:29:47.820523+00:00",
   "coverage": {
-    "programs": 5,
-    "players": 27,
-    "events": 29,
-    "sources": 20,
-    "historical_links": 17,
+    "programs": 8,
+    "players": 53,
+    "events": 55,
+    "sources": 31,
+    "historical_links": 28,
     "complete_national_coverage": false
   },
   "methodology": "Selected school announcements, independently summarized. Publication dates are not effective transfer dates. A signing does not establish eligibility or current availability. Coverage is partial, including within listed programs. These records do not change model forecasts.",
@@ -48,6 +48,24 @@
       "name": "Arizona",
       "host": "arizonawildcats.com",
       "publisher": "Arizona Athletics"
+    },
+    {
+      "id": "62",
+      "name": "Hawai'i",
+      "host": "hawaiiathletics.com",
+      "publisher": "Hawaiʻi Athletics"
+    },
+    {
+      "id": "2509",
+      "name": "Purdue",
+      "host": "purduesports.com",
+      "publisher": "Purdue Athletics"
+    },
+    {
+      "id": "2305",
+      "name": "Kansas",
+      "host": "kuathletics.com",
+      "publisher": "Kansas Athletics"
     }
   ],
   "sources": [
@@ -270,6 +288,127 @@
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
       "review_note": null
+    },
+    {
+      "id": "hawaii-june-additions",
+      "team_id": "62",
+      "url": "https://hawaiiathletics.com/news/2026/6/9/mens-basketball-announces-2026-27-roster-additions.aspx",
+      "title": "Men's Basketball Announces 2026-27 Roster Additions",
+      "publisher": "Hawaiʻi Athletics",
+      "published_on": "2026-06-09",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": "This is a June roster-addition update; its publication date is not the original commitment date for every player. Historical box totals remain a separate source."
+    },
+    {
+      "id": "purdue-pierce",
+      "team_id": "2509",
+      "url": "https://purduesports.com/news/2026/04/7/pierce-signs-with-the-boilermakers-for-the-2026-27-season",
+      "title": "Pierce Signs With the Boilermakers for the 2026-27 Season",
+      "publisher": "Purdue Athletics",
+      "published_on": "2026-04-07",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "purdue-three-prep",
+      "team_id": "2509",
+      "url": "https://purduesports.com/news/2025/11/12/painter-inks-3-as-part-of-2026-recruiting-class",
+      "title": "Painter Inks 3 as Part of 2026 Recruiting Class",
+      "publisher": "Purdue Athletics",
+      "published_on": "2025-11-12",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "purdue-huan",
+      "team_id": "2509",
+      "url": "https://purduesports.com/news/2025/11/12/huan-signs-paperwork-to-join-class-of-2026",
+      "title": "Huan Signs Paperwork to Join Class of 2026",
+      "publisher": "Purdue Athletics",
+      "published_on": "2025-11-12",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-dawes",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/4/21/mens-basketball-dawes-signs-with-kansas-mens-basketball",
+      "title": "Dawes Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-04-21",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-blyden",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/4/22/mens-basketball-blyden-signs-with-kansas-mens-basketball",
+      "title": "Blyden Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-04-22",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-stokes",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/4/29/mens-basketball-stokes-signs-with-kansas-mens-basketball",
+      "title": "Stokes Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-04-29",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-reeves",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/5/1/mens-basketball-reeves-signs-with-kansas-mens-basketball",
+      "title": "Reeves Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-05-01",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-parker",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/5/11/mens-basketball-parker-signs-with-kansas-mens-basketball",
+      "title": "Parker Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-05-11",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-richmond",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/5/12/mens-basketball-richmond-signs-with-kansas-mens-basketball",
+      "title": "Richmond Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-05-12",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kansas-grant-mordini",
+      "team_id": "2305",
+      "url": "https://kuathletics.com/news/2026/5/1/mens-basketball-grant-mordini-signs-with-kansas-mens-basketball",
+      "title": "Grant Mordini Signs with Kansas Men’s Basketball",
+      "publisher": "Kansas Athletics",
+      "published_on": "2026-05-01",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "review_note": "This article also identifies previously signed freshmen; their listed event date is this update, not an inferred original signing date."
     }
   ],
   "people": [
@@ -709,6 +848,357 @@
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
+    },
+    {
+      "key": "62-marcus-adams-jr",
+      "name": "Marcus Adams Jr.",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Arizona State",
+      "stats": {
+        "id": "5142326",
+        "team_id": "9",
+        "team": "Arizona St",
+        "season": 2026,
+        "games": 14,
+        "mpg": 11.7,
+        "ppg": 3.6,
+        "rpg": 2.4,
+        "apg": 0.2,
+        "efg": 0.43902439024390244,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-houran-dan",
+      "name": "Houran Dan",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Seattle",
+      "stats": {
+        "id": "5241344",
+        "team_id": "2547",
+        "team": "Seattle U",
+        "season": 2026,
+        "games": 35,
+        "mpg": 15.0,
+        "ppg": 5.7,
+        "rpg": 2.5,
+        "apg": 0.3,
+        "efg": 0.5882352941176471,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-zack-davidson",
+      "name": "Zack Davidson",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Northern Arizona",
+      "stats": {
+        "id": "5177696",
+        "team_id": "2464",
+        "team": "N Arizona",
+        "season": 2026,
+        "games": 14,
+        "mpg": 23.6,
+        "ppg": 14.0,
+        "rpg": 4.8,
+        "apg": 0.8,
+        "efg": 0.6203007518796992,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-bol-dengdit",
+      "name": "Bol Dengdit",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "UC San Diego",
+      "stats": {
+        "id": "5105426",
+        "team_id": "28",
+        "team": "UC San Diego",
+        "season": 2026,
+        "games": 34,
+        "mpg": 23.4,
+        "ppg": 10.7,
+        "rpg": 5.2,
+        "apg": 1.7,
+        "efg": 0.5269784172661871,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-kellen-hampton",
+      "name": "Kellen Hampton",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Pacific",
+      "stats": {
+        "id": "5144130",
+        "team_id": "279",
+        "team": "Pacific",
+        "season": 2026,
+        "games": 1,
+        "mpg": 1.0,
+        "ppg": 0.0,
+        "rpg": 0.0,
+        "apg": 0.0,
+        "efg": null,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and Pacific identity. The box archive records one minute in one game; this is not a full-season production sample or an eligibility determination."
+      }
+    },
+    {
+      "key": "62-manie-joses",
+      "name": "Manie Joses",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Davidson",
+      "stats": {
+        "id": "5239519",
+        "team_id": "2166",
+        "team": "Davidson",
+        "season": 2026,
+        "games": 31,
+        "mpg": 9.5,
+        "ppg": 1.8,
+        "rpg": 2.2,
+        "apg": 0.5,
+        "efg": 0.5930232558139535,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-jaden-matingou",
+      "name": "Jaden Matingou",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Point Loma",
+      "stats": null
+    },
+    {
+      "key": "62-chance-trujillo",
+      "name": "Chance Trujillo",
+      "team_id": "62",
+      "category": "transfer",
+      "previous_program": "Utah Tech",
+      "stats": {
+        "id": "4897982",
+        "team_id": "3101",
+        "team": "Utah Tech",
+        "season": 2026,
+        "games": 33,
+        "mpg": 32.9,
+        "ppg": 12.3,
+        "rpg": 3.4,
+        "apg": 2.7,
+        "efg": 0.5262345679012346,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "62-scotty-belnap",
+      "name": "Scotty Belnap",
+      "team_id": "62",
+      "category": "freshman",
+      "previous_program": "Mater Dei High School",
+      "stats": null
+    },
+    {
+      "key": "62-tiger-cuff",
+      "name": "Tiger Cuff",
+      "team_id": "62",
+      "category": "freshman",
+      "previous_program": "American Fork High School",
+      "stats": null
+    },
+    {
+      "key": "2509-caden-pierce",
+      "name": "Caden Pierce",
+      "team_id": "2509",
+      "category": "transfer",
+      "previous_program": "Princeton",
+      "stats": null
+    },
+    {
+      "key": "2509-luke-ertel",
+      "name": "Luke Ertel",
+      "team_id": "2509",
+      "category": "freshman",
+      "previous_program": "Mount Vernon High School",
+      "stats": null
+    },
+    {
+      "key": "2509-jacob-webber",
+      "name": "Jacob Webber",
+      "team_id": "2509",
+      "category": "freshman",
+      "previous_program": "La Lumiere School",
+      "stats": null
+    },
+    {
+      "key": "2509-rivers-knight",
+      "name": "Rivers Knight",
+      "team_id": "2509",
+      "category": "freshman",
+      "previous_program": "La Lumiere School",
+      "stats": null
+    },
+    {
+      "key": "2509-sinan-huan",
+      "name": "Sinan Huan",
+      "team_id": "2509",
+      "category": "freshman",
+      "previous_program": "Georgetown Prep",
+      "stats": null
+    },
+    {
+      "key": "2305-keanu-dawes",
+      "name": "Keanu Dawes",
+      "team_id": "2305",
+      "category": "transfer",
+      "previous_program": "Utah",
+      "stats": {
+        "id": "5060685",
+        "team_id": "254",
+        "team": "Utah",
+        "season": 2026,
+        "games": 32,
+        "mpg": 30.7,
+        "ppg": 12.5,
+        "rpg": 8.8,
+        "apg": 2.2,
+        "efg": 0.6051660516605166,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2305-leroy-blyden-jr",
+      "name": "Leroy Blyden Jr.",
+      "team_id": "2305",
+      "category": "transfer",
+      "previous_program": "Toledo",
+      "stats": {
+        "id": "5314225",
+        "team_id": "2649",
+        "team": "Toledo",
+        "season": 2026,
+        "games": 34,
+        "mpg": 33.4,
+        "ppg": 16.4,
+        "rpg": 4.0,
+        "apg": 4.5,
+        "efg": 0.5543478260869565,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2305-christian-reeves",
+      "name": "Christian Reeves",
+      "team_id": "2305",
+      "category": "transfer",
+      "previous_program": "College of Charleston",
+      "stats": {
+        "id": "5105444",
+        "team_id": "232",
+        "team": "Charleston",
+        "season": 2026,
+        "games": 31,
+        "mpg": 21.4,
+        "ppg": 11.1,
+        "rpg": 7.8,
+        "apg": 0.4,
+        "efg": 0.6540284360189573,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2305-dennis-parker-jr",
+      "name": "Dennis Parker Jr.",
+      "team_id": "2305",
+      "category": "transfer",
+      "previous_program": "Radford",
+      "stats": {
+        "id": "4848630",
+        "team_id": "2515",
+        "team": "Radford",
+        "season": 2026,
+        "games": 32,
+        "mpg": 29.2,
+        "ppg": 18.2,
+        "rpg": 5.9,
+        "apg": 1.3,
+        "efg": 0.5577395577395577,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2305-tyran-stokes",
+      "name": "Tyran Stokes",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": "Rainier Beach High School",
+      "stats": null
+    },
+    {
+      "key": "2305-atticus-richmond",
+      "name": "Atticus Richmond",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": "Newman School",
+      "stats": null
+    },
+    {
+      "key": "2305-grant-mordini",
+      "name": "Grant Mordini",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": "Avon Old Farms School",
+      "stats": null
+    },
+    {
+      "key": "2305-davion-adkins",
+      "name": "Davion Adkins",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "2305-luke-barnett",
+      "name": "Luke Barnett",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "2305-taylen-kinney",
+      "name": "Taylen Kinney",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "2305-trent-perry",
+      "name": "Trent Perry",
+      "team_id": "2305",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
     }
   ],
   "events": [
@@ -914,7 +1404,189 @@
       "kind": "addition",
       "source_id": "arizona-dixon",
       "summary": "Arizona announced Derek Dixon as a 2026–27 addition."
+    },
+    {
+      "id": "62-marcus-adams-jr-addition",
+      "person_key": "62-marcus-adams-jr",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Marcus Adams Jr. in its June roster-addition update."
+    },
+    {
+      "id": "62-houran-dan-addition",
+      "person_key": "62-houran-dan",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Houran Dan in its June roster-addition update."
+    },
+    {
+      "id": "62-zack-davidson-addition",
+      "person_key": "62-zack-davidson",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Zack Davidson in its June roster-addition update."
+    },
+    {
+      "id": "62-bol-dengdit-addition",
+      "person_key": "62-bol-dengdit",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Bol Dengdit in its June roster-addition update."
+    },
+    {
+      "id": "62-kellen-hampton-addition",
+      "person_key": "62-kellen-hampton",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Kellen Hampton in its June roster-addition update. The school describes a prior Pacific redshirt season; the archive records one minute in one game."
+    },
+    {
+      "id": "62-manie-joses-addition",
+      "person_key": "62-manie-joses",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Manie Joses in its June roster-addition update."
+    },
+    {
+      "id": "62-jaden-matingou-addition",
+      "person_key": "62-jaden-matingou",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Jaden Matingou in its June roster-addition update. No matching 2025–26 college box profile is available in this release."
+    },
+    {
+      "id": "62-chance-trujillo-addition",
+      "person_key": "62-chance-trujillo",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Chance Trujillo in its June roster-addition update."
+    },
+    {
+      "id": "62-scotty-belnap-addition",
+      "person_key": "62-scotty-belnap",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Scotty Belnap in its June roster-addition update."
+    },
+    {
+      "id": "62-tiger-cuff-addition",
+      "person_key": "62-tiger-cuff",
+      "kind": "addition",
+      "source_id": "hawaii-june-additions",
+      "summary": "Hawaiʻi included Tiger Cuff in its June roster-addition update."
+    },
+    {
+      "id": "2509-caden-pierce-addition",
+      "person_key": "2509-caden-pierce",
+      "kind": "addition",
+      "source_id": "purdue-pierce",
+      "summary": "Purdue announced Caden Pierce for 2026–27 after a 2025–26 redshirt year at Princeton. No 2025–26 box profile is linked; his earlier production is not last-season production."
+    },
+    {
+      "id": "2509-luke-ertel-addition",
+      "person_key": "2509-luke-ertel",
+      "kind": "addition",
+      "source_id": "purdue-three-prep",
+      "summary": "Purdue announced Luke Ertel as a 2026–27 addition."
+    },
+    {
+      "id": "2509-jacob-webber-addition",
+      "person_key": "2509-jacob-webber",
+      "kind": "addition",
+      "source_id": "purdue-three-prep",
+      "summary": "Purdue announced Jacob Webber as a 2026–27 addition."
+    },
+    {
+      "id": "2509-rivers-knight-addition",
+      "person_key": "2509-rivers-knight",
+      "kind": "addition",
+      "source_id": "purdue-three-prep",
+      "summary": "Purdue announced Rivers Knight as a 2026–27 addition."
+    },
+    {
+      "id": "2509-sinan-huan-addition",
+      "person_key": "2509-sinan-huan",
+      "kind": "addition",
+      "source_id": "purdue-huan",
+      "summary": "Purdue announced Sinan Huan as a 2026–27 addition."
+    },
+    {
+      "id": "2305-keanu-dawes-addition",
+      "person_key": "2305-keanu-dawes",
+      "kind": "addition",
+      "source_id": "kansas-dawes",
+      "summary": "Kansas announced Keanu Dawes as a 2026–27 addition."
+    },
+    {
+      "id": "2305-leroy-blyden-jr-addition",
+      "person_key": "2305-leroy-blyden-jr",
+      "kind": "addition",
+      "source_id": "kansas-blyden",
+      "summary": "Kansas announced Leroy Blyden Jr. as a 2026–27 addition."
+    },
+    {
+      "id": "2305-christian-reeves-addition",
+      "person_key": "2305-christian-reeves",
+      "kind": "addition",
+      "source_id": "kansas-reeves",
+      "summary": "Kansas announced Christian Reeves as a 2026–27 addition."
+    },
+    {
+      "id": "2305-dennis-parker-jr-addition",
+      "person_key": "2305-dennis-parker-jr",
+      "kind": "addition",
+      "source_id": "kansas-parker",
+      "summary": "Kansas announced Dennis Parker Jr. as a 2026–27 addition."
+    },
+    {
+      "id": "2305-tyran-stokes-addition",
+      "person_key": "2305-tyran-stokes",
+      "kind": "addition",
+      "source_id": "kansas-stokes",
+      "summary": "Kansas announced Tyran Stokes as a 2026–27 addition."
+    },
+    {
+      "id": "2305-atticus-richmond-addition",
+      "person_key": "2305-atticus-richmond",
+      "kind": "addition",
+      "source_id": "kansas-richmond",
+      "summary": "Kansas announced Atticus Richmond as a 2026–27 addition."
+    },
+    {
+      "id": "2305-grant-mordini-addition",
+      "person_key": "2305-grant-mordini",
+      "kind": "addition",
+      "source_id": "kansas-grant-mordini",
+      "summary": "Kansas announced Grant Mordini as a 2026–27 addition."
+    },
+    {
+      "id": "2305-davion-adkins-addition",
+      "person_key": "2305-davion-adkins",
+      "kind": "addition",
+      "source_id": "kansas-grant-mordini",
+      "summary": "Kansas identified Davion Adkins among its previously signed freshmen in the May 1 update."
+    },
+    {
+      "id": "2305-luke-barnett-addition",
+      "person_key": "2305-luke-barnett",
+      "kind": "addition",
+      "source_id": "kansas-grant-mordini",
+      "summary": "Kansas identified Luke Barnett among its previously signed freshmen in the May 1 update."
+    },
+    {
+      "id": "2305-taylen-kinney-addition",
+      "person_key": "2305-taylen-kinney",
+      "kind": "addition",
+      "source_id": "kansas-grant-mordini",
+      "summary": "Kansas identified Taylen Kinney among its previously signed freshmen in the May 1 update."
+    },
+    {
+      "id": "2305-trent-perry-addition",
+      "person_key": "2305-trent-perry",
+      "kind": "addition",
+      "source_id": "kansas-grant-mordini",
+      "summary": "Kansas identified Trent Perry among its previously signed freshmen in the May 1 update."
     }
   ],
-  "edition": "654ddf97b8968d9996ca3219ab315cceed8704a622b3604151100314bef372b1"
+  "edition": "8403d403ba27c7a5f2b9db4db5b15266e6bccbace33a3654dc8ec546f941746c"
 }
