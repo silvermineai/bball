@@ -1,4 +1,5 @@
 import { getBasketball } from "./_lib/basketball-data";
+import { getScoutIndex } from "./_lib/scouting-data";
 import type { MetadataRoute } from "next";
 import { getOverview } from "./_lib/data";
 export const dynamic = "force-static";
@@ -11,6 +12,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/research/scorecard/",
     "/basketball/",
     "/basketball/ratings/",
+    "/basketball/programs/",
+    "/basketball/compare/",
+    ...getScoutIndex().teams.map((t) => `/basketball/programs/${t.id}/`),
     "/basketball/players/",
     "/basketball/recruiting/",
     "/basketball/impact/",

@@ -72,11 +72,7 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
               <tr key={t.id}>
                 <td className="rank-number">{t.rank}</td>
                 <td>
-                  <Link
-                    href={`/basketball/matchups/?team=${encodeURIComponent(t.name)}`}
-                  >
-                    {t.name}
-                  </Link>
+                  <Link href={`/basketball/programs/${t.id}/`}>{t.name}</Link>
                   <small>
                     {t.wins}–{t.games - t.wins} in paired box-score games
                   </small>

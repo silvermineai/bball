@@ -29,6 +29,8 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Basketball desk | `/basketball/` | Upcoming forecasts, ratings and research coverage |
 | Matchups | `/basketball/matchups/` | 1,579 forecasts for 2026–27, with score ranges and matchup briefs |
 | Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and four factors |
+| Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
+| Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios and historical factor comparisons |
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
 | Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
@@ -40,6 +42,8 @@ The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** a
 Existing basketball URLs such as `/scout/333` redirect to their corresponding archive route. Native pages replace the old desk, player index and recruiting landing pages; the remaining scouting tools use the preserved application.
 
 See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
+
+See [program scouting definitions and publishing workflow](docs/BASKETBALL_SCOUTING.md) for pooled Four Factors, workload estimates and scenario-model parity checks.
 
 ## Forecast record
 

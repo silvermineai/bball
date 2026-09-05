@@ -57,6 +57,20 @@ run(
         str(ROOT / ".local/research-ledger.sql"),
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_basketball_scouting.py",
+    ]
+)
+run([PY, "-m", "ncaa_scraper.basketball_scouting"])
+run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
 run(["npm", "test"], ROOT / "worker")

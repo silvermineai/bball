@@ -57,6 +57,9 @@ export type BBOverview = {
   ratings: BBTeam[];
   upcoming: BBGame[];
   model: {
+    teams: string[];
+    efficiency: number[];
+    tempo: number[];
     id: string;
     version: string;
     cutoff: string;

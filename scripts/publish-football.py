@@ -61,6 +61,7 @@ run(
         str(ROOT / ".local/research-ledger.sql"),
     ]
 )
+run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
 run(["npm", "test"], ROOT / "worker")

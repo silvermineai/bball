@@ -60,6 +60,14 @@ export default async function Page({
       </p>
       <h2>A possession-based first look.</h2>
       <p>
+        Open the{" "}
+        <Link href={`/basketball/compare/?a=${g.home_id}&b=${g.away_id}`}>
+          matchup workbench
+        </Link>{" "}
+        to compare both programs’ Four Factors, shooting profiles and historical
+        personnel.
+      </p>
+      <p>
         Silvermine’s efficiency model projects {g.away_name} {fmt(p.away_score)}
         , {g.home_name} {fmt(p.home_score)}: {favorite} ahead by{" "}
         {fmt(Math.abs(p.home_margin))} points. Estimated pace is {fmt(p.pace)}{" "}

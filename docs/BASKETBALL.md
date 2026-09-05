@@ -43,6 +43,8 @@ Possession pace is normalized to 40 minutes using the final period count, includ
 
 ## Player and team statistics
 
+The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.
+
 The player index exposes PPG, RPG, APG, steals, blocks, turnovers, minutes, eFG%, estimated TS% and 3P%. Default qualification is 15 games and 400 recorded minutes, with complete fields. DNP rows remain accessible in game logs. TS uses the same disclosed 0.475 college free-throw coefficient.
 
 Team ratings show adjusted offense, defense, net efficiency and tempo, plus pooled observed four factors. Lower adjusted defense and turnover rate are better. Schedule strength is the mean adjusted net strength of rated opponents; the number of included opponents is reported. These are independent Silvermine calculations, not KenPom or another publisher's proprietary ratings.
@@ -63,14 +65,14 @@ The publisher refreshes sources, tests, builds both frontend applications, syncs
 
 ## Release verification
 
-The release passed 14 Python ingestion/model tests, four Worker API/routing tests, Worker type checking and the combined production build. Browser checks covered desktop/mobile layouts, player search, roster view switching, matchup filters and generated briefs. Live checks verified D1 counts, player game logs and season statistics, error responses, football access and legacy scouting redirects. The frontend Vitest command currently has no test files; frontend verification used the production build and browser checks. The local Wrangler preview failed with a runtime spawn error, so Worker integration was verified on the deployed release.
+The original basketball release passed ingestion/model tests, Worker API/routing tests, Worker type checking and the combined production build. Browser checks covered desktop/mobile layouts, player search, roster view switching, matchup filters and generated briefs. Live checks verified D1 counts, player game logs and season statistics, error responses, football access and legacy scouting redirects. The scouting extension adds seven Python tests and three frontend tests, including agreement with all 1,579 published basketball forecasts. The local Wrangler preview failed with a runtime spawn error, so Worker integration is verified on the deployed release.
 
 D1 coverage queries use a batch of individual counts to stay within its compound SELECT limit. Forecast counts include preserved model snapshots; the current model has 1,579 forecasts, while the release warehouse retains 4,737 forecasts across three model versions.
 
 ## Remaining full-goal work
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
-- Expand and audit historical player-game coverage, play-by-play, shot locations and lineup statistics; expose deeper team/player reports and comparisons.
+- Expand and audit historical player-game coverage, play-by-play, shot locations and lineup statistics; extend the new program dossiers and comparisons with those sources.
 - Add dated roster/efficiency features and rolling evaluations. The [shared ledger](RESEARCH_LEDGER.md) now implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Finish migrating remaining basketball archive tools to Next.js.

@@ -121,9 +121,7 @@ export default function Page() {
                   <tr key={t.id}>
                     <td className="rank-number">{t.rank}</td>
                     <td>
-                      <Link
-                        href={`/basketball/matchups/?team=${encodeURIComponent(t.name)}`}
-                      >
+                      <Link href={`/basketball/programs/${t.id}/`}>
                         {t.name}
                       </Link>
                     </td>
