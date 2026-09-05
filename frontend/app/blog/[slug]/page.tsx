@@ -105,6 +105,10 @@ export default async function Page({
         </p>
         <h2>The market checkpoint</h2>
         <p>
+          Follow registered forecasts and observed lines in the{" "}
+          <Link href="/research/scorecard/">prospective scorecard</Link>.
+        </p>
+        <p>
           {g.market
             ? `The imported archive contains a home spread of ${fmt(g.market.home_spread)}. Its observation time is ${kick(g.market.observed_at)}, but a bookmaker publication timestamp is unavailable. Treat it as an archive reference rather than a live quote.`
             : "There is no verified pregame line for this game in the imported dataset. A model-versus-market edge cannot be reported yet. We retain the absence instead of filling it with a guessed price."}
@@ -252,6 +256,11 @@ export default async function Page({
             timestamp. At this edition, {d.coverage.pregame_market_observations}{" "}
             observations qualify as captured before kickoff. We therefore report
             no prospective market benchmark.
+          </p>
+          <p>
+            The <Link href="/research/scorecard/">forecast scorecard</Link> now
+            preserves registered predictions, source-state histories and
+            qualifying model-versus-market comparisons for both sports.
           </p>
           <h2>Keep an immutable record</h2>
           <p>

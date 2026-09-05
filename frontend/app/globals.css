@@ -834,3 +834,98 @@ summary {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.ledger-intro {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 8%;
+  padding: 48px 0;
+  border-bottom: 1px solid var(--ink);
+}
+.ledger-intro h1 {
+  font-size: clamp(48px, 5.3vw, 80px);
+  line-height: 1.05;
+  margin: 24px 0;
+}
+.ledger-intro h1 em {
+  color: var(--orange);
+}
+.ledger-intro p {
+  max-width: 580px;
+  line-height: 1.8;
+}
+.ledger-stamp {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 40px;
+  align-self: center;
+}
+.ledger-stamp strong {
+  display: block;
+  font-family: "Libre Caslon Display", Georgia, serif;
+  font-size: clamp(60px, 7vw, 100px);
+  font-weight: 400;
+  line-height: 1.2;
+}
+.ledger-stamp hr {
+  border: 0;
+  border-top: 1px solid #ffffff40;
+  margin: 24px 0;
+}
+.ledger-stamp > span:last-child {
+  font-size: 13px;
+  line-height: 1.9;
+}
+.ledger-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 20px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.ledger-metrics b {
+  padding-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-status {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: var(--green);
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.ledger-status.settled {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ledger-record {
+  margin: 22px 0;
+}
+.ledger-record h2 {
+  font-size: 32px;
+  margin: 20px 0;
+}
+.ledger-record dd,
+.ledger-record .note,
+.ledger-hash {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .ledger-intro {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 30px 0;
+  }
+  .ledger-stamp {
+    padding: 28px;
+  }
+  .ledger-metrics {
+    gap: 16px;
+  }
+  .ledger-intro h1 {
+    font-size: 48px;
+  }
+}

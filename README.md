@@ -41,6 +41,12 @@ Existing basketball URLs such as `/scout/333` redirect to their corresponding ar
 
 See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
 
+## Forecast record
+
+The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The initial ledger contains 2,323 forecasts, of which 444 have confirmed starts. No prospective result or market advantage is claimed before qualifying games settle.
+
+A credential-driven The Odds API connector records bookmaker updates and capture times, rejects ambiguous game matches and supports matched-game market comparisons. No odds credential is currently configured. See [the ledger protocol, source policy and publishing commands](docs/RESEARCH_LEDGER.md).
+
 ## Architecture
 
 ```text

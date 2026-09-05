@@ -7,6 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         "/api/",
+        "/research/game/",
         "/football/player/",
         "/basketball/player/",
         "/basketball-shell/",

@@ -37,7 +37,7 @@ FBS offensive ranks use publisher total EPA separately for passing (minimum 100 
 
 977 imported archive records currently contain **zero verified pregame observations**. Archive rows lack bookmaker publication time. Observations first collected after kickoff cannot be relabeled as historical pregame quotes or closing lines. No market advantage or prospective betting performance is reported.
 
-Home spread is negative for a home favorite; model home margin is positive for a home favorite. Their point difference is `model_home_margin + home_spread`. D1 retains prior model and forecast versions and market observations. Settlement and prospective model/market evaluation remain to be implemented.
+Home spread is negative for a home favorite; model home margin is positive for a home favorite. Their point difference is `model_home_margin + home_spread`. D1 retains prior model and forecast versions and market observations. The [shared research ledger](RESEARCH_LEDGER.md) now registers predictions and implements prospective settlement and matched-game evaluation. Live odds account validation and future real-result scoring remain pending.
 
 ## Run and publish
 
@@ -65,7 +65,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and calibrate probabilities.
-- Integrate a permitted live odds provider; settle immutable forecasts and compare only valid pregame observations.
+- Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, expose advanced defensive/specialist records, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
 - Add recurring ingestion/deployment with monitored job state; no recurring job is installed yet.

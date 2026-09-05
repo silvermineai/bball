@@ -71,7 +71,7 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
 - Expand and audit historical player-game coverage, play-by-play, shot locations and lineup statistics; expose deeper team/player reports and comparisons.
-- Add dated roster/efficiency features, rolling evaluations and prospective prediction settlement; compare against permitted, timestamped betting feeds.
+- Add dated roster/efficiency features and rolling evaluations. The [shared ledger](RESEARCH_LEDGER.md) now implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Finish migrating remaining basketball archive tools to Next.js.
 - Install monitored recurring ingestion/publishing and validate freshness against expected source coverage.

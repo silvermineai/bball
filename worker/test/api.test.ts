@@ -50,4 +50,16 @@ describe("bball api", () => {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }
   });
+
+  it("validates research history identifiers and pagination before database access", async () => {
+    for (const path of [
+      "/api/research/games/nba/123",
+      "/api/research/games/football/not-an-id",
+      "/api/research/games/basketball/123?kind=secrets",
+      "/api/research/games/football/123?page=-1",
+      "/api/research/games/football/123?page=1.5",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
 });

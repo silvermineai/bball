@@ -106,6 +106,32 @@ class ImportTests(unittest.TestCase):
             self.assertIsNone(number(value))
         self.assertEqual(number("0"), 0)
 
+    def test_future_archive_line_still_lacks_verified_provider_clock(self):
+        row = {
+            "game_id": "future",
+            "season": "2026",
+            "start_date": "2026-09-10T12:00:00Z",
+            "home_id": "2",
+            "away_id": "3",
+            "home_team": "Home",
+            "away_team": "Away",
+            "completed": "false",
+            "start_time_tbd": "false",
+        }
+        receipt = {"fetched_at": "2026-09-04T00:00:00Z"}
+        store_rows(self.conn, "schedule", 2026, [row], receipt)
+        store_rows(
+            self.conn,
+            "betting",
+            2026,
+            [{"game_id": "future", "home_team_spread": "-3.5"}],
+            receipt,
+        )
+        self.assertEqual(
+            self.conn.execute("SELECT is_pregame FROM football_markets").fetchone()[0],
+            0,
+        )
+
     def test_source_unmapped_stats_are_preserved(self):
         row = {
             "athlete_id": "7",

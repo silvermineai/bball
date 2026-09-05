@@ -105,14 +105,8 @@ def store_rows(conn, dataset, year, rows, receipt):
             )
         if dataset == "betting":
             for row in rows:
-                game = conn.execute(
-                    "SELECT completed,kickoff,time_tbd FROM football_games WHERE id=?",
-                    (row["game_id"],),
-                ).fetchone()
                 observed = receipt["fetched_at"]
-                pregame = bool(
-                    game and not game[0] and not game[2] and observed < game[1]
-                )
+                pregame = False
                 # Historical archive lacks bookmaker/time provenance. Retain, but never treat as closing/live odds.
                 conn.execute(
                     "INSERT OR IGNORE INTO football_markets VALUES (?,?,?,?,?,?,?)",

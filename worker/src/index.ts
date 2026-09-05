@@ -130,6 +130,51 @@ app.get("/api/football/coverage", async (c) => {
   return c.json({ coverage: result.results });
 });
 
+const researchHistoryQuery = z.object({
+  kind: z.enum(["predictions", "states"]).default("predictions"),
+  page: z.coerce.number().int().min(0).max(1000).default(0),
+});
+app.get(
+  "/api/research/games/:sport/:id",
+  zValidator("query", researchHistoryQuery),
+  async (c) => {
+    const { sport, id } = c.req.param();
+    if (!["football", "basketball"].includes(sport) || !/^\d{1,15}$/.test(id)) {
+      return c.json({ error: "Invalid sport or game ID" }, 400);
+    }
+    const { kind, page } = c.req.valid("query");
+    const table =
+      kind === "predictions" ? "audit_predictions" : "audit_game_states";
+    const clock = kind === "predictions" ? "registered_at" : "observed_at";
+    const [count, rows] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT count(*) AS total FROM ${table} WHERE sport=? AND game_id=?`,
+      )
+        .bind(sport, id)
+        .first<{ total: number }>(),
+      c.env.DB.prepare(
+        `SELECT * FROM ${table} WHERE sport=? AND game_id=? ORDER BY ${clock} DESC,id DESC LIMIT 25 OFFSET ?`,
+      )
+        .bind(sport, id, page * 25)
+        .all<{ payload_json: string; id: string }>(),
+    ]);
+    if (!count?.total)
+      return c.json({ error: "No registered history for this game" }, 404);
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json({
+      sport,
+      game_id: id,
+      kind,
+      page,
+      total: count.total,
+      rows: rows.results.map(({ payload_json, ...row }) => ({
+        ...row,
+        payload: JSON.parse(payload_json),
+      })),
+    });
+  },
+);
+
 const basketballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2024).max(2035).default(2026),
   page: z.coerce.number().int().min(0).max(100).default(0),

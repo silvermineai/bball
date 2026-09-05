@@ -40,6 +40,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/football/players/">Player index</Link>
             <Link href="/football/ratings/">Power ratings</Link>
             <Link href="/blog/">The journal</Link>
+            <Link href="/research/scorecard/">Forecast record</Link>
             <a href="/basketball/">Basketball ↗</a>
             <Link href="/football/methodology/">Methodology</Link>
           </nav>

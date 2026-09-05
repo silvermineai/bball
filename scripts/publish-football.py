@@ -40,6 +40,27 @@ run(
         str(ROOT / ".local/football.sql"),
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_research_ledger.py",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.research_ledger",
+        "--sql",
+        str(ROOT / ".local/research-ledger.sql"),
+    ]
+)
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
 run(["npm", "test"], ROOT / "worker")
@@ -74,4 +95,5 @@ with (ROOT / ".local/d1-publish.log").open("w") as log:
         stderr=subprocess.STDOUT,
         check=True,
     )
+run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])
