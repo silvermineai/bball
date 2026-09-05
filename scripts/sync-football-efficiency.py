@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.football import DB_PATH
+from ncaa_scraper.football_artifacts import manifest_statements, quote
 from ncaa_scraper.football_efficiency import OUT, build, encoded
 
 with sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) as conn:
@@ -60,16 +61,23 @@ for source in files["efficiency.json"]["sources"]:
         )
 
 
-def quote(s):
-    return "'" + s.replace("'", "''") + "'"
-
-
 now = datetime.now(timezone.utc).isoformat()
-remote(
-    "INSERT OR REPLACE INTO football_artifacts (name,generated_at,payload_json) VALUES ("
-    + ",".join(map(quote, ["football-efficiency", now, encoded(manifest)]))
-    + ")"
+stage, statements, activate, cleanup = manifest_statements(
+    "football-efficiency", now, encoded(manifest)
 )
+for statement in statements:
+    remote(statement)
+if (
+    json.loads(
+        remote(
+            "SELECT payload_json FROM football_artifacts WHERE name=" + quote(stage)
+        )[0]["payload_json"]
+    )
+    != manifest
+):
+    raise SystemExit("Staged artifact manifest failed verification")
+remote(activate)
+
 assert (
     json.loads(
         remote(
@@ -78,4 +86,5 @@ assert (
     )
     == manifest
 )
+remote(cleanup)
 print("Registered verified efficiency asset manifest:", manifest["edition"])

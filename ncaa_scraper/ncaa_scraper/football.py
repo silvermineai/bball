@@ -415,7 +415,11 @@ def main():
     if not args.build_only:
         client = ReleaseClient()
         for year in range(args.season - 4, args.season + 1):
-            for dataset in ["schedule"] if year < args.season - 1 else DATASETS:
+            for dataset in (
+                ["schedule", "teams", "team_advanced"]
+                if year < args.season - 1
+                else DATASETS
+            ):
                 # Required downloads fail the run instead of silently producing partial coverage.
                 rows, receipt = client.load(dataset, year, refresh=args.refresh)
                 store_rows(conn, dataset, year, rows, receipt)

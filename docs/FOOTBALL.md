@@ -53,7 +53,7 @@ The [weekly evaluation](FOOTBALL_EVALUATION.md) compares 44 historical refits wi
 
 ## Team efficiency
 
-The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 1,950 retained advanced team-game records with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. Rates remain descriptive and do not modify forecasts.
+The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 7,370 retained advanced team-game records across 2022–2026 with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. The historical expansion archives six additional source releases in R2 and verifies their complete D1 rows. Rates remain descriptive and do not modify forecasts.
 
 ## Player rankings
 

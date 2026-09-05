@@ -27,7 +27,9 @@ export default function Page() {
         <p>
           Place an offense beside the defense it will face. Compare
           play-weighted efficiency, rushing situations and explosive-play
-          counts, then trace the numbers back to individual games.
+          counts, then trace the numbers back to individual games. Explore{" "}
+          {data.seasons.length} source seasons, from{" "}
+          {Math.min(...data.seasons.map((s) => s.season))} through partial 2026.
         </p>
       </div>
       <EfficiencyDesk data={data} />

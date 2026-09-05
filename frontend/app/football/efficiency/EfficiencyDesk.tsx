@@ -600,6 +600,13 @@ export default function EfficiencyDesk({ data }: { data: EfficiencyIndex }) {
           independently verified census.
         </p>
         <p>
+          Team division comes from nonempty schedule labels within the selected
+          season. Missing or conflicting labels remain unknown. Historical
+          all-star squads can appear in the full source archive; a directory
+          label alone does not place them on the FBS board. Conference names
+          retain the source team-directory labels.
+        </p>
+        <p>
           Explosive plays and power rushes retain the publisher’s
           classification. First-down share is not down-and-distance success
           rate; line yards are not player grades. Special-teams production is

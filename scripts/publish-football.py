@@ -94,7 +94,31 @@ run(
         "test_football_efficiency.py",
     ]
 )
-run([PY, "-m", "ncaa_scraper.football_efficiency"])
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_history.py",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_artifacts.py",
+    ]
+)
+run([PY, "-m", "ncaa_scraper.football_history"])
 run([PY, "-m", "ncaa_scraper.football_evaluation"])
 run(
     [
@@ -145,6 +169,7 @@ with (ROOT / ".local/d1-publish.log").open("w") as log:
     )
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-football-events.py"])
+run([PY, "scripts/sync-football-history.py"])
 run([PY, "scripts/sync-football-efficiency.py"])
 run([PY, "scripts/archive-football-evaluation.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])

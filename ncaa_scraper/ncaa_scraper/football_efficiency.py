@@ -166,6 +166,13 @@ def season_release(rows, games, directory, season):
     profiles = []
     for tid in sorted({tid for _, tid in indexed}):
         team = directory.get(tid, {})
+        # Historical team directories can label all-star squads as FBS. Use
+        # nonempty labels on this season's actual schedule, as opponent filters do.
+        divisions = {
+            g["home_division" if tid == g["home_id"] else "away_division"]
+            for g in games.values()
+            if g["season"] == season and tid in (g["home_id"], g["away_id"])
+        } - {None, ""}
         logs = []
         schedule = [
             g
@@ -247,7 +254,7 @@ def season_release(rows, games, directory, season):
                 "season": season,
                 "id": tid,
                 "name": team.get("short_display_name") or logs[0]["raw"]["pos_team"],
-                "division": team.get("division") or "unknown",
+                "division": next(iter(divisions)) if len(divisions) == 1 else "unknown",
                 "conference": team.get("conference_short_name") or "Unknown conference",
                 "samples": samples,
                 "games": logs,
