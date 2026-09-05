@@ -33,6 +33,7 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
     [retry, setRetry] = useState(0),
     [page, setPage] = useState(0),
     [copied, setCopied] = useState("");
+  const [shareFallback, setShareFallback] = useState("");
   const cache = useRef(new Map<number, SeasonPlayers>());
   const coverage = catalog.seasons.find((s) => s.season === season);
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
   useEffect(() => {
     setPage(0);
     setCopied("");
+    setShareFallback("");
   }, [params]);
   const ready = data?.season === season ? data : null;
   const signature = boardMetrics.map((m) => weights[m.key]).join(",");
@@ -114,11 +116,15 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const share = async () => {
+    const link = new URL(window.location.href);
+    link.search = boardParams(state);
+    setShareFallback("");
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(link.href);
       setCopied("Board link copied.");
     } catch {
-      setCopied("Copy this page’s address to share your board.");
+      setShareFallback(link.href);
+      setCopied("Copy the board link below.");
     }
   };
   return (
@@ -203,6 +209,17 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
           </button>
         </div>
         {copied && <p role="status">{copied}</p>}
+        {shareFallback && (
+          <label className="control">
+            <span>BOARD SHARE LINK</span>
+            <input
+              readOnly
+              value={shareFallback}
+              onFocus={(e) => e.target.select()}
+              style={{ width: "100%" }}
+            />
+          </label>
+        )}
         <div className="toolbar board-filters">
           <label className="control">
             <span>STAT SEASON</span>
