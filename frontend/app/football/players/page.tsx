@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PlayerBrowser from "./PlayerBrowser";
 export const metadata = {
   title: "College football player statistics and rankings",
@@ -15,6 +16,12 @@ export default function Page() {
           predictions of transfer availability.
         </p>
       </div>
+      <p className="note" style={{ marginBottom: 24 }}>
+        Looking for sacks, turnovers, punting or return records? The{" "}
+        <Link href="/football/events/">defense and specialist notebook →</Link>{" "}
+        exposes additional name-attributed game records that cannot be joined to
+        these profiles by athlete ID.
+      </p>
       <PlayerBrowser />
     </>
   );

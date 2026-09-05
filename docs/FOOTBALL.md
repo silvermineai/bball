@@ -53,6 +53,29 @@ FBS offensive ranks use publisher total EPA separately for passing (minimum 100 
 
 `/api/football/players/:id?season=2025&page=0` returns up to 50 source rows with schedule context. `/api/football/coverage` returns authoritative D1 row counts. Public pages read generated static artifacts; the player log reads D1 directly.
 
+## Defensive and specialist event notebook
+
+`/football/events/` exposes the previously retained name-attributed releases: 7,925 defensive and 8,518 specialist records for 2025; 196 defensive and 149 specialist records for partial 2026. These 16,788 rows are source records, **not unique athletes**. Every current row joins to its game by game ID and to a participant by team ID. No athlete ID is present, and repeated names are never merged into career totals or linked to player profiles.
+
+The notebook supports season/type/team/division/name filters, game drilldown, metric sorting in either direction, positive-value filtering, full raw-row inspection, field coverage, source receipts and CSV downloads of the visible page. The URL preserves browsing filters. Missing metrics remain null; source zeroes and negative yardage are retained. The current 2026 specialist release has no kickoff-return fields, which the field coverage table reports explicitly.
+
+Definitions were checked against [the cfbfastR loader source](https://github.com/sportsdataverse/cfbfastR/blob/master/R/load_espn_cfb.R). `field_goals` counts attempts, not makes; zero `field_goals_yards` can reflect an unparsed distance. `punts_yards` is gross, not net yardage. These releases do not establish total tackles, defensive snaps, field-goal accuracy or complete return opportunities. Sorting a game statistic is not a player ranking.
+
+The Python builder `ncaa_scraper.football_events` reads the existing football warehouse in read-only mode and normalizes finite numeric metrics while preserving every original source field. It writes a separate ignored `.local/football-events.sqlite3`, a compact public `/data/football/events.json` index, and Cloudflare SQL. Migration `0014_football_events.sql` stores immutable source editions and rows with active-edition pointers. Each edition incorporates source receipts, normalized game context, all rows and the implementation SHA-256. Source row keys are meaningful only within their edition. Refreshes retain previous editions; activation follows row publication.
+
+`GET /api/football/events?dataset=defense&season=2025&sort=sacks&positive=1` returns at most 40 records. Optional `q`, `team`, `game`, `division`, `direction` and zero-based `page` filters are validated and bound. Literal name search uses SQLite's case-insensitive ASCII matching; percent and underscore are literal characters. `edition=football-events-…` pins queries to a retained edition and must match the requested dataset/season. Unknown editions return 404. Count and data queries read the same immutable edition. Metric paths and ordering are allow-listed; numeric nulls sort last in either direction.
+
+```bash
+PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.football_events --sql .local/football-events.sql
+PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/tests -p 'test_football_events.py'
+.venv/bin/python scripts/sync-football-events.py
+```
+
+The full football publisher rebuilds and syncs these event editions after refreshing the underlying sources. The standalone path does not regenerate forecasts or research registrations. The record audit reconciles every source row, numeric field and opponent join; tests also cover missing/zero/negative values, edition retention, SQL replay, validated API filters and safe CSV cells.
+
+The event notebook release passed three Python tests, 20 Worker tests, 26 frontend tests, Worker type checking and the combined production build. The full source audit reconciled all 16,788 rows and verified that forecasts and the research ledger remained unchanged. Fractional sack counts and sack yardage remain visible; two-decimal display precision retains every current metric exactly. Live checks compared 12 API result sets—including paging, signed yardage, nulls, literal name search and edition pins—with independently selected local records. Desktop/mobile checks covered filtering, source inspection, game drilldown, CSV downloads, URL reload and fractional yardage. An application-router test covers canonical and trailing-slash API URLs. Deployed Worker version: `03741384-11bf-47ec-9655-5b701ac0b214`.
+
+
 ## Market integrity
 
 977 imported archive records currently contain **zero verified pregame observations**. Archive rows lack bookmaker publication time. Observations first collected after kickoff cannot be relabeled as historical pregame quotes or closing lines. No market advantage or prospective betting performance is reported.
@@ -86,6 +109,6 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and test calibration stability.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
-- Expand stats beyond the available box-score sample, expose advanced defensive/specialist records, and document coverage against expected games/players.
+- Expand stats beyond the available box-score sample, expose the remaining team-level advanced tables, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
 - Add recurring ingestion/deployment with monitored job state; no recurring job is installed yet.

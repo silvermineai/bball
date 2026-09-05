@@ -61,6 +61,27 @@ run(
         str(ROOT / ".local/research-ledger.sql"),
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_events.py",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.football_events",
+        "--sql",
+        str(ROOT / ".local/football-events.sql"),
+    ]
+)
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
@@ -97,4 +118,5 @@ with (ROOT / ".local/d1-publish.log").open("w") as log:
         check=True,
     )
 run([PY, "scripts/sync-ledger.py"])
+run([PY, "scripts/sync-football-events.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])

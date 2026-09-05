@@ -2217,3 +2217,153 @@ summary {
     overflow-wrap: anywhere;
   }
 }
+
+/* Football event notebook: source evidence before player identity. */
+.event-identity {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 32px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding: 26px 0;
+  margin-bottom: 32px;
+}
+.event-identity h2 {
+  margin-top: 12px;
+  font-size: 30px;
+}
+.event-identity p {
+  margin: 0;
+  line-height: 1.8;
+}
+.event-identity a,
+.event-receipt a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.event-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.event-filters .control {
+  min-width: 0;
+}
+.event-filters select,
+.event-filters input {
+  width: 100%;
+}
+.event-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 24px;
+}
+.event-actions label {
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.event-coverage {
+  display: grid;
+  grid-template-columns: repeat(3, auto) 1fr;
+  gap: 28px;
+  padding: 24px;
+  background: var(--ink);
+  color: var(--paper);
+  margin-bottom: 25px;
+}
+.event-coverage strong {
+  display: block;
+  font-family: "Libre Caslon Display", serif;
+  font-size: 38px;
+  font-weight: 400;
+}
+.event-coverage span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.event-coverage p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+  align-self: center;
+}
+.event-table td:first-child {
+  min-width: 220px;
+}
+.event-table td:nth-child(2) {
+  min-width: 210px;
+}
+.event-inspect {
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.event-detail {
+  scroll-margin-top: 20px;
+}
+.event-detail .raw-stat-grid dd small {
+  display: block;
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.event-hash {
+  overflow-wrap: anywhere;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+}
+.event-receipt {
+  border-top: 1px solid var(--line);
+  margin: 20px 0;
+  padding-top: 15px;
+}
+.event-receipt p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .event-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .event-coverage {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+  .event-coverage p {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 650px) {
+  .event-identity {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .event-filters {
+    grid-template-columns: 1fr;
+  }
+  .event-coverage {
+    padding: 20px 15px;
+  }
+  .event-coverage strong {
+    font-size: 30px;
+  }
+  .event-coverage span {
+    font-size: 9px;
+  }
+  .event-detail .section-heading {
+    display: block;
+  }
+}

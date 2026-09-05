@@ -6,6 +6,7 @@ import { z } from "zod";
 import { shooting } from "./shooting";
 import { recruiting } from "./recruiting";
 import { careers } from "./careers";
+import { footballEvents } from "./football-events";
 
 type Bindings = Env;
 
@@ -105,6 +106,11 @@ app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
 app.route("/api/basketball/research/shooting", shooting);
 app.route("/api/basketball/research/recruiting", recruiting);
 app.route("/api/basketball/research/careers", careers);
+app.get("/api/football/events/", (c) => {
+  const url = new URL(c.req.url);
+  return c.redirect(`/api/football/events${url.search}`, 308);
+});
+app.route("/api/football/events", footballEvents);
 
 const footballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2022).max(2035).default(2025),
