@@ -4,6 +4,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { shooting } from "./shooting";
+import { recruiting } from "./recruiting";
 
 type Bindings = Env;
 
@@ -101,6 +102,7 @@ const ingestBatchBody = z.object({
 
 app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
 app.route("/api/basketball/research/shooting", shooting);
+app.route("/api/basketball/research/recruiting", recruiting);
 
 const footballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2022).max(2035).default(2025),

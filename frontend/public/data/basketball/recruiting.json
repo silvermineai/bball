@@ -1,0 +1,920 @@
+{
+  "schema_version": 1,
+  "season": 2027,
+  "reviewed_at": "2026-09-05T06:47:40.047960+00:00",
+  "coverage": {
+    "programs": 5,
+    "players": 27,
+    "events": 29,
+    "sources": 20,
+    "historical_links": 17,
+    "complete_national_coverage": false
+  },
+  "methodology": "Selected school announcements, independently summarized. Publication dates are not effective transfer dates. A signing does not establish eligibility or current availability. Coverage is partial, including within listed programs. These records do not change model forecasts.",
+  "stats_source": {
+    "publisher": "SportsDataverse",
+    "url": "https://github.com/sportsdataverse/sportsdataverse-data",
+    "license": "CC BY 4.0",
+    "season": 2026,
+    "release_sha256": "6ec86c54bde79ef06ec4e8e83bcca2f82703c2d9241902d8e1b49b323884b1f0"
+  },
+  "programs": [
+    {
+      "id": "41",
+      "name": "UConn",
+      "host": "uconnhuskies.com",
+      "publisher": "UConn Athletics"
+    },
+    {
+      "id": "248",
+      "name": "Houston",
+      "host": "uhcougars.com",
+      "publisher": "Houston Athletics"
+    },
+    {
+      "id": "130",
+      "name": "Michigan",
+      "host": "mgoblue.com",
+      "publisher": "Michigan Athletics"
+    },
+    {
+      "id": "96",
+      "name": "Kentucky",
+      "host": "ukathletics.com",
+      "publisher": "UK Athletics"
+    },
+    {
+      "id": "12",
+      "name": "Arizona",
+      "host": "arizonawildcats.com",
+      "publisher": "Arizona Athletics"
+    }
+  ],
+  "sources": [
+    {
+      "id": "uconn-four",
+      "team_id": "41",
+      "url": "https://uconnhuskies.com/news/2026/4/29/mens-basketball-huskies-sign-four-newcomers-for-2026-27",
+      "title": "Huskies Sign Four Newcomers For 2026-27",
+      "publisher": "UConn Athletics",
+      "published_on": "2026-04-29",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "uconn-nash-shaw",
+      "team_id": "41",
+      "url": "https://uconnhuskies.com/news/2026/5/27/mens-basketball-huskies-add-jaye-nash-and-isaiah-shaw",
+      "title": "Huskies Add Jaye Nash and Isaiah Shaw",
+      "publisher": "UConn Athletics",
+      "published_on": "2026-05-27",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "uconn-dzafic",
+      "team_id": "41",
+      "url": "https://uconnhuskies.com/news/2026/6/2/mens-basketball-huskies-announce-addition-of-elmir-d-afi",
+      "title": "Huskies Announce Addition of Elmir Džafic",
+      "publisher": "UConn Athletics",
+      "published_on": "2026-06-02",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "uconn-amosov",
+      "team_id": "41",
+      "url": "https://uconnhuskies.com/news/2026/7/6/mens-basketball-huskies-add-freshman-egor-amosov-to-2026-27-roster",
+      "title": "Huskies Add Freshman Egor Amosov To 2026-27 Roster",
+      "publisher": "UConn Athletics",
+      "published_on": "2026-07-06",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-1",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/8/10/mens-basketball-chendall-weaver-signs-with-mens-basketball",
+      "title": "Chendall Weaver Signs with Men’s Basketball",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-08-10",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-2",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/5/7/mens-basketball-mens-basketball-welcomes-tyus-thomas",
+      "title": "Men’s Basketball Welcomes Tyus Thomas",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-05-07",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-3",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/5/5/mens-basketball-mens-basketball-inks-djafar-silimana",
+      "title": "Men’s Basketball Inks Djafar Silimana",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-05-05",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-4",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/4/24/mens-basketball-mens-basketball-welcomes-transfer-braden-east",
+      "title": "Men’s Basketball Welcomes Transfer Braden East",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-04-24",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-5",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/4/24/mens-basketball-guard-corey-hadnot-ii-signs-with-mens-basketball",
+      "title": "Guard Corey Hadnot II Signs with Men’s Basketball",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-04-24",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-6",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/4/23/mens-basketball-forward-delrecco-gillespie-joins-mens-basketball",
+      "title": "Forward Delrecco Gillespie Joins Men’s Basketball",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-04-23",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "houston-7",
+      "team_id": "248",
+      "url": "https://uhcougars.com/news/2026/4/22/mens-basketball-mens-basketball-welcomes-dedan-thomas-jr",
+      "title": "Men’s Basketball Welcomes Dedan Thomas Jr",
+      "publisher": "Houston Athletics",
+      "published_on": "2026-04-22",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "michigan-early",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2025/11/14/mens-basketball-wolverines-add-four-during-early-signing-period",
+      "title": "Wolverines Add Four During Early Signing Period",
+      "publisher": "Michigan Athletics",
+      "published_on": "2025-11-14",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "michigan-mccoy-cosby",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2026/4/28/mens-basketball-wolverines-add-mccoy-cosby-to-class-of-2026-signees",
+      "title": "Wolverines Add McCoy, Cosby to Class of 2026 Signees",
+      "publisher": "Michigan Athletics",
+      "published_on": "2026-04-28",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "michigan-mccoy-unavailable",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2026/9/1/mens-basketball-mccoy-jr-out-for-2026-27-season-with-acl-injury",
+      "title": "McCoy Jr. Out for 2026-27 Season with ACL Injury",
+      "publisher": "Michigan Athletics",
+      "published_on": "2026-09-01",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "michigan-estrella",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2026/4/26/mens-basketball-wolverines-bolster-frontcourt-with-addition-of-6-11-forward-j-p-estrella",
+      "title": "Wolverines Bolster Frontcourt with Addition of Forward J.P. Estrella",
+      "publisher": "Michigan Athletics",
+      "published_on": "2026-04-28",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": "Article display and announcement text say April 28; URL path says April 26."
+    },
+    {
+      "id": "michigan-reed",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2026/4/28/mens-basketball-wolverines-welcome-6-10-forward-jalen-reed-for-2026-27-season",
+      "title": "Wolverines Welcome Forward Jalen Reed for 2026-27 Season",
+      "publisher": "Michigan Athletics",
+      "published_on": "2026-04-28",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "michigan-thiam",
+      "team_id": "130",
+      "url": "https://mgoblue.com/news/2026/4/28/mens-basketball-wolverines-add-third-frontcourt-transfer-with-7-2-center-moustapha-thiam",
+      "title": "Wolverines Add Third Frontcourt Transfer with Center Moustapha Thiam",
+      "publisher": "Michigan Athletics",
+      "published_on": "2026-04-28",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kentucky-momcilovic",
+      "team_id": "96",
+      "url": "https://ukathletics.com/news/2026/06/05/milan-momcilovic-nations-leading-3-point-shooter-signs-with-wildcats/",
+      "title": "Milan Momcilovic, Nation’s Leading 3-Point Shooter, Signs with Wildcats",
+      "publisher": "UK Athletics",
+      "published_on": "2026-06-05",
+      "date_basis": "article:published_time metadata: 2026-06-05T13:00:26-04:00",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": "The closing paragraph labels the roster 2025–26. Kentucky’s June 15, 2026 schedule announcement explicitly places Momcilovic in its 2026–27 transfer class: https://ukathletics.com/news/2026/06/15/kentucky-announces-seven-home-nonconference-games/"
+    },
+    {
+      "id": "kentucky-ndiaye",
+      "team_id": "96",
+      "url": "https://ukathletics.com/news/2026/05/07/ousmane-ndiaye-signs-to-play-at-kentucky/",
+      "title": "Ousmane N’Diaye Signs to Play at Kentucky",
+      "publisher": "UK Athletics",
+      "published_on": "2026-05-07",
+      "date_basis": "article:published_time metadata: 2026-05-07T13:08:32-04:00",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "arizona-dixon",
+      "team_id": "12",
+      "url": "https://arizonawildcats.com/news/2026/4/16/mens-basketball-arizona-basketball-adds-point-guard-transfer-derek-dixon",
+      "title": "Arizona Basketball Adds Point Guard Transfer Derek Dixon",
+      "publisher": "Arizona Athletics",
+      "published_on": "2026-04-16",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    }
+  ],
+  "people": [
+    {
+      "key": "41-najai-hines",
+      "name": "Najai Hines",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Seton Hall",
+      "stats": {
+        "id": "5292602",
+        "team_id": "2550",
+        "team": "Seton Hall",
+        "season": 2026,
+        "games": 31,
+        "mpg": 17.9,
+        "ppg": 6.5,
+        "rpg": 5.5,
+        "apg": 0.6,
+        "efg": 0.6015037593984962,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-nikolas-khamenia",
+      "name": "Nikolas Khamenia",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Duke",
+      "stats": {
+        "id": "5144124",
+        "team_id": "150",
+        "team": "Duke",
+        "season": 2026,
+        "games": 38,
+        "mpg": 19.7,
+        "ppg": 5.7,
+        "rpg": 3.3,
+        "apg": 1.0,
+        "efg": 0.5473372781065089,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-oskar-giltay",
+      "name": "Oskar Giltay",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Stanford",
+      "stats": {
+        "id": "5312293",
+        "team_id": "24",
+        "team": "Stanford",
+        "season": 2026,
+        "games": 32,
+        "mpg": 14.6,
+        "ppg": 3.3,
+        "rpg": 4.1,
+        "apg": 0.3,
+        "efg": 0.6268656716417911,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-nils-machowski",
+      "name": "Nils Machowski",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Wofford",
+      "stats": {
+        "id": "5175080",
+        "team_id": "2747",
+        "team": "Wofford",
+        "season": 2026,
+        "games": 32,
+        "mpg": 33.7,
+        "ppg": 17.2,
+        "rpg": 5.7,
+        "apg": 2.6,
+        "efg": 0.5418660287081339,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-jaye-nash",
+      "name": "Jaye Nash",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Jacksonville State",
+      "stats": {
+        "id": "5060718",
+        "team_id": "55",
+        "team": "Jax State",
+        "season": 2026,
+        "games": 32,
+        "mpg": 25.8,
+        "ppg": 5.1,
+        "rpg": 2.8,
+        "apg": 4.0,
+        "efg": 0.34328358208955223,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-isaiah-shaw",
+      "name": "Isaiah Shaw",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Northern Arizona",
+      "stats": {
+        "id": "4896885",
+        "team_id": "2464",
+        "team": "N Arizona",
+        "season": 2026,
+        "games": 29,
+        "mpg": 18.3,
+        "ppg": 8.1,
+        "rpg": 2.1,
+        "apg": 0.6,
+        "efg": 0.5686274509803921,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-elmir-dzafic",
+      "name": "Elmir Džafic",
+      "team_id": "41",
+      "category": "transfer",
+      "previous_program": "Arkansas",
+      "stats": {
+        "id": "5311500",
+        "team_id": "8",
+        "team": "Arkansas",
+        "season": 2026,
+        "games": 7,
+        "mpg": 2.3,
+        "ppg": 0.4,
+        "rpg": 0.1,
+        "apg": 0.0,
+        "efg": null,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "41-egor-amosov",
+      "name": "Egor Amosov",
+      "team_id": "41",
+      "category": "international",
+      "previous_program": "Real Madrid (Liga U)",
+      "stats": null
+    },
+    {
+      "key": "248-chendall-weaver",
+      "name": "Chendall Weaver",
+      "team_id": "248",
+      "category": "transfer",
+      "previous_program": "Texas",
+      "stats": {
+        "id": "5105486",
+        "team_id": "251",
+        "team": "Texas",
+        "season": 2026,
+        "games": 36,
+        "mpg": 20.9,
+        "ppg": 5.8,
+        "rpg": 4.1,
+        "apg": 1.1,
+        "efg": 0.47337278106508873,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "248-tyus-thomas",
+      "name": "Tyus Thomas",
+      "team_id": "248",
+      "category": "freshman",
+      "previous_program": "Liberty High School",
+      "stats": null
+    },
+    {
+      "key": "248-djafar-silimana",
+      "name": "Djafar Silimana",
+      "team_id": "248",
+      "category": "freshman",
+      "previous_program": "Utah Prep",
+      "stats": null
+    },
+    {
+      "key": "248-braden-east",
+      "name": "Braden East",
+      "team_id": "248",
+      "category": "transfer",
+      "previous_program": "Lamar",
+      "stats": {
+        "id": "5242573",
+        "team_id": "2320",
+        "team": "Lamar",
+        "season": 2026,
+        "games": 30,
+        "mpg": 23.9,
+        "ppg": 12.8,
+        "rpg": 9.1,
+        "apg": 0.7,
+        "efg": 0.5418118466898955,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "248-corey-hadnot-ii",
+      "name": "Corey Hadnot II",
+      "team_id": "248",
+      "category": "transfer",
+      "previous_program": "Purdue Fort Wayne",
+      "stats": {
+        "id": "5177707",
+        "team_id": "2870",
+        "team": "Purdue FW",
+        "season": 2026,
+        "games": 32,
+        "mpg": 33.2,
+        "ppg": 20.4,
+        "rpg": 4.0,
+        "apg": 3.5,
+        "efg": 0.5806794055201698,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "248-delrecco-gillespie",
+      "name": "Delrecco Gillespie",
+      "team_id": "248",
+      "category": "transfer",
+      "previous_program": "Kent State",
+      "stats": {
+        "id": "5108093",
+        "team_id": "2309",
+        "team": "Kent State",
+        "season": 2026,
+        "games": 34,
+        "mpg": 32.2,
+        "ppg": 17.7,
+        "rpg": 11.3,
+        "apg": 1.7,
+        "efg": 0.5290556900726392,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "248-dedan-thomas-jr",
+      "name": "Dedan Thomas Jr.",
+      "team_id": "248",
+      "category": "transfer",
+      "previous_program": "LSU",
+      "stats": {
+        "id": "4873093",
+        "team_id": "99",
+        "team": "LSU",
+        "season": 2026,
+        "games": 16,
+        "mpg": 29.4,
+        "ppg": 15.2,
+        "rpg": 2.7,
+        "apg": 6.5,
+        "efg": 0.494475138121547,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "130-quinn-costello",
+      "name": "Quinn Costello",
+      "team_id": "130",
+      "category": "freshman",
+      "previous_program": "The Newman School",
+      "stats": null
+    },
+    {
+      "key": "130-joseph-hartman",
+      "name": "Joseph Hartman",
+      "team_id": "130",
+      "category": "freshman",
+      "previous_program": "The Rock School",
+      "stats": null
+    },
+    {
+      "key": "130-marcus-moller",
+      "name": "Marcus Moller",
+      "team_id": "130",
+      "category": "international",
+      "previous_program": "Unicaja Malaga U22",
+      "stats": null
+    },
+    {
+      "key": "130-malachi-brown",
+      "name": "Malachi Brown",
+      "team_id": "130",
+      "category": "freshman",
+      "previous_program": "Knoxville Catholic",
+      "stats": null
+    },
+    {
+      "key": "130-brandon-mccoy-jr",
+      "name": "Brandon McCoy Jr.",
+      "team_id": "130",
+      "category": "freshman",
+      "previous_program": "Sierra Canyon School",
+      "stats": null
+    },
+    {
+      "key": "130-lincoln-cosby",
+      "name": "Lincoln Cosby",
+      "team_id": "130",
+      "category": "freshman",
+      "previous_program": "Montverde Academy",
+      "stats": null
+    },
+    {
+      "key": "130-j-p-estrella",
+      "name": "J.P. Estrella",
+      "team_id": "130",
+      "category": "transfer",
+      "previous_program": "Tennessee",
+      "stats": {
+        "id": "5093142",
+        "team_id": "2633",
+        "team": "Tennessee",
+        "season": 2026,
+        "games": 33,
+        "mpg": 18.3,
+        "ppg": 10.0,
+        "rpg": 5.4,
+        "apg": 0.8,
+        "efg": 0.6042553191489362,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "130-jalen-reed",
+      "name": "Jalen Reed",
+      "team_id": "130",
+      "category": "transfer",
+      "previous_program": "LSU",
+      "stats": {
+        "id": "5105534",
+        "team_id": "99",
+        "team": "LSU",
+        "season": 2026,
+        "games": 6,
+        "mpg": 17.8,
+        "ppg": 9.5,
+        "rpg": 5.7,
+        "apg": 0.7,
+        "efg": 0.6142857142857143,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "130-moustapha-thiam",
+      "name": "Moustapha Thiam",
+      "team_id": "130",
+      "category": "transfer",
+      "previous_program": "Cincinnati",
+      "stats": {
+        "id": "5149078",
+        "team_id": "2132",
+        "team": "Cincinnati",
+        "season": 2026,
+        "games": 31,
+        "mpg": 27.2,
+        "ppg": 12.8,
+        "rpg": 7.1,
+        "apg": 0.5,
+        "efg": 0.5491803278688525,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "96-milan-momcilovic",
+      "name": "Milan Momcilovic",
+      "team_id": "96",
+      "category": "transfer",
+      "previous_program": "Iowa State",
+      "stats": {
+        "id": "4848637",
+        "team_id": "66",
+        "team": "Iowa State",
+        "season": 2026,
+        "games": 37,
+        "mpg": 30.4,
+        "ppg": 16.9,
+        "rpg": 3.1,
+        "apg": 1.0,
+        "efg": 0.6715328467153284,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "96-ousmane-ndiaye",
+      "name": "Ousmane N’Diaye",
+      "team_id": "96",
+      "category": "international",
+      "previous_program": "Vanoli Cremona",
+      "stats": null
+    },
+    {
+      "key": "12-derek-dixon",
+      "name": "Derek Dixon",
+      "team_id": "12",
+      "category": "transfer",
+      "previous_program": "North Carolina",
+      "stats": {
+        "id": "5144097",
+        "team_id": "153",
+        "team": "North Carolina",
+        "season": 2026,
+        "games": 33,
+        "mpg": 22.3,
+        "ppg": 6.5,
+        "rpg": 2.3,
+        "apg": 2.7,
+        "efg": 0.4973544973544973,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "41-najai-hines-addition",
+      "person_key": "41-najai-hines",
+      "kind": "addition",
+      "source_id": "uconn-four",
+      "summary": "UConn announced Najai Hines as a 2026–27 addition."
+    },
+    {
+      "id": "41-nikolas-khamenia-addition",
+      "person_key": "41-nikolas-khamenia",
+      "kind": "addition",
+      "source_id": "uconn-four",
+      "summary": "UConn announced Nikolas Khamenia as a 2026–27 addition."
+    },
+    {
+      "id": "41-oskar-giltay-addition",
+      "person_key": "41-oskar-giltay",
+      "kind": "addition",
+      "source_id": "uconn-four",
+      "summary": "UConn announced Oskar Giltay as a 2026–27 addition."
+    },
+    {
+      "id": "41-nils-machowski-addition",
+      "person_key": "41-nils-machowski",
+      "kind": "addition",
+      "source_id": "uconn-four",
+      "summary": "UConn announced Nils Machowski as a 2026–27 addition."
+    },
+    {
+      "id": "41-jaye-nash-addition",
+      "person_key": "41-jaye-nash",
+      "kind": "addition",
+      "source_id": "uconn-nash-shaw",
+      "summary": "UConn announced Jaye Nash as a 2026–27 addition."
+    },
+    {
+      "id": "41-isaiah-shaw-addition",
+      "person_key": "41-isaiah-shaw",
+      "kind": "addition",
+      "source_id": "uconn-nash-shaw",
+      "summary": "UConn announced Isaiah Shaw as a 2026–27 addition."
+    },
+    {
+      "id": "41-elmir-dzafic-addition",
+      "person_key": "41-elmir-dzafic",
+      "kind": "addition",
+      "source_id": "uconn-dzafic",
+      "summary": "UConn announced Elmir Džafic as a 2026–27 addition."
+    },
+    {
+      "id": "41-egor-amosov-addition",
+      "person_key": "41-egor-amosov",
+      "kind": "addition",
+      "source_id": "uconn-amosov",
+      "summary": "UConn announced Egor Amosov as a 2026–27 addition."
+    },
+    {
+      "id": "248-chendall-weaver-addition",
+      "person_key": "248-chendall-weaver",
+      "kind": "addition",
+      "source_id": "houston-1",
+      "summary": "Houston announced Chendall Weaver as a 2026–27 addition."
+    },
+    {
+      "id": "248-tyus-thomas-addition",
+      "person_key": "248-tyus-thomas",
+      "kind": "addition",
+      "source_id": "houston-2",
+      "summary": "Houston announced Tyus Thomas as a 2026–27 addition."
+    },
+    {
+      "id": "248-djafar-silimana-addition",
+      "person_key": "248-djafar-silimana",
+      "kind": "addition",
+      "source_id": "houston-3",
+      "summary": "Houston announced Djafar Silimana as a 2026–27 addition."
+    },
+    {
+      "id": "248-braden-east-addition",
+      "person_key": "248-braden-east",
+      "kind": "addition",
+      "source_id": "houston-4",
+      "summary": "Houston announced Braden East as a 2026–27 addition."
+    },
+    {
+      "id": "248-corey-hadnot-ii-addition",
+      "person_key": "248-corey-hadnot-ii",
+      "kind": "addition",
+      "source_id": "houston-5",
+      "summary": "Houston announced Corey Hadnot II as a 2026–27 addition."
+    },
+    {
+      "id": "248-delrecco-gillespie-addition",
+      "person_key": "248-delrecco-gillespie",
+      "kind": "addition",
+      "source_id": "houston-6",
+      "summary": "Houston announced Delrecco Gillespie as a 2026–27 addition."
+    },
+    {
+      "id": "248-dedan-thomas-jr-addition",
+      "person_key": "248-dedan-thomas-jr",
+      "kind": "addition",
+      "source_id": "houston-7",
+      "summary": "Houston announced Dedan Thomas Jr. as a 2026–27 addition."
+    },
+    {
+      "id": "130-quinn-costello-addition",
+      "person_key": "130-quinn-costello",
+      "kind": "addition",
+      "source_id": "michigan-early",
+      "summary": "Michigan announced Quinn Costello as a 2026–27 addition."
+    },
+    {
+      "id": "130-joseph-hartman-addition",
+      "person_key": "130-joseph-hartman",
+      "kind": "addition",
+      "source_id": "michigan-early",
+      "summary": "Michigan announced Joseph Hartman as a 2026–27 addition."
+    },
+    {
+      "id": "130-marcus-moller-addition",
+      "person_key": "130-marcus-moller",
+      "kind": "addition",
+      "source_id": "michigan-early",
+      "summary": "Michigan announced Marcus Moller as a 2026–27 addition."
+    },
+    {
+      "id": "130-malachi-brown-addition",
+      "person_key": "130-malachi-brown",
+      "kind": "addition",
+      "source_id": "michigan-early",
+      "summary": "Michigan announced Malachi Brown as a 2026–27 addition."
+    },
+    {
+      "id": "130-brandon-mccoy-jr-addition",
+      "person_key": "130-brandon-mccoy-jr",
+      "kind": "addition",
+      "source_id": "michigan-mccoy-cosby",
+      "summary": "Michigan announced Brandon McCoy Jr. as a 2026–27 addition."
+    },
+    {
+      "id": "130-lincoln-cosby-addition",
+      "person_key": "130-lincoln-cosby",
+      "kind": "addition",
+      "source_id": "michigan-mccoy-cosby",
+      "summary": "Michigan announced Lincoln Cosby as a 2026–27 addition."
+    },
+    {
+      "id": "130-lincoln-cosby-redshirt",
+      "person_key": "130-lincoln-cosby",
+      "kind": "redshirt_announced",
+      "source_id": "michigan-mccoy-cosby",
+      "summary": "Michigan announced a planned redshirt season for Lincoln Cosby in 2026–27."
+    },
+    {
+      "id": "130-brandon-mccoy-jr-unavailable",
+      "person_key": "130-brandon-mccoy-jr",
+      "kind": "season_unavailable",
+      "source_id": "michigan-mccoy-unavailable",
+      "summary": "Michigan announced that Brandon McCoy Jr. will miss the 2026–27 season."
+    },
+    {
+      "id": "130-j-p-estrella-addition",
+      "person_key": "130-j-p-estrella",
+      "kind": "addition",
+      "source_id": "michigan-estrella",
+      "summary": "Michigan announced J.P. Estrella as a 2026–27 addition."
+    },
+    {
+      "id": "130-jalen-reed-addition",
+      "person_key": "130-jalen-reed",
+      "kind": "addition",
+      "source_id": "michigan-reed",
+      "summary": "Michigan announced Jalen Reed as a 2026–27 addition."
+    },
+    {
+      "id": "130-moustapha-thiam-addition",
+      "person_key": "130-moustapha-thiam",
+      "kind": "addition",
+      "source_id": "michigan-thiam",
+      "summary": "Michigan announced Moustapha Thiam as a 2026–27 addition."
+    },
+    {
+      "id": "96-milan-momcilovic-addition",
+      "person_key": "96-milan-momcilovic",
+      "kind": "addition",
+      "source_id": "kentucky-momcilovic",
+      "summary": "Kentucky announced Milan Momcilovic as a 2026–27 addition."
+    },
+    {
+      "id": "96-ousmane-ndiaye-addition",
+      "person_key": "96-ousmane-ndiaye",
+      "kind": "addition",
+      "source_id": "kentucky-ndiaye",
+      "summary": "Kentucky announced Ousmane N’Diaye as a 2026–27 addition."
+    },
+    {
+      "id": "12-derek-dixon-addition",
+      "person_key": "12-derek-dixon",
+      "kind": "addition",
+      "source_id": "arizona-dixon",
+      "summary": "Arizona announced Derek Dixon as a 2026–27 addition."
+    }
+  ],
+  "edition": "654ddf97b8968d9996ca3219ab315cceed8704a622b3604151100314bef372b1"
+}

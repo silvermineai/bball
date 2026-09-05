@@ -1,28 +1,31 @@
-import Recruiting from "./Recruiting";
+import Announcements from "./Announcements";
+import { getRecruiting } from "../../_lib/basketball-data";
 export const metadata = {
-  title: "Basketball roster changes and recruiting research",
+  title: "Basketball recruiting: school announcements and transfer evidence",
+  description:
+    "Dated 2026–27 school announcements, prior college stats and availability updates. Source-linked recruiting research with explicit coverage limits.",
+  alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {
+  const data = getRecruiting();
   return (
     <>
       <div className="page-title">
         <div className="eyebrow">
-          Roster construction / Evidence before assumptions
+          Roster construction / 2026–27 research file
         </div>
         <h1>
-          Track the people.
+          Follow the player.
           <br />
-          Question the listing.
+          Keep the evidence.
         </h1>
         <p>
-          Compare stable player IDs across recorded game appearances and source
-          roster listings. The 2025–26 view identifies historical program
-          changes in game records. The 2026–27 view is an unconfirmed, partial
-          listing—not proof of a transfer, return, eligibility or recruiting
-          availability.
+          Who a school announced. Where they played. What the next statement
+          changed. Build your recruiting picture from dated sources and recorded
+          college production.
         </p>
       </div>
-      <Recruiting />
+      <Announcements data={data} />
     </>
   );
 }

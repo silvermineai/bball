@@ -50,6 +50,12 @@ export default async function Page({
             </Link>
             <Link
               className="hero-link"
+              href={`/basketball/recruiting/?team=${p.id}`}
+            >
+              Recruiting evidence →
+            </Link>
+            <Link
+              className="hero-link"
               href={`/basketball/shooting/?team=${p.id}`}
             >
               Shooting lab →

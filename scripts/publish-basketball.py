@@ -83,6 +83,19 @@ run(
     ]
 )
 run([PY, "-m", "ncaa_scraper.basketball_shooting", "--refresh", "--sql"])
+run([PY, "-m", "ncaa_scraper.basketball_recruiting"])
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_basketball_recruiting.py",
+    ]
+)
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
@@ -119,4 +132,5 @@ with (ROOT / ".local/basketball-publish-d1.log").open("w") as log:
     )
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
+run([PY, "scripts/sync-recruiting.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])
