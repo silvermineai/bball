@@ -17,6 +17,11 @@ export default function Page() {
           modeled.
         </p>
       </div>
+      <p className="note">
+        <Link href="/football/efficiency/">
+          Compare team efficiency and opponent production →
+        </Link>
+      </p>
       <div className="table-scroll">
         <table className="data-table">
           <thead>

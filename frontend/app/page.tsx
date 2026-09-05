@@ -52,7 +52,7 @@ export default function Home() {
               <br />
               HOME WIN PROBABILITY{" "}
               {fmt(p ? p.home_win_probability * 100 : null)}%<br />
-              Score model v1 · uncertainty included
+              Calibrated score model · uncertainty included
             </div>
           </div>
         </div>

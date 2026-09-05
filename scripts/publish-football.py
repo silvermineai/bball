@@ -82,6 +82,19 @@ run(
         str(ROOT / ".local/football-events.sql"),
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_efficiency.py",
+    ]
+)
+run([PY, "-m", "ncaa_scraper.football_efficiency"])
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")
@@ -119,4 +132,5 @@ with (ROOT / ".local/d1-publish.log").open("w") as log:
     )
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-football-events.py"])
+run([PY, "scripts/sync-football-efficiency.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])

@@ -1,4 +1,8 @@
 import Link from "next/link";
+import efficiency from "../../../public/data/football/efficiency.json";
+const efficiencyTeams = new Set(
+  efficiency.seasons.find((s) => s.season === 2025)?.teams.map((t) => t.id),
+);
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
 import { date, fmt, kick } from "../../_lib/format";
@@ -73,6 +77,15 @@ export default async function Page({
             ? "The source lists this as a neutral-site game, so the model removes its home-field term."
             : "The model includes its learned home-field effect."}
         </p>
+        {efficiencyTeams.has(g.away_id) && efficiencyTeams.has(g.home_id) && (
+          <p>
+            <Link
+              href={`/football/efficiency/?season=2025&a=${g.away_id}&b=${g.home_id}&scope=fbs`}
+            >
+              Compare these teams’ 2025 efficiency and opponent production →
+            </Link>
+          </p>
+        )}
         <h2>The baseline projection</h2>
         <p>
           Our score model estimates {g.away_name} {fmt(p.away_score)},{" "}

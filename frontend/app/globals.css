@@ -2367,3 +2367,162 @@ summary {
     display: block;
   }
 }
+
+/* Football efficiency: a paired scouting worksheet. */
+.efficiency-context {
+  align-items: center;
+}
+.efficiency-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 24px 0;
+}
+.efficiency-team {
+  background: #173b35;
+  color: #f4f1e7;
+  padding: 30px;
+  border-top: 4px solid #b5c28c;
+}
+.efficiency-team .control {
+  max-width: none;
+}
+.efficiency-team .control span {
+  color: #d0d8bd;
+}
+.efficiency-team select {
+  width: 100%;
+  background: #f4f1e7;
+  color: #173b35;
+  font-size: 20px;
+}
+.efficiency-team > small {
+  display: block;
+  margin-top: 12px;
+}
+.efficiency-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 28px 0 18px;
+}
+.efficiency-numbers strong {
+  display: block;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 46px;
+  font-weight: 400;
+}
+.efficiency-numbers span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  margin-top: 6px;
+}
+.efficiency-caution {
+  color: #e7d295;
+}
+.efficiency-playmix {
+  height: 8px;
+  background: #47665c;
+  margin-top: 24px;
+}
+.efficiency-playmix span {
+  display: block;
+  height: 100%;
+  background: #d3ddad;
+}
+.efficiency-matrix {
+  min-width: 860px;
+}
+.efficiency-matrix caption {
+  text-align: left;
+  padding: 12px 0;
+  color: #4b6157;
+  font-size: 13px;
+}
+.efficiency-matrix small,
+.efficiency-ranking small,
+.efficiency-games small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  margin-top: 7px;
+  color: #52675f;
+}
+.efficiency-matrix td strong,
+.efficiency-ranking td strong {
+  font-size: 21px;
+  font-weight: 400;
+}
+.efficiency-matrix th:first-child {
+  min-width: 210px;
+  max-width: 270px;
+}
+.efficiency-matrix details p {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.efficiency-matrix code {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.efficiency-board,
+.efficiency-log,
+.efficiency-method {
+  margin-top: 55px;
+}
+.efficiency-ranking {
+  min-width: 740px;
+}
+.efficiency-ranking button {
+  background: none;
+  border: 0;
+  padding: 5px;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.efficiency-games {
+  min-width: 820px;
+}
+.efficiency-games details {
+  max-width: 240px;
+}
+.efficiency-games pre {
+  width: 240px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  background: #e8e8dd;
+  font-size: 11px;
+}
+.efficiency-method {
+  padding: 30px;
+}
+.efficiency-method details {
+  margin: 24px 0;
+}
+.efficiency-method code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+@media (max-width: 700px) {
+  .efficiency-teams {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .efficiency-team {
+    padding: 22px;
+  }
+  .efficiency-numbers strong {
+    font-size: 38px;
+  }
+  .efficiency-context {
+    align-items: stretch;
+  }
+}

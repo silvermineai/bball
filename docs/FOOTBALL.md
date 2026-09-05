@@ -47,6 +47,10 @@ The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 
 
 Production verification checked byte equality for the model/evidence/ledger assets, methodology, forecast guide, sample brief and homepage, and confirmed the basketball overview was unchanged. Live D1 history retains both v1 and v2 with their original registration clocks. Deployed Worker version: `bcc563b9-4afb-43be-9bb6-e23ae08d93e4`.
 
+## Team efficiency
+
+The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 1,950 retained advanced team-game records with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. Rates remain descriptive and do not modify forecasts.
+
 ## Player rankings
 
 FBS offensive ranks use publisher total EPA separately for passing (minimum 100 plays), rushing (50) and receiving (30). These are production ranks, not all-position prospect grades. EPA can overlap between passers and receivers and must not be summed across categories. Players below thresholds remain searchable and unranked. Team affiliations refer to the selected stat season.
@@ -109,6 +113,6 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and test calibration stability.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
-- Expand stats beyond the available box-score sample, expose the remaining team-level advanced tables, and document coverage against expected games/players.
+- Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
 - Add recurring ingestion/deployment with monitored job state; no recurring job is installed yet.

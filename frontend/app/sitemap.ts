@@ -28,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/matchups/",
     "/football/players/",
     "/football/events/",
+    "/football/efficiency/",
     "/football/ratings/",
     "/football/methodology/",
     "/blog/",
