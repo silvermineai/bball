@@ -228,7 +228,8 @@ def build(conn, season=2026):
         dict(r)
         for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")
     ]
-    model = train_and_evaluate(games, now, season)
+    validation = {}
+    model = train_and_evaluate(games, now, season, validation_out=validation)
     upcoming = []
     for g in games:
         if (
@@ -334,7 +335,18 @@ def build(conn, season=2026):
         (model["id"], now, now, json.dumps(model)),
     )
     OUT.mkdir(parents=True, exist_ok=True)
-    artifacts = {"overview": overview}
+    validation.update(
+        {
+            "generated_at": now,
+            "sources": [s for s in sources if s["dataset"] == "schedule"],
+            "calibration": model["calibration"],
+            "evaluation": model["evaluation"],
+            "implementation_sha256": hashlib.sha256(
+                Path(__file__).with_name("football_model.py").read_bytes()
+            ).hexdigest(),
+        }
+    )
+    artifacts = {"overview": overview, "validation": validation}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
     for name, payload in artifacts.items():

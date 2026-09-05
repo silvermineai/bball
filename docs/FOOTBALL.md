@@ -6,7 +6,9 @@ The football-first publication is built in **Next.js 16**, React and Tailwind, s
 
 The first verified import contains 18,758 schedule records across 2022–2026; 82,187 player box-score rows across 2025–2026; 12,850 player/team entries for 2025; and 1,421 for 2026. Coverage spans multiple divisions; the prediction model is FBS-vs-FBS only. This is **not** a complete roster census. Three games marked final lack scores and are excluded from modeling.
 
-The model currently forecasts 744 upcoming FBS matchups. Its fixed 2025 holdout covers 784 games, excludes 24 games involving unseen teams, and reports 66.20% winner accuracy, 14.24-point margin MAE, 17.99-point margin RMSE and 12.98-point total MAE. A constant home-margin baseline has 15.99-point MAE on the same evaluation games. These are baseline results, not proof of market advantage.
+The September 5, 2026 07:56 UTC edition forecasts 744 upcoming FBS matchups with `ridge-team-calibrated-v2-9faf8033016a`. Its fixed 2025 holdout covers 784 games and excludes 24 games involving unseen teams. Probability-pick accuracy is 65.43%; margin-pick accuracy is 66.20%. Margin MAE is 14.24 points, margin RMSE 17.99 and total MAE 12.98. A constant home-margin baseline has 15.99-point MAE on the same games. These are retrospective baseline results, not proof of market advantage.
+
+The v2 change separates probability and interval calibration from the test season. Brier score is 0.211391, log loss 0.610242, and the nominal 80% margin range covers 80.61% of the test outcomes. Point forecasts and score-model errors are unchanged from v1 on this source edition. Probability-pick accuracy is lower than the margin-pick accuracy; no improvement in winner selection is claimed.
 
 ## Sources and collection policy
 
@@ -23,9 +25,27 @@ The model currently forecasts 744 upcoming FBS matchups. Its fixed 2025 holdout 
 
 `football_model.py` fits separate ridge regressions for home margin and game total. Features are intercept, non-neutral venue, and team indicators. The margin uses opposite team signs; the total uses additive team effects. Team regularization is fixed at 12 and 24, home-field regularization at 2; intercepts are unpenalized. Training weights decay by 0.65 per season.
 
-For the 2025 test, fitting uses 2022–2024 only. The holdout is never used to fit coefficients. Production fitting then includes eligible completed games through the current cutoff. Unknown teams and non-FBS opponents receive no score estimate. Tests verify future results cannot change the model and the holdout never enters the evaluation fit.
+The v2 procedure has three temporal windows:
 
-Win probability uses a normal error distribution with sigma from holdout RMSE. The 80% margin range uses ±1.281552 sigma. Probability calibration and empirical interval coverage are **not independently validated**. There are no injury, transfer, depth-chart, recruiting, weather or coaching features yet. Retrospective source corrections can affect backtests.
+1. Fit initial score coefficients on 2022–2023.
+2. Predict 2024: 787 scored games, 11 unseen-team games excluded. Fit a logistic home-win curve on the binary outcomes (`intercept = 0.03536320733907593`, `margin slope = 0.08705446509617575`, L2 penalty 0.01). Both outcomes and at least 100 binary games are required. The 80th percentile of absolute raw-margin errors sets a symmetric half-width of 23.767887135829675 points, using NumPy's linear quantile interpolation.
+3. Refit score coefficients on 2022–2024 and evaluate 2025 with that earlier probability curve and range width frozen. Production then refits score coefficients on all eligible completed games through its current cutoff, retaining the same calibration.
+
+No 2025 outcomes enter evaluation coefficients, probability calibration or interval calibration. Tests perturb all 2025 outcomes and verify the calibration and evaluation coefficients cannot change. The fixed choices were not tuned against the 2025 results. The procedure is retrospective: it was designed after that season and source corrections may postdate games.
+
+Probability picks choose home at a displayed probability of at least 50%; margin picks choose home above zero raw margin. The logistic intercept can shift the winner threshold near an even matchup. Binary metrics omit tied finals. Brier, log loss and reliability bins use four-decimal displayed probabilities (log/Brier inputs are clipped to `[1e-6,1-1e-6]`); interval coverage tests inclusive one-decimal displayed endpoints. Score errors use full-precision predictions. The empirical range is not a guarantee of future coverage. Brier and log loss measure overall probabilistic performance, not calibration alone; see [scikit-learn's calibration documentation](https://scikit-learn.org/stable/modules/calibration.html).
+
+`/football/methodology/` displays the three windows, metrics, a reliability chart and all ten bins with sample counts. `/data/football/validation.json` contains calibration/test game records, raw predictions, displayed test forecasts, training IDs, excluded IDs, both fitted coefficient sets, source receipts and the model implementation SHA-256. The D1 artifact manifest records this file's SHA-256; the large file is served through Cloudflare Assets. The JavaScript artifact tests independently reproduce the model predictions, quantile, probability mapping and reported metrics.
+
+V1 artifacts retain their original normal-error/sigma interpretation for exact reproduction. Their sigma came from the 2025 test RMSE, so their probability and range statistics are not a separately calibrated benchmark. All 744 prior published forecasts reproduce unchanged under the compatibility path, and all earlier D1 model, prediction and ledger registration rows are retained. The ledger keeps the earliest eligible registration per game; v2 publication does not reset that selection.
+
+There are no injury, transfer, depth-chart, recruiting, weather or coaching features yet. Unknown teams and non-FBS opponents receive no score estimate.
+
+## Calibration release verification
+
+The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 15 Worker tests, plus Worker type checking and the combined production build. An independent database audit checked exact temporal cohorts, the fitted logistic gradient, all 744 legacy forecast reproductions, unchanged point forecasts, retained historical rows and the implementation hash. Browser checks covered desktop/mobile layout, chart hydration, the evidence download, a game brief and the forecast guide. The existing 519 KB legacy basketball bundle warning remains.
+
+Production verification checked byte equality for the model/evidence/ledger assets, methodology, forecast guide, sample brief and homepage, and confirmed the basketball overview was unchanged. Live D1 history retains both v1 and v2 with their original registration clocks. Deployed Worker version: `bcc563b9-4afb-43be-9bb6-e23ae08d93e4`.
 
 ## Player rankings
 
@@ -64,7 +84,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Finish migrating basketball pages from TanStack to Next.js.
 - Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
-- Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and calibrate probabilities.
+- Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and test calibration stability.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, expose advanced defensive/specialist records, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.

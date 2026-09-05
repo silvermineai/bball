@@ -79,8 +79,8 @@ export default async function Page({
           {g.home_name} {fmt(p.home_score)}. That places {favorite} ahead by{" "}
           {fmt(Math.abs(p.home_margin))} points, with a projected total of{" "}
           {fmt(p.total)}. The home win estimate is{" "}
-          {fmt(p.home_win_probability * 100)}% under the model’s normal-error
-          assumption.
+          {fmt(p.home_win_probability * 100)}%, using a probability curve
+          calibrated on {d.model.calibration.season} game outcomes.
         </p>
         <p>
           The 80% range for the home scoring margin runs from{" "}
@@ -178,16 +178,19 @@ export default async function Page({
           <h2>Read the range before the score</h2>
           <p>
             A predicted three-point margin can coexist with a wide range of
-            plausible outcomes. Our displayed 80% range assumes normally
-            distributed errors and uses the historical holdout root mean squared
-            error. Its coverage has not been independently calibrated. A
-            probability like 60% is an estimate under these assumptions, not a
-            measured guarantee.
+            plausible outcomes. Our displayed 80% range uses the 80th percentile
+            of absolute forecast errors on {d.model.calibration.season} games. A
+            logistic curve fitted on that same earlier window maps projected
+            margins to home win probabilities. Neither uses the{" "}
+            {d.model.evaluation.season} test results for calibration. The frozen
+            range covered {fmt(d.model.evaluation.interval_coverage * 100)}% of
+            those test margins. A probability like 60% remains an estimate, not
+            a guarantee. The <a href="/football/methodology/">model notebook</a>{" "}
+            shows the reliability groups and downloadable test evidence.
           </p>
           <p>
             The next research steps are to incorporate dated roster and
-            efficiency features, evaluate on rolling time splits, and calibrate
-            probabilities on a separate validation window. Until then, use the
+            efficiency features and evaluate on rolling time splits. Use the
             score model to organize film study and identify questions worth
             investigating.
           </p>

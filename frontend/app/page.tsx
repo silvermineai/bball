@@ -159,7 +159,7 @@ export default function Home() {
               <strong>{e.games}</strong>
             </div>
             <div>
-              <span>Winner accuracy</span>
+              <span>Probability-pick accuracy</span>
               <strong>{fmt(e.winner_accuracy * 100)}%</strong>
             </div>
             <div>

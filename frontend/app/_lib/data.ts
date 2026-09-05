@@ -53,7 +53,15 @@ export type Overview = {
     cutoff: string;
     training_games: number;
     training_seasons: number[];
-    sigma: number;
+    calibration: {
+      season: number;
+      games: number;
+      binary_games: number;
+      unscored_games: number;
+      training_seasons: number[];
+      logistic_coefficients: number[];
+      margin_half_width: number;
+    };
     evaluation: {
       season: number;
       games: number;
@@ -64,6 +72,18 @@ export type Overview = {
       total_mae: number;
       baseline_margin_mae: number;
       winner_accuracy: number;
+      margin_pick_accuracy: number;
+      binary_games: number;
+      brier: number;
+      log_loss: number;
+      interval_coverage: number;
+      reliability: {
+        lower: number;
+        upper: number;
+        games: number;
+        predicted: number | null;
+        observed: number | null;
+      }[];
       design: string;
       probability_note: string;
     };

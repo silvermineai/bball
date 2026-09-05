@@ -6,6 +6,8 @@ The shared Next.js scorecard lives at `/research/scorecard/`. Individual game hi
 
 The initial registration contains 2,323 forecasts: 744 football and 1,579 basketball. Confirmed start times make 345 football and 99 basketball games eligible for future scoring. The other 1,879 games remain visible but excluded because their source start time is unconfirmed. There are no settled prospective games and no licensed-feed quote observations in this edition. Missing metrics are null, not zero accuracy.
 
+The football calibration release on September 5, 2026 adds 744 immutable v2 registrations, bringing the ledger to 3,067 versions across the same 2,323 games (1,488 football versions and 1,579 basketball versions). Every original registration remains unchanged. The earlier eligible v1 forecast still supplies each football game's prospective selection; both versions are available through the game-history API. The eligible game counts remain 345 football and 99 basketball, with zero settled games and zero licensed-feed quotes. See [football calibration methodology](FOOTBALL.md#model-design).
+
 This prospective record is separate from each model's retrospective holdout. Registration times are local pipeline observations, not independently notarized public release times. Existing generated forecasts are registered at the time this ledger first sees them; their registration time is never backdated to the earlier model generation date.
 
 ## Storage and selection
