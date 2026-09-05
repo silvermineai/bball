@@ -160,6 +160,9 @@ export default function Evaluation({
           training behind each prediction.
         </p>
         <div className="hero-actions">
+          <Link className="hero-link" href="/football/features/">
+            Do efficiency features help? →
+          </Link>
           <Link className="button" href="/football/matchups/">
             Current football forecasts ↗
           </Link>

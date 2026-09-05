@@ -2852,3 +2852,144 @@ summary {
     padding: 8px;
   }
 }
+
+.feature-timeline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+.feature-timeline > div {
+  padding: 24px;
+  border-right: 1px solid var(--line);
+}
+.feature-timeline > div:last-child {
+  border: 0;
+}
+.feature-timeline strong {
+  display: block;
+  font:
+    30px "Libre Caslon Display",
+    Georgia,
+    serif;
+  margin-top: 16px;
+}
+.feature-timeline p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.feature-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 30px 0;
+}
+.feature-months button {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 18px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.feature-months button[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  background: #e8ecdf;
+}
+.feature-months strong,
+.feature-months small {
+  display: block;
+}
+.feature-months small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.feature-month-bar {
+  display: block;
+  height: 7px;
+  background: #e6e6db;
+  margin: 13px 0 8px;
+}
+.feature-month-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+.feature-month-bar.candidate {
+  margin-top: 0;
+}
+.feature-month-bar.candidate > span {
+  background: #b25732;
+}
+.feature-metrics,
+.feature-games {
+  min-width: 850px;
+}
+.feature-games tbody th,
+.feature-metrics tbody th {
+  text-transform: none;
+  letter-spacing: 0;
+  text-align: left;
+  font-size: 13px;
+}
+.feature-games small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 5px;
+}
+.feature-games summary {
+  cursor: pointer;
+}
+.feature-inputs {
+  width: 560px;
+  white-space: normal;
+  padding: 16px 0;
+}
+.feature-inputs p {
+  line-height: 1.65;
+  font-size: 12px;
+}
+.feature-inputs table {
+  width: 100%;
+}
+.feature-inputs th,
+.feature-inputs td {
+  white-space: normal;
+  padding: 9px;
+  font-size: 11px;
+}
+.feature-inputs .source-hash {
+  word-break: break-all;
+}
+.feature-downloads {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+.feature-downloads a {
+  padding: 20px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .feature-timeline {
+    grid-template-columns: 1fr;
+  }
+  .feature-timeline > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .feature-months {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .feature-months button {
+    padding: 14px;
+  }
+  .feature-downloads {
+    grid-template-columns: 1fr;
+  }
+}

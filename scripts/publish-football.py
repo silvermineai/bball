@@ -120,6 +120,19 @@ run(
 )
 run([PY, "-m", "ncaa_scraper.football_history"])
 run([PY, "-m", "ncaa_scraper.football_evaluation"])
+run([PY, "-m", "ncaa_scraper.football_features"])
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_football_features.py",
+    ]
+)
 run(
     [
         PY,
@@ -172,4 +185,5 @@ run([PY, "scripts/sync-football-events.py"])
 run([PY, "scripts/sync-football-history.py"])
 run([PY, "scripts/sync-football-efficiency.py"])
 run([PY, "scripts/archive-football-evaluation.py"])
+run([PY, "scripts/archive-football-features.py"])
 run([PY, "scripts/cloudflare.py", "deploy"])

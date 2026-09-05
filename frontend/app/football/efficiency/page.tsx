@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import Link from "next/link";
 import path from "node:path";
 import EfficiencyDesk from "./EfficiencyDesk";
 import type { EfficiencyIndex } from "../../_lib/football-efficiency";
@@ -32,6 +33,11 @@ export default function Page() {
           {Math.min(...data.seasons.map((s) => s.season))} through partial 2026.
         </p>
       </div>
+      <p className="note">
+        <Link className="hero-link" href="/football/features/">
+          Test whether these statistics improve forecasts →
+        </Link>
+      </p>
       <EfficiencyDesk data={data} />
     </>
   );

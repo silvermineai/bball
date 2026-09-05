@@ -4,15 +4,15 @@
 
 ## Observed results
 
-| 2025 season, same 784 games | Fixed preseason | Weekly refits |
-|---|---:|---:|
-| Margin MAE, points | 14.2417 | 13.6402 |
-| Margin RMSE, points | 17.9925 | 17.3113 |
-| Total MAE, points | 12.9828 | 12.8081 |
-| Probability-pick accuracy | 65.4337% | 70.1531% |
-| Brier score | 0.211391 | 0.194944 |
-| Log loss | 0.610242 | 0.570612 |
-| Nominal 80% margin-range coverage | 80.6122% | 79.4643% |
+| 2025 season, same 784 games       | Fixed preseason | Weekly refits |
+| --------------------------------- | --------------: | ------------: |
+| Margin MAE, points                |         14.2417 |       13.6402 |
+| Margin RMSE, points               |         17.9925 |       17.3113 |
+| Total MAE, points                 |         12.9828 |       12.8081 |
+| Probability-pick accuracy         |        65.4337% |      70.1531% |
+| Brier score                       |        0.211391 |      0.194944 |
+| Log loss                          |        0.610242 |      0.570612 |
+| Nominal 80% margin-range coverage |        80.6122% |      79.4643% |
 
 Weekly minus preseason margin MAE is **−0.6015 points**. An approximate 95% interval from 5,000 whole-week bootstrap resamples is **−0.8775 to −0.3030**, using seed 2605 and the 22 represented UTC weeks. Each resample recomputes the game-weighted mean from sampled block sums and counts; it does not average differently sized weekly means. Teams recur across weeks, so those blocks do not eliminate all dependence. This interval is not a forecast of future improvement or proof of a betting advantage.
 
@@ -61,3 +61,5 @@ The regular football publisher also builds, tests and archives this experiment b
 An independent audit reconciles every input against the read-only football warehouse, checks all 44 ridge normal equations (maximum residual below `7e-10`), the logistic optimum and empirical range quantile. Tests reproduce every calibration/test raw prediction from coefficients, every training cohort/cutoff and every public metric; the fixed benchmark must match the currently published holdout. Perturbing future evaluation scores cannot affect earlier fits or any 2024 calibration. The interface supports shared month/venue/program filters, error sorting, reliability-bin inspection, monthly charts, pagination, fit details, filtered CSV export and data-load retry. Existing basketball evaluation behavior is regression-checked after making its common prediction type support both sports.
 
 Relevant statistical references: [time-series evaluation guidance](https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split) and [probability calibration](https://scikit-learn.org/stable/modules/calibration.html). Source releases remain attributed to [SportsDataverse](https://github.com/sportsdataverse/sportsdataverse-data), labeled CC BY 4.0 by its publisher; direct ESPN/NCAA extraction is not enabled.
+
+The [follow-up efficiency experiment](FOOTBALL_FEATURES.md) holds this benchmark fixed and tests lagged EPA/yardage against a matched score-only correction. Its small incremental margin-error gain is inconclusive; neither experiment has been promoted to current forecasts.
