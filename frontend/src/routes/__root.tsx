@@ -38,7 +38,7 @@ function RootComponent() {
 }
 
 function AuthenticatedApp() {
-  const isLoginRoute = typeof window !== "undefined" && window.location.pathname === "/login";
+  const isLoginRoute = typeof window !== "undefined" && window.location.pathname === "/basketball/login";
 
   return isLoginRoute ? (
     <Outlet />

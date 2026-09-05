@@ -4,9 +4,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 
-type Bindings = {
-  DB: D1Database;
-};
+type Bindings = Env;
 
 type AppEnv = {
   Bindings: Bindings;
@@ -101,6 +99,51 @@ const ingestBatchBody = z.object({
 });
 
 app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
+
+const footballPlayerQuery = z.object({
+  season: z.coerce.number().int().min(2022).max(2035).default(2025),
+  page: z.coerce.number().int().min(0).max(200).default(0),
+});
+
+app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), async (c) => {
+  const id = c.req.param("id");
+  if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
+  const { season, page } = c.req.valid("query");
+  const [count, result] = await Promise.all([
+    c.env.DB.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
+      FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
+      WHERE s.athlete_id=? AND s.season=? ORDER BY g.kickoff DESC,s.dataset,s.record_key LIMIT 50 OFFSET ?`)
+      .bind(id, season, page * 50).all<{ dataset: string; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
+  ]);
+  if (!count?.total) return c.json({ error: "No records found" }, 404);
+  const rows = result.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(stats_json) as Record<string, string> }));
+  const first = rows[0]?.stats;
+  const name = first?.athlete_name ?? first?.passer_player_name ?? first?.rusher_player_name ?? first?.receiver_player_name ?? id;
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ rows, total: count.total, name, season, page });
+});
+
+app.get("/api/football/coverage", async (c) => {
+  const result = await c.env.DB.prepare(`SELECT 'games' AS dataset,count(*) AS rows FROM football_games
+    UNION ALL SELECT dataset,count(*) FROM football_stats GROUP BY dataset`).all();
+  return c.json({ coverage: result.results });
+});
+
+// Preserve basketball deep links while Next.js owns the new publication pages.
+app.get("/basketball", (c) => c.redirect("/basketball/", 302));
+app.get("/basketball/*", async (c) => {
+  const url = new URL(c.req.url);
+  if (/\.[a-z0-9]+$/i.test(url.pathname)) return c.env.ASSETS.fetch(c.req.raw);
+  url.pathname = "/basketball/";
+  return c.env.ASSETS.fetch(new Request(url, { headers: c.req.raw.headers }));
+});
+
+for (const path of ["scout", "gameplan", "recruiting", "pressroom", "film", "rankings", "season", "leaders", "conferences", "teams", "games", "players", "login", "admin"]) {
+  const redirectLegacy = (c: Context<AppEnv>) => { const u = new URL(c.req.url); return c.redirect(`/basketball${u.pathname}${u.search}`, 302); };
+  app.get(`/${path}`, redirectLegacy);
+  app.get(`/${path}/*`, redirectLegacy);
+}
 
 app.get("/api/auth/me", async (c) => {
   const user = await currentUser(c.env.DB, getCookie(c, SESSION_COOKIE));

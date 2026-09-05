@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await api.logout();
-    window.location.href = "/";
+    window.location.href = "/basketball/";
   }
 
   return (
@@ -110,6 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+      <div className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-5 pt-4 text-sm"><a href="/football/" className="font-semibold text-court">Football ↗</a><a href="/blog/">Journal ↗</a><span className="text-graphite">Basketball · 2025–26 archive</span></div>
       <main className="mx-auto max-w-7xl px-5 py-6">{children}</main>
     </div>
   );

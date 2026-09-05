@@ -1,0 +1,29 @@
+"""Run the project's Wrangler with credentials from ~/.env, never printed."""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from dotenv import dotenv_values
+
+root = Path(__file__).resolve().parents[1]
+values = dotenv_values(Path.home() / ".env")
+env = os.environ.copy()
+env["CLOUDFLARE_API_TOKEN"] = (
+    env.get("CLOUDFLARE_API_TOKEN") or values.get("CF_API_TOKEN_ACCOUNT") or ""
+)
+env["CLOUDFLARE_ACCOUNT_ID"] = (
+    env.get("CLOUDFLARE_ACCOUNT_ID") or values.get("CF_ACCOUNT_ID") or ""
+)
+if not env["CLOUDFLARE_API_TOKEN"] or not env["CLOUDFLARE_ACCOUNT_ID"]:
+    raise SystemExit(
+        "Cloudflare account credentials are missing from the environment or ~/.env"
+    )
+result = subprocess.run(
+    ["node", "node_modules/wrangler/bin/wrangler.js", *sys.argv[1:]],
+    cwd=root / "worker",
+    env=env,
+    check=False,
+)
+raise SystemExit(result.returncode)

@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --host 0.0.0.0 --port 3000",
-    "build": "vite build --config vite.spa.config.ts",
-    "start": "node .output/server/index.mjs",
+    "dev": "next dev --port 3000",
+    "build": "next build && npm run build:basketball && node scripts/combine-builds.mjs",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:basketball": "vite build --config vite.spa.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",
@@ -16,6 +17,7 @@
     "@tanstack/react-start": "^1.139.14",
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^0.468.0",
+    "next": "^16.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

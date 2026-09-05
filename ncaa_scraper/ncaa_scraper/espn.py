@@ -45,18 +45,11 @@ session.headers.update({"User-Agent": "bball-silvermine-research/1.0 (public dat
 
 
 def get_json(url: str, params: Optional[dict] = None, retries: int = 3) -> Optional[dict]:
-    for attempt in range(retries):
-        try:
-            resp = session.get(url, params=params, timeout=30)
-            if resp.status_code == 200:
-                time.sleep(REQUEST_DELAY)
-                return resp.json()
-            if resp.status_code in (404, 400):
-                return None
-            time.sleep(1.5 * (attempt + 1))
-        except requests.RequestException:
-            time.sleep(1.5 * (attempt + 1))
-    return None
+    raise RuntimeError(
+        "Direct ESPN automation is disabled: source terms restrict extraction and model training. "
+        "Use the attributed SportsDataverse bulk-release pipeline: python -m ncaa_scraper.football. "
+        "Do not re-enable this connector without an appropriate source license."
+    )
 
 
 def connect() -> sqlite3.Connection:

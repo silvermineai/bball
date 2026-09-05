@@ -181,6 +181,9 @@ frontend/node_modules/
 worker/node_modules/
 .next/
 frontend/.next/
+frontend/out/
+*.tsbuildinfo
+.firecrawl/
 dist/
 frontend/dist/
 .output/

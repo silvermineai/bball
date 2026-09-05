@@ -16,6 +16,7 @@ dependencies = [
     "pyarrow>=20.0.0",
     "pydantic>=2.8.0",
     "requests>=2.32.3",
+    "python-dotenv>=1.0.0",
     "scrapling[fetchers]>=0.4.8",
     "sqlalchemy>=2.0.0",
     "streamlit>=1.45.1",

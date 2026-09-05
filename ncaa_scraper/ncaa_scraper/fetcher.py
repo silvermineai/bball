@@ -1,10 +1,14 @@
-"""Polite Scrapling-backed fetching with durable HTML cache."""
+"""Cache reader and robots-respecting NCAA fetcher; no anti-bot bypass."""
 
 from __future__ import annotations
 
 import hashlib
 import logging
 import time
+from urllib.parse import urlsplit
+from urllib.robotparser import RobotFileParser
+
+import requests
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -15,7 +19,7 @@ class NCAAFetchError(RuntimeError):
 
 
 class ScraplingNCAAFetcher:
-    """Fetch NCAA stats pages through Scrapling and cache every successful page."""
+    """Read cached NCAA pages; require robots permission for every live fetch."""
 
     base_url = "https://stats.ncaa.org"
 
@@ -67,31 +71,27 @@ class ScraplingNCAAFetcher:
         self._last_fetch_at = time.monotonic()
 
     def _fetch_with_scrapling(self, url: str) -> str:
-        try:
-            from scrapling.fetchers import Fetcher
-        except ImportError as exc:
-            raise NCAAFetchError("Install scrapling to fetch live NCAA pages.") from exc
-
-        logger.info("Fetching NCAA page: %s", url)
-        page = Fetcher.get(
-            url,
-            impersonate="chrome",
-            stealthy_headers=True,
-            timeout=self.timeout,
-        )
-        html = str(page.body) if not isinstance(page.body, str) else page.body
-        if not self._looks_blocked(html) and not self.prefer_dynamic:
-            return html
-
-        from scrapling.fetchers import StealthyFetcher
-
-        page = StealthyFetcher.fetch(
-            url,
-            headless=True,
-            network_idle=True,
-            timeout=self.timeout * 1000,
-        )
-        return str(page.body) if not isinstance(page.body, str) else page.body
+        # Historical method name retained for compatibility with existing callers.
+        parts = urlsplit(url)
+        if parts.scheme != "https" or parts.netloc != "stats.ncaa.org":
+            raise NCAAFetchError("Only HTTPS stats.ncaa.org URLs are accepted")
+        agent = "SilvermineResearch/1.0 (service@silvermineai.com)"
+        robots = requests.get(f"{parts.scheme}://{parts.netloc}/robots.txt",
+                              headers={"User-Agent": agent}, timeout=self.timeout)
+        if robots.status_code != 200:
+            raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested")
+        policy = RobotFileParser()
+        policy.parse(robots.text.splitlines())
+        if not policy.can_fetch(agent, url):
+            raise NCAAFetchError("NCAA robots.txt disallows this request; use an authorized data release")
+        delay = policy.crawl_delay(agent) or policy.crawl_delay("*")
+        if delay:
+            time.sleep(max(float(delay), self.delay_seconds))
+        response = requests.get(url, headers={"User-Agent": agent}, timeout=self.timeout)
+        if response.status_code in (401, 403, 429):
+            raise NCAAFetchError(f"NCAA returned {response.status_code}; no bypass or retry attempted")
+        response.raise_for_status()
+        return response.text
 
     @staticmethod
     def _looks_blocked(html: str) -> bool:
