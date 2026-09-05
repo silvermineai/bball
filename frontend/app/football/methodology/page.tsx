@@ -139,9 +139,10 @@ export default function Page() {
               <p key={l}>{l}</p>
             ))}
             <p>
-              The 2026–27 basketball forecast model, confirmed roster
-              transitions and recruiting prospect evaluations are still in
-              development. Existing basketball pages cover the 2025–26 archive.
+              The independent 2026–27 basketball efficiency model is available
+              in the basketball model notebook. Confirmed current roster
+              transitions and recruiting prospect evaluations remain in
+              development.
             </p>
           </div>
         </div>

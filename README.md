@@ -4,7 +4,7 @@ College sports statistics, scouting and recruiting research from Silvermine.
 
 **Live:** https://bball.silvermine.dev
 
-The publication now starts with football: a Next.js frontend, Python bulk-data pipeline, independent score model and Cloudflare D1 storage. The basketball scouting archive remains accessible while its Next.js migration and 2026–27 forecast work continue.
+The publication covers football and men’s college basketball with a Next.js frontend, Python bulk-data pipelines, independent forecast models and Cloudflare D1 storage. Native basketball pages now include 2026–27 forecasts, efficiency ratings, player statistics, NCAA impact rankings and roster observations.
 
 ## Football
 
@@ -22,19 +22,24 @@ The initial edition includes **18,758 schedule records**, **82,187 player box-sc
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 
-## Basketball archive
+## Basketball
 
 | Tool | Route | What it does |
 |---|---|---|
-| Command center | `/basketball/` | 2025–26 final polls, power ratings, news and season summary |
-| Scouting reports | `/basketball/scout/:teamId` | Four factors, strengths/weaknesses, personnel, game logs and roster |
-| Game plan | `/basketball/gameplan?a=&b=` | Head-to-head comparisons, projected score and personnel watchlists |
-| Recruiting board | `/basketball/recruiting` | Roster class mix, departing production, positional needs and local target tracker |
-| Press room | `/basketball/pressroom?team=` | Template-generated storylines and game-preview angles |
-| Film room | `/basketball/film` | Official-channel film links and team film finders |
-| Power ratings | `/basketball/rankings` | SRS with opponent adjustment and four factors |
+| Basketball desk | `/basketball/` | Upcoming forecasts, ratings and research coverage |
+| Matchups | `/basketball/matchups/` | 1,579 forecasts for 2026–27, with score ranges and matchup briefs |
+| Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and four factors |
+| Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
+| Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
+| Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
+| Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
+| Scouting archive | `/basketball/scout/` | Preserved scouting reports and coaching tools |
 
-Existing basketball URLs such as `/scout/333` redirect to the corresponding archive route. Archive rosters and statistical projections are not verified current recruiting availability or a trained 2026–27 basketball model.
+The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** and **10.46-point margin MAE**. The nominal 80% margin interval covered **78.7%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
+
+Existing basketball URLs such as `/scout/333` redirect to their corresponding archive route. Native pages replace the old desk, player index and recruiting landing pages; the remaining scouting tools use the preserved application.
+
+See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
 
 ## Architecture
 
@@ -43,6 +48,9 @@ ncaa_scraper/ncaa_scraper/
   football_sources.py     Attributed SportsDataverse bulk downloads and receipts
   football.py             Normalization, player rankings, artifacts and D1 export
   football_model.py       Ridge forecasts and temporal holdout evaluation
+  basketball_sources.py   Basketball bulk-release catalog
+  basketball.py           Basketball ingestion, rankings, rosters and D1 export
+  basketball_model.py     Possession efficiency model and independent calibration
   analytics.py            Existing basketball analytics artifacts
   fetcher.py              NCAA cache reader with enforced robots checks
 
@@ -65,7 +73,7 @@ npm --prefix worker run dev         # API on :8787
 npm --prefix frontend run build     # Next.js + preserved basketball -> dist/client
 ```
 
-The static football pages load committed data artifacts. Player logs require the Worker API on the same origin; the deployment serves both. For an integrated local preview, build the site and use Wrangler against seeded local D1:
+The static publication pages load committed data artifacts. Player logs require the Worker API on the same origin; the deployment serves both. For an integrated local preview, build the site and use Wrangler against seeded local D1:
 
 ```bash
 cd worker
@@ -85,12 +93,13 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 
 # Full refresh, validation, D1 synchronization and deployment
 .venv/bin/python scripts/publish-football.py
+.venv/bin/python scripts/publish-basketball.py
 ```
 
 Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. No recurring refresh job is installed yet.
 
 ## Data policy
 
-Football data comes from the [SportsDataverse release store](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution and per-download provenance are retained. We normalize records, calculate rankings and fit an independent score model.
+Football and native basketball data come from the [SportsDataverse release store](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution and per-download provenance are retained. We normalize records, calculate rankings and fit an independent score model.
 
 Direct ESPN automated fetching is disabled because source terms restrict extraction and model training. NCAA requests must pass robots checks; the current source policy disallows crawling. Cached basketball data remains available. Source restrictions are never bypassed with stealth browsers or proxy rotation.

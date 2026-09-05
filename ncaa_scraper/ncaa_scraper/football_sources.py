@@ -49,8 +49,15 @@ class SourceUnavailable(RuntimeError):
 class ReleaseClient:
     """Single-threaded, conditional downloads, bounded retries, durable receipts."""
 
-    def __init__(self, cache: Path = CACHE):
+    def __init__(
+        self,
+        cache: Path = CACHE,
+        datasets: dict | None = None,
+        attribution: dict | None = None,
+    ):
         self.cache = cache
+        self.datasets = datasets if datasets is not None else DATASETS
+        self.attribution = attribution if attribution is not None else ATTRIBUTION
         cache.mkdir(parents=True, exist_ok=True)
         self.session = requests.Session()
         self.session.headers["User-Agent"] = (
@@ -61,7 +68,7 @@ class ReleaseClient:
     def load(
         self, dataset: str, year: int, refresh: bool = False
     ) -> tuple[list[dict], dict]:
-        tag, template = DATASETS[dataset]
+        tag, template = self.datasets[dataset]
         name = template.format(year=year)
         path = self.cache / name
         receipt_path = self.cache / (name + ".receipt.json")
@@ -106,7 +113,7 @@ class ReleaseClient:
                 response.raise_for_status()
                 payload = response.content
                 # Parse before replacing the last usable download.
-                parse_csv(payload, name)
+                parse_release(payload, name)
                 tmp = path.with_suffix(path.suffix + ".tmp")
                 tmp.write_bytes(payload)
                 tmp.replace(path)
@@ -118,11 +125,32 @@ class ReleaseClient:
                     "etag": response.headers.get("ETag"),
                     "last_modified": response.headers.get("Last-Modified"),
                     "sha256": hashlib.sha256(payload).hexdigest(),
-                    "attribution": ATTRIBUTION,
+                    "attribution": self.attribution,
                 }
                 receipt_path.write_text(json.dumps(receipt, indent=2))
                 break
-        return parse_csv(path.read_bytes(), name), receipt
+        return parse_release(path.read_bytes(), name), receipt
+
+
+def parse_release(payload: bytes, name: str) -> list[dict]:
+    if name.endswith(".parquet"):
+        import pyarrow.parquet as pq
+
+        rows = pq.read_table(io.BytesIO(payload)).to_pylist()
+
+        def source_value(v):
+            if v is None:
+                return ""
+            if isinstance(v, bool):
+                return "true" if v else "false"
+            if isinstance(v, (dict, list)):
+                return json.dumps(v, default=str)
+            if isinstance(v, datetime):
+                return v.isoformat().replace("+00:00", "Z")
+            return str(v)
+
+        return [{k: source_value(v) for k, v in row.items()} for row in rows]
+    return parse_csv(payload, name)
 
 
 def parse_csv(payload: bytes, name: str) -> list[dict]:

@@ -1,3 +1,4 @@
+import { getBasketball } from "../_lib/basketball-data";
 import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
@@ -38,6 +39,35 @@ export default function Page() {
           limitations behind its projections.
         </p>
       </div>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Basketball / 2026–27</div>
+            <h2>From the hardwood.</h2>
+          </div>
+          <Link href="/basketball/matchups/">All basketball matchups →</Link>
+        </div>
+        <div className="article-grid">
+          {getBasketball()
+            .upcoming.filter((g) => g.prediction)
+            .slice(0, 6)
+            .map((g) => (
+              <article className="article-card" key={g.id}>
+                <div className="eyebrow">{date(g.starts_at)} · Model brief</div>
+                <h2>
+                  {g.away_name} vs {g.home_name}
+                </h2>
+                <p>
+                  Score estimates, pace, uncertainty and questions for the
+                  scouting room.
+                </p>
+                <Link href={`/basketball/briefs/${g.id}/`}>
+                  Read the preview →
+                </Link>
+              </article>
+            ))}
+        </div>
+      </section>
       <div className="article-grid">
         {guides.map(([slug, title, deck]) => (
           <article className="article-card" key={slug}>

@@ -1,6 +1,6 @@
 # Football data and forecasting
 
-The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. The existing TanStack basketball app remains at `/basketball/` while its migration continues. Previous basketball URLs redirect to their corresponding paths.
+The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. Native basketball forecasts and research pages now start at `/basketball/`; preserved TanStack scouting tools remain on their archive routes. See [basketball documentation](BASKETBALL.md).
 
 ## Published data edition
 
@@ -62,7 +62,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 ## Remaining goal scope
 
 - Finish migrating basketball pages from TanStack to Next.js.
-- Build and verify the 2026–27 basketball forecast pipeline.
+- Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and calibrate probabilities.
 - Integrate a permitted live odds provider; settle immutable forecasts and compare only valid pregame observations.

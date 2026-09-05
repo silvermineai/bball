@@ -175,10 +175,13 @@ export default function Home() {
       <section className="section banner">
         <div>
           <div className="eyebrow">From the hardwood</div>
-          <h3 style={{ marginTop: 12 }}>The basketball binder is open.</h3>
+          <h3 style={{ marginTop: 12 }}>
+            The next basketball season is taking shape.
+          </h3>
           <p>
-            Scouting reports, four factors, game planning, roster runway and
-            recruiting tools for the 2025–26 men’s college basketball archive.
+            Explore 2026–27 forecasts, possession-based ratings, player
+            production and observed roster changes, alongside the scouting
+            archive.
           </p>
         </div>
         <a className="button secondary" href="/basketball/">

@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen text-ink">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-5 px-5 py-3">
-          <Link to="/" className="flex items-center gap-3">
+          <a href="/basketball/" className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-md bg-ink text-white">
               <BarChart3 size={20} />
             </div>
@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="font-stat text-[10px] font-semibold uppercase tracking-[0.22em] text-court">Silvermine</div>
               <div className="font-display text-lg font-semibold leading-tight">The Coaching Annual</div>
             </div>
-          </Link>
+          </a>
           <nav className="ml-auto hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Link

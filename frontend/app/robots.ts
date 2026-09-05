@@ -8,6 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/api/",
         "/football/player/",
+        "/basketball/player/",
+        "/basketball-shell/",
         "/basketball/admin",
         "/basketball/login",
       ],

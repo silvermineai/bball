@@ -130,12 +130,118 @@ app.get("/api/football/coverage", async (c) => {
   return c.json({ coverage: result.results });
 });
 
+const basketballPlayerQuery = z.object({
+  season: z.coerce.number().int().min(2024).max(2035).default(2026),
+  page: z.coerce.number().int().min(0).max(100).default(0),
+});
+app.get(
+  "/api/basketball/research/players/:id",
+  zValidator("query", basketballPlayerQuery),
+  async (c) => {
+    const id = c.req.param("id");
+    if (!/^\d{1,15}$/.test(id))
+      return c.json({ error: "Invalid player ID" }, 400);
+    const { season, page } = c.req.valid("query");
+    const player = await c.env.DB.prepare("SELECT * FROM bb_players WHERE id=?")
+      .bind(id)
+      .first();
+    if (!player) return c.json({ error: "Player not found" }, 404);
+    const [count, box, rosters, totals, participation] = await Promise.all([
+      c.env.DB.prepare(
+        "SELECT count(*) AS total FROM bb_player_box WHERE athlete_id=? AND season=?",
+      )
+        .bind(id, season)
+        .first<{ total: number }>(),
+      c.env.DB.prepare(
+        `SELECT p.team_id,p.game_id,p.stats_json,g.starts_at,g.home_name,g.away_name FROM bb_player_box p
+      LEFT JOIN bb_games g ON g.id=p.game_id WHERE p.athlete_id=? AND p.season=? ORDER BY g.starts_at DESC,p.game_id LIMIT 40 OFFSET ?`,
+      )
+        .bind(id, season, page * 40)
+        .all<{
+          team_id: string;
+          game_id: string;
+          stats_json: string;
+          starts_at: string | null;
+          home_name: string | null;
+          away_name: string | null;
+        }>(),
+      c.env.DB.prepare(
+        "SELECT season,team_id,profile_json FROM bb_rosters WHERE athlete_id=? ORDER BY season DESC,team_id",
+      )
+        .bind(id)
+        .all<{ season: number; team_id: string; profile_json: string }>(),
+      c.env.DB.prepare(
+        "SELECT team_id,stats_json FROM bb_player_season WHERE athlete_id=? AND season=?",
+      )
+        .bind(id, season)
+        .all<{ team_id: string; stats_json: string }>(),
+      c.env.DB.prepare(
+        "SELECT season,team_id,games,minutes FROM bb_participation WHERE athlete_id=? ORDER BY season DESC,team_id",
+      )
+        .bind(id)
+        .all(),
+    ]);
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json({
+      player,
+      season,
+      total: count?.total ?? 0,
+      rows: box.results.map(({ stats_json, ...row }) => ({
+        ...row,
+        stats: JSON.parse(stats_json),
+      })),
+      rosters: rosters.results.map(({ profile_json, ...row }) => ({
+        ...row,
+        profile: JSON.parse(profile_json),
+      })),
+      seasonStats: totals.results.map(({ stats_json, ...row }) => ({
+        ...row,
+        stats: JSON.parse(stats_json),
+      })),
+      participation: participation.results,
+    });
+  },
+);
+app.get("/api/basketball/research/coverage", async (c) => {
+  // D1 limits compound SELECT terms; count each dataset in one batch.
+  const tables = {
+    games: "bb_games",
+    player_box: "bb_player_box",
+    team_box: "bb_team_box",
+    rosters: "bb_rosters",
+    impact: "bb_impact",
+    forecasts: "bb_forecasts",
+    unresolved: "bb_unresolved",
+  };
+  const counts = await c.env.DB.batch<{ rows: number }>(
+    Object.values(tables).map((table) =>
+      c.env.DB.prepare(`SELECT count(*) AS rows FROM ${table}`),
+    ),
+  );
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({
+    coverage: Object.keys(tables).map((dataset, index) => ({
+      dataset,
+      rows: counts[index].results[0].rows,
+    })),
+  });
+});
+
 // Preserve basketball deep links while Next.js owns the new publication pages.
 app.get("/basketball", (c) => c.redirect("/basketball/", 302));
 app.get("/basketball/*", async (c) => {
   const url = new URL(c.req.url);
-  if (/\.[a-z0-9]+$/i.test(url.pathname)) return c.env.ASSETS.fetch(c.req.raw);
-  url.pathname = "/basketball/";
+  const asset = await c.env.ASSETS.fetch(c.req.raw);
+  if (asset.status !== 404 || /\.[a-z0-9]+$/i.test(url.pathname)) return asset;
+  // Only old, known archive routes receive the SPA fallback. New publication
+  // paths and unknown routes should retain a genuine 404.
+  if (
+    !/^\/basketball\/(scout|gameplan|pressroom|film|rankings|season|leaders|conferences|teams|games|players|login|admin)(\/|$)/.test(
+      url.pathname,
+    )
+  )
+    return asset;
+  url.pathname = "/basketball-shell/";
   return c.env.ASSETS.fetch(new Request(url, { headers: c.req.raw.headers }));
 });
 

@@ -1,3 +1,4 @@
+import { getBasketball } from "./_lib/basketball-data";
 import type { MetadataRoute } from "next";
 import { getOverview } from "./_lib/data";
 export const dynamic = "force-static";
@@ -7,6 +8,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
     "/football/",
+    "/basketball/",
+    "/basketball/ratings/",
+    "/basketball/players/",
+    "/basketball/recruiting/",
+    "/basketball/impact/",
+    "/basketball/model/",
+    "/basketball/matchups/",
+    ...getBasketball()
+      .upcoming.filter((g) => g.prediction)
+      .map((g) => `/basketball/briefs/${g.id}/`),
     "/football/matchups/",
     "/football/players/",
     "/football/ratings/",
