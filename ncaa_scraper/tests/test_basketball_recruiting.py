@@ -23,7 +23,7 @@ class RecruitingTests(unittest.TestCase):
 
     def test_reviewed_links_and_missing_stats(self):
         release = build(self.doc, self.box, self.programs)
-        self.assertEqual(release["coverage"]["historical_links"], 28)
+        self.assertEqual(release["coverage"]["historical_links"], 33)
         self.assertFalse(release["coverage"]["complete_national_coverage"])
         self.assertTrue(
             all(
@@ -40,9 +40,23 @@ class RecruitingTests(unittest.TestCase):
         self.assertIsNone(people["2305-trent-perry"]["stats"])
         self.assertEqual(people["2305-trent-perry"]["category"], "freshman")
         self.assertIsNone(people["62-jaden-matingou"]["stats"])
+        self.assertIsNone(people["153-cade-bennerman"]["stats"])
+        self.assertIsNone(people["153-neo-avdalas"]["stats"])
         hampton = people["62-kellen-hampton"]["stats"]
         self.assertEqual((hampton["games"], hampton["mpg"]), (1, 1.0))
         self.assertEqual(hampton["team_id"], "279")
+
+    def test_nickname_does_not_bypass_reviewed_full_name_rule(self):
+        doc = copy.deepcopy(self.doc)
+        person = next(p for p in doc["people"] if p["key"] == "153-neo-avdalas")
+        person["stats_ref"] = {
+            "player_id": "5311829",
+            "team_id": "259",
+            "season": 2026,
+            "basis": "Same prior program but a different first name.",
+        }
+        with self.assertRaisesRegex(ValueError, "identity"):
+            build(doc, self.box, self.programs)
 
     def test_reviewed_school_spellings_still_require_exact_player_and_team_ids(self):
         for key in ["62-marcus-adams-jr", "62-houran-dan", "2305-christian-reeves"]:

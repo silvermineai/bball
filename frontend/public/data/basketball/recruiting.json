@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "season": 2027,
-  "reviewed_at": "2026-09-05T08:29:47.820523+00:00",
+  "reviewed_at": "2026-09-05T10:09:41.078188+00:00",
   "coverage": {
-    "programs": 8,
-    "players": 53,
-    "events": 55,
-    "sources": 31,
-    "historical_links": 28,
+    "programs": 10,
+    "players": 71,
+    "events": 73,
+    "sources": 39,
+    "historical_links": 33,
     "complete_national_coverage": false
   },
   "methodology": "Selected school announcements, independently summarized. Publication dates are not effective transfer dates. A signing does not establish eligibility or current availability. Coverage is partial, including within listed programs. These records do not change model forecasts.",
@@ -66,6 +66,18 @@
       "name": "Kansas",
       "host": "kuathletics.com",
       "publisher": "Kansas Athletics"
+    },
+    {
+      "id": "153",
+      "name": "North Carolina",
+      "host": "goheels.com",
+      "publisher": "North Carolina Athletics"
+    },
+    {
+      "id": "356",
+      "name": "Illinois",
+      "host": "fightingillini.com",
+      "publisher": "Illinois Athletics"
     }
   ],
   "sources": [
@@ -409,6 +421,94 @@
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
       "review_note": "This article also identifies previously signed freshmen; their listed event date is this update, not an inferred original signing date."
+    },
+    {
+      "id": "unc-august-roster",
+      "team_id": "153",
+      "url": "https://goheels.com/news/2026/8/21/mens-basketball-releases-2026-27-roster",
+      "title": "Men's Basketball Announces 2026-27 Roster",
+      "publisher": "North Carolina Athletics",
+      "published_on": "2026-08-21",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": "Events use the roster-update date, not an inferred signing date. Neo Avdalas is unlinked because the archive uses Neoklis Avdalas; no name alias is assumed. Cade Bennerman has no matching 2025–26 box profile. Sayon Keita is grouped by his international club pathway, although the school lists him as a freshman."
+    },
+    {
+      "id": "illinois-ethan-brown",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2025/11/15/mens-basketball-illinois-signs-brown",
+      "title": "Illinois Signs Brown",
+      "publisher": "Illinois Athletics",
+      "published_on": "2025-11-15",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-landon-davis",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2025/11/12/mens-basketball-davis-signs-with-illinois",
+      "title": "Davis Signs with Illinois",
+      "publisher": "Illinois Athletics",
+      "published_on": "2025-11-12",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-lucas-morillo",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2025/11/20/mens-basketball-morillo-signs-with-illinois",
+      "title": "Morillo Signs with Illinois",
+      "publisher": "Illinois Athletics",
+      "published_on": "2025-11-20",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-zavier-zens",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2026/4/17/mens-basketball-zens-signs-with-illinois",
+      "title": "Zens Signs with Illinois",
+      "publisher": "Illinois Athletics",
+      "published_on": "2026-04-17",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-quentin-coleman",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2026/4/19/mens-basketball-coleman-signs-with-fighting-illini",
+      "title": "Coleman Signs with Fighting Illini",
+      "publisher": "Illinois Athletics",
+      "published_on": "2026-04-19",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-lincoln-williams",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2026/6/8/mens-basketball-illinois-adds-williams",
+      "title": "Illinois Adds Williams",
+      "publisher": "Illinois Athletics",
+      "published_on": "2026-06-08",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "illinois-stefan-vaaks",
+      "team_id": "356",
+      "url": "https://fightingillini.com/news/2026/5/1/mens-basketball-vaaks-signs-with-fighting-illini",
+      "title": "Vaaks Signs with Fighting Illini",
+      "publisher": "Illinois Athletics",
+      "published_on": "2026-05-01",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
     }
   ],
   "people": [
@@ -1199,6 +1299,215 @@
       "category": "freshman",
       "previous_program": null,
       "stats": null
+    },
+    {
+      "key": "153-angelo-brizzi",
+      "name": "Angelo Brizzi",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "Buffalo",
+      "stats": {
+        "id": "4684022",
+        "team_id": "2084",
+        "team": "Buffalo",
+        "season": 2026,
+        "games": 32,
+        "mpg": 29.8,
+        "ppg": 14.5,
+        "rpg": 2.8,
+        "apg": 1.8,
+        "efg": 0.5625,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "153-cameron-fens",
+      "name": "Cameron Fens",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "South Dakota",
+      "stats": {
+        "id": "5107880",
+        "team_id": "233",
+        "team": "South Dakota",
+        "season": 2026,
+        "games": 32,
+        "mpg": 25.2,
+        "ppg": 14.4,
+        "rpg": 8.7,
+        "apg": 0.8,
+        "efg": 0.5787781350482315,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "153-terrence-brown",
+      "name": "Terrence Brown",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "Utah",
+      "stats": {
+        "id": "5177233",
+        "team_id": "254",
+        "team": "Utah",
+        "season": 2026,
+        "games": 32,
+        "mpg": 31.5,
+        "ppg": 19.9,
+        "rpg": 2.4,
+        "apg": 3.8,
+        "efg": 0.48577235772357724,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "153-matt-able",
+      "name": "Matt Able",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "NC State",
+      "stats": {
+        "id": "5196877",
+        "team_id": "152",
+        "team": "NC State",
+        "season": 2026,
+        "games": 34,
+        "mpg": 21.7,
+        "ppg": 8.8,
+        "rpg": 3.4,
+        "apg": 0.9,
+        "efg": 0.514,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "153-neo-avdalas",
+      "name": "Neo Avdalas",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "Virginia Tech",
+      "stats": null
+    },
+    {
+      "key": "153-cade-bennerman",
+      "name": "Cade Bennerman",
+      "team_id": "153",
+      "category": "transfer",
+      "previous_program": "Northwestern",
+      "stats": null
+    },
+    {
+      "key": "153-alexandros-samodurov",
+      "name": "Alexandros Samodurov",
+      "team_id": "153",
+      "category": "international",
+      "previous_program": "Panathinaikos",
+      "stats": null
+    },
+    {
+      "key": "153-sayon-keita",
+      "name": "Sayon Keita",
+      "team_id": "153",
+      "category": "international",
+      "previous_program": "FC Barcelona U18",
+      "stats": null
+    },
+    {
+      "key": "153-maximo-adams",
+      "name": "Maximo Adams",
+      "team_id": "153",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "153-malloy-smith",
+      "name": "Malloy Smith",
+      "team_id": "153",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "153-kevin-thomas",
+      "name": "Kevin Thomas",
+      "team_id": "153",
+      "category": "freshman",
+      "previous_program": null,
+      "stats": null
+    },
+    {
+      "key": "356-ethan-brown",
+      "name": "Ethan Brown",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "Rolla High School",
+      "stats": null
+    },
+    {
+      "key": "356-landon-davis",
+      "name": "Landon Davis",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "Waukee Northwest High School",
+      "stats": null
+    },
+    {
+      "key": "356-lucas-morillo",
+      "name": "Lucas Morillo",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "The Newman School",
+      "stats": null
+    },
+    {
+      "key": "356-zavier-zens",
+      "name": "Zavier Zens",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "Wisconsin Lutheran High School",
+      "stats": null
+    },
+    {
+      "key": "356-quentin-coleman",
+      "name": "Quentin Coleman",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "Principia School",
+      "stats": null
+    },
+    {
+      "key": "356-lincoln-williams",
+      "name": "Lincoln Williams",
+      "team_id": "356",
+      "category": "freshman",
+      "previous_program": "Kankakee High School",
+      "stats": null
+    },
+    {
+      "key": "356-stefan-vaaks",
+      "name": "Stefan Vaaks",
+      "team_id": "356",
+      "category": "transfer",
+      "previous_program": "Providence",
+      "stats": {
+        "id": "5311991",
+        "team_id": "2507",
+        "team": "Providence",
+        "season": 2026,
+        "games": 31,
+        "mpg": 31.5,
+        "ppg": 15.8,
+        "rpg": 2.5,
+        "apg": 3.2,
+        "efg": 0.5223684210526316,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
     }
   ],
   "events": [
@@ -1586,7 +1895,133 @@
       "kind": "addition",
       "source_id": "kansas-grant-mordini",
       "summary": "Kansas identified Trent Perry among its previously signed freshmen in the May 1 update."
+    },
+    {
+      "id": "153-angelo-brizzi-addition",
+      "person_key": "153-angelo-brizzi",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Angelo Brizzi among transfers in its August roster update."
+    },
+    {
+      "id": "153-cameron-fens-addition",
+      "person_key": "153-cameron-fens",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Cameron Fens among transfers in its August roster update."
+    },
+    {
+      "id": "153-terrence-brown-addition",
+      "person_key": "153-terrence-brown",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Terrence Brown among transfers in its August roster update."
+    },
+    {
+      "id": "153-matt-able-addition",
+      "person_key": "153-matt-able",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Matt Able among transfers in its August roster update."
+    },
+    {
+      "id": "153-neo-avdalas-addition",
+      "person_key": "153-neo-avdalas",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Neo Avdalas among transfers in its August roster update."
+    },
+    {
+      "id": "153-cade-bennerman-addition",
+      "person_key": "153-cade-bennerman",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC included Cade Bennerman among transfers in its August roster update. The school reports a prior redshirt year."
+    },
+    {
+      "id": "153-alexandros-samodurov-addition",
+      "person_key": "153-alexandros-samodurov",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC named Alexandros Samodurov as a newcomer in its August roster update."
+    },
+    {
+      "id": "153-sayon-keita-addition",
+      "person_key": "153-sayon-keita",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC named Sayon Keita as a newcomer in its August roster update."
+    },
+    {
+      "id": "153-maximo-adams-addition",
+      "person_key": "153-maximo-adams",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC named Maximo Adams as a newcomer in its August roster update."
+    },
+    {
+      "id": "153-malloy-smith-addition",
+      "person_key": "153-malloy-smith",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC named Malloy Smith as a newcomer in its August roster update."
+    },
+    {
+      "id": "153-kevin-thomas-addition",
+      "person_key": "153-kevin-thomas",
+      "kind": "addition",
+      "source_id": "unc-august-roster",
+      "summary": "UNC named Kevin Thomas as a newcomer in its August roster update."
+    },
+    {
+      "id": "356-ethan-brown-addition",
+      "person_key": "356-ethan-brown",
+      "kind": "addition",
+      "source_id": "illinois-ethan-brown",
+      "summary": "Illinois announced the signing of Ethan Brown for its 2026–27 additions."
+    },
+    {
+      "id": "356-landon-davis-addition",
+      "person_key": "356-landon-davis",
+      "kind": "addition",
+      "source_id": "illinois-landon-davis",
+      "summary": "Illinois announced the signing of Landon Davis for its 2026–27 additions."
+    },
+    {
+      "id": "356-lucas-morillo-addition",
+      "person_key": "356-lucas-morillo",
+      "kind": "addition",
+      "source_id": "illinois-lucas-morillo",
+      "summary": "Illinois announced the signing of Lucas Morillo for its 2026–27 additions."
+    },
+    {
+      "id": "356-zavier-zens-addition",
+      "person_key": "356-zavier-zens",
+      "kind": "addition",
+      "source_id": "illinois-zavier-zens",
+      "summary": "Illinois announced the signing of Zavier Zens for its 2026–27 additions."
+    },
+    {
+      "id": "356-quentin-coleman-addition",
+      "person_key": "356-quentin-coleman",
+      "kind": "addition",
+      "source_id": "illinois-quentin-coleman",
+      "summary": "Illinois announced the signing of Quentin Coleman for its 2026–27 additions."
+    },
+    {
+      "id": "356-lincoln-williams-addition",
+      "person_key": "356-lincoln-williams",
+      "kind": "addition",
+      "source_id": "illinois-lincoln-williams",
+      "summary": "Illinois announced the signing of Lincoln Williams for its 2026–27 additions."
+    },
+    {
+      "id": "356-stefan-vaaks-addition",
+      "person_key": "356-stefan-vaaks",
+      "kind": "addition",
+      "source_id": "illinois-stefan-vaaks",
+      "summary": "Illinois announced the signing of Stefan Vaaks for its 2026–27 additions."
     }
   ],
-  "edition": "8403d403ba27c7a5f2b9db4db5b15266e6bccbace33a3654dc8ec546f941746c"
+  "edition": "1362b72fc614359bd8fb9b6f1b74b6c93567055d2b9dc3c427cebc7a67503808"
 }
