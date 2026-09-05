@@ -26,6 +26,8 @@ The browser applies the same published coefficients and calibration as the Pytho
 
 Hypothetical comparisons are not scheduled games and do not enter the prospective ledger. The model does not yet include current roster, injury or recruiting features. A generated scenario is not evidence of betting value.
 
+Program selections and venue now persist in the comparison URL (`a`, `b`, `venue=neutral|a|b`). Incoming matchup briefs preserve their actual designated floor, and swapping programs retains the physical home team. The [expanded briefs](BASKETBALL_BRIEFS.md) use the same scouting edition and link into the workbench.
+
 ## Rebuild and publish
 
 ```bash

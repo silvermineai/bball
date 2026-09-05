@@ -1,0 +1,37 @@
+# Basketball scouting briefs
+
+The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, workload leaders, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
+
+## Evidence selection
+
+Every brief requires the two scouting profiles to match its home/away IDs, previous-season year, model ID and source edition. A mismatch stops the build rather than publishing mixed model/scouting evidence.
+
+For each direction of play, the page considers eFG%, turnovers per estimated possession, offensive rebound rate and FTA/FGA. Both sides need a nonmissing rate, at least ten games, a rank and a favorable percentile. The two largest absolute favorable-percentile differences are selected for film questions, with metric keys breaking ties. These are editorial priorities, not an estimated point advantage or an adjustment to the forecast. The full rates remain visible so the highlighted selection can be audited.
+
+Categories describe historical quartiles: an offense at or above the 75th favorable percentile against a defense at or below the 25th is labeled offensive strength/defensive concern; the reverse, two upper-quartile units and two lower-quartile units are labeled separately. Other pairings are described as contrasts to investigate. The questions ask the reader to check film; box-score rates do not establish a current coverage, lineup or tactical cause.
+
+Two full tables show all four factors, three-point attempt share, two-point accuracy and three-point accuracy in both directions. Each value retains its own valid-game count and source rank. Defensive rates refer to opponents except for turnovers forced. Three-point attempt share is a style measure with no favorable ranking. Definitions and denominator rules are expandable. A pace paragraph separates observed 2025–26 pace from the opponent-adjusted forecast.
+
+The historical personnel section selects the three largest recorded minute totals per program, requiring at least 200 minutes, positive games and matching team/season IDs. PPG, minutes, estimated usage, usage sample count and TS remain sourced values; missing values remain unavailable. The section explicitly does not project a current rotation. Player links select the actual historical season, and program links open the shot map or dossier.
+
+## School evidence and markets
+
+School announcements are filtered by exact program ID and the forecast season. Each person shows their latest dated statement, its publisher/source link and the full announcement timeline. A later redshirt or season-unavailable statement remains visible instead of being replaced by the earlier addition. Prior college statistics link to the reviewed source identity. Programs outside the partial review get an explicit coverage message; no absence, departure or roster continuity is inferred. The current slate includes 116 appearances of reviewed announcement records across its briefs, including Michigan's later availability statements.
+
+The market section reads the published ledger snapshot instead of using a permanent hard-coded no-odds message. It selects the same sport, game and model ID and verifies participants, start instant, start-time confirmation and prediction values. ISO timestamp formatting differences are normalized to their actual instant. A different snapshot is not treated as evidence for this forecast.
+
+A selected registration shows its timestamp and status, including reasons for exclusion. Only an unexcluded selected record can supply comparisons. Quote capture and provider-update times are explicit, with UTC timestamps. The spread, total and moneyline difference conventions are stated separately. No qualifying odds exist in the present ledger, so the real pages correctly show unavailable comparisons. The odds account and live market collection remain unverified; this UI change does not supply those missing data.
+
+## Workbench and preparation notes
+
+The primary link passes the published home team as program A, away team as program B, and `venue=a` for a home-designated game or `venue=neutral` for a neutral game. Previously the workbench defaulted every incoming brief to neutral. The workbench now reads a valid `venue` query value and writes program/venue selections back into the URL. Swapping programs reverses the A/B venue label while preserving the physical home program. Reloading the URL retains the scenario. Invalid venue values fall back to neutral. These scenarios still do not create forecast registrations.
+
+Each brief has a checklist derived from its highlighted film questions, plus availability and market-clock checks, and a free-text preparation notebook. Notes/checks live only in browser local storage, scoped to the game and model edition; this is disclosed next to the editor. They are not sent to the server or synchronized between devices. Storage failures are shown. Print styling includes the notes/checklist and hides navigation and editing controls. This is a browser print feature, not a generated PDF report service.
+
+## Verification and release
+
+Five added frontend tests cover all 1,579 model/scouting joins and venue predictions, mixed-edition rejection, ledger mismatch rejection, short/missing factor samples, workload qualification, later availability, stale-season recruiting and scenario query handling. All 20 frontend tests pass, including the prior forecast and evaluation parity suites. Worker type checking and its 15 tests pass; the combined production build passes.
+
+An independent HTML audit checks all 1,579 generated pages against their source JSON: forecast scores, venue links, every one of the 28 factor values and sample counts, source ranks and historical personnel IDs. The single exactly even-margin prediction is explicitly labeled even. Local and production browser QA pass home/neutral score parity, program swap and reload, note persistence/isolation, print visibility, Michigan availability statements, unconfirmed-time ledger status and desktop/mobile layouts. Five representative live pages, including the even-margin and Michigan matchups, match their audited HTML hashes. The production overview is unchanged and adjacent desks remain reachable.
+
+Build using the standard frontend workflow and deploy with `scripts/cloudflare.py`; existing basketball/scouting publishers also rebuild these pages. The current generator still follows the published upcoming slate. Durable postgame brief archives, more current school coverage and richer possession/lineup analysis remain open work.

@@ -1,7 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBasketball } from "../../../_lib/basketball-data";
-import { date, fmt, kick } from "../../../_lib/format";
+import { getBasketball, getRecruiting } from "../../../_lib/basketball-data";
+import { getScoutProfile } from "../../../_lib/scouting-data";
+import { getLedger } from "../../../_lib/research-data";
+import { date, fmt, kick, signed } from "../../../_lib/format";
+import {
+  briefEvidence,
+  briefFactors,
+  briefScenarioUrl,
+} from "../../../_lib/matchup-brief";
+import { eventLabels, publicationDate } from "../../../_lib/recruiting";
+import { reasons } from "../../../_lib/research-types";
+import type { Metric } from "../../../_lib/scouting-types";
+import BriefNotebook from "../BriefNotebook";
+
 export function generateStaticParams() {
   return getBasketball()
     .upcoming.filter((g) => g.prediction)
@@ -16,10 +28,44 @@ export async function generateMetadata({
     g = getBasketball().upcoming.find((g) => g.id === id);
   return {
     title: g
-      ? `${g.away_name} vs ${g.home_name}: 2026–27 basketball preview`
+      ? `${g.away_name} vs ${g.home_name}: 2026–27 basketball scouting brief`
       : "Basketball preview",
+    description: g
+      ? `Forecast, Four Factors, historical personnel and dated roster evidence for ${g.away_name} versus ${g.home_name}.`
+      : undefined,
     alternates: { canonical: `/basketball/briefs/${id}/` },
   };
+}
+function Rate({ metric }: { metric: Metric | undefined }) {
+  return (
+    <>
+      <strong>
+        {metric?.value == null ? "—" : fmt(metric.value * 100) + "%"}
+      </strong>
+      <small>
+        {metric?.games ?? 0} games
+        {metric?.rank != null
+          ? ` · rank ${metric.rank}/${metric.population}`
+          : ""}
+      </small>
+    </>
+  );
+}
+function EvidenceTime({ value }: { value: string }) {
+  return (
+    <time dateTime={value} title={value}>
+      {new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
+      }).format(new Date(value))}{" "}
+      UTC
+    </time>
+  );
 }
 export default async function Page({
   params,
@@ -31,104 +77,553 @@ export default async function Page({
     g = d.upcoming.find((g) => g.id === id),
     p = g?.prediction;
   if (!g || !p) notFound();
-  const favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
+  const home = getScoutProfile(g.home_id),
+    away = getScoutProfile(g.away_id),
+    recruiting = getRecruiting(),
+    ledger = getLedger();
+  const evidence = briefEvidence(g, d, home, away, recruiting, ledger),
+    favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
+  const tasks = [
+    ...evidence.pressures.map(
+      (point) =>
+        `${point.offense} offense vs ${point.defense}: review ${point.factor.label.toLowerCase()}.`,
+    ),
+    "Confirm current availability and the expected rotation with dated school evidence.",
+    "Check the forecast record and capture time before using a market comparison.",
+  ];
+  const record = evidence.ledger,
+    quotes = record && !record.exclusion ? record.comparisons : [];
   return (
-    <article className="article">
-      <div className="eyebrow">
-        Basketball matchup brief · Generated from model data ·{" "}
-        {date(d.generated_at)}
+    <article className="matchup-brief">
+      <header className="page-title">
+        <div className="eyebrow">2026–27 / Basketball scouting brief</div>
+        <h1>
+          {g.away_name}
+          <br />
+          <span className="brief-versus">vs</span> {g.home_name}
+        </h1>
+        <p>
+          The projected game, the historical pressure points and the personnel
+          questions to take into preparation. Generated from published
+          statistics and reviewed announcements.
+        </p>
+        <p className="brief-schedule">
+          <strong>
+            {g.time_tbd
+              ? `${date(g.starts_at)} · start time unconfirmed`
+              : kick(g.starts_at)}
+          </strong>
+          <span>
+            {g.neutral ? "Neutral floor" : `${g.home_name} designated home`}
+            {g.venue ? ` · ${g.venue}` : ""}
+          </span>
+        </p>
+        <div className="hero-actions">
+          <Link className="button" href={briefScenarioUrl(g)}>
+            Open this venue in the workbench ↗
+          </Link>
+          <a className="hero-link" href="#brief-notes">
+            Preparation notes ↓
+          </a>
+          <Link
+            className="hero-link"
+            href={`/research/game/?sport=basketball&id=${g.id}`}
+          >
+            Forecast history →
+          </Link>
+        </div>
+      </header>
+      <section className="brief-scoreboard" aria-label="Model forecast">
+        <div>
+          <span>{g.away_name}</span>
+          <strong>{fmt(p.away_score)}</strong>
+          <small>Projected away score</small>
+        </div>
+        <div className="brief-score-center">
+          <span>Preseason baseline</span>
+          <strong>
+            {p.home_margin === 0
+              ? "Even projected score"
+              : `${favorite} by ${fmt(Math.abs(p.home_margin), Math.abs(p.home_margin) < 1 ? 2 : 1)}`}
+          </strong>
+          <small>
+            Projected winning margin · {fmt(p.pace)} possessions / 40 min
+          </small>
+          <p>
+            {g.home_name} win estimate {fmt(p.home_win_probability * 100)}%
+          </p>
+        </div>
+        <div>
+          <span>{g.home_name}</span>
+          <strong>{fmt(p.home_score)}</strong>
+          <small>Projected home score</small>
+        </div>
+      </section>
+      <div className="brief-forecast-note">
+        <p>
+          Projected total <strong>{fmt(p.total)}</strong>. Nominal 80% range for
+          home scoring margin:{" "}
+          <strong>
+            {signed(p.margin_low)} to {signed(p.margin_high)}
+          </strong>
+          .{" "}
+          {p.margin_low <= 0 && p.margin_high >= 0
+            ? "Either team winning falls within that range."
+            : "Outcomes outside that range remain possible."}
+        </p>
+        <p className="note">
+          The model uses historical opponent-adjusted efficiency and tempo. It
+          has no current roster or injury inputs. Schedule details are partial
+          and may change. Model edition: {date(d.generated_at)}.
+        </p>
       </div>
-      <h1>
-        {g.away_name}
-        <br />
-        vs {g.home_name}
-      </h1>
-      <p className="deck">
-        The projected score, the uncertainty, and the next questions for the
-        scouting room.
-      </p>
-      <p>
-        The published schedule lists this game for {date(g.starts_at)}
-        {g.time_tbd
-          ? ", with time still to be confirmed"
-          : ` at ${kick(g.starts_at)}`}
-        . {g.venue ? `The listed venue is ${g.venue}.` : ""}{" "}
-        {g.neutral
-          ? "This is marked as a neutral-floor game."
-          : "The source designates " + g.home_name + " as the home team."}{" "}
-        The 2026–27 schedule is still partial and may change.
-      </p>
-      <h2>A possession-based first look.</h2>
-      <p>
-        Open the{" "}
-        <Link href={`/basketball/compare/?a=${g.home_id}&b=${g.away_id}`}>
-          matchup workbench
-        </Link>{" "}
-        to compare both programs’ Four Factors, shooting profiles and historical
-        personnel.
-      </p>
-      <p>
-        Silvermine’s efficiency model projects {g.away_name} {fmt(p.away_score)}
-        , {g.home_name} {fmt(p.home_score)}: {favorite} ahead by{" "}
-        {fmt(Math.abs(p.home_margin))} points. Estimated pace is {fmt(p.pace)}{" "}
-        possessions per team over 40 minutes. The projected combined score is{" "}
-        {fmt(p.total)}.
-      </p>
-      <p>
-        The home win estimate is {fmt(p.home_win_probability * 100)}%. The
-        nominal 80% range for home scoring margin is {fmt(p.margin_low)} to{" "}
-        {fmt(p.margin_high)} points.{" "}
-        {p.margin_low <= 0 && p.margin_high >= 0
-          ? "That range includes either team winning."
-          : "The range sits on one side of zero; outcomes outside it remain possible."}
-      </p>
-      <h2>Separate team history from today’s roster.</h2>
-      <p>
-        This version learns offensive and defensive strength from past box
-        scores while accounting for opponents and home floor. It does not yet
-        include current roster composition or injuries. Before acting on the
-        point estimate, confirm the players expected to be available and check
-        which prior contributors remain in the rotation.
-      </p>
-      <p>
-        The <Link href="/basketball/recruiting/">roster board</Link>{" "}
-        distinguishes recorded historical program changes from future-season
-        source listings. A listing can be incomplete or carried forward, so it
-        should not be treated as a school-confirmed roster.
-      </p>
-      <h2>Three questions for film study.</h2>
-      <p>
-        Who can create efficient shots without turning the ball over? Which
-        lineup combinations control the defensive glass? If the game slows down,
-        which players can still generate good half-court opportunities? Use the{" "}
-        <Link href="/basketball/players/">player statistics</Link> and{" "}
-        <Link href="/basketball/impact/">NCAA impact rankings</Link> to locate
-        evidence, then test those hypotheses on film. These are scouting
-        prompts, not verified claims about this matchup’s tendencies.
-      </p>
-      <h2>How the forecast was tested.</h2>
-      <p>
-        The model’s independent 2025–26 evaluation covered{" "}
-        {d.model.evaluation.games.toLocaleString()} games. Average margin error
-        was {fmt(d.model.evaluation.margin_mae)} points; nominal 80% ranges
-        covered {fmt(d.model.evaluation.interval_coverage * 100)}% of outcomes.
-        Calibration used the preceding season, separate from the test games.
-      </p>
-      <p>
-        No verified pregame betting line for this matchup has been imported. We
-        cannot report a model-versus-market edge. This preview is generated
-        commentary from a historical baseline, not an injury report or a
-        prediction of a certain result.
-      </p>
-      <p>
-        Source statistics and schedule:{" "}
-        <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-          SportsDataverse
-        </a>
-        , CC BY 4.0. Independent calculations and text templates: Silvermine.
-        Model {d.model.id}; cutoff {d.model.cutoff}.{" "}
-        <Link href="/basketball/model/">Read the model notebook</Link>.
-      </p>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              01 / Prior-season evidence → Film questions
+            </div>
+            <h2>Where the styles meet.</h2>
+          </div>
+          <span className="note">2025–26 observations</span>
+        </div>
+        <p className="note brief-explainer">
+          These are historical questions, not forecast adjustments. Each
+          direction highlights up to two Four Factors with the largest
+          difference in favorable percentile between one offense and the
+          opposing defense. Rates came against different schedules and
+          personnel; their difference is not an expected matchup outcome.
+        </p>
+        <div className="brief-pressure-grid">
+          {evidence.pressures.map((point, i) => (
+            <section
+              className="brief-pressure"
+              key={`${point.offense}-${point.factor.key}`}
+            >
+              <div className="eyebrow">
+                {String(i + 1).padStart(2, "0")} / {point.category}
+              </div>
+              <h3>{point.factor.title}</h3>
+              <p className="brief-direction">
+                {point.offense} offense <span>↔</span> {point.defense} defense
+              </p>
+              <div className="brief-pressure-values">
+                <div>
+                  <span>{point.offense} · offense</span>
+                  <Rate metric={point.offensive} />
+                </div>
+                <div>
+                  <span>
+                    {point.defense} ·{" "}
+                    {point.factor.key === "tov"
+                      ? "turnovers forced"
+                      : "opponent rate"}
+                  </span>
+                  <Rate metric={point.defensive} />
+                </div>
+              </div>
+              <p className="note">
+                {point.factor.label}. Favorable percentile:{" "}
+                {fmt(point.offensive.percentile, 1)} offense /{" "}
+                {fmt(point.defensive.percentile, 1)} defense. Higher favorable
+                percentile is better, including for statistics where a lower raw
+                rate is better.
+              </p>
+              <p className="brief-film-question">
+                <strong>On film:</strong> {point.factor.question}
+              </p>
+            </section>
+          ))}
+        </div>
+        {!evidence.pressures.length && (
+          <p className="empty">
+            The available samples do not support ranked Four Factor contrasts.
+          </p>
+        )}
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              02 / Both directions, all the evidence
+            </div>
+            <h2>The possession matchup.</h2>
+          </div>
+        </div>
+        <div className="two-col">
+          {[
+            [away, home],
+            [home, away],
+          ].map(([offense, defense]) => (
+            <section
+              className="paper-panel brief-factor-panel"
+              key={offense.id}
+            >
+              <h3>{offense.name} with the ball.</h3>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Historical rate</th>
+                      <th>
+                        {offense.name}
+                        <small>Offense</small>
+                      </th>
+                      <th>
+                        {defense.name}
+                        <small>Defense</small>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ...briefFactors.map((f) => [f.key, f.label]),
+                      ["three_rate", "Three-point attempt share"],
+                      ["two", "Two-point FG%"],
+                      ["three", "Three-point FG%"],
+                    ].map(([key, label]) => (
+                      <tr key={key}>
+                        <td>{label}</td>
+                        <td>
+                          <Rate
+                            metric={offense.splits.season.metrics[`off_${key}`]}
+                          />
+                        </td>
+                        <td>
+                          <Rate
+                            metric={defense.splits.season.metrics[`def_${key}`]}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="note">
+                Defense reports opponent rates, except turnovers forced. Each
+                statistic pools its own valid numerators and denominators; game
+                counts can differ. Three-point attempt share describes style and
+                has no favorable rank.
+              </p>
+              <Link href={`/basketball/programs/${offense.id}/`}>
+                Open {offense.name}’s full dossier →
+              </Link>
+            </section>
+          ))}
+        </div>
+        <details className="brief-definitions">
+          <summary>Stat definitions and denominators</summary>
+          <div className="two-col">
+            {briefFactors.map((factor) => (
+              <p className="note" key={factor.key}>
+                <strong>{factor.label}:</strong>{" "}
+                {home.metrics[`off_${factor.key}`].description}
+              </p>
+            ))}
+          </div>
+          <p className="note">
+            Rates are pooled from the source records, not averages of game
+            percentages. Rankings compare the {d.ratings.length} programs in the
+            model field. Some source games include opponents outside Division I.
+          </p>
+        </details>
+        <div className="brief-pace">
+          <h3>The pace question.</h3>
+          <p>
+            {away.name} recorded {fmt(away.splits.season.pace)} possessions per
+            40 minutes across {away.splits.season.paired_games} paired games;{" "}
+            {home.name} recorded {fmt(home.splits.season.pace)} across{" "}
+            {home.splits.season.paired_games}. The adjusted forecast for this
+            matchup is {fmt(p.pace)}. Identify which team’s personnel can
+            dictate the first pass, early offense and transition balance; the
+            historical tempo gap alone does not identify a tactical winner.
+          </p>
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              03 / Historical workload, then roster verification
+            </div>
+            <h2>Who carried the old possessions?</h2>
+          </div>
+        </div>
+        <p className="note brief-explainer">
+          The three largest recorded minute totals on each 2025–26 team, among
+          players with at least 200 minutes. These are historical contributors,
+          not a projected 2026–27 rotation. Follow the player history and verify
+          availability before assigning matchups.
+        </p>
+        <div className="two-col">
+          {evidence.programs.map(({ profile, personnel }) => (
+            <section className="paper-panel brief-personnel" key={profile.id}>
+              <h3>{profile.name} / 2025–26</h3>
+              {personnel.map((player) => (
+                <div className="brief-player" key={player.id}>
+                  <div>
+                    <Link
+                      href={`/basketball/player/?id=${player.id}&season=${profile.season}`}
+                    >
+                      {player.name}
+                    </Link>
+                    <small>
+                      {player.position || "Position unavailable"} ·{" "}
+                      {player.games} games · {fmt(player.minutes, 0)} total
+                      minutes
+                    </small>
+                  </div>
+                  <div className="brief-player-stats">
+                    <span>
+                      <strong>{fmt(player.mpg)}</strong> MPG
+                    </span>
+                    <span>
+                      <strong>{fmt(player.ppg)}</strong> PPG
+                    </span>
+                    <span>
+                      <strong>
+                        {player.usage_est == null
+                          ? "—"
+                          : fmt(player.usage_est * 100) + "%"}
+                      </strong>{" "}
+                      est. usage
+                    </span>
+                    <span>
+                      <strong>
+                        {player.ts == null ? "—" : fmt(player.ts * 100) + "%"}
+                      </strong>{" "}
+                      TS
+                    </span>
+                  </div>
+                  <p className="note">
+                    Usage sample: {player.usage_games ?? 0} games. An
+                    opportunity estimate from matched minutes and boxes, not
+                    measured on-court possessions.
+                  </p>
+                </div>
+              ))}
+              {!personnel.length && (
+                <p className="empty">
+                  No qualifying historical workloads in this profile.
+                </p>
+              )}
+              <Link href={`/basketball/shooting/?team=${profile.id}`}>
+                Inspect the historical shot map →
+              </Link>
+            </section>
+          ))}
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">04 / Dated school evidence</div>
+            <h2>What changed after those box scores?</h2>
+          </div>
+          <span className="note">
+            Announcement board reviewed {date(recruiting.reviewed_at)}
+          </span>
+        </div>
+        <p className="note brief-explainer">
+          This board covers a limited set of schools. An announced addition does
+          not by itself prove game-day availability. Later statements remain in
+          the player’s timeline; a missing entry is not evidence that a player
+          left or that a roster stayed unchanged.
+        </p>
+        <div className="two-col">
+          {evidence.programs.map(({ profile, announcements, reviewed }) => (
+            <section
+              className="paper-panel brief-announcements"
+              key={profile.id}
+            >
+              <h3>{profile.name}</h3>
+              {announcements.length ? (
+                announcements.map((person) => (
+                  <div className="brief-announcement" key={person.key}>
+                    <strong>{person.name}</strong>
+                    <span
+                      className={`brief-announcement-kind ${person.latest.kind !== "addition" ? "availability" : ""}`}
+                    >
+                      {eventLabels[person.latest.kind]}
+                    </span>
+                    <p>{person.latest.summary}</p>
+                    <a href={person.latest.source.url}>
+                      {person.latest.source.publisher} · published{" "}
+                      {publicationDate(person.latest.source.published_on)} ↗
+                    </a>
+                    {person.stats && (
+                      <p className="note">
+                        <Link
+                          href={`/basketball/player/?id=${person.stats.id}&season=${person.stats.season}`}
+                        >
+                          Historical production at {person.stats.team} →
+                        </Link>
+                      </p>
+                    )}
+                    <details>
+                      <summary>
+                        Announcement timeline · {person.timeline.length}{" "}
+                        {person.timeline.length === 1
+                          ? "source event"
+                          : "source events"}
+                      </summary>
+                      {person.timeline.map((event) => (
+                        <p className="note" key={event.id}>
+                          <strong>{eventLabels[event.kind]}</strong> ·{" "}
+                          {event.summary}{" "}
+                          <a href={event.source.url}>
+                            {publicationDate(event.source.published_on)} source
+                            ↗
+                          </a>
+                        </p>
+                      ))}
+                    </details>
+                  </div>
+                ))
+              ) : (
+                <p>
+                  {reviewed
+                    ? "No reviewed same-season additions are recorded for this school in this edition."
+                    : "This program is outside the reviewed school-announcement coverage in this edition. Check its official roster and availability reports."}
+                </p>
+              )}
+              <Link
+                href={`/basketball/recruiting/?q=${encodeURIComponent(profile.name)}`}
+              >
+                Open the recruiting evidence board →
+              </Link>
+            </section>
+          ))}
+        </div>
+      </section>
+      <section className="section brief-market">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">05 / Compare only matching records</div>
+            <h2>The forecast and market trail.</h2>
+          </div>
+        </div>
+        <p className="note">
+          Published ledger edition {date(ledger.generated_at)}. Only a record
+          matching this game’s model, participants, start and prediction can
+          appear here. Quotes are last qualifying observations, not verified
+          closing lines or a live price feed.
+        </p>
+        {record ? (
+          <p>
+            Forecast registered <EvidenceTime value={record.registered_at} />.
+            Status: <strong>{reasons[record.status] || record.status}</strong>
+            {record.exclusion
+              ? ` · ${reasons[record.exclusion] || record.exclusion}`
+              : ""}
+            .
+          </p>
+        ) : (
+          <p>
+            No matching forecast version is present in the published ledger
+            snapshot. Use the game history to inspect other registrations.
+          </p>
+        )}
+        {quotes.length ? (
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Bookmaker / provider</th>
+                  <th>Market</th>
+                  <th>Observed line / home probability</th>
+                  <th>Model difference</th>
+                  <th>Captured / updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotes.map((q) => (
+                  <tr key={`${q.provider}-${q.bookmaker}-${q.market}`}>
+                    <td>
+                      {q.bookmaker}
+                      <small>{q.provider}</small>
+                    </td>
+                    <td>{q.market}</td>
+                    <td>
+                      {q.market === "h2h"
+                        ? q.market_home_probability == null
+                          ? "—"
+                          : fmt(q.market_home_probability * 100) + "%"
+                        : fmt(q.line)}
+                    </td>
+                    <td>
+                      {q.market === "h2h"
+                        ? signed(q.model_difference * 100) + " pp"
+                        : signed(q.model_difference) + " pts"}
+                    </td>
+                    <td>
+                      <EvidenceTime value={q.captured_at} />
+                      <small>
+                        Provider: <EvidenceTime value={q.updated_at} />
+                      </small>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="empty">
+            No qualifying timestamped market comparison is available for this
+            forecast in this ledger edition. A model-versus-market edge cannot
+            be reported.
+          </p>
+        )}
+        <p className="note">
+          For spreads, a positive difference is model home margin plus the
+          observed home spread; for totals it is model total minus the line; for
+          moneylines it is model home probability minus the two-way normalized
+          market probability. These are model disagreements, not placed bets or
+          profit estimates.
+        </p>
+        <Link
+          href={`/research/game/?sport=basketball&id=${g.id}${record ? `&selected=${record.id}` : ""}`}
+        >
+          Inspect this game’s complete forecast and source history →
+        </Link>
+      </section>
+      <div id="brief-notes">
+        <BriefNotebook
+          key={`${g.id}-${d.model.id}`}
+          storageKey={`silvermine-brief:${g.id}:${d.model.id}`}
+          tasks={tasks}
+        />
+      </div>
+      <footer className="brief-provenance">
+        <h2>How to read this brief.</h2>
+        <p>
+          The preseason model’s independent 2025–26 evaluation covered{" "}
+          {d.model.evaluation.games.toLocaleString()} games, with{" "}
+          {fmt(d.model.evaluation.margin_mae, 2)}-point margin MAE and{" "}
+          {fmt(d.model.evaluation.interval_coverage * 100)}% empirical coverage
+          for nominal 80% ranges. The{" "}
+          <Link href="/basketball/evaluation/">weekly model experiment</Link> is
+          separate from these forecasts.
+        </p>
+        <p>
+          Historical scouting and player statistics: {date(home.source_edition)}{" "}
+          source edition. Model: <span className="mono">{d.model.id}</span>.
+          Training cutoff: {d.model.cutoff}.{" "}
+          <Link href="/basketball/model/">
+            Model notebook and source receipts →
+          </Link>
+        </p>
+        <p>
+          Bulk observations:{" "}
+          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
+            SportsDataverse
+          </a>
+          , whose publisher labels its datasets CC BY 4.0. Independent
+          calculations and text templates: Silvermine. School announcements are
+          linked individually. The film questions are hypotheses to verify, not
+          measured descriptions of a current lineup.
+        </p>
+      </footer>
     </article>
   );
 }

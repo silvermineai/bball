@@ -6,6 +6,11 @@ import { date, fmt, signed } from "../../_lib/format";
 import type { ScoutProfile, SplitKey } from "../../_lib/scouting-types";
 import { splitLabels } from "../../_lib/scouting-types";
 import {
+  scenarioQuery,
+  scenarioVenue,
+  type ScenarioVenue,
+} from "../../_lib/scenario-location";
+import {
   basketballScenario,
   type ScenarioModel,
 } from "../../_lib/basketball-scenario";
@@ -34,10 +39,18 @@ export default function Compare({
         teams.find((t) => t.id !== (validId(params.get("a")) || teams[0].id))!
           .id,
     );
-  const [venue, setVenue] = useState("neutral"),
+  const [venue, setVenue] = useState<ScenarioVenue>(
+      scenarioVenue(params.get("venue")),
+    ),
     [split, setSplit] = useState<SplitKey>("season"),
     [data, setData] = useState<[ScoutProfile, ScoutProfile] | null>(null),
     [error, setError] = useState("");
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const query = new URLSearchParams(scenarioQuery(a, b, venue));
+    for (const [key, value] of query) url.searchParams.set(key, value);
+    window.history.replaceState(null, "", url);
+  }, [a, b, venue]);
   useEffect(() => {
     const c = new AbortController();
     setData(null);
@@ -114,7 +127,10 @@ export default function Compare({
         </label>
         <label className="control">
           <span>SCENARIO VENUE</span>
-          <select value={venue} onChange={(e) => setVenue(e.target.value)}>
+          <select
+            value={venue}
+            onChange={(e) => setVenue(scenarioVenue(e.target.value))}
+          >
             <option value="neutral">Neutral floor</option>
             <option value="a">{an} home</option>
             <option value="b">{bn} home</option>

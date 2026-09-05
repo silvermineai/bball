@@ -53,6 +53,8 @@ The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from
 
 The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.
 
+The [expanded matchup briefs](BASKETBALL_BRIEFS.md) connect all 1,579 current forecasts to team-specific Four Factor contrasts, historical personnel, dated school announcements and matching ledger records. Venue-preserving workbench links, browser preparation notes and print layouts support the coaching workflow.
+
 The player index exposes PPG, RPG, APG, steals, blocks, turnovers, minutes, eFG%, estimated TS% and 3P%. Default qualification is 15 games and 400 recorded minutes, with complete fields. DNP rows remain accessible in game logs. TS uses the same disclosed 0.475 college free-throw coefficient.
 
 Team ratings show adjusted offense, defense, net efficiency and tempo, plus pooled observed four factors. Lower adjusted defense and turnover rate are better. Schedule strength is the mean adjusted net strength of rated opponents; the number of included opponents is reported. These are independent Silvermine calculations, not KenPom or another publisher's proprietary ratings.
