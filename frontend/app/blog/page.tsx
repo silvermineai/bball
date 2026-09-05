@@ -110,8 +110,8 @@ export default function Page() {
                   {g.away_name} at {g.home_name}
                 </h2>
                 <p>
-                  The projected score, uncertainty range and questions to take
-                  to the film room.
+                  The projected score, unit efficiency, historical player
+                  leaders and a notebook for the film room.
                 </p>
                 <Link href={`/blog/game-${g.id}/`}>Open the matchup →</Link>
               </article>

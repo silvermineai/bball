@@ -83,7 +83,6 @@ The full football publisher rebuilds and syncs these event editions after refres
 
 The event notebook release passed three Python tests, 20 Worker tests, 26 frontend tests, Worker type checking and the combined production build. The full source audit reconciled all 16,788 rows and verified that forecasts and the research ledger remained unchanged. Fractional sack counts and sack yardage remain visible; two-decimal display precision retains every current metric exactly. Live checks compared 12 API result sets—including paging, signed yardage, nulls, literal name search and edition pins—with independently selected local records. Desktop/mobile checks covered filtering, source inspection, game drilldown, CSV downloads, URL reload and fractional yardage. An application-router test covers canonical and trailing-slash API URLs. Deployed Worker version: `03741384-11bf-47ec-9655-5b701ac0b214`.
 
-
 ## Market integrity
 
 977 imported archive records currently contain **zero verified pregame observations**. Archive rows lack bookmaker publication time. Observations first collected after kickoff cannot be relabeled as historical pregame quotes or closing lines. No market advantage or prospective betting performance is reported.
@@ -124,3 +123,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 ## Historical player expansion
 
 The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2022–2026: 259,017 raw player box rows, 43,344 athlete/program/season records and 57,909 name-attributed defensive/specialist events. The expansion adds 18 source files and 230,947 raw D1 records, excludes retained team placeholders from all player indexes, exposes per-season coverage and verifies source/asset hashes. The earlier 2025/2026 player counts above predate that identity correction.
+
+## Matchup notebooks
+
+The [football matchup notebooks](FOOTBALL_BRIEFS.md) add two-sided unit comparisons, prior-season EPA leaders and private film notes to all 744 forecast briefs. Readers can select prior/current team seasons and FBS/all-opponent samples, inspect denominators and source receipts, and open the exact prospective game record. All forecast, statistics and ledger artifacts remain unchanged by this presentation release.

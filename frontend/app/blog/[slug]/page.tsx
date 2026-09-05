@@ -1,11 +1,8 @@
 import Link from "next/link";
-import efficiency from "../../../public/data/football/efficiency.json";
-const efficiencyTeams = new Set(
-  efficiency.seasons.find((s) => s.season === 2025)?.teams.map((t) => t.id),
-);
+import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
-import { date, fmt, kick } from "../../_lib/format";
+import { date, fmt } from "../../_lib/format";
 const titles: Record<string, string> = {
   "reading-the-forecast": "What a preseason model knows. And what it misses.",
   "understanding-player-epa": "Production is a question of context.",
@@ -29,12 +26,12 @@ export async function generateMetadata({
   const title =
     titles[slug] ||
     (g
-      ? `${g.away_name} at ${g.home_name}: 2026 matchup preview`
+      ? `${g.away_name} at ${g.home_name}: 2026 matchup notebook`
       : "Matchup brief");
   return {
     title,
     description: g
-      ? `Projected score, uncertainty and scouting questions for ${g.away_name} at ${g.home_name}, ${date(g.kickoff)}.`
+      ? `Projected score, unit efficiency, historical player production and scouting questions for ${g.away_name} at ${g.home_name}, ${date(g.kickoff)}.`
       : title,
     alternates: { canonical: `/blog/${slug}/` },
   };
@@ -49,108 +46,7 @@ export default async function Page({
     g = d.upcoming.find((g) => `game-${g.id}` === slug),
     p = g?.prediction;
   if (!titles[slug] && (!g || !p)) notFound();
-  if (g && p) {
-    const favorite = p.home_margin >= 0 ? g.home_name : g.away_name,
-      uncertain = p.margin_low <= 0 && p.margin_high >= 0;
-    return (
-      <article className="article">
-        <div className="eyebrow">
-          Matchup brief · Template-generated from model data ·{" "}
-          {date(d.generated_at)}
-        </div>
-        <h1>
-          {g.away_name}
-          <br />
-          at {g.home_name}
-        </h1>
-        <p className="deck">
-          A first look at the matchup, with the numbers and their uncertainty on
-          the same page.
-        </p>
-        <p>
-          {g.away_name} visits {g.home_name} on {date(g.kickoff)}
-          {g.time_tbd
-            ? ", with kickoff time to be determined"
-            : `, at ${kick(g.kickoff)}`}
-          . {g.venue ? `The scheduled venue is ${g.venue}.` : ""}{" "}
-          {g.neutral
-            ? "The source lists this as a neutral-site game, so the model removes its home-field term."
-            : "The model includes its learned home-field effect."}
-        </p>
-        {efficiencyTeams.has(g.away_id) && efficiencyTeams.has(g.home_id) && (
-          <p>
-            <Link
-              href={`/football/efficiency/?season=2025&a=${g.away_id}&b=${g.home_id}&scope=fbs`}
-            >
-              Compare these teams’ 2025 efficiency and opponent production →
-            </Link>
-          </p>
-        )}
-        <h2>The baseline projection</h2>
-        <p>
-          Our score model estimates {g.away_name} {fmt(p.away_score)},{" "}
-          {g.home_name} {fmt(p.home_score)}. That places {favorite} ahead by{" "}
-          {fmt(Math.abs(p.home_margin))} points, with a projected total of{" "}
-          {fmt(p.total)}. The home win estimate is{" "}
-          {fmt(p.home_win_probability * 100)}%, using a probability curve
-          calibrated on {d.model.calibration.season} game outcomes.
-        </p>
-        <p>
-          The 80% range for the home scoring margin runs from{" "}
-          {fmt(p.margin_low)} to {fmt(p.margin_high)} points.{" "}
-          {uncertain
-            ? "That interval includes a win by either team. The point estimate should not be mistaken for a confident outcome."
-            : "The interval sits on one side of zero, but unexpected roster changes and game conditions can still create outcomes outside it."}
-        </p>
-        <h2>What to check before kickoff</h2>
-        <p>
-          Confirm the starting quarterback and offensive-line continuity. This
-          model uses program identities and historical scores, so a major
-          personnel change will not be reflected directly. Examine each team’s
-          most recent player workloads and compare performance within the same
-          role before drawing conclusions from a production ranking.
-        </p>
-        <p>
-          Use the matchup as a film-study starting point: which unit can create
-          favorable down-and-distance situations, and which players are
-          responsible for that production? These are scouting questions, not
-          claims about tendencies we have verified for this game.
-        </p>
-        <h2>The market checkpoint</h2>
-        <p>
-          Follow registered forecasts and observed lines in the{" "}
-          <Link href="/research/scorecard/">prospective scorecard</Link>.
-        </p>
-        <p>
-          {g.market
-            ? `The imported archive contains a home spread of ${fmt(g.market.home_spread)}. Its observation time is ${kick(g.market.observed_at)}, but a bookmaker publication timestamp is unavailable. Treat it as an archive reference rather than a live quote.`
-            : "There is no verified pregame line for this game in the imported dataset. A model-versus-market edge cannot be reported yet. We retain the absence instead of filling it with a guessed price."}
-        </p>
-        <h2>How much weight to give this forecast</h2>
-        <p>
-          The {d.model.version} model was evaluated on{" "}
-          {d.model.evaluation.games} games from {d.model.evaluation.season},
-          using only earlier seasons for fitting. Its mean absolute margin error
-          was {fmt(d.model.evaluation.margin_mae)} points. The production model
-          uses completed FBS results through the published cutoff, but does not
-          explicitly include transfers, injuries, coaching changes or weather.
-        </p>
-        <p>
-          Model: {d.model.id}. Data edition: {d.model.cutoff}. Schedule and
-          source statistics:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>{" "}
-          (CC BY 4.0). Silvermine supplies the independent model and generated
-          commentary.
-        </p>
-        <p>
-          <Link href="/football/methodology/">Read the full methodology</Link> ·{" "}
-          <Link href="/football/matchups/">Return to matchups</Link>
-        </p>
-      </article>
-    );
-  }
+  if (g && p) return <FootballBrief game={g} overview={d} />;
   return (
     <article className="article">
       <div className="eyebrow">

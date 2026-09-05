@@ -3316,3 +3316,155 @@ summary {
 #player-shortlist {
   scroll-margin-top: 24px;
 }
+
+/* Football notebooks: paired unit tables with explicit evidence samples. */
+.football-brief {
+  overflow-wrap: anywhere;
+}
+.football-brief .brief-forecast-note {
+  line-height: 1.8;
+  font-size: 14px;
+}
+.football-unit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+.football-unit {
+  min-width: 0;
+  border: 1px solid var(--line);
+  padding: 24px;
+  background: var(--paper);
+}
+.football-unit h3 {
+  font:
+    30px "Libre Caslon Display",
+    Georgia,
+    serif;
+  margin: 8px 0 24px;
+}
+.football-unit h3 span {
+  color: var(--orange);
+  font-size: 20px;
+}
+.football-unit .eyebrow {
+  font-size: 9px;
+}
+.football-unit .data-table {
+  min-width: 0;
+  width: 100%;
+}
+.football-unit .data-table th {
+  white-space: normal;
+}
+.football-unit .data-table tbody th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+}
+.football-unit .data-table td {
+  font-size: 12px;
+}
+.football-unit .data-table td strong {
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.football-unit .data-table small {
+  display: block;
+  white-space: normal;
+  font-size: 10px;
+  line-height: 1.6;
+  font-weight: 400;
+  margin-top: 5px;
+}
+.football-sample {
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 12px;
+}
+.football-sample p {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 8px 0;
+  color: var(--muted);
+}
+.football-evidence-controls {
+  margin-top: 22px;
+}
+.football-evidence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 30px;
+  margin-top: 20px;
+  font-size: 12px;
+}
+.football-definitions {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+  margin-top: 24px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.football-definitions summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.football-definitions h3 {
+  font-size: 16px;
+  margin-top: 20px;
+}
+.football-definitions p {
+  margin: 8px 0;
+}
+.football-provenance code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.football-provenance li {
+  margin: 14px 0;
+}
+.football-market {
+  line-height: 1.8;
+  font-size: 14px;
+}
+.football-market p {
+  margin: 0 0 15px;
+}
+@media (max-width: 950px) {
+  .football-unit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .football-unit {
+    padding: 16px 10px;
+  }
+  .football-unit h3,
+  .football-unit .eyebrow {
+    margin-left: 6px;
+  }
+  .football-unit .data-table th,
+  .football-unit .data-table td {
+    padding: 12px 6px;
+  }
+  .football-unit .data-table td strong {
+    font-size: 18px;
+  }
+  .football-unit .data-table small {
+    font-size: 9px;
+  }
+}
+@media print {
+  .football-evidence-controls {
+    display: none;
+  }
+  .football-unit {
+    break-inside: avoid;
+  }
+  .football-provenance {
+    display: none;
+  }
+}
