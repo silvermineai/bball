@@ -14,6 +14,7 @@ import {
   type StatKey,
 } from "../../_lib/careers";
 import LegacyRecords from "./LegacyRecords";
+import { comparisonHref } from "../../_lib/player-comparison";
 const statLabels: Record<StatKey, string> = {
   min: "Minutes",
   pts: "Points",
@@ -186,6 +187,25 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               completed schedule entries in this season’s source coverage.
             </p>
           </div>
+          {selected && selected.teams.filter((t) => t.games > 0).length > 0 && (
+            <div className="hero-actions">
+              {selected.teams
+                .filter((t) => t.games > 0)
+                .map((t) => (
+                  <Link
+                    className="button secondary"
+                    key={t.team_id}
+                    href={comparisonHref({
+                      season: selected.season,
+                      id: selected.id,
+                      team_id: t.team_id,
+                    })}
+                  >
+                    Compare {t.team} · {seasonLabel(selected.season)} →
+                  </Link>
+                ))}
+            </div>
+          )}
           <div className="strip">
             <div>
               <strong>{totals?.games ?? 0}</strong>

@@ -9,6 +9,7 @@ import {
   type RecruitingRelease,
 } from "../../_lib/recruiting";
 import Recruiting from "./Recruiting";
+import { comparisonHref } from "../../_lib/player-comparison";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 export default function Announcements({ data }: { data: RecruitingRelease }) {
   const [view, setView] = useState("announcements"),
@@ -200,6 +201,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     )}
                     <Link href={`/basketball/player/?id=${p.stats.id}`}>
                       Historical player file →
+                    </Link>
+                    <Link href={comparisonHref(p.stats)}>
+                      Compare prior production →
                     </Link>
                     {p.stats.incomplete_box_games > 0 && (
                       <small>

@@ -2526,3 +2526,329 @@ summary {
     align-items: stretch;
   }
 }
+
+/* Player comparison: three marked columns on the personnel desk. */
+.pc-picker {
+  border-top: 1px solid var(--ink);
+  padding-top: 28px;
+}
+.pc-selection-count {
+  font:
+    13px "IBM Plex Mono",
+    monospace;
+  white-space: nowrap;
+}
+.pc-search-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+}
+.pc-search-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+  padding: 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.pc-search-result:nth-child(odd) {
+  border-right: 1px solid var(--line);
+}
+.pc-search-result:hover:not(:disabled) {
+  background: #e8ecdf;
+}
+.pc-search-result small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pc-search-result > span:last-child {
+  text-align: right;
+  font-size: 12px;
+}
+.pc-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+.pc-slot-0 {
+  --player-color: #235447;
+}
+.pc-slot-1 {
+  --player-color: #a94a25;
+}
+.pc-slot-2 {
+  --player-color: #45568c;
+}
+.pc-card {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--player-color);
+  padding: 22px;
+  background: #faf8f1;
+  min-width: 0;
+}
+.pc-card h2 {
+  font-family: "Libre Caslon Display", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(28px, 2.5vw, 38px);
+  line-height: 1.12;
+  margin: 18px 0 10px;
+}
+.pc-card p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.pc-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.pc-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--player-color);
+  color: white;
+  font:
+    13px "IBM Plex Mono",
+    monospace;
+}
+.pc-remove {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px 0 8px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pc-program {
+  margin-bottom: 22px;
+}
+.pc-card-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  border-block: 1px solid var(--line);
+  padding: 16px 0;
+}
+.pc-card-numbers strong {
+  display: block;
+  font:
+    24px "IBM Plex Mono",
+    monospace;
+}
+.pc-card-numbers span {
+  display: block;
+  margin-top: 6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.pc-card .pc-sample {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 38px;
+}
+.pc-actions {
+  margin-top: 22px;
+}
+.pc-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pc-actions > p {
+  min-height: 20px;
+}
+.pc-percentiles {
+  margin-top: 28px;
+  border-top: 1px solid var(--ink);
+}
+.pc-percentile-row {
+  display: grid;
+  grid-template-columns: 180px repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.pc-metric-label strong,
+.pc-metric-label small {
+  display: block;
+}
+.pc-metric-label small {
+  color: var(--muted);
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+  margin-top: 6px;
+}
+.pc-percentile {
+  min-width: 0;
+}
+.pc-percentile-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+}
+.pc-percentile-heading strong {
+  color: var(--player-color);
+}
+.pc-rail {
+  height: 20px;
+  position: relative;
+  margin: 8px 5px 4px;
+  background: linear-gradient(var(--line), var(--line)) center/100% 2px
+    no-repeat;
+}
+.pc-rail::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 50%;
+  border-left: 1px solid var(--line);
+}
+.pc-rail > span {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: 5px;
+  border-radius: 50%;
+  background: var(--player-color);
+  transform: translateX(-50%);
+}
+.pc-percentile > small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.pc-stat-table {
+  min-width: 700px;
+}
+.pc-stat-table caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 15px 0;
+}
+.pc-stat-table th,
+.pc-stat-table td {
+  width: 25%;
+}
+.pc-stat-table tbody th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.pc-stat-table small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  margin-top: 5px;
+}
+.pc-stat-table td strong {
+  font:
+    17px "IBM Plex Mono",
+    monospace;
+}
+.pc-evidence details {
+  border-top: 1px solid var(--line);
+  padding: 20px 0;
+}
+.pc-evidence summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .pc-cards {
+    gap: 10px;
+  }
+  .pc-card {
+    padding: 16px;
+  }
+  .pc-card-numbers strong {
+    font-size: 19px;
+  }
+  .pc-percentile-row {
+    gap: 18px;
+    grid-template-columns: 130px repeat(3, minmax(0, 1fr));
+  }
+  .pc-percentile-heading {
+    flex-direction: column;
+  }
+}
+@media (max-width: 650px) {
+  .pc-cards,
+  .pc-search-results {
+    grid-template-columns: 1fr;
+  }
+  .pc-search-result:nth-child(odd) {
+    border-right: 0;
+  }
+  .pc-card {
+    padding: 22px;
+  }
+  .pc-card .pc-sample {
+    min-height: 0;
+  }
+  .pc-percentile-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .pc-metric-label {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pc-metric-label small {
+    margin-top: 0;
+  }
+  .pc-percentile > small {
+    line-height: 1.6;
+    display: block;
+  }
+}
+@media print {
+  .pc-picker,
+  .pc-actions,
+  .pc-remove {
+    display: none;
+  }
+  .pc-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pc-card,
+  .pc-percentile-row {
+    break-inside: avoid;
+  }
+  .pc-stat-table {
+    min-width: 0;
+  }
+  .pc-stat-table th,
+  .pc-stat-table td {
+    padding: 8px;
+  }
+}

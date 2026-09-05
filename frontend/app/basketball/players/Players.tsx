@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { BBPlayer } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
+import { comparisonHref } from "../../_lib/player-comparison";
 import {
   rankProduction,
   seasonLabel,
@@ -209,6 +210,11 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         {p.name}
                       </Link>
                       <small>{p.team}</small>
+                      <small>
+                        <Link href={comparisonHref(p)}>
+                          Compare this season →
+                        </Link>
+                      </small>
                     </td>
                     <td>{p.position || "—"}</td>
                     {[
