@@ -12,9 +12,9 @@ export type EvaluationGame = {
   home_score: number;
   away_score: number;
   neutral: number;
-  periods: number;
-  preseason: BBPrediction;
-  weekly: BBPrediction;
+  periods?: number;
+  preseason: Omit<BBPrediction, "pace">;
+  weekly: Omit<BBPrediction, "pace">;
   weekly_fit_id: string;
   training_before: string;
 };

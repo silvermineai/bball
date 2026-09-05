@@ -31,6 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/efficiency/",
     "/football/ratings/",
     "/football/methodology/",
+    "/football/evaluation/",
     "/blog/",
     "/blog/reading-the-forecast/",
     "/blog/understanding-player-epa/",
@@ -38,8 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
   ].map((path) => ({
     url: base + path,
-    lastModified:
-      path === "/basketball/evaluation/" ? undefined : d.generated_at,
+    lastModified: path.endsWith("/evaluation/") ? undefined : d.generated_at,
     changeFrequency: path.startsWith("/blog/") ? "weekly" : "daily",
   }));
 }

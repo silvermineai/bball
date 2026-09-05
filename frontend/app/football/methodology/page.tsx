@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getOverview } from "../../_lib/data";
 import { date, fmt } from "../../_lib/format";
 export const metadata = {
@@ -22,6 +23,12 @@ export default function Page() {
           coverage alongside the results.
         </p>
       </div>
+      <p className="note">
+        <Link href="/football/evaluation/">
+          Does weekly updating improve the model? Inspect the historical
+          experiment →
+        </Link>
+      </p>
       <div className="two-col">
         <section className="paper-panel">
           <h2>What the model learns.</h2>

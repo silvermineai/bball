@@ -47,6 +47,10 @@ The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 
 
 Production verification checked byte equality for the model/evidence/ledger assets, methodology, forecast guide, sample brief and homepage, and confirmed the basketball overview was unchanged. Live D1 history retains both v1 and v2 with their original registration clocks. Deployed Worker version: `bcc563b9-4afb-43be-9bb6-e23ae08d93e4`.
 
+## Weekly model experiment
+
+The [weekly evaluation](FOOTBALL_EVALUATION.md) compares 44 historical refits with the frozen baseline on the same 784 games. Margin MAE falls from 14.24 to 13.64 points and probability-pick accuracy rises from 65.4% to 70.2%. This retrospective evidence is published separately; it does not replace production forecasts or prospective ledger results.
+
 ## Team efficiency
 
 The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 1,950 retained advanced team-game records with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. Rates remain descriptive and do not modify forecasts.

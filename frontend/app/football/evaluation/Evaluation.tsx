@@ -8,9 +8,9 @@ import {
   filterEvaluation,
   reliability,
   type EvaluationGame,
-  type EvaluationSummary,
   type Method,
 } from "../../_lib/evaluation";
+import type { FootballEvaluationSummary as EvaluationSummary } from "../../_lib/football-evaluation";
 const methods: Method[] = ["preseason", "weekly"];
 const labels = { preseason: "Preseason model", weekly: "Weekly challenger" };
 const monthLabel = (value: string) =>
@@ -29,6 +29,7 @@ export default function Evaluation({
 }) {
   const [games, setGames] = useState<EvaluationGame[] | null>(null),
     [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [month, setMonth] = useState(""),
     [venue, setVenue] = useState(""),
     [query, setQuery] = useState("");
@@ -40,26 +41,26 @@ export default function Evaluation({
   } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/data/basketball/evaluation/games.json", {
+    setError("");
+    setGames(null);
+    fetch("/data/football/evaluation/games.json", {
       signal: controller.signal,
     })
       .then(async (r) => {
         if (!r.ok)
-          throw Error(
-            "The evaluation games could not be loaded. Please reload.",
-          );
+          throw Error("The evaluation games could not be loaded. Try again.");
         const value = await r.json();
         if (value.experiment_id !== summary.id)
           throw Error(
             "A new experiment is being published. Please reload to use one consistent edition.",
           );
-        setGames(value.games);
+        if (!controller.signal.aborted) setGames(value.games);
       })
       .catch((e) => {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [summary.id]);
+  }, [summary.id, retry]);
   useEffect(() => {
     setPage(0);
     setSelectedBin(null);
@@ -137,7 +138,7 @@ export default function Evaluation({
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = "basketball-evaluation-2026.csv";
+    a.download = "football-evaluation-2025.csv";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -155,12 +156,12 @@ export default function Evaluation({
         <p>
           A frozen preseason model and a weekly updating challenger, compared on
           the same {summary.coverage.compared_games.toLocaleString()} games from
-          2025–26. Inspect the errors, the probabilities and the training behind
-          each prediction.
+          the 2025 season. Inspect the errors, the probabilities and the
+          training behind each prediction.
         </p>
         <div className="hero-actions">
-          <Link className="button" href="/basketball/matchups/">
-            Current preseason forecasts ↗
+          <Link className="button" href="/football/matchups/">
+            Current football forecasts ↗
           </Link>
           <a className="hero-link" href="#evaluation-evidence">
             Inspect the evidence ↓
@@ -187,7 +188,7 @@ export default function Evaluation({
           <p>
             <strong>This is an experiment, not a live betting record.</strong>{" "}
             It uses currently published historical data and does not replace the
-            2026–27 preseason model. Rosters, injuries and market prices are
+            2026 production model. Rosters, injuries and market prices are
             absent.
           </p>
           <p className="note">
@@ -207,16 +208,16 @@ export default function Evaluation({
         </div>
         <div className="evaluation-timeline">
           <div>
-            <span>01 / Before 2024–25</span>
+            <span>01 / Before the 2024 season</span>
             <h3>Establish the field</h3>
             <p>
-              Fit 2023–24 efficiency and tempo. Freeze program membership before
-              the next season; ten games in the latest fitting year are
-              required.
+              Fit the score model on 2022–23. Freeze program membership from
+              that fit for the 2024 calibration replay. The 2025 comparison
+              freezes its field from the 2022–24 fit.
             </p>
           </div>
           <div>
-            <span>02 / During 2024–25</span>
+            <span>02 / During the 2024 season</span>
             <h3>Calibrate probabilities</h3>
             <p>
               Generate weekly predictions, then use{" "}
@@ -226,7 +227,7 @@ export default function Evaluation({
             </p>
           </div>
           <div>
-            <span>03 / During 2025–26</span>
+            <span>03 / During the 2025 season</span>
             <h3>Replay the next season</h3>
             <p>
               Freeze calibration. Each Monday, refit using earlier completed
@@ -238,7 +239,7 @@ export default function Evaluation({
         <p className="note">
           The 24-hour start buffer reduces overlap with unfinished games; it is
           not proof of historical data availability. Source corrections are not
-          rolled back. Earlier 2025–26 results may enter later weekly fits, but
+          rolled back. Earlier 2025 results may enter later weekly fits, but
           never their own forecast.
         </p>
       </section>
@@ -263,7 +264,7 @@ export default function Evaluation({
             </select>
           </label>
           <label className="control">
-            <span>FLOOR</span>
+            <span>VENUE</span>
             <select value={venue} onChange={(e) => setVenue(e.target.value)}>
               <option value="">All venues</option>
               <option value="neutral">Neutral</option>
@@ -275,7 +276,7 @@ export default function Evaluation({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Duke, Houston, Gonzaga…"
+              placeholder="Ohio State, Texas, Georgia…"
             />
           </label>
           <button
@@ -291,7 +292,13 @@ export default function Evaluation({
         </div>
         {error ? (
           <p className="status-error" role="alert">
-            {error}
+            {error}{" "}
+            <button
+              className="button secondary"
+              onClick={() => setRetry((n) => n + 1)}
+            >
+              Retry evaluation
+            </button>
           </p>
         ) : !games ? (
           <p className="empty" role="status">
@@ -350,7 +357,7 @@ export default function Evaluation({
                 <h3>Margin error by month</h3>
                 <p className="note">
                   Lower bars mean smaller average errors. Select a month to
-                  inspect its games. Floor and program filters apply.
+                  inspect its games. Venue and program filters apply.
                 </p>
                 <div className="evaluation-months">
                   {monthly.map((m) => (
@@ -538,8 +545,8 @@ export default function Evaluation({
               </label>
               <p className="note">
                 Margins are home minus away. Positive means the designated home
-                team. Actual scores include overtime; model scores use
-                regulation pace.
+                team. Actual scores include overtime. Score errors use raw model
+                margins and totals; the table rounds them for reading.
               </p>
               <div className="table-scroll">
                 <table className="data-table evaluation-game-table">
@@ -562,17 +569,20 @@ export default function Evaluation({
                             {date(g.starts_at)} ·{" "}
                             {g.neutral ? "Neutral" : "Home-designated"}
                           </small>
-                          <Link href={`/basketball/programs/${g.away_id}/`}>
+                          <Link
+                            href={`/football/efficiency/?season=2025&a=${g.away_id}&b=${g.home_id}&scope=fbs`}
+                          >
                             {g.away_name}
                           </Link>
                           <span> at </span>
-                          <Link href={`/basketball/programs/${g.home_id}/`}>
+                          <Link
+                            href={`/football/efficiency/?season=2025&a=${g.home_id}&b=${g.away_id}&scope=fbs`}
+                          >
                             {g.home_name}
                           </Link>
                         </td>
                         <td>
                           {g.away_score}–{g.home_score}
-                          {(g.periods ?? 0) > 2 ? " OT" : ""}
                         </td>
                         <td>{fmt(g.home_score - g.away_score)}</td>
                         <td>{fmt(g.preseason.home_margin)}</td>
@@ -644,9 +654,9 @@ export default function Evaluation({
               </strong>
             </div>
             <div>
-              <span>Usable paired box scores</span>
+              <span>Scored FBS-versus-FBS finals</span>
               <strong>
-                {summary.coverage.paired_box_games.toLocaleString()}
+                {summary.coverage.scored_fbs_games.toLocaleString()}
               </strong>
             </div>
             <div>
@@ -662,11 +672,11 @@ export default function Evaluation({
           </div>
           <p>
             Both methods exclude the same out-of-field games. The source is not
-            a certified Division I membership list. These counts describe this
-            source edition.
+            a certified FBS membership list. These counts describe this source
+            edition.
           </p>
           <p>
-            <Link href="/research/scorecard/?sport=basketball">
+            <Link href="/research/scorecard/?sport=football">
               Use the prospective ledger
             </Link>{" "}
             to distinguish forecasts actually registered before games from
@@ -688,13 +698,10 @@ export default function Evaluation({
                 "Calibration predictions · not a test",
               ],
               ["fits.json", "Every fit & training-game ID"],
+              ["training-games.json", "Training and evaluation input games"],
               ["manifest.json", "SHA-256 manifest"],
             ].map(([file, label]) => (
-              <a
-                href={`/data/basketball/evaluation/${file}`}
-                key={file}
-                download
-              >
+              <a href={`/data/football/evaluation/${file}`} key={file} download>
                 {label} ↓
               </a>
             ))}
@@ -735,7 +742,7 @@ export default function Evaluation({
           </a>
           , labeled CC BY 4.0 by its publisher. Source receipts and download
           URLs are in the summary.{" "}
-          <Link href="/basketball/model/">
+          <Link href="/football/methodology/">
             Read the production model notebook →
           </Link>
         </p>

@@ -170,6 +170,11 @@ export default function Home() {
           <p>
             <Link href="/football/methodology/">Open the model notebook →</Link>
           </p>
+          <p>
+            <Link href="/football/evaluation/">
+              Compare preseason and weekly learning →
+            </Link>
+          </p>
         </aside>
       </section>
       <section className="section banner">
