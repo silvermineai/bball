@@ -78,10 +78,10 @@ jobs:
         run: |
           case "$REFRESH_SPORT" in
             football)
-              python scripts/publish-football.py
+              BATCH_PUBLICATION=1 python scripts/publish-football.py
               ;;
             basketball)
-              python scripts/publish-basketball.py
+              BATCH_PUBLICATION=1 python scripts/publish-basketball.py
               ;;
             both)
               BATCH_PUBLICATION=1 python scripts/publish-football.py
@@ -103,13 +103,11 @@ jobs:
       - name: Validate and deploy combined publication
         if: ${{ inputs.capture_odds != true }}
         run: |
-          if [ "${{ inputs.sport || 'both' }}" = "both" ]; then
-            npm test --prefix frontend
-            npm run build --prefix frontend
-            npm run typecheck --prefix worker
-            npm test --prefix worker
-            python scripts/cloudflare.py deploy
-          fi
+          npm test --prefix frontend
+          npm run build --prefix frontend
+          npm run typecheck --prefix worker
+          npm test --prefix worker
+          python scripts/cloudflare.py deploy
 
       - name: Capture licensed odds snapshot
         if: ${{ inputs.capture_odds == true }}
