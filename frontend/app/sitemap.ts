@@ -42,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/reading-the-forecast/",
     "/blog/understanding-player-epa/",
     "/blog/market-comparison/",
+    "/blog/basketball-four-factors/",
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
   ].map((path) => ({
     url: base + path,
