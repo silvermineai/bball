@@ -205,6 +205,7 @@ export default function Page() {
                   <th className="numeric">Adj O</th>
                   <th className="numeric">Adj D</th>
                   <th className="numeric">Net</th>
+                  <th className="numeric">Luck</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,6 +220,9 @@ export default function Page() {
                     <td className="numeric">{fmt(t.adj_off)}</td>
                     <td className="numeric">{fmt(t.adj_def)}</td>
                     <td className="numeric">{fmt(t.adj_net)}</td>
+                    <td className="numeric">
+                      {t.luck == null ? "—" : `${fmt(t.luck)} pp`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -226,7 +230,8 @@ export default function Page() {
           </div>
           <p className="note">
             Points per 100 estimated possessions, opponent-adjusted with ridge
-            regression. Lower defensive efficiency is better.
+            regression. Lower defensive efficiency is better. Luck is actual
+            wins minus model-expected wins in percentage points.
           </p>
         </div>
         <aside className="paper-panel">
