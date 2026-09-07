@@ -291,6 +291,12 @@ def market_eligible(quote, prediction, state, now):
 def compare(prediction, quote, state):
     p, q = prediction["payload"]["prediction"], quote["payload"]
     market = quote["market"]
+    price_keys = {
+        "spreads": ("home_price", "away_price"),
+        "totals": ("over_price", "under_price"),
+        "h2h": ("home_price", "away_price"),
+    }[market]
+    implied = [1 / q[key] for key in price_keys]
     output = {
         "bookmaker": quote["bookmaker"],
         "provider": quote["provider"],
@@ -300,13 +306,15 @@ def compare(prediction, quote, state):
         "line": q.get("line"),
         "model_difference": None,
         "market_home_probability": None,
+        # Sum of both implied prices minus one: the bookmaker overround.
+        "market_overround": sum(implied) - 1,
     }
     if market == "spreads":
         output["model_difference"] = p["home_margin"] + q["line"]
     elif market == "totals":
         output["model_difference"] = p["total"] - q["line"]
     elif market == "h2h":
-        a, b = 1 / q["home_price"], 1 / q["away_price"]
+        a, b = implied
         output["market_home_probability"] = a / (a + b)
         output["model_difference"] = (
             p["home_win_probability"] - output["market_home_probability"]

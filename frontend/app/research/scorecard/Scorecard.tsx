@@ -285,6 +285,8 @@ export default function Scorecard() {
                               ? `Market home win ${fmt((c.market_home_probability || 0) * 100)}%`
                               : `Line ${signed(c.line!)} · model difference ${signed(c.model_difference)}`}
                             <br />
+                            Bookmaker overround {fmt(c.market_overround * 100, 2)}%
+                            <br />
                             Captured {kick(c.captured_at)}
                             <br />
                             Updated {kick(c.updated_at)}

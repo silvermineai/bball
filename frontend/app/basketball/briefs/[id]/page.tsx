@@ -630,6 +630,9 @@ export default async function Page({
                       {q.market === "h2h"
                         ? signed(q.model_difference * 100) + " pp"
                         : signed(q.model_difference) + " pts"}
+                      <small>
+                        {fmt(q.market_overround * 100, 2)}% bookmaker overround
+                      </small>
                     </td>
                     <td>
                       <EvidenceTime value={q.captured_at} />

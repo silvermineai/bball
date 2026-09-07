@@ -220,6 +220,9 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(comparisons["spreads"]["direction_result"], "win")
         self.assertEqual(comparisons["totals"]["direction_result"], "pass")
         self.assertAlmostEqual(comparisons["h2h"]["market_home_probability"], 2 / 3)
+        self.assertAlmostEqual(comparisons["spreads"]["market_overround"], 2 / 1.91 - 1)
+        self.assertAlmostEqual(comparisons["totals"]["market_overround"], 2 / 1.91 - 1)
+        self.assertAlmostEqual(comparisons["h2h"]["market_overround"], 0)
         # Future timestamps cannot masquerade as a pregame capture.
         self.c.execute("UPDATE audit_markets SET captured_at=?", (timestamp(END),))
         self.assertEqual(self.report()["games"][0]["comparisons"], [])
