@@ -6,6 +6,10 @@ import {
   verifyPlayerIndex,
   type PlayerCatalog,
 } from "../../_lib/football-player-history";
+import {
+  hasRankedProduction,
+  productionForCategory,
+} from "../../_lib/football-player-view";
 type Production = {
   plays: number | null;
   yards: number | null;
@@ -77,12 +81,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         .includes(query.toLowerCase()) &&
       (division === "all" || p.division === division) &&
       (category === "all" || p.categories.includes(category)) &&
-      (!qualified || p.production[category]?.rank != null),
+      (!qualified || hasRankedProduction(p, category)),
   );
   rows.sort(
     (a, b) =>
-      (a.production[category]?.rank ?? 999999) -
-        (b.production[category]?.rank ?? 999999) ||
+      (productionForCategory(a, category)?.stats.rank ?? 999999) -
+        (productionForCategory(b, category)?.stats.rank ?? 999999) ||
       a.name.localeCompare(b.name),
   );
   const minimum = data?.rankings[category]?.minimum_plays;
@@ -210,7 +214,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       )}
       <p className="note" style={{ marginBottom: 20 }}>
         Ranked by total EPA within{" "}
-        {category === "all" ? "each offensive category" : category}. Team
+        {category === "all"
+          ? "the best available ranked category per player"
+          : category}. Team
         affiliations reflect {season} production and do not establish current
         rosters.{" "}
         {season === "2026"
@@ -251,7 +257,8 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
               </thead>
               <tbody>
                 {rows.slice(page * 40, page * 40 + 40).map((p) => {
-                  const s = p.production[category];
+                  const selected = productionForCategory(p, category),
+                    s = selected?.stats;
                   return (
                     <tr key={`${p.id}-${p.team_id}`}>
                       <td className="rank-number">{s?.rank ?? "—"}</td>
@@ -266,9 +273,10 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                         </small>
                       </td>
                       <td>
-                        {category === "all"
-                          ? p.categories.slice(0, 3).join(", ")
-                          : category}
+                        {selected?.category ||
+                          (category === "all"
+                            ? p.categories.slice(0, 3).join(", ")
+                            : category)}
                       </td>
                       <td className="numeric">{p.box_games}</td>
                       <td className="numeric">{fmt(s?.plays, 0)}</td>
