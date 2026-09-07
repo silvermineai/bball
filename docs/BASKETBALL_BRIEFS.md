@@ -1,6 +1,6 @@
 # Basketball scouting briefs
 
-The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, workload leaders, exact-ID roster observations, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
+The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, schedule-adjusted Four Factor role estimates, workload leaders, exact-ID roster observations, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
 
 ## Evidence selection
 
@@ -11,6 +11,8 @@ For each direction of play, the page considers eFG%, turnovers per estimated pos
 Categories describe historical quartiles: an offense at or above the 75th favorable percentile against a defense at or below the 25th is labeled offensive strength/defensive concern; the reverse, two upper-quartile units and two lower-quartile units are labeled separately. Other pairings are described as contrasts to investigate. The questions ask the reader to check film; box-score rates do not establish a current coverage, lineup or tactical cause.
 
 Two full tables show all four factors, three-point attempt share, two-point accuracy and three-point accuracy in both directions. Each value retains its own valid-game count and source rank. Defensive rates refer to opponents except for turnovers forced. Three-point attempt share is a style measure with no favorable ranking. Definitions and denominator rules are expandable. A pace paragraph separates observed 2025–26 pace from the opponent-adjusted forecast.
+
+The schedule-adjusted lens then compares each offense's adjusted eFG%, turnover rate, offensive-rebound rate and free-throw attempt rate with the opposing defense's corresponding adjusted rate. The values use the same team/venue ridge design and season recency weights as the published ratings. The favorable gap reverses the turnover direction so that lower offensive turnovers and higher forced turnovers are favorable. It is a descriptive rate comparison, not a new model input, matchup prediction or claim about a current lineup.
 
 The historical personnel section selects the three largest recorded minute totals per program, requiring at least 200 minutes, positive games and matching team/season IDs. PPG, minutes, estimated usage, usage sample count and TS remain sourced values; missing values remain unavailable. The section explicitly does not project a current rotation. Player links select the actual historical season, and program links open the shot map or dossier.
 
@@ -32,7 +34,7 @@ Each brief has a checklist derived from its highlighted film questions, plus ava
 
 ## Verification and release
 
-Five added frontend tests cover all 1,579 model/scouting joins and venue predictions, mixed-edition rejection, ledger mismatch rejection, short/missing factor samples, workload qualification, later availability, stale-season recruiting and scenario query handling. All 20 frontend tests pass, including the prior forecast and evaluation parity suites. Worker type checking and its 15 tests pass; the combined production build passes.
+Frontend tests cover all 1,579 model/scouting joins and venue predictions, both-direction adjusted-factor lenses, mixed-edition rejection, ledger mismatch rejection, short/missing factor samples, workload qualification, later availability, stale-season recruiting and scenario query handling. Worker type checking and its tests pass; the combined production build passes.
 
 An independent HTML audit checks all 1,579 generated pages against their source JSON: forecast scores, venue links, every one of the 28 factor values and sample counts, source ranks and historical personnel IDs. The single exactly even-margin prediction is explicitly labeled even. Local and production browser QA pass home/neutral score parity, program swap and reload, note persistence/isolation, print visibility, Michigan availability statements, unconfirmed-time ledger status and desktop/mobile layouts. Five representative live pages, including the even-margin and Michigan matchups, match their audited HTML hashes. The production overview is unchanged and adjacent desks remain reachable.
 
