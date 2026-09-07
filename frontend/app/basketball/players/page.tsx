@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import Players from "./Players";
-export const metadata = { title: "College basketball player statistics" };
+export const metadata = {
+  title: "College basketball player statistics, rankings and impact",
+  description:
+    "Search historical player production, build weighted rankings, browse NCAA national leaderboards and inspect separate RAPM impact records.",
+};
 export default function Page() {
   return (
     <>
@@ -16,11 +20,52 @@ export default function Page() {
           current recruiting availability.
         </p>
       </div>
-      <p className="note">
-        <Link className="hero-link" href="/basketball/scouting-board/">
-          Combine statistics into a scouting board →
-        </Link>
-      </p>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">The player desk / Four ways to read a player</div>
+            <h2>Start with the question.</h2>
+          </div>
+        </div>
+        <div className="two-col">
+          <Link className="paper-panel" href="/basketball/scouting-board/">
+            <div className="eyebrow">Build a board</div>
+            <h3>Which production profile fits the lineup?</h3>
+            <p>
+              Weight scoring, rebounding, passing, events, control and
+              efficiency against the full qualified season field.
+            </p>
+            <span>Open the weighted scouting board →</span>
+          </Link>
+          <Link className="paper-panel" href="/basketball/ncaa/">
+            <div className="eyebrow">Source leaderboards</div>
+            <h3>Who leads the NCAA’s published tables?</h3>
+            <p>
+              Browse NCAA source identities across Divisions I, II and III,
+              with the published measure and coverage visible.
+            </p>
+            <span>Browse national leaderboards →</span>
+          </Link>
+          <Link className="paper-panel" href="/basketball/impact/">
+            <div className="eyebrow">Separate impact model</div>
+            <h3>Who changed possessions with context?</h3>
+            <p>
+              Read publisher NCAA RAPM for offensive, defensive and net impact;
+              these NCAA IDs remain separate from the production archive.
+            </p>
+            <span>Open RAPM impact rankings →</span>
+          </Link>
+          <Link className="paper-panel" href="/basketball/recruiting/">
+            <div className="eyebrow">Roster context</div>
+            <h3>Where has a player been observed?</h3>
+            <p>
+              Compare source-listed program movement with prior recorded
+              workload, keeping eligibility and availability unconfirmed.
+            </p>
+            <span>Read recruiting evidence →</span>
+          </Link>
+        </div>
+      </section>
       <Players
         catalog={JSON.parse(
           fs.readFileSync(
