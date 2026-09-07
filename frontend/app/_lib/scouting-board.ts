@@ -13,6 +13,12 @@ export const presets = {
     description: "Scoring volume, true shooting and fewer turnovers.",
     weights: [50, 0, 0, 0, 0, 15, 35, 0],
   },
+  balanced: {
+    label: "Balanced",
+    description:
+      "A broad lineup view across production, defense, efficiency and control.",
+    weights: [20, 15, 15, 10, 10, 10, 10, 10],
+  },
   passing: {
     label: "Passing",
     description: "Assists, fewer turnovers and true shooting.",

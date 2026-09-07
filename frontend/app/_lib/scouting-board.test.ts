@@ -39,6 +39,20 @@ const one = (i: number): BBPlayer => ({
   incomplete_box_games: 0,
 });
 describe("player scouting board", () => {
+  it("ships a normalized all-around preset for first-pass lineup work", () => {
+    expect(presets.balanced.weights).toHaveLength(boardMetrics.length);
+    expect(presets.balanced.weights.reduce((sum, weight) => sum + weight, 0)).toBe(100);
+    expect(toWeights(presets.balanced.weights)).toEqual({
+      ppg: 20,
+      rpg: 15,
+      apg: 15,
+      spg: 10,
+      bpg: 10,
+      topg: 10,
+      ts: 10,
+      efg: 10,
+    });
+  });
   it("uses weighted midranks, reverses turnovers and shares competition ties", () => {
     const players = Array.from({ length: 30 }, (_, i) => one(i));
     players[0].ppg = players[1].ppg;

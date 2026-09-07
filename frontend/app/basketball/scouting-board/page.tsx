@@ -27,8 +27,9 @@ export default function Page() {
         <p>
           Start with a scouting priority. Adjust the weights, inspect the
           production behind each rank, and take three players into a detailed
-          comparison. Explore {catalog.seasons.length} source seasons of men’s
-          college basketball.
+          comparison. The Balanced preset gives a quick all-around view before
+          you tune the board for a specific lineup need. Explore {catalog.seasons.length}
+          source seasons of men’s college basketball.
         </p>
       </div>
       <Suspense fallback={<p role="status">Loading scouting board…</p>}>
