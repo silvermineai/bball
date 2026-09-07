@@ -3,22 +3,29 @@ import { useState } from "react";
 import Link from "next/link";
 import type { BBTeam } from "../../_lib/basketball-types";
 import { fmt } from "../../_lib/format";
+import {
+  sortTeamRatings,
+  type RatingSortKey,
+} from "../../_lib/basketball-ratings";
+const sortLabels: Record<RatingSortKey, string> = {
+  adj_net: "Adjusted net efficiency",
+  adj_off: "Offense · higher first",
+  adj_def: "Defense · lower first",
+  adj_tempo: "Tempo · faster first",
+  sos: "Strength of schedule",
+  efg: "Effective FG% · higher first",
+  tov_rate: "Turnover rate · lower first",
+  orb_rate: "Offensive rebound rate · higher first",
+  ft_rate: "Free throw rate · higher first",
+  three_rate: "Three point attempt rate · higher first",
+};
 export default function Ratings({ rows }: { rows: BBTeam[] }) {
   const [q, setQ] = useState(""),
-    [sort, setSort] = useState("adj_net");
-  const filtered = rows
-    .filter((r) => r.name.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => {
-      const key = sort as
-        | "adj_net"
-        | "adj_off"
-        | "adj_def"
-        | "adj_tempo"
-        | "sos";
-      return (
-        ((b[key] ?? -999) - (a[key] ?? -999)) * (sort === "adj_def" ? -1 : 1)
-      );
-    });
+    [sort, setSort] = useState<RatingSortKey>("adj_net");
+  const filtered = sortTeamRatings(
+    rows.filter((r) => r.name.toLowerCase().includes(q.toLowerCase())),
+    sort,
+  );
   return (
     <>
       <div className="toolbar">
@@ -33,12 +40,15 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
         </label>
         <label className="control">
           <span>SORT</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="adj_net">Adjusted net efficiency</option>
-            <option value="adj_off">Offense · higher first</option>
-            <option value="adj_def">Defense · lower first</option>
-            <option value="adj_tempo">Tempo · faster first</option>
-            <option value="sos">Strength of schedule</option>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as RatingSortKey)}
+          >
+            {Object.entries(sortLabels).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
       </div>
