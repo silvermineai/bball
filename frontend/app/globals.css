@@ -3711,3 +3711,22 @@ summary {
 .film-source-note { max-width: 850px; border-top: 1px solid var(--line); padding-top: 18px; }
 @media (max-width: 900px) { .film-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .film-search-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .film-grid, .film-search-grid { grid-template-columns: 1fr; } .film-controls select { min-width: 0; width: 100%; } }
+
+/* Native conference desk */
+.conference-filters { align-items: end; }
+.conference-filters .control:first-child { flex: 1 1 360px; }
+.conference-filters .control select { min-width: 190px; }
+.conference-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.conference-card { overflow: hidden; border: 1px solid var(--line); background: #fcfaf4; }
+.conference-card-header { display: flex; align-items: center; width: 100%; gap: 14px; padding: 18px; border: 0; border-bottom: 1px solid var(--line); background: white; color: var(--ink); text-align: left; cursor: pointer; }
+.conference-card-header:hover { background: #f9f7ef; }
+.conference-rank { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--orange); color: var(--orange); font: 600 14px "IBM Plex Mono", monospace; }
+.conference-card-header strong { display: block; font: 400 1.35rem "Libre Caslon Display", Georgia, serif; }
+.conference-card-header small { display: block; margin-top: 4px; color: var(--muted); font: 10px "IBM Plex Mono", monospace; }
+.conference-toggle { margin-left: auto; color: var(--orange); font: 10px "IBM Plex Mono", monospace; text-transform: uppercase; white-space: nowrap; }
+.conference-table { margin: 0; }
+.conference-table td, .conference-table th { padding-top: 10px; padding-bottom: 10px; }
+.conference-table td small { display: block; color: var(--muted); font: 10px "IBM Plex Mono", monospace; }
+.conference-more { display: block; width: 100%; padding: 10px; border: 0; border-top: 1px solid var(--line); background: var(--paper); color: var(--muted); cursor: pointer; font: 10px "IBM Plex Mono", monospace; }
+.conference-more:hover { color: var(--ink); }
+@media (max-width: 760px) { .conference-grid { grid-template-columns: 1fr; } .conference-toggle { font-size: 9px; } }

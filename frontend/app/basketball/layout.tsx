@@ -8,6 +8,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/matchups/">2026–27 matchups</Link>
         <Link href="/basketball/gameplan/">Game plan</Link>
         <Link href="/basketball/ratings/">Efficiency ratings</Link>
+        <Link href="/basketball/conferences/">Conferences</Link>
         <Link href="/basketball/programs/">Program dossiers</Link>
         <Link href="/basketball/compare/">Compare programs</Link>
         <Link href="/basketball/players/">Player stats</Link>
