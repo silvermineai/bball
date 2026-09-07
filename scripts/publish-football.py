@@ -19,6 +19,28 @@ def run(args, cwd=ROOT):
     subprocess.run(args, cwd=cwd, env=ENV, check=True)
 
 
+def run_logged(args, log_path, cwd=ROOT):
+    """Keep large Wrangler output on disk, but surface a useful failure tail."""
+    with log_path.open("w") as log:
+        result = subprocess.run(
+            args,
+            cwd=cwd,
+            env=ENV,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+    if result.returncode:
+        tail = log_path.read_text(errors="replace").splitlines()[-80:]
+        print(
+            f"Remote SQL import failed with exit status {result.returncode}; "
+            f"last log lines from {log_path}:",
+            file=sys.stderr,
+        )
+        print("\n".join(tail), file=sys.stderr)
+        raise subprocess.CalledProcessError(result.returncode, args)
+
+
 run(
     [
         PY,
@@ -177,24 +199,19 @@ run(
     ]
 )
 # Wrangler import output can be large; retain it on disk for audit.
-with (ROOT / ".local/d1-publish.log").open("w") as log:
-    subprocess.run(
-        [
-            PY,
-            "scripts/cloudflare.py",
-            "d1",
-            "execute",
-            "bball-silvermine",
-            "--remote",
-            "--file",
-            "../.local/football.sql",
-        ],
-        cwd=ROOT,
-        env=ENV,
-        stdout=log,
-        stderr=subprocess.STDOUT,
-        check=True,
-    )
+run_logged(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        "bball-silvermine",
+        "--remote",
+        "--file",
+        "../.local/football.sql",
+    ],
+    ROOT / ".local/d1-publish.log",
+)
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-football-player-history.py"])
 run([PY, "scripts/sync-football-events.py"])
