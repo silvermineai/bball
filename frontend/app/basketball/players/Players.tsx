@@ -142,9 +142,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
       <p className="note" style={{ marginBottom: 20 }}>
         TS uses PTS / [2 × (FGA + 0.475 FTA)]. This is an estimate; the college
         free-throw coefficient differs from the commonly used NBA 0.44.
-        Incomplete totals remain unavailable. Stat ranks use this season and
-        qualification setting before search filters; ties share rank. The source
-        includes some opponents outside Division I.
+        FTR is FTA / FGA, 3PA rate is 3PA / FGA, and TO rate is TOV / (FGA +
+        0.475 FTA + TOV). Incomplete totals remain unavailable. Stat ranks use
+        this season and qualification setting before search filters; ties share
+        rank. The source includes some opponents outside Division I.
       </p>
       {coverage &&
         coverage.appearance_games < coverage.completed_schedule_games * 0.8 && (
