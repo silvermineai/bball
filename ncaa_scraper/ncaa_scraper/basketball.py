@@ -35,6 +35,50 @@ STAT_FIELDS = [
     "points",
 ]
 
+# Numeric publisher fields that are useful for a national context. Compound
+# made-attempted fields intentionally stay out of this board because their
+# source value is a display string rather than one comparable number.
+PUBLISHER_LEADER_SPECS = (
+    ("avg_points", "averages", "avgPoints", "Points per game", "per game"),
+    ("avg_rebounds", "averages", "avgRebounds", "Rebounds per game", "per game"),
+    ("avg_assists", "averages", "avgAssists", "Assists per game", "per game"),
+    (
+        "field_goal_pct",
+        "averages",
+        "fieldGoalPct",
+        "Field-goal percentage",
+        "percent",
+    ),
+    (
+        "three_point_pct",
+        "averages",
+        "threePointFieldGoalPct",
+        "Three-point percentage",
+        "percent",
+    ),
+    (
+        "free_throw_pct",
+        "averages",
+        "freeThrowPct",
+        "Free-throw percentage",
+        "percent",
+    ),
+    (
+        "assist_turnover_ratio",
+        "miscellaneous",
+        "assistTurnoverRatio",
+        "Assist-to-turnover ratio",
+        "ratio",
+    ),
+    (
+        "scoring_efficiency",
+        "miscellaneous",
+        "scoringEfficiency",
+        "Scoring efficiency",
+        "ratio",
+    ),
+)
+
 
 def identity(v):
     if not v:
@@ -403,6 +447,88 @@ def player_index(conn, year=2026):
     return {"season": year, "players": result, "box_games": len(observed_games)}
 
 
+def publisher_leaders(conn, year=2026, limit=10):
+    """Rank comparable numeric fields from the attributed publisher release.
+
+    The source's season aggregates are retained verbatim in D1. This derivative
+    only adds a stable player/team label, a conservative game threshold, and
+    tie-aware ranks; it does not reinterpret the publisher's formulas.
+    """
+    names = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM bb_players")}
+    team_names = {
+        tid: g[name]
+        for g in conn.execute("SELECT * FROM bb_games ORDER BY season")
+        for tid, name in [(g["home_id"], "home_name"), (g["away_id"], "away_name")]
+    }
+    for r in conn.execute("SELECT * FROM bb_rosters WHERE season=?", (year,)):
+        profile = json.loads(r["profile_json"])
+        team_names[r["team_id"]] = profile.get(
+            "team_display_name", team_names.get(r["team_id"], r["team_id"])
+        )
+    by_metric = defaultdict(list)
+    descriptions = {}
+    rows = conn.execute(
+        "SELECT team_id,athlete_id,stats_json FROM bb_player_season WHERE season=?",
+        (year,),
+    )
+    for row in rows:
+        source = json.loads(row["stats_json"])
+        averages = source.get("averages", {})
+        games = number((averages.get("gamesPlayed") or {}).get("value"))
+        if games is None or games < 15:
+            continue
+        player = names.get(row["athlete_id"], {"name": row["athlete_id"], "position": None})
+        for key, category, stat, label, unit in PUBLISHER_LEADER_SPECS:
+            value = (source.get(category, {}).get(stat) or {}).get("value")
+            value = number(value)
+            if value is None:
+                continue
+            detail = source[category][stat]
+            descriptions.setdefault(key, detail.get("description"))
+            by_metric[key].append(
+                {
+                    "id": row["athlete_id"],
+                    "name": player["name"],
+                    "position": player.get("position"),
+                    "team_id": row["team_id"],
+                    "team": team_names.get(row["team_id"], row["team_id"]),
+                    "games": int(games) if games.is_integer() else games,
+                    "value": value,
+                    "display": detail.get("display") or str(value),
+                }
+            )
+    metrics = []
+    for key, category, stat, label, unit in PUBLISHER_LEADER_SPECS:
+        ranked = sorted(
+            by_metric[key],
+            key=lambda row: (-row["value"], row["name"], row["team"]),
+        )[:limit]
+        previous = None
+        rank = 0
+        for index, row in enumerate(ranked):
+            if row["value"] != previous:
+                rank = index + 1
+            row["rank"] = rank
+            previous = row["value"]
+        metrics.append(
+            {
+                "key": key,
+                "category": category,
+                "stat": stat,
+                "label": label,
+                "unit": unit,
+                "description": descriptions.get(key),
+                "leaders": ranked,
+            }
+        )
+    return {
+        "season": year,
+        "minimum_games": 15,
+        "source": "SportsDataverse attributed player-season statistics",
+        "metrics": metrics,
+    }
+
+
 def team_ratings(model, games, boxes, season):
     names = {
         tid: g[name]
@@ -583,6 +709,7 @@ def build(conn, target=2027):
     artifacts = {
         "overview": overview,
         "players": player_index(conn, target - 1),
+        "publisher-leaders": publisher_leaders(conn, target - 1),
         "rosters": roster_changes(conn, target),
         "rosters-2026": roster_changes(conn, 2026),
         "impact": {

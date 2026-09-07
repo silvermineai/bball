@@ -13,6 +13,28 @@ type Metric =
   | "ts"
   | "efg";
 
+type PublisherLeader = {
+  id: string;
+  name: string;
+  position: string | null;
+  team_id: string;
+  team: string;
+  games: number;
+  value: number;
+  display: string;
+  rank: number;
+};
+
+type PublisherMetric = {
+  key: string;
+  category: string;
+  stat: string;
+  label: string;
+  unit: string;
+  description: string | null;
+  leaders: PublisherLeader[];
+};
+
 const specs: { key: Metric; label: string; description: string; percent?: boolean }[] = [
   { key: "ppg", label: "Scoring", description: "Points per game" },
   { key: "rpg", label: "Rebounding", description: "Rebounds per game" },
@@ -57,6 +79,17 @@ export default function Page() {
       "utf8",
     ),
   ) as { season: number; players: BBPlayer[]; coverage: { qualified_entries: number } };
+  const publisher = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/publisher-leaders.json"),
+      "utf8",
+    ),
+  ) as {
+    season: number;
+    minimum_games: number;
+    source: string;
+    metrics: PublisherMetric[];
+  };
   return (
     <>
       <div className="page-title">
@@ -136,6 +169,65 @@ export default function Page() {
           </section>
         ))}
       </div>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              Published source metrics / {publisher.season - 1}–{String(publisher.season).slice(-2)}
+            </div>
+            <h2>More of the stat sheet.</h2>
+          </div>
+        </div>
+        <p className="note">
+          These boards preserve numeric fields from the attributed publisher
+          season release. They use at least {publisher.minimum_games} source
+          games; the display value and definition remain the publisher’s. They
+          are descriptive rankings, not Silvermine model inputs.
+        </p>
+        <div className="leader-grid">
+          {publisher.metrics.map((metric) => (
+            <section className="paper-panel" key={metric.key}>
+              <div className="eyebrow">{metric.unit}</div>
+              <h3>{metric.label}</h3>
+              {metric.description && <p className="note">{metric.description}</p>}
+              <div className="table-scroll">
+                <table className="data-table leaders-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Player</th>
+                      <th className="numeric">Source value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metric.leaders.map((leader) => (
+                      <tr key={`${metric.key}-${leader.id}-${leader.team_id}`}>
+                        <td className="rank-number">{leader.rank}</td>
+                        <td>
+                          <Link href={`/basketball/player/?id=${leader.id}&season=${publisher.season}`}>
+                            {leader.name}
+                          </Link>
+                          <small>
+                            <Link href={`/basketball/programs/${leader.team_id}/`}>
+                              {leader.team}
+                            </Link>{" "}
+                            · {leader.games} GP
+                          </small>
+                        </td>
+                        <td className="numeric">{leader.display}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+        </div>
+        <p className="note">
+          Source: {publisher.source}. Silvermine retains the original category,
+          label, description and display string in the player record.
+        </p>
+      </section>
       <p className="note">
         Explore the complete <Link href="/basketball/players/">player archive</Link>{" "}
         to change the season, qualification rule or sort metric. Historical

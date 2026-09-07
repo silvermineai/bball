@@ -8,6 +8,7 @@ from ncaa_scraper.basketball import (
     canonical_date,
     ingest,
     player_index,
+    publisher_leaders,
     roster_changes,
 )
 from ncaa_scraper.basketball_model import fit, forecast, game_features, train
@@ -152,6 +153,32 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(
             player_index(self.conn), {"season": 2026, "players": [], "box_games": 0}
         )
+
+    def test_publisher_leaders_use_numeric_source_fields_and_ties(self):
+        self.conn.execute(
+            "INSERT INTO bb_players VALUES (?,?,?)", ("1", "A Player", "G")
+        )
+        self.conn.execute(
+            "INSERT INTO bb_players VALUES (?,?,?)", ("2", "B Player", "F")
+        )
+        self.conn.execute(
+            "INSERT INTO bb_games VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("g", 2026, "2026-01-01T00:00:00Z", "T", "U", "Team T", "Team U", 1, 0, 1, 0, 2, 0, None, None),
+        )
+        source = lambda points: {
+            "averages": {
+                "gamesPlayed": {"value": 15},
+                "avgPoints": {"value": points, "display": str(points)},
+            }
+        }
+        self.conn.executemany(
+            "INSERT INTO bb_player_season VALUES (?,?,?,?)",
+            [(2026, "T", "1", json.dumps(source(20))), (2026, "U", "2", json.dumps(source(20)))],
+        )
+        result = publisher_leaders(self.conn)
+        points = next(m for m in result["metrics"] if m["key"] == "avg_points")
+        self.assertEqual([r["rank"] for r in points["leaders"]], [1, 1])
+        self.assertEqual([r["display"] for r in points["leaders"]], ["20", "20"])
 
 
 if __name__ == "__main__":
