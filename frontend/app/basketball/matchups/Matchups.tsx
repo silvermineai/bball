@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { BBGame } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 export default function Matchups({ games }: { games: BBGame[] }) {
   const params = useSearchParams(),
     [q, setQ] = useState(params.get("team") || ""),
@@ -48,9 +49,54 @@ export default function Matchups({ games }: { games: BBGame[] }) {
           </select>
         </label>
       </div>
-      <p className="note" style={{ marginBottom: 20 }}>
-        {rows.length} games · partial schedule · times Eastern when confirmed
-      </p>
+      <div className="section-heading" style={{ marginBottom: 20 }}>
+        <p>
+          {rows.length} games · partial schedule · times Eastern when confirmed
+        </p>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() =>
+            downloadCsv(
+              "basketball-2026-27-matchups.csv",
+              toCsv(
+                [
+                  "Scheduled start",
+                  "Away program",
+                  "Home program",
+                  "Venue",
+                  "Projected away score",
+                  "Projected home score",
+                  "Home win probability",
+                  "Projected home margin",
+                  "Margin range low",
+                  "Margin range high",
+                  "Projected pace",
+                  "Broadcast",
+                ],
+                rows.map((g) => [
+                  g.starts_at,
+                  g.away_name,
+                  g.home_name,
+                  g.venue,
+                  g.prediction?.away_score,
+                  g.prediction?.home_score,
+                  g.prediction?.home_win_probability == null
+                    ? null
+                    : g.prediction.home_win_probability * 100,
+                  g.prediction?.home_margin,
+                  g.prediction?.margin_low,
+                  g.prediction?.margin_high,
+                  g.prediction?.pace,
+                  g.broadcast,
+                ]),
+              ),
+            )
+          }
+        >
+          Download CSV ↓
+        </button>
+      </div>
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <BasketballCard key={g.id} game={g} />
