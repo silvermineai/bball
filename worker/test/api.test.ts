@@ -67,6 +67,16 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects unknown publisher stat fields before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/publisher-stats?stat=not-a-source-field",
+      "/api/basketball/research/publisher-stats?category=totals&stat=avgPoints",
+      "/api/basketball/research/publisher-stats?page=-1",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("validates research history identifiers and pagination before database access", async () => {
     for (const path of [
       "/api/research/games/nba/123",

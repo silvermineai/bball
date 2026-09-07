@@ -8,6 +8,7 @@ import { recruiting } from "./recruiting";
 import { careers } from "./careers";
 import { footballEvents } from "./football-events";
 import { briefArchive, retiredBrief } from "./brief-archive";
+import { publisherStats } from "./publisher-stats";
 
 type Bindings = Env;
 
@@ -109,6 +110,7 @@ app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
 app.route("/api/basketball/research/shooting", shooting);
 app.route("/api/basketball/research/recruiting", recruiting);
 app.route("/api/basketball/research/careers", careers);
+app.route("/api/basketball/research/publisher-stats", publisherStats);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);
   return c.redirect(`/api/football/events${url.search}`, 308);
