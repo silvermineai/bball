@@ -30,7 +30,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Matchups | `/basketball/matchups/` | 1,579 forecasts for 2026–27, with score ranges and matchup briefs |
 | Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and four factors |
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
-| Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios and historical factor comparisons |
+| Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios, historical factors and source-listed roster movement |
 | Shooting lab | `/basketball/shooting/` | 738,233 recorded attempts, player/program shot maps and box-score reconciliation |
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |

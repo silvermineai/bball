@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getScoutIndex } from "../../_lib/scouting-data";
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import Compare from "./Compare";
 export const metadata = {
   title: "Basketball matchup workbench",
@@ -10,7 +10,8 @@ export const metadata = {
 };
 export default function Page() {
   const data = getScoutIndex(),
-    m = getBasketball().model;
+    m = getBasketball().model,
+    rosters = getRosters();
   return (
     <>
       <div className="page-title">
@@ -38,6 +39,7 @@ export default function Page() {
             tempo: m.tempo,
             calibration: m.calibration,
           }}
+          rosters={rosters.players}
         />
       </Suspense>
     </>

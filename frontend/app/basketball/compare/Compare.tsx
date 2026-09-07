@@ -5,6 +5,8 @@ import Link from "next/link";
 import { date, fmt, signed } from "../../_lib/format";
 import type { ScoutProfile, SplitKey } from "../../_lib/scouting-types";
 import { splitLabels } from "../../_lib/scouting-types";
+import type { BBRoster } from "../../_lib/basketball-types";
+import { buildRosterIntel } from "../../_lib/roster-intel";
 import {
   scenarioQuery,
   scenarioVenue,
@@ -26,9 +28,11 @@ const factors = [
 export default function Compare({
   teams,
   model,
+  rosters,
 }: {
   teams: { id: string; name: string }[];
   model: ScenarioModel;
+  rosters: BBRoster[];
 }) {
   const params = useSearchParams();
   const validId = (value: string | null) =>
@@ -80,6 +84,8 @@ export default function Compare({
     p = basketballScenario(model, homeId, awayId, venue === "neutral");
   const an = teams.find((t) => t.id === a)!.name,
     bn = teams.find((t) => t.id === b)!.name;
+  const intel =
+    data?.map((profile) => buildRosterIntel(rosters, profile)) ?? [];
   const scoreA = p ? (venue === "b" ? p.away_score : p.home_score) : null,
     scoreB = p ? (venue === "b" ? p.home_score : p.away_score) : null,
     winA = p
@@ -183,9 +189,9 @@ export default function Compare({
           <p className="note">
             This is a scenario estimate, not a scheduled game or a new
             forecast-ledger registration. It uses the published model as of{" "}
-            {date(model.cutoff)}, without current roster, injury or recruiting
-            features. The historical split selector changes descriptive stats
-            only.{" "}
+            {date(model.cutoff)}. The roster panel below is contextual evidence;
+            roster, injury and recruiting inputs do not change this forecast.
+            The historical split selector changes descriptive stats only.{" "}
             <Link href="/basketball/model/">
               Model assumptions and validation →
             </Link>
@@ -203,7 +209,85 @@ export default function Compare({
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">01 / Attack meets resistance</div>
+                    <div className="eyebrow">01 / Roster construction</div>
+                    <h2>Know what the source lists.</h2>
+                  </div>
+                  <Link href="/basketball/recruiting/">
+                    Open recruiting evidence →
+                  </Link>
+                </div>
+                <p className="note">
+                  The 2026–27 roster view is a source-listed observation, not a
+                  confirmed depth chart. Returning and movement counts are
+                  grouped by publisher athlete ID; an absent player is not
+                  treated as a departure. Prior minutes are historical context
+                  only and do not change this forecast.
+                </p>
+                <div className="two-col">
+                  {intel.map((team) => (
+                    <div className="paper-panel roster-intel" key={team.teamId}>
+                      <h3>{team.teamName}</h3>
+                      <p>
+                        <strong>{team.observed}</strong> source-listed players ·{" "}
+                        {team.returning} returning by prior-program match
+                      </p>
+                      <div className="roster-intel-stats">
+                        <span>
+                          <strong>{team.transfers}</strong>
+                          <small>different program</small>
+                        </span>
+                        <span>
+                          <strong>{team.newToDataset}</strong>
+                          <small>new to dataset</small>
+                        </span>
+                        <span>
+                          <strong>{team.ambiguous}</strong>
+                          <small>ambiguous</small>
+                        </span>
+                      </div>
+                      <h4>Movement to investigate</h4>
+                      {team.movement.length ? (
+                        <ul className="roster-intel-list">
+                          {team.movement.slice(0, 5).map((player) => (
+                            <li key={player.id}>
+                              <span>
+                                <strong>{player.name}</strong>
+                                <small>
+                                  {player.status === "different_program"
+                                    ? player.previous_teams.join(", ") ||
+                                      "Different program"
+                                    : player.status === "new_to_dataset"
+                                      ? "No prior appearance observed"
+                                      : "Multiple current programs"}
+                                </small>
+                              </span>
+                              <span>
+                                {player.priorPlayer
+                                  ? `${fmt(player.priorPlayer.mpg)} min/g`
+                                  : "No prior log"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="note">
+                          No movement records in this source view.
+                        </p>
+                      )}
+                      {team.movement.length > 5 && (
+                        <small className="roster-intel-more">
+                          +{team.movement.length - 5} more listed records in the
+                          recruiting view.
+                        </small>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="section">
+                <div className="section-heading">
+                  <div>
+                    <div className="eyebrow">02 / Attack meets resistance</div>
                     <h2>Compare both ends.</h2>
                   </div>
                   <label className="control">
@@ -290,7 +374,7 @@ export default function Compare({
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">02 / Start with the rotation</div>
+                    <div className="eyebrow">03 / Start with the rotation</div>
                     <h2>Who carried the workload?</h2>
                   </div>
                 </div>

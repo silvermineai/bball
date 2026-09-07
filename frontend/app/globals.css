@@ -422,6 +422,60 @@ th,
   line-height: 1.8;
   margin-top: 14px;
 }
+.roster-intel h4 {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.roster-intel-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+.roster-intel-stats span {
+  padding: 12px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+.roster-intel-stats strong {
+  display: block;
+  font:
+    22px "Libre Caslon Display",
+    serif;
+}
+.roster-intel-stats small,
+.roster-intel-list small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.roster-intel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.roster-intel-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.roster-intel-list li > span:last-child {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.roster-intel-more {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+}
 .rule-list {
   margin-top: 20px;
 }

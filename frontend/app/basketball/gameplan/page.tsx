@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import { getScoutIndex } from "../../_lib/scouting-data";
 import Compare from "../compare/Compare";
 
@@ -13,6 +13,7 @@ export const metadata = {
 export default function Page() {
   const data = getScoutIndex();
   const model = getBasketball().model;
+  const rosters = getRosters();
   return (
     <>
       <div className="page-title">
@@ -38,6 +39,7 @@ export default function Page() {
             tempo: model.tempo,
             calibration: model.calibration,
           }}
+          rosters={rosters.players}
         />
       </Suspense>
     </>
