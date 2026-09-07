@@ -23,6 +23,16 @@ const searchLinks = (team: FilmTeam) => [
   { label: "Press conferences", query: `${team.name} basketball press conference` },
 ];
 
+const publishedDate = (value: string) => {
+  if (!value) return "Date unknown";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
+};
+
 export default function FilmRoom({ videos, teams }: Props) {
   const [teamId, setTeamId] = useState("");
   const [hoopsOnly, setHoopsOnly] = useState(true);
@@ -121,7 +131,7 @@ export default function FilmRoom({ videos, teams }: Props) {
                 )}
                 <figcaption>
                   <strong>{video.title}</strong>
-                  <span className="eyebrow">{video.channel} · {video.published ? new Date(video.published).toLocaleDateString() : "Date unknown"}</span>
+                  <span className="eyebrow">{video.channel} · {publishedDate(video.published)}</span>
                 </figcaption>
               </figure>
             ))}
