@@ -28,7 +28,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 |---|---|---|
 | Basketball desk | `/basketball/` | Upcoming forecasts, ratings and research coverage |
 | Matchups | `/basketball/matchups/` | 1,579 primary forecasts plus 50 labeled cold-start estimates for 2026–27, with score ranges and matchup briefs |
-| Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and four factors |
+| Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and opponent-adjusted four factors |
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios, historical factors and source-listed roster movement |
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |

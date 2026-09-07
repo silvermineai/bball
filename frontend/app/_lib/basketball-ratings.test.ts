@@ -51,4 +51,15 @@ describe("basketball rating sorting", () => {
     );
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha"]);
   });
+
+  it("sorts adjusted defensive factors in the coaching direction", () => {
+    const rows = sortTeamRatings(
+      [
+        { ...team("1", "Alpha", 0.55, 0.15), adj_def_efg: 0.48 },
+        { ...team("2", "Beta", 0.55, 0.15), adj_def_efg: 0.44 },
+      ],
+      "adj_def_efg",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha"]);
+  });
 });

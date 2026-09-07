@@ -20,6 +20,14 @@ const sortLabels: Record<RatingSortKey, string> = {
   orb_rate: "Offensive rebound rate · higher first",
   ft_rate: "Free throw rate · higher first",
   three_rate: "Three point attempt rate · higher first",
+  adj_off_efg: "Adjusted eFG offense · higher first",
+  adj_def_efg: "Adjusted eFG defense · lower first",
+  adj_off_tov: "Adjusted turnover offense · lower first",
+  adj_def_tov: "Adjusted turnover defense · lower first",
+  adj_off_orb: "Adjusted ORB offense · higher first",
+  adj_def_orb: "Adjusted ORB defense · lower first",
+  adj_off_ftr: "Adjusted FT rate offense · higher first",
+  adj_def_ftr: "Adjusted FT rate defense · lower first",
 };
 export default function Ratings({ rows }: { rows: BBTeam[] }) {
   const [q, setQ] = useState(""),
@@ -63,8 +71,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
             downloadCsv(
               "basketball-team-ratings.csv",
               toCsv(
-                ["Net rank", "Program", "Wins", "Games", "Expected wins", "Luck (points)", "Adjusted offense", "Adjusted defense", "Adjusted net", "Tempo", "SOS", "Rated opponents", "eFG%", "TO%", "ORB%", "FT rate", "3PA rate"],
-                filtered.map((t) => [t.rank, t.name, t.wins, t.games, t.expected_wins, t.luck, t.adj_off, t.adj_def, t.adj_net, t.adj_tempo, t.sos, t.sos_games, t.efg == null ? null : t.efg * 100, t.tov_rate == null ? null : t.tov_rate * 100, t.orb_rate == null ? null : t.orb_rate * 100, t.ft_rate == null ? null : t.ft_rate * 100, t.three_rate == null ? null : t.three_rate * 100]),
+                ["Net rank", "Program", "Wins", "Games", "Expected wins", "Luck (points)", "Adjusted offense", "Adjusted defense", "Adjusted net", "Tempo", "SOS", "Rated opponents", "eFG%", "TO%", "ORB%", "FT rate", "3PA rate", "Adj eFG O%", "Adj eFG D%", "Adj TO O%", "Adj TO D%", "Adj ORB O%", "Adj ORB D%", "Adj FTR O%", "Adj FTR D%"],
+                filtered.map((t) => [t.rank, t.name, t.wins, t.games, t.expected_wins, t.luck, t.adj_off, t.adj_def, t.adj_net, t.adj_tempo, t.sos, t.sos_games, t.efg == null ? null : t.efg * 100, t.tov_rate == null ? null : t.tov_rate * 100, t.orb_rate == null ? null : t.orb_rate * 100, t.ft_rate == null ? null : t.ft_rate * 100, t.three_rate == null ? null : t.three_rate * 100, t.adj_off_efg == null ? null : t.adj_off_efg * 100, t.adj_def_efg == null ? null : t.adj_def_efg * 100, t.adj_off_tov == null ? null : t.adj_off_tov * 100, t.adj_def_tov == null ? null : t.adj_def_tov * 100, t.adj_off_orb == null ? null : t.adj_off_orb * 100, t.adj_def_orb == null ? null : t.adj_def_orb * 100, t.adj_off_ftr == null ? null : t.adj_off_ftr * 100, t.adj_def_ftr == null ? null : t.adj_def_ftr * 100]),
               ),
             )
           }
@@ -97,6 +105,14 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                 "ORB%",
                 "FT rate",
                 "3PA rate",
+                "Adj eFG O",
+                "Adj eFG D",
+                "Adj TO O",
+                "Adj TO D",
+                "Adj ORB O",
+                "Adj ORB D",
+                "Adj FTR O",
+                "Adj FTR D",
               ].map((k) => (
                 <th key={k} className="numeric">
                   {k}
@@ -129,6 +145,14 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                     t.orb_rate,
                     t.ft_rate,
                     t.three_rate,
+                    t.adj_off_efg,
+                    t.adj_def_efg,
+                    t.adj_off_tov,
+                    t.adj_def_tov,
+                    t.adj_off_orb,
+                    t.adj_def_orb,
+                    t.adj_off_ftr,
+                    t.adj_def_ftr,
                   ].map((n) => (n == null ? null : n * 100)),
                 ].map((v, i) => (
                   <td className="numeric" key={i}>

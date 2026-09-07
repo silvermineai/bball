@@ -46,6 +46,14 @@ export type BBTeam = {
   orb_rate: number | null;
   ft_rate: number | null;
   three_rate: number | null;
+  adj_off_efg?: number | null;
+  adj_def_efg?: number | null;
+  adj_off_tov?: number | null;
+  adj_def_tov?: number | null;
+  adj_off_orb?: number | null;
+  adj_def_orb?: number | null;
+  adj_off_ftr?: number | null;
+  adj_def_ftr?: number | null;
 };
 export type BBOverview = {
   season: number;

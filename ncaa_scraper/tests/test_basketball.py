@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from ncaa_scraper.basketball import (
     ROOT,
+    adjusted_factor_ratings,
     canonical_date,
     ingest,
     player_index,
@@ -98,6 +99,33 @@ class BasketballModelTests(unittest.TestCase):
             estimate["margin_high"] - estimate["home_margin"],
             model["calibration"]["margin_half_width"],
         )
+
+    def test_adjusted_four_factors_require_complete_paired_boxes(self):
+        games = [sample(i, 2026) for i in range(45)]
+        boxes = {}
+        for game in games:
+            for side in ("home", "away"):
+                team_id = game[f"{side}_id"]
+                boxes[(game["id"], team_id)] = {
+                    "field_goals_made": 30,
+                    "field_goals_attempted": 60,
+                    "three_point_field_goals_made": 8,
+                    "three_point_field_goals_attempted": 24,
+                    "free_throws_attempted": 16,
+                    "offensive_rebounds": 9,
+                    "defensive_rebounds": 24,
+                    "turnovers": 11,
+                }
+        model = {"teams": [str(i) for i in range(6)]}
+        ratings = adjusted_factor_ratings(model, games, boxes, 2026)
+        self.assertIn("adj_off_efg", ratings["0"])
+        self.assertIn("adj_def_orb", ratings["1"])
+        incomplete_boxes = {
+            key: {**value, "field_goals_attempted": None}
+            for key, value in boxes.items()
+        }
+        incomplete = adjusted_factor_ratings(model, games, incomplete_boxes, 2026)
+        self.assertNotIn("adj_off_efg", incomplete["0"])
 
 
 class BasketballIngestTests(unittest.TestCase):

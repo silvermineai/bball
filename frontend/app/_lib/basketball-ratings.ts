@@ -11,9 +11,25 @@ export type RatingSortKey =
   | "tov_rate"
   | "orb_rate"
   | "ft_rate"
-  | "three_rate";
+  | "three_rate"
+  | "adj_off_efg"
+  | "adj_def_efg"
+  | "adj_off_tov"
+  | "adj_def_tov"
+  | "adj_off_orb"
+  | "adj_def_orb"
+  | "adj_off_ftr"
+  | "adj_def_ftr";
 
-const lowerIsBetter = new Set<RatingSortKey>(["adj_def", "tov_rate"]);
+const lowerIsBetter = new Set<RatingSortKey>([
+  "adj_def",
+  "tov_rate",
+  "adj_def_efg",
+  "adj_off_tov",
+  "adj_def_tov",
+  "adj_def_orb",
+  "adj_def_ftr",
+]);
 
 /** Sort the published rating board without mutating its source release. */
 export function sortTeamRatings(rows: BBTeam[], key: RatingSortKey): BBTeam[] {

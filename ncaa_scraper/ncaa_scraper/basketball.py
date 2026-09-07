@@ -9,6 +9,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
 from .basketball_model import fallback_forecast, forecast, game_features, ratio, train
 from .basketball_sources import BASKETBALL_ATTRIBUTION, client
 from .football import number
@@ -620,6 +622,128 @@ def publisher_leaders(conn, year=2026, limit=10):
     }
 
 
+FACTOR_FIELDS = ("efg", "tov", "orb", "ftr")
+
+
+def _factor_values(game, boxes):
+    """Return each side's four-factor rates when both boxes support them."""
+    features = game_features(game, boxes)
+    if features is None:
+        return None
+    result = {}
+    for own, opp in (("home", "away"), ("away", "home")):
+        box = boxes.get((game["id"], game[f"{own}_id"]))
+        other = boxes.get((game["id"], game[f"{opp}_id"]))
+        if box is None or other is None:
+            return None
+        fga = box.get("field_goals_attempted")
+        fg = box.get("field_goals_made")
+        threes = box.get("three_point_field_goals_made")
+        fta = box.get("free_throws_attempted")
+        turnovers = box.get("turnovers")
+        orb = box.get("offensive_rebounds")
+        opp_drb = other.get("defensive_rebounds")
+        opp_fga = other.get("field_goals_attempted")
+        opp_fg = other.get("field_goals_made")
+        opp_threes = other.get("three_point_field_goals_made")
+        opp_fta = other.get("free_throws_attempted")
+        opp_turnovers = other.get("turnovers")
+        opp_orb = other.get("offensive_rebounds")
+        drb = box.get("defensive_rebounds")
+        values = {
+            "efg": ratio(fg + 0.5 * threes, fga)
+            if all(v is not None for v in (fg, threes, fga))
+            else None,
+            "tov": ratio(turnovers, features["possessions"])
+            if turnovers is not None
+            else None,
+            "orb": ratio(orb, orb + opp_drb)
+            if orb is not None and opp_drb is not None
+            else None,
+            "ftr": ratio(fta, fga)
+            if fta is not None and fga is not None
+            else None,
+        }
+        opponent_values = {
+            "efg": ratio(opp_fg + 0.5 * opp_threes, opp_fga)
+            if all(v is not None for v in (opp_fg, opp_threes, opp_fga))
+            else None,
+            "tov": ratio(opp_turnovers, features["possessions"])
+            if opp_turnovers is not None
+            else None,
+            "orb": ratio(opp_orb, opp_orb + drb)
+            if opp_orb is not None and drb is not None
+            else None,
+            "ftr": ratio(opp_fta, opp_fga)
+            if opp_fta is not None and opp_fga is not None
+            else None,
+        }
+        result[own] = values
+        result[opp] = opponent_values
+    return result
+
+
+def adjusted_factor_ratings(model, games, boxes, season):
+    """Fit opponent-adjusted offensive and defensive four-factor rates.
+
+    Each factor uses the same team/venue design as the efficiency model, with
+    season recency weights. Missing box components remove only that factor's
+    game; no missing value is imputed to zero.
+    """
+    teams = model["teams"]
+    index = {tid: i for i, tid in enumerate(teams)}
+    n = len(teams)
+    by_factor = {key: [] for key in FACTOR_FIELDS}
+    for game in games:
+        if not game["completed"] or game["season"] > season:
+            continue
+        if game["home_id"] not in index or game["away_id"] not in index:
+            continue
+        values = _factor_values(game, boxes)
+        if values is None:
+            continue
+        for key in FACTOR_FIELDS:
+            if values["home"].get(key) is None or values["away"].get(key) is None:
+                continue
+            by_factor[key].append((game, values["home"][key], values["away"][key]))
+
+    def fit_factor(pairs):
+        if len(pairs) < 30:
+            return None
+        x = np.zeros((2 * len(pairs), 2 + 2 * n))
+        y = []
+        weights = []
+        for i, (game, home_value, away_value) in enumerate(pairs):
+            h, a = index[game["home_id"]], index[game["away_id"]]
+            venue = 0 if game["neutral"] else 0.5
+            for j, (own, opp, sign, value) in enumerate(
+                [(h, a, 1, home_value), (a, h, -1, away_value)]
+            ):
+                x[2 * i + j, 0] = 1
+                x[2 * i + j, 1] = venue * sign
+                x[2 * i + j, 2 + own] = 1
+                x[2 * i + j, 2 + n + opp] = 1
+                y.append(value)
+            weights.append(0.6 ** (season - game["season"]))
+        regularizer = np.eye(x.shape[1]) * 12
+        regularizer[0, 0] = 0
+        coef = np.linalg.solve(
+            x.T @ (np.repeat(weights, 2)[:, None] * x) + regularizer,
+            x.T @ (np.repeat(weights, 2) * np.asarray(y)),
+        )
+        return coef
+
+    fitted = {key: fit_factor(pairs) for key, pairs in by_factor.items()}
+    result = {tid: {} for tid in teams}
+    for key, coef in fitted.items():
+        if coef is None:
+            continue
+        for tid, i in index.items():
+            result[tid][f"adj_off_{key}"] = float(coef[0] + coef[i + 2])
+            result[tid][f"adj_def_{key}"] = float(coef[0] + coef[i + n + 2])
+    return result
+
+
 def team_ratings(model, games, boxes, season):
     names = {
         tid: g[name]
@@ -675,6 +799,7 @@ def team_ratings(model, games, boxes, season):
     b = model["efficiency"]
     tempo = model["tempo"]
     n = len(model["teams"])
+    factor_ratings = adjusted_factor_ratings(model, games, boxes, season)
     ratings = []
     net = {tid: b[i + 2] - b[i + n + 2] for i, tid in enumerate(model["teams"])}
     for i, tid in enumerate(model["teams"]):
@@ -723,6 +848,10 @@ def team_ratings(model, games, boxes, season):
                 "three_rate": ratio(s["three_point_field_goals_attempted"], fg)
                 if not s["missing"]
                 else None,
+                **{
+                    key: round(value, 4)
+                    for key, value in factor_ratings.get(tid, {}).items()
+                },
             }
         )
     ratings.sort(key=lambda t: -t["adj_net"])
