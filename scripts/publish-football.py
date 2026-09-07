@@ -74,6 +74,7 @@ def run_logged(args, log_path, cwd=ROOT):
             "Upstream service unavailable" in output
             or "code: 7009" in output
             or "Currently processing a long-running import" in output
+            or "Cancelled due to no poll() received" in output
         )
         if retryable and attempt < max_attempts:
             delay = retry_delays[attempt - 1]
