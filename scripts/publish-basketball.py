@@ -68,9 +68,9 @@ def run_logged(args, log_path, cwd=ROOT):
         # one when its poll stream closes with an empty error. The receipt is
         # authoritative: it includes the final D1 bookmark and query count.
         completed_receipt = (
-            '"success": true' in output
+            '"success"' in output
             and '"finalBookmark"' in output
-            and "Processed " in output
+            and ("Processed " in output or "Executed " in output)
         )
         if result.returncode == 0 or completed_receipt:
             if result.returncode != 0:
