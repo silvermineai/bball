@@ -21,6 +21,12 @@ PRIOR_ALIASES = {
     "Seattle": "Seattle U",
     "College of Charleston": "Charleston",
 }
+# A source display-name correction can differ from a reviewed school spelling.
+# Keep these aliases keyed to the curated person identity; the explicit player
+# and team IDs below remain mandatory before any historical link is published.
+PRIOR_PLAYER_NAME_ALIASES = {
+    "62-marcus-adams-jr": {"Marcus Adams"},
+}
 KINDS = {"addition", "redshirt_announced", "season_unavailable"}
 
 
@@ -116,7 +122,10 @@ def build(document, box_release, rated_programs):
             candidates = [
                 p
                 for p in box_release["players"]
-                if canonical(p["name"]) == canonical(person["name"])
+                if (
+                    canonical(p["name"]) == canonical(person["name"])
+                    or p["name"] in PRIOR_PLAYER_NAME_ALIASES.get(person["key"], set())
+                )
                 and canonical(p["team"])
                 == canonical(
                     PRIOR_ALIASES.get(

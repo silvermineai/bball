@@ -82,6 +82,14 @@ class RecruitingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ambiguous"):
             build(self.doc, box, self.programs)
 
+    def test_explicit_provider_name_alias_keeps_reviewed_identity_link(self):
+        box = copy.deepcopy(self.box)
+        player = next(p for p in box["players"] if p["id"] == "5142326")
+        player["name"] = "Marcus Adams"
+        release = build(self.doc, box, self.programs)
+        linked = next(p for p in release["people"] if p["key"] == "62-marcus-adams-jr")
+        self.assertEqual(linked["stats"]["id"], "5142326")
+
     def test_reviewed_id_must_match(self):
         doc = copy.deepcopy(self.doc)
         doc["people"][0]["stats_ref"]["player_id"] = "999"

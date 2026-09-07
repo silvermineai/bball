@@ -120,7 +120,7 @@ The repository also defines a serialized weekly GitHub Actions refresh in [`.git
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
-- Validate the first scheduled refresh run and monitor source freshness and expected coverage after each run.
+- The first scheduled weekly refresh completed successfully on September 7, 2026, including validation and combined Cloudflare deployment. Monitor source freshness and expected coverage after each run.
 
 ## Historical player expansion
 

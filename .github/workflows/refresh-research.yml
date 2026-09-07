@@ -93,6 +93,13 @@ jobs:
               ;;
           esac
 
+      - name: Check release freshness and shape
+        env:
+          REFRESH_SPORT: ${{ inputs.sport || 'both' }}
+        run: |
+          python -m unittest discover -s ncaa_scraper/tests -p 'test_publication_health.py'
+          python scripts/check-freshness.py --sport "$REFRESH_SPORT"
+
       - name: Validate and deploy combined publication
         if: ${{ inputs.capture_odds != true }}
         run: |
