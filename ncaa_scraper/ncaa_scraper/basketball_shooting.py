@@ -158,7 +158,7 @@ def summarize(shots):
     }
 
 
-def build(source, conn, path, receipt, season):
+def build(source, conn, path, receipt, season, write_public=True):
     conn.executescript(
         (ROOT / "worker/migrations/0011_basketball_shooting.sql").read_text()
     )
@@ -382,7 +382,8 @@ def build(source, conn, path, receipt, season):
         )
     for kind in ("teams", "players"):
         index[kind].sort(key=lambda p: p["name"])
-    (OUT / "shooting.json").write_text(dumps(index))
+    if write_public:
+        (OUT / "shooting.json").write_text(dumps(index))
     return index
 
 
@@ -427,20 +428,101 @@ def export(conn, season, directory):
     (directory / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
 
+def export_all(conn, seasons, directory):
+    """Export immutable SQL batches for every published shooting season."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for old in directory.glob("shots-*.sql"):
+        old.unlink()
+    files = []
+    for season in seasons:
+        statements = []
+        size = 0
+        part = 0
+        for table in ("bb_shot_games", "bb_shot_profiles", "bb_shot_sources"):
+            for row in conn.execute(
+                f"SELECT * FROM {table} WHERE season=?", (season,)
+            ):
+                sql = (
+                    f"INSERT OR REPLACE INTO {table} VALUES ("
+                    + ",".join(
+                        str(v)
+                        if isinstance(v, int)
+                        else "'" + v.replace("'", "''") + "'"
+                        for v in row
+                    )
+                    + ");\n"
+                )
+                if len(sql.encode()) > 95000:
+                    raise ValueError("Statement exceeds safe D1 import size")
+                if size + len(sql) > 8_000_000:
+                    target = directory / f"shots-{season}-{part:03d}.sql"
+                    target.write_text("".join(statements))
+                    files.append(target)
+                    part += 1
+                    statements = []
+                    size = 0
+                statements.append(sql)
+                size += len(sql)
+        if statements:
+            target = directory / f"shots-{season}-{part:03d}.sql"
+            target.write_text("".join(statements))
+            files.append(target)
+    editions = {
+        season: conn.execute(
+            "SELECT edition FROM bb_shot_sources WHERE season=?", (season,)
+        ).fetchone()[0]
+        for season in seasons
+    }
+    manifest = {
+        "seasons": list(seasons),
+        "editions": editions,
+        "files": [
+            {
+                "name": path.name,
+                "season": next(
+                    season for season in seasons if path.name.startswith(f"shots-{season}-")
+                ),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in files
+        ],
+    }
+    (directory / "manifest.json").write_text(json.dumps(manifest, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", type=int, default=2026)
+    parser.add_argument("--seasons", type=int, nargs="+")
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--sql", action="store_true")
     args = parser.parse_args()
-    path, receipt = parquet_file(client(), "pbp", args.season, args.refresh)
     source = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
     source.row_factory = sqlite3.Row
     conn = sqlite3.connect(SHOT_DB)
-    data = build(source, conn, path, receipt, args.season)
+    seasons = args.seasons or [args.season]
+    indexes = []
+    for season in seasons:
+        path, receipt = parquet_file(client(), "pbp", season, args.refresh)
+        indexes.append(build(source, conn, path, receipt, season, write_public=False))
+    data = max(indexes, key=lambda index: index["season"])
+    (OUT / "shooting.json").write_text(dumps(data))
+    if len(indexes) > 1:
+        (OUT / "shooting-catalog.json").write_text(
+            dumps(
+                {
+                    "schema_version": 1,
+                    "default_season": data["season"],
+                    "seasons": indexes,
+                }
+            )
+        )
     if args.sql:
-        export(conn, args.season, ROOT / ".local/shooting-sql")
-    print(json.dumps(data["coverage"], indent=2))
+        if len(seasons) > 1:
+            export_all(conn, seasons, ROOT / ".local/shooting-sql")
+        else:
+            export(conn, seasons[0], ROOT / ".local/shooting-sql")
+    print(json.dumps({"seasons": seasons, "coverage": [i["coverage"] for i in indexes]}, indent=2))
     conn.close()
     source.close()
 

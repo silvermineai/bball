@@ -50,13 +50,18 @@ export type ShotOption = {
   matched: { attempts?: number };
   box_games: number;
 };
-export type ShotCatalog = {
+export type ShotSeason = {
   season: number;
   generated_at: string;
   source: { fetched_at: string; url: string; sha256: string };
   coverage: Record<string, unknown>;
   teams: ShotOption[];
   players: ShotOption[];
+};
+export type ShotCatalog = ShotSeason & {
+  schema_version?: number;
+  default_season?: number;
+  seasons?: ShotSeason[];
 };
 export const shotTypes: Record<string, string> = {
   layup: "Layups",

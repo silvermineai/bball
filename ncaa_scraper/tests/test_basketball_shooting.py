@@ -1,5 +1,6 @@
 import hashlib
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +10,7 @@ import pyarrow.parquet as pq
 from ncaa_scraper.basketball_shooting import (
     BOX_KEYS,
     counts,
+    export_all,
     location,
     matches,
     normalize,
@@ -108,6 +110,37 @@ class CacheTests(unittest.TestCase):
             receipt.write_text(json.dumps({"sha256": "changed"}))
             with self.assertRaises(SourceUnavailable):
                 parquet_file(c, "pbp", 2026)
+
+    def test_multi_season_export_manifest_keeps_editions_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            conn = sqlite3.connect(":memory:")
+            conn.executescript(
+                """
+                CREATE TABLE bb_shot_sources (season INTEGER, edition TEXT, receipt_json TEXT, coverage_json TEXT);
+                CREATE TABLE bb_shot_games (edition TEXT, season INTEGER, game_id TEXT, part INTEGER, payload_json TEXT);
+                CREATE TABLE bb_shot_profiles (edition TEXT, season INTEGER, kind TEXT, entity_id TEXT, payload_json TEXT);
+                """
+            )
+            conn.executemany(
+                "INSERT INTO bb_shot_sources VALUES (?,?,?,?)",
+                [(2025, "edition-2025", "{}", "{}"), (2026, "edition-2026", "{}", "{}")],
+            )
+            conn.executemany(
+                "INSERT INTO bb_shot_games VALUES (?,?,?,?,?)",
+                [("edition-2025", 2025, "game-2025", 0, "[]"), ("edition-2026", 2026, "game-2026", 0, "[]")],
+            )
+            conn.commit()
+            export_all(conn, [2025, 2026], root)
+            manifest = json.loads((root / "manifest.json").read_text())
+            self.assertEqual(manifest["seasons"], [2025, 2026])
+            self.assertEqual(manifest["editions"], {"2025": "edition-2025", "2026": "edition-2026"})
+            self.assertEqual(
+                [f["name"] for f in manifest["files"]],
+                ["shots-2025-000.sql", "shots-2026-000.sql"],
+            )
+            self.assertTrue(all(f["season"] in (2025, 2026) for f in manifest["files"]))
+            conn.close()
 
 
 if __name__ == "__main__":

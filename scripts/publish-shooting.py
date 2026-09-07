@@ -26,7 +26,18 @@ run(
         "test_basketball_shooting.py",
     ]
 )
-run([PY, "-m", "ncaa_scraper.basketball_shooting", "--refresh", "--sql"])
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_shooting",
+        "--seasons",
+        "2025",
+        "2026",
+        "--refresh",
+        "--sql",
+    ]
+)
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")

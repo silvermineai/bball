@@ -1,12 +1,12 @@
 # Basketball shooting evidence
 
-`/basketball/shooting/` combines program/player selection, a court map, shot-type breakdowns, event inspection and game-level coverage. It defaults to field-goal samples that reconcile with box scores. Historical affiliations are not current availability claims.
+`/basketball/shooting/` combines program/player selection, a season-aware court map, shot-type breakdowns, event inspection and game-level coverage. It defaults to field-goal samples that reconcile with box scores. Historical affiliations are not current availability claims.
 
 ## Imported edition
 
-The 2026 season-ending SportsDataverse release contains 2,915,731 play-by-play events across 6,275 games. The corresponding completed schedule has 6,300 games. Normalization accepts 738,233 field-goal attempts and retains 700 without a shooter ID in team evidence; 14 potential attempts have unresolved team/event identities and are excluded. Other events remain in the archived source.
+The catalog now includes the 2025 and 2026 season-ending SportsDataverse releases. The 2025 release contains 2,190,101 play-by-play events across 6,129 games; normalization accepts 713,144 field-goal attempts. The 2026 release contains 2,915,731 events across 6,275 games; normalization accepts 738,233 field-goal attempts. Each season retains its own source receipt, edition and reconciliation counts.
 
-The data covers 721 observed programs and 9,312 shooter identities, including opponents outside the 366-program model field. It is not a verified Division I membership roster. Of 12,550 team-game samples, 12,367 match all four box-score counts. Of 113,675 player-game samples, 111,293 pass both player and team reconciliation.
+The 2025 edition covers 682 observed programs and 8,864 shooter identities; 10,573 of 12,258 team-game samples and 94,712 of 110,352 player-game samples reconcile. The 2026 edition covers 721 programs and 9,312 shooter identities; 12,367 of 12,550 team-game samples and 111,293 of 113,675 player-game samples reconcile. These are not verified Division I membership rosters.
 
 ## Identity, outcomes and coverage
 
@@ -21,13 +21,13 @@ The data covers 721 observed programs and 9,312 shooter identities, including op
 
 The publisher documents raw coordinates relative to a basket at `(25, 0)`. The diagram places the baseline 5.25 feet behind that origin. The map omits positions outside the court, placeholders at `(25, 0)` or `(0, 0)`, three-point positions within 20 feet, layup/dunk/tip positions over ten feet, and positions differing from an explicitly stated distance by over four feet. It does not correct coordinates or manufacture missing locations.
 
-There are 733,313 accepted locations, 2,276 inconsistent locations and 2,644 placeholders in this edition. Beyond-half-court attempts remain in percentages while being omitted from the half-court drawing. Source coordinates are approximate and should not be treated as optical tracking. The filters are conservative heuristics, not proof of shot location.
+The 2026 edition has 733,313 accepted locations, 2,276 inconsistent locations and 2,644 placeholders; the 2025 edition has 185,014 accepted locations, 475 inconsistent locations and 6,228 placeholders. Beyond-half-court attempts remain in percentages while being omitted from the half-court drawing. Source coordinates are approximate and should not be treated as optical tracking. The filters are conservative heuristics, not proof of shot location.
 
 FG% is makes divided by attempts; eFG% adds half a made three-pointer to the numerator. Field-goal points per attempt excludes free throws. Filters apply to all three summaries and the event table; unavailable coordinates affect the map only.
 
 ## Cloudflare storage and refresh
 
-The original Parquet file and its receipt are stored in the private R2 bucket `bball-research` under `basketball/pbp/2026/<sha256>`. Source download URLs, timestamps, license attribution and content hashes are retained. Direct ESPN/NCAA requests remain disabled under the existing source policy.
+Each original Parquet file and receipt is stored in the private R2 bucket `bball-research` under `basketball/pbp/<season>/<sha256>`. Source download URLs, timestamps, license attribution and content hashes are retained. Direct ESPN/NCAA requests remain disabled under the existing source policy.
 
 D1 migration `0011_basketball_shooting.sql` adds versioned shot chunks, entity summaries and the active source pointer. Event arrays are split into at most 100 shots per row. The read-only shooting API selects the active edition and filters source IDs exactly. It does not modify the forecast ledger.
 
@@ -35,7 +35,7 @@ The edition fingerprint includes the PBP hash, schedule/team-box/player-box hash
 
 ```bash
 # Build using the current cached source and generate bounded SQL batches.
-PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_shooting --sql
+PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_shooting --seasons 2025 2026 --sql
 
 # Full source refresh, validation, Cloudflare sync and site deployment.
 .venv/bin/python scripts/publish-shooting.py

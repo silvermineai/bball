@@ -650,7 +650,7 @@ def main():
         c = client()
         for year in [2024, 2025, 2026, 2027]:
             datasets = (
-                (["schedule", "team_box"] + (["participation"] if year == 2025 else []))
+                ["schedule", "team_box", "player_box"]
                 if year < 2026
                 else (
                     [

@@ -83,7 +83,18 @@ run(
         "test_basketball_shooting.py",
     ]
 )
-run([PY, "-m", "ncaa_scraper.basketball_shooting", "--refresh", "--sql"])
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_shooting",
+        "--seasons",
+        "2025",
+        "2026",
+        "--refresh",
+        "--sql",
+    ]
+)
 run([PY, "-m", "ncaa_scraper.basketball_recruiting"])
 run(
     [

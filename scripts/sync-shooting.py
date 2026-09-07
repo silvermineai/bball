@@ -8,24 +8,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
-catalog = json.loads(
-    (ROOT / "frontend/public/data/basketball/shooting.json").read_text()
-)
-season = catalog["season"]
-receipt = catalog["source"]
-source = ROOT / f".local/basketball/play_by_play_{season}.parquet"
-digest = hashlib.sha256(source.read_bytes()).hexdigest()
-if digest != receipt["sha256"]:
-    raise SystemExit("Source receipt mismatch; refusing archive upload")
+catalog_path = ROOT / "frontend/public/data/basketball/shooting-catalog.json"
+if catalog_path.exists():
+    catalog = json.loads(catalog_path.read_text())
+    catalogs = catalog["seasons"]
+else:
+    catalog = json.loads((ROOT / "frontend/public/data/basketball/shooting.json").read_text())
+    catalogs = [catalog]
 files = sorted((ROOT / ".local/shooting-sql").glob("shots-*.sql"))
 if not files:
     raise SystemExit("Generate the shooting SQL before syncing")
 manifest = json.loads((ROOT / ".local/shooting-sql/manifest.json").read_text())
-if (
-    manifest["edition"] != catalog["coverage"]["edition"]
-    or manifest["season"] != season
-):
-    raise SystemExit("SQL and public data editions differ; rebuild shooting first")
 if [p.name for p in files] != [p["name"] for p in manifest["files"]]:
     raise SystemExit("SQL batch set differs from the export manifest")
 for path, expected in zip(files, manifest["files"]):
@@ -45,34 +38,51 @@ def run(args):
         )
 
 
-key = f"bball-research/basketball/pbp/{season}/{digest}"
-run(
-    [
-        "r2",
-        "object",
-        "put",
-        key + ".parquet",
-        "--file",
-        str(source),
-        "--content-type",
-        "application/vnd.apache.parquet",
-        "--remote",
-    ]
-)
-run(
-    [
-        "r2",
-        "object",
-        "put",
-        key + ".receipt.json",
-        "--file",
-        str(source) + ".receipt.json",
-        "--content-type",
-        "application/json",
-        "--remote",
-    ]
-)
-print("Attributed PBP source and receipt archived in R2", flush=True)
+for season_catalog in catalogs:
+    season = season_catalog["season"]
+    receipt = season_catalog["source"]
+    source = ROOT / f".local/basketball/play_by_play_{season}.parquet"
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    if digest != receipt["sha256"]:
+        raise SystemExit(f"Source receipt mismatch for {season}; refusing archive upload")
+    key = f"bball-research/basketball/pbp/{season}/{digest}"
+    run(
+        [
+            "r2",
+            "object",
+            "put",
+            key + ".parquet",
+            "--file",
+            str(source),
+            "--content-type",
+            "application/vnd.apache.parquet",
+            "--remote",
+        ]
+    )
+    run(
+        [
+            "r2",
+            "object",
+            "put",
+            key + ".receipt.json",
+            "--file",
+            str(source) + ".receipt.json",
+            "--content-type",
+            "application/json",
+            "--remote",
+        ]
+    )
+    print(f"Attributed {season} PBP source and receipt archived in R2", flush=True)
+if "seasons" in manifest:
+    if sorted(manifest["seasons"]) != sorted(c["season"] for c in catalogs):
+        raise SystemExit("SQL and public shooting season sets differ; rebuild shooting first")
+    editions = {str(c["season"]): c["coverage"]["edition"] for c in catalogs}
+    if manifest["editions"] != editions:
+        raise SystemExit("SQL and public shooting editions differ; rebuild shooting first")
+else:
+    only = catalogs[0]
+    if manifest["edition"] != only["coverage"]["edition"] or manifest["season"] != only["season"]:
+        raise SystemExit("SQL and public data editions differ; rebuild shooting first")
 run(
     [
         "d1",

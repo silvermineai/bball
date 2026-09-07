@@ -13,21 +13,36 @@ export const metadata = {
   alternates: { canonical: "/basketball/shooting/" },
 };
 export default function Page() {
+  const catalogPath = path.join(
+    process.cwd(),
+    "public/data/basketball/shooting-catalog.json",
+  );
   const catalog = JSON.parse(
     fs.readFileSync(
-      path.join(process.cwd(), "public/data/basketball/shooting.json"),
+      fs.existsSync(catalogPath)
+        ? catalogPath
+        : path.join(process.cwd(), "public/data/basketball/shooting.json"),
       "utf8",
     ),
   ) as ShotCatalog;
-  const c = catalog.coverage;
+  const current =
+    catalog.seasons?.find(
+      (season) => season.season === (catalog.default_season ?? catalog.season),
+    ) ?? catalog;
+  const c = current.coverage;
   return (
     <>
       <div className="dateline eyebrow">
         <span>
-          Play-by-play research / {catalog.season - 1}–
-          {String(catalog.season).slice(-2)}
+          Play-by-play research / {current.season - 1}–
+          {String(current.season).slice(-2)}
         </span>
-        <span>Retrieved {date(catalog.source.fetched_at)}</span>
+        <span>
+          {catalog.seasons?.length
+            ? `${catalog.seasons.length} published seasons · `
+            : ""}
+          Retrieved {date(current.source.fetched_at)}
+        </span>
       </div>
       <div className="page-title">
         <div className="eyebrow">The shooting lab</div>
@@ -106,7 +121,7 @@ export default function Page() {
         </p>
         <p>
           Source:{" "}
-          <a href={catalog.source.url}>
+          <a href={current.source.url}>
             SportsDataverse’s bulk play-by-play release
           </a>
           , CC BY 4.0. Normalization, coordinate checks and reconciliation by
@@ -118,7 +133,7 @@ export default function Page() {
         </p>
         <details>
           <summary>Source receipt and calculation limits</summary>
-          <p className="source-hash">SHA-256: {catalog.source.sha256}</p>
+          <p className="source-hash">SHA-256: {current.source.sha256}</p>
           <p>
             Basket-relative coordinates use the publisher’s origin (25, 0).
             Coordinate checks remove basket-center/default positions, values

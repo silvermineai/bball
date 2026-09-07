@@ -20,11 +20,19 @@ export default function Shooting({
   ratedTeamIds: string[];
 }) {
   const params = useSearchParams();
-  const requestedPlayer = catalog.players.find(
+  const seasons = catalog.seasons ?? [catalog];
+  const requestedSeason = Number(params.get("season"));
+  const initialSeason = seasons.some((s) => s.season === requestedSeason)
+    ? requestedSeason
+    : (catalog.default_season ?? catalog.season);
+  const [season, setSeason] = useState(initialSeason);
+  const activeCatalog =
+    seasons.find((s) => s.season === season) ?? seasons[0];
+  const requestedPlayer = activeCatalog.players.find(
     (p) => p.id === params.get("player"),
   );
   const [team, setTeam] = useState(
-    catalog.teams.find((t) => t.id === params.get("team"))?.id ||
+    activeCatalog.teams.find((t) => t.id === params.get("team"))?.id ||
       requestedPlayer?.teams[0] ||
       "150",
   );
@@ -47,7 +55,7 @@ export default function Shooting({
     setSelected(null);
     setGame("all");
     fetch(
-      `/api/basketball/research/shooting/${kind}/${encodeURIComponent(id)}?season=${catalog.season}`,
+      `/api/basketball/research/shooting/${kind}/${encodeURIComponent(id)}?season=${activeCatalog.season}`,
       { signal: c.signal },
     )
       .then((r) => {
@@ -64,8 +72,8 @@ export default function Shooting({
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => c.abort();
-  }, [kind, id, catalog.season]);
-  const people = catalog.players.filter((p) => p.teams.includes(team));
+  }, [kind, id, activeCatalog.season]);
+  const people = activeCatalog.players.filter((p) => p.teams.includes(team));
   const results = people.filter((p) =>
     p.name.toLowerCase().includes(q.toLowerCase()),
   );
@@ -97,13 +105,43 @@ export default function Shooting({
                 setQ("");
               }}
             >
-              {catalog.teams.map((t) => (
+              {activeCatalog.teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
             </select>
           </label>
+          {seasons.length > 1 && (
+            <label className="control">
+              <span>SHOT SEASON</span>
+              <select
+                value={season}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setSeason(next);
+                  const nextCatalog = seasons.find((s) => s.season === next);
+                  setTeam(nextCatalog?.teams[0]?.id || "150");
+                  setPlayer("");
+                  setQ("");
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("season", String(next));
+                  url.searchParams.delete("player");
+                  window.history.replaceState(null, "", url);
+                }}
+              >
+                {seasons
+                  .slice()
+                  .sort((a, b) => b.season - a.season)
+                  .map((entry) => (
+                    <option key={entry.season} value={entry.season}>
+                      {entry.season - 1}–{String(entry.season).slice(-2)} ·{" "}
+                      {String(entry.coverage.shot_games ?? 0)} games
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
           <label className="control">
             <span>FIND A PLAYER IN THIS PROGRAM</span>
             <input
@@ -124,7 +162,7 @@ export default function Shooting({
               ))}
               {player && !results.some((p) => p.id === player) && (
                 <option value={player}>
-                  {catalog.players.find((p) => p.id === player)?.name ||
+                  {activeCatalog.players.find((p) => p.id === player)?.name ||
                     `Player ${player}`}
                 </option>
               )}
@@ -151,7 +189,8 @@ export default function Shooting({
               <div>
                 <div className="eyebrow">
                   {player ? "Player evidence" : "Program evidence"} /{" "}
-                  {catalog.season - 1}–{String(catalog.season).slice(-2)}
+                  {activeCatalog.season - 1}–
+                  {String(activeCatalog.season).slice(-2)}
                 </div>
                 <h2>{data.profile.name}</h2>
               </div>
