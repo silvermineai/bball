@@ -341,6 +341,17 @@ th,
   font-size: 12px;
   white-space: nowrap;
 }
+.button-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.button-row > a {
+  font-size: 12px;
+  white-space: nowrap;
+}
 .match-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

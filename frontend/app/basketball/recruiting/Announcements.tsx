@@ -12,6 +12,7 @@ import {
 } from "../../_lib/recruiting";
 import Recruiting from "./Recruiting";
 import { comparisonHref } from "../../_lib/player-comparison";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
@@ -163,9 +164,78 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     ? "Prior minutes per game, highest first"
                     : "Alphabetical by player"}
             </p>
-            <a href="/data/basketball/recruiting.json" download>
-              Download evidence JSON ↓
-            </a>
+            <div className="button-row">
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    "basketball-recruiting-evidence.csv",
+                    toCsv(
+                      [
+                        "Player",
+                        "Category",
+                        "Announcing program",
+                        "Prior program",
+                        "Latest status",
+                        "Latest publication",
+                        "Prior stat team",
+                        "Games",
+                        "Minutes per game",
+                        "Points per game",
+                        "Rebounds per game",
+                        "Assists per game",
+                        "eFG%",
+                        "TS%",
+                        "3P%",
+                        "Free throw rate",
+                        "3PA rate",
+                        "Turnover rate",
+                        "Source title",
+                        "Source URL",
+                        "Reviewed at",
+                      ],
+                      rows.map((p) => [
+                        p.name,
+                        categoryLabels[p.category],
+                        p.program.name,
+                        p.previous_program,
+                        eventLabels[p.latest.kind],
+                        p.latest.source.published_on,
+                        p.stats?.team,
+                        p.stats?.games,
+                        p.stats?.mpg,
+                        p.stats?.ppg,
+                        p.stats?.rpg,
+                        p.stats?.apg,
+                        p.stats?.efg == null ? null : p.stats.efg * 100,
+                        p.stats?.ts == null ? null : p.stats.ts * 100,
+                        p.stats?.three_pct == null
+                          ? null
+                          : p.stats.three_pct * 100,
+                        p.stats?.ft_rate == null
+                          ? null
+                          : p.stats.ft_rate * 100,
+                        p.stats?.three_rate == null
+                          ? null
+                          : p.stats.three_rate * 100,
+                        p.stats?.tov_rate == null
+                          ? null
+                          : p.stats.tov_rate * 100,
+                        p.latest.source.title,
+                        p.latest.source.url,
+                        p.latest.source.checked_at,
+                      ]),
+                    ),
+                  )
+                }
+              >
+                Download CSV ↓
+              </button>
+              <a href="/data/basketball/recruiting.json" download>
+                Evidence JSON ↓
+              </a>
+            </div>
           </div>
           <div className="recruiting-grid">
             {rows.map((p) => (
