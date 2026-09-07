@@ -102,7 +102,7 @@ export default function Matchups({
           >
             <option value="all">All games</option>
             <option value="forecasted">With model forecast</option>
-            <option value="unforecasted">Without forecast</option>
+            <option value="unforecasted">Without primary forecast</option>
           </select>
         </label>
         <label className="control">
@@ -151,23 +151,25 @@ export default function Matchups({
                   "Margin range high",
                   "Projected pace",
                   "Broadcast",
+                  "Estimate type",
                 ],
                 rows.map((g) => [
                   g.starts_at,
                   g.away_name,
                   g.home_name,
                   g.venue,
-                  g.prediction?.away_score,
-                  g.prediction?.home_score,
-                  g.prediction?.home_win_probability == null
+                  (g.prediction || g.fallback_prediction)?.away_score,
+                  (g.prediction || g.fallback_prediction)?.home_score,
+                  (g.prediction || g.fallback_prediction)?.home_win_probability == null
                     ? null
-                    : g.prediction.home_win_probability * 100,
-                  g.prediction?.home_margin,
-                  g.prediction?.total,
-                  g.prediction?.margin_low,
-                  g.prediction?.margin_high,
-                  g.prediction?.pace,
+                    : (g.prediction || g.fallback_prediction)!.home_win_probability * 100,
+                  (g.prediction || g.fallback_prediction)?.home_margin,
+                  (g.prediction || g.fallback_prediction)?.total,
+                  (g.prediction || g.fallback_prediction)?.margin_low,
+                  (g.prediction || g.fallback_prediction)?.margin_high,
+                  (g.prediction || g.fallback_prediction)?.pace,
                   g.broadcast,
+                  g.prediction ? "primary" : g.fallback_prediction ? "cold-start" : null,
                 ]),
               ),
             )

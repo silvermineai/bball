@@ -135,11 +135,13 @@ export default function Page() {
         </div>
         <p className="note" style={{ marginBottom: 20 }}>
           The source has published {d.coverage.upcoming_games.toLocaleString()}{" "}
-          games so far. This is a partial schedule, not the complete season.
+          games so far. {d.coverage.baseline_estimate_games || 0} carry a
+          labeled cold-start estimate because a program is outside the primary
+          trained field. This is a partial schedule, not the complete season.
         </p>
         <div className="match-grid">
           {d.upcoming
-            .filter((g) => g.prediction)
+            .filter((g) => g.prediction || g.fallback_prediction)
             .slice(0, 3)
             .map((g) => (
               <BasketballCard

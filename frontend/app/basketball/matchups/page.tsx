@@ -14,10 +14,11 @@ export default function Page() {
         <h1>Prepare for what’s next.</h1>
         <p>
           Search the published slate and compare score estimates, pace and
-          uncertainty. These forecasts use historical efficiency, calibrated on
-          a separate season. The desk also shows observed prior-minute coverage
-          for roster context; injuries, eligibility and availability remain
-          outside the model.
+          uncertainty. Primary forecasts use historical efficiency, calibrated
+          on a separate season. Games outside that trained field carry a
+          separately calibrated cold-start estimate so the whole published
+          schedule remains useful; those cards are labeled clearly. The desk
+          also shows observed prior-minute coverage for roster context.
         </p>
         <p className="note">
           Use the triage controls to surface the strongest model signals, the

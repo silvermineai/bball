@@ -79,6 +79,26 @@ class PublicationHealthTest(unittest.TestCase):
                 )
             self.assertIn("invalid forecast coverage counts", str(error.exception))
 
+    def test_baseline_estimates_cannot_exceed_schedule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.payload()
+            payload["coverage"]["baseline_estimate_games"] = 2
+            write_release(directory, "basketball", "overview.json", payload)
+            write_release(
+                directory,
+                "basketball",
+                "ncaa-individual.json",
+                {"generated_at": "2026-09-07T12:00:00Z", "season": 2026},
+            )
+            with self.assertRaises(ValueError) as error:
+                check_freshness(
+                    Path(directory),
+                    "basketball",
+                    now=datetime(2026, 9, 8, tzinfo=timezone.utc),
+                    max_age_hours=48,
+                )
+            self.assertIn("baseline estimates exceed", str(error.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -444,6 +444,15 @@ th,
   margin-top: 12px;
   padding-top: 10px;
 }
+
+.forecast-caveat {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--orange);
+  background: color-mix(in srgb, var(--orange) 8%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
 .roster-context small {
   display: block;
   color: var(--muted);

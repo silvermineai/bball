@@ -12,7 +12,7 @@ The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for 
 - 9,990 player/team entries with recorded minutes in the player index; incomplete box-score aggregates are not presented as complete rates.
 - 426,040 published player-season statistic rows grouped by player, team and category, retaining labels, values, displays and descriptions.
 - 4,974 NCAA league-wide RAPM records, kept in their original NCAA identity namespace.
-- 1,629 published 2026–27 games, including 1,579 forecasts. This is a partial schedule.
+- 1,629 published 2026–27 games, including 1,579 primary forecasts and 50 separately labeled cold-start estimates. This is a partial schedule.
 - 5,461 players listed under 2026–27 in the source, spanning 354 programs. Listings are unconfirmed and may carry over; they do not prove current eligibility or a roster return.
 - 1,595 different-program records in the historical 2024–25 → 2025–26 appearance comparison. These are observed participation changes, not claims about transfer announcements or reasons.
 
@@ -43,7 +43,7 @@ For the 2026–27 forecast:
 
 The 2025–26 test covers 5,734 games and excludes 564 paired-box games involving teams outside the trained field. Metrics: 67.37% winner accuracy, 10.46-point margin MAE, 13.35-point margin RMSE, 15.37-point total MAE, 0.2057 Brier score, 0.5943 log loss and 78.69% empirical coverage for nominal 80% ranges. The constant-home-margin baseline MAE is 11.97 points. These are retrospective results, not a market-edge claim.
 
-Possession pace is normalized to 40 minutes using the final period count, including overtime. Forecasts use regulation pace; evaluation compares against final scores, including overtime. No injury, transfer, roster or recruiting features are used yet. Source corrections may have been published after the historical events.
+Possession pace is normalized to 40 minutes using the final period count, including overtime. Forecasts use regulation pace; evaluation compares against final scores, including overtime. No injury, transfer, roster or recruiting features are used in the primary model. Games involving a program outside the trained field receive a separate cold-start estimate built from latest-season team priors shrunk toward the league mean; its interval is calibrated on held-out games and the estimate is not registered in the prospective ledger. Source corrections may have been published after the historical events.
 
 ## Player and team statistics
 

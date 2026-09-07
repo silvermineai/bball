@@ -11,7 +11,8 @@ export default function BasketballCard({
   homeRoster?: BBRosterSummary;
   awayRoster?: BBRosterSummary;
 }) {
-  const p = g.prediction;
+  const p = g.prediction || g.fallback_prediction || null;
+  const coldStart = !g.prediction && !!g.fallback_prediction;
   const signal = p ? forecastSignal(p) : null;
   return (
     <article className="match-card">
@@ -47,6 +48,13 @@ export default function BasketballCard({
               {fmt(p.home_win_probability * 100)}%
             </strong>
           </div>
+          {coldStart && (
+            <p className="forecast-caveat">
+              Exploratory cold-start estimate · at least one program is outside
+              the trained field. Range is calibrated wider from held-out games;
+              this estimate is not registered as a primary model forecast.
+            </p>
+          )}
           <div className="match-detail muted">
             <span>Model signal</span>
             <span>{signal?.label}</span>
@@ -86,19 +94,19 @@ export default function BasketballCard({
         </>
       ) : (
         <p className="note">
-          No forecast: at least one program lacks enough observed training
-          games.
+          No estimate is available for this game.
         </p>
       )}
       <p className="market-note">
         {g.venue || "Venue not supplied"}
         {g.broadcast ? ` · ${g.broadcast}` : ""}
         <br />
-        Preseason baseline · roster changes are not model features.
+        {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
+        roster changes are not model features.
         <br />
         No verified pregame market line imported.
       </p>
-      {p && (
+      {g.prediction && (
         <Link className="note" href={`/basketball/briefs/${g.id}/`}>
           Read the matchup brief →
         </Link>

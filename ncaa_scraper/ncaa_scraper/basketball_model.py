@@ -61,6 +61,31 @@ def fit(games, *, teams=None):
     counts = Counter(
         t for g in games if g["season"] == latest for t in [g["home_id"], g["away_id"]]
     )
+    # Keep a conservative prior for programs that do not meet the production
+    # field threshold.  These priors are only used by the explicitly labeled
+    # cold-start estimate; the trained coefficients below remain unchanged.
+    prior_rows = Counter()
+    prior_totals = {}
+    for g in games:
+        if g["season"] != latest:
+            continue
+        for own, opp, eff_key, opp_eff_key in [
+            ("home", "away", "home_eff", "away_eff"),
+            ("away", "home", "away_eff", "home_eff"),
+        ]:
+            tid = g[f"{own}_id"]
+            row = prior_totals.setdefault(tid, [0.0, 0.0, 0.0])
+            row[0] += float(g[eff_key])
+            row[1] += float(g[opp_eff_key])
+            row[2] += float(g["pace"])
+            prior_rows[tid] += 1
+    total_rows = sum(prior_rows.values())
+    league = [
+        sum(prior_totals[t][i] for t in prior_totals) / total_rows
+        if total_rows
+        else 0.0
+        for i in range(3)
+    ]
     # Rolling experiments freeze membership before the season begins. The
     # default production fit continues to infer its field from the latest year.
     teams = (
@@ -100,6 +125,17 @@ def fit(games, *, teams=None):
             features.T @ (w * np.asarray(target)),
         ).tolist()
 
+    fallback_priors = {}
+    for tid, row in prior_totals.items():
+        n = prior_rows[tid]
+        # Ten pseudo-games keeps one-game listings close to the league mean.
+        reliability = n / (n + 10.0)
+        fallback_priors[tid] = {
+            "off": reliability * (row[0] / n - league[0]),
+            "def": reliability * (row[1] / n - league[1]),
+            "tempo": reliability * (row[2] / n - league[2]),
+            "games": n,
+        }
     return {
         "teams": teams,
         "efficiency": solve(x, y, np.repeat(weights, 2), 12),
@@ -107,6 +143,7 @@ def fit(games, *, teams=None):
         "training_games": len(games),
         "training_seasons": sorted({g["season"] for g in games}),
         "last_training_start": max(g["starts_at"] for g in games),
+        "fallback_priors": fallback_priors,
     }
 
 
@@ -126,6 +163,46 @@ def raw_predict(model, game):
         "home_margin": home - away,
         "total": home + away,
         "pace": pace,
+    }
+
+
+def fallback_raw_predict(model, game):
+    """Predict with fitted effects plus shrunk latest-season priors.
+
+    This is deliberately separate from :func:`raw_predict`: callers must opt
+    into a cold-start estimate when a program is outside the trained field.
+    """
+    unknown = [
+        tid
+        for tid in (game["home_id"], game["away_id"])
+        if tid not in model["teams"]
+    ]
+    if not unknown:
+        return None
+    n = len(model["teams"])
+    b, tempo = model["efficiency"], model["tempo"]
+    priors = model.get("fallback_priors", {})
+
+    def effects(tid):
+        if tid in model["teams"]:
+            i = model["teams"].index(tid)
+            return b[i + 2], b[i + n + 2], tempo[i + 1]
+        prior = priors.get(tid, {})
+        return prior.get("off", 0.0), prior.get("def", 0.0), prior.get("tempo", 0.0)
+
+    hoff, hdef, htempo = effects(game["home_id"])
+    aoff, adef, atempo = effects(game["away_id"])
+    venue = 0 if game["neutral"] else b[1] / 2
+    pace = tempo[0] + htempo + atempo
+    home = (b[0] + hoff + adef + venue) * pace / 100
+    away = (b[0] + aoff + hdef - venue) * pace / 100
+    return {
+        "home_score": home,
+        "away_score": away,
+        "home_margin": home - away,
+        "total": home + away,
+        "pace": pace,
+        "unknown_teams": unknown,
     }
 
 
@@ -163,6 +240,23 @@ def calibrate_predictions(pairs):
     }
 
 
+def calibrate_fallback_width(games, model, default):
+    """Estimate cold-start interval width from held-out games only."""
+    errors = []
+    for game in games:
+        if raw_predict(model, game) is not None:
+            continue
+        predicted = fallback_raw_predict(model, game)
+        if predicted is not None:
+            errors.append(
+                abs(predicted["home_margin"] - (game["home_score"] - game["away_score"]))
+            )
+    return (
+        float(np.quantile(errors, 0.8)) if len(errors) >= 30 else float(default * 1.5),
+        len(errors),
+    )
+
+
 def forecast(model, game):
     p = raw_predict(model, game)
     if p is None:
@@ -170,13 +264,32 @@ def forecast(model, game):
     return apply_calibration(p, model["calibration"])
 
 
+def fallback_forecast(model, game):
+    """Return an exploratory estimate for a game with an unmodeled program."""
+    p = fallback_raw_predict(model, game)
+    if p is None:
+        return None
+    result = apply_calibration(p, model["calibration"])
+    width = model["calibration"].get(
+        "fallback_margin_half_width",
+        model["calibration"]["margin_half_width"] * 1.5,
+    )
+    result["margin_low"] = round(p["home_margin"] - width, 2)
+    result["margin_high"] = round(p["home_margin"] + width, 2)
+    result["estimate_type"] = "cold_start"
+    result["unknown_teams"] = p["unknown_teams"]
+    result["margin_half_width"] = round(width, 2)
+    return result
+
+
 def apply_calibration(p, calibration):
     intercept, slope = calibration["logistic_coefficients"]
     probability = 1 / (
         1 + math.exp(-max(-30, min(30, intercept + slope * p["home_margin"])))
     )
+    numeric_keys = ("home_score", "away_score", "home_margin", "total", "pace")
     return {
-        **{k: round(v, 2) for k, v in p.items()},
+        **{k: round(p[k], 2) for k in numeric_keys},
         "home_win_probability": round(probability, 5),
         "margin_low": round(p["home_margin"] - calibration["margin_half_width"], 2),
         "margin_high": round(p["home_margin"] + calibration["margin_half_width"], 2),
@@ -191,9 +304,13 @@ def train(games, cutoff, target_season=2027):
     ]
     calibration_year, test_year = target_season - 2, target_season - 1
     initial = fit([g for g in valid if g["season"] < calibration_year])
-    calibration = calibrate(
-        [g for g in valid if g["season"] == calibration_year], initial
+    calibration_games = [g for g in valid if g["season"] == calibration_year]
+    calibration = calibrate(calibration_games, initial)
+    fallback_width, fallback_games = calibrate_fallback_width(
+        calibration_games, initial, calibration["margin_half_width"]
     )
+    calibration["fallback_margin_half_width"] = fallback_width
+    calibration["fallback_games"] = fallback_games
     evaluation_model = fit([g for g in valid if g["season"] < test_year])
     evaluation_model["calibration"] = calibration
     test = [g for g in valid if g["season"] == test_year]
@@ -251,6 +368,7 @@ def train(games, cutoff, target_season=2027):
             "limitations": [
                 "Historical box-score strength, not an injury or roster-adjusted model.",
                 "Schedules and 2026–27 rosters are partial source snapshots.",
+                "Cold-start estimates use latest-season team priors shrunk toward the league mean; they are exploratory and carry a separately calibrated wider range.",
                 "Estimated possessions use a 0.475 free-throw weight; pace is normalized to 40 minutes.",
                 "Predictions use regulation pace; evaluation compares against final scores including overtime.",
                 "Source corrections may have been published after games. This is a retrospective preseason test.",

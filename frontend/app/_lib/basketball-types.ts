@@ -7,6 +7,9 @@ export type BBPrediction = {
   home_win_probability: number;
   margin_low: number;
   margin_high: number;
+  estimate_type?: "cold_start";
+  unknown_teams?: string[];
+  margin_half_width?: number;
 };
 export type BBGame = {
   id: string;
@@ -21,6 +24,7 @@ export type BBGame = {
   venue: string;
   broadcast: string;
   prediction: BBPrediction | null;
+  fallback_prediction?: BBPrediction | null;
 };
 export type BBTeam = {
   id: string;
@@ -56,6 +60,7 @@ export type BBOverview = {
     unresolved_rows: number;
     upcoming_games: number;
     forecast_games: number;
+    baseline_estimate_games?: number;
   };
   ratings: BBTeam[];
   upcoming: BBGame[];
@@ -73,6 +78,8 @@ export type BBOverview = {
       games: number;
       logistic_coefficients: number[];
       margin_half_width: number;
+      fallback_margin_half_width?: number;
+      fallback_games?: number;
     };
     evaluation: {
       season: number;
@@ -89,6 +96,7 @@ export type BBOverview = {
       training_seasons: number[];
     };
     limitations: string[];
+    fallback_priors?: Record<string, { off: number; def: number; tempo: number; games: number }>;
   };
   sources: {
     dataset: string;

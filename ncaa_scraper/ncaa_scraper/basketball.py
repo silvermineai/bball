@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .basketball_model import forecast, game_features, ratio, train
+from .basketball_model import fallback_forecast, forecast, game_features, ratio, train
 from .basketball_sources import BASKETBALL_ATTRIBUTION, client
 from .football import number
 from .football_sources import ROOT, utcnow
@@ -739,7 +739,8 @@ def build(conn, target=2027):
     for g in games:
         if g["season"] == target and not g["completed"] and g["starts_at"] > now:
             p = forecast(model, g)
-            upcoming.append({**g, "prediction": p})
+            cold_start = fallback_forecast(model, g) if p is None else None
+            upcoming.append({**g, "prediction": p, "fallback_prediction": cold_start})
             if p:
                 conn.execute(
                     "INSERT OR IGNORE INTO bb_forecasts VALUES (?,?,?,?)",
@@ -773,6 +774,9 @@ def build(conn, target=2027):
             ).fetchone()[0],
             "upcoming_games": len(upcoming),
             "forecast_games": sum(g["prediction"] is not None for g in upcoming),
+            "baseline_estimate_games": sum(
+                g["fallback_prediction"] is not None for g in upcoming
+            ),
         },
         "model": model,
         "upcoming": upcoming,

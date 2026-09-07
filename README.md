@@ -27,7 +27,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Tool | Route | What it does |
 |---|---|---|
 | Basketball desk | `/basketball/` | Upcoming forecasts, ratings and research coverage |
-| Matchups | `/basketball/matchups/` | 1,579 forecasts for 2026–27, with score ranges and matchup briefs |
+| Matchups | `/basketball/matchups/` | 1,579 primary forecasts plus 50 labeled cold-start estimates for 2026–27, with score ranges and matchup briefs |
 | Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and four factors |
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios, historical factors and source-listed roster movement |

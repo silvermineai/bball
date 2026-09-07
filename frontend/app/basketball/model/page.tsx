@@ -63,7 +63,10 @@ export default function Page() {
           <p>
             Production fit: {d.model.training_games.toLocaleString()} games from{" "}
             {d.model.training_seasons.join(", ")}. No recruiting, roster, injury
-            or weather variables enter this version.
+            or weather variables enter the primary model. Scheduled games with
+            an unmodeled program receive a separate cold-start estimate using
+            latest-season priors shrunk toward the league mean; its held-out
+            interval is wider and it is never registered in the ledger.
           </p>
         </section>
         <section className="paper-panel">
@@ -155,6 +158,9 @@ export default function Page() {
             as currently published. They do not prove an edge over sportsbooks.
             Final-score evaluation includes overtime, while predictions use
             regulation pace.
+          </p>
+          <p className="note">
+            The model notebook currently has {d.model.calibration.fallback_games?.toLocaleString() ?? "—"} held-out cold-start games for interval calibration; the public slate reports {d.coverage.baseline_estimate_games?.toLocaleString() ?? 0} exploratory estimates alongside {d.coverage.forecast_games.toLocaleString()} primary forecasts.
           </p>
         </div>
       </section>

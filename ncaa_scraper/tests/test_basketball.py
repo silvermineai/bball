@@ -11,7 +11,13 @@ from ncaa_scraper.basketball import (
     publisher_leaders,
     roster_changes,
 )
-from ncaa_scraper.basketball_model import fit, forecast, game_features, train
+from ncaa_scraper.basketball_model import (
+    fallback_forecast,
+    fit,
+    forecast,
+    game_features,
+    train,
+)
 
 
 def sample(i, season):
@@ -80,6 +86,18 @@ class BasketballModelTests(unittest.TestCase):
         self.assertTrue(0 <= p["home_win_probability"] <= 1)
         self.assertLess(p["margin_low"], p["home_margin"])
         self.assertIsNone(forecast(model, {**sample(1, 2027), "home_id": "unseen"}))
+
+    def test_cold_start_estimate_is_explicit_and_wider(self):
+        games = [sample(i, y) for y in [2024, 2025, 2026] for i in range(180)]
+        model = train(games, "2026-09-05T00:00:00Z")
+        game = {**sample(1, 2027), "home_id": "unseen"}
+        estimate = fallback_forecast(model, game)
+        self.assertEqual(estimate["estimate_type"], "cold_start")
+        self.assertIn("unseen", estimate["unknown_teams"])
+        self.assertGreater(
+            estimate["margin_high"] - estimate["home_margin"],
+            model["calibration"]["margin_half_width"],
+        )
 
 
 class BasketballIngestTests(unittest.TestCase):
