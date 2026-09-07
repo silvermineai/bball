@@ -241,6 +241,16 @@ def summarize(logs):
             "three_rate": rate(
                 ["tpa", "fga"], lambda: ratio(totals["tpa"], totals["fga"])
             ),
+            "ft_rate": rate(
+                ["fta", "fga"], lambda: ratio(totals["fta"], totals["fga"])
+            ),
+            "tov_rate": rate(
+                ["tov", "fga", "fta"],
+                lambda: ratio(
+                    totals["tov"],
+                    totals["fga"] + 0.475 * totals["fta"] + totals["tov"],
+                ),
+            ),
         }
     )
     return {
@@ -343,6 +353,9 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
                                     "efg",
                                     "ts",
                                     "three_pct",
+                                    "ft_rate",
+                                    "three_rate",
+                                    "tov_rate",
                                     "qualified",
                                     "incomplete_box_games",
                                 ]

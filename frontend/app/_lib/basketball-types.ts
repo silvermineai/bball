@@ -114,6 +114,9 @@ export type BBPlayer = {
   efg: number | null;
   ts: number | null;
   three_pct: number | null;
+  ft_rate: number | null;
+  three_rate: number | null;
+  tov_rate: number | null;
   qualified: boolean;
   incomplete_box_games: number;
 };

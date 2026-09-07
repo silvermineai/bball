@@ -69,6 +69,8 @@ export type CareerSummary = {
   ts: number | null;
   three_pct: number | null;
   ft_pct: number | null;
+  ft_rate: number | null;
+  tov_rate: number | null;
   three_rate: number | null;
 };
 export type CareerProfile = {

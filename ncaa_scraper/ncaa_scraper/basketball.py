@@ -370,6 +370,11 @@ def player_index(conn, year=2026):
                     t["three_point_field_goals_made"],
                     t["three_point_field_goals_attempted"],
                 ),
+                "ft_rate": ratio(t["free_throws_attempted"], fga),
+                "three_rate": ratio(t["three_point_field_goals_attempted"], fga),
+                "tov_rate": ratio(
+                    t["turnovers"], fga + 0.475 * fta + t["turnovers"]
+                ),
                 "qualified": t["minutes"] >= 400
                 and games >= 15
                 and t["incomplete_box_games"] == 0,
@@ -389,6 +394,9 @@ def player_index(conn, year=2026):
                 "efg",
                 "ts",
                 "three_pct",
+                "ft_rate",
+                "three_rate",
+                "tov_rate",
             ]:
                 p[k] = None
     result.sort(key=lambda p: (-(p["ppg"] or 0), p["name"]))

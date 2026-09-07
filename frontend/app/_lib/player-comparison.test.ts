@@ -68,6 +68,8 @@ const summary = (): CareerSummary => ({
   ts: 240 / (2 * (180 + 0.475 * 50)),
   three_pct: 1 / 3,
   ft_pct: 0.8,
+  ft_rate: 50 / 180,
+  tov_rate: 30 / (180 + 0.475 * 50 + 30),
   three_rate: 1 / 3,
 });
 const player = (overrides: Partial<BBPlayer> = {}): BBPlayer => ({
@@ -89,6 +91,9 @@ const player = (overrides: Partial<BBPlayer> = {}): BBPlayer => ({
   efg: 100 / 180,
   ts: 240 / (2 * (180 + 0.475 * 50)),
   three_pct: 1 / 3,
+  ft_rate: 50 / 180,
+  three_rate: 1 / 3,
+  tov_rate: 30 / (180 + 0.475 * 50 + 30),
   qualified: true,
   incomplete_box_games: 0,
   ...overrides,

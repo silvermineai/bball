@@ -61,6 +61,8 @@ class CareerTests(unittest.TestCase):
         self.assertEqual(result["samples"]["ast"], 1)
         self.assertIsNone(result["totals"]["ast"])
         self.assertEqual(result["efg"], 0.625)
+        self.assertEqual(result["ft_rate"], 0)
+        self.assertEqual(result["tov_rate"], 0)
 
     def test_dnp_unknown_minutes_and_unmatched_rows_stay_out_of_rates(self):
         logs = [

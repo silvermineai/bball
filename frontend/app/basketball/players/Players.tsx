@@ -36,7 +36,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "spg"
     | "bpg"
     | "efg"
-    | "three_pct";
+    | "three_pct"
+    | "ft_rate"
+    | "three_rate"
+    | "tov_rate";
   const rows = rankProduction(
     (data?.season === +season ? data.players : []).filter(
       (p) => !qualified || p.qualified,
@@ -119,6 +122,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <option value="bpg">Blocks per game</option>
             <option value="efg">Effective FG%</option>
             <option value="three_pct">Three-point FG%</option>
+            <option value="ft_rate">Free-throw attempt rate</option>
+            <option value="three_rate">Three-point attempt share</option>
+            <option value="tov_rate">Turnover rate · lower is better</option>
           </select>
         </label>
       </div>
@@ -217,6 +223,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       "Effective FG%",
                       "True shooting %",
                       "Three-point FG%",
+                      "Free-throw attempt rate",
+                      "Three-point attempt share",
+                      "Turnover rate",
                     ],
                     rows.map((p) => [
                       p.statRank,
@@ -234,6 +243,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       p.efg == null ? null : p.efg * 100,
                       p.ts == null ? null : p.ts * 100,
                       p.three_pct == null ? null : p.three_pct * 100,
+                      p.ft_rate == null ? null : p.ft_rate * 100,
+                      p.three_rate == null ? null : p.three_rate * 100,
+                      p.tov_rate == null ? null : p.tov_rate * 100,
                     ]),
                   ),
                 )
@@ -260,6 +272,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     "eFG%",
                     "TS%",
                     "3P%",
+                    "FTR",
+                    "3PA rate",
+                    "TO rate",
                   ].map((k) => (
                     <th className="numeric" key={k}>
                       {k}
@@ -293,7 +308,14 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       p.apg,
                       p.spg,
                       p.bpg,
-                      ...[p.efg, p.ts, p.three_pct].map((n) =>
+                      ...[
+                        p.efg,
+                        p.ts,
+                        p.three_pct,
+                        p.ft_rate,
+                        p.three_rate,
+                        p.tov_rate,
+                      ].map((n) =>
                         n == null ? null : n * 100,
                       ),
                     ].map((v, i) => (

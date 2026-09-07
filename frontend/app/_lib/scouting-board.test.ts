@@ -32,6 +32,9 @@ const one = (i: number): BBPlayer => ({
   efg: 0.5,
   ts: 0.5,
   three_pct: 0.4,
+  ft_rate: 0.2,
+  three_rate: 0.35,
+  tov_rate: 0.12,
   qualified: true,
   incomplete_box_games: 0,
 });
