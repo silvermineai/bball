@@ -9,6 +9,7 @@ import { getScoutProfile } from "../../../_lib/scouting-data";
 import { getLedger } from "../../../_lib/research-data";
 import { date, fmt, kick, signed } from "../../../_lib/format";
 import {
+  adjustedFactorPoints,
   briefEvidence,
   briefFactors,
   briefScenarioUrl,
@@ -348,8 +349,76 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
+            <div className="eyebrow">03 / Schedule-adjusted lens</div>
+            <h2>What survives a harder schedule?</h2>
+          </div>
+        </div>
+        <p className="note brief-explainer">
+          These four-factor role estimates adjust for opponent and season
+          recency using the same team-and-venue design as the efficiency model.
+          A positive gap means the offense’s favorable rate is stronger than the
+          opposing defense’s corresponding rate. This is a descriptive lens for
+          preparation, not a new forecast or a claim about the next rotation.
+        </p>
+        <div className="two-col">
+          {[
+            [away, home],
+            [home, away],
+          ].map(([offense, defense]) => {
+            const points = adjustedFactorPoints(offense, defense);
+            return (
+              <section className="paper-panel brief-factor-panel" key={offense.id}>
+                <h3>{offense.name} offense vs {defense.name} defense.</h3>
+                {points.length ? (
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Adjusted rate</th>
+                          <th>
+                            {offense.name}
+                            <small>Offense</small>
+                          </th>
+                          <th>
+                            {defense.name}
+                            <small>Defense</small>
+                          </th>
+                          <th>Favorable gap</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {points.map((point) => (
+                          <tr key={point.factor.key}>
+                            <td>{point.factor.label}</td>
+                            <td className="numeric">{fmt(point.offenseValue * 100)}%</td>
+                            <td className="numeric">{fmt(point.defenseValue * 100)}%</td>
+                            <td className="numeric">
+                              <strong>{signed(point.gap * 100)} pp</strong>
+                              <small>{point.gap >= 0 ? "favors this offense" : "favors this defense"}</small>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="empty">No complete adjusted-factor sample is available for this direction.</p>
+                )}
+                <p className="note">
+                  For turnover rate, lower offensive turnover rate and higher
+                  forced-turnover rate are favorable. The other rows favor more
+                  efficient offense and lower opponent rates.
+                </p>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
             <div className="eyebrow">
-              03 / Historical workload, then roster verification
+              04 / Historical workload, then roster verification
             </div>
             <h2>Who carried the old possessions?</h2>
           </div>
@@ -422,7 +491,7 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">04 / Source roster observation</div>
+            <div className="eyebrow">05 / Source roster observation</div>
             <h2>How much old workload is represented?</h2>
           </div>
           <span className="note">2026–27 listing · unconfirmed</span>
@@ -492,7 +561,7 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">05 / Dated school evidence</div>
+            <div className="eyebrow">06 / Dated school evidence</div>
             <h2>What changed after those box scores?</h2>
           </div>
           <span className="note">
@@ -574,7 +643,7 @@ export default async function Page({
       <section className="section brief-market">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">05 / Compare only matching records</div>
+            <div className="eyebrow">07 / Compare only matching records</div>
             <h2>The forecast and market trail.</h2>
           </div>
         </div>

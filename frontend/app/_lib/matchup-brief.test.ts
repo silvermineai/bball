@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  adjustedFactorPoints,
   briefEvidence,
   briefScenarioUrl,
   historicalPersonnel,
@@ -24,6 +25,28 @@ const profiles = new Map<string, ScoutProfile>(
   overview.ratings.map((t) => [t.id, read(`basketball/scouting/${t.id}.json`)]),
 );
 describe("matchup evidence and scenario handoff", () => {
+  it("exposes complete schedule-adjusted factor lenses in both directions", () => {
+    const game = overview.upcoming.find((g) => g.prediction)!;
+    const home = profiles.get(game.home_id)!;
+    const away = profiles.get(game.away_id)!;
+    for (const [offense, defense] of [
+      [away, home],
+      [home, away],
+    ] as const) {
+      const points = adjustedFactorPoints(offense, defense);
+      expect(points).toHaveLength(4);
+      expect(points.every((point) => Number.isFinite(point.gap))).toBe(true);
+      const turnover = points.find((point) => point.factor.key === "tov")!;
+      expect(turnover.gap).toBeCloseTo(
+        defense.rating.adj_def_tov! - offense.rating.adj_off_tov!,
+        8,
+      );
+    }
+    const incomplete = structuredClone(home);
+    incomplete.rating.adj_def_efg = null;
+    expect(adjustedFactorPoints(away, incomplete)).toHaveLength(3);
+  });
+
   it("builds every published brief from matching editions and preserves venue forecasts", () => {
     let count = 0;
     for (const game of overview.upcoming.filter((g) => g.prediction)) {

@@ -44,6 +44,62 @@ export type PressurePoint = {
   category: string;
 };
 
+export const adjustedBriefFactors = [
+  { key: "efg", label: "Effective FG%", higherIsBetter: true },
+  { key: "tov", label: "Turnover rate", higherIsBetter: false },
+  { key: "orb", label: "Offensive rebound rate", higherIsBetter: true },
+  { key: "ftr", label: "Free-throw attempt rate", higherIsBetter: true },
+] as const;
+export type AdjustedBriefFactor = (typeof adjustedBriefFactors)[number];
+export type AdjustedFactorPoint = {
+  factor: AdjustedBriefFactor;
+  offense: string;
+  defense: string;
+  offenseValue: number;
+  defenseValue: number;
+  gap: number;
+};
+
+/**
+ * Compare the two schedule-adjusted role estimates relevant to an offense.
+ * The gap is a descriptive rate comparison, not a new forecast input.
+ */
+export function adjustedFactorPoints(
+  offense: ScoutProfile,
+  defense: ScoutProfile,
+): AdjustedFactorPoint[] {
+  return adjustedBriefFactors
+    .flatMap((factor) => {
+      const offenseValue = offense.rating[`adj_off_${factor.key}`];
+      const defenseValue = defense.rating[`adj_def_${factor.key}`];
+      if (
+        typeof offenseValue !== "number" ||
+        !Number.isFinite(offenseValue) ||
+        typeof defenseValue !== "number" ||
+        !Number.isFinite(defenseValue)
+      )
+        return [];
+      const gap = factor.higherIsBetter
+        ? offenseValue - defenseValue
+        : defenseValue - offenseValue;
+      return [
+        {
+          factor,
+          offense: offense.name,
+          defense: defense.name,
+          offenseValue,
+          defenseValue,
+          gap,
+        },
+      ];
+    })
+    .sort(
+      (a, b) =>
+        Math.abs(b.gap) - Math.abs(a.gap) ||
+        a.factor.key.localeCompare(b.factor.key),
+    );
+}
+
 export function pressurePoints(
   offense: ScoutProfile,
   defense: ScoutProfile,
