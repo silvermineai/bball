@@ -3,19 +3,35 @@ import { useState } from "react";
 import type { BBImpact } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
+import {
+  sortImpactRows,
+  type ImpactSortKey,
+} from "../../_lib/basketball-impact";
+const sortLabels: Record<ImpactSortKey, string> = {
+  rank: "Publisher net rank",
+  rapm_net: "Net RAPM · higher first",
+  orapm: "ORAPM · higher first",
+  drapm: "DRAPM · higher first",
+  off_poss: "Offensive possessions",
+  def_poss: "Defensive possessions",
+};
 export default function Impact() {
   const { data, error } = useBasketballRelease<{ players: BBImpact[] }>(
     "impact",
   );
   const [q, setQ] = useState(""),
     [qualified, setQualified] = useState(true),
+    [sort, setSort] = useState<ImpactSortKey>("rank"),
     [page, setPage] = useState(0);
-  const rows = (data?.players || []).filter(
-    (p) =>
-      (p.player.replaceAll(".", " ") + " " + p.team)
-        .toLowerCase()
-        .includes(q.toLowerCase()) &&
-      (!qualified || p.qualified),
+  const rows = sortImpactRows(
+    (data?.players || []).filter(
+      (p) =>
+        (p.player.replaceAll(".", " ") + " " + p.team)
+          .toLowerCase()
+          .includes(q.toLowerCase()) &&
+        (!qualified || p.qualified),
+    ),
+    sort,
   );
   return (
     <>
@@ -31,6 +47,22 @@ export default function Impact() {
             }}
             placeholder="Search impact rankings"
           />
+        </label>
+        <label className="control">
+          <span>SORT IMPACT BOARD</span>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as ImpactSortKey);
+              setPage(0);
+            }}
+          >
+            {Object.entries(sortLabels).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <label className="note">
@@ -96,7 +128,7 @@ export default function Impact() {
           )}
           <div className="pagination">
             <span>
-              {rows.length} records · page {page + 1} of{" "}
+              {rows.length} records · {sortLabels[sort]} · page {page + 1} of{" "}
               {Math.max(1, Math.ceil(rows.length / 40))}
             </span>
             <div>
