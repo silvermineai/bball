@@ -531,6 +531,15 @@ def build_report(conn, now):
                 actual_margin=state["home_score"] - state["away_score"],
                 actual_total=state["home_score"] + state["away_score"],
             )
+        if not reason:
+            chosen = {}
+            for quote in quotes[key]:
+                if market_eligible(quote, row, state, now):
+                    chosen[(quote["provider"], quote["bookmaker"], quote["market"])] = quote
+            item["comparisons"] = [
+                compare(row, q, {**state, "completed": status == "settled"})
+                for q in chosen.values()
+            ]
         versions.append(item)
     versions.sort(key=lambda r: (r["starts_at"], r["sport"], r["game_id"], r["registered_at"], r["id"]))
     summaries = {}

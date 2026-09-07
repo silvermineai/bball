@@ -210,6 +210,11 @@ class LedgerTests(unittest.TestCase):
         ingest(self.c, "football", [event()], receipt, [schedule()])
         observe_state(self.c, "football", "123", state(True), END)
         comparisons = {r["market"]: r for r in self.report()["games"][0]["comparisons"]}
+        version_comparisons = {
+            r["market"]
+            for r in next(v for v in self.report()["versions"] if v["model_id"] == "v1")["comparisons"]
+        }
+        self.assertEqual(version_comparisons, {"spreads", "totals", "h2h"})
         self.assertEqual(comparisons["spreads"]["model_difference"], 4)
         self.assertEqual(comparisons["spreads"]["market_absolute_error"], 7)
         self.assertEqual(comparisons["spreads"]["direction_result"], "win")
