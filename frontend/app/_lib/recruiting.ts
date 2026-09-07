@@ -72,6 +72,34 @@ export const eventLabels = {
   redshirt_announced: "Redshirt announced",
   season_unavailable: "Season unavailable",
 };
+export type RecruitingSort = "latest" | "ppg" | "mpg" | "name";
+type RecruitingSortable = {
+  name: string;
+  latest: { source: { published_on: string } };
+  stats: { ppg: number | null; mpg: number | null } | null;
+};
+
+export function sortRecruitingRows<T extends RecruitingSortable>(
+  rows: T[],
+  sort: RecruitingSort,
+) {
+  return [...rows].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "latest") {
+      return (
+        b.latest.source.published_on.localeCompare(
+          a.latest.source.published_on,
+        ) || a.name.localeCompare(b.name)
+      );
+    }
+    const av = a.stats?.[sort] ?? null;
+    const bv = b.stats?.[sort] ?? null;
+    if (av == null && bv == null) return a.name.localeCompare(b.name);
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return bv - av || a.name.localeCompare(b.name);
+  });
+}
 export function recruitingRows(data: RecruitingRelease) {
   return data.people
     .map((person) => {

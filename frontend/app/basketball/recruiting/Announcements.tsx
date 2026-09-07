@@ -6,6 +6,8 @@ import {
   eventLabels,
   publicationDate,
   recruitingRows,
+  sortRecruitingRows,
+  type RecruitingSort,
   type RecruitingRelease,
 } from "../../_lib/recruiting";
 import Recruiting from "./Recruiting";
@@ -15,24 +17,28 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const [view, setView] = useState("announcements"),
     [team, setTeam] = useState("all"),
     [q, setQ] = useState(""),
-    [kind, setKind] = useState("all");
+    [kind, setKind] = useState("all"),
+    [sort, setSort] = useState<RecruitingSort>("latest");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setTeam(params.get("team") || "all");
     setQ(params.get("q") || "");
   }, []);
-  const rows = recruitingRows(data).filter(
-    (p) =>
-      (team === "all" || p.team_id === team) &&
-      (kind === "all" ||
-        (kind === "availability"
-          ? p.timeline.some((e) => e.kind !== "addition")
-          : p.category === kind)) &&
-      `${p.name} ${p.program.name} ${p.previous_program || ""}`
-        .normalize("NFKD")
-        .replace(/\p{M}/gu, "")
-        .toLowerCase()
-        .includes(q.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()),
+  const rows = sortRecruitingRows(
+    recruitingRows(data).filter(
+      (p) =>
+        (team === "all" || p.team_id === team) &&
+        (kind === "all" ||
+          (kind === "availability"
+            ? p.timeline.some((e) => e.kind !== "addition")
+            : p.category === kind)) &&
+        `${p.name} ${p.program.name} ${p.previous_program || ""}`
+          .normalize("NFKD")
+          .replace(/\p{M}/gu, "")
+          .toLowerCase()
+          .includes(q.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()),
+    ),
+    sort,
   );
   return (
     <>
@@ -131,11 +137,29 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 </option>
               </select>
             </label>
+            <label className="control">
+              <span>SORT</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as RecruitingSort)}
+              >
+                <option value="latest">Latest school publication</option>
+                <option value="ppg">Prior points per game</option>
+                <option value="mpg">Prior minutes per game</option>
+                <option value="name">Player name</option>
+              </select>
+            </label>
           </div>
           <div className="section-heading recruiting-results">
             <p role="status">
-              {rows.length} player{rows.length === 1 ? "" : "s"} · Latest school
-              publication first
+              {rows.length} player{rows.length === 1 ? "" : "s"} ·{" "}
+              {sort === "latest"
+                ? "Latest school publication first"
+                : sort === "ppg"
+                  ? "Prior points per game, highest first"
+                  : sort === "mpg"
+                    ? "Prior minutes per game, highest first"
+                    : "Alphabetical by player"}
             </p>
             <a href="/data/basketball/recruiting.json" download>
               Download evidence JSON ↓

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   recruitingRows,
   publicationDate,
+  sortRecruitingRows,
   type RecruitingRelease,
 } from "./recruiting";
 const data = JSON.parse(
@@ -23,5 +24,15 @@ describe("school announcement histories", () => {
   });
   it("preserves a publication calendar date in every local timezone", () => {
     expect(publicationDate("2026-04-28")).toBe("Apr 28, 2026");
+  });
+  it("sorts prior production without promoting missing stats", () => {
+    const rows = recruitingRows(data).filter((p) =>
+      ["Corey Hadnot II", "Najai Hines"].includes(p.name),
+    );
+    const sorted = sortRecruitingRows(rows, "ppg");
+    expect(sorted[0].stats?.ppg).toBeGreaterThan(sorted[1].stats?.ppg ?? -1);
+    expect(sortRecruitingRows(rows, "name").map((p) => p.name)).toEqual(
+      [...rows].map((p) => p.name).sort(),
+    );
   });
 });
