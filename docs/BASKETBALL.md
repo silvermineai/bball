@@ -79,7 +79,7 @@ The publisher refreshes sources, tests, builds both frontend applications, syncs
 
 The original basketball release passed ingestion/model tests, Worker API/routing tests, Worker type checking and the combined production build. Browser checks covered desktop/mobile layouts, player search, roster view switching, matchup filters and generated briefs. Live checks verified D1 counts, player game logs and season statistics, error responses, football access and legacy scouting redirects. The scouting extension adds seven Python tests and three frontend tests, including agreement with all 1,579 published basketball forecasts. The local Wrangler preview failed with a runtime spawn error, so Worker integration is verified on the deployed release. The first scheduled weekly refresh completed successfully on September 7, 2026, including source refresh, publication validation, combined build and Cloudflare deployment; a subsequent manual run also completed successfully.
 
-D1 coverage queries use a batch of individual counts to stay within its compound SELECT limit. Forecast counts include preserved model snapshots; the current model has 1,579 forecasts, while the release warehouse retains 4,737 forecasts across three model versions.
+D1 coverage queries use a batch of individual counts to stay within its compound SELECT limit. Forecast counts include preserved model snapshots; the current model has 1,579 forecasts, while the release warehouse retains 11,053 basketball registrations across seven model fingerprints.
 
 ## Remaining full-goal work
 
