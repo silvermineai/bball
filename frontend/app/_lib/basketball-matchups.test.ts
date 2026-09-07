@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { forecastSignal, sortMatchups } from "./basketball-matchups";
+import {
+  forecastSignal,
+  matchupFilterSearch,
+  parseMatchupFilters,
+  sortMatchups,
+} from "./basketball-matchups";
 import type { BBGame } from "./basketball-types";
 
 const game = (
@@ -82,5 +87,32 @@ describe("basketball matchup triage", () => {
       "uncertainty",
     );
     expect(rows.map((row) => row.id)).toEqual(["wide", "narrow"]);
+  });
+
+  it("round-trips supported slate controls for a shareable view", () => {
+    const filters = parseMatchupFilters(
+      "?team=Kansas%20Jayhawks&month=2026-11&coverage=forecasted&sort=confidence",
+    );
+    expect(filters).toEqual({
+      team: "Kansas Jayhawks",
+      month: "2026-11",
+      coverage: "forecasted",
+      sort: "confidence",
+    });
+    expect(matchupFilterSearch(filters)).toBe(
+      "?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&sort=confidence",
+    );
+  });
+
+  it("withholds invalid controls and omits defaults", () => {
+    expect(parseMatchupFilters("?month=tomorrow&coverage=maybe&sort=bad")).toEqual({
+      team: "",
+      month: "all",
+      coverage: "all",
+      sort: "date",
+    });
+    expect(
+      matchupFilterSearch({ team: "", month: "all", coverage: "all", sort: "date" }),
+    ).toBe("");
   });
 });

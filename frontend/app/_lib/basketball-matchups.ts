@@ -7,6 +7,53 @@ export type MatchupSort =
   | "margin"
   | "uncertainty";
 
+export type MatchupCoverage = "all" | "forecasted" | "unforecasted";
+export type MatchupFilters = {
+  team: string;
+  month: string;
+  coverage: MatchupCoverage;
+  sort: MatchupSort;
+};
+
+const matchupSorts = new Set<MatchupSort>([
+  "date",
+  "confidence",
+  "close",
+  "margin",
+  "uncertainty",
+]);
+const matchupCoverages = new Set<MatchupCoverage>([
+  "all",
+  "forecasted",
+  "unforecasted",
+]);
+
+/** Read only supported matchup controls from a shareable query string. */
+export function parseMatchupFilters(search: string): MatchupFilters {
+  const params = new URLSearchParams(search);
+  const sort = params.get("sort") as MatchupSort | null;
+  const coverage = params.get("coverage") as MatchupCoverage | null;
+  const month = params.get("month") || "all";
+  return {
+    team: params.get("team") || "",
+    month: month === "all" || /^\d{4}-\d{2}$/.test(month) ? month : "all",
+    coverage:
+      coverage && matchupCoverages.has(coverage) ? coverage : "all",
+    sort: sort && matchupSorts.has(sort) ? sort : "date",
+  };
+}
+
+/** Serialize non-default matchup controls into a compact query string. */
+export function matchupFilterSearch(filters: MatchupFilters) {
+  const params = new URLSearchParams();
+  if (filters.team) params.set("team", filters.team);
+  if (filters.month !== "all") params.set("month", filters.month);
+  if (filters.coverage !== "all") params.set("coverage", filters.coverage);
+  if (filters.sort !== "date") params.set("sort", filters.sort);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export type ForecastSignal = {
   label: "Toss-up" | "Lean" | "Strong lean";
   confidence: number;

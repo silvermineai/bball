@@ -1,17 +1,34 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { BBGame } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { sortMatchups, type MatchupSort } from "../../_lib/basketball-matchups";
+import {
+  matchupFilterSearch,
+  parseMatchupFilters,
+  sortMatchups,
+  type MatchupCoverage,
+  type MatchupSort,
+} from "../../_lib/basketball-matchups";
 export default function Matchups({ games }: { games: BBGame[] }) {
-  const params = useSearchParams(),
-    [q, setQ] = useState(params.get("team") || ""),
-    [month, setMonth] = useState("all"),
-    [coverage, setCoverage] = useState("all"),
-    [sort, setSort] = useState<MatchupSort>("date"),
+  const params = useSearchParams();
+  const initial = parseMatchupFilters(params.toString());
+  const [q, setQ] = useState(initial.team),
+    [month, setMonth] = useState(initial.month),
+    [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
+    [sort, setSort] = useState<MatchupSort>(initial.sort),
     [page, setPage] = useState(0);
+  useEffect(() => {
+    const next = matchupFilterSearch({ team: q, month, coverage, sort });
+    if (next !== window.location.search) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${window.location.pathname}${next}${window.location.hash}`,
+      );
+    }
+  }, [q, month, coverage, sort]);
   const rows = sortMatchups(
     games.filter(
       (g) =>
@@ -63,7 +80,7 @@ export default function Matchups({ games }: { games: BBGame[] }) {
           <select
             value={coverage}
             onChange={(e) => {
-              setCoverage(e.target.value);
+              setCoverage(e.target.value as MatchupCoverage);
               setPage(0);
             }}
           >
@@ -89,6 +106,10 @@ export default function Matchups({ games }: { games: BBGame[] }) {
           </select>
         </label>
       </div>
+      <p className="note">
+        This filtered slate updates the URL, so a preparation view can be
+        bookmarked or shared with the exact team, coverage and triage sort.
+      </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>
           {rows.length} games · partial schedule · times Eastern when confirmed
