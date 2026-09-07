@@ -42,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/evaluation/",
     "/football/features/",
     "/blog/",
+    "/conferences/",
     "/film/",
     "/blog/reading-the-forecast/",
     "/blog/understanding-player-epa/",
