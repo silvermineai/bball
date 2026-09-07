@@ -13,6 +13,13 @@ export type RosterSummary = {
   transfers: number;
   newToDataset: number;
   ambiguous: number;
+  /** Prior-season recorded minutes represented by the source-listed group. */
+  priorMinutes: number;
+  returningMinutes: number;
+  incomingPriorMinutes: number;
+  representedPriorMinutes: number;
+  returningMinutesShare: number | null;
+  representedPriorMinutesShare: number | null;
   movement: BBRoster[];
 };
 
@@ -24,6 +31,12 @@ export type RosterIntel = {
   transfers: number;
   newToDataset: number;
   ambiguous: number;
+  priorMinutes: number;
+  returningMinutes: number;
+  incomingPriorMinutes: number;
+  representedPriorMinutes: number;
+  returningMinutesShare: number | null;
+  representedPriorMinutesShare: number | null;
   players: RosterIntelPlayer[];
   movement: RosterIntelPlayer[];
 };
@@ -40,6 +53,27 @@ export function buildRosterSummary(rosters: BBRoster[]): RosterSummary[] {
     .map(([teamId, players]) => {
       const count = (status: string) =>
         players.filter((player) => player.status === status).length;
+      const priorMinutes = players.reduce(
+        (sum, player) => sum + (player.prior_production?.minutes ?? 0),
+        0,
+      );
+      const returningMinutes = players.reduce(
+        (sum, player) =>
+          sum +
+          (player.status === "same_program"
+            ? (player.prior_production?.minutes ?? 0)
+            : 0),
+        0,
+      );
+      const incomingPriorMinutes = players.reduce(
+        (sum, player) =>
+          sum +
+          (player.status === "different_program"
+            ? (player.prior_production?.minutes ?? 0)
+            : 0),
+        0,
+      );
+      const representedPriorMinutes = returningMinutes + incomingPriorMinutes;
       return {
         teamId,
         teamName: players[0]?.team ?? teamId,
@@ -48,6 +82,14 @@ export function buildRosterSummary(rosters: BBRoster[]): RosterSummary[] {
         transfers: count("different_program"),
         newToDataset: count("new_to_dataset"),
         ambiguous: count("ambiguous"),
+        priorMinutes,
+        returningMinutes,
+        incomingPriorMinutes,
+        representedPriorMinutes,
+        returningMinutesShare:
+          priorMinutes > 0 ? returningMinutes / priorMinutes : null,
+        representedPriorMinutesShare:
+          priorMinutes > 0 ? representedPriorMinutes / priorMinutes : null,
         movement: players
           .filter((player) =>
             ["different_program", "new_to_dataset", "ambiguous"].includes(
@@ -89,6 +131,12 @@ export function buildRosterIntel(
     transfers: summary?.transfers ?? 0,
     newToDataset: summary?.newToDataset ?? 0,
     ambiguous: summary?.ambiguous ?? 0,
+    priorMinutes: summary?.priorMinutes ?? 0,
+    returningMinutes: summary?.returningMinutes ?? 0,
+    incomingPriorMinutes: summary?.incomingPriorMinutes ?? 0,
+    representedPriorMinutes: summary?.representedPriorMinutes ?? 0,
+    returningMinutesShare: summary?.returningMinutesShare ?? null,
+    representedPriorMinutesShare: summary?.representedPriorMinutesShare ?? null,
     players,
     movement: players,
   };

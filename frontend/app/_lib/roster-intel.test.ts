@@ -6,7 +6,7 @@ import type { ScoutProfile } from "./scouting-types";
 const player = (id: string, name: string, minutes: number) =>
   ({ id, name, minutes }) as ScoutProfile["players"][number];
 
-const roster = (id: string, name: string, status: string): BBRoster => ({
+const roster = (id: string, name: string, status: string, minutes = 0): BBRoster => ({
   id,
   name,
   team_id: "150",
@@ -18,6 +18,17 @@ const roster = (id: string, name: string, status: string): BBRoster => ({
   height: null,
   weight: null,
   source_url: null,
+  prior_production: minutes
+    ? {
+        games: 20,
+        minutes,
+        mpg: minutes / 20,
+        ppg: 10,
+        rpg: 5,
+        apg: 2,
+        teams: ["Duke"],
+      }
+    : null,
 });
 
 describe("roster intelligence", () => {
@@ -32,8 +43,8 @@ describe("roster intelligence", () => {
     } as ScoutProfile;
     const result = buildRosterIntel(
       buildRosterSummary([
-        roster("1", "Returning guard", "same_program"),
-        roster("2", "Transfer forward", "different_program"),
+        roster("1", "Returning guard", "same_program", 900),
+        roster("2", "Transfer forward", "different_program", 500),
         roster("3", "New guard", "new_to_dataset"),
       ]),
       profile,
@@ -44,5 +55,15 @@ describe("roster intelligence", () => {
     expect(result.newToDataset).toBe(1);
     expect(result.movement.map((row) => row.id)).toEqual(["2", "3"]);
     expect(result.players[0].priorPlayer?.minutes).toBe(500);
+    const summary = buildRosterSummary([
+      roster("1", "Returning guard", "same_program", 900),
+      roster("2", "Transfer forward", "different_program", 500),
+      roster("3", "New guard", "new_to_dataset"),
+    ])[0];
+    expect(summary.priorMinutes).toBe(1400);
+    expect(summary.returningMinutes).toBe(900);
+    expect(summary.incomingPriorMinutes).toBe(500);
+    expect(summary.returningMinutesShare).toBeCloseTo(900 / 1400);
+    expect(summary.representedPriorMinutesShare).toBe(1);
   });
 });

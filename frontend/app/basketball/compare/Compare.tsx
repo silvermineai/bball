@@ -244,6 +244,34 @@ export default function Compare({
                           <small>ambiguous</small>
                         </span>
                       </div>
+                      <div className="roster-intel-workload">
+                        <div>
+                          <span>Returning prior minutes</span>
+                          <strong>
+                            {team.returningMinutesShare == null
+                              ? "—"
+                              : `${(team.returningMinutesShare * 100).toFixed(1)}%`}
+                          </strong>
+                          <small>
+                            {team.returningMinutes
+                              ? `${Math.round(team.returningMinutes).toLocaleString()} min`
+                              : "No matched minutes"}
+                          </small>
+                        </div>
+                        <div>
+                          <span>Prior workload represented</span>
+                          <strong>
+                            {team.representedPriorMinutesShare == null
+                              ? "—"
+                              : `${(team.representedPriorMinutesShare * 100).toFixed(1)}%`}
+                          </strong>
+                          <small>
+                            {team.representedPriorMinutes
+                              ? `${Math.round(team.representedPriorMinutes).toLocaleString()} min`
+                              : "No matched minutes"}
+                          </small>
+                        </div>
+                      </div>
                       <h4>Movement to investigate</h4>
                       {team.movement.length ? (
                         <ul className="roster-intel-list">
