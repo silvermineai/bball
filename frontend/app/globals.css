@@ -407,6 +407,36 @@ th,
   color: var(--muted);
   line-height: 1.7;
 }
+.football-leader-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.football-leader-list {
+  margin-top: 18px;
+}
+.football-leader-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.football-leader-row strong,
+.football-leader-row small {
+  display: block;
+}
+.football-leader-row small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 3px;
+}
+@media (max-width: 860px) {
+  .football-leader-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .two-col {
   display: grid;
   grid-template-columns: 1.5fr 1fr;

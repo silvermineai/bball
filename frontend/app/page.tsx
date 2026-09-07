@@ -2,11 +2,46 @@ import Link from "next/link";
 import { getOverview } from "./_lib/data";
 import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
+import fs from "node:fs";
+import path from "node:path";
+import { topFootballLeaders, type LeaderPlayer } from "./_lib/football-leaders";
+
+function getFootballLeaders() {
+  const catalog = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football/player-catalog.json"),
+      "utf8",
+    ),
+  ) as { seasons: { season: number; file: string }[] };
+  const complete = [...catalog.seasons]
+    .filter((s) => s.season < 2026)
+    .sort((a, b) => b.season - a.season)[0];
+  if (!complete) return null;
+  const data = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football", complete.file),
+      "utf8",
+    ),
+  ) as { players: LeaderPlayer[] };
+  return {
+    season: complete.season,
+    passing: topFootballLeaders(data.players, "passing"),
+    rushing: topFootballLeaders(data.players, "rushing"),
+    receiving: topFootballLeaders(data.players, "receiving"),
+  };
+}
+
+const leaderCategoryLabels = {
+  passing: "Passing EPA",
+  rushing: "Rushing EPA",
+  receiving: "Receiving EPA",
+} as const;
 export default function Home() {
   const d = getOverview(),
     e = d.model.evaluation,
     g = d.upcoming.find((g) => g.prediction),
-    p = g?.prediction;
+    p = g?.prediction,
+    leaders = getFootballLeaders();
   return (
     <>
       <div className="dateline eyebrow">
@@ -94,11 +129,55 @@ export default function Home() {
             ))}
         </div>
       </section>
+      {leaders && (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">02 / Player production</div>
+              <h2>The players driving the numbers.</h2>
+            </div>
+            <Link href="/football/players/">Full player index →</Link>
+          </div>
+          <p className="note" style={{ marginBottom: 20 }}>
+            Latest complete source season: {leaders.season}. Ranked by total
+            expected points added within each category; early or unranked rows
+            stay out of this board.
+          </p>
+          <div className="football-leader-grid">
+            {(["passing", "rushing", "receiving"] as const).map((category) => (
+              <div className="paper-panel" key={category}>
+                <div className="eyebrow">{leaderCategoryLabels[category]}</div>
+                <div className="football-leader-list">
+                  {leaders[category].map((player) => (
+                    <Link
+                      className="football-leader-row"
+                      href={`/football/player/?id=${encodeURIComponent(player.id)}&season=${leaders.season}`}
+                      key={player.id}
+                    >
+                      <span className="rank-number">{player.rank}</span>
+                      <span>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {player.team} · {player.conference}
+                        </small>
+                      </span>
+                      <span className="numeric">
+                        {fmt(player.epa)}
+                        <small>{fmt(player.epa_per_play, 2)} / play</small>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="section two-col">
         <div>
           <div className="section-heading">
             <div>
-              <div className="eyebrow">02 / The national picture</div>
+              <div className="eyebrow">03 / The national picture</div>
               <h2>Strength, adjusted.</h2>
             </div>
             <Link href="/football/ratings/">Full ratings →</Link>
@@ -139,7 +218,7 @@ export default function Home() {
           </p>
         </div>
         <aside className="paper-panel">
-          <div className="eyebrow">03 / Show your work</div>
+          <div className="eyebrow">04 / Show your work</div>
           <h2 style={{ marginTop: 20 }}>
             A prediction is
             <br />a starting point.
@@ -196,7 +275,7 @@ export default function Home() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">04 / The journal</div>
+            <div className="eyebrow">05 / The journal</div>
             <h2>Notes from the desk.</h2>
           </div>
           <Link href="/blog/">Read the journal →</Link>
