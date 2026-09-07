@@ -33,8 +33,8 @@ export default function Page() {
             recruiting evidence. Turn the next matchup into a better game plan.
           </p>
           <div className="hero-actions">
-            <Link className="button" href="/basketball/matchups/">
-              Scout the slate ↗
+            <Link className="button" href="/basketball/gameplan/">
+              Open the game plan ↗
             </Link>
             <Link className="hero-link" href="/basketball/recruiting/">
               Study recruiting evidence →

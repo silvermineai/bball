@@ -26,6 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/model/",
     "/basketball/evaluation/",
     "/basketball/matchups/",
+    "/basketball/gameplan/",
     ...getBasketball()
       .upcoming.filter((g) => g.prediction)
       .map((g) => `/basketball/briefs/${g.id}/`),
