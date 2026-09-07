@@ -1,4 +1,6 @@
 import Link from "next/link";
+import fs from "node:fs";
+import path from "node:path";
 import { getBasketball, getRecruiting, getRosters } from "../../_lib/basketball-data";
 import { getOverview } from "../../_lib/data";
 import { getLedger } from "../../_lib/research-data";
@@ -18,6 +20,25 @@ export default function Page() {
   const rosters = getRosters();
   const recruiting = getRecruiting();
   const ledger = getLedger();
+  const dataDir = path.join(process.cwd(), "public/data/basketball");
+  const history = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "history/index.json"), "utf8"),
+  ) as {
+    player_ids: number;
+    seasons: { identified_rows: number }[];
+  };
+  const ncaa = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "ncaa-individual.json"), "utf8"),
+  ) as { coverage: { players: number; divisions: Record<string, unknown> } };
+  const impact = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "impact.json"), "utf8"),
+  ) as { players: unknown[] };
+  const shooting = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "shooting.json"), "utf8"),
+  ) as { coverage: { field_goal_attempts: number } };
+  const publisher = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "publisher-leaders.json"), "utf8"),
+  ) as { metrics: unknown[] };
   const footballLedger = ledger.sports.football;
   const basketballLedger = ledger.sports.basketball;
 
@@ -215,9 +236,60 @@ export default function Page() {
         </article>
       </section>
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">04 / Basketball data library</div>
+            <h2>Choose the evidence layer.</h2>
+          </div>
+          <span className="note">Each dataset keeps its own source identity.</span>
+        </div>
+        <div className="article-grid">
+          <article className="paper-panel">
+            <div className="eyebrow">Player archive</div>
+            <h3>{count(history.seasons.reduce((n, s) => n + s.identified_rows, 0))} identified box rows</h3>
+            <p>
+              {history.seasons.length} source seasons and {count(history.player_ids)}{" "}
+              archived player identities, with game logs and field-level coverage.
+            </p>
+            <Link href="/basketball/players/">Open player statistics →</Link>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">Publisher context</div>
+            <h3>{publisher.metrics.length} source-native leaderboards</h3>
+            <p>
+              Preserve the publisher’s labels and display values alongside
+              Silvermine’s derived production rates.
+            </p>
+            <Link href="/basketball/leaders/">Open national leaders →</Link>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">NCAA snapshot</div>
+            <h3>{count(ncaa.coverage.players)} national records</h3>
+            <p>
+              Final individual tables across {Object.keys(ncaa.coverage.divisions).length}{" "}
+              divisions, with publisher ranks and missing-field coverage visible.
+            </p>
+            <Link href="/basketball/ncaa/">Open NCAA leaderboards →</Link>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">Boutique context</div>
+            <h3>{count(impact.players.length)} RAPM records · {count(shooting.coverage.field_goal_attempts)} shots</h3>
+            <p>
+              Read possession impact and shot-location evidence without joining
+              separate source IDs by name.
+            </p>
+            <p>
+              <Link href="/basketball/impact/">Player impact →</Link>{" "}
+              · <Link href="/basketball/shooting/">Shooting lab →</Link>
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section className="section banner">
         <div>
-          <div className="eyebrow">04 / Source boundary</div>
+          <div className="eyebrow">05 / Source boundary</div>
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
             Current releases come from the attributed SportsDataverse bulk

@@ -87,5 +87,4 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 - Expand historical player-game and play-by-play seasons, add possession/lineup analysis, and improve location validation beyond the new 2025–26 shooting lab.
 - Add dated roster features and extend the weekly experiment to additional seasons and prospective operation. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
-- Finish migrating remaining basketball archive tools to Next.js.
 - Monitor scheduled refresh freshness against expected source coverage and investigate any failed publication run.
