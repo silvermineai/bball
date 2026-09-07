@@ -197,7 +197,8 @@ class ScrapeLog(Base):
 
 
 def make_engine(database_url: str = "sqlite:///ncaa_mbb.sqlite3"):
-    return create_engine(database_url, future=True)
+    connect_args = {"timeout": 30} if database_url.startswith("sqlite") else {}
+    return create_engine(database_url, future=True, connect_args=connect_args)
 
 
 def create_session(database_url: str = "sqlite:///ncaa_mbb.sqlite3") -> Session:
