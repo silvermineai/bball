@@ -12,6 +12,9 @@ const team = (id: string, name: string, efg: number | null, tov_rate: number): B
   adj_tempo: 70,
   games: 20,
   wins: 15,
+  expected_wins: 14.2,
+  luck: 4,
+  luck_games: 20,
   sos: null,
   sos_games: 0,
   efg,
@@ -34,6 +37,17 @@ describe("basketball rating sorting", () => {
     const rows = sortTeamRatings(
       [team("1", "Alpha", 0.55, 0.18), team("2", "Beta", 0.55, 0.12)],
       "tov_rate",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha"]);
+  });
+
+  it("sorts luck by positive actual-over-expected variance", () => {
+    const rows = sortTeamRatings(
+      [
+        { ...team("1", "Alpha", 0.55, 0.15), luck: -3 },
+        { ...team("2", "Beta", 0.55, 0.15), luck: 5 },
+      ],
+      "luck",
     );
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha"]);
   });

@@ -32,6 +32,9 @@ export type BBTeam = {
   adj_tempo: number;
   games: number;
   wins: number;
+  expected_wins: number | null;
+  luck: number | null;
+  luck_games: number;
   sos: number | null;
   sos_games: number;
   efg: number | null;

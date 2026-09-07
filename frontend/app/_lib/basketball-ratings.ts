@@ -6,6 +6,7 @@ export type RatingSortKey =
   | "adj_def"
   | "adj_tempo"
   | "sos"
+  | "luck"
   | "efg"
   | "tov_rate"
   | "orb_rate"

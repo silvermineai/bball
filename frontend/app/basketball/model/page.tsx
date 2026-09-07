@@ -55,6 +55,12 @@ export default function Page() {
             how many opponents were included.
           </p>
           <p>
+            Luck is a companion diagnostic: actual wins minus the model’s
+            expected wins for each paired 2025–26 game, shown in percentage
+            points. It helps separate close-game variance from the efficiency
+            profile and is not used to alter the 2026–27 forecast.
+          </p>
+          <p>
             Production fit: {d.model.training_games.toLocaleString()} games from{" "}
             {d.model.training_seasons.join(", ")}. No recruiting, roster, injury
             or weather variables enter this version.

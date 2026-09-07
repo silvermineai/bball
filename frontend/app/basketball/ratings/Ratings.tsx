@@ -14,6 +14,7 @@ const sortLabels: Record<RatingSortKey, string> = {
   adj_def: "Defense · lower first",
   adj_tempo: "Tempo · faster first",
   sos: "Strength of schedule",
+  luck: "Luck · actual minus expected wins",
   efg: "Effective FG% · higher first",
   tov_rate: "Turnover rate · lower first",
   orb_rate: "Offensive rebound rate · higher first",
@@ -62,8 +63,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
             downloadCsv(
               "basketball-team-ratings.csv",
               toCsv(
-                ["Net rank", "Program", "Wins", "Games", "Adjusted offense", "Adjusted defense", "Adjusted net", "Tempo", "SOS", "Rated opponents", "eFG%", "TO%", "ORB%", "FT rate", "3PA rate"],
-                filtered.map((t) => [t.rank, t.name, t.wins, t.games, t.adj_off, t.adj_def, t.adj_net, t.adj_tempo, t.sos, t.sos_games, t.efg == null ? null : t.efg * 100, t.tov_rate == null ? null : t.tov_rate * 100, t.orb_rate == null ? null : t.orb_rate * 100, t.ft_rate == null ? null : t.ft_rate * 100, t.three_rate == null ? null : t.three_rate * 100]),
+                ["Net rank", "Program", "Wins", "Games", "Expected wins", "Luck (points)", "Adjusted offense", "Adjusted defense", "Adjusted net", "Tempo", "SOS", "Rated opponents", "eFG%", "TO%", "ORB%", "FT rate", "3PA rate"],
+                filtered.map((t) => [t.rank, t.name, t.wins, t.games, t.expected_wins, t.luck, t.adj_off, t.adj_def, t.adj_net, t.adj_tempo, t.sos, t.sos_games, t.efg == null ? null : t.efg * 100, t.tov_rate == null ? null : t.tov_rate * 100, t.orb_rate == null ? null : t.orb_rate * 100, t.ft_rate == null ? null : t.ft_rate * 100, t.three_rate == null ? null : t.three_rate * 100]),
               ),
             )
           }
@@ -71,6 +72,11 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
           Download CSV ↓
         </button>
       </div>
+      <p className="note" style={{ marginBottom: 20 }}>
+        Luck is actual wins minus model-expected wins, in percentage points,
+        over the same paired box-score games. It is a descriptive variance
+        signal, not a forecast or a claim that a team will regress.
+      </p>
       <div className="table-scroll">
         <table className="data-table">
           <thead>
@@ -84,6 +90,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                 "Tempo",
                 "SOS",
                 "Rated opp.",
+                "Expected W",
+                "Luck",
                 "eFG%",
                 "TO%",
                 "ORB%",
@@ -113,6 +121,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                   t.adj_tempo,
                   t.sos,
                   t.sos_games,
+                  t.expected_wins,
+                  t.luck,
                   ...[
                     t.efg,
                     t.tov_rate,

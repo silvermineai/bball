@@ -429,6 +429,14 @@ def team_ratings(model, games, boxes, season):
             t["possessions"] += features["possessions"]
             t["pace_sum"] += features["pace"]
             t["wins"] += g[f"{own}_score"] > g[f"{opp}_score"]
+            prediction = forecast(model, g)
+            if prediction is not None:
+                t["expected_wins"] += (
+                    prediction["home_win_probability"]
+                    if own == "home"
+                    else 1 - prediction["home_win_probability"]
+                )
+                t["expected_games"] += 1
             opponents[tid].append(oid)
             for k in [
                 "field_goals_made",
@@ -467,6 +475,18 @@ def team_ratings(model, games, boxes, season):
                 "adj_tempo": round(tempo[0] + tempo[i + 1], 2),
                 "games": int(s["games"]),
                 "wins": int(s["wins"]),
+                "expected_wins": round(s["expected_wins"], 2)
+                if s["expected_games"]
+                else None,
+                "luck": round(
+                    100
+                    * (s["wins"] - s["expected_wins"])
+                    / s["expected_games"],
+                    2,
+                )
+                if s["expected_games"]
+                else None,
+                "luck_games": int(s["expected_games"]),
                 "sos": round(sum(op) / len(op), 2) if op else None,
                 "sos_games": len(op),
                 "efg": ratio(
