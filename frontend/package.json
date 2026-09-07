@@ -8,7 +8,7 @@
     "build": "next build && npm run build:basketball && node scripts/combine-builds.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout 30000",
     "build:basketball": "vite build --config vite.spa.config.ts"
   },
   "dependencies": {

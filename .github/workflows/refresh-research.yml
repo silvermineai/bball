@@ -82,14 +82,25 @@ jobs:
               python scripts/publish-basketball.py
               ;;
             both)
-              python scripts/publish-football.py
-              python scripts/publish-basketball.py
+              BATCH_PUBLICATION=1 python scripts/publish-football.py
+              BATCH_PUBLICATION=1 python scripts/publish-basketball.py
               ;;
             *)
               echo "Unsupported sport: $REFRESH_SPORT" >&2
               exit 1
               ;;
           esac
+
+      - name: Validate and deploy combined publication
+        if: ${{ inputs.capture_odds != true }}
+        run: |
+          if [ "${{ inputs.sport || 'both' }}" = "both" ]; then
+            npm test --prefix frontend
+            npm run build --prefix frontend
+            npm run typecheck --prefix worker
+            npm test --prefix worker
+            python scripts/cloudflare.py deploy
+          fi
 
       - name: Capture licensed odds snapshot
         if: ${{ inputs.capture_odds == true }}

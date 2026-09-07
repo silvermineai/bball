@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
+BATCH_PUBLICATION = os.getenv("BATCH_PUBLICATION") == "1"
 
 
 def run(args, cwd=ROOT):
@@ -158,10 +159,11 @@ run(
         "test_football_evaluation.py",
     ]
 )
-run(["npm", "test"], ROOT / "frontend")
-run(["npm", "run", "build"], ROOT / "frontend")
-run(["npm", "run", "typecheck"], ROOT / "worker")
-run(["npm", "test"], ROOT / "worker")
+if not BATCH_PUBLICATION:
+    run(["npm", "test"], ROOT / "frontend")
+    run(["npm", "run", "build"], ROOT / "frontend")
+    run(["npm", "run", "typecheck"], ROOT / "worker")
+    run(["npm", "test"], ROOT / "worker")
 run(
     [
         PY,
@@ -200,4 +202,5 @@ run([PY, "scripts/sync-football-history.py"])
 run([PY, "scripts/sync-football-efficiency.py"])
 run([PY, "scripts/archive-football-evaluation.py"])
 run([PY, "scripts/archive-football-features.py"])
-run([PY, "scripts/cloudflare.py", "deploy"])
+if not BATCH_PUBLICATION:
+    run([PY, "scripts/cloudflare.py", "deploy"])
