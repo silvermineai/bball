@@ -37,8 +37,11 @@ if result.returncode:
 if sys.argv[1:2] == ["deploy"] and not any(
     arg.startswith("--dry-run") for arg in sys.argv[2:]
 ):
+    archive_python = root / ".venv/bin/python"
+    if not archive_python.exists():
+        archive_python = Path(sys.executable)
     archived = subprocess.run(
-        [sys.executable, str(root / "scripts/archive-briefs.py")],
+        [str(archive_python), str(root / "scripts/archive-briefs.py")],
         cwd=root,
         check=False,
     )
