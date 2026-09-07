@@ -88,7 +88,8 @@ describe("matchup evidence and scenario handoff", () => {
         ledger,
       ),
     ).toThrow(/edition/);
-    const original = ledger.games.find(
+    const versionRows = ledger.versions?.length ? ledger.versions : ledger.games;
+    const original = versionRows.find(
       (r) => r.game_id === game.id && r.model_id === overview.model.id,
     )!;
     expect(original).toBeDefined();
@@ -98,7 +99,10 @@ describe("matchup evidence and scenario handoff", () => {
       { starts_at: "2000-01-01T00:00:00Z" },
       { home_name: "Wrong program" },
     ]) {
-      const changed = { ...ledger, games: [{ ...original, ...patch }] };
+      const changed = {
+        ...ledger,
+        versions: versionRows.map((r) => (r.id === original.id ? { ...r, ...patch } : r)),
+      };
       expect(
         briefEvidence(game, overview, home, away, recruiting, changed).ledger,
       ).toBeNull();

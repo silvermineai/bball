@@ -488,6 +488,51 @@ def build_report(conn, now):
             ]
         rows.append(item)
     rows.sort(key=lambda r: (r["starts_at"], r["sport"], r["game_id"]))
+    # Keep every immutable registration available to native briefs and audit
+    # tooling. `games` intentionally remains one row per game so the
+    # prospective scorecard can apply the first-eligible policy without
+    # double-counting later model versions.
+    versions = []
+    for row in predictions:
+        key = (row["sport"], row["game_id"])
+        state = latest.get(key)
+        reason = eligibility(row, state)
+        payload = row["payload"]
+        prediction = payload["prediction"]
+        status = "excluded" if reason else final_status(state, now)
+        item = {
+            k: row[k]
+            for k in (
+                "id",
+                "sport",
+                "game_id",
+                "model_id",
+                "generated_at",
+                "registered_at",
+                "starts_at",
+                "time_tbd",
+            )
+        }
+        item.update({k: payload[k] for k in ("home_name", "away_name", "season")})
+        item.update(
+            {k: prediction[k] for k in ("home_margin", "total", "home_win_probability")}
+        )
+        item.update(
+            status=status,
+            exclusion=reason,
+            margin_low=prediction.get("margin_low"),
+            margin_high=prediction.get("margin_high"),
+            actual_margin=None,
+            actual_total=None,
+            comparisons=[],
+        )
+        if status == "settled" and state:
+            item.update(
+                actual_margin=state["home_score"] - state["away_score"],
+                actual_total=state["home_score"] + state["away_score"],
+            )
+        versions.append(item)
+    versions.sort(key=lambda r: (r["starts_at"], r["sport"], r["game_id"], r["registered_at"], r["id"]))
     summaries = {}
     for sport in SPORTS:
         subset = [r for r in rows if r["sport"] == sport]
@@ -549,6 +594,7 @@ def build_report(conn, now):
         "policy": POLICY,
         "sports": summaries,
         "games": rows,
+        "versions": versions,
         "provider_receipts": receipts,
         "market_observations": conn.execute(
             "SELECT count(*) FROM audit_markets"

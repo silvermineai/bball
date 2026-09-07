@@ -36,6 +36,7 @@ export type LedgerGame = {
   actual_total: number | null;
   comparisons: Comparison[];
 };
+export type LedgerVersion = LedgerGame;
 export type Metrics = {
   games: number;
   binary_games: number;
@@ -72,6 +73,8 @@ export type Ledger = {
   policy: string;
   sports: Record<"football" | "basketball", SportSummary>;
   games: LedgerGame[];
+  /** All immutable registrations; older editions may omit this field. */
+  versions?: LedgerVersion[];
   market_observations: number;
   unmatched_events: number;
   selection: string;

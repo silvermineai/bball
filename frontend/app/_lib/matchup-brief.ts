@@ -180,7 +180,7 @@ export function briefEvidence(
   }
   const announcementRows =
     recruiting.season === overview.season ? recruitingRows(recruiting) : [];
-  const record = ledger.games.find(
+  const record = (ledger.versions?.length ? ledger.versions : ledger.games).find(
     (r) =>
       r.sport === "basketball" &&
       r.game_id === game.id &&

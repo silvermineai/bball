@@ -148,6 +148,7 @@ class LedgerTests(unittest.TestCase):
         r = self.report()
         metrics = r["sports"]["football"]["metrics"]
         self.assertEqual(r["games"][0]["model_id"], "v1")
+        self.assertEqual({v["model_id"] for v in r["versions"]}, {"v1", "v2"})
         self.assertEqual(metrics["games"], 1)
         self.assertEqual(metrics["margin_mae"], 3)
         self.assertEqual(metrics["brier"], 0.0625)
