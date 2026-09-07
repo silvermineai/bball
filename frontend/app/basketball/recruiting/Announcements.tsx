@@ -382,6 +382,14 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     {publicationDate(p.latest.source.published_on)}
                   </time>
                 </div>
+                <a
+                  className="recruiting-source"
+                  href={p.latest.source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Read publisher source ↗
+                </a>
                 <p className="recruiting-eligibility">{p.latest.summary}</p>
                 {p.latest.kind === "addition" && (
                   <p className="recruiting-eligibility">
