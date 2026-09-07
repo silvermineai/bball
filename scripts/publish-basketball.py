@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,23 +18,38 @@ def run(args, cwd=ROOT):
 
 def run_logged(args, log_path, cwd=ROOT):
     """Keep large Wrangler output on disk, but surface a useful failure tail."""
-    with log_path.open("w") as log:
-        result = subprocess.run(
-            args,
-            cwd=cwd,
-            env=ENV,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
-    if result.returncode:
+    for attempt in range(1, 4):
+        mode = "w" if attempt == 1 else "a"
+        with log_path.open(mode) as log:
+            if attempt > 1:
+                log.write(f"\nRetrying remote SQL import (attempt {attempt}/3)\n")
+            result = subprocess.run(
+                args,
+                cwd=cwd,
+                env=ENV,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+        if result.returncode == 0:
+            return
         tail = log_path.read_text(errors="replace").splitlines()[-80:]
+        output = "\n".join(tail)
+        retryable = "Upstream service unavailable" in output or "code: 7009" in output
+        if retryable and attempt < 3:
+            print(
+                f"Remote SQL import hit a transient Cloudflare upstream error "
+                f"(attempt {attempt}/3); retrying in 15 seconds.",
+                file=sys.stderr,
+            )
+            time.sleep(15)
+            continue
         print(
             f"Remote SQL import failed with exit status {result.returncode}; "
             f"last log lines from {log_path}:",
             file=sys.stderr,
         )
-        print("\n".join(tail), file=sys.stderr)
+        print(output, file=sys.stderr)
         raise subprocess.CalledProcessError(result.returncode, args)
 
 
