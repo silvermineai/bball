@@ -40,7 +40,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 
 The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** and **10.46-point margin MAE**. The historical player archive retains **3.68 million identified box-score rows** across 24 seasons. The nominal 80% margin interval covered **78.7%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
 
-Existing basketball URLs such as `/scout/333` redirect to the native `/basketball/scout/333/` dossier aliases. Native pages replace the old desk, player index, recruiting landing page, scouting archive, rankings, team and game indexes; game-planning and other remaining archive tools use the preserved application.
+Existing basketball URLs such as `/scout/333` redirect to the native `/basketball/scout/333/` dossier aliases. Native pages replace the old desk, player index, recruiting landing page, scouting archive, rankings, team, game and press indexes; game-planning and other remaining archive tools use the preserved application.
 
 See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
 
