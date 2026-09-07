@@ -13,20 +13,20 @@ import {
 } from "../../_lib/careers";
 export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const [season, setSeason] = useState("2026");
+  const [q, setQ] = useState(""),
+    [sort, setSort] = useState("ppg"),
+    [qualified, setQualified] = useState(true),
+    [page, setPage] = useState(0);
   useEffect(() => {
-    setSeason(
-      new URLSearchParams(window.location.search).get("season") || "2026",
-    );
+    const params = new URLSearchParams(window.location.search);
+    setSeason(params.get("season") || "2026");
+    setQ(params.get("q") || "");
   }, []);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const { data, error } = useBasketballRelease<{
     season: number;
     players: BBPlayer[];
   }>(`history/players-${coverage ? season : "unsupported"}`);
-  const [q, setQ] = useState(""),
-    [sort, setSort] = useState("ppg"),
-    [qualified, setQualified] = useState(true),
-    [page, setPage] = useState(0);
   const sortKey = sort as
     | "ppg"
     | "rpg"
