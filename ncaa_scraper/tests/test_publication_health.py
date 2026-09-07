@@ -65,6 +65,20 @@ class PublicationHealthTest(unittest.TestCase):
                 )
             self.assertIn("hours old", str(error.exception))
 
+    def test_malformed_coverage_fails_cleanly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.payload(2026)
+            payload["coverage"]["forecast_games"] = None
+            write_release(directory, "football", "overview.json", payload)
+            with self.assertRaises(ValueError) as error:
+                check_freshness(
+                    Path(directory),
+                    "football",
+                    now=datetime(2026, 9, 8, tzinfo=timezone.utc),
+                    max_age_hours=48,
+                )
+            self.assertIn("invalid forecast coverage counts", str(error.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

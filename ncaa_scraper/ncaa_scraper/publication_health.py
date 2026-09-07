@@ -93,8 +93,15 @@ def check_freshness(
                 raise ValueError(f"{selected}/overview.json has no coverage object")
             if not isinstance(model, dict) or not model.get("id"):
                 raise ValueError(f"{selected}/overview.json has no model id")
+            forecast_games = coverage.get("forecast_games")
+            upcoming_games = coverage.get("upcoming_games")
+            if not all(
+                isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
+                for value in (forecast_games, upcoming_games)
+            ):
+                raise ValueError(f"{selected}/overview.json has invalid forecast coverage counts")
             if selected == "basketball":
-                if coverage.get("forecast_games", 0) > coverage.get("upcoming_games", 0):
+                if forecast_games > upcoming_games:
                     raise ValueError("basketball forecasts exceed upcoming games")
                 if not isinstance(overview.get("ratings"), list) or not overview["ratings"]:
                     raise ValueError("basketball release has no team ratings")
@@ -108,7 +115,7 @@ def check_freshness(
                 if ncaa.get("season") != overview.get("season") - 1:
                     raise ValueError("NCAA leaderboard season does not match basketball overview")
             else:
-                if coverage.get("forecast_games", 0) > coverage.get("upcoming_games", 0):
+                if forecast_games > upcoming_games:
                     raise ValueError("football forecasts exceed upcoming games")
                 if not isinstance(overview.get("ratings"), list) or not overview["ratings"]:
                     raise ValueError("football release has no team ratings")
