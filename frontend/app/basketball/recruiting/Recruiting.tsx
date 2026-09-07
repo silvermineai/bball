@@ -139,6 +139,13 @@ export default function Recruiting() {
             recorded workload from the preceding source season, not a
             projected role at the listed program.
           </p>
+          {data.unusable_rows != null && data.unusable_rows > 0 && (
+            <p className="career-coverage-warning">
+              {data.unusable_rows.toLocaleString()} source roster rows were
+              excluded as team-attributed placeholders; raw records remain in
+              the research warehouse.
+            </p>
+          )}
           {!!data.team_summaries?.length && season === "2027" && (
             <details className="career-coverage-details" style={{ marginBottom: 24 }}>
               <summary>Team workload continuity ({data.team_summaries.length} programs)</summary>

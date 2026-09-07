@@ -151,6 +151,7 @@ export type BBRosters = {
   teams_observed: number;
   players_observed: number;
   prior_players_not_observed: number;
+  unusable_rows?: number;
   status_counts: Record<string, number>;
   team_summaries?: BBRosterSummary[];
   players: BBRoster[];

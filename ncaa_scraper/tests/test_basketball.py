@@ -213,6 +213,19 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(summary["prior_minutes"], 500.0)
         self.assertEqual(summary["returning_minutes_share"], 1.0)
 
+    def test_roster_changes_exclude_team_placeholder_rows(self):
+        self.conn.executemany(
+            "INSERT INTO bb_rosters VALUES (?,?,?,?)",
+            [
+                (2027, "A", "team-row", json.dumps({"full_name": " Team"})),
+                (2027, "A", "player-row", json.dumps({"full_name": "A Player", "team_display_name": "A"})),
+            ],
+        )
+        board = roster_changes(self.conn)
+        self.assertEqual(board["players_observed"], 1)
+        self.assertEqual(board["unusable_rows"], 1)
+        self.assertEqual([p["name"] for p in board["players"]], ["A Player"])
+
     def test_publisher_leaders_use_numeric_source_fields_and_ties(self):
         self.conn.execute(
             "INSERT INTO bb_players VALUES (?,?,?)", ("1", "A Player", "G")

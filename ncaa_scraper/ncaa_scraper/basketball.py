@@ -312,6 +312,7 @@ def roster_changes(conn, target=2027, prior_players=None):
     prior = defaultdict(list)
     current = defaultdict(list)
     teams = {}
+    unusable_rows = 0
     for g in conn.execute("SELECT * FROM bb_games ORDER BY season"):
         teams[g["home_id"]] = g["home_name"]
         teams[g["away_id"]] = g["away_name"]
@@ -323,6 +324,13 @@ def roster_changes(conn, target=2027, prior_players=None):
         "SELECT * FROM bb_rosters WHERE season IN (?,?)", (target - 1, target)
     ):
         p = json.loads(r["profile_json"])
+        # ESPN occasionally emits a team-attributed roster row with an athlete
+        # ID and the display name "Team". Keep the raw row in the warehouse,
+        # but never present it as a player identity in the public derivative.
+        if not (p.get("full_name") or "").strip() or (p.get("full_name") or "").strip().casefold() == "team":
+            if r["season"] == target:
+                unusable_rows += 1
+            continue
         p["team_id"] = r["team_id"]
         p["athlete_id"] = r["athlete_id"]
         if r["season"] == target:
@@ -430,6 +438,7 @@ def roster_changes(conn, target=2027, prior_players=None):
         ),
         "teams_observed": len({p["team_id"] for p in observed}),
         "players_observed": len(current),
+        "unusable_rows": unusable_rows,
         "prior_players_not_observed": len(set(prior) - set(current)),
         "status_counts": dict(Counter(p["status"] for p in observed)),
         "team_summaries": sorted(team_summaries, key=lambda p: p["team"]),
