@@ -11,8 +11,9 @@ export default function Page() {
         <p>
           Browse the NCAA’s published men’s basketball individual leaderboards
           across Divisions I, II and III. Search a player, compare programs and
-          switch from scoring to rebounding, shooting, minutes and defensive
-          events while keeping the source identity intact.
+          switch from rates to published totals for scoring, rebounding,
+          shooting, minutes and defensive events while keeping the source
+          identity intact.
         </p>
       </div>
       <NCAAIndividual />

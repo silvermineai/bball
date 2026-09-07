@@ -55,4 +55,15 @@ describe("NCAA individual leader sorting", () => {
       { stat: "ppg", divisions: { 1: 1, 2: 0, 3: 1 } },
     ]);
   });
+
+  it("supports source total leaderboards alongside rates", () => {
+    const rows = [
+      { ...player("Low", 10), pts: 400 },
+      { ...player("High", 10), pts: 700 },
+    ];
+    expect(sortNCAAPlayers(rows, "pts").map((p) => p.name)).toEqual([
+      "High",
+      "Low",
+    ]);
+  });
 });

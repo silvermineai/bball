@@ -58,7 +58,15 @@ export type NCAAStatKey =
   | "threes_pg"
   | "mpg"
   | "ast_to"
-  | "dbl_dbl";
+  | "dbl_dbl"
+  | "pts"
+  | "reb"
+  | "ast"
+  | "fgm"
+  | "fga"
+  | "three_fgm"
+  | "three_fga"
+  | "ftm";
 
 export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   ppg: "Points per game",
@@ -73,6 +81,14 @@ export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   mpg: "Minutes per game",
   ast_to: "Assist / turnover ratio",
   dbl_dbl: "Double-doubles",
+  pts: "Total points",
+  reb: "Total rebounds",
+  ast: "Total assists",
+  fgm: "Field goals made",
+  fga: "Field goals attempted",
+  three_fgm: "Three-pointers made",
+  three_fga: "Three-pointers attempted",
+  ftm: "Free throws made",
 };
 
 export type NCAAValueCoverage = {
