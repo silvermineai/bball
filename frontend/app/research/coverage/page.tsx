@@ -18,6 +18,7 @@ export default function Page() {
   const football = getOverview();
   const basketball = getBasketball();
   const rosters = getRosters();
+  const rosterSourceProfiles = rosters.players.filter((player) => player.source_url).length;
   const recruiting = getRecruiting();
   const ledger = getLedger();
   const dataDir = path.join(process.cwd(), "public/data/basketball");
@@ -181,6 +182,14 @@ export default function Page() {
             <div>
               <span>Observed 2026–27 roster listings</span>
               <strong>{count(rosters.players_observed)}</strong>
+            </div>
+            <div>
+              <span>Programs in roster source view</span>
+              <strong>{count(rosters.teams_observed)}</strong>
+            </div>
+            <div>
+              <span>Roster publisher profiles linked</span>
+              <strong>{count(rosterSourceProfiles)}</strong>
             </div>
           </div>
           <p className="note">
