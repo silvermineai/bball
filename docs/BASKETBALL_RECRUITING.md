@@ -1,12 +1,12 @@
 # School announcement evidence
 
-The native `/basketball/recruiting/` board combines selected school announcements with explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings, prior-season program comparisons and recorded workload for matching prior player identities.
+The native `/basketball/recruiting/` board combines a linked publisher wire for national recruiting context with selected school announcements and explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings, prior-season program comparisons and recorded workload for matching prior player identities.
 
 ## Coverage and claims
 
 The September 2026 review contains 71 announced additions across Arizona, Hawaiʻi, Houston, Illinois, Kansas, Kentucky, Michigan, North Carolina, Purdue and UConn: 37 college transfers, 29 prep additions and five international additions. It also includes Michigan's planned redshirt announcement for Lincoln Cosby and subsequent season-unavailable announcement for Brandon McCoy Jr. There are 73 events from 39 school articles. Coverage is partial, including within those ten programs. Counts are announced additions, not current eligible or available players. Missing records are not departures or evidence of no recruiting activity.
 
-The board does not contain proprietary recruiting grades, stars, rankings, valuations, contact information, article bodies, photographs or copied biographies. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
+The publisher wire links to the retained ESPN article feed for context and does not copy article bodies, photographs or biographies. It is not a transaction ledger: headlines and descriptions do not establish eligibility, destination or availability. The board does not contain proprietary recruiting grades, stars, rankings, valuations or contact information. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
 
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
 
