@@ -75,6 +75,26 @@ export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   dbl_dbl: "Double-doubles",
 };
 
+export type NCAAValueCoverage = {
+  stat: NCAAStatKey;
+  divisions: Record<1 | 2 | 3, number>;
+};
+
+/** Count published numeric values without treating an absent source field as zero. */
+export function ncaaValueCoverage(
+  rows: NCAAIndividualPlayer[],
+  keys: NCAAStatKey[] = Object.keys(ncaaStatLabels) as NCAAStatKey[],
+): NCAAValueCoverage[] {
+  return keys.map((stat) => ({
+    stat,
+    divisions: {
+      1: rows.filter((row) => row.division === 1 && row[stat] != null).length,
+      2: rows.filter((row) => row.division === 2 && row[stat] != null).length,
+      3: rows.filter((row) => row.division === 3 && row[stat] != null).length,
+    },
+  }));
+}
+
 export function sortNCAAPlayers(rows: NCAAIndividualPlayer[], stat: NCAAStatKey) {
   return [...rows].sort((a, b) => {
     const av = a[stat];
@@ -85,4 +105,3 @@ export function sortNCAAPlayers(rows: NCAAIndividualPlayer[], stat: NCAAStatKey)
     return bv - av || a.name.localeCompare(b.name) || a.player_id - b.player_id;
   });
 }
-

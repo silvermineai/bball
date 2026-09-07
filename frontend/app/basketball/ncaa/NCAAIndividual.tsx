@@ -10,6 +10,7 @@ import {
   type NCAAIndividualPlayer,
   type NCAAIndividualRelease,
   type NCAAStatKey,
+  ncaaValueCoverage,
 } from "../../_lib/ncaa-individual";
 
 const stats = Object.keys(ncaaStatLabels) as NCAAStatKey[];
@@ -41,6 +42,7 @@ export default function NCAAIndividual() {
   const divisionCount = division === "all"
     ? Object.values(data?.coverage.divisions || {}).reduce((sum, d) => sum + d.players, 0)
     : data?.coverage.divisions[division]?.players || 0;
+  const coverage = data ? ncaaValueCoverage(data.players) : [];
   return (
     <>
       <div className="toolbar">
@@ -56,6 +58,16 @@ export default function NCAAIndividual() {
           <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <details className="career-coverage-details" style={{ marginBottom: 24 }}>
+          <summary>Published values by division and measure</summary>
+          <p className="note">The matrix counts non-null values in this release. A blank source field is left blank; it is never converted to zero.</p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Measure</th><th className="numeric">Division I</th><th className="numeric">Division II</th><th className="numeric">Division III</th></tr></thead>
+              <tbody>{coverage.map((row) => <tr key={row.stat}><td>{ncaaStatLabels[row.stat]}</td><td className="numeric">{row.divisions[1].toLocaleString()}</td><td className="numeric">{row.divisions[2].toLocaleString()}</td><td className="numeric">{row.divisions[3].toLocaleString()}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{rows.length.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} published values · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}
