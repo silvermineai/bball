@@ -11,6 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/programs/">Program dossiers</Link>
         <Link href="/basketball/compare/">Compare programs</Link>
         <Link href="/basketball/players/">Player stats</Link>
+        <Link href="/basketball/leaders/">National leaders</Link>
         <Link href="/basketball/scouting-board/">Build a player board</Link>
         <Link href="/basketball/compare-players/">Compare players</Link>
         <Link href="/basketball/shooting/">Shooting lab</Link>

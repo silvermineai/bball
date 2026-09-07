@@ -352,6 +352,17 @@ th,
   font-size: 12px;
   white-space: nowrap;
 }
+.leader-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.leader-grid .paper-panel {
+  margin: 0;
+}
+.leaders-table small {
+  display: block;
+}
 .match-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -892,7 +903,8 @@ summary {
   }
   .match-grid,
   .article-grid,
-  .two-col {
+  .two-col,
+  .leader-grid {
     grid-template-columns: 1fr;
   }
   .section {
