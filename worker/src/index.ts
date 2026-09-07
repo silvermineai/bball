@@ -270,6 +270,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
     team_box: "bb_team_box",
     rosters: "bb_rosters",
     impact: "bb_impact",
+    ncaa_individual_players: "ncaa_individual_players",
     forecasts: "bb_forecasts",
     unresolved: "bb_unresolved",
   };

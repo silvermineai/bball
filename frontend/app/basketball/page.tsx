@@ -288,6 +288,9 @@ export default function Page() {
         <Link className="button secondary" href="/basketball/impact/">
           Explore player impact ↗
         </Link>
+        <Link className="hero-link" href="/basketball/ncaa/">
+          Browse NCAA national leaderboards →
+        </Link>
       </section>
     </>
   );
