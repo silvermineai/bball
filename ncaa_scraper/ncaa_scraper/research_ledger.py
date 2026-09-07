@@ -81,7 +81,10 @@ def source_connection(sport):
 
     sql_path = ROOT / f".local/{sport}.sql"
     if not sql_path.exists():
-        raise FileNotFoundError(f"Missing source database and SQL export for {sport}")
+        # A single-sport publication still has the other sport's checked-in
+        # overview. Without its source artifact, leave that sport untouched.
+        yield None
+        return
     migration = (
         ROOT / "worker/migrations/0008_football.sql"
         if sport == "football"
@@ -189,12 +192,14 @@ def ingest_published(conn, now):
         if not overview_path.exists():
             continue
         overview = json.loads(overview_path.read_text())
-        for game in overview["upcoming"]:
-            if game.get("prediction"):
-                register(
-                    conn, sport, game, overview["model"], overview["generated_at"], now
-                )
         with source_connection(sport) as source:
+            if source is None:
+                continue
+            for game in overview["upcoming"]:
+                if game.get("prediction"):
+                    register(
+                        conn, sport, game, overview["model"], overview["generated_at"], now
+                    )
             source.row_factory = sqlite3.Row
             prefix = "football" if sport == "football" else "bb"
             clock = "kickoff" if sport == "football" else "starts_at"
