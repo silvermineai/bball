@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import {
   recruitingRows,
   publicationDate,
+  parseRecruitingFilters,
+  recruitingFilterSearch,
   sortRecruitingRows,
   summarizeRecruitingPrograms,
   type RecruitingRelease,
@@ -104,5 +106,33 @@ describe("recruiting program summaries", () => {
         high_workload: 0,
       },
     ]);
+  });
+});
+
+describe("shareable recruiting filters", () => {
+  it("parses supported filters and ignores invalid choices", () => {
+    expect(
+      parseRecruitingFilters("?team=duke&q=Khamenia&kind=transfer&sort=mpg"),
+    ).toEqual({ team: "duke", q: "Khamenia", kind: "transfer", sort: "mpg" });
+    expect(parseRecruitingFilters("?kind=bogus&sort=bad")).toEqual({
+      team: "all",
+      q: "",
+      kind: "all",
+      sort: "latest",
+    });
+  });
+
+  it("omits defaults while preserving meaningful values", () => {
+    expect(
+      recruitingFilterSearch({
+        team: "duke",
+        q: "Khamenia",
+        kind: "transfer",
+        sort: "mpg",
+      }),
+    ).toBe("?team=duke&q=Khamenia&kind=transfer&sort=mpg");
+    expect(
+      recruitingFilterSearch({ team: "all", q: "", kind: "all", sort: "latest" }),
+    ).toBe("");
   });
 });

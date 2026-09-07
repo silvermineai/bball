@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   categoryLabels,
   eventLabels,
   publicationDate,
   recruitingRows,
+  parseRecruitingFilters,
+  recruitingFilterSearch,
   sortRecruitingRows,
   summarizeRecruitingPrograms,
   type RecruitingSort,
@@ -23,11 +25,27 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     [q, setQ] = useState(""),
     [kind, setKind] = useState("all"),
     [sort, setSort] = useState<RecruitingSort>("latest");
+  const hydrated = useRef(false);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setTeam(params.get("team") || "all");
-    setQ(params.get("q") || "");
+    const filters = parseRecruitingFilters(window.location.search);
+    setTeam(filters.team);
+    setQ(filters.q);
+    setKind(filters.kind);
+    setSort(filters.sort);
+    hydrated.current = true;
   }, []);
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const next = recruitingFilterSearch({ team, q, kind, sort });
+    const current = window.location.search;
+    if (next !== current) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${window.location.pathname}${next}${window.location.hash}`,
+      );
+    }
+  }, [team, q, kind, sort]);
   const allRows = recruitingRows(data);
   const programSummary = summarizeRecruitingPrograms(allRows);
   const rows = sortRecruitingRows(
@@ -242,6 +260,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </select>
             </label>
           </div>
+          <p className="note recruiting-share-note">
+            This filtered view updates the URL, so a coaching staff can bookmark
+            or share the exact recruiting evidence slice.
+          </p>
           <div className="section-heading recruiting-results">
             <p role="status">
               {rows.length} player{rows.length === 1 ? "" : "s"} ·{" "}

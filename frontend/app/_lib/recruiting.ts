@@ -81,6 +81,12 @@ export const eventLabels = {
   season_unavailable: "Season unavailable",
 };
 export type RecruitingSort = "latest" | "ppg" | "mpg" | "name";
+export type RecruitingFilters = {
+  team: string;
+  q: string;
+  kind: string;
+  sort: RecruitingSort;
+};
 export type RecruitingProgramSummary = {
   team_id: string;
   team_name: string;
@@ -91,6 +97,42 @@ export type RecruitingProgramSummary = {
   prior_mpg: number;
   high_workload: number;
 };
+
+const recruitingKinds = new Set([
+  "all",
+  ...Object.keys(categoryLabels),
+  "availability",
+]);
+const recruitingSorts = new Set<RecruitingSort>([
+  "latest",
+  "ppg",
+  "mpg",
+  "name",
+]);
+
+/** Read only supported recruiting filters from a shareable query string. */
+export function parseRecruitingFilters(search: string): RecruitingFilters {
+  const params = new URLSearchParams(search);
+  const sort = params.get("sort") as RecruitingSort | null;
+  const kind = params.get("kind") || "all";
+  return {
+    team: params.get("team") || "all",
+    q: params.get("q") || "",
+    kind: recruitingKinds.has(kind) ? kind : "all",
+    sort: sort && recruitingSorts.has(sort) ? sort : "latest",
+  };
+}
+
+/** Serialize non-default recruiting filters for a compact shareable URL. */
+export function recruitingFilterSearch(filters: RecruitingFilters) {
+  const params = new URLSearchParams();
+  if (filters.team !== "all") params.set("team", filters.team);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.kind !== "all") params.set("kind", filters.kind);
+  if (filters.sort !== "latest") params.set("sort", filters.sort);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
 type RecruitingSortable = {
   name: string;
   latest: { source: { published_on: string } };
