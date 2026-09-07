@@ -64,6 +64,15 @@ export default function Page() {
             </p>
             <span>Read recruiting evidence →</span>
           </Link>
+          <Link className="paper-panel" href="/basketball/source-stats/">
+            <div className="eyebrow">Publisher archive</div>
+            <h3>Which source field do you want to inspect?</h3>
+            <p>
+              Search all retained publisher-defined averages, totals and
+              miscellaneous fields across the player-season release.
+            </p>
+            <span>Open the source stat browser →</span>
+          </Link>
         </div>
       </section>
       <Players
