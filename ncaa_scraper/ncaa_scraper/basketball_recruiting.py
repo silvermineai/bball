@@ -146,7 +146,12 @@ def build(document, box_release, rated_programs):
                     "ppg",
                     "rpg",
                     "apg",
+                    "spg",
+                    "bpg",
+                    "topg",
                     "efg",
+                    "ts",
+                    "three_pct",
                     "incomplete_box_games",
                 )
             }

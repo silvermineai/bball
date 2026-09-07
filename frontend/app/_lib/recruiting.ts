@@ -25,7 +25,12 @@ export type RecruitingPerson = {
     ppg: number | null;
     rpg: number | null;
     apg: number | null;
+    spg: number | null;
+    bpg: number | null;
+    topg: number | null;
     efg: number | null;
+    ts: number | null;
+    three_pct: number | null;
     incomplete_box_games: number;
     identity_basis: string;
   };

@@ -13,6 +13,8 @@ import {
 import Recruiting from "./Recruiting";
 import { comparisonHref } from "../../_lib/player-comparison";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
+const percent = (n: number | null) =>
+  n == null ? "—" : `${(n * 100).toFixed(1)}%`;
 export default function Announcements({ data }: { data: RecruitingRelease }) {
   const [view, setView] = useState("announcements"),
     [team, setTeam] = useState("all"),
@@ -218,11 +220,17 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                       </div>
                       <div>
                         <strong>
-                          {p.stats.efg == null
-                            ? "—"
-                            : `${(p.stats.efg * 100).toFixed(1)}%`}
+                          {percent(p.stats.efg)}
                         </strong>
                         <span>eFG%</span>
+                      </div>
+                      <div>
+                        <strong>{percent(p.stats.ts)}</strong>
+                        <span>TS%</span>
+                      </div>
+                      <div>
+                        <strong>{percent(p.stats.three_pct)}</strong>
+                        <span>3P%</span>
                       </div>
                     </div>
                     {p.stats.games < 10 && (
