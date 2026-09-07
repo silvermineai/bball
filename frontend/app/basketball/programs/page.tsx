@@ -1,4 +1,5 @@
 import { getScoutIndex } from "../../_lib/scouting-data";
+import { getRosters } from "../../_lib/basketball-data";
 import Programs from "./Programs";
 export const metadata = {
   title: "College basketball program scouting library",
@@ -7,6 +8,7 @@ export const metadata = {
 };
 export default function Page() {
   const data = getScoutIndex();
+  const rosters = getRosters();
   return (
     <>
       <div className="page-title">
@@ -24,12 +26,13 @@ export default function Page() {
           behind the production, and the games that shaped its season.
         </p>
       </div>
-      <Programs teams={data.teams} />
+      <Programs teams={data.teams} rosters={rosters} />
       <p className="note">
         The library covers the {data.teams.length} programs in the independent
         model’s rated field. It is not a verified complete Division I membership
         list. Ratings use the published 2026–27 preseason model; records and
-        descriptive statistics are from 2025–26.
+        descriptive statistics are from 2025–26. Roster observations are
+        source-listed for 2026–27 and are not confirmed depth charts.
       </p>
     </>
   );

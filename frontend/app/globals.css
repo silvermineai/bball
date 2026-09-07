@@ -363,6 +363,13 @@ th,
 .leaders-table small {
   display: block;
 }
+.program-roster strong,
+.program-roster small {
+  display: block;
+}
+.program-roster small {
+  max-width: 220px;
+}
 .match-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
