@@ -25,6 +25,7 @@ import html as htmllib
 import json
 import re
 import sqlite3
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -122,6 +123,11 @@ def decode_html(value: str) -> str:
     return text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace("\\'", "'")
 
 
+def team_key(value: str | None) -> str:
+    normalized = unicodedata.normalize("NFKD", value or "").casefold()
+    return "".join(ch for ch in normalized if ch.isalnum())
+
+
 def final_period(fetcher: ScraplingNCAAFetcher, division: str) -> str | None:
     html = decode_html(fetcher.fetch(
         f"/rankings/change_sport_year_div?academic_year={YEAR}&division={division}&sport_code={SPORT}",
@@ -149,11 +155,18 @@ def _json_number(value):
 
 def export_release(conn: sqlite3.Connection) -> dict:
     """Create a compact, public derivative of the NCAA national snapshots."""
+    team_ids = {
+        (int(division), team_key(name)): int(team_id)
+        for team_id, division, name in conn.execute(
+            "SELECT team_ncaa_id,division,name FROM ncaa_team_directory WHERE team_ncaa_id IS NOT NULL"
+        )
+    }
     columns = [row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")]
     players = []
     for row in conn.execute("SELECT * FROM ncaa_players ORDER BY division, ppg_rank IS NULL, ppg_rank, name, player_id"):
         item = dict(zip(columns, row))
         item.pop("updated_at", None)
+        item["team_ncaa_id"] = item.get("team_ncaa_id") or team_ids.get((item["division"], team_key(item.get("team_name"))))
         item = {k: _json_number(v) if isinstance(v, (int, float)) and k not in {"player_id", "division", "games", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm", "ppg_rank", "rpg_rank", "apg_rank"} else v for k, v in item.items()}
         players.append(item)
     coverage = {}

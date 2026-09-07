@@ -17,6 +17,10 @@ class NCAAIndividualTests(unittest.TestCase):
         conn = sqlite3.connect(":memory:")
         conn.executescript(SCHEMA)
         conn.execute(
+            "INSERT INTO ncaa_team_directory (team_ncaa_id,division,name) VALUES (?,?,?)",
+            (42, 1, "A School"),
+        )
+        conn.execute(
             "INSERT INTO ncaa_players (player_id,division,name,team_name,ppg,mpg,ppg_rank,updated_at) VALUES (?,?,?,?,?,?,?,?)",
             (7, 1, "A Player", "A School", 20.5, 30.0, 1, "2026-06-12 23:00:00"),
         )
@@ -24,6 +28,7 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["players"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
         self.assertEqual(release["players"][0]["name"], "A Player")
+        self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
 
 
 if __name__ == "__main__":
