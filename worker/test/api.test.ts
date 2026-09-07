@@ -39,6 +39,9 @@ describe("bball api", () => {
     expect(response.headers.get("location")).toBe(
       "/basketball/scout/333?season=2026",
     );
+    const film = await app.request("/film/");
+    expect(film.status).toBe(302);
+    expect(film.headers.get("location")).toBe("/basketball/film/");
   });
 
   it("rejects invalid basketball player parameters before querying D1", async () => {
