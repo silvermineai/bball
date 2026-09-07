@@ -187,6 +187,32 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(production["mpg"], 25.0)
         self.assertEqual(production["ppg"], 14.0)
 
+    def test_roster_changes_publish_team_workload_summary(self):
+        self.conn.execute(
+            "INSERT INTO bb_participation VALUES (?,?,?,?,?,?)",
+            (2026, "A", "1", "A Player", 20, 500),
+        )
+        self.conn.executemany(
+            "INSERT INTO bb_rosters VALUES (?,?,?,?)",
+            [
+                (2027, "A", "1", json.dumps({"full_name": "A Player", "team_display_name": "A"})),
+                (2027, "A", "2", json.dumps({"full_name": "New Player", "team_display_name": "A"})),
+            ],
+        )
+        board = roster_changes(
+            self.conn,
+            prior_players={
+                "players": [
+                    {"id": "1", "team_id": "A", "team": "A", "games": 20, "minutes": 500},
+                ]
+            },
+        )
+        summary = board["team_summaries"][0]
+        self.assertEqual(summary["returning_players"], 1)
+        self.assertEqual(summary["returning_minutes"], 500.0)
+        self.assertEqual(summary["prior_minutes"], 500.0)
+        self.assertEqual(summary["returning_minutes_share"], 1.0)
+
     def test_publisher_leaders_use_numeric_source_fields_and_ties(self):
         self.conn.execute(
             "INSERT INTO bb_players VALUES (?,?,?)", ("1", "A Player", "G")

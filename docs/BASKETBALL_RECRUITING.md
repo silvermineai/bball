@@ -8,6 +8,8 @@ The September 2026 review contains 71 announced additions across Arizona, Hawai 
 
 The board does not contain proprietary recruiting grades, stars, rankings, valuations, contact information, article bodies, photographs or copied biographies. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
 
+The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
+
 ## Source review
 
 `data/recruiting/announcements.json` is the curated input. Each school has an explicit program ID, publisher and exact source host. Each article stores its original URL, title, publication calendar date, date evidence, review timestamp and any necessary editorial caveat. Source pages are consulted for brief independent factual reporting with attribution. There is no school-roster crawler, page mirror or automated article-body storage in this pipeline.

@@ -152,6 +152,21 @@ export type BBRosters = {
   players_observed: number;
   prior_players_not_observed: number;
   status_counts: Record<string, number>;
+  team_summaries?: {
+    team_id: string;
+    team: string;
+    listed_players: number;
+    returning_players: number;
+    transfer_players: number;
+    new_players: number;
+    ambiguous_players: number;
+    prior_minutes: number;
+    returning_minutes: number;
+    incoming_prior_minutes: number;
+    represented_prior_minutes: number;
+    returning_minutes_share: number | null;
+    represented_prior_minutes_share: number | null;
+  }[];
   players: BBRoster[];
 };
 export type BBImpact = {

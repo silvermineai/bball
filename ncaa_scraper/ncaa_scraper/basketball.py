@@ -373,6 +373,52 @@ def roster_changes(conn, target=2027, prior_players=None):
                     "prior_production": _prior_production(prior_production.get(aid)),
                 }
             )
+    # Keep a team-level workload view beside the player observations. These
+    # values are descriptive: an observed listing does not prove eligibility,
+    # availability or a future rotation role.
+    prior_minutes_by_team = defaultdict(float)
+    prior_player_minutes = {}
+    for player in (prior_players or {}).get("players", []):
+        team_id = str(player.get("team_id")) if player.get("team_id") is not None else None
+        player_id = str(player.get("id")) if player.get("id") is not None else None
+        minutes = float(player.get("minutes") or 0)
+        if not team_id or not player_id or minutes < 0:
+            continue
+        prior_minutes_by_team[team_id] += minutes
+        prior_player_minutes[(player_id, team_id)] = prior_player_minutes.get((player_id, team_id), 0.0) + minutes
+    team_rows = defaultdict(list)
+    for row in observed:
+        team_rows[str(row["team_id"])].append(row)
+    team_summaries = []
+    for team_id, rows in team_rows.items():
+        returning = [r for r in rows if r["status"] == "same_program"]
+        transfers = [r for r in rows if r["status"] == "different_program"]
+        new = [r for r in rows if r["status"] == "new_to_dataset"]
+        ambiguous = [r for r in rows if r["status"] == "ambiguous"]
+        returning_minutes = sum(prior_player_minutes.get((str(r["id"]), team_id), 0.0) for r in returning)
+        incoming_minutes = sum(
+            sum(float(p.get("minutes") or 0) for p in prior_production.get(str(r["id"]), []))
+            for r in transfers
+        )
+        represented = returning_minutes + incoming_minutes
+        prior_minutes = prior_minutes_by_team.get(team_id, 0.0)
+        team_summaries.append(
+            {
+                "team_id": team_id,
+                "team": teams.get(team_id, team_id),
+                "listed_players": len(rows),
+                "returning_players": len(returning),
+                "transfer_players": len(transfers),
+                "new_players": len(new),
+                "ambiguous_players": len(ambiguous),
+                "prior_minutes": round(prior_minutes, 1),
+                "returning_minutes": round(returning_minutes, 1),
+                "incoming_prior_minutes": round(incoming_minutes, 1),
+                "represented_prior_minutes": round(represented, 1),
+                "returning_minutes_share": round(returning_minutes / prior_minutes, 4) if prior_minutes else None,
+                "represented_prior_minutes_share": round(represented / prior_minutes, 4) if prior_minutes else None,
+            }
+        )
     return {
         "season": target,
         "previous_season": target - 1,
@@ -386,6 +432,7 @@ def roster_changes(conn, target=2027, prior_players=None):
         "players_observed": len(current),
         "prior_players_not_observed": len(set(prior) - set(current)),
         "status_counts": dict(Counter(p["status"] for p in observed)),
+        "team_summaries": sorted(team_summaries, key=lambda p: p["team"]),
         "players": sorted(observed, key=lambda p: p["name"]),
     }
 

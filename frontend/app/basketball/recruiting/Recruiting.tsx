@@ -139,6 +139,36 @@ export default function Recruiting() {
             recorded workload from the preceding source season, not a
             projected role at the listed program.
           </p>
+          {!!data.team_summaries?.length && season === "2027" && (
+            <details className="career-coverage-details" style={{ marginBottom: 24 }}>
+              <summary>Team workload continuity ({data.team_summaries.length} programs)</summary>
+              <p className="note">
+                Prior minutes are summed from the preceding source season. The
+                listed view is an unconfirmed observation; this table is a
+                workload context signal, not a depth chart or eligibility claim.
+              </p>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th className="numeric">Prior minutes</th><th className="numeric">Returning share</th></tr></thead>
+                  <tbody>
+                    {[...data.team_summaries]
+                      .sort((a, b) => (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team))
+                      .slice(0, 24)
+                      .map((team) => (
+                        <tr key={team.team_id}>
+                          <td><Link href={`/basketball/programs/${team.team_id}/`}>{team.team}</Link><small>{team.transfer_players} different-program · {team.new_players} new to dataset</small></td>
+                          <td className="numeric">{team.listed_players}</td>
+                          <td className="numeric">{team.returning_players}</td>
+                          <td className="numeric">{team.incoming_prior_minutes ? `${Math.round(team.incoming_prior_minutes).toLocaleString()} min` : "—"}</td>
+                          <td className="numeric">{team.prior_minutes ? Math.round(team.prior_minutes).toLocaleString() : "—"}</td>
+                          <td className="numeric">{team.returning_minutes_share == null ? "—" : `${(team.returning_minutes_share * 100).toFixed(1)}%`}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>
               {rows.length.toLocaleString()} matching observations · export
