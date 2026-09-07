@@ -290,7 +290,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
 
 const ncaaLeaderQuery = z.object({
   division: z.enum(["1", "2", "3", "all"]).default("1"),
-  stat: z.enum(["ppg", "rpg", "apg", "mpg"]).default("ppg"),
+  stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl"]).default("ppg"),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(0).max(100).default(0),
 });
@@ -301,10 +301,12 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const search = q?.trim();
   const searchSql = search ? " AND (name LIKE ? OR team_name LIKE ? OR payload_json LIKE ?)" : "";
   if (search) binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
-  const order = `${stat} IS NULL, ${stat} DESC, name, player_id`;
-  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${stat},ppg_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
+  const columnStat = new Set(["ppg", "rpg", "apg", "mpg"]).has(stat);
+  const value = columnStat ? stat : `json_extract(payload_json, '$.${stat}')`;
+  const order = `${value} IS NULL, ${value} DESC, name, player_id`;
+  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,ppg_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season: 2026, division, stat, page, rows: rows.results.map((row) => ({ ...row, payload: JSON.parse(String(row.payload_json)) })) });
+  return c.json({ season: 2026, division, stat, page, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
 });
 
 // Keep completed-game reading snapshots reachable from their original URLs.
