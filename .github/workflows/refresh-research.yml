@@ -24,7 +24,9 @@ on:
 
 concurrency:
   group: research-publication
-  cancel-in-progress: false
+  # A newer source/model publication supersedes an older one. Cancelling here
+  # prevents a stale checkout from reaching the deploy step after a correction.
+  cancel-in-progress: true
 
 permissions:
   contents: read
