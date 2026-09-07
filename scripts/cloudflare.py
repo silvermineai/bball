@@ -11,10 +11,16 @@ root = Path(__file__).resolve().parents[1]
 values = dotenv_values(Path.home() / ".env")
 env = os.environ.copy()
 env["CLOUDFLARE_API_TOKEN"] = (
-    env.get("CLOUDFLARE_API_TOKEN") or values.get("CF_API_TOKEN_ACCOUNT") or ""
+    env.get("CLOUDFLARE_API_TOKEN")
+    or env.get("CF_API_TOKEN_ACCOUNT")
+    or values.get("CF_API_TOKEN_ACCOUNT")
+    or ""
 )
 env["CLOUDFLARE_ACCOUNT_ID"] = (
-    env.get("CLOUDFLARE_ACCOUNT_ID") or values.get("CF_ACCOUNT_ID") or ""
+    env.get("CLOUDFLARE_ACCOUNT_ID")
+    or env.get("CF_ACCOUNT_ID")
+    or values.get("CF_ACCOUNT_ID")
+    or ""
 )
 if not env["CLOUDFLARE_API_TOKEN"] or not env["CLOUDFLARE_ACCOUNT_ID"]:
     raise SystemExit(
