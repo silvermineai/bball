@@ -1,6 +1,6 @@
 import type { BBRoster } from "./basketball-types";
 
-export type RosterSortKey = "status" | "name" | "program" | "prior";
+export type RosterSortKey = "status" | "name" | "program" | "prior" | "workload";
 
 const statusOrder: Record<string, number> = {
   different_program: 0,
@@ -26,6 +26,11 @@ export function sortRosterObservations(
       if (delta) return delta;
     } else if (key === "prior") {
       const delta = b.previous_teams.length - a.previous_teams.length;
+      if (delta) return delta;
+    } else if (key === "workload") {
+      const delta =
+        (b.prior_production?.minutes ?? -1) -
+        (a.prior_production?.minutes ?? -1);
       if (delta) return delta;
     }
     return (

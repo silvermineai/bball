@@ -90,6 +90,7 @@ export default function Recruiting() {
           >
             <option value="status">Movement signal</option>
             <option value="prior">Most prior programs</option>
+            <option value="workload">Most prior minutes</option>
             <option value="program">Current program</option>
             <option value="name">Player name</option>
           </select>
@@ -134,7 +135,9 @@ export default function Recruiting() {
             {season === "2027"
               ? "Listings can carry over from earlier seasons; no school-confirmed current transfer status is supplied. Missing players may reflect incomplete rosters, not departures."
               : "Both sides of this comparison require recorded playing time. A different program record describes historical participation, not why or when a transfer happened."}{" "}
-            New to the dataset does not mean freshman.
+            New to the dataset does not mean freshman. Prior production is
+            recorded workload from the preceding source season, not a
+            projected role at the listed program.
           </p>
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>
@@ -157,6 +160,13 @@ export default function Recruiting() {
                       "Observation",
                       "Position",
                       "Source-listed class",
+                      "Prior recorded games",
+                      "Prior recorded minutes",
+                      "Prior minutes per game",
+                      "Prior points per game",
+                      "Prior rebounds per game",
+                      "Prior assists per game",
+                      "Prior recorded programs",
                       "Height",
                       "Weight",
                       "Source URL",
@@ -170,6 +180,13 @@ export default function Recruiting() {
                       labels[p.status],
                       p.position,
                       p.class_year,
+                      p.prior_production?.games,
+                      p.prior_production?.minutes,
+                      p.prior_production?.mpg,
+                      p.prior_production?.ppg,
+                      p.prior_production?.rpg,
+                      p.prior_production?.apg,
+                      p.prior_production?.teams?.join("; "),
                       p.height,
                       p.weight,
                       p.source_url,
@@ -194,6 +211,7 @@ export default function Recruiting() {
                   <th>Prior appearances</th>
                   <th>Observation</th>
                   <th>Source-listed class</th>
+                  <th>Prior recorded production</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +229,16 @@ export default function Recruiting() {
                     <td>{p.previous_teams.join(", ") || "Not observed"}</td>
                     <td>{labels[p.status]}</td>
                     <td>{p.class_year || "—"}</td>
+                    <td>
+                      {p.prior_production ? (
+                        <>
+                          {p.prior_production.minutes.toLocaleString()} min · {p.prior_production.games} GP
+                          <small>
+                            {p.prior_production.ppg == null ? "—" : p.prior_production.ppg.toFixed(1)} PPG · {p.prior_production.mpg == null ? "—" : p.prior_production.mpg.toFixed(1)} MPG
+                          </small>
+                        </>
+                      ) : "No prior recorded stats"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

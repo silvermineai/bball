@@ -8,6 +8,7 @@ const row = (
   status: string,
   team: string,
   previous_teams: string[],
+  priorMinutes?: number,
 ): BBRoster => ({
   id,
   name,
@@ -20,6 +21,18 @@ const row = (
   height: null,
   weight: null,
   source_url: null,
+  prior_production:
+    priorMinutes == null
+      ? null
+      : {
+          games: 20,
+          minutes: priorMinutes,
+          mpg: priorMinutes / 20,
+          ppg: 10,
+          rpg: 5,
+          apg: 2,
+          teams: ["A"],
+        },
 });
 
 describe("roster observation sorting", () => {
@@ -44,5 +57,17 @@ describe("roster observation sorting", () => {
       "prior",
     );
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha"]);
+  });
+
+  it("sorts roster observations by recorded prior workload", () => {
+    const rows = sortRosterObservations(
+      [
+        row("a", "Alpha", "same_program", "A", ["A"], 240),
+        row("b", "Beta", "different_program", "B", ["A"], 620),
+        row("c", "Gamma", "new_to_dataset", "C", []),
+      ],
+      "workload",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 });

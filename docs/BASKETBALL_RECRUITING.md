@@ -1,6 +1,6 @@
 # School announcement evidence
 
-The native `/basketball/recruiting/` board combines selected school announcements with explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings and prior-season program comparisons.
+The native `/basketball/recruiting/` board combines selected school announcements with explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings, prior-season program comparisons and recorded workload for matching prior player identities.
 
 ## Coverage and claims
 
@@ -31,6 +31,8 @@ Keep a signing and later availability statements as separate events. A planned r
 Local person keys group editorial records for one announced player/program relationship. They are not global player IDs and are never joined to NCAA or ESPN IDs automatically. A historical stats reference must explicitly identify the reviewed player, prior team and season. The publisher requires exactly one normalized full-name AND prior-program match, matching the explicit IDs. Only punctuation/diacritics and six enumerated program spelling aliases are normalized. No fuzzy names, name-only joins or new-school roster inference are used. Ambiguity or a changed source identity stops publication.
 
 There are 33 reviewed historical links. Historical per-game statistics retain season, previous team, game count and incomplete-box count. These statistics describe recorded appearances in 2025–26; they are not predicted production at the destination school. The board highlights samples below ten games and shows each latest statement without requiring the evidence drawer to be opened. The public release includes a canonical JSON hash (sorted keys, compact separators, UTF-8) of the whole historical player release to identify the exact linked edition.
+
+Roster observations also carry an optional `prior_production` summary when the exact source athlete ID has recorded prior-season statistics: games, minutes, minutes per game, points, rebounds, assists and prior programs. These are aggregated across prior program stints using recorded game counts; they describe historical workload only and never establish transfer status, eligibility or a new-school role. The roster board can sort by those prior minutes and includes the fields in its CSV export.
 
 ## Storage and publishing
 

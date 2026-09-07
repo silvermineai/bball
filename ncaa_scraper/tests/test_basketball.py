@@ -154,6 +154,39 @@ class BasketballIngestTests(unittest.TestCase):
             player_index(self.conn), {"season": 2026, "players": [], "box_games": 0}
         )
 
+    def test_roster_observations_attach_recorded_prior_production(self):
+        self.conn.execute(
+            "INSERT INTO bb_participation VALUES (?,?,?,?,?,?)",
+            (2026, "A", "1", "A Player", 20, 500),
+        )
+        self.conn.execute(
+            "INSERT INTO bb_rosters VALUES (?,?,?,?)",
+            (2027, "A", "1", json.dumps({"full_name": "A Player", "team_display_name": "A"})),
+        )
+        board = roster_changes(
+            self.conn,
+            prior_players={
+                "players": [
+                    {
+                        "id": "1",
+                        "team_id": "A",
+                        "team": "A",
+                        "games": 20,
+                        "minutes": 500,
+                        "mpg": 25.0,
+                        "ppg": 14.0,
+                        "rpg": 6.0,
+                        "apg": 3.0,
+                    }
+                ]
+            },
+        )
+        production = board["players"][0]["prior_production"]
+        self.assertEqual(production["games"], 20)
+        self.assertEqual(production["minutes"], 500.0)
+        self.assertEqual(production["mpg"], 25.0)
+        self.assertEqual(production["ppg"], 14.0)
+
     def test_publisher_leaders_use_numeric_source_fields_and_ties(self):
         self.conn.execute(
             "INSERT INTO bb_players VALUES (?,?,?)", ("1", "A Player", "G")

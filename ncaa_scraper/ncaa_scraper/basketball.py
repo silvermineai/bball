@@ -277,7 +277,38 @@ def load_games(conn):
     return games, boxes, valid
 
 
-def roster_changes(conn, target=2027):
+def _prior_production(rows):
+    """Summarize recorded prior-season stints without implying a new-school role."""
+    if not rows:
+        return None
+    games = sum(int(row.get("games") or 0) for row in rows)
+    minutes = sum(float(row.get("minutes") or 0) for row in rows)
+    if games <= 0 and minutes <= 0:
+        return None
+
+    def weighted(key):
+        values = [
+            (float(row[key]), int(row.get("games") or 0))
+            for row in rows
+            if row.get(key) is not None and int(row.get("games") or 0) > 0
+        ]
+        return sum(value * weight for value, weight in values) / sum(
+            weight for _, weight in values
+        ) if values else None
+
+    values = {key: weighted(key) for key in ("ppg", "rpg", "apg")}
+    return {
+        "games": games,
+        "minutes": round(minutes, 1),
+        "mpg": round(minutes / games, 1) if games else None,
+        "ppg": round(values["ppg"], 1) if values["ppg"] is not None else None,
+        "rpg": round(values["rpg"], 1) if values["rpg"] is not None else None,
+        "apg": round(values["apg"], 1) if values["apg"] is not None else None,
+        "teams": sorted({row["team"] for row in rows if row.get("team")}),
+    }
+
+
+def roster_changes(conn, target=2027, prior_players=None):
     prior = defaultdict(list)
     current = defaultdict(list)
     teams = {}
@@ -297,6 +328,9 @@ def roster_changes(conn, target=2027):
         if r["season"] == target:
             current[r["athlete_id"]].append(p)
         teams[r["team_id"]] = p.get("team_display_name", r["team_id"])
+    prior_production = defaultdict(list)
+    for player in (prior_players or {}).get("players", []):
+        prior_production[player["id"]].append(player)
     if target == 2026:
         current = defaultdict(list)
         for r in conn.execute(
@@ -336,6 +370,7 @@ def roster_changes(conn, target=2027):
                     "height": p.get("height"),
                     "weight": p.get("weight"),
                     "source_url": p.get("link_web"),
+                    "prior_production": _prior_production(prior_production.get(aid)),
                 }
             )
     return {
@@ -706,12 +741,13 @@ def build(conn, target=2027):
             r["rank"] = rank
         else:
             r["rank"] = None
+    season_players = player_index(conn, target - 1)
     artifacts = {
         "overview": overview,
-        "players": player_index(conn, target - 1),
+        "players": season_players,
         "publisher-leaders": publisher_leaders(conn, target - 1),
-        "rosters": roster_changes(conn, target),
-        "rosters-2026": roster_changes(conn, 2026),
+        "rosters": roster_changes(conn, target, season_players),
+        "rosters-2026": roster_changes(conn, 2026, player_index(conn, 2025)),
         "impact": {
             "season": target - 1,
             "players": impact,

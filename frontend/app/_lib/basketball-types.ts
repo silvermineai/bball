@@ -135,6 +135,15 @@ export type BBRoster = {
   height: string | null;
   weight: string | null;
   source_url: string | null;
+  prior_production?: {
+    games: number;
+    minutes: number;
+    mpg: number | null;
+    ppg: number | null;
+    rpg: number | null;
+    apg: number | null;
+    teams: string[];
+  } | null;
 };
 export type BBRosters = {
   season: number;
