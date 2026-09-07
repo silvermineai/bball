@@ -3687,3 +3687,27 @@ summary {
   font-size: 10px;
   overflow-wrap: anywhere;
 }
+
+/* Native film room */
+.film-controls { display: flex; align-items: end; gap: 18px; flex-wrap: wrap; }
+.film-controls label:first-child { display: grid; gap: 7px; min-width: min(100%, 340px); }
+.film-controls select { border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 11px 13px; min-width: 300px; }
+.film-check { display: inline-flex; align-items: center; gap: 8px; padding-bottom: 12px; font-size: 12px; color: var(--muted); }
+.film-check input { accent-color: var(--orange); }
+.film-search-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.film-search-card { display: grid; gap: 10px; margin: 0; transition: transform .2s ease, border-color .2s ease; }
+.film-search-card:hover { transform: translateY(-2px); border-color: var(--orange); }
+.film-search-card strong { font-family: "Libre Caslon Display", Georgia, serif; font-size: 1.45rem; font-weight: 400; }
+.film-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.film-card { margin: 0; overflow: hidden; border: 1px solid var(--line); background: #fcfaf4; }
+.film-thumb, .film-frame { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.film-thumb { position: relative; padding: 0; background: var(--ink); cursor: pointer; }
+.film-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.film-play { position: absolute; inset: 0; display: grid; place-items: center; color: white; font-size: 35px; text-shadow: 0 2px 8px #0008; background: #182b2640; transition: background .2s ease, transform .2s ease; }
+.film-thumb:hover .film-play { background: #182b2666; transform: scale(1.04); }
+.film-card figcaption { display: grid; gap: 10px; padding: 16px; }
+.film-card figcaption strong { font-size: 14px; line-height: 1.35; }
+.film-card figcaption .eyebrow { color: var(--orange); font-size: 9px; }
+.film-source-note { max-width: 850px; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (max-width: 900px) { .film-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .film-search-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .film-grid, .film-search-grid { grid-template-columns: 1fr; } .film-controls select { min-width: 0; width: 100%; } }
