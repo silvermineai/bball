@@ -1,4 +1,4 @@
-import type { BBGame, BBOverview } from "./basketball-types";
+import type { BBGame, BBOverview, BBRosters } from "./basketball-types";
 import type { Metric, ScoutProfile, ScoutPlayer } from "./scouting-types";
 import { recruitingRows, type RecruitingRelease } from "./recruiting";
 import type { Ledger } from "./research-types";
@@ -109,6 +109,48 @@ export function historicalPersonnel(profile: ScoutProfile): ScoutPlayer[] {
     .slice(0, 3);
 }
 
+export type BriefRosterContext = {
+  listed: number;
+  sameProgram: number;
+  newToDataset: number;
+  representedPlayers: number;
+  representedMinutes: number;
+  priorMinutes: number;
+  representedMinutesShare: number | null;
+};
+
+/**
+ * Summarize the current source roster without treating a listing as eligibility
+ * or a guaranteed return. Player IDs are the only join to prior production.
+ */
+export function rosterContext(
+  profile: ScoutProfile,
+  rosters: BBRosters | undefined,
+): BriefRosterContext | null {
+  if (!rosters || rosters.season !== profile.forecast_season) return null;
+  const listed = rosters.players.filter((p) => p.team_id === profile.id);
+  const prior = profile.players.filter(
+    (p) => p.team_id === profile.id && p.season === profile.season,
+  );
+  const priorById = new Map(prior.map((p) => [p.id, p]));
+  const returning = listed.filter((p) => p.status === "same_program");
+  const representedMinutes = returning.reduce(
+    (sum, p) => sum + (priorById.get(p.id)?.minutes || 0),
+    0,
+  );
+  const priorMinutes = prior.reduce((sum, p) => sum + (p.minutes || 0), 0);
+  return {
+    listed: listed.length,
+    sameProgram: returning.length,
+    newToDataset: listed.filter((p) => p.status === "new_to_dataset").length,
+    representedPlayers: returning.filter((p) => priorById.has(p.id)).length,
+    representedMinutes: Math.round(representedMinutes),
+    priorMinutes: Math.round(priorMinutes),
+    representedMinutesShare:
+      priorMinutes > 0 ? representedMinutes / priorMinutes : null,
+  };
+}
+
 export function briefScenarioUrl(
   game: Pick<BBGame, "home_id" | "away_id" | "neutral">,
 ) {
@@ -122,6 +164,7 @@ export function briefEvidence(
   away: ScoutProfile,
   recruiting: RecruitingRelease,
   ledger: Ledger,
+  rosters?: BBRosters,
 ) {
   for (const [profile, id] of [
     [home, game.home_id],
@@ -160,6 +203,7 @@ export function briefEvidence(
     programs: [away, home].map((profile) => ({
       profile,
       personnel: historicalPersonnel(profile),
+      roster: rosterContext(profile, rosters),
       announcements: announcementRows.filter((p) => p.team_id === profile.id),
       reviewed:
         recruiting.season === overview.season &&

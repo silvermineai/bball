@@ -1,6 +1,6 @@
 # Basketball scouting briefs
 
-The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, workload leaders, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
+The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, workload leaders, exact-ID roster observations, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
 
 ## Evidence selection
 
@@ -13,6 +13,8 @@ Categories describe historical quartiles: an offense at or above the 75th favora
 Two full tables show all four factors, three-point attempt share, two-point accuracy and three-point accuracy in both directions. Each value retains its own valid-game count and source rank. Defensive rates refer to opponents except for turnovers forced. Three-point attempt share is a style measure with no favorable ranking. Definitions and denominator rules are expandable. A pace paragraph separates observed 2025–26 pace from the opponent-adjusted forecast.
 
 The historical personnel section selects the three largest recorded minute totals per program, requiring at least 200 minutes, positive games and matching team/season IDs. PPG, minutes, estimated usage, usage sample count and TS remain sourced values; missing values remain unavailable. The section explicitly does not project a current rotation. Player links select the actual historical season, and program links open the shot map or dossier.
+
+The roster observation section compares the 2026–27 source listing with prior recorded appearances using exact ESPN athlete IDs. It reports listed players, same-program listings, new-to-dataset entries and the prior minutes represented by returning IDs. The minutes share is descriptive and uses the program's recorded prior minutes as its denominator. A missing listing is not treated as a departure, and a listing is not proof of eligibility, availability or a transfer; these observations do not enter the forecast.
 
 ## School evidence and markets
 

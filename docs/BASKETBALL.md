@@ -53,7 +53,7 @@ The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from
 
 The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.
 
-The [expanded matchup briefs](BASKETBALL_BRIEFS.md) connect all 1,579 current forecasts to team-specific Four Factor contrasts, historical personnel, dated school announcements and matching ledger records. Venue-preserving workbench links, browser preparation notes and print layouts support the coaching workflow.
+The [expanded matchup briefs](BASKETBALL_BRIEFS.md) connect all 1,579 current forecasts to team-specific Four Factor contrasts, historical personnel, dated school announcements and matching ledger records. They also summarize exact-ID 2026–27 roster observations and the share of prior minutes those listings represent, while keeping eligibility and availability explicitly unconfirmed. Venue-preserving workbench links, browser preparation notes and print layouts support the coaching workflow.
 
 The player index exposes PPG, RPG, APG, steals, blocks, turnovers, minutes, eFG%, estimated TS% and 3P%. Default qualification is 15 games and 400 recorded minutes, with complete fields. DNP rows remain accessible in game logs. TS uses the same disclosed 0.475 college free-throw coefficient.
 

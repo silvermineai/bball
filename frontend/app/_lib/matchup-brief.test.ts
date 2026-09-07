@@ -8,7 +8,7 @@ import {
 } from "./matchup-brief";
 import { basketballScenario } from "./basketball-scenario";
 import { scenarioQuery, scenarioVenue } from "./scenario-location";
-import type { BBOverview } from "./basketball-types";
+import type { BBOverview, BBRosters } from "./basketball-types";
 import type { ScoutProfile } from "./scouting-types";
 import type { RecruitingRelease } from "./recruiting";
 import type { Ledger } from "./research-types";
@@ -17,6 +17,7 @@ const read = (path: string) =>
     readFileSync(new URL("../../public/data/" + path, import.meta.url), "utf8"),
   );
 const overview: BBOverview = read("basketball/overview.json"),
+  rosters: BBRosters = read("basketball/rosters.json"),
   recruiting: RecruitingRelease = read("basketball/recruiting.json"),
   ledger: Ledger = read("research/ledger.json");
 const profiles = new Map<string, ScoutProfile>(
@@ -35,8 +36,15 @@ describe("matchup evidence and scenario handoff", () => {
         away,
         recruiting,
         ledger,
+        rosters,
       );
       expect(result.pressures.length).toBeLessThanOrEqual(4);
+      for (const program of result.programs) {
+        expect(program.roster).not.toBeNull();
+        expect(program.roster!.representedMinutes).toBeLessThanOrEqual(
+          program.roster!.priorMinutes,
+        );
+      }
       for (const point of result.pressures) {
         expect(point.offensive.games).toBeGreaterThanOrEqual(10);
         expect(point.defensive.games).toBeGreaterThanOrEqual(10);
@@ -128,6 +136,7 @@ describe("matchup evidence and scenario handoff", () => {
       profiles.get(covered.away_id)!,
       recruiting,
       ledger,
+      rosters,
     );
     const team = result.programs.find((p) => p.profile.id === "130")!;
     expect(team.reviewed).toBe(true);
@@ -142,6 +151,7 @@ describe("matchup evidence and scenario handoff", () => {
       profiles.get(covered.away_id)!,
       later,
       ledger,
+      rosters,
     );
     expect(
       stale.programs.every((p) => !p.reviewed && !p.announcements.length),

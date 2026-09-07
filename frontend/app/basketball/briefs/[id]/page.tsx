@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBasketball, getRecruiting } from "../../../_lib/basketball-data";
+import {
+  getBasketball,
+  getRecruiting,
+  getRosters,
+} from "../../../_lib/basketball-data";
 import { getScoutProfile } from "../../../_lib/scouting-data";
 import { getLedger } from "../../../_lib/research-data";
 import { date, fmt, kick, signed } from "../../../_lib/format";
@@ -80,8 +84,9 @@ export default async function Page({
   const home = getScoutProfile(g.home_id),
     away = getScoutProfile(g.away_id),
     recruiting = getRecruiting(),
+    rosters = getRosters(),
     ledger = getLedger();
-  const evidence = briefEvidence(g, d, home, away, recruiting, ledger),
+  const evidence = briefEvidence(g, d, home, away, recruiting, ledger, rosters),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
   const tasks = [
     ...evidence.pressures.map(
@@ -417,7 +422,77 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">04 / Dated school evidence</div>
+            <div className="eyebrow">04 / Source roster observation</div>
+            <h2>How much old workload is represented?</h2>
+          </div>
+          <span className="note">2026–27 listing · unconfirmed</span>
+        </div>
+        <p className="note brief-explainer">
+          This is an exact-ID comparison between the published 2026–27 roster
+          listing and recorded 2025–26 minutes. It describes what the source
+          currently represents; it does not establish eligibility, availability,
+          a returning decision or a projected rotation, and it does not change
+          the forecast.
+        </p>
+        <div className="two-col">
+          {evidence.programs.map(({ profile, roster }) => (
+            <section className="paper-panel brief-roster" key={profile.id}>
+              <h3>{profile.name}</h3>
+              {roster ? (
+                <>
+                  <div className="rule-list">
+                    <div>
+                      <span>Players listed</span>
+                      <strong>{roster.listed}</strong>
+                    </div>
+                    <div>
+                      <span>Listed as same program</span>
+                      <strong>{roster.sameProgram}</strong>
+                    </div>
+                    <div>
+                      <span>New to source dataset</span>
+                      <strong>{roster.newToDataset}</strong>
+                    </div>
+                    <div>
+                      <span>Returning IDs with prior minutes</span>
+                      <strong>{roster.representedPlayers}</strong>
+                    </div>
+                    <div>
+                      <span>Prior minutes represented</span>
+                      <strong>
+                        {roster.representedMinutes.toLocaleString()}
+                        {roster.representedMinutesShare == null
+                          ? ""
+                          : " · " +
+                            fmt(roster.representedMinutesShare * 100, 1) +
+                            "%"}
+                      </strong>
+                    </div>
+                  </div>
+                  <p className="note">
+                    The percentage uses {roster.priorMinutes.toLocaleString()} recorded
+                    2025–26 minutes for this program as its denominator. A
+                    missing listing is not evidence of a departure; a new entry
+                    is not proof of a freshman or transfer.
+                  </p>
+                </>
+              ) : (
+                <p className="empty">
+                  No same-edition roster observation is available for this
+                  profile.
+                </p>
+              )}
+              <Link href={`/basketball/recruiting/?team=${profile.id}`}>
+                Review roster observations and announcements →
+              </Link>
+            </section>
+          ))}
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">05 / Dated school evidence</div>
             <h2>What changed after those box scores?</h2>
           </div>
           <span className="note">

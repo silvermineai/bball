@@ -2156,10 +2156,17 @@ summary {
 }
 .brief-factor-panel > a,
 .brief-personnel > a,
-.brief-announcements > a {
+.brief-announcements > a,
+.brief-roster > a {
   font-size: 13px;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+.brief-roster {
+  min-width: 0;
+}
+.brief-roster .rule-list {
+  margin: 20px 0;
 }
 .brief-factor-panel > p {
   margin: 18px 0;
