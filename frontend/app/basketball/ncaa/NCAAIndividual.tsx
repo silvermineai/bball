@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   ncaaStatLabels,
+  ncaaFilterSearch,
+  parseNCAAFilters,
   sortNCAAPlayers,
   type NCAAIndividualPlayer,
   type NCAAIndividualRelease,
   type NCAAStatKey,
+  type NCAADivisionFilter,
   ncaaValueCoverage,
 } from "../../_lib/ncaa-individual";
 
@@ -17,12 +21,26 @@ const stats = Object.keys(ncaaStatLabels) as NCAAStatKey[];
 const percentStats = new Set<NCAAStatKey>(["fg_pct", "three_pct", "ft_pct"]);
 
 export default function NCAAIndividual() {
+  const params = useSearchParams();
+  const initial = parseNCAAFilters(params.toString());
   const { data, error } = useBasketballRelease<NCAAIndividualRelease>("ncaa-individual");
-  const [division, setDivision] = useState("1");
-  const [stat, setStat] = useState<NCAAStatKey>("ppg");
-  const [query, setQuery] = useState("");
+  const [division, setDivision] = useState<NCAADivisionFilter>(initial.division);
+  const [stat, setStat] = useState<NCAAStatKey>(initial.stat);
+  const [query, setQuery] = useState(initial.query);
   const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [division, stat, query]);
+  const [copied, setCopied] = useState("");
+  useEffect(() => {
+    const next = ncaaFilterSearch({ division, stat, query });
+    if (next !== window.location.search) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${window.location.pathname}${next}${window.location.hash}`,
+      );
+    }
+    setPage(0);
+    setCopied("");
+  }, [division, stat, query]);
   const rows = sortNCAAPlayers(
     (data?.players || []).filter((p) =>
       (division === "all" || p.division === +division) &&
@@ -43,13 +61,23 @@ export default function NCAAIndividual() {
     ? Object.values(data?.coverage.divisions || {}).reduce((sum, d) => sum + d.players, 0)
     : data?.coverage.divisions[division]?.players || 0;
   const coverage = data ? ncaaValueCoverage(data.players) : [];
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Leaderboard link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   return (
     <>
       <div className="toolbar">
-        <label className="control"><span>DIVISION</span><select value={division} onChange={(e) => setDivision(e.target.value)}><option value="1">Division I</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">All divisions</option></select></label>
+        <label className="control"><span>DIVISION</span><select value={division} onChange={(e) => setDivision(e.target.value as NCAADivisionFilter)}><option value="1">Division I</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">All divisions</option></select></label>
         <label className="control"><span>LEADERBOARD</span><select value={stat} onChange={(e) => setStat(e.target.value as NCAAStatKey)}>{stats.map((key) => <option key={key} value={key}>{ncaaStatLabels[key]}</option>)}</select></label>
         <label className="control"><span>PLAYER OR PROGRAM</span><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search national records" /></label>
+        <button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button>
       </div>
+      {copied && <p role="status">{copied}</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !data ? <p role="status" className="empty">Loading NCAA national records…</p> : <>
         <div className="strip" style={{ borderTop: "1px solid var(--ink)", marginBottom: 25 }}>
           <div><strong>{data.coverage.players.toLocaleString()}</strong><span>Published player records</span></div>

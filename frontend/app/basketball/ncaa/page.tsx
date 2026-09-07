@@ -1,4 +1,5 @@
 import NCAAIndividual from "./NCAAIndividual";
+import { Suspense } from "react";
 
 export const metadata = { title: "NCAA national basketball player leaders" };
 
@@ -16,7 +17,9 @@ export default function Page() {
           identity intact.
         </p>
       </div>
-      <NCAAIndividual />
+      <Suspense fallback={<p role="status">Loading NCAA national records…</p>}>
+        <NCAAIndividual />
+      </Suspense>
       <p className="note">
         Source snapshots were collected with a rate-limited fetcher that checks
         robots.txt and stores only the structured derivative. NCAA IDs are kept

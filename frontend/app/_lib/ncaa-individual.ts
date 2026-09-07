@@ -91,6 +91,37 @@ export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   ftm: "Free throws made",
 };
 
+export type NCAADivisionFilter = "1" | "2" | "3" | "all";
+export type NCAAFilters = {
+  division: NCAADivisionFilter;
+  stat: NCAAStatKey;
+  query: string;
+};
+
+const ncaaDivisions = new Set<NCAADivisionFilter>(["1", "2", "3", "all"]);
+
+/** Read supported NCAA leaderboard controls from a shareable query string. */
+export function parseNCAAFilters(search: string): NCAAFilters {
+  const params = new URLSearchParams(search);
+  const division = params.get("division") as NCAADivisionFilter | null;
+  const stat = params.get("stat") as NCAAStatKey | null;
+  return {
+    division: division && ncaaDivisions.has(division) ? division : "1",
+    stat: stat && stat in ncaaStatLabels ? stat : "ppg",
+    query: params.get("q") || "",
+  };
+}
+
+/** Serialize non-default NCAA leaderboard controls for a stable link. */
+export function ncaaFilterSearch(filters: NCAAFilters) {
+  const params = new URLSearchParams();
+  if (filters.division !== "1") params.set("division", filters.division);
+  if (filters.stat !== "ppg") params.set("stat", filters.stat);
+  if (filters.query) params.set("q", filters.query);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export type NCAAValueCoverage = {
   stat: NCAAStatKey;
   divisions: Record<1 | 2 | 3, number>;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ncaaFilterSearch,
   ncaaValueCoverage,
+  parseNCAAFilters,
   sortNCAAPlayers,
   type NCAAIndividualPlayer,
 } from "./ncaa-individual";
@@ -65,5 +67,28 @@ describe("NCAA individual leader sorting", () => {
       "High",
       "Low",
     ]);
+  });
+
+  it("round-trips shareable division, stat and name filters", () => {
+    const filters = parseNCAAFilters(
+      "?division=2&stat=three_fgm&q=Jordan%20Smith",
+    );
+    expect(filters).toEqual({
+      division: "2",
+      stat: "three_fgm",
+      query: "Jordan Smith",
+    });
+    expect(ncaaFilterSearch(filters)).toBe(
+      "?division=2&stat=three_fgm&q=Jordan+Smith",
+    );
+  });
+
+  it("withholds invalid NCAA controls and omits defaults", () => {
+    expect(parseNCAAFilters("?division=5&stat=made_up&q=")).toEqual({
+      division: "1",
+      stat: "ppg",
+      query: "",
+    });
+    expect(ncaaFilterSearch({ division: "1", stat: "ppg", query: "" })).toBe("");
   });
 });
