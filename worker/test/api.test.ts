@@ -42,6 +42,9 @@ describe("bball api", () => {
     const film = await app.request("/film/");
     expect(film.status).toBe(302);
     expect(film.headers.get("location")).toBe("/basketball/film/");
+    const conferences = await app.request("/conferences/");
+    expect(conferences.status).toBe(302);
+    expect(conferences.headers.get("location")).toBe("/basketball/conferences/");
   });
 
   it("rejects invalid basketball player parameters before querying D1", async () => {

@@ -317,6 +317,7 @@ app.get("/basketball/*", async (c) => {
 for (const path of ["scout", "gameplan", "recruiting", "pressroom", "film", "rankings", "season", "leaders", "conferences", "teams", "games", "players", "login", "admin"]) {
   const redirectLegacy = (c: Context<AppEnv>) => { const u = new URL(c.req.url); return c.redirect(`/basketball${u.pathname}${u.search}`, 302); };
   app.get(`/${path}`, redirectLegacy);
+  app.get(`/${path}/`, redirectLegacy);
   app.get(`/${path}/*`, redirectLegacy);
 }
 
