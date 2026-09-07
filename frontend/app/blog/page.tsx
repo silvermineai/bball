@@ -26,6 +26,11 @@ const guides = [
     "Read the matchup before you read the score.",
     "A practical guide to Four Factors, pace, forecast ranges and roster evidence for 2026–27 college basketball.",
   ],
+  [
+    "basketball-impact",
+    "Read impact with the lineup context intact.",
+    "How to use ORAPM, DRAPM, net RAPM and possession samples when comparing college players.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

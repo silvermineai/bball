@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   "understanding-player-epa": "Production is a question of context.",
   "market-comparison": "Before measuring an edge, check the clock.",
   "basketball-four-factors": "Read the matchup before you read the score.",
+  "basketball-impact": "Read impact with the lineup context intact.",
 };
 export function generateStaticParams() {
   return [
@@ -160,6 +161,8 @@ export default async function Page({
         </>
       ) : slug === "basketball-four-factors" ? (
         <BasketballFourFactors />
+      ) : slug === "basketball-impact" ? (
+        <BasketballImpact />
       ) : (
         <>
           <p className="deck">
@@ -283,6 +286,68 @@ function BasketballFourFactors() {
         the player-level archive, use the{" "}
         <Link href="/basketball/scouting-board/">scouting board</Link> to set
         your own production priorities and export the evidence behind a rank.
+      </p>
+    </>
+  );
+}
+
+function BasketballImpact() {
+  return (
+    <>
+      <p className="deck">
+        A player’s box score records what happened while they were on the
+        floor. Adjusted plus-minus asks a harder question: how did the team’s
+        scoring balance change after accounting for the teammates and opponents
+        in those lineups?
+      </p>
+      <p>
+        The <Link href="/basketball/impact/">impact board</Link> publishes
+        NCAA-derived regularized adjusted plus-minus (RAPM) from the attributed
+        SportsDataverse release. ORAPM describes the offensive component,
+        DRAPM the defensive component, and net RAPM is their sum. The publisher
+        fits a ridge model across Division I stints, which helps keep a player
+        with a small or highly unusual lineup sample from dominating the fit.
+      </p>
+      <h2>Start with the possession denominator</h2>
+      <p>
+        A large positive estimate with 2,000 possessions has a different level
+        of evidence than the same estimate with 250. The board’s qualified
+        view requires at least 500 offensive and 500 defensive possessions. That
+        threshold is a browsing rule, not a guarantee that the estimate is
+        stable. Use the possession columns to keep the sample visible when you
+        sort by ORAPM, DRAPM or net RAPM.
+      </p>
+      <h2>Keep offense and defense separate</h2>
+      <p>
+        Net RAPM is useful for a first pass, but it can hide a player’s role. A
+        strong ORAPM with a neutral DRAPM suggests a different film question
+        than a defensive specialist with the reverse profile. Sort each
+        component, then compare the result with the{" "}
+        <Link href="/basketball/players/">box-score archive</Link> for minutes,
+        shooting, rebounding and turnovers. These measures answer related
+        questions and should not be added into a new composite without a
+        separate validated model.
+      </p>
+      <h2>Do not turn a historical estimate into a roster claim</h2>
+      <p>
+        RAPM describes recorded stints in a source season. It does not establish
+        a player’s current team, health, eligibility or expected role next
+        season. NCAA source IDs remain in their own identity namespace; they are
+        not joined to ESPN identities by name alone. For 2026–27 preparation,
+        put the estimate beside the dated{" "}
+        <Link href="/basketball/recruiting/">recruiting evidence</Link> and
+        current roster observations, then confirm availability with the school.
+      </p>
+      <h2>Use it to choose film, not to skip film</h2>
+      <p>
+        A useful workflow is to identify a player whose component estimate
+        changes the matchup, inspect the possession sample, and then write a
+        question for film. Does the offensive value come from creation, shot
+        selection or finishing? Does the defensive value survive different
+        matchups? The{" "}
+        <Link href="/basketball/gameplan/">game-plan workbench</Link> turns those
+        questions into matchup preparation while keeping the forecast model’s
+        roster limitations explicit.
       </p>
     </>
   );
