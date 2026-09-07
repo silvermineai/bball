@@ -62,10 +62,24 @@ def run_logged(args, log_path, cwd=ROOT):
                 stderr=subprocess.STDOUT,
                 check=False,
             )
-        if result.returncode == 0:
-            return
         tail = log_path.read_text(errors="replace").splitlines()[-80:]
         output = "\n".join(tail)
+        # Wrangler 4.93 can report a successful import receipt and still exit
+        # one when its poll stream closes with an empty error. The receipt is
+        # authoritative: it includes the final D1 bookmark and query count.
+        completed_receipt = (
+            '"success": true' in output
+            and '"finalBookmark"' in output
+            and "Processed " in output
+        )
+        if result.returncode == 0 or completed_receipt:
+            if result.returncode != 0:
+                print(
+                    "Remote SQL import returned a successful D1 receipt despite "
+                    "Wrangler exit status 1; continuing.",
+                    file=sys.stderr,
+                )
+            return
         retryable = (
             "Upstream service unavailable" in output
             or "code: 7009" in output
