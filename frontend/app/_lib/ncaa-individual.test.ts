@@ -3,6 +3,7 @@ import {
   ncaaFilterSearch,
   ncaaValueCoverage,
   parseNCAAFilters,
+  publisherRank,
   sortNCAAPlayers,
   type NCAAIndividualPlayer,
 } from "./ncaa-individual";
@@ -90,5 +91,11 @@ describe("NCAA individual leader sorting", () => {
       query: "",
     });
     expect(ncaaFilterSearch({ division: "1", stat: "ppg", query: "" })).toBe("");
+  });
+
+  it("only reports rank fields that the source actually publishes", () => {
+    const row = { ...player("Ranked", 20), ppg_rank: 17, pts: 900 };
+    expect(publisherRank(row, "ppg")).toBe(17);
+    expect(publisherRank(row, "pts")).toBeNull();
   });
 });

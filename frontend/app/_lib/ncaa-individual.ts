@@ -152,3 +152,20 @@ export function sortNCAAPlayers(rows: NCAAIndividualPlayer[], stat: NCAAStatKey)
     return bv - av || a.name.localeCompare(b.name) || a.player_id - b.player_id;
   });
 }
+
+const publisherRankKeys: Partial<Record<NCAAStatKey, keyof NCAAIndividualPlayer>> = {
+  ppg: "ppg_rank",
+  rpg: "rpg_rank",
+  apg: "apg_rank",
+};
+
+/** Return a rank explicitly published for this measure, never a filtered row number. */
+export function publisherRank(
+  player: NCAAIndividualPlayer,
+  stat: NCAAStatKey,
+): number | null {
+  const key = publisherRankKeys[stat];
+  if (!key) return null;
+  const value = player[key];
+  return typeof value === "number" ? value : null;
+}

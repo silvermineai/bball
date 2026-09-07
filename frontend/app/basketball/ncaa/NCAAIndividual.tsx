@@ -9,6 +9,7 @@ import {
   ncaaStatLabels,
   ncaaFilterSearch,
   parseNCAAFilters,
+  publisherRank,
   sortNCAAPlayers,
   type NCAAIndividualPlayer,
   type NCAAIndividualRelease,
@@ -54,8 +55,8 @@ export default function NCAAIndividual() {
     return value == null ? "—" : fmt(value, percentStats.has(stat) ? 1 : stat === "ast_to" ? 2 : 1);
   };
   const download = () => downloadCsv(`ncaa-leaders-${division}-${stat}.csv`, toCsv(
-    ["Rank", "Player", "NCAA ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat]],
-    rows.map((p, i) => [i + 1, p.name, p.player_id, p.team_name, p.division, p.conference, p.class_year, p.position, p.games, p[stat]]),
+    ["View order", "Publisher rank", "Player", "NCAA ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat]],
+    rows.map((p, i) => [i + 1, publisherRank(p, stat), p.name, p.player_id, p.team_name, p.division, p.conference, p.class_year, p.position, p.games, p[stat]]),
   ));
   const divisionCount = division === "all"
     ? Object.values(data?.coverage.divisions || {}).reduce((sum, d) => sum + d.players, 0)
@@ -97,7 +98,8 @@ export default function NCAAIndividual() {
           </div>
         </details>
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{rows.length.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} published values · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${data.season}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td></tr>)}</tbody></table></div>
+        <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Publisher rank is shown only when that NCAA page supplied a rank for the selected measure.</p>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Publisher rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${data.season}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}
         <div className="pagination"><span>{rows.length.toLocaleString()} records · page {page + 1} of {Math.max(1, Math.ceil(rows.length / 40))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 40 >= rows.length} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       </>}

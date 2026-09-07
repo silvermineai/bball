@@ -24,7 +24,8 @@ export default function Page() {
         Source snapshots were collected with a rate-limited fetcher that checks
         robots.txt and stores only the structured derivative. NCAA IDs are kept
         separate from ESPN and SportsDataverse identities; no name-only join is
-        performed. “Search archive by name” is a research lead only: verify the
+        performed. Publisher rank is shown only when the source supplies it;
+        “Search archive by name” is a research lead only: verify the
         program, season and source identity before treating records as the same
         player. <a href="https://stats.ncaa.org/rankings/national_ranking">NCAA Statistics ↗</a>
       </p>
