@@ -18,7 +18,7 @@ The publication covers football and men’s college basketball with a Next.js fr
 | Model notebook | `/football/methodology/` | Holdout results, source receipts, missing coverage and limitations |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
-The initial edition includes **18,758 schedule records**, **82,187 player box-score rows**, and **744 upcoming FBS forecasts**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **66.2% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
+The current football archive contains **18,758 schedule records** across 2022–26, **259,017 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **744 upcoming FBS forecasts**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **66.2% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 
@@ -38,7 +38,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
 | Scouting archive | `/basketball/scout/` | Preserved scouting reports and coaching tools |
 
-The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** and **10.46-point margin MAE**. The nominal 80% margin interval covered **78.7%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
+The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** and **10.46-point margin MAE**. The historical player archive retains **3.68 million identified box-score rows** across 24 seasons. The nominal 80% margin interval covered **78.7%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
 
 Existing basketball URLs such as `/scout/333` redirect to their corresponding archive route. Native pages replace the old desk, player index and recruiting landing pages; the remaining scouting tools use the preserved application.
 
@@ -50,7 +50,7 @@ See [shooting evidence, source coverage and Cloudflare storage](docs/BASKETBALL_
 
 ## Forecast record
 
-The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The initial ledger contains 2,323 forecasts, of which 444 have confirmed starts. No prospective result or market advantage is claimed before qualifying games settle.
+The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The ledger contains 2,323 forecasted games, of which 444 have confirmed starts. The [immutable reading archive](https://bball.silvermine.dev/research/briefs/) preserves each captured brief version separately. No prospective result or market advantage is claimed before qualifying games settle.
 
 A credential-driven The Odds API connector records bookmaker updates and capture times, rejects ambiguous game matches and supports matched-game market comparisons. No odds credential is currently configured. See [the ledger protocol, source policy and publishing commands](docs/RESEARCH_LEDGER.md).
 
@@ -109,7 +109,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 .venv/bin/python scripts/publish-basketball.py
 ```
 
-Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. No recurring refresh job is installed yet.
+Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized weekly GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment also captures the immutable matchup reading archive.
 
 ## Data policy
 

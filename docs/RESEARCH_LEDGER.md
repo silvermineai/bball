@@ -47,7 +47,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.odds_feed --sport both
 .venv/bin/python scripts/publish-research.py
 ```
 
-Refresh football or basketball first to obtain updated schedules and results. Both existing sport publish scripts now register forecasts and observe source states before rebuilding, then sync append-only ledger rows to D1 before deployment. This does not install a recurring ingestion job. Automated collection, live account validation, settlement against future real finals and verified closing-line feeds remain open work.
+Refresh football or basketball first to obtain updated schedules and results. Both existing sport publish scripts now register forecasts and observe source states before rebuilding, then sync append-only ledger rows to D1 before deployment. The repository defines a serialized weekly GitHub Actions refresh in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml), with manual sport selection and an opt-in licensed odds step. Repository secrets are required before its first run. Automated collection freshness, live account validation, settlement against future real finals and verified closing-line feeds remain open work.
 
 ## Release verification
 

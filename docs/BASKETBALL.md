@@ -71,7 +71,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 .venv/bin/python scripts/publish-basketball.py
 ```
 
-The publisher refreshes sources, tests, builds both frontend applications, syncs D1 and deploys the Worker using credentials supplied through `~/.env`. No recurring job is installed yet. Football and basketball refresh scripts rebuild the shared site while leaving the other sport's data edition intact.
+The publisher refreshes sources, tests, builds both frontend applications, syncs D1 and deploys the Worker using credentials supplied through `~/.env`. The repository also defines a serialized weekly GitHub Actions refresh with manual sport selection in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml); it requires the same Cloudflare credentials as repository secrets. Football and basketball refresh scripts rebuild the shared site while leaving the other sport's data edition intact.
 
 ## Release verification
 
@@ -86,4 +86,4 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 - Add dated roster features and extend the weekly experiment to additional seasons and prospective operation. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Finish migrating remaining basketball archive tools to Next.js.
-- Install monitored recurring ingestion/publishing and validate freshness against expected source coverage.
+- Validate the first scheduled refresh run and monitor freshness against expected source coverage.

@@ -101,13 +101,15 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 # Build Next.js and the preserved basketball SPA
 npm --prefix frontend run build
 
-# Full refresh + validation + D1 sync + deployment (manual, not a scheduled job)
+# Full refresh + validation + D1 sync + deployment
 .venv/bin/python scripts/publish-football.py
 ```
 
 The publisher requires requests, numpy and python-dotenv. Cloudflare credentials are read from the process environment or `CF_API_TOKEN_ACCOUNT` / `CF_ACCOUNT_ID` in `~/.env`. They are passed to Wrangler through its environment only. No secrets enter the frontend.
 
 SQL imports replace current schedule/stat snapshots by dataset and season, while keeping historical prediction and market observations. There are no destructive changes to basketball tables. The local football database is under ignored `.local/`; the existing basketball SQLite database is separate.
+
+The repository also defines a serialized weekly GitHub Actions refresh in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml). It uses the same publisher, requires `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT` repository secrets, and exposes manual sport selection. A successful deployment invokes the immutable brief archive capture. The local `~/.env` workflow remains available for development and audited manual runs.
 
 ## Remaining goal scope
 
@@ -118,7 +120,7 @@ SQL imports replace current schedule/stat snapshots by dataset and season, while
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
-- Add recurring ingestion/deployment with monitored job state; no recurring job is installed yet.
+- Validate the first scheduled refresh run and monitor source freshness and expected coverage after each run.
 
 ## Historical player expansion
 

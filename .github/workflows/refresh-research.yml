@@ -1,0 +1,107 @@
+name: Refresh research publication
+
+on:
+  schedule:
+    # Weekly source refresh; manual dispatch remains available for a faster
+    # correction after a publisher releases an amended file.
+    - cron: "17 10 * * 1"
+  workflow_dispatch:
+    inputs:
+      sport:
+        description: Which source/model publisher should run?
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - football
+          - basketball
+      capture_odds:
+        description: Capture one licensed odds snapshot after the refresh
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: research-publication
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      CF_API_TOKEN_ACCOUNT: ${{ secrets.CF_API_TOKEN_ACCOUNT }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            worker/package-lock.json
+
+      - name: Install source dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./ncaa_scraper
+
+      - name: Install JavaScript dependencies
+        run: |
+          npm ci --prefix frontend
+          npm ci --prefix worker
+
+      - name: Require Cloudflare deployment credentials
+        run: |
+          test -n "$CF_ACCOUNT_ID" || { echo "Missing repository secret CF_ACCOUNT_ID" >&2; exit 1; }
+          test -n "$CF_API_TOKEN_ACCOUNT" || { echo "Missing repository secret CF_API_TOKEN_ACCOUNT" >&2; exit 1; }
+
+      - name: Refresh selected sources, models and publication
+        env:
+          REFRESH_SPORT: ${{ inputs.sport || 'both' }}
+        run: |
+          case "$REFRESH_SPORT" in
+            football)
+              python scripts/publish-football.py
+              ;;
+            basketball)
+              python scripts/publish-basketball.py
+              ;;
+            both)
+              python scripts/publish-football.py
+              python scripts/publish-basketball.py
+              ;;
+            *)
+              echo "Unsupported sport: $REFRESH_SPORT" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Capture licensed odds snapshot
+        if: ${{ inputs.capture_odds == true }}
+        run: |
+          test -n "$THE_ODDS_API_KEY" || { echo "capture_odds requires repository secret THE_ODDS_API_KEY" >&2; exit 1; }
+          python scripts/publish-research.py --odds
+
+      - name: Record publication summary
+        run: |
+          {
+            echo "### Research publication completed"
+            echo "- Source/model selection: \`${{ inputs.sport || 'both' }}\`"
+            echo "- Odds capture requested: \`${{ inputs.capture_odds || false }}\`"
+            echo "- Archive capture runs automatically after each successful Worker deployment."
+          } >> "$GITHUB_STEP_SUMMARY"
