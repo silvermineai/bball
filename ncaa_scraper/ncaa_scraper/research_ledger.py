@@ -10,7 +10,9 @@ import hashlib
 import json
 import math
 import sqlite3
+import tempfile
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -57,6 +59,42 @@ def connect(path=DB):
         (ROOT / "worker/migrations/0010_research_ledger.sql").read_text()
     )
     return conn
+
+
+@contextmanager
+def source_connection(sport):
+    """Open the source store, rebuilding it from the publisher SQL export if needed.
+
+    CI starts from a clean checkout and may retain the D1-ready SQL export while
+    the intermediate SQLite file is absent. Replaying that export against the
+    same schema keeps ledger state validation fail-closed without creating an
+    empty source database through SQLite's default open behavior.
+    """
+    path = ROOT / f".local/{sport}.sqlite3"
+    if path.exists():
+        source = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            yield source
+        finally:
+            source.close()
+        return
+
+    sql_path = ROOT / f".local/{sport}.sql"
+    if not sql_path.exists():
+        raise FileNotFoundError(f"Missing source database and SQL export for {sport}")
+    migration = (
+        ROOT / "worker/migrations/0008_football.sql"
+        if sport == "football"
+        else ROOT / "worker/migrations/0009_basketball_research.sql"
+    )
+    with tempfile.TemporaryDirectory(prefix=f"ledger-{sport}-") as directory:
+        source = sqlite3.connect(Path(directory) / f"{sport}.sqlite3")
+        try:
+            source.executescript(migration.read_text())
+            source.executescript(sql_path.read_text())
+            yield source
+        finally:
+            source.close()
 
 
 def register(conn, sport, game, model, generated_at, now):
@@ -156,46 +194,43 @@ def ingest_published(conn, now):
                 register(
                     conn, sport, game, overview["model"], overview["generated_at"], now
                 )
-        path = ROOT / f".local/{sport}.sqlite3"
-        # Opening read-only prevents silently creating an empty source database.
-        source = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-        source.row_factory = sqlite3.Row
-        prefix = "football" if sport == "football" else "bb"
-        clock = "kickoff" if sport == "football" else "starts_at"
-        schedule_receipts = {
-            r["season"]: json.loads(r["receipt_json"])
-            for r in source.execute(
-                f"SELECT * FROM {prefix}_sources WHERE dataset='schedule'"
-            )
-        }
-        for row in conn.execute(
-            "SELECT DISTINCT game_id FROM audit_predictions WHERE sport=?", (sport,)
-        ).fetchall():
-            g = source.execute(
-                f"SELECT * FROM {prefix}_games WHERE id=?", (row[0],)
-            ).fetchone()
-            state = None
-            if g:
-                receipt = schedule_receipts[g["season"]]
-                state = {
-                    k: g[k]
-                    for k in (
-                        "home_id",
-                        "away_id",
-                        "home_score",
-                        "away_score",
-                        "completed",
-                        "time_tbd",
-                    )
-                }
-                state.update(
-                    starts_at=g[clock],
-                    source_url=receipt["url"],
-                    source_fetched_at=receipt["fetched_at"],
-                    source_sha256=receipt["sha256"],
+        with source_connection(sport) as source:
+            source.row_factory = sqlite3.Row
+            prefix = "football" if sport == "football" else "bb"
+            clock = "kickoff" if sport == "football" else "starts_at"
+            schedule_receipts = {
+                r["season"]: json.loads(r["receipt_json"])
+                for r in source.execute(
+                    f"SELECT * FROM {prefix}_sources WHERE dataset='schedule'"
                 )
-            observe_state(conn, sport, row[0], state, now)
-        source.close()
+            }
+            for row in conn.execute(
+                "SELECT DISTINCT game_id FROM audit_predictions WHERE sport=?", (sport,)
+            ).fetchall():
+                g = source.execute(
+                    f"SELECT * FROM {prefix}_games WHERE id=?", (row[0],)
+                ).fetchone()
+                state = None
+                if g:
+                    receipt = schedule_receipts[g["season"]]
+                    state = {
+                        k: g[k]
+                        for k in (
+                            "home_id",
+                            "away_id",
+                            "home_score",
+                            "away_score",
+                            "completed",
+                            "time_tbd",
+                        )
+                    }
+                    state.update(
+                        starts_at=g[clock],
+                        source_url=receipt["url"],
+                        source_fetched_at=receipt["fetched_at"],
+                        source_sha256=receipt["sha256"],
+                    )
+                observe_state(conn, sport, row[0], state, now)
     conn.commit()
 
 

@@ -14,6 +14,7 @@ from ncaa_scraper.research_ledger import (
     export_sql,
     observe_state,
     register,
+    source_connection,
     timestamp,
 )
 
@@ -306,6 +307,25 @@ class LedgerTests(unittest.TestCase):
                 fetch("football", "SECRET_TEST_KEY")
             self.assertNotIn("SECRET_TEST_KEY", str(failure.exception))
             self.assertEqual(get.call_count, 1)
+
+    def test_source_sql_export_is_a_safe_ci_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".local").mkdir()
+            (root / "worker/migrations").mkdir(parents=True)
+            (root / "worker/migrations/0008_football.sql").write_text(
+                (ROOT / "worker/migrations/0008_football.sql").read_text()
+            )
+            (root / ".local/football.sql").write_text(
+                "INSERT INTO football_sources VALUES ('schedule',2026,'{}');"
+            )
+            with patch("ncaa_scraper.research_ledger.ROOT", root):
+                with source_connection("football") as source:
+                    self.assertEqual(
+                        source.execute("SELECT count(*) FROM football_sources").fetchone()[0],
+                        1,
+                    )
+            self.assertFalse((root / ".local/football.sqlite3").exists())
 
 
 if __name__ == "__main__":
