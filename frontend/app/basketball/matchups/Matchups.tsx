@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import type { BBGame, BBRosterSummary } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
@@ -180,6 +181,9 @@ export default function Matchups({
         <button className="button secondary" type="button" onClick={share}>
           Copy slate link
         </button>
+        <Link className="button secondary" href="/research/scorecard/?sport=basketball">
+          Forecast record
+        </Link>
       </div>
       {copied && <p role="status">{copied}</p>}
       <div className="match-grid">

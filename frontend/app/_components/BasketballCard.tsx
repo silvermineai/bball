@@ -104,7 +104,10 @@ export default function BasketballCard({
         {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
         roster changes are not model features.
         <br />
-        No verified pregame market line imported.
+        No verified pregame market line imported.{" "}
+        <Link href="/research/scorecard/?sport=basketball">
+          Check the forecast record →
+        </Link>
       </p>
       {g.prediction && (
         <Link className="note" href={`/basketball/briefs/${g.id}/`}>
