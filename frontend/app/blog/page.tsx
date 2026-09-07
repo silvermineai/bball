@@ -21,6 +21,11 @@ const guides = [
     "Before measuring an edge, check the clock.",
     "Why archived odds and verified pregame observations belong in different evaluations.",
   ],
+  [
+    "basketball-four-factors",
+    "Read the matchup before you read the score.",
+    "A practical guide to Four Factors, pace, forecast ranges and roster evidence for 2026–27 college basketball.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

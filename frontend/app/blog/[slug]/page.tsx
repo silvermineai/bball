@@ -2,11 +2,13 @@ import Link from "next/link";
 import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
+import { getBasketball } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 const titles: Record<string, string> = {
   "reading-the-forecast": "What a preseason model knows. And what it misses.",
   "understanding-player-epa": "Production is a question of context.",
   "market-comparison": "Before measuring an edge, check the clock.",
+  "basketball-four-factors": "Read the matchup before you read the score.",
 };
 export function generateStaticParams() {
   return [
@@ -156,6 +158,8 @@ export default async function Page({
             original names when their meaning has not been established.
           </p>
         </>
+      ) : slug === "basketball-four-factors" ? (
+        <BasketballFourFactors />
       ) : (
         <>
           <p className="deck">
@@ -218,5 +222,68 @@ export default async function Page({
         .
       </p>
     </article>
+  );
+}
+
+function BasketballFourFactors() {
+  const b = getBasketball();
+  return (
+    <>
+      <p className="deck">
+        A college basketball forecast is more useful when it tells you which
+        possessions deserve attention. Start with shooting, turnovers,
+        rebounding and free throws, then use pace and roster evidence to plan
+        the questions you will ask in film.
+      </p>
+      <p>
+        Silvermine rates {b.ratings.length} programs from paired 2025–26 box
+        scores and publishes {b.coverage.forecast_games.toLocaleString()}{" "}
+        2026–27 forecasts in this edition. The model estimates efficiency and
+        tempo from historical team performance. It does not copy a proprietary
+        KenPom rating or claim to know a player&apos;s current health or role.
+      </p>
+      <h2>Four questions for every possession</h2>
+      <p>
+        Effective field-goal percentage gives made threes their extra value; a
+        team that creates efficient shots can survive an ordinary free-throw
+        night. Turnovers per possession measure how often an offense gives the
+        ball away before it can create a shot. Offensive rebounding rate asks
+        whether a missed shot becomes another possession. Free-throw rate
+        describes pressure at the rim and the value of getting to the line.
+      </p>
+      <p>
+        Read offense and defense together. A high offensive rebounding rate can
+        be muted by an opponent that ends possessions with defensive rebounds. A
+        low turnover rate matters less if the team cannot generate efficient
+        attempts. Each program dossier shows the numerator, denominator and
+        number of games behind the displayed split.
+      </p>
+      <h2>Translate the forecast into a plan</h2>
+      <p>
+        The published 80% margin range is a reminder that the score is a
+        distribution, not a promise. Open the{" "}
+        <Link href="/basketball/gameplan/">game-plan workbench</Link>, choose
+        the floor, and compare the matchup factors. The roster panel places
+        source-listed 2026–27 movement beside the historical rotation. A
+        returning-player match or different-program observation is a question
+        for staff review, not proof of availability or a new model input.
+      </p>
+      <h2>What the model has not seen</h2>
+      <p>
+        A box-score model cannot identify an injury announced after its cutoff,
+        a changed role, a redshirt decision or a late transfer unless a later
+        source edition records it. The recruiting board preserves dated school
+        statements and prior production with explicit coverage limits. It does
+        not turn a signing into an eligibility ruling. Keep those facts beside
+        the forecast and report uncertainty when you write the preview.
+      </p>
+      <p>
+        For the formulas, independent holdout and source receipts, read the{" "}
+        <Link href="/basketball/model/">basketball model notebook</Link>. For
+        the player-level archive, use the{" "}
+        <Link href="/basketball/scouting-board/">scouting board</Link> to set
+        your own production priorities and export the evidence behind a rank.
+      </p>
+    </>
   );
 }
