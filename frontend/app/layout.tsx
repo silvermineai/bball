@@ -65,7 +65,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <br />
             Normalized statistics and independent Silvermine estimates.
             <br />
-            <Link href="/football/methodology/">
+            <Link href="/research/coverage/">
               Sources, coverage & limitations →
             </Link>
           </p>

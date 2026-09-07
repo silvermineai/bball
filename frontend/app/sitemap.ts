@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/",
     "/research/scorecard/",
     "/research/briefs/",
+    "/research/coverage/",
     "/basketball/",
     "/basketball/ratings/",
     "/basketball/programs/",
