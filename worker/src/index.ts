@@ -305,7 +305,7 @@ app.get("/basketball/*", async (c) => {
   // Only old, known archive routes receive the SPA fallback. New publication
   // paths and unknown routes should retain a genuine 404.
   if (
-    !/^\/basketball\/(scout|gameplan|pressroom|film|rankings|season|leaders|conferences|teams|games|players|login|admin)(\/|$)/.test(
+    !/^\/basketball\/(scout|gameplan|pressroom|rankings|season|leaders|conferences|teams|games|players|login|admin)(\/|$)/.test(
       url.pathname,
     )
   )

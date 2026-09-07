@@ -11,14 +11,14 @@ describe("bball api", () => {
   it("serves native basketball pages while preserving known archive routes", async () => {
     const fetch = vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
-      if (path === "/basketball/" || path === "/basketball/players/") {
+      if (path === "/basketball/" || path === "/basketball/players/" || path === "/basketball/film/") {
         return new Response("native page");
       }
       if (path === "/basketball-shell/") return new Response("archive shell");
       return new Response("not found", { status: 404 });
     });
     const env = { ASSETS: { fetch } };
-    for (const path of ["/basketball/", "/basketball/players/"]) {
+    for (const path of ["/basketball/", "/basketball/players/", "/basketball/film/"]) {
       const response = await app.request(path, {}, env);
       expect(await response.text()).toBe("native page");
     }
