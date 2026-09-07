@@ -142,7 +142,12 @@ export default function Page() {
             .filter((g) => g.prediction)
             .slice(0, 3)
             .map((g) => (
-              <BasketballCard key={g.id} game={g} />
+              <BasketballCard
+                key={g.id}
+                game={g}
+                homeRoster={r.team_summaries?.find((summary) => summary.team_id === g.home_id)}
+                awayRoster={r.team_summaries?.find((summary) => summary.team_id === g.away_id)}
+              />
             ))}
         </div>
       </section>

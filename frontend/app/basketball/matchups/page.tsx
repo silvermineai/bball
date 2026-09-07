@@ -1,11 +1,12 @@
 import { Suspense } from "react";
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import Matchups from "./Matchups";
 export const metadata = {
   title: "2026–27 college basketball matchup predictions",
 };
 export default function Page() {
   const d = getBasketball();
+  const rosters = getRosters();
   return (
     <>
       <div className="page-title">
@@ -14,8 +15,9 @@ export default function Page() {
         <p>
           Search the published slate and compare score estimates, pace and
           uncertainty. These forecasts use historical efficiency, calibrated on
-          a separate season. Injuries, transfers and current roster composition
-          are not yet model inputs.
+          a separate season. The desk also shows observed prior-minute coverage
+          for roster context; injuries, eligibility and availability remain
+          outside the model.
         </p>
         <p className="note">
           Use the triage controls to surface the strongest model signals, the
@@ -25,7 +27,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
-        <Matchups games={d.upcoming} />
+        <Matchups games={d.upcoming} rosterSummaries={rosters.team_summaries || []} />
       </Suspense>
     </>
   );

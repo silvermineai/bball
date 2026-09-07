@@ -1,8 +1,16 @@
 import Link from "next/link";
-import type { BBGame } from "../_lib/basketball-types";
+import type { BBGame, BBRosterSummary } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
-export default function BasketballCard({ game: g }: { game: BBGame }) {
+export default function BasketballCard({
+  game: g,
+  homeRoster,
+  awayRoster,
+}: {
+  game: BBGame;
+  homeRoster?: BBRosterSummary;
+  awayRoster?: BBRosterSummary;
+}) {
   const p = g.prediction;
   const signal = p ? forecastSignal(p) : null;
   return (
@@ -61,6 +69,20 @@ export default function BasketballCard({ game: g }: { game: BBGame }) {
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
+          {(homeRoster || awayRoster) && (
+            <div className="roster-context">
+              <div className="match-detail muted">
+                <span>Prior minutes represented · H / A</span>
+                <span>
+                  {rosterShare(homeRoster?.represented_prior_minutes_share)} / {rosterShare(awayRoster?.represented_prior_minutes_share)}
+                </span>
+              </div>
+              <small>
+                Observed listings only; this workload context is not an
+                eligibility, availability or forecast input.
+              </small>
+            </div>
+          )}
         </>
       ) : (
         <p className="note">
@@ -83,4 +105,8 @@ export default function BasketballCard({ game: g }: { game: BBGame }) {
       )}
     </article>
   );
+}
+
+function rosterShare(value: number | null | undefined) {
+  return value == null ? "—" : `${fmt(value * 100, 0)}%`;
 }

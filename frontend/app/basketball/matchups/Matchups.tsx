@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { BBGame } from "../../_lib/basketball-types";
+import type { BBGame, BBRosterSummary } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
@@ -11,7 +11,13 @@ import {
   type MatchupCoverage,
   type MatchupSort,
 } from "../../_lib/basketball-matchups";
-export default function Matchups({ games }: { games: BBGame[] }) {
+export default function Matchups({
+  games,
+  rosterSummaries,
+}: {
+  games: BBGame[];
+  rosterSummaries: BBRosterSummary[];
+}) {
   const params = useSearchParams();
   const initial = parseMatchupFilters(params.toString());
   const [q, setQ] = useState(initial.team),
@@ -44,6 +50,7 @@ export default function Matchups({ games }: { games: BBGame[] }) {
     ),
     sort,
   );
+  const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -175,7 +182,12 @@ export default function Matchups({ games }: { games: BBGame[] }) {
       {copied && <p role="status">{copied}</p>}
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
-          <BasketballCard key={g.id} game={g} />
+          <BasketballCard
+            key={g.id}
+            game={g}
+            homeRoster={rosterByTeam.get(g.home_id)}
+            awayRoster={rosterByTeam.get(g.away_id)}
+          />
         ))}
       </div>
       {!rows.length && (
