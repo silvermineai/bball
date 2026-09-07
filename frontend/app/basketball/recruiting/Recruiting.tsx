@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { BBRosters } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   sortRosterObservations,
   type RosterSortKey,
@@ -135,6 +136,51 @@ export default function Recruiting() {
               : "Both sides of this comparison require recorded playing time. A different program record describes historical participation, not why or when a transfer happened."}{" "}
             New to the dataset does not mean freshman.
           </p>
+          <div className="section-heading" style={{ marginBottom: 20 }}>
+            <p>
+              {rows.length.toLocaleString()} matching observations · export
+              respects the season, search, observation and sort filters
+            </p>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  `basketball-roster-observations-${season}.csv`,
+                  toCsv(
+                    [
+                      "Player",
+                      "Source ID",
+                      "Current program",
+                      "Current program ID",
+                      "Prior observed programs",
+                      "Observation",
+                      "Position",
+                      "Source-listed class",
+                      "Height",
+                      "Weight",
+                      "Source URL",
+                    ],
+                    rows.map((p) => [
+                      p.name,
+                      p.id,
+                      p.team,
+                      p.team_id,
+                      p.previous_teams.join("; "),
+                      labels[p.status],
+                      p.position,
+                      p.class_year,
+                      p.height,
+                      p.weight,
+                      p.source_url,
+                    ]),
+                  ),
+                )
+              }
+            >
+              Download CSV ↓
+            </button>
+          </div>
           <div className="table-scroll">
             <table className="data-table">
               <thead>
