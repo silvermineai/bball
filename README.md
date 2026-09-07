@@ -55,6 +55,8 @@ See [shooting evidence, source coverage and Cloudflare storage](docs/BASKETBALL_
 
 The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The ledger contains 2,323 forecasted games, of which 411 have confirmed starts. The [immutable reading archive](https://bball.silvermine.dev/research/briefs/) preserves each captured brief version separately. No prospective result or market advantage is claimed before qualifying games settle.
 
+The [historical market archive](https://bball.silvermine.dev/research/markets/) exposes retained football market observations with matchup, source and capture-time context. These rows are labeled archival references and stay outside prospective odds evaluation until the timing evidence qualifies.
+
 The [coverage desk](https://bball.silvermine.dev/research/coverage/) gathers current source editions, player/recruiting counts, model holdouts, forecast clocks and explicit source limitations in one dated view.
 
 A credential-driven The Odds API connector records bookmaker updates and capture times, rejects ambiguous game matches and supports matched-game market comparisons. No odds credential is currently configured. See [the ledger protocol, source policy and publishing commands](docs/RESEARCH_LEDGER.md).

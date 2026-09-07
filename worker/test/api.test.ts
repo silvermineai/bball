@@ -77,6 +77,16 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid market archive parameters before querying D1", async () => {
+    for (const path of [
+      "/api/research/markets?season=2020",
+      "/api/research/markets?page=-1",
+      "/api/research/markets?page=1.5",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("validates research history identifiers and pagination before database access", async () => {
     for (const path of [
       "/api/research/games/nba/123",

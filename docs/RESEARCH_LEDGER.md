@@ -2,6 +2,8 @@
 
 The shared Next.js scorecard lives at `/research/scorecard/`. Individual game history at `/research/game/?sport=football&id=…` reads Cloudflare D1 through a paginated, read-only API. Basketball uses `sport=basketball`.
 
+The historical market archive lives at `/research/markets/` and reads the retained `football_markets` observations through `/api/research/markets`. It is a searchable, paginated research view with CSV export. Every row carries its source and observed time and is explicitly excluded from prospective odds evaluation; the scorecard only uses observations that pass its provider, capture-time, participant and kickoff checks.
+
 ## Current edition
 
 The current registration contains 2,323 forecasted games: 744 football and 1,579 basketball. Confirmed start times make 312 football and 99 basketball games eligible for future scoring; three additional football games are awaiting a result. The other 1,879 games remain visible but excluded because their source start time is unconfirmed. Thirty football games have settled in the prospective record; basketball has no settled games yet. There are no licensed-feed quote observations in this edition. Missing metrics are null, not zero accuracy.

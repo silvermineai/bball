@@ -43,6 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/football/ratings/">Power ratings</Link>
             <Link href="/blog/">The journal</Link>
             <Link href="/research/scorecard/">Forecast record</Link>
+            <Link href="/research/markets/">Market archive</Link>
             <a href="/basketball/">Basketball ↗</a>
             <Link href="/football/methodology/">Methodology</Link>
           </nav>

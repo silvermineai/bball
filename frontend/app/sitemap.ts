@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/football/",
     "/research/scorecard/",
+    "/research/markets/",
     "/research/briefs/",
     "/research/coverage/",
     "/basketball/",

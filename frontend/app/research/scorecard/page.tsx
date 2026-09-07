@@ -134,6 +134,9 @@ export default function Page() {
             </a>
             .
           </p>
+          <p>
+            <Link href="/research/markets/">Browse the historical market archive →</Link>
+          </p>
         </div>
       </section>
     </>
