@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { BBTeam } from "../../_lib/basketball-types";
 import { fmt } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   sortTeamRatings,
   type RatingSortKey,
@@ -51,6 +52,24 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
             ))}
           </select>
         </label>
+      </div>
+      <div className="section-heading" style={{ marginTop: 20 }}>
+        <p>{filtered.length.toLocaleString()} matching programs · export respects the current search and sort</p>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() =>
+            downloadCsv(
+              "basketball-team-ratings.csv",
+              toCsv(
+                ["Net rank", "Program", "Wins", "Games", "Adjusted offense", "Adjusted defense", "Adjusted net", "Tempo", "SOS", "Rated opponents", "eFG%", "TO%", "ORB%", "FT rate", "3PA rate"],
+                filtered.map((t) => [t.rank, t.name, t.wins, t.games, t.adj_off, t.adj_def, t.adj_net, t.adj_tempo, t.sos, t.sos_games, t.efg == null ? null : t.efg * 100, t.tov_rate == null ? null : t.tov_rate * 100, t.orb_rate == null ? null : t.orb_rate * 100, t.ft_rate == null ? null : t.ft_rate * 100, t.three_rate == null ? null : t.three_rate * 100]),
+              ),
+            )
+          }
+        >
+          Download CSV ↓
+        </button>
       </div>
       <div className="table-scroll">
         <table className="data-table">

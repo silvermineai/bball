@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { BBImpact } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   sortImpactRows,
   type ImpactSortKey,
@@ -86,6 +87,24 @@ export default function Impact() {
         </p>
       ) : (
         <>
+          <div className="section-heading" style={{ marginTop: 20 }}>
+            <p>{rows.length.toLocaleString()} matching players · export respects the current search and qualification filter</p>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  "basketball-impact.csv",
+                  toCsv(
+                    ["Net rank", "Player", "NCAA ID", "Program", "ORAPM", "DRAPM", "Net RAPM", "Offensive possessions", "Defensive possessions"],
+                    rows.map((p) => [p.rank, p.player.replaceAll(".", " "), p.player_id, p.team, p.orapm, p.drapm, p.rapm_net, p.off_poss, p.def_poss]),
+                  ),
+                )
+              }
+            >
+              Download CSV ↓
+            </button>
+          </div>
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <thead>
