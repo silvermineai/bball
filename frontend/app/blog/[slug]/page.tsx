@@ -10,6 +10,8 @@ const titles: Record<string, string> = {
   "market-comparison": "Before measuring an edge, check the clock.",
   "basketball-four-factors": "Read the matchup before you read the score.",
   "basketball-impact": "Read impact with the lineup context intact.",
+  "basketball-recruiting-workload":
+    "An announcement is a starting point, not a depth chart.",
 };
 export function generateStaticParams() {
   return [
@@ -163,6 +165,8 @@ export default async function Page({
         <BasketballFourFactors />
       ) : slug === "basketball-impact" ? (
         <BasketballImpact />
+      ) : slug === "basketball-recruiting-workload" ? (
+        <BasketballRecruitingWorkload />
       ) : (
         <>
           <p className="deck">
@@ -225,6 +229,75 @@ export default async function Page({
         .
       </p>
     </article>
+  );
+}
+
+function BasketballRecruitingWorkload() {
+  const b = getBasketball();
+  return (
+    <>
+      <p className="deck">
+        Recruiting research becomes useful when every statement keeps its own
+        date, source and level of certainty. Start with what a school said,
+        then add the historical production that can be verified.
+      </p>
+      <p>
+        An announcement confirms that a publisher reported an addition. It does
+        not settle eligibility, a roster spot, health or the minutes a player
+        will receive. The{" "}
+        <Link href="/basketball/recruiting/">recruiting evidence board</Link>{" "}
+        keeps the original source beside later redshirt or availability
+        statements so a newer update does not erase the earlier record.
+      </p>
+      <h2>Three records answer three questions</h2>
+      <p>
+        School announcements answer what was publicly reported and when. The
+        roster observation view answers which source-listed player and program
+        affiliations appeared in a particular release. The player archive
+        answers what happened in recorded college games. A missing observation
+        is not a departure, and a prior team label is not a transfer explanation.
+      </p>
+      <p>
+        Those distinctions matter in the current file: {b.ratings.length}{" "}
+        programs have model ratings, while recruiting coverage is a selected
+        review rather than a national census. The{" "}
+        <Link href="/basketball/programs/">program dossiers</Link> show
+        historical workloads beside the source-listed roster view without
+        feeding an unconfirmed listing into the forecast.
+      </p>
+      <h2>Read workload as represented evidence</h2>
+      <p>
+        Prior points and minutes describe the player’s previous sample. They do
+        not add together into a guaranteed new-school rotation. A sum of prior
+        MPG on the recruiting board means that much workload is represented by
+        linked profiles in the reviewed file; it does not mean those players
+        will share the same role or remain available.
+      </p>
+      <p>
+        Use the{" "}
+        <Link href="/basketball/scouting-board/">scouting board</Link> to
+        compare complete historical records, then open the source statement and
+        check the date. Keep prep and international additions separate when no
+        college box-score profile exists. This produces a more honest briefing
+        than filling gaps with a recruiting grade or an inferred departure.
+      </p>
+      <h2>Keep the forecast boundary visible</h2>
+      <p>
+        The 2026–27 model is a historical efficiency baseline. Its published
+        forecast and retrospective evaluation remain unchanged by recruiting
+        announcements, and a scenario in the game-plan workbench is a coaching
+        question rather than a registered prediction. When a later source
+        changes availability, update the evidence trail first; only a reviewed
+        model release should change the forecast.
+      </p>
+      <p>
+        Read the{" "}
+        <Link href="/basketball/model/">model notebook</Link> for the exact
+        training cutoff, source editions and known limitations. Good recruiting
+        analysis does not hide uncertainty—it gives the staff a clear next
+        verification step.
+      </p>
+    </>
   );
 }
 

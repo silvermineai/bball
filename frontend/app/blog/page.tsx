@@ -31,6 +31,11 @@ const guides = [
     "Read impact with the lineup context intact.",
     "How to use ORAPM, DRAPM, net RAPM and possession samples when comparing college players.",
   ],
+  [
+    "basketball-recruiting-workload",
+    "An announcement is a starting point, not a depth chart.",
+    "How to connect school statements, roster observations and prior college workload without inventing eligibility or a role.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();
