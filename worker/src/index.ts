@@ -287,6 +287,25 @@ app.get("/api/basketball/research/coverage", async (c) => {
   });
 });
 
+const ncaaLeaderQuery = z.object({
+  division: z.enum(["1", "2", "3", "all"]).default("1"),
+  stat: z.enum(["ppg", "rpg", "apg", "mpg"]).default("ppg"),
+  q: z.string().max(120).optional(),
+  page: z.coerce.number().int().min(0).max(100).default(0),
+});
+app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
+  const { division, stat, q, page } = c.req.valid("query");
+  const where = division === "all" ? "season=?" : "season=? AND division=?";
+  const binds: Array<string | number> = division === "all" ? [2026] : [2026, Number(division)];
+  const search = q?.trim();
+  const searchSql = search ? " AND (name LIKE ? OR team_name LIKE ? OR payload_json LIKE ?)" : "";
+  if (search) binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  const order = `${stat} IS NULL, ${stat} DESC, name, player_id`;
+  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${stat},ppg_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ season: 2026, division, stat, page, rows: rows.results.map((row) => ({ ...row, payload: JSON.parse(String(row.payload_json)) })) });
+});
+
 // Keep completed-game reading snapshots reachable from their original URLs.
 app.get("/blog/*", async (c) => {
   const asset = await c.env.ASSETS.fetch(c.req.raw);

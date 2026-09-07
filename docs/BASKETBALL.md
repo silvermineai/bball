@@ -2,6 +2,8 @@
 
 Native Next.js pages now live at `/basketball/`, `/basketball/matchups/`, `/basketball/ratings/`, `/basketball/conferences/`, `/basketball/players/`, `/basketball/impact/`, `/basketball/recruiting/`, `/basketball/player/`, `/basketball/model/`, `/basketball/pressroom/` and `/basketball/film/`. Per-game basketball briefs appear at `/basketball/briefs/:id/` and in the shared journal. The legacy `/film/`, `/conferences/`, `/scout/`, `/rankings/`, `/teams/`, `/games/` and `/pressroom/` links now land on native pages; game-planning and other archive routes remain served by the TanStack application.
 
+The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for final national individual-stat snapshots across Divisions I, II and III. See [`NCAA_INDIVIDUAL.md`](NCAA_INDIVIDUAL.md) for source, cache and D1 publication details.
+
 ## Current verified import
 
 - 20,495 schedule records across season-ending years 2024–2027.

@@ -34,6 +34,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
+| NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
 | Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |

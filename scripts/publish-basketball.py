@@ -257,6 +257,7 @@ run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
 run([PY, "scripts/sync-recruiting.py"])
 run([PY, "scripts/sync-careers.py"])
+run([PY, "scripts/sync-ncaa-individual.py"])
 run([PY, "scripts/archive-evaluation.py"])
 if not BATCH_PUBLICATION:
     run([PY, "scripts/cloudflare.py", "deploy"])

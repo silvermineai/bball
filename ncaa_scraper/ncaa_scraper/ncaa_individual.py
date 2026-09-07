@@ -1,0 +1,338 @@
+"""Individual player season stats + team directory across D1/D2/D3.
+
+Scrapes stats.ncaa.org national ranking pages (final statistics period) for
+men's basketball. Each individual stat page lists EVERY qualifying player
+with class, height, position, and counting stats — merged by player id this
+yields a season stat line for ~1,500 players per division.
+
+Also captures the per-division team directory (id, name, conference, record)
+from the team Scoring Offense page.
+
+Tables written to data/ncaa_mbb.sqlite3:
+  ncaa_players(player_id PK, division, name, team_name, team_ncaa_id,
+               conference, class_year, height, position, games, ...stats)
+  ncaa_team_directory(team_ncaa_id PK, division, name, conference, record,
+                      wins, losses, ppg)
+
+Run:  python -m ncaa_scraper.ncaa_individual --divisions 1 2 3
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import html as htmllib
+import json
+import re
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .fetcher import ScraplingNCAAFetcher
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = REPO_ROOT / "data" / "ncaa_mbb.sqlite3"
+PUBLIC_PATH = REPO_ROOT / "frontend" / "public" / "data" / "basketball" / "ncaa-individual.json"
+SQL_PATH = REPO_ROOT / ".local" / "ncaa-individual.sql"
+
+YEAR = "2026.0"
+SPORT = "MBB"
+
+# individual stat pages: stat_seq -> (slug, value column meaning)
+INDIVIDUAL_STATS = {
+    "136.0": "ppg",       # Points Per Game (also G, FGM, 3FG, FT, PTS)
+    "137.0": "rpg",       # Rebounds Per Game (also REB)
+    "140.0": "apg",       # Assists Per Game (also AST)
+    "139.0": "spg",       # Steals Per Game
+    "138.0": "bpg",       # Blocks Per Game
+    "141.0": "fg_pct",    # FG% (also FGM/FGA)
+    "143.0": "three_pct", # 3P% (also 3FG/3FGA)
+    "142.0": "ft_pct",    # FT%
+    "144.0": "threes_pg", # Three Pointers Per Game
+    "628.0": "mpg",       # Minutes Per Game
+    "473.0": "ast_to",    # Assist/Turnover Ratio
+    "556.0": "dbl_dbl",   # Double doubles
+}
+
+TEAM_SCORING_STAT = "145.0"  # team Scoring Offense: G, W-L, PTS, PPG
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS ncaa_players (
+  player_id INTEGER PRIMARY KEY,
+  division INTEGER,
+  name TEXT, team_name TEXT, team_ncaa_id INTEGER, conference TEXT,
+  class_year TEXT, height TEXT, position TEXT, games INTEGER,
+  ppg REAL, rpg REAL, apg REAL, spg REAL, bpg REAL,
+  fg_pct REAL, three_pct REAL, ft_pct REAL, threes_pg REAL,
+  mpg REAL, ast_to REAL, dbl_dbl REAL,
+  pts INTEGER, reb INTEGER, ast INTEGER, fgm INTEGER, fga INTEGER,
+  three_fgm INTEGER, three_fga INTEGER, ftm INTEGER,
+  ppg_rank INTEGER, rpg_rank INTEGER, apg_rank INTEGER,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_ncaa_players_division ON ncaa_players(division);
+CREATE TABLE IF NOT EXISTS ncaa_team_directory (
+  team_ncaa_id INTEGER PRIMARY KEY,
+  division INTEGER, name TEXT, conference TEXT,
+  games INTEGER, wins INTEGER, losses INTEGER, ppg REAL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+CELL_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
+TAG_RE = re.compile(r"<[^>]+>")
+
+
+def clean(cell: str) -> str:
+    return htmllib.unescape(TAG_RE.sub("", cell)).replace("\\n", " ").replace("\\t", " ").strip()
+
+
+def to_num(text: str):
+    text = text.replace("\\n", " ").replace("\\t", " ").replace("\\r", " ")
+    text = text.replace(",", "").strip()
+    if not text or text == "-":
+        return None
+    # NCAA minutes are rendered as MM:SS on the minutes-per-game table.
+    if re.fullmatch(r"\d+:\d{2}", text):
+        minutes, seconds = text.split(":")
+        return int(minutes) + int(seconds) / 60
+    try:
+        return float(text) if "." in text else int(text)
+    except ValueError:
+        return None
+
+
+def decode_html(value: str) -> str:
+    """Decode cached Scrapling byte reprs without changing live fetch policy.
+
+    Older cached responses were written as ``repr(bytes)`` (for example
+    ``b'<html>\\n...'``).  Newer responses may be plain text.  Supporting both
+    formats keeps the parser deterministic and lets us reprocess an existing
+    cache without making another request to a source whose robots policy has
+    changed.
+    """
+    text = value
+    if text.startswith(("b'", 'b"')):
+        try:
+            decoded = ast.literal_eval(text)
+            if isinstance(decoded, bytes):
+                return decoded.decode("utf-8", errors="replace")
+        except (SyntaxError, ValueError):
+            pass
+    return text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace("\\'", "'")
+
+
+def final_period(fetcher: ScraplingNCAAFetcher, division: str) -> str | None:
+    html = decode_html(fetcher.fetch(
+        f"/rankings/change_sport_year_div?academic_year={YEAR}&division={division}&sport_code={SPORT}",
+        cache_key=f"rk_change_{SPORT}_{division}",
+    ))
+    m = re.search(r'<option value="([\d.]+)"[^>]*>[^<]*Final Statistics</option>', html)
+    return m.group(1) if m else None
+
+
+def parse_table(html: str):
+    """Yield (headers, row_html, cells) for the ranking table."""
+    headers = [clean(h) for h in re.findall(r"<th[^>]*>(.*?)</th>", html, re.DOTALL)]
+    body = re.search(r"<tbody>(.*?)</tbody>", html, re.DOTALL)
+    if not body:
+        return headers, []
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", body.group(1), re.DOTALL)
+    return headers, rows
+
+
+def _json_number(value):
+    if isinstance(value, bool) or value is None:
+        return None
+    return value if isinstance(value, (int, float)) else None
+
+
+def export_release(conn: sqlite3.Connection) -> dict:
+    """Create a compact, public derivative of the NCAA national snapshots."""
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")]
+    players = []
+    for row in conn.execute("SELECT * FROM ncaa_players ORDER BY division, ppg_rank IS NULL, ppg_rank, name, player_id"):
+        item = dict(zip(columns, row))
+        item.pop("updated_at", None)
+        item = {k: _json_number(v) if isinstance(v, (int, float)) and k not in {"player_id", "division", "games", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm", "ppg_rank", "rpg_rank", "apg_rank"} else v for k, v in item.items()}
+        players.append(item)
+    coverage = {}
+    for division in (1, 2, 3):
+        rows = [p for p in players if p["division"] == division]
+        coverage[str(division)] = {
+            "players": len(rows),
+            "ppg": sum(p.get("ppg") is not None for p in rows),
+            "rpg": sum(p.get("rpg") is not None for p in rows),
+            "apg": sum(p.get("apg") is not None for p in rows),
+            "mpg": sum(p.get("mpg") is not None for p in rows),
+        }
+    updated = [p[0] for p in conn.execute("SELECT updated_at FROM ncaa_players WHERE updated_at IS NOT NULL")]
+    generated = max(updated) if updated else None
+    if generated:
+        generated = datetime.fromisoformat(generated.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return {
+        "schema_version": 1,
+        "season": 2026,
+        "generated_at": generated,
+        "attribution": {
+            "publisher": "NCAA Statistics",
+            "source": "https://stats.ncaa.org/rankings/national_ranking",
+            "method": "Cached final national-ranking snapshots fetched with robots.txt checks; values are a public derivative, not a page mirror.",
+        },
+        "coverage": {"players": len(players), "divisions": coverage},
+        "players": players,
+    }
+
+
+def quote(value):
+    if value is None:
+        return "NULL"
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def export_sql(conn: sqlite3.Connection, release: dict) -> str:
+    """Export idempotent D1 rows while retaining the complete source payload."""
+    lines = [
+        "CREATE TABLE IF NOT EXISTS ncaa_individual_players (season INTEGER NOT NULL, division INTEGER NOT NULL, player_id TEXT NOT NULL, name TEXT NOT NULL, team_name TEXT, ppg REAL, rpg REAL, apg REAL, mpg REAL, ppg_rank INTEGER, payload_json TEXT NOT NULL, PRIMARY KEY(season, division, player_id));",
+        "CREATE INDEX IF NOT EXISTS ncaa_individual_division ON ncaa_individual_players(season, division, ppg_rank);",
+        "DELETE FROM ncaa_individual_players WHERE season=2026;",
+    ]
+    for player in release["players"]:
+        lines.append(
+            "INSERT OR REPLACE INTO ncaa_individual_players (season,division,player_id,name,team_name,ppg,rpg,apg,mpg,ppg_rank,payload_json) VALUES ("
+            + ",".join(map(quote, [2026, player["division"], player["player_id"], player["name"], player.get("team_name"), player.get("ppg"), player.get("rpg"), player.get("apg"), player.get("mpg"), player.get("ppg_rank"), json.dumps(player, ensure_ascii=False, separators=(",", ":"))]))
+            + ");"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, division: str) -> None:
+    div_int = int(float(division))
+    period = final_period(fetcher, division)
+    if not period:
+        print(f"[individual] d{div_int}: no final period found", flush=True)
+        return
+    print(f"[individual] d{div_int}: final period {period}", flush=True)
+
+    # ---- team directory from team scoring offense
+    url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={TEAM_SCORING_STAT}"
+    html = decode_html(fetcher.fetch(url, cache_key=f"rk_{SPORT}_d{div_int}_teamscoring"))
+    headers, rows = parse_table(html)
+    count = 0
+    for row in rows:
+        cells = [clean(c) for c in CELL_RE.findall(row)]
+        if len(cells) < 6:
+            continue
+        team_link = re.search(r'href="/teams/(\d+)"', row)
+        m = re.match(r"(.*?)\s*\(([^)]*)\)\s*$", cells[1])
+        name, conf = (m.group(1), m.group(2)) if m else (cells[1], None)
+        wl = re.match(r"(\d+)-(\d+)", cells[3] or "")
+        conn.execute(
+            """INSERT INTO ncaa_team_directory (team_ncaa_id, division, name, conference, games, wins, losses, ppg)
+               VALUES (?,?,?,?,?,?,?,?)
+               ON CONFLICT(team_ncaa_id) DO UPDATE SET division=excluded.division, name=excluded.name,
+               conference=excluded.conference, games=excluded.games, wins=excluded.wins,
+               losses=excluded.losses, ppg=excluded.ppg, updated_at=CURRENT_TIMESTAMP""",
+            (
+                int(team_link.group(1)) if team_link else None,
+                div_int, name, conf, to_num(cells[2]),
+                int(wl.group(1)) if wl else None, int(wl.group(2)) if wl else None,
+                to_num(cells[-1]),
+            ),
+        )
+        count += 1
+    conn.commit()
+    print(f"[individual] d{div_int}: team directory {count} teams", flush=True)
+
+    # ---- individual stats
+    for stat_seq, slug in INDIVIDUAL_STATS.items():
+        url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={stat_seq}"
+        try:
+            html = decode_html(fetcher.fetch(url, cache_key=f"rk_{SPORT}_d{div_int}_{slug}"))
+        except Exception as exc:
+            print(f"[individual] d{div_int} {slug}: fetch failed {exc}", flush=True)
+            continue
+        headers, rows = parse_table(html)
+        # header indices: first 6 are Rank, Player, Cl, Ht, Pos, G
+        added = 0
+        for row in rows:
+            raw_cells = CELL_RE.findall(row)
+            cells = [clean(c) for c in raw_cells]
+            if len(cells) < 7:
+                continue
+            player_link = re.search(r'href="/players/(\d+)"', row)
+            team_link = re.search(r'href="/teams/(\d+)"', row)
+            if not player_link:
+                continue
+            pid = int(player_link.group(1))
+            pm = re.match(r"(.*?),\s*(.*?)\s*\(([^)]*)\)\s*$", cells[1])
+            pname, tname, conf = (pm.group(1), pm.group(2), pm.group(3)) if pm else (cells[1], None, None)
+            rank = to_num(cells[0])
+            value = to_num(cells[-1])
+            games = to_num(cells[5])
+
+            conn.execute(
+                """INSERT INTO ncaa_players (player_id, division, name, team_name, team_ncaa_id, conference,
+                   class_year, height, position, games)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(player_id) DO UPDATE SET division=excluded.division,
+                   class_year=COALESCE(excluded.class_year, ncaa_players.class_year),
+                   games=COALESCE(excluded.games, ncaa_players.games),
+                   team_ncaa_id=COALESCE(excluded.team_ncaa_id, ncaa_players.team_ncaa_id),
+                   updated_at=CURRENT_TIMESTAMP""",
+                (
+                    pid, div_int, pname, tname,
+                    int(team_link.group(1)) if team_link else None,
+                    conf, cells[2] or None, cells[3] or None, cells[4] or None, games,
+                ),
+            )
+            conn.execute(f"UPDATE ncaa_players SET {slug}=? WHERE player_id=?", (value, pid))
+            if slug in ("ppg", "rpg", "apg") and rank is not None:
+                conn.execute(f"UPDATE ncaa_players SET {slug}_rank=? WHERE player_id=?", (int(rank), pid))
+
+            # counting stats from the PPG page (FGM, 3FG, FT, PTS) and others
+            if slug == "ppg" and len(cells) >= 11:
+                conn.execute(
+                    "UPDATE ncaa_players SET fgm=?, three_fgm=?, ftm=?, pts=? WHERE player_id=?",
+                    (to_num(cells[6]), to_num(cells[7]), to_num(cells[8]), to_num(cells[9]), pid),
+                )
+            elif slug == "rpg" and len(cells) >= 8:
+                conn.execute("UPDATE ncaa_players SET reb=? WHERE player_id=?", (to_num(cells[6]), pid))
+            elif slug == "apg" and len(cells) >= 8:
+                conn.execute("UPDATE ncaa_players SET ast=? WHERE player_id=?", (to_num(cells[6]), pid))
+            elif slug == "fg_pct" and len(cells) >= 9:
+                conn.execute("UPDATE ncaa_players SET fgm=?, fga=? WHERE player_id=?", (to_num(cells[6]), to_num(cells[7]), pid))
+            elif slug == "three_pct" and len(cells) >= 9:
+                conn.execute(
+                    "UPDATE ncaa_players SET three_fgm=?, three_fga=? WHERE player_id=?",
+                    (to_num(cells[6]), to_num(cells[7]), pid),
+                )
+            added += 1
+        conn.commit()
+        print(f"[individual] d{div_int} {slug}: {added} players", flush=True)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--divisions", nargs="+", default=["1", "2", "3"])
+    args = parser.parse_args()
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
+    conn.executescript(SCHEMA)
+    fetcher = ScraplingNCAAFetcher()
+    for division in args.divisions:
+        div = division if "." in division else f"{division}.0"
+        scrape_division(fetcher, conn, div)
+    release = export_release(conn)
+    PUBLIC_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PUBLIC_PATH.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
+    SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SQL_PATH.write_text(export_sql(conn, release))
+    print(f"[individual] published {len(release['players']):,} players to {PUBLIC_PATH}", flush=True)
+    conn.close()
+
+
+if __name__ == "__main__":
+    main()

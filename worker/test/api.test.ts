@@ -57,6 +57,16 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid NCAA leaderboard parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-leaders?division=4",
+      "/api/basketball/research/ncaa-leaders?stat=per",
+      "/api/basketball/research/ncaa-leaders?page=-1",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("validates research history identifiers and pagination before database access", async () => {
     for (const path of [
       "/api/research/games/nba/123",
