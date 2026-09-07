@@ -18,7 +18,7 @@ The publication covers football and men’s college basketball with a Next.js fr
 | Model notebook | `/football/methodology/` | Holdout results, source receipts, missing coverage and limitations |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
-The current football archive contains **18,758 schedule records** across 2022–26, **259,017 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **744 upcoming FBS forecasts**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **66.2% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
+The current football archive contains **18,759 schedule records** across 2022–26, **264,061 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **790 upcoming FBS schedule records**, of which **711 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 
@@ -52,7 +52,7 @@ See [shooting evidence, source coverage and Cloudflare storage](docs/BASKETBALL_
 
 ## Forecast record
 
-The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The ledger contains 2,323 forecasted games, of which 444 have confirmed starts. The [immutable reading archive](https://bball.silvermine.dev/research/briefs/) preserves each captured brief version separately. No prospective result or market advantage is claimed before qualifying games settle.
+The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The ledger contains 2,323 forecasted games, of which 411 have confirmed starts. The [immutable reading archive](https://bball.silvermine.dev/research/briefs/) preserves each captured brief version separately. No prospective result or market advantage is claimed before qualifying games settle.
 
 The [coverage desk](https://bball.silvermine.dev/research/coverage/) gathers current source editions, player/recruiting counts, model holdouts, forecast clocks and explicit source limitations in one dated view.
 
