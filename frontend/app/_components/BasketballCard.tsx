@@ -38,6 +38,14 @@ export default function BasketballCard({ game: g }: { game: BBGame }) {
             </strong>
           </div>
           <div className="match-detail muted">
+            <span>Projected home margin</span>
+            <span>{fmt(p.home_margin, 1)}</span>
+          </div>
+          <div className="match-detail muted">
+            <span>Projected total</span>
+            <span>{fmt(p.total, 1)}</span>
+          </div>
+          <div className="match-detail muted">
             <span>80% home-margin range</span>
             <span>
               {fmt(p.margin_low)} to {fmt(p.margin_high)}

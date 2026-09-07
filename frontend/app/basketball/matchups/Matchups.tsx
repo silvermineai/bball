@@ -69,6 +69,7 @@ export default function Matchups({ games }: { games: BBGame[] }) {
                   "Projected home score",
                   "Home win probability",
                   "Projected home margin",
+                  "Projected total",
                   "Margin range low",
                   "Margin range high",
                   "Projected pace",
@@ -85,6 +86,7 @@ export default function Matchups({ games }: { games: BBGame[] }) {
                     ? null
                     : g.prediction.home_win_probability * 100,
                   g.prediction?.home_margin,
+                  g.prediction?.total,
                   g.prediction?.margin_low,
                   g.prediction?.margin_high,
                   g.prediction?.pace,
