@@ -106,6 +106,39 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 <div className="eyebrow">Program view / linked production</div>
                 <h2>How much prior workload is represented?</h2>
               </div>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    "basketball-recruiting-program-summary.csv",
+                    toCsv(
+                      [
+                        "Program",
+                        "Program ID",
+                        "Announced additions",
+                        "College transfers",
+                        "Linked prior profiles",
+                        "Prior PPG represented",
+                        "Prior MPG represented",
+                        "Prior 20+ MPG contributors",
+                      ],
+                      programSummary.map((summary) => [
+                        summary.team_name,
+                        summary.team_id,
+                        summary.additions,
+                        summary.transfers,
+                        summary.linked_profiles,
+                        summary.prior_ppg,
+                        summary.prior_mpg,
+                        summary.high_workload,
+                      ]),
+                    ),
+                  )
+                }
+              >
+                Download program CSV ↓
+              </button>
             </div>
             <p className="note">
               Sums below cover only announced additions in this reviewed file
