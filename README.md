@@ -35,8 +35,9 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
 | Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
+| Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
-| Scouting archive | `/basketball/scout/` | Preserved scouting reports and coaching tools |
+| Scouting archive | `/basketball/scout/` | Native program dossier index and legacy-compatible dossier links |
 
 The independent 2025–26 test scored 5,734 games at **67.4% winner accuracy** and **10.46-point margin MAE**. The historical player archive retains **3.68 million identified box-score rows** across 24 seasons. The nominal 80% margin interval covered **78.7%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
 
