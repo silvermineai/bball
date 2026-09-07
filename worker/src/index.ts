@@ -7,6 +7,7 @@ import { shooting } from "./shooting";
 import { recruiting } from "./recruiting";
 import { careers } from "./careers";
 import { footballEvents } from "./football-events";
+import { briefArchive, retiredBrief } from "./brief-archive";
 
 type Bindings = Env;
 
@@ -18,6 +19,8 @@ type AppEnv = {
 };
 
 const app = new Hono<AppEnv>();
+app.route("/", briefArchive);
+
 const SESSION_COOKIE = "silvermine_session";
 const SESSION_DAYS = 14;
 const ADMIN_EMAIL = "bryan@silvermineai.com";
@@ -284,12 +287,21 @@ app.get("/api/basketball/research/coverage", async (c) => {
   });
 });
 
+// Keep completed-game reading snapshots reachable from their original URLs.
+app.get("/blog/*", async (c) => {
+  const asset = await c.env.ASSETS.fetch(c.req.raw);
+  const match = new URL(c.req.url).pathname.match(/^\/blog\/game-(\d{1,15})\/?$/);
+  return match ? retiredBrief(c.env,c.req.raw,"football",match[1],asset) : asset;
+});
+
 // Preserve basketball deep links while Next.js owns the new publication pages.
 app.get("/basketball", (c) => c.redirect("/basketball/", 302));
 app.get("/basketball/*", async (c) => {
   const url = new URL(c.req.url);
   const asset = await c.env.ASSETS.fetch(c.req.raw);
   if (asset.status !== 404 || /\.[a-z0-9]+$/i.test(url.pathname)) return asset;
+  const retired = url.pathname.match(/^\/basketball\/briefs\/(\d{1,15})\/?$/);
+  if (retired) return retiredBrief(c.env,c.req.raw,"basketball",retired[1],asset);
   // Only old, known archive routes receive the SPA fallback. New publication
   // paths and unknown routes should retain a genuine 404.
   if (

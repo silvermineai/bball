@@ -587,6 +587,11 @@ export default async function Page({
           Inspect this game’s complete forecast and source history →
         </Link>
       </section>
+      <p>
+        <Link href={`/research/briefs/?sport=basketball&game=${g.id}`}>
+          Retained reading snapshots of this brief →
+        </Link>
+      </p>
       <div id="brief-notes">
         <BriefNotebook
           key={`${g.id}-${d.model.id}`}

@@ -140,6 +140,11 @@ export default function FootballBrief({
           </div>
         </div>
       </section>
+      <p>
+        <Link href={`/research/briefs/?sport=football&game=${g.id}`}>
+          Retained reading snapshots of this brief →
+        </Link>
+      </p>
       <BriefNotebook
         storageKey={`football-brief:${g.id}:${d.model.id}`}
         tasks={tasks}

@@ -3468,3 +3468,55 @@ summary {
     display: none;
   }
 }
+
+.brief-archive-note {
+  margin-bottom: 28px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.brief-archive-note p {
+  margin-top: 10px;
+}
+.brief-archive-count {
+  margin: 20px 0;
+}
+.brief-archive-grid .article-card h2 {
+  font-size: 30px;
+}
+.brief-archive-grid dl {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+.brief-archive-grid dt {
+  font:
+    9px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.brief-archive-grid dd {
+  margin: 5px 0 0;
+  font-size: 12px;
+}
+.brief-archive-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 20px;
+  font-size: 11px;
+}
+.brief-archive-grid details {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 14px;
+  font-size: 11px;
+}
+.brief-archive-grid summary {
+  cursor: pointer;
+}
+.brief-archive-grid code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}

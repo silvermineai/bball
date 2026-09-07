@@ -26,4 +26,20 @@ result = subprocess.run(
     env=env,
     check=False,
 )
-raise SystemExit(result.returncode)
+if result.returncode:
+    raise SystemExit(result.returncode)
+if sys.argv[1:2] == ["deploy"] and not any(
+    arg.startswith("--dry-run") for arg in sys.argv[2:]
+):
+    archived = subprocess.run(
+        [sys.executable, str(root / "scripts/archive-briefs.py")],
+        cwd=root,
+        check=False,
+    )
+    if archived.returncode:
+        print(
+            "Deployment succeeded, but brief archiving failed. Retry scripts/archive-briefs.py without redeploying.",
+            file=sys.stderr,
+        )
+        raise SystemExit(archived.returncode)
+raise SystemExit(0)

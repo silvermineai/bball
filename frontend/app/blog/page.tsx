@@ -39,6 +39,11 @@ export default function Page() {
           limitations behind its projections.
         </p>
       </div>
+      <p className="note">
+        <Link href="/research/briefs/">
+          Browse the retained matchup reading archive →
+        </Link>
+      </p>
       <section className="section">
         <div className="section-heading">
           <div>
