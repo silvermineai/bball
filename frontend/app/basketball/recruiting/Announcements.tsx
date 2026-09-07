@@ -232,6 +232,18 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         <strong>{percent(p.stats.three_pct)}</strong>
                         <span>3P%</span>
                       </div>
+                      <div>
+                        <strong>{percent(p.stats.ft_rate)}</strong>
+                        <span>FTR</span>
+                      </div>
+                      <div>
+                        <strong>{percent(p.stats.three_rate)}</strong>
+                        <span>3PA RATE</span>
+                      </div>
+                      <div>
+                        <strong>{percent(p.stats.tov_rate)}</strong>
+                        <span>TO RATE</span>
+                      </div>
                     </div>
                     {p.stats.games < 10 && (
                       <small>

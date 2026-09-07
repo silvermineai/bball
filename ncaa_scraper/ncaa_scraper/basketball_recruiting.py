@@ -136,6 +136,8 @@ def build(document, box_release, rated_programs):
             p = candidates[0]
             stats = {
                 key: p[key]
+                if key not in {"ft_rate", "three_rate", "tov_rate"}
+                else p.get(key)
                 for key in (
                     "id",
                     "team_id",
@@ -152,6 +154,9 @@ def build(document, box_release, rated_programs):
                     "efg",
                     "ts",
                     "three_pct",
+                    "ft_rate",
+                    "three_rate",
+                    "tov_rate",
                     "incomplete_box_games",
                 )
             }
