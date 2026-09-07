@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRosterIntel } from "./roster-intel";
+import { buildRosterIntel, buildRosterSummary } from "./roster-intel";
 import type { BBRoster } from "./basketball-types";
 import type { ScoutProfile } from "./scouting-types";
 
@@ -31,11 +31,11 @@ describe("roster intelligence", () => {
       ],
     } as ScoutProfile;
     const result = buildRosterIntel(
-      [
+      buildRosterSummary([
         roster("1", "Returning guard", "same_program"),
         roster("2", "Transfer forward", "different_program"),
         roster("3", "New guard", "new_to_dataset"),
-      ],
+      ]),
       profile,
     );
     expect(result.observed).toBe(3);
@@ -43,6 +43,6 @@ describe("roster intelligence", () => {
     expect(result.transfers).toBe(1);
     expect(result.newToDataset).toBe(1);
     expect(result.movement.map((row) => row.id)).toEqual(["2", "3"]);
-    expect(result.players[0].priorPlayer?.minutes).toBe(900);
+    expect(result.players[0].priorPlayer?.minutes).toBe(500);
   });
 });

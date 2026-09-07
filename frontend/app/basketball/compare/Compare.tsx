@@ -5,8 +5,7 @@ import Link from "next/link";
 import { date, fmt, signed } from "../../_lib/format";
 import type { ScoutProfile, SplitKey } from "../../_lib/scouting-types";
 import { splitLabels } from "../../_lib/scouting-types";
-import type { BBRoster } from "../../_lib/basketball-types";
-import { buildRosterIntel } from "../../_lib/roster-intel";
+import { buildRosterIntel, type RosterSummary } from "../../_lib/roster-intel";
 import {
   scenarioQuery,
   scenarioVenue,
@@ -32,7 +31,7 @@ export default function Compare({
 }: {
   teams: { id: string; name: string }[];
   model: ScenarioModel;
-  rosters: BBRoster[];
+  rosters: RosterSummary[];
 }) {
   const params = useSearchParams();
   const validId = (value: string | null) =>
