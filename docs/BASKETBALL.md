@@ -1,6 +1,6 @@
 # Basketball research desk
 
-Native Next.js pages now live at `/basketball/`, `/basketball/matchups/`, `/basketball/ratings/`, `/basketball/conferences/`, `/basketball/players/`, `/basketball/impact/`, `/basketball/recruiting/`, `/basketball/player/`, `/basketball/model/` and `/basketball/film/`. Per-game basketball briefs appear at `/basketball/briefs/:id/` and in the shared journal. The legacy `/film/` and `/conferences/` links now land on native pages; scouting, game-planning and other archive routes remain served by the TanStack application.
+Native Next.js pages now live at `/basketball/`, `/basketball/matchups/`, `/basketball/ratings/`, `/basketball/conferences/`, `/basketball/players/`, `/basketball/impact/`, `/basketball/recruiting/`, `/basketball/player/`, `/basketball/model/` and `/basketball/film/`. Per-game basketball briefs appear at `/basketball/briefs/:id/` and in the shared journal. The legacy `/film/`, `/conferences/` and `/scout/` links now land on native pages; game-planning and other archive routes remain served by the TanStack application.
 
 ## Current verified import
 
