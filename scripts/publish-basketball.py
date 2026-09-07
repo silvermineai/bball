@@ -41,11 +41,19 @@ def run_remote_migration(args, cwd=ROOT):
 
 def run_logged(args, log_path, cwd=ROOT):
     """Keep large Wrangler output on disk, but surface a useful failure tail."""
-    for attempt in range(1, 4):
+    # D1 imports can continue asynchronously after Wrangler reports a 7009
+    # response. Give that import time to finish before attempting another one;
+    # otherwise the retry itself fails with "Currently processing a
+    # long-running import" and masks a recoverable upstream response.
+    retry_delays = (15, 30, 60, 120, 180)
+    max_attempts = len(retry_delays) + 1
+    for attempt in range(1, max_attempts + 1):
         mode = "w" if attempt == 1 else "a"
         with log_path.open(mode) as log:
             if attempt > 1:
-                log.write(f"\nRetrying remote SQL import (attempt {attempt}/3)\n")
+                log.write(
+                    f"\nRetrying remote SQL import (attempt {attempt}/{max_attempts})\n"
+                )
             result = subprocess.run(
                 args,
                 cwd=cwd,
@@ -58,14 +66,19 @@ def run_logged(args, log_path, cwd=ROOT):
             return
         tail = log_path.read_text(errors="replace").splitlines()[-80:]
         output = "\n".join(tail)
-        retryable = "Upstream service unavailable" in output or "code: 7009" in output
-        if retryable and attempt < 3:
+        retryable = (
+            "Upstream service unavailable" in output
+            or "code: 7009" in output
+            or "Currently processing a long-running import" in output
+        )
+        if retryable and attempt < max_attempts:
+            delay = retry_delays[attempt - 1]
             print(
-                f"Remote SQL import hit a transient Cloudflare upstream error "
-                f"(attempt {attempt}/3); retrying in 15 seconds.",
+                f"Remote SQL import hit a transient Cloudflare error "
+                f"(attempt {attempt}/{max_attempts}); retrying in {delay} seconds.",
                 file=sys.stderr,
             )
-            time.sleep(15)
+            time.sleep(delay)
             continue
         print(
             f"Remote SQL import failed with exit status {result.returncode}; "
