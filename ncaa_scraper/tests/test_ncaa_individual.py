@@ -39,8 +39,8 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
 
     def test_assists_uses_current_ncaa_sequence_and_rejects_stale_body(self):
-        self.assertIn(("216.0", "apg"), INDIVIDUAL_STATS)
-        self.assertNotIn(("140.0", "apg"), INDIVIDUAL_STATS)
+        self.assertEqual(INDIVIDUAL_STATS["216.0"], "apg")
+        self.assertNotIn("140.0", INDIVIDUAL_STATS)
         self.assertTrue(invalid_ranking_page("b'Invalid ranking period'"))
         self.assertFalse(invalid_ranking_page("<table><tbody><tr><td>1</td></tr></tbody></table>"))
 

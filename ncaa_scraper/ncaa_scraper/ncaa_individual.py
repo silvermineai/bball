@@ -39,23 +39,23 @@ SQL_PATH = REPO_ROOT / ".local" / "ncaa-individual.sql"
 YEAR = "2026.0"
 SPORT = "MBB"
 
-# Individual stat pages: (stat_seq, slug). NCAA's current
-# navigation points to 216.0 for assists per game; 140.0 is retained as a
-# fallback because older cached editions used that identifier.
-INDIVIDUAL_STATS = (
-    ("136.0", "ppg"),       # Points Per Game (also G, FGM, 3FG, FT, PTS)
-    ("137.0", "rpg"),       # Rebounds Per Game (also REB)
-    ("216.0", "apg"),       # Assists Per Game (also AST)
-    ("139.0", "spg"),       # Steals Per Game
-    ("138.0", "bpg"),       # Blocks Per Game
-    ("141.0", "fg_pct"),    # FG% (also FGM/FGA)
-    ("143.0", "three_pct"), # 3P% (also 3FG/3FGA)
-    ("142.0", "ft_pct"),    # FT%
-    ("144.0", "threes_pg"), # Three Pointers Per Game
-    ("628.0", "mpg"),       # Minutes Per Game
-    ("473.0", "ast_to"),    # Assist/Turnover Ratio
-    ("556.0", "dbl_dbl"),   # Double doubles
-)
+# Individual stat pages: stat_seq -> slug. NCAA's current navigation points
+# to 216.0 for assists per game; 140.0 is retained as a fallback because older
+# cached editions used that identifier.
+INDIVIDUAL_STATS = {
+    "136.0": "ppg",       # Points Per Game (also G, FGM, 3FG, FT, PTS)
+    "137.0": "rpg",       # Rebounds Per Game (also REB)
+    "216.0": "apg",       # Assists Per Game (also AST)
+    "139.0": "spg",       # Steals Per Game
+    "138.0": "bpg",       # Blocks Per Game
+    "141.0": "fg_pct",    # FG% (also FGM/FGA)
+    "143.0": "three_pct", # 3P% (also 3FG/3FGA)
+    "142.0": "ft_pct",    # FT%
+    "144.0": "threes_pg", # Three Pointers Per Game
+    "628.0": "mpg",       # Minutes Per Game
+    "473.0": "ast_to",    # Assist/Turnover Ratio
+    "556.0": "dbl_dbl",   # Double doubles
+}
 STAT_FALLBACKS = {"apg": ("140.0",)}
 
 TEAM_SCORING_STAT = "145.0"  # team Scoring Offense: G, W-L, PTS, PPG
@@ -266,7 +266,7 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
     print(f"[individual] d{div_int}: team directory {count} teams", flush=True)
 
     # ---- individual stats
-    for stat_seq, slug in INDIVIDUAL_STATS:
+    for stat_seq, slug in INDIVIDUAL_STATS.items():
         url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={stat_seq}"
         try:
             # Include the sequence in the APG cache key so its old invalid
