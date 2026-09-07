@@ -20,6 +20,29 @@ def run(args, cwd=ROOT):
     subprocess.run(args, cwd=cwd, env=ENV, check=True)
 
 
+def run_remote_migration(args, cwd=ROOT):
+    """Retry only remote migration calls when Cloudflare reports an upstream outage."""
+    for attempt in range(1, 4):
+        result = subprocess.run(
+            args, cwd=cwd, env=ENV, check=False, capture_output=True, text=True
+        )
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
+        if result.returncode == 0:
+            return
+        output = (result.stdout or "") + (result.stderr or "")
+        retryable = "Upstream service unavailable" in output or "code: 7009" in output
+        if not retryable or attempt == 3:
+            raise subprocess.CalledProcessError(result.returncode, args)
+        print(
+            f"Remote migration failed (attempt {attempt}/3); retrying in 15 seconds.",
+            file=sys.stderr,
+        )
+        time.sleep(15)
+
+
 def run_logged(args, log_path, cwd=ROOT):
     """Keep large Wrangler output on disk, but surface a useful failure tail."""
     for attempt in range(1, 4):
@@ -202,7 +225,7 @@ if not BATCH_PUBLICATION:
     run(["npm", "run", "build"], ROOT / "frontend")
     run(["npm", "run", "typecheck"], ROOT / "worker")
     run(["npm", "test"], ROOT / "worker")
-run(
+run_remote_migration(
     [
         PY,
         "scripts/cloudflare.py",
