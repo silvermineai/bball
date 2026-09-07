@@ -3,6 +3,10 @@ import { useState } from "react";
 import Link from "next/link";
 import type { BBRosters } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
+import {
+  sortRosterObservations,
+  type RosterSortKey,
+} from "../../_lib/roster-observations";
 const labels: Record<string, string> = {
   same_program: "Prior program also observed",
   different_program: "Different program observed",
@@ -13,16 +17,20 @@ export default function Recruiting() {
   const [season, setSeason] = useState("2027"),
     [q, setQ] = useState(""),
     [status, setStatus] = useState("all"),
+    [sort, setSort] = useState<RosterSortKey>("status"),
     [page, setPage] = useState(0);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
   );
-  const rows = (data?.players || []).filter(
-    (p) =>
-      (p.name + " " + p.team + " " + p.previous_teams.join(" "))
-        .toLowerCase()
-        .includes(q.toLowerCase()) &&
-      (status === "all" || p.status === status),
+  const rows = sortRosterObservations(
+    (data?.players || []).filter(
+      (p) =>
+        (p.name + " " + p.team + " " + p.previous_teams.join(" "))
+          .toLowerCase()
+          .includes(q.toLowerCase()) &&
+        (status === "all" || p.status === status),
+    ),
+    sort,
   );
   return (
     <>
@@ -68,6 +76,21 @@ export default function Recruiting() {
                 {v}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="control">
+          <span>ORDER</span>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as RosterSortKey);
+              setPage(0);
+            }}
+          >
+            <option value="status">Movement signal</option>
+            <option value="prior">Most prior programs</option>
+            <option value="program">Current program</option>
+            <option value="name">Player name</option>
           </select>
         </label>
       </div>
