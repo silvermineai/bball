@@ -490,7 +490,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         </time>
                         <strong>{eventLabels[e.kind]}</strong>
                         <p>{e.summary}</p>
-                        <a href={e.source.url}>{e.source.title} ↗</a>
+                        <a href={e.source.url} target="_blank" rel="noreferrer">
+                          {e.source.title} ↗
+                        </a>
                         <small>
                           {e.source.publisher} · Reviewed{" "}
                           {publicationDate(e.source.checked_at)}
