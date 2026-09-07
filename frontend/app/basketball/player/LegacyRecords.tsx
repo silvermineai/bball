@@ -43,17 +43,27 @@ type Data = {
 };
 export default function LegacyRecords() {
   const params = useSearchParams(),
-    id = params.get("id");
+    id = params.get("id"),
+    requestedSeason = params.get("season");
+  const publisherSeasons = [2026, 2025, 2024];
+  const initialSeason =
+    requestedSeason && publisherSeasons.includes(Number(requestedSeason))
+      ? requestedSeason
+      : "2026";
+  const [season, setSeason] = useState(initialSeason);
   const page = 0;
   const [data, setData] = useState<Data | null>(null),
     [error, setError] = useState("");
+  useEffect(() => {
+    setSeason(initialSeason);
+  }, [initialSeason]);
   useEffect(() => {
     if (!id) return;
     const c = new AbortController();
     setData(null);
     setError("");
     fetch(
-      `/api/basketball/research/players/${encodeURIComponent(id)}?season=2026&page=${page}`,
+      `/api/basketball/research/players/${encodeURIComponent(id)}?season=${season}&page=${page}`,
       { signal: c.signal },
     )
       .then((r) => {
@@ -70,15 +80,27 @@ export default function LegacyRecords() {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => c.abort();
-  }, [id, page]);
+  }, [id, page, season]);
   return (
     <>
       <h2>{data?.player.name || "Publisher stats and roster observations."}</h2>
-      <p className="note">
-        Published 2025–26 aggregates and the previously imported source roster
-        listings. These may differ from independently calculated game-log
-        totals.
-      </p>
+      <div className="toolbar">
+        <label className="control">
+          <span>PUBLISHER STAT SEASON</span>
+          <select value={season} onChange={(e) => setSeason(e.target.value)}>
+            {publisherSeasons.map((year) => (
+              <option key={year} value={year}>
+                {year - 1}–{String(year).slice(-2)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="note">
+          Published source aggregates for the selected season and previously
+          imported roster listings. These may differ from independently
+          calculated game-log totals.
+        </p>
+      </div>
       {!id ? (
         <p className="empty">Choose a player from the index or roster board.</p>
       ) : error ? (
@@ -123,7 +145,9 @@ export default function LegacyRecords() {
           </section>
           <section className="section">
             <div className="section-heading">
-              <h2>Published season statistics.</h2>
+              <h2>
+                Published {Number(season) - 1}–{season.slice(-2)} statistics.
+              </h2>
             </div>
             {!data.seasonStats.length && (
               <p className="empty">
