@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { BBPlayer } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import { comparisonHref } from "../../_lib/player-comparison";
 import {
   rankProduction,
@@ -187,6 +188,60 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         </p>
       ) : (
         <>
+          <div className="section-heading" style={{ marginTop: 20 }}>
+            <p>
+              {rows.length.toLocaleString()} matching player/program records ·
+              export respects the selected season, search, sort and qualification
+              filter
+            </p>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  `basketball-players-${season}.csv`,
+                  toCsv(
+                    [
+                      "Stat rank",
+                      "Player",
+                      "NCAA ID",
+                      "Program",
+                      "Position",
+                      "Games",
+                      "Minutes per game",
+                      "Points per game",
+                      "Rebounds per game",
+                      "Assists per game",
+                      "Steals per game",
+                      "Blocks per game",
+                      "Effective FG%",
+                      "True shooting %",
+                      "Three-point FG%",
+                    ],
+                    rows.map((p) => [
+                      p.statRank,
+                      p.name,
+                      p.id,
+                      p.team,
+                      p.position,
+                      p.games,
+                      p.mpg,
+                      p.ppg,
+                      p.rpg,
+                      p.apg,
+                      p.spg,
+                      p.bpg,
+                      p.efg == null ? null : p.efg * 100,
+                      p.ts == null ? null : p.ts * 100,
+                      p.three_pct == null ? null : p.three_pct * 100,
+                    ]),
+                  ),
+                )
+              }
+            >
+              Download CSV ↓
+            </button>
+          </div>
           <div className="table-scroll">
             <table className="data-table">
               <thead>
