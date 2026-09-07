@@ -7,6 +7,7 @@ import {
   publicationDate,
   recruitingRows,
   sortRecruitingRows,
+  summarizeRecruitingPrograms,
   type RecruitingSort,
   type RecruitingRelease,
 } from "../../_lib/recruiting";
@@ -27,8 +28,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     setTeam(params.get("team") || "all");
     setQ(params.get("q") || "");
   }, []);
+  const allRows = recruitingRows(data);
+  const programSummary = summarizeRecruitingPrograms(allRows);
   const rows = sortRecruitingRows(
-    recruitingRows(data).filter(
+    allRows.filter(
       (p) =>
         (team === "all" || p.team_id === team) &&
         (kind === "all" ||
@@ -97,6 +100,59 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               announcements do not adjust the forecast model.
             </small>
           </div>
+          <section className="paper-panel recruiting-program-summary">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">Program view / linked production</div>
+                <h2>How much prior workload is represented?</h2>
+              </div>
+            </div>
+            <p className="note">
+              Sums below cover only announced additions in this reviewed file
+              whose prior college profile was linked. They describe the source
+              sample; they do not predict minutes, availability or a new-school
+              role.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Program</th>
+                    <th className="numeric">Additions</th>
+                    <th className="numeric">College transfers</th>
+                    <th className="numeric">Linked profiles</th>
+                    <th className="numeric">Prior PPG represented</th>
+                    <th className="numeric">Prior MPG represented</th>
+                    <th className="numeric">20+ MPG</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {programSummary.map((summary) => (
+                    <tr key={summary.team_id}>
+                      <td>
+                        <button
+                          className="text-link"
+                          type="button"
+                          onClick={() => {
+                            setTeam(summary.team_id);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          {summary.team_name}
+                        </button>
+                      </td>
+                      <td className="numeric">{summary.additions}</td>
+                      <td className="numeric">{summary.transfers}</td>
+                      <td className="numeric">{summary.linked_profiles}</td>
+                      <td className="numeric">{number(summary.prior_ppg)}</td>
+                      <td className="numeric">{number(summary.prior_mpg)}</td>
+                      <td className="numeric">{summary.high_workload}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
           <div className="toolbar recruiting-filters">
             <label className="control">
               <span>PLAYER OR PRIOR PROGRAM</span>

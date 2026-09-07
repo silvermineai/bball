@@ -81,6 +81,16 @@ export const eventLabels = {
   season_unavailable: "Season unavailable",
 };
 export type RecruitingSort = "latest" | "ppg" | "mpg" | "name";
+export type RecruitingProgramSummary = {
+  team_id: string;
+  team_name: string;
+  additions: number;
+  transfers: number;
+  linked_profiles: number;
+  prior_ppg: number;
+  prior_mpg: number;
+  high_workload: number;
+};
 type RecruitingSortable = {
   name: string;
   latest: { source: { published_on: string } };
@@ -138,6 +148,49 @@ export function recruitingRows(data: RecruitingRelease) {
         ) || a.name.localeCompare(b.name),
     );
 }
+
+/** Aggregate linked prior production by announcing program for roster review. */
+export function summarizeRecruitingPrograms(
+  rows: Array<{
+    team_id: string;
+    category: RecruitingPerson["category"];
+    program: { name: string };
+    stats: RecruitingPerson["stats"];
+  }>,
+): RecruitingProgramSummary[] {
+  const byTeam = new Map<string, RecruitingProgramSummary>();
+  for (const row of rows) {
+    const summary =
+      byTeam.get(row.team_id) ?? {
+        team_id: row.team_id,
+        team_name: row.program.name,
+        additions: 0,
+        transfers: 0,
+        linked_profiles: 0,
+        prior_ppg: 0,
+        prior_mpg: 0,
+        high_workload: 0,
+      };
+    summary.additions += 1;
+    if (row.category === "transfer") summary.transfers += 1;
+    if (row.stats) {
+      summary.linked_profiles += 1;
+      if (row.stats.ppg != null) summary.prior_ppg += row.stats.ppg;
+      if (row.stats.mpg != null) {
+        summary.prior_mpg += row.stats.mpg;
+        if (row.stats.mpg >= 20) summary.high_workload += 1;
+      }
+    }
+    byTeam.set(row.team_id, summary);
+  }
+  return [...byTeam.values()].sort(
+    (a, b) =>
+      b.prior_mpg - a.prior_mpg ||
+      b.linked_profiles - a.linked_profiles ||
+      a.team_name.localeCompare(b.team_name),
+  );
+}
+
 export function publicationDate(day: string) {
   return new Date(day.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-US", {
     month: "short",

@@ -4,11 +4,34 @@ import {
   recruitingRows,
   publicationDate,
   sortRecruitingRows,
+  summarizeRecruitingPrograms,
   type RecruitingRelease,
 } from "./recruiting";
 const data = JSON.parse(
   readFileSync("public/data/basketball/recruiting.json", "utf8"),
 ) as RecruitingRelease;
+const stat = (mpg: number, ppg: number) => ({
+  id: "player",
+  team_id: "prior",
+  team: "Prior",
+  season: 2026,
+  games: 20,
+  mpg,
+  ppg,
+  rpg: null,
+  apg: null,
+  spg: null,
+  bpg: null,
+  topg: null,
+  efg: null,
+  ts: null,
+  three_pct: null,
+  ft_rate: null,
+  three_rate: null,
+  tov_rate: null,
+  incomplete_box_games: 0,
+  identity_basis: "test",
+});
 describe("school announcement histories", () => {
   it("shows a later availability report and preserves the signing", () => {
     const row = recruitingRows(data).find(
@@ -34,5 +57,52 @@ describe("school announcement histories", () => {
     expect(sortRecruitingRows(rows, "name").map((p) => p.name)).toEqual(
       [...rows].map((p) => p.name).sort(),
     );
+  });
+});
+
+describe("recruiting program summaries", () => {
+  it("aggregates linked prior production and identifies high-workload additions", () => {
+    const rows = summarizeRecruitingPrograms([
+      {
+        team_id: "a",
+        category: "transfer",
+        program: { name: "Alpha" },
+        stats: stat(21, 12),
+      },
+      {
+        team_id: "a",
+        category: "freshman",
+        program: { name: "Alpha" },
+        stats: null,
+      },
+      {
+        team_id: "b",
+        category: "transfer",
+        program: { name: "Beta" },
+        stats: stat(18, 9),
+      },
+    ]);
+    expect(rows).toEqual([
+      {
+        team_id: "a",
+        team_name: "Alpha",
+        additions: 2,
+        transfers: 1,
+        linked_profiles: 1,
+        prior_ppg: 12,
+        prior_mpg: 21,
+        high_workload: 1,
+      },
+      {
+        team_id: "b",
+        team_name: "Beta",
+        additions: 1,
+        transfers: 1,
+        linked_profiles: 1,
+        prior_ppg: 9,
+        prior_mpg: 18,
+        high_workload: 0,
+      },
+    ]);
   });
 });
