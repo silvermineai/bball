@@ -24,7 +24,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     [team, setTeam] = useState("all"),
     [q, setQ] = useState(""),
     [kind, setKind] = useState("all"),
-    [sort, setSort] = useState<RecruitingSort>("latest");
+    [sort, setSort] = useState<RecruitingSort>("latest"),
+    [copied, setCopied] = useState("");
   const hydrated = useRef(false);
   useEffect(() => {
     const filters = parseRecruitingFilters(window.location.search);
@@ -46,6 +47,14 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       );
     }
   }, [team, q, kind, sort]);
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Recruiting view link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   const allRows = recruitingRows(data);
   const programSummary = summarizeRecruitingPrograms(allRows);
   const rows = sortRecruitingRows(
@@ -276,6 +285,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     : "Alphabetical by player"}
             </p>
             <div className="button-row">
+              <button className="button secondary" type="button" onClick={share}>
+                Copy view link
+              </button>
               <button
                 className="button secondary"
                 type="button"
@@ -347,6 +359,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 Evidence JSON ↓
               </a>
             </div>
+            {copied && <p role="status">{copied}</p>}
           </div>
           <div className="recruiting-grid">
             {rows.map((p) => (

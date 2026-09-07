@@ -18,7 +18,8 @@ export default function Matchups({ games }: { games: BBGame[] }) {
     [month, setMonth] = useState(initial.month),
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(0),
+    [copied, setCopied] = useState("");
   useEffect(() => {
     const next = matchupFilterSearch({ team: q, month, coverage, sort });
     if (next !== window.location.search) {
@@ -43,6 +44,14 @@ export default function Matchups({ games }: { games: BBGame[] }) {
     ),
     sort,
   );
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Slate link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   return (
     <>
       <div className="toolbar">
@@ -159,7 +168,11 @@ export default function Matchups({ games }: { games: BBGame[] }) {
         >
           Download CSV ↓
         </button>
+        <button className="button secondary" type="button" onClick={share}>
+          Copy slate link
+        </button>
       </div>
+      {copied && <p role="status">{copied}</p>}
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <BasketballCard key={g.id} game={g} />
