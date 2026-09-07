@@ -631,7 +631,9 @@ export default async function Page({
                         ? signed(q.model_difference * 100) + " pp"
                         : signed(q.model_difference) + " pts"}
                       <small>
-                        {fmt(q.market_overround * 100, 2)}% bookmaker overround
+                        {q.market_overround == null
+                          ? "Bookmaker overround unavailable"
+                          : `${fmt(q.market_overround * 100, 2)}% bookmaker overround`}
                       </small>
                     </td>
                     <td>

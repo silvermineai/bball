@@ -7,7 +7,7 @@ export type Comparison = {
   line: number | null;
   model_difference: number;
   market_home_probability: number | null;
-  market_overround: number;
+  market_overround?: number;
   model_absolute_error?: number;
   market_absolute_error?: number;
   direction_result?: string;
