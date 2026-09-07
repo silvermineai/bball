@@ -6,6 +6,44 @@ import {
 } from "../_lib/basketball-data";
 import { date, fmt } from "../_lib/format";
 import BasketballCard from "../_components/BasketballCard";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  topBasketballLeaders,
+  type BasketballLeaderMetric,
+  type BasketballLeaderPlayer,
+} from "../_lib/basketball-leaders";
+import { seasonLabel } from "../_lib/careers";
+
+function getBasketballLeaders(season: number) {
+  const file = path.join(
+    process.cwd(),
+    "public/data/basketball/history",
+    `players-${season - 1}.json`,
+  );
+  if (!fs.existsSync(file)) return null;
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    season: number;
+    players: BasketballLeaderPlayer[];
+  };
+  const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "ts"];
+  return {
+    season: data.season,
+    boards: Object.fromEntries(
+      metrics.map((metric) => [metric, topBasketballLeaders(data.players, metric)]),
+    ) as Record<
+      BasketballLeaderMetric,
+      ReturnType<typeof topBasketballLeaders>
+    >,
+  };
+}
+
+const leaderMetricLabels: Record<BasketballLeaderMetric, string> = {
+  ppg: "Points per game",
+  rpg: "Rebounds per game",
+  apg: "Assists per game",
+  ts: "True shooting",
+};
 export const metadata = {
   title: "2026–27 basketball stats, scouting and recruiting research",
 };
@@ -13,7 +51,8 @@ export default function Page() {
   const d = getBasketball(),
     r = getRosters(),
     recruiting = getRecruiting(),
-    e = d.model.evaluation;
+    e = d.model.evaluation,
+    leaders = getBasketballLeaders(d.season);
   return (
     <>
       <div className="dateline eyebrow">
@@ -101,11 +140,58 @@ export default function Page() {
             ))}
         </div>
       </section>
+      {leaders && (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">02 / Player production</div>
+              <h2>Start with the player file.</h2>
+            </div>
+            <Link href="/basketball/players/">Full player archive →</Link>
+          </div>
+          <p className="note" style={{ marginBottom: 20 }}>
+            Qualified {seasonLabel(leaders.season)} source records, ranked
+            within each measure. Qualification requires at least 15 games and
+            400 minutes; this describes recorded production, not a projection.
+          </p>
+          <div className="basketball-leader-grid">
+            {(["ppg", "rpg", "apg", "ts"] as BasketballLeaderMetric[]).map(
+              (metric) => (
+                <div className="paper-panel" key={metric}>
+                  <div className="eyebrow">{leaderMetricLabels[metric]}</div>
+                  <div className="basketball-leader-list">
+                    {leaders.boards[metric].map((player) => (
+                      <Link
+                        className="basketball-leader-row"
+                        href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${leaders.season}`}
+                        key={player.id}
+                      >
+                        <span className="rank-number">{player.rank}</span>
+                        <span>
+                          <strong>{player.name}</strong>
+                          <small>
+                            {player.team} · {player.games} GP
+                          </small>
+                        </span>
+                        <span className="numeric">
+                          {metric === "ts"
+                            ? `${fmt(player.value * 100)}%`
+                            : fmt(player.value)}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+      )}
       <section className="section two-col">
         <div>
           <div className="section-heading">
             <div>
-              <div className="eyebrow">02 / Both ends of the floor</div>
+              <div className="eyebrow">03 / Both ends of the floor</div>
               <h2>Quality beyond tempo.</h2>
             </div>
             <Link href="/basketball/ratings/">Full table →</Link>
@@ -144,7 +230,7 @@ export default function Page() {
           </p>
         </div>
         <aside className="paper-panel">
-          <div className="eyebrow">03 / Roster construction</div>
+          <div className="eyebrow">04 / Roster construction</div>
           <h2 style={{ marginTop: 22 }}>
             Know what changed.
             <br />
@@ -182,7 +268,7 @@ export default function Page() {
       </section>
       <section className="section banner">
         <div>
-          <div className="eyebrow">04 / Player evaluation</div>
+          <div className="eyebrow">05 / Player evaluation</div>
           <h3 style={{ marginTop: 12 }}>Production meets lineup context.</h3>
           <p>
             Browse box-score rates and shooting efficiency, then study the
