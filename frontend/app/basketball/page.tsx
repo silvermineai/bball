@@ -78,6 +78,9 @@ export default function Page() {
             <Link className="hero-link" href="/basketball/recruiting/">
               Study recruiting evidence →
             </Link>
+            <Link className="hero-link" href="/basketball/pressroom/">
+              Find the next story angle →
+            </Link>
           </div>
         </div>
         <div className="field">
