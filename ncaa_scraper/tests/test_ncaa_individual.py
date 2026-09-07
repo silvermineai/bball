@@ -1,7 +1,15 @@
 import sqlite3
 import unittest
 
-from ncaa_scraper.ncaa_individual import SCHEMA, decode_html, export_release, parse_table, to_num
+from ncaa_scraper.ncaa_individual import (
+    INDIVIDUAL_STATS,
+    SCHEMA,
+    decode_html,
+    export_release,
+    invalid_ranking_page,
+    parse_table,
+    to_num,
+)
 
 
 class NCAAIndividualTests(unittest.TestCase):
@@ -29,6 +37,12 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
         self.assertEqual(release["players"][0]["name"], "A Player")
         self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
+
+    def test_assists_uses_current_ncaa_sequence_and_rejects_stale_body(self):
+        self.assertIn(("216.0", "apg"), INDIVIDUAL_STATS)
+        self.assertNotIn(("140.0", "apg"), INDIVIDUAL_STATS)
+        self.assertTrue(invalid_ranking_page("b'Invalid ranking period'"))
+        self.assertFalse(invalid_ranking_page("<table><tbody><tr><td>1</td></tr></tbody></table>"))
 
 
 if __name__ == "__main__":

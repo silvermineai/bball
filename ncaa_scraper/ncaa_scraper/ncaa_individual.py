@@ -39,21 +39,24 @@ SQL_PATH = REPO_ROOT / ".local" / "ncaa-individual.sql"
 YEAR = "2026.0"
 SPORT = "MBB"
 
-# individual stat pages: stat_seq -> (slug, value column meaning)
-INDIVIDUAL_STATS = {
-    "136.0": "ppg",       # Points Per Game (also G, FGM, 3FG, FT, PTS)
-    "137.0": "rpg",       # Rebounds Per Game (also REB)
-    "140.0": "apg",       # Assists Per Game (also AST)
-    "139.0": "spg",       # Steals Per Game
-    "138.0": "bpg",       # Blocks Per Game
-    "141.0": "fg_pct",    # FG% (also FGM/FGA)
-    "143.0": "three_pct", # 3P% (also 3FG/3FGA)
-    "142.0": "ft_pct",    # FT%
-    "144.0": "threes_pg", # Three Pointers Per Game
-    "628.0": "mpg",       # Minutes Per Game
-    "473.0": "ast_to",    # Assist/Turnover Ratio
-    "556.0": "dbl_dbl",   # Double doubles
-}
+# Individual stat pages: (stat_seq, slug). NCAA's current
+# navigation points to 216.0 for assists per game; 140.0 is retained as a
+# fallback because older cached editions used that identifier.
+INDIVIDUAL_STATS = (
+    ("136.0", "ppg"),       # Points Per Game (also G, FGM, 3FG, FT, PTS)
+    ("137.0", "rpg"),       # Rebounds Per Game (also REB)
+    ("216.0", "apg"),       # Assists Per Game (also AST)
+    ("139.0", "spg"),       # Steals Per Game
+    ("138.0", "bpg"),       # Blocks Per Game
+    ("141.0", "fg_pct"),    # FG% (also FGM/FGA)
+    ("143.0", "three_pct"), # 3P% (also 3FG/3FGA)
+    ("142.0", "ft_pct"),    # FT%
+    ("144.0", "threes_pg"), # Three Pointers Per Game
+    ("628.0", "mpg"),       # Minutes Per Game
+    ("473.0", "ast_to"),    # Assist/Turnover Ratio
+    ("556.0", "dbl_dbl"),   # Double doubles
+)
+STAT_FALLBACKS = {"apg": ("140.0",)}
 
 TEAM_SCORING_STAT = "145.0"  # team Scoring Offense: G, W-L, PTS, PPG
 
@@ -145,6 +148,11 @@ def parse_table(html: str):
         return headers, []
     rows = re.findall(r"<tr[^>]*>(.*?)</tr>", body.group(1), re.DOTALL)
     return headers, rows
+
+
+def invalid_ranking_page(html: str) -> bool:
+    """Identify the short error body returned for an obsolete stat sequence."""
+    return bool(re.search(r"invalid ranking period", decode_html(html), re.I))
 
 
 def _json_number(value):
@@ -258,13 +266,35 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
     print(f"[individual] d{div_int}: team directory {count} teams", flush=True)
 
     # ---- individual stats
-    for stat_seq, slug in INDIVIDUAL_STATS.items():
+    for stat_seq, slug in INDIVIDUAL_STATS:
         url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={stat_seq}"
         try:
-            html = decode_html(fetcher.fetch(url, cache_key=f"rk_{SPORT}_d{div_int}_{slug}"))
+            # Include the sequence in the APG cache key so its old invalid
+            # response cannot mask the corrected URL. Preserve established
+            # keys for every other measure so an offline refresh reuses them.
+            cache_key = (
+                f"rk_{SPORT}_d{div_int}_{slug}_{stat_seq.replace('.', '_')}"
+                if slug == "apg"
+                else f"rk_{SPORT}_d{div_int}_{slug}"
+            )
+            html = fetcher.fetch(url, cache_key=cache_key)
+            if invalid_ranking_page(html):
+                raise ValueError("Invalid ranking period")
         except Exception as exc:
-            print(f"[individual] d{div_int} {slug}: fetch failed {exc}", flush=True)
-            continue
+            html = None
+            for fallback in STAT_FALLBACKS.get(slug, ()):
+                fallback_url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={fallback}"
+                try:
+                    candidate = fetcher.fetch(fallback_url, cache_key=f"rk_{SPORT}_d{div_int}_{slug}_{fallback.replace('.', '_')}")
+                    if not invalid_ranking_page(candidate):
+                        html = candidate
+                        break
+                except Exception:
+                    pass
+            if html is None:
+                print(f"[individual] d{div_int} {slug}: fetch failed {exc}", flush=True)
+                continue
+        html = decode_html(html)
         headers, rows = parse_table(html)
         # header indices: first 6 are Rank, Player, Cl, Ht, Pos, G
         added = 0
