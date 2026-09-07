@@ -225,7 +225,7 @@ export function rateValue(s: CareerSummary, metric: RateMetric) {
     return [t.fgm, t.tpm, t.fga, t.tpa].some((v) => v === null)
       ? null
       : ratio(t.fgm! - t.tpm!, t.fga! - t.tpa!);
-  return s[metric];
+  return s[metric] ?? null;
 }
 export const peerMetrics = [
   { key: "ppg", label: "Scoring", unit: "PTS / 40" },

@@ -42,7 +42,8 @@ async function read<T>(url: string, signal: AbortSignal): Promise<T> {
   return response.json();
 }
 const letter = (index: number) => String.fromCharCode(65 + index);
-const percent = (v: number | null) => (v === null ? "—" : `${fmt(v * 100)}%`);
+const percent = (v: number | null | undefined) =>
+  v == null ? "—" : `${fmt(v * 100)}%`;
 function rateSample(s: CareerSummary, metric: RateMetric) {
   const t = s.totals;
   const fields: Record<Exclude<RateMetric, "two_pct">, StatKey[]> = {
