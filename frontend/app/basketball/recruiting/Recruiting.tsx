@@ -261,8 +261,19 @@ export default function Recruiting() {
                       <small>
                         {[p.position, p.height].filter(Boolean).join(" · ")}
                       </small>
+                      {p.source_url && (
+                        <small>
+                          <a href={p.source_url} target="_blank" rel="noreferrer">
+                            Publisher profile ↗
+                          </a>
+                        </small>
+                      )}
                     </td>
-                    <td>{p.team}</td>
+                    <td>
+                      <Link href={`/basketball/programs/${p.team_id}/`}>
+                        {p.team}
+                      </Link>
+                    </td>
                     <td>{p.previous_teams.join(", ") || "Not observed"}</td>
                     <td>{labels[p.status]}</td>
                     <td>{p.class_year || "—"}</td>
