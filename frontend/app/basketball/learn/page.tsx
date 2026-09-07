@@ -19,6 +19,16 @@ const metrics = [
     use: "Lower is better. A low number is a foundation; the matchup page shows which four factors may explain it.",
   },
   {
+    name: "Opponent-adjusted four factors",
+    value: "Ridge estimates of eFG%, turnover rate, offensive-rebound rate and free-throw attempt rate after opponent, venue and season-recency adjustment.",
+    use: "Read offensive and defensive directions together to find a matchup lever. Missing components stay unavailable; these are independent Silvermine estimates, not KenPom ratings.",
+  },
+  {
+    name: "Strength of schedule (SOS)",
+    value: "The mean adjusted net strength of rated opponents, with the number of rated opponents shown beside it.",
+    use: "Use SOS to qualify a record’s context, then check the sample count. It describes the opponents faced; it is not a forecast or a replacement for game-level matchup evidence.",
+  },
+  {
     name: "Tempo",
     value: "Estimated possessions per 40 minutes, including an overtime normalization.",
     use: "Use the pace contrast to ask whether a game will be played in one team’s preferred rhythm.",
