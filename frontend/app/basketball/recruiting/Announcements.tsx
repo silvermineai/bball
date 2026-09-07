@@ -216,6 +216,14 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         <strong>{number(p.stats.mpg)}</strong>
                         <span>MIN / G</span>
                       </div>
+                      <div>
+                        <strong>
+                          {p.stats.efg == null
+                            ? "—"
+                            : `${(p.stats.efg * 100).toFixed(1)}%`}
+                        </strong>
+                        <span>eFG%</span>
+                      </div>
                     </div>
                     {p.stats.games < 10 && (
                       <small>
