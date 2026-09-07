@@ -26,7 +26,16 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     [sort, setSort] = useState("ppg"),
     [qualified, setQualified] = useState(true),
     [page, setPage] = useState(0);
-  const sortKey = sort as "ppg" | "rpg" | "apg" | "ts" | "mpg";
+  const sortKey = sort as
+    | "ppg"
+    | "rpg"
+    | "apg"
+    | "ts"
+    | "mpg"
+    | "spg"
+    | "bpg"
+    | "efg"
+    | "three_pct";
   const rows = rankProduction(
     (data?.season === +season ? data.players : []).filter(
       (p) => !qualified || p.qualified,
@@ -105,6 +114,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <option value="apg">Assists per game</option>
             <option value="ts">True shooting</option>
             <option value="mpg">Minutes per game</option>
+            <option value="spg">Steals per game</option>
+            <option value="bpg">Blocks per game</option>
+            <option value="efg">Effective FG%</option>
+            <option value="three_pct">Three-point FG%</option>
           </select>
         </label>
       </div>
