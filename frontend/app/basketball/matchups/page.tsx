@@ -17,6 +17,12 @@ export default function Page() {
           a separate season. Injuries, transfers and current roster composition
           are not yet model inputs.
         </p>
+        <p className="note">
+          Use the triage controls to surface the strongest model signals, the
+          closest projected games or the widest uncertainty ranges. “Toss-up,”
+          “Lean” and “Strong lean” describe estimated win-probability confidence;
+          they are not betting advice.
+        </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
         <Matchups games={d.upcoming} />

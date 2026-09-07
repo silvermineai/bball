@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { BBGame } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
+import { forecastSignal } from "../_lib/basketball-matchups";
 export default function BasketballCard({ game: g }: { game: BBGame }) {
   const p = g.prediction;
+  const signal = p ? forecastSignal(p) : null;
   return (
     <article className="match-card">
       <div className="meta">
@@ -36,6 +38,10 @@ export default function BasketballCard({ game: g }: { game: BBGame }) {
             <strong className="mono">
               {fmt(p.home_win_probability * 100)}%
             </strong>
+          </div>
+          <div className="match-detail muted">
+            <span>Model signal</span>
+            <span>{signal?.label}</span>
           </div>
           <div className="match-detail muted">
             <span>Projected home margin</span>

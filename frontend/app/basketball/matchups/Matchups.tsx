@@ -4,17 +4,27 @@ import { useSearchParams } from "next/navigation";
 import type { BBGame } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { sortMatchups, type MatchupSort } from "../../_lib/basketball-matchups";
 export default function Matchups({ games }: { games: BBGame[] }) {
   const params = useSearchParams(),
     [q, setQ] = useState(params.get("team") || ""),
     [month, setMonth] = useState("all"),
+    [coverage, setCoverage] = useState("all"),
+    [sort, setSort] = useState<MatchupSort>("date"),
     [page, setPage] = useState(0);
-  const rows = games.filter(
-    (g) =>
-      (g.home_name + " " + g.away_name)
-        .toLowerCase()
-        .includes(q.toLowerCase()) &&
-      (month === "all" || g.starts_at.startsWith(month)),
+  const rows = sortMatchups(
+    games.filter(
+      (g) =>
+        (g.home_name + " " + g.away_name)
+          .toLowerCase()
+          .includes(q.toLowerCase()) &&
+        (month === "all" || g.starts_at.startsWith(month)) &&
+        (coverage === "all" ||
+          (coverage === "forecasted"
+            ? g.prediction != null
+            : g.prediction == null)),
+    ),
+    sort,
   );
   return (
     <>
@@ -46,6 +56,36 @@ export default function Matchups({ games }: { games: BBGame[] }) {
               .map((m) => (
                 <option key={m}>{m}</option>
               ))}
+          </select>
+        </label>
+        <label className="control">
+          <span>FORECAST</span>
+          <select
+            value={coverage}
+            onChange={(e) => {
+              setCoverage(e.target.value);
+              setPage(0);
+            }}
+          >
+            <option value="all">All games</option>
+            <option value="forecasted">With model forecast</option>
+            <option value="unforecasted">Without forecast</option>
+          </select>
+        </label>
+        <label className="control">
+          <span>SORT BY</span>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as MatchupSort);
+              setPage(0);
+            }}
+          >
+            <option value="date">Date</option>
+            <option value="confidence">Strongest model signal</option>
+            <option value="close">Closest projected margin</option>
+            <option value="margin">Largest projected margin</option>
+            <option value="uncertainty">Widest margin range</option>
           </select>
         </label>
       </div>
