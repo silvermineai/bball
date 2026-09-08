@@ -118,9 +118,16 @@ export default function BasketballCard({
                   {rosterShare(homeRoster?.represented_prior_minutes_share)} / {rosterShare(awayRoster?.represented_prior_minutes_share)}
                 </span>
               </div>
+              <div className="match-detail muted">
+                <span>Prior minutes needing review · H / A</span>
+                <span>
+                  {rosterMinutes(homeRoster?.unrepresented_prior_minutes)} / {rosterMinutes(awayRoster?.unrepresented_prior_minutes)}
+                </span>
+              </div>
               <small>
                 Observed listings only; this workload context is not an
-                eligibility, availability or forecast input.
+                eligibility, availability or forecast input. The review-minute
+                measure is a source queue, not a departure count.
               </small>
             </div>
           )}
@@ -237,4 +244,8 @@ function pct(value: number) {
 
 function rosterShare(value: number | null | undefined) {
   return value == null ? "—" : `${fmt(value * 100, 0)}%`;
+}
+
+function rosterMinutes(value: number | null | undefined) {
+  return value == null ? "—" : `${Math.round(value).toLocaleString()} min`;
 }
