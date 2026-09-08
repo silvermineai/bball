@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -29,6 +29,7 @@ const aggregate = (where: string) => `
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.pts') AS REAL),0)) AS points,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(s.stats_json,'$.drb') AS REAL),0)) AS rebounds,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.ast') AS REAL),0)) AS assists,
+    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tov') AS REAL),0)) AS turnovers,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.stl') AS REAL),0)) AS steals,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.blk') AS REAL),0)) AS blocks,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.fga') AS REAL),0)) AS fga,
@@ -53,6 +54,8 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   ts: "CASE WHEN (fga + 0.475 * fta) > 0 THEN 100.0 * points / (2 * (fga + 0.475 * fta)) ELSE NULL END",
   efg: "CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END",
   per40: "CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END",
+  ast_to: "CASE WHEN turnovers > 0 THEN assists / turnovers ELSE NULL END",
+  stocks40: "CASE WHEN minutes > 0 THEN 40.0 * (steals + blocks) / minutes ELSE NULL END",
   rapm_net: "rapm_net",
   orapm: "orapm",
   drapm: "drapm",
