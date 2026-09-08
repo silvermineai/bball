@@ -13,6 +13,7 @@ from ncaa_scraper.basketball import (
     dataset_catalog,
     ingest,
     matchup_factor_edges,
+    ncaa_player_box_field_coverage,
     player_index,
     publisher_leaders,
     publisher_value_leaders,
@@ -54,6 +55,24 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_ncaa_player_box_field_coverage_counts_zero_as_observed(self):
+        conn = sqlite3.connect(":memory:")
+        conn.execute("CREATE TABLE bb_ncaa_player_box (season INTEGER, stats_json TEXT)")
+        conn.executemany(
+            "INSERT INTO bb_ncaa_player_box VALUES (?,?)",
+            [
+                (2026, json.dumps({"pts": 0, "mins": 12, "ts_pct": None})),
+                (2026, json.dumps({"pts": 5, "mins": None})),
+            ],
+        )
+        coverage = ncaa_player_box_field_coverage(conn, "2026-09-08T00:00:00Z")
+        season = coverage["seasons"][0]
+        self.assertEqual(season["rows"], 2)
+        self.assertEqual(season["fields"]["pts"]["observed"], 2)
+        self.assertEqual(season["fields"]["mins"]["observed"], 1)
+        self.assertEqual(season["fields"]["ts_pct"]["observed"], 0)
+        conn.close()
+
     def test_sql_export_batches_are_hashed_and_replayable(self):
         statements = [
             "CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT);\n",

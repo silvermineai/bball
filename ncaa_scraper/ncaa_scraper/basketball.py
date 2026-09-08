@@ -1443,6 +1443,57 @@ def dataset_catalog(conn):
     return catalog
 
 
+def ncaa_player_box_field_coverage(conn, generated_at=None):
+    """Count every source stat key by season without treating zero as missing."""
+    seasons = {}
+    fields = set()
+    for season, stats_json in conn.execute(
+        "SELECT season,stats_json FROM bb_ncaa_player_box ORDER BY season"
+    ):
+        season = int(season)
+        entry = seasons.setdefault(season, {"rows": 0, "fields": defaultdict(int)})
+        entry["rows"] += 1
+        try:
+            stats = json.loads(stats_json)
+        except (TypeError, json.JSONDecodeError):
+            stats = {}
+        if not isinstance(stats, dict):
+            stats = {}
+        for key, value in stats.items():
+            if not isinstance(key, str):
+                continue
+            fields.add(key)
+            if value is not None and value != "":
+                entry["fields"][key] += 1
+    result = []
+    for season in sorted(seasons):
+        entry = seasons[season]
+        result.append(
+            {
+                "season": season,
+                "rows": entry["rows"],
+                "fields": {
+                    key: {
+                        "observed": entry["fields"].get(key, 0),
+                        "share": round(
+                            entry["fields"].get(key, 0) / entry["rows"], 6
+                        )
+                        if entry["rows"]
+                        else 0,
+                    }
+                    for key in sorted(fields)
+                },
+            }
+        )
+    return {
+        "generated_at": generated_at or utcnow(),
+        "fields": sorted(fields),
+        "seasons": result,
+        "source": "SportsDataverse ncaa_mbb_player_box parquet releases",
+        "identity_note": "Counts describe source-field presence; they do not establish identity, eligibility or a cross-publisher join.",
+    }
+
+
 def build(conn, target=2027):
     now = utcnow()
     games, boxes, valid = load_games(conn)
@@ -1571,6 +1622,7 @@ def build(conn, target=2027):
             "source": "SportsDataverse ncaa_mbb_player_box parquet releases",
             "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
         },
+        "ncaa-player-box-fields": ncaa_player_box_field_coverage(conn, now),
     }
     OUT.mkdir(parents=True, exist_ok=True)
     for name, data in artifacts.items():

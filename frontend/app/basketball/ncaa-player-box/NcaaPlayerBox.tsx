@@ -11,6 +11,14 @@ type Row = {
 };
 type Result = { season: number; archive_mode: "games" | "season"; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; total: number; source?: { fetched_at?: string | null; sha256?: string | null } };
+type FieldCoverage = {
+  fields: string[];
+  seasons: Array<{
+    season: number;
+    rows: number;
+    fields: Record<string, { observed: number; share: number }>;
+  }>;
+};
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const n = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const pct = (value: number | null | undefined) => n(value == null ? null : value * 100) + "%";
@@ -49,6 +57,7 @@ export default function NcaaPlayerBox() {
   const [season, setSeason] = useState(initial?.get("season") || "2026");
   const [query, setQuery] = useState(initial?.get("q") || "");
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [fieldCoverage, setFieldCoverage] = useState<FieldCoverage | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(() => {
     const value = Number(initial?.get("page") || 0);
@@ -64,6 +73,15 @@ export default function NcaaPlayerBox() {
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
   }, [season, query, page]);
 
+  useEffect(() => {
+    fetch("/data/basketball/ncaa-player-box-fields.json")
+      .then((r) => {
+        if (!r.ok) throw Error("The NCAA field coverage report could not be loaded.");
+        return r.json() as Promise<FieldCoverage>;
+      })
+      .then(setFieldCoverage)
+      .catch((e) => setError(e.message));
+  }, []);
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-player-box?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA player archive could not be loaded."); return r.json() as Promise<Meta>; })
@@ -82,6 +100,7 @@ export default function NcaaPlayerBox() {
   }, [season, query, page]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
+  const selectedCoverage = fieldCoverage?.seasons.find((entry) => entry.season === Number(season));
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -119,6 +138,20 @@ export default function NcaaPlayerBox() {
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} placeholder="Search a player, team or source ID" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
+    {selectedCoverage && <section className="paper-panel" style={{ marginBottom: 24 }}>
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">Source field audit / {label(selectedCoverage.season)}</div>
+          <h2>Know which stats the release actually carries.</h2>
+        </div>
+        <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} source keys</span>
+      </div>
+      <p className="note">Observed counts include source-reported zeroes. A blank or null source value is unavailable and is never converted into zero.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th className="numeric">Observed</th><th className="numeric">Coverage</th></tr></thead><tbody>{fieldCoverage?.fields.map((field) => {
+        const value = selectedCoverage.fields[field];
+        return <tr key={field}><td><code>{field}</code></td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{value ? (value.share * 100).toFixed(1) + "%" : "0.0%"}</td></tr>;
+      })}</tbody></table></div>
+    </section>}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
       {copied && <p role="status">{copied}</p>}
