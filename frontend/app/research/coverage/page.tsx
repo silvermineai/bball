@@ -26,7 +26,47 @@ export default function Page() {
     fs.readFileSync(path.join(dataDir, "history/index.json"), "utf8"),
   ) as {
     player_ids: number;
-    seasons: { identified_rows: number }[];
+    generated_at: string;
+    seasons: { season: number; source_rows: number; identified_rows: number }[];
+    sources: { url: string }[][];
+  };
+  const pbp = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "pbp-catalog.json"), "utf8"),
+  ) as {
+    seasons: {
+      season: number;
+      generated_at: string;
+      source: { url: string };
+      coverage: { source_events: number };
+    }[];
+  };
+  const matchupStints = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "matchup-stints.json"), "utf8"),
+  ) as {
+    seasons: {
+      season: number;
+      generated_at: string;
+      source: { url: string };
+      coverage: { source_rows: number };
+    }[];
+  };
+  const ncaaTeamBox = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "ncaa-team-box.json"), "utf8"),
+  ) as {
+    seasons: {
+      season: number;
+      generated_at: string;
+      coverage: { source_rows: number };
+    }[];
+  };
+  const withinImpact = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "impact-within-team.json"), "utf8"),
+  ) as {
+    seasons: {
+      season: number;
+      generated_at: string;
+      coverage: { source_rows: number };
+    }[];
   };
   const ncaa = JSON.parse(
     fs.readFileSync(path.join(dataDir, "ncaa-individual.json"), "utf8"),
@@ -46,6 +86,53 @@ export default function Page() {
   const publisher = JSON.parse(
     fs.readFileSync(path.join(dataDir, "publisher-leaders.json"), "utf8"),
   ) as { metrics: unknown[] };
+  const supplemental = [
+    {
+      key: "career-player-box",
+      label: "Historical player game archive",
+      rows: history.seasons.reduce((sum, season) => sum + season.source_rows, 0),
+      seasons: history.seasons.map((season) => season.season),
+      latest: history.generated_at,
+      url: history.sources[0]?.[0]?.url ?? null,
+      note: "SportsDataverse box rows; source IDs and incomplete fields stay explicit.",
+    },
+    {
+      key: "pbp",
+      label: "Play-by-play event archive",
+      rows: pbp.seasons.reduce((sum, season) => sum + season.coverage.source_events, 0),
+      seasons: pbp.seasons.map((season) => season.season),
+      latest: pbp.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
+      url: pbp.seasons[0]?.source.url ?? null,
+      note: "Source events; shooting reconciliation is available only for the editions that publish the required fields.",
+    },
+    {
+      key: "matchup-stints",
+      label: "Five-v-five matchup stints",
+      rows: matchupStints.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0),
+      seasons: matchupStints.seasons.map((season) => season.season),
+      latest: matchupStints.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
+      url: matchupStints.seasons[0]?.source.url ?? null,
+      note: "NCAA source matchup rows; names remain in the NCAA identity namespace.",
+    },
+    {
+      key: "ncaa-team-box",
+      label: "NCAA team-game archive",
+      rows: ncaaTeamBox.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0),
+      seasons: ncaaTeamBox.seasons.map((season) => season.season),
+      latest: ncaaTeamBox.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
+      url: null,
+      note: "NCAA-derived team rows with descriptive Four Factors and tempo.",
+    },
+    {
+      key: "within-team-impact",
+      label: "Within-team RAPM archive",
+      rows: withinImpact.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0),
+      seasons: withinImpact.seasons.map((season) => season.season),
+      latest: withinImpact.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
+      url: null,
+      note: "Source impact rows; qualification and possession samples remain visible.",
+    },
+  ];
   const footballLedger = ledger.sports.football;
   const basketballLedger = ledger.sports.basketball;
 
@@ -226,6 +313,58 @@ export default function Page() {
         {!basketball.coverage.datasets?.length && (
           <p className="empty">The inventory will appear after the next basketball build.</p>
         )}
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">03 / Supplemental research archives</div>
+            <h2>The deeper player and possession files.</h2>
+          </div>
+          <span className="note">Source-native and derived layers</span>
+        </div>
+        <p className="note">
+          These archives power the historical player, shooting, lineup, team-box
+          and impact desks. Their rows are not interchangeable identities: NCAA
+          records stay in the NCAA namespace, and derived profiles retain their
+          source season and edition.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Archive</th>
+                <th className="numeric">Rows</th>
+                <th>Season span</th>
+                <th>Latest build</th>
+                <th>Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplemental.map((archive) => (
+                <tr key={archive.key}>
+                  <td>
+                    <strong>{archive.label}</strong>
+                    {archive.url && (
+                      <small>
+                        <a href={archive.url} target="_blank" rel="noreferrer">
+                          Source release ↗
+                        </a>
+                      </small>
+                    )}
+                  </td>
+                  <td className="numeric">{archive.rows.toLocaleString()}</td>
+                  <td>
+                    {archive.seasons[0]}–
+                    {archive.seasons[archive.seasons.length - 1]}
+                  </td>
+                  <td>{date(archive.latest)}</td>
+                  <td><small>{archive.note}</small></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="section two-col">
