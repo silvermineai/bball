@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { filterRecruitingWire, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
+import { filterRecruitingWire, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
 
 const PAGE_SIZE = 12;
 const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability" };
@@ -22,6 +22,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
     window.history.replaceState(window.history.state, "", url);
   }, [page, query, topic]);
   const filtered = useMemo(() => filterRecruitingWire(articles, { query, topic, page }), [articles, query, topic, page]);
+  const latestPublication = latestRecruitingWirePublication(articles);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => { if (page >= pages) setPage(Math.max(0, pages - 1)); }, [page, pages]);
@@ -31,7 +32,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
   };
   return <section className="section">
     <div className="section-heading"><div><div className="eyebrow">Publisher wire / recruiting context</div><h2>Follow the national conversation.</h2></div><span className="note">{filtered.length} linked stories</span></div>
-    <p className="note" style={{ marginBottom: 20 }}>These are publisher articles for context, not Silvermine-reviewed transaction records. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below.</p>
+    <p className="note" style={{ marginBottom: 20 }}>These are publisher articles for context, not Silvermine-reviewed transaction records. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below. Latest retained publisher publication: {latestPublication ? date(latestPublication) : "unavailable"}. This timestamp describes the archive and is not a live-feed guarantee.</p>
     <div className="toolbar">
       <label className="control"><span>SEARCH THE WIRE</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
       <label className="control"><span>TOPIC</span><select value={topic} onChange={(event) => { setTopic(event.target.value as RecruitingWireTopic); setPage(0); }}>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>

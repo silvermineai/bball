@@ -45,3 +45,11 @@ export function filterRecruitingWire(articles: RecruitingWireArticle[], filters:
       (filters.topic === "all" || topicWords[filters.topic].test(text));
   });
 }
+
+/** Return the newest retained publisher timestamp without claiming live coverage. */
+export function latestRecruitingWirePublication(articles: RecruitingWireArticle[]) {
+  return articles.reduce<string | null>((latest, article) => {
+    if (!article.published || Number.isNaN(Date.parse(article.published))) return latest;
+    return !latest || article.published > latest ? article.published : latest;
+  }, null);
+}
