@@ -12,6 +12,8 @@ const titles: Record<string, string> = {
   "basketball-impact": "Read impact with the lineup context intact.",
   "basketball-recruiting-workload":
     "An announcement is a starting point, not a depth chart.",
+  "basketball-player-rates":
+    "A rate is only as useful as its denominator.",
 };
 export function generateStaticParams() {
   return [
@@ -167,6 +169,8 @@ export default async function Page({
         <BasketballImpact />
       ) : slug === "basketball-recruiting-workload" ? (
         <BasketballRecruitingWorkload />
+      ) : slug === "basketball-player-rates" ? (
+        <BasketballPlayerRates />
       ) : (
         <>
           <p className="deck">
@@ -359,6 +363,61 @@ function BasketballFourFactors() {
         the player-level archive, use the{" "}
         <Link href="/basketball/scouting-board/">scouting board</Link> to set
         your own production priorities and export the evidence behind a rank.
+      </p>
+    </>
+  );
+}
+
+function BasketballPlayerRates() {
+  return (
+    <>
+      <p className="deck">
+        A leaderboard can answer who led a category. A coaching decision also
+        needs to answer how often the player was involved and how much evidence
+        sits behind the rate.
+      </p>
+      <p>
+        The <Link href="/basketball/ncaa-rankings/">NCAA player rankings</Link>
+        keep the source player and team IDs visible while offering counting
+        totals, shooting rates, assist-to-turnover ratio, defensive events,
+        RAPM components and recorded possession share. These are descriptive
+        source statistics. They do not establish a current roster spot,
+        eligibility, health or a projected role.
+      </p>
+      <h2>Start with the denominator</h2>
+      <p>
+        True shooting and effective field goal percentage use field-goal and
+        free-throw attempts. Three-point attempt rate uses field-goal attempts.
+        Turnover rate uses recorded offensive possessions, while assist-to-
+        turnover ratio uses recorded turnovers. The ranking board lets you set
+        a minimum rate sample using the matching denominator so a player with a
+        short run of attempts does not look like a full-season shooting leader.
+      </p>
+      <h2>Separate workload from efficiency</h2>
+      <p>
+        Team possession share describes the player&apos;s recorded offensive
+        possessions divided by all recorded player possessions for that
+        team-season. It is a workload context measure, not a proprietary usage
+        estimate. Pair it with minutes, games and points per 40 rather than
+        treating a high share as proof of decision-making quality.
+      </p>
+      <h2>Keep impact in its own lane</h2>
+      <p>
+        ORAPM and DRAPM come from a separate NCAA lineup-impact release. The
+        board requires exact NCAA player IDs and shows offensive and defensive
+        possession samples. A player can be efficient in the box score and
+        unavailable in RAPM, or the reverse, because the releases measure
+        different things. Missing impact is not zero impact.
+      </p>
+      <h2>Use the ranking to choose the next question</h2>
+      <p>
+        Open the source player card, inspect the season and game evidence, then
+        compare the result with the{" "}
+        <Link href="/basketball/scouting-board/">historical scouting board</Link>{" "}
+        and dated{" "}
+        <Link href="/basketball/recruiting/">recruiting evidence</Link>. A
+        strong rate should direct film review and source verification; it
+        should not silently become a recruiting grade or a forecast feature.
       </p>
     </>
   );

@@ -36,6 +36,11 @@ const guides = [
     "An announcement is a starting point, not a depth chart.",
     "How to connect school statements, roster observations and prior college workload without inventing eligibility or a role.",
   ],
+  [
+    "basketball-player-rates",
+    "A rate is only as useful as its denominator.",
+    "How to read NCAA player efficiency, workload and impact rankings while keeping volume, sample size and identity boundaries visible.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();
