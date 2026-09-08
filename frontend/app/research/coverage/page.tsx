@@ -63,6 +63,12 @@ export default function Page() {
   ).sort((a, b) => a - b);
   const rosters = getRosters();
   const rosterSourceProfiles = rosters.players.filter((player) => player.source_url).length;
+  const rosterBpmRows = rosters.players.filter(
+    (player) => player.prior_production?.box_bpm != null,
+  ).length;
+  const rosterBpmShare = rosters.players_observed
+    ? (rosterBpmRows / rosters.players_observed) * 100
+    : null;
   const recruiting = getRecruiting();
   const ledger = getLedger();
   const dataDir = path.join(process.cwd(), "public/data/basketball");
@@ -533,12 +539,20 @@ export default function Page() {
               <span>Roster publisher profiles linked</span>
               <strong>{count(rosterSourceProfiles)}</strong>
             </div>
+            <div>
+              <span>Roster rows with publisher Box BPM</span>
+              <strong>
+                {count(rosterBpmRows)}{rosterBpmShare == null ? "" : ` · ${rosterBpmShare.toFixed(1)}%`}
+              </strong>
+            </div>
           </div>
           <p className="note">
             School announcements are retained with source links and dates. A
             signing does not establish eligibility or availability, and an
-            absent listing does not establish departure. The review is not a
-            national recruiting census.
+            absent listing does not establish departure. Box BPM is source-
+            attributed prior-season context and stays blank when its exact
+            athlete/team row is unavailable. The review is not a national
+            recruiting census.
           </p>
           <p>
             <Link href="/basketball/recruiting/">Read the recruiting file →</Link>
