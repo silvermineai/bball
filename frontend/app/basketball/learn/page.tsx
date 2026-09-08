@@ -58,6 +58,46 @@ const metrics = [
     value: "Regularized adjusted plus-minus from the attributed NCAA-derived lineup release.",
     use: "Read net, offensive and defensive values with their possession samples. It describes recorded stints, not a guarantee about a future role.",
   },
+  {
+    name: "ORAPM and DRAPM",
+    value: "The offensive and defensive components of the NCAA lineup estimate, each reported in points per 100 possessions.",
+    use: "Separate scoring influence from defensive influence, then check the offensive and defensive possession thresholds before comparing players.",
+  },
+  {
+    name: "Points per 40 minutes",
+    value: "Recorded points scaled to a 40-minute game: points ÷ minutes × 40.",
+    use: "Use it to compare scoring rate across workloads, never as a replacement for total minutes, role or efficiency.",
+  },
+  {
+    name: "Assist-to-turnover ratio",
+    value: "Recorded assists divided by recorded turnovers. Zero-turnover rows remain unavailable.",
+    use: "Read the ratio with minutes and possession volume. A small turnover denominator can make the rate unstable.",
+  },
+  {
+    name: "Three-point and free-throw attempt rates",
+    value: "Three-point attempts or free-throw attempts divided by field-goal attempts, with the source denominator shown by the ranking controls.",
+    use: "These describe shot profile and foul pressure. They do not measure accuracy or shooting quality by themselves.",
+  },
+  {
+    name: "Possession share",
+    value: "A player’s recorded offensive possessions divided by the recorded player possessions for that NCAA team-season.",
+    use: "Use it as a workload context signal. It is not a usage projection and does not establish a future role.",
+  },
+  {
+    name: "Lineup net performance",
+    value: "Points scored minus points allowed per 100 shared possessions for a source-native five-v-five lineup pairing.",
+    use: "Apply possession and repeat-game thresholds before treating a combination as meaningful. Lineup labels remain in the publisher’s identity namespace.",
+  },
+  {
+    name: "Shot-location profile",
+    value: "Recorded field-goal attempts, makes and misses grouped by source event type and validated court coordinates.",
+    use: "Start with box-score-matched games, then inspect the location coverage. Coordinates are approximate event evidence, not optical tracking.",
+  },
+  {
+    name: "Roster workload continuity",
+    value: "Prior recorded minutes represented by same-program or incoming source-listed players in the next roster snapshot.",
+    use: "Use it to frame a recruiting question about experience and workload. It is not a transfer ledger, eligibility ruling or forecast feature.",
+  },
 ];
 
 const paths = [
