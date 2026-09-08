@@ -71,6 +71,22 @@ describe("same-game model evaluation", () => {
       ),
     ).toBe(true);
   });
+  it("publishes separate independent season transitions", () => {
+    expect(summary.season_results).toHaveLength(2);
+    expect(summary.season_results?.map((result) => result.season)).toEqual([
+      2025,
+      2026,
+    ]);
+    expect(
+      summary.season_results?.every(
+        (result) =>
+          result.stage === "independent_test" &&
+          result.compared_games > 5000 &&
+          result.weekly_fits > 0 &&
+          result.metrics.weekly.margin_mae !== null,
+      ),
+    ).toBe(true);
+  });
   it("exports the selected evidence and protects spreadsheet text cells", () => {
     const csv = evaluationCsv([{ ...games[0], home_name: '=bad,"name"' }]);
     expect(csv).toContain('"\'=bad,""name"""');

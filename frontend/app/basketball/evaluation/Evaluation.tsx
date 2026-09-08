@@ -198,6 +198,54 @@ export default function Evaluation({
           </p>
         </div>
       </div>
+      {summary.season_results?.length ? (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Across dated transitions</div>
+              <h2>Does the update travel?</h2>
+            </div>
+            <span className="note">Independent holdouts · same field rules</span>
+          </div>
+          <p>
+            Each row calibrates on the prior season, freezes that mapping, and
+            scores the following season. The 2025 and 2026 tests stay separate
+            so a strong year cannot hide a weak transition.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table evaluation-metrics">
+              <thead>
+                <tr>
+                  <th>Test season</th>
+                  <th>Calibrated on</th>
+                  <th className="numeric">Games</th>
+                  <th className="numeric">Preseason MAE</th>
+                  <th className="numeric">Weekly MAE</th>
+                  <th className="numeric">Weekly winner %</th>
+                  <th className="numeric">Weekly fits</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.season_results.map((result) => (
+                  <tr key={result.season}>
+                    <th scope="row">{result.season - 1}–{String(result.season).slice(-2)}</th>
+                    <td>{result.calibration_season - 1}–{String(result.calibration_season).slice(-2)}</td>
+                    <td className="numeric">{result.compared_games.toLocaleString()}</td>
+                    <td className="numeric">{fmt(result.metrics.preseason.margin_mae, 2)}</td>
+                    <td className="numeric">{fmt(result.metrics.weekly.margin_mae, 2)}</td>
+                    <td className="numeric">{percent(result.metrics.weekly.winner_accuracy)}</td>
+                    <td className="numeric">{result.weekly_fits}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Margin MAE is points. Weekly fits are Monday snapshots; they are
+            evidence of temporal replay, not a guarantee of future edge.
+          </p>
+        </section>
+      ) : null}
       <section className="section">
         <div className="section-heading">
           <div>

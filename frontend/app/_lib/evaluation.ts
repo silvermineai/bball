@@ -41,6 +41,14 @@ export type EvaluationSummary = {
     bootstrap_replicates: number;
   };
   metrics: Record<Method, EvaluationMetrics>;
+  season_results?: {
+    season: number;
+    calibration_season: number;
+    stage: string;
+    metrics: Record<Method, EvaluationMetrics>;
+    compared_games: number;
+    weekly_fits: number;
+  }[];
   calibration: Record<
     Method,
     {

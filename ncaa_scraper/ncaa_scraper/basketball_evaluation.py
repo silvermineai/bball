@@ -239,7 +239,7 @@ def verify_sources(conn, overview):
     if {(s["dataset"], s["season"]) for s in sources} != {
         (dataset, year)
         for dataset in ("schedule", "team_box")
-        for year in (2024, 2025, 2026)
+        for year in (2023, 2024, 2025, 2026)
     }:
         raise ValueError("Expected all six schedule/team-box receipts")
     for source in sources:
@@ -255,7 +255,7 @@ def verify_sources(conn, overview):
 def build(conn, overview, output=DIRECTORY):
     sources = verify_sources(conn, overview)
     schedules, _, valid = load_games(conn)
-    valid = [g for g in valid if g["season"] in (2024, 2025, 2026)]
+    valid = [g for g in valid if g["season"] in (2023, 2024, 2025, 2026)]
     if len({g["id"] for g in valid}) != len(valid):
         raise ValueError("Repeated game identity")
     implementation = {
@@ -296,9 +296,58 @@ def build(conn, overview, output=DIRECTORY):
     ]
     if any(row["preseason"] is None for row in rows):
         raise ValueError("The two methods must use exactly the same game field")
+
+    # Add a second, independently calibrated transition to the published
+    # summary.  This uses 2024 as the calibration season and 2025 as the test
+    # season; no 2025 result is used to fit that transition.  Keeping this
+    # alongside the existing 2026 holdout makes season-to-season stability
+    # visible without blending the two experiments into one score.
+    transition_initial, transition_calibration_pairs, _ = rolling_predictions(
+        valid, 2024
+    )
+    transition_calibration = calibrate_predictions(
+        [(g, p) for g, p, _, _ in transition_calibration_pairs]
+    )
+    transition_baseline, transition_test_pairs, _ = rolling_predictions(valid, 2025)
+    transition_baseline["calibration"] = calibrate(
+        [g for g in valid if g["season"] == 2024], transition_initial
+    )
+    transition_rows = [
+        game_record(
+            g,
+            forecast(transition_baseline, g),
+            apply_calibration(p, transition_calibration),
+            fit_id,
+            cutoff,
+        )
+        for g, p, fit_id, cutoff in transition_test_pairs
+    ]
+    if any(row["preseason"] is None for row in transition_rows):
+        raise ValueError("The transition methods must use exactly the same game field")
     summary_metrics = {
         method: metrics(rows, method) for method in ("preseason", "weekly")
     }
+    season_results = [
+        {
+            "season": 2025,
+            "calibration_season": 2024,
+            "stage": "independent_test",
+            "metrics": {
+                method: metrics(transition_rows, method)
+                for method in ("preseason", "weekly")
+            },
+            "compared_games": len(transition_rows),
+            "weekly_fits": len({row["weekly_fit_id"] for row in transition_rows}),
+        },
+        {
+            "season": 2026,
+            "calibration_season": 2025,
+            "stage": "independent_test",
+            "metrics": summary_metrics,
+            "compared_games": len(rows),
+            "weekly_fits": len({row["weekly_fit_id"] for row in rows}),
+        },
+    ]
     # Pin this experiment to the existing published evaluation, not a quietly
     # changed baseline. Coverage uses unrounded half-width in the original model.
     expected = overview["model"]["evaluation"]
@@ -338,6 +387,7 @@ def build(conn, overview, output=DIRECTORY):
         "sources": sources,
         "implementation_sha256": implementation,
         "metrics": summary_metrics,
+        "season_results": season_results,
         "calibration": {"preseason": prior_calibration, "weekly": calibration},
         "paired_mae_difference": paired_difference(
             rows, SETTINGS["bootstrap_replicates"]

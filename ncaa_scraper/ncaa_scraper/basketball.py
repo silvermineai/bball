@@ -1739,7 +1739,11 @@ def main():
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
-        for year in [2024, 2025, 2026, 2027]:
+        # The ESPN-derived schedule, team-box and player-box releases begin in
+        # 2023 in the local release cache. Keep the full completed 2023–26
+        # window in the primary warehouse so the 2026–27 model has three
+        # complete prior seasons rather than silently dropping 2023–24.
+        for year in [2023, 2024, 2025, 2026, 2027]:
             datasets = (
                 ["schedule", "team_box", "player_box"]
                 if year < 2026
@@ -1765,7 +1769,7 @@ def main():
                 # source snapshot. Keep it as historical context even though
                 # the public workload lab compares 2026–27 with 2025–26.
                 datasets.append("rosters")
-            if year in (2024, 2025, 2026):
+            if year in (2023, 2024, 2025, 2026):
                 datasets.append("team_season")
                 datasets.extend(["publisher_ratings", "publisher_player_value"])
                 datasets.append("player_core")

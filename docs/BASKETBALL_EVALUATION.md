@@ -1,6 +1,6 @@
 # Weekly basketball model experiment
 
-`/basketball/evaluation/` compares the published preseason model with a weekly updating ridge challenger on identical 2025–26 games. The basketball navigation, model notebook and journal link to it. This is an exploratory retrospective experiment, separate from the production 2026–27 forecasts and the prospective ledger.
+`/basketball/evaluation/` compares the published preseason model with a weekly updating ridge challenger on identical 2025–26 games and publishes a separate 2024–25 holdout transition. The basketball navigation, model notebook and journal link to it. This is an exploratory retrospective experiment, separate from the production 2026–27 forecasts and the prospective ledger.
 
 ## Time ordering and model definition
 
@@ -10,26 +10,26 @@ For each replay year, fit a preseason baseline using earlier seasons and freeze 
 
 Each Monday at 00:00 UTC, include only completed records whose game starts are strictly before Sunday 00:00 UTC. This 24-hour buffer is conservative separation from game start, not a reconstruction of historical final-publication times. The entire current UTC week is excluded. Earlier evaluation-season outcomes can enter later weekly fits; no game enters its own forecast or an earlier fit.
 
-The 2024–25 replay supplies 5,701 raw predictions for the challenger's two-parameter logistic calibration and 80th-percentile absolute-margin interval. The preseason baseline separately calibrates its fixed 2023–24 model on the same next-season field. Both probability mappings and interval widths are frozen for the 2025–26 comparison. Calibration rows are downloadable and explicitly labeled as calibration, not independent test results.
+The 2024–25 replay supplies 5,701 raw predictions for an independent 2025 holdout transition's two-parameter logistic calibration and 80th-percentile absolute-margin interval. The preseason baseline separately calibrates its fixed 2023–24 model on the same next-season field. The 2025–26 transition independently calibrates on 2024–25 and freezes that mapping for its test season. Calibration rows are downloadable and explicitly labeled as calibration inputs, not independent test results.
 
-The first replay used 46 weekly fits: 23 for calibration and 23 for evaluation. Source releases are current downloads, so later source corrections can appear in historical records. The 2025–26 season had already been used for the published preseason evaluation; this is a new exploratory comparison on that season, not an untouched external test or a real-time record. No prospective forecasts or production model registrations are changed.
+The two transitions use 69 weekly fits: 23 for the 2024–25 calibration replay, 23 for the 2025–26 holdout, and 23 for the additional 2024–25 holdout replay. Source releases are current downloads, so later source corrections can appear in historical records. The 2025–26 season had already been used for the published preseason evaluation; this is a new exploratory comparison on that season, not an untouched external test or a real-time record. No prospective forecasts or production model registrations are changed.
 
 ## First verified comparison
 
 | Metric | Preseason | Weekly |
 |---|---:|---:|
 | Compared games | 5,734 | 5,734 |
-| Margin MAE | 10.4569 | 9.9094 |
-| Margin RMSE | 13.3508 | 12.7077 |
-| Total MAE | 15.3715 | 14.4431 |
-| Winner accuracy | 67.3701% | 69.8988% |
-| Brier score | 0.205737 | 0.191226 |
-| Log loss | 0.594316 | 0.558542 |
-| Published 80% interval coverage | 78.7060% | 78.7060% |
+| Margin MAE | 10.3861 | 9.9096 |
+| Margin RMSE | 13.2627 | 12.7041 |
+| Total MAE | 15.5498 | 14.6422 |
+| Winner accuracy | 67.2131% | 69.7070% |
+| Brier score | 0.204492 | 0.191298 |
+| Log loss | 0.591141 | 0.558748 |
+| Published 80% interval coverage | 79.0199% | 78.9327% |
 
-The same-game mean difference in absolute margin error, weekly minus preseason, is -0.5475 points. A seeded 5,000-replicate bootstrap resamples whole UTC weeks and recomputes the game-weighted mean; its approximate 95% percentile range is [-0.6794, -0.4072]. This describes variation within one season. Teams repeat across weeks, and future seasons can differ; the range does not establish betting value or future improvement.
+The same-game mean difference in absolute margin error, weekly minus preseason, is -0.4764 points. A seeded 5,000-replicate bootstrap resamples whole UTC weeks and recomputes the game-weighted mean; its approximate 95% percentile range is [-0.5944, -0.3497]. This describes variation within one season. Teams repeat across weeks, and future seasons can differ; the range does not establish betting value or future improvement.
 
-The source has 6,300 completed 2025–26 schedule records, 6,298 usable paired boxes and 564 paired-box games outside the frozen field. Both models exclude those 564. The full-cohort constant-home-margin baseline has 11.97-point MAE. Coverage uses each game's published rounded interval endpoints; this includes one more baseline game than the original notebook calculation against the unrounded calibration half-width.
+The source has 6,300 completed 2025–26 schedule records, 6,298 usable paired boxes and 564 paired-box games outside the frozen field. Both models exclude those 564. The full-cohort constant-home-margin baseline has 11.96-point MAE. Coverage uses each game's published rounded interval endpoints.
 
 ## Public evidence and interface
 
@@ -39,7 +39,7 @@ The source has 6,300 completed 2025–26 schedule records, 6,298 usable paired b
 - `fits.json`: all weekly coefficients and training-game IDs, plus the preseason and initial calibration fits. Training-feature hashes identify the actual records used.
 - `manifest.json`: experiment signature and SHA-256 of every artifact.
 
-The experiment signature covers settings, all normalized fitting records, source receipts, the production model ID and the Python evaluator/model implementation hashes. Unchanged editions are reused only when every public file passes its hash check. Warehouse receipts must match the published model's six schedule/team-box source receipts before building. The experiment opens the source warehouse read-only.
+The experiment signature covers settings, all normalized fitting records, source receipts, the production model ID and the Python evaluator/model implementation hashes. Unchanged editions are reused only when every public file passes its hash check. Warehouse receipts must match the published model's eight schedule/team-box source receipts for 2023–26 before building. The experiment opens the source warehouse read-only.
 
 The interface filters both methods together by UTC month, venue and program. It recomputes errors and ten fixed-bin calibration summaries from the selected games. Empty selections remain unavailable rather than showing zero error. Monthly bars preserve the floor/program cohort and select the active month. The game table sorts by date, largest weekly error or largest weekly improvement; users can inspect the exact training cutoff and export all selected rows as CSV. Text fields are quoted and guarded against spreadsheet formula interpretation. Downloaded JSON retains full evidence.
 

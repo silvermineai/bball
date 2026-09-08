@@ -471,6 +471,7 @@ import_sql_batches(
     "ncaa-player-box-publish-d1",
     "NCAA_PLAYER_BOX_SQL_BATCH_START",
 )
+run([PY, "scripts/sync-basketball-core.py", "--remote"])
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
 run([PY, "scripts/sync-recruiting.py"])

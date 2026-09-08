@@ -5,7 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 type Bindings = Env;
 
 const querySchema = z.object({
-  season: z.coerce.number().int().min(2024).max(2035).default(2027),
+  season: z.coerce.number().int().min(2023).max(2035).default(2027),
   status: z.enum(["all", "upcoming", "completed"]).default("all"),
   q: z.string().trim().max(120).optional(),
   model: z.union([
