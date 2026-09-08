@@ -61,6 +61,13 @@ export default function Page() {
             profile and is not used to alter the 2026–27 forecast.
           </p>
           <p>
+            Matchup cards pair each forecast with opponent-adjusted four-factor
+            edges from the latest completed season: effective shooting,
+            turnover pressure, offensive rebounding and free-throw rate. Those
+            edges explain the matchup context; they are descriptive inputs
+            alongside the score forecast, not extra roster or injury claims.
+          </p>
+          <p>
             Production fit: {d.model.training_games.toLocaleString()} games from{" "}
             {d.model.training_seasons.join(", ")}. No recruiting, roster, injury
             or weather variables enter the primary model. Scheduled games with

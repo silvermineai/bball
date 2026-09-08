@@ -1,5 +1,9 @@
 import Link from "next/link";
-import type { BBGame, BBRosterSummary } from "../_lib/basketball-types";
+import type {
+  BBFactorKey,
+  BBGame,
+  BBRosterSummary,
+} from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
 export default function BasketballCard({
@@ -77,6 +81,13 @@ export default function BasketballCard({
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
+          {g.matchup_factors && (
+            <MatchupFactorSummary
+              factors={g.matchup_factors}
+              homeName={g.home_name}
+              awayName={g.away_name}
+            />
+          )}
           {(homeRoster || awayRoster) && (
             <div className="roster-context">
               <div className="match-detail muted">
@@ -116,6 +127,62 @@ export default function BasketballCard({
       )}
     </article>
   );
+}
+
+const FACTOR_META: Array<{ key: BBFactorKey; label: string }> = [
+  { key: "efg", label: "Shot quality" },
+  { key: "tov", label: "Ball security" },
+  { key: "orb", label: "Second chances" },
+  { key: "ftr", label: "Free-throw pressure" },
+];
+
+function MatchupFactorSummary({
+  factors,
+  homeName,
+  awayName,
+}: {
+  factors: NonNullable<BBGame["matchup_factors"]>;
+  homeName: string;
+  awayName: string;
+}) {
+  const rows = FACTOR_META.flatMap((meta) => {
+    const values = factors.factors[meta.key];
+    const edge = factors.edges[meta.key];
+    return values && edge != null ? [{ ...meta, values, edge }] : [];
+  });
+  if (!rows.length) return null;
+  return (
+    <div className="matchup-factors">
+      <div className="match-detail">
+        <strong>Why the model tilts</strong>
+        <span className="muted">four-factor edge</span>
+      </div>
+      {rows.map((row) => (
+        <div className="matchup-factor-row" key={row.key}>
+          <div className="match-detail">
+            <span>{row.label}</span>
+            <strong className={row.edge >= 0 ? "factor-home" : "factor-away"}>
+              {row.edge === 0
+                ? "Even"
+                : `${row.edge > 0 ? "Home" : "Away"} ${fmt(Math.abs(row.edge) * 100, 1)} pts`}
+            </strong>
+          </div>
+          <small>
+            {homeName} attack {pct(row.values.home_offense)} · {awayName} defense {pct(row.values.away_defense)}
+            <br />
+            {awayName} attack {pct(row.values.away_offense)} · {homeName} defense {pct(row.values.home_defense)}
+          </small>
+        </div>
+      ))}
+      <small className="factor-source">
+        Opponent-adjusted rates from the {factors.season - 1}–{String(factors.season).slice(-2)} season. Positive edge favors the home side; defensive direction follows the factor (lower allowed shooting, rebounding and free-throw rates, higher forced-turnover rate).
+      </small>
+    </div>
+  );
+}
+
+function pct(value: number) {
+  return `${fmt(value * 100, 1)}%`;
 }
 
 function rosterShare(value: number | null | undefined) {

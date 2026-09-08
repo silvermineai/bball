@@ -444,6 +444,37 @@ th,
   margin-top: 12px;
   padding-top: 10px;
 }
+.matchup-factors {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 11px;
+}
+.matchup-factors > .match-detail {
+  margin-bottom: 8px;
+}
+.matchup-factor-row {
+  border-top: 1px solid var(--line);
+  padding: 8px 0 7px;
+}
+.matchup-factor-row small,
+.factor-source {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  margin-top: 3px;
+}
+.factor-home {
+  color: var(--accent);
+}
+.factor-away {
+  color: var(--orange);
+}
+.factor-source {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 8px;
+}
 
 .forecast-caveat {
   margin: 14px 0;

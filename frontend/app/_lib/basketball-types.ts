@@ -11,6 +11,20 @@ export type BBPrediction = {
   unknown_teams?: string[];
   margin_half_width?: number;
 };
+export type BBFactorKey = "efg" | "tov" | "orb" | "ftr";
+export type BBMatchupFactors = {
+  season: number;
+  factors: Partial<Record<
+    BBFactorKey,
+    {
+      home_offense: number;
+      home_defense: number;
+      away_offense: number;
+      away_defense: number;
+    }
+  >>;
+  edges: Partial<Record<BBFactorKey, number>>;
+};
 export type BBGame = {
   id: string;
   season: number;
@@ -25,6 +39,7 @@ export type BBGame = {
   broadcast: string;
   prediction: BBPrediction | null;
   fallback_prediction?: BBPrediction | null;
+  matchup_factors?: BBMatchupFactors | null;
 };
 export type BBTeam = {
   id: string;

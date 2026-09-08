@@ -8,6 +8,7 @@ from ncaa_scraper.basketball import (
     adjusted_factor_ratings,
     canonical_date,
     ingest,
+    matchup_factor_edges,
     player_index,
     publisher_leaders,
     roster_changes,
@@ -126,6 +127,40 @@ class BasketballModelTests(unittest.TestCase):
         }
         incomplete = adjusted_factor_ratings(model, games, incomplete_boxes, 2026)
         self.assertNotIn("adj_off_efg", incomplete["0"])
+
+    def test_matchup_factor_edges_keep_home_sign_and_turnover_direction(self):
+        ratings = {
+            "home": {
+                "adj_off_efg": 0.58,
+                "adj_def_efg": 0.48,
+                "adj_off_tov": 0.14,
+                "adj_def_tov": 0.19,
+                "adj_off_orb": 0.34,
+                "adj_def_orb": 0.25,
+                "adj_off_ftr": 0.25,
+                "adj_def_ftr": 0.18,
+            },
+            "away": {
+                "adj_off_efg": 0.54,
+                "adj_def_efg": 0.50,
+                "adj_off_tov": 0.17,
+                "adj_def_tov": 0.22,
+                "adj_off_orb": 0.30,
+                "adj_def_orb": 0.29,
+                "adj_off_ftr": 0.21,
+                "adj_def_ftr": 0.22,
+            },
+        }
+        result = matchup_factor_edges("home", "away", ratings, 2026)
+        self.assertEqual(result["season"], 2026)
+        self.assertAlmostEqual(result["edges"]["efg"], 0.02)
+        self.assertAlmostEqual(result["edges"]["tov"], 0.06)
+        self.assertEqual(result["factors"]["orb"]["home_offense"], 0.34)
+
+    def test_matchup_factor_edges_withhold_unknown_programs(self):
+        self.assertIsNone(
+            matchup_factor_edges("home", "away", {"home": {}}, 2026)
+        )
 
 
 class BasketballIngestTests(unittest.TestCase):

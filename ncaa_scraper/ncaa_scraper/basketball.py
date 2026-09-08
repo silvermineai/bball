@@ -974,6 +974,44 @@ def publisher_leaders(conn, year=2026, limit=10):
 FACTOR_FIELDS = ("efg", "tov", "orb", "ftr")
 
 
+def matchup_factor_edges(home_id, away_id, ratings, season):
+    """Explain a matchup with opponent-adjusted four-factor edges.
+
+    ``home`` and ``away`` retain the underlying attack and defense rates so
+    the UI can show its work.  ``edges`` are signed in home-team terms: a
+    positive number means the home side has the cleaner factor matchup.  For
+    turnover rate, lower offensive turnover rate and higher defensive pressure
+    are favorable, so that factor uses the inverse sign convention.
+    """
+    home = ratings.get(home_id)
+    away = ratings.get(away_id)
+    if home is None or away is None:
+        return None
+    factors = {}
+    edges = {}
+    for key in FACTOR_FIELDS:
+        home_off = home.get(f"adj_off_{key}")
+        home_def = home.get(f"adj_def_{key}")
+        away_off = away.get(f"adj_off_{key}")
+        away_def = away.get(f"adj_def_{key}")
+        if any(value is None for value in (home_off, home_def, away_off, away_def)):
+            continue
+        factors[key] = {
+            "home_offense": round(float(home_off), 4),
+            "home_defense": round(float(home_def), 4),
+            "away_offense": round(float(away_off), 4),
+            "away_defense": round(float(away_def), 4),
+        }
+        if key == "tov":
+            home_edge = (away_def - home_off) - (home_def - away_off)
+        else:
+            home_edge = (home_off - away_def) - (away_off - home_def)
+        edges[key] = round(float(home_edge), 4)
+    if not factors:
+        return None
+    return {"season": season, "factors": factors, "edges": edges}
+
+
 def _factor_values(game, boxes):
     """Return each side's four-factor rates when both boxes support them."""
     features = game_features(game, boxes)
@@ -1213,12 +1251,24 @@ def build(conn, target=2027):
     now = utcnow()
     games, boxes, valid = load_games(conn)
     model = train(valid, now, target)
+    ratings = team_ratings(model, games, boxes, target - 1)
+    rating_by_id = {rating["id"]: rating for rating in ratings}
     upcoming = []
     for g in games:
         if g["season"] == target and not g["completed"] and g["starts_at"] > now:
             p = forecast(model, g)
             cold_start = fallback_forecast(model, g) if p is None else None
-            upcoming.append({**g, "prediction": p, "fallback_prediction": cold_start})
+            factors = matchup_factor_edges(
+                g["home_id"], g["away_id"], rating_by_id, target - 1
+            )
+            upcoming.append(
+                {
+                    **g,
+                    "prediction": p,
+                    "fallback_prediction": cold_start,
+                    "matchup_factors": factors,
+                }
+            )
             if p:
                 conn.execute(
                     "INSERT OR IGNORE INTO bb_forecasts VALUES (?,?,?,?)",
@@ -1258,7 +1308,7 @@ def build(conn, target=2027):
         },
         "model": model,
         "upcoming": upcoming,
-        "ratings": team_ratings(model, games, boxes, target - 1),
+        "ratings": ratings,
         "sources": sources,
     }
     impact = [
