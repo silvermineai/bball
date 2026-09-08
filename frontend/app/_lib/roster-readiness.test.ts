@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { BBOverview, BBRosters } from "./basketball-types";
 import {
   buildRosterLabRows,
+  parseRosterLabFilters,
   positionContinuityWatch,
+  rosterLabFilterSearch,
   rosterPositionGroup,
   sortRosterLabRows,
 } from "./roster-readiness";
@@ -56,6 +58,21 @@ const overview = {
 } satisfies BBOverview;
 
 describe("roster lab", () => {
+  it("parses and serializes shareable lab controls", () => {
+    expect(parseRosterLabFilters("?q=Arizona&sort=rating&rated=1")).toEqual({
+      query: "Arizona",
+      sort: "rating",
+      ratedOnly: true,
+    });
+    expect(parseRosterLabFilters("?sort=unknown&rated=0")).toEqual({
+      query: "",
+      sort: "represented",
+      ratedOnly: false,
+    });
+    expect(rosterLabFilterSearch({ query: "Arizona", sort: "rating", ratedOnly: true })).toBe("?q=Arizona&sort=rating&rated=1");
+    expect(rosterLabFilterSearch({ query: "", sort: "represented", ratedOnly: false })).toBe("");
+  });
+
   it("keeps prior workload denominators and schedule coverage separate", () => {
     const rows = buildRosterLabRows(
       rosters([

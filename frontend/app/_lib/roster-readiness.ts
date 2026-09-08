@@ -6,6 +6,11 @@ export type RosterLabSort =
   | "incoming"
   | "listed"
   | "rating";
+export type RosterLabFilters = {
+  query: string;
+  sort: RosterLabSort;
+  ratedOnly: boolean;
+};
 
 export type RosterPositionGroup = "guard" | "forward" | "center" | "unreported";
 export type RosterPositionCounts = Record<RosterPositionGroup, number>;
@@ -15,6 +20,35 @@ export type RosterPositionWorkload = {
   incomingPriorMinutes: number;
   returningShare: number | null;
 };
+
+const rosterLabSorts = new Set<RosterLabSort>([
+  "represented",
+  "returning",
+  "incoming",
+  "listed",
+  "rating",
+]);
+
+/** Read the roster impact lab controls from a shareable URL. */
+export function parseRosterLabFilters(search: string): RosterLabFilters {
+  const params = new URLSearchParams(search);
+  const sort = params.get("sort") as RosterLabSort | null;
+  return {
+    query: params.get("q") || "",
+    sort: sort && rosterLabSorts.has(sort) ? sort : "represented",
+    ratedOnly: params.get("rated") === "1",
+  };
+}
+
+/** Serialize non-default roster impact lab controls for a compact handoff URL. */
+export function rosterLabFilterSearch(filters: RosterLabFilters) {
+  const params = new URLSearchParams();
+  if (filters.query) params.set("q", filters.query);
+  if (filters.sort !== "represented") params.set("sort", filters.sort);
+  if (filters.ratedOnly) params.set("rated", "1");
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
 
 /** Normalize the source's short position labels for a descriptive roster shape. */
 export function rosterPositionGroup(position: string | null): RosterPositionGroup {

@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fmt } from "../../_lib/format";
 import {
   rosterLabCsv,
   positionContinuityWatch,
+  parseRosterLabFilters,
+  rosterLabFilterSearch,
   sortRosterLabRows,
   type RosterPositionGroup,
   type RosterLabRow,
@@ -29,6 +31,21 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<RosterLabSort>("represented");
   const [ratedOnly, setRatedOnly] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const filters = parseRosterLabFilters(window.location.search);
+    setQuery(filters.query);
+    setSort(filters.sort);
+    setRatedOnly(filters.ratedOnly);
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    url.search = rosterLabFilterSearch({ query, sort, ratedOnly });
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, query, ratedOnly, sort]);
   const filtered = useMemo(
     () =>
       sortRosterLabRows(
@@ -74,6 +91,23 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
           <input type="checkbox" checked={ratedOnly} onChange={(event) => setRatedOnly(event.target.checked)} />
           <span>Rated programs only</span>
         </label>
+      </div>
+      <div className="button-row" style={{ marginTop: 12 }}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setCopied("Roster lab link copied.");
+            } catch {
+              setCopied("Copy the filtered URL from your address bar.");
+            }
+          }}
+        >
+          Copy roster lab link
+        </button>
+        {copied && <span className="note" role="status">{copied}</span>}
       </div>
       <p className="note">
         {filtered.length.toLocaleString()} of {rows.length.toLocaleString()} source-listed programs shown. Every workload signal uses recorded 2025–26 minutes for exact publisher IDs; a missing value means no qualifying prior production was observed.
