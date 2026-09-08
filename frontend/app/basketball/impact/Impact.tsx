@@ -128,6 +128,7 @@ export default function Impact() {
                     <td>
                       {p.player.replaceAll(".", " ")}
                       <small>NCAA {p.player_id}</small>
+                      <small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(p.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small>
                     </td>
                     <td>{p.team}</td>
                     {[p.orapm, p.drapm, p.rapm_net, p.off_poss, p.def_poss].map(
