@@ -445,9 +445,14 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             athlete lists and ranks eligible offensive production. Source IDs
             are not independently verified person-level identities.
           </p>
-          <a className="hero-link" href="/data/football/player-catalog.json">
-            Download full coverage catalog ↗
-          </a>
+          <div className="button-row">
+            <a className="hero-link" href="/data/football/player-catalog.json">
+              Download full coverage catalog ↗
+            </a>
+            <a className="hero-link" href="/api/football/player-history/source">
+              Download validated source archive ↓
+            </a>
+          </div>
           {coverage && (
             <p>
               <a className="hero-link" href={`/data/football/${coverage.file}`}>

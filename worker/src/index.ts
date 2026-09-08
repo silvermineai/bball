@@ -21,6 +21,7 @@ import { ncaaShooting } from "./ncaa-shooting";
 import { ncaaCareers } from "./ncaa-careers";
 import { ncaaHighSchools } from "./ncaa-high-schools";
 import { ncaaPlayerCard } from "./ncaa-player-card";
+import { footballPlayerHistory } from "./football-player-history";
 
 type Bindings = Env;
 
@@ -140,6 +141,7 @@ app.get("/api/football/events/", (c) => {
   return c.redirect(`/api/football/events${url.search}`, 308);
 });
 app.route("/api/football/events", footballEvents);
+app.route("/api/football/player-history", footballPlayerHistory);
 
 const footballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2018).max(2035).default(2025),

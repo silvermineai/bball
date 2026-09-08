@@ -219,14 +219,34 @@ if (
 ):
     raise SystemExit("Staged player manifest mismatch")
 query(activate)
-if (
-    json.loads(
-        query(
-            "SELECT payload_json FROM football_artifacts WHERE name='football-player-history'"
-        )[0]["payload_json"]
-    )
-    != manifest
-):
+active = json.loads(
+    query(
+        "SELECT payload_json FROM football_artifacts WHERE name='football-player-history'"
+    )[0]["payload_json"]
+)
+if active != manifest:
     raise SystemExit("Active player manifest mismatch")
+# Keep the archive pointer in D1 rather than the static catalog. The tar
+# contains that catalog, so adding the pointer there would create a circular
+# content hash.
+archive_manifest = {
+    **manifest,
+    "archive": {
+        "key": key,
+        "sha256": digest,
+        "content_type": "application/x-tar",
+    },
+}
+query(
+    "UPDATE football_artifacts SET payload_json="
+    + quote(json.dumps(archive_manifest, sort_keys=True, separators=(",", ":")))
+    + " WHERE name='football-player-history'"
+)
+if json.loads(
+    query(
+        "SELECT payload_json FROM football_artifacts WHERE name='football-player-history'"
+    )[0]["payload_json"]
+) != archive_manifest:
+    raise SystemExit("Active player archive pointer mismatch")
 query(cleanup)
 print("Registered verified historical player release in D1", flush=True)
