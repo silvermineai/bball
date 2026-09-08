@@ -6,7 +6,7 @@ import { date } from "../../_lib/format";
 export const metadata = {
   title: "Basketball recruiting: school announcements and transfer evidence",
   description:
-    "Dated 2026–27 school announcements, prior college stats and availability updates. Source-linked recruiting research with explicit coverage limits.",
+    "Dated 2026–27 school announcements, prior college stats, availability updates and all-program coverage labels. Source-linked recruiting research with explicit coverage limits.",
   alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {

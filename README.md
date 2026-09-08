@@ -36,7 +36,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
 | NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
-| Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
+| Roster observations | `/basketball/recruiting/` | Dated recruiting evidence plus an all-354-program coverage map and clearly marked unconfirmed future listings |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
 | Scouting archive | `/basketball/scout/` | Native program dossier index and legacy-compatible dossier links |
