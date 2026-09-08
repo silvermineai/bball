@@ -61,10 +61,17 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
       json_extract(profile_json,'$.experience_years') AS experience,
       json_extract(profile_json,'$.status_name') AS status,
       json_extract(profile_json,'$.current_team_id') AS team_id,
+      COALESCE(r.team_name, json_extract(profile_json,'$.current_team_id')) AS team,
       profile_json
-     FROM bb_player_core WHERE ${where}
+     FROM bb_player_core
+     LEFT JOIN (
+       SELECT season,athlete_id,
+         MAX(json_extract(profile_json,'$.team_display_name')) AS team_name
+       FROM bb_rosters WHERE season=? GROUP BY season,athlete_id
+     ) r ON r.season=bb_player_core.season AND r.athlete_id=bb_player_core.athlete_id
+     WHERE ${where}
      ORDER BY name ${order}, id ASC LIMIT 40 OFFSET ?`,
-  ).bind(...binds, page * 40).all();
+  ).bind(season, ...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     season,
