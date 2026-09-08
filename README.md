@@ -32,6 +32,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and opponent-adjusted four factors |
 | Boutique model archive | `/basketball/boutique/` | Attributed publisher adjusted team ratings and player Box Plus/Minus across 2005–06 through 2025–26, with model comparison context |
 | Lineup lab | `/basketball/lineups/` | NCAA-derived five-player lineup combinations with possession thresholds, offensive/defensive ratings and net performance |
+| Five-v-five matchup archive | `/basketball/matchup-stints/` | Search 1.53 million source stint rows aggregated into high-volume five-player versus five-player pairs across 2018–19 through 2025–26 |
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, transparent model-term decomposition, venue scenarios, historical factors and source-listed roster movement |
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
@@ -85,6 +86,7 @@ ncaa_scraper/ncaa_scraper/
   basketball_sources.py   Basketball bulk-release catalog
   basketball.py           Basketball ingestion, rankings, rosters and D1 export
   basketball_model.py     Possession efficiency model and independent calibration
+  basketball_matchups.py  Source-derived five-v-five matchup stint archive
   analytics.py            Existing basketball analytics artifacts
   fetcher.py              NCAA cache reader with enforced robots checks
 
