@@ -15,7 +15,19 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-FEED_URL = "https://www.espn.com/espn/rss/ncb/news"
+FEEDS = (
+    {
+        "publisher": "ESPN",
+        "sport": "mens-college-basketball",
+        "url": "https://www.espn.com/espn/rss/ncb/news",
+    },
+    {
+        "publisher": "NCAA.com",
+        "sport": "mens-college-basketball",
+        "url": "https://www.ncaa.com/news/basketball-men/d1/rss.xml",
+    },
+)
+FEED_URL = FEEDS[0]["url"]
 USER_AGENT = "SilvermineResearch/1.0 (service@silvermineai.com)"
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[2] / "frontend/public/data/news.json"
 
@@ -33,7 +45,13 @@ def _published(value: str) -> str:
     return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def parse_rss(payload: bytes, *, feed_url: str = FEED_URL) -> list[dict]:
+def parse_rss(
+    payload: bytes,
+    *,
+    feed_url: str = FEED_URL,
+    publisher: str = "ESPN",
+    sport: str = "mens-college-basketball",
+) -> list[dict]:
     """Parse one RSS feed without changing supplied content fields."""
     root = ET.fromstring(payload)
     articles: list[dict] = []
@@ -60,8 +78,8 @@ def parse_rss(payload: bytes, *, feed_url: str = FEED_URL) -> list[dict]:
                 "published": published,
                 "link": link,
                 "categories": categories,
-                "publisher": "ESPN",
-                "sport": "mens-college-basketball",
+                "publisher": publisher,
+                "sport": sport,
                 "author": creator,
             }
         )
@@ -74,15 +92,26 @@ def fetch_feed(feed_url: str = FEED_URL, *, timeout: int = 30) -> bytes:
         return response.read()
 
 
-def build_release(*, feed_url: str = FEED_URL, limit: int = 40) -> dict:
+def build_release(*, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
     started = time.time()
-    articles = parse_rss(fetch_feed(feed_url), feed_url=feed_url)
+    articles: list[dict] = []
+    for index, feed in enumerate(feeds):
+        if index:
+            time.sleep(1.0)
+        articles.extend(
+            parse_rss(
+                fetch_feed(str(feed["url"])),
+                feed_url=str(feed["url"]),
+                publisher=str(feed["publisher"]),
+                sport=str(feed["sport"]),
+            )
+        )
     articles.sort(key=lambda article: article["published"], reverse=True)
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
         "schema_version": 2,
         "generated_at": now,
-        "feeds": [{"publisher": "ESPN", "sport": "mens-college-basketball", "url": feed_url}],
+        "feeds": list(feeds),
         "articles": articles[:limit],
         "attribution": {
             "publisher": "ESPN",
@@ -93,8 +122,8 @@ def build_release(*, feed_url: str = FEED_URL, limit: int = 40) -> dict:
     }
 
 
-def write_release(output: Path = DEFAULT_OUTPUT, *, feed_url: str = FEED_URL, limit: int = 40) -> dict:
-    release = build_release(feed_url=feed_url, limit=limit)
+def write_release(output: Path = DEFAULT_OUTPUT, *, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
+    release = build_release(feeds=feeds, limit=limit)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
     return release

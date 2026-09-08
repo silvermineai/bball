@@ -148,4 +148,4 @@ Football and native basketball data come from the [SportsDataverse release store
 
 Direct ESPN automated fetching is disabled because source terms restrict extraction and model training. NCAA requests must pass robots checks; the current source policy disallows crawling. Cached basketball data remains available. Source restrictions are never bypassed with stealth browsers or proxy rotation.
 
-The recruiting wire uses ESPN's published college-basketball RSS feed under its feed terms. Only the supplied headline, summary and article URL are retained, with ESPN attribution; linked article pages are not fetched or rewritten.
+The recruiting wire uses published ESPN and NCAA.com men’s-basketball RSS feeds for publisher context. Only each supplied headline, summary and article URL are retained, with publisher attribution; linked article pages are not fetched or rewritten.

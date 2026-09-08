@@ -48,7 +48,7 @@ The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for 
 
 All new imports use the SportsDataverse GitHub release store. The publisher labels datasets CC BY 4.0. Attribution, source URLs, retrieval times, ETags, last-modified metadata and SHA-256 hashes are retained. Direct ESPN extraction remains disabled; NCAA requests must pass robots checks and currently cannot proceed.
 
-The recruiting wire uses ESPN's permitted college-basketball RSS feed for current editorial context. The refresh stores the feed-supplied headline, summary and URL without fetching or rewriting linked article pages, stamps its retrieval time, and labels the wire as publisher context. It does not turn a headline into a transaction, eligibility or availability claim. The scheduled research workflow refreshes this feed before basketball publication.
+The recruiting wire uses the published ESPN and NCAA.com men’s-basketball RSS feeds for current editorial context. The refresh stores each feed-supplied headline, summary and URL without fetching or rewriting linked article pages, stamps its retrieval time, and labels the publisher. It does not turn a headline into a transaction, eligibility or availability claim. The scheduled research workflow refreshes these feeds before basketball publication.
 
 Parquet downloads substantially reduce network transfer. The shared release client maintains polite request spacing, conditional caching and bounded retries. Every published release used for this edition is listed in the model notebook.
 

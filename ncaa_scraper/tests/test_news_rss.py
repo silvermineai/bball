@@ -12,12 +12,12 @@ class NewsRssTests(unittest.TestCase):
           <pubDate>Tue, 8 Sep 2026 16:01:09 EST</pubDate>
           <guid>US-EN-1</guid><category>Recruiting</category>
         </item></channel></rss>'''
-        rows = parse_rss(payload, feed_url="https://example.test/feed")
+        rows = parse_rss(payload, feed_url="https://example.test/feed", publisher="NCAA.com")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["headline"], "Portal &amp; prep update")
         self.assertEqual(rows[0]["description"], "Summary exactly as supplied.")
         self.assertEqual(rows[0]["published"], "2026-09-08T21:01:09Z")
-        self.assertEqual(rows[0]["publisher"], "ESPN")
+        self.assertEqual(rows[0]["publisher"], "NCAA.com")
         self.assertEqual(rows[0]["sport"], "mens-college-basketball")
 
     def test_parser_skips_incomplete_items(self):
