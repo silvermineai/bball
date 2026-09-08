@@ -17,6 +17,10 @@ export default function Page() {
       (sum, row) => sum + row.represented_prior_minutes,
       0,
     ),
+    unrepresentedMinutes = rosterSummary.reduce(
+      (sum, row) => sum + row.unrepresented_prior_minutes,
+      0,
+    ),
     scenarioTeams = rosterModel.teams
       .filter((team) => team.predicted_net != null)
       .sort((a, b) => (b.predicted_net ?? -Infinity) - (a.predicted_net ?? -Infinity))
@@ -233,6 +237,10 @@ export default function Page() {
                 : "—"}
             </strong>
             <span>Prior minutes represented</span>
+          </div>
+          <div>
+            <strong>{Math.round(unrepresentedMinutes).toLocaleString()}</strong>
+            <span>Prior minutes needing source review</span>
           </div>
           <div>
             <strong>{recruiting.coverage.historical_links.toLocaleString()}</strong>
