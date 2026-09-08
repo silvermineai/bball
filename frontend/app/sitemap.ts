@@ -29,6 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/ncaa-rankings/",
     "/basketball/ncaa-careers/",
     "/basketball/ncaa-rosters/",
+    "/basketball/ncaa-high-schools/",
     "/basketball/ncaa-shooting/",
     "/basketball/source-stats/",
     "/basketball/team-stats/",

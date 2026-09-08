@@ -41,6 +41,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | NCAA player rankings | `/basketball/ncaa-rankings/` | Rank current NCAA-derived player/team rows by scoring, rebounding, playmaking, defense or shooting efficiency with a configurable game minimum |
 | NCAA historical leaderboard | `/basketball/ncaa-careers/` | Compare NCAA player-season rows across a selectable historical window with explicit workload filters and source identity |
 | NCAA roster intel | `/basketball/ncaa-rosters/` | Search NCAA roster records by class, position, size, hometown and high school for recruiting context |
+| High-school pipeline | `/basketball/ncaa-high-schools/` | Aggregate source roster rows by high school, programs represented and recorded college production, with links back to the evidence rows |
 | NCAA shooting profiles | `/basketball/ncaa-shooting/` | Compare NCAA-derived shot volume, zone efficiency and average distance by player/team across 2019–26 |
 | Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Team stat browser | `/basketball/team-stats/` | Search 45 attributed aggregate team-season fields across 2023–24 through 2025–26, with source display values, pagination and CSV export |

@@ -71,6 +71,7 @@ const paths = [
     ["Study lineups", "/basketball/lineups/", "Use possession thresholds and lineup net ratings to ask which combinations actually worked."],
     ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],
     ["Search roster intel", "/basketball/ncaa-rosters/", "Use class, position, size, hometown and high-school fields as recruiting context, then verify any transaction with a dated statement."],
+    ["Trace high-school pipelines", "/basketball/ncaa-high-schools/", "Aggregate source roster rows by high-school label, then open the underlying players before drawing a recruiting conclusion."],
     ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
     ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
     ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],

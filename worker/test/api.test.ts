@@ -156,6 +156,17 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-high-schools?season=2009",
+      "/api/basketball/research/ncaa-high-schools?metric=made_up",
+      "/api/basketball/research/ncaa-high-schools?minPlayers=0",
+      "/api/basketball/research/ncaa-high-schools?page=-1",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",
