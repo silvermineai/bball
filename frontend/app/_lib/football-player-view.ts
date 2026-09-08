@@ -22,6 +22,24 @@ export const footballPlayerCategories = [
 ] as const;
 export type FootballPlayerCategory = (typeof footballPlayerCategories)[number];
 export type FootballPlayerDivision = "fbs" | "all";
+
+const footballEventCategoryMap: Partial<
+  Record<FootballPlayerCategory, "defense" | "specialists">
+> = {
+  defensive: "defense",
+  interceptions: "defense",
+  fumbles: "defense",
+  kicking: "specialists",
+  punting: "specialists",
+  kickReturns: "specialists",
+  puntReturns: "specialists",
+};
+
+/** Return the source notebook for categories that do not have stable athlete IDs. */
+export function footballEventDataset(category: FootballPlayerCategory) {
+  return footballEventCategoryMap[category] ?? null;
+}
+
 export type FootballPlayerFilters = {
   season: string;
   category: FootballPlayerCategory;

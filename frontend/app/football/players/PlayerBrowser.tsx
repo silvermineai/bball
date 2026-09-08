@@ -9,6 +9,7 @@ import {
 import {
   hasRankedProduction,
   footballPlayerCategories,
+  footballEventDataset,
   footballPlayerFilterSearch,
   parseFootballPlayerFilters,
   productionForCategory,
@@ -56,6 +57,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     [copied, setCopied] = useState(""),
     [hydrated, setHydrated] = useState(false);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
+  const eventDataset = footballEventDataset(category);
   useEffect(() => {
     const parsed = parseFootballPlayerFilters(
       window.location.search,
@@ -86,6 +88,10 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     const controller = new AbortController();
     setData(null);
     setError("");
+    if (eventDataset) {
+      setData(null);
+      return;
+    }
     if (!catalog.seasons.some((s) => String(s.season) === season)) {
       setError("Choose a supported stat season.");
       return;
@@ -105,7 +111,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [season, retry, catalog]);
+  }, [season, retry, catalog, eventDataset]);
   const rows = (data?.season === +season ? data.players : []).filter(
     (p) =>
       (p.name + " " + p.team + " " + p.conference)
@@ -259,7 +265,23 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           : "Historical coverage varies by division and category."}{" "}
         A dash means unranked or unavailable, never zero.
       </p>
-      {error ? (
+      {eventDataset ? (
+        <section className="section paper-panel">
+          <div className="eyebrow">Source event handoff</div>
+          <h2>This category belongs in the event notebook.</h2>
+          <p>
+            The imported {category} records contain source names, team labels
+            and game context, but no stable athlete ID. They stay separate from
+            this identified player index, so an empty player production cell is
+            never treated as zero or joined by name.
+          </p>
+          <p>
+            <Link href={`/football/events/?dataset=${eventDataset}`}>
+              Open the {eventDataset === "defense" ? "defensive" : "specialist"} event notebook →
+            </Link>
+          </p>
+        </section>
+      ) : error ? (
         <div role="alert" className="status-error">
           {error}{" "}
           <button

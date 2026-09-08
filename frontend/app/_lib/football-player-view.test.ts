@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  footballEventDataset,
   footballPlayerFilterSearch,
   hasRankedProduction,
   parseFootballPlayerFilters,
@@ -30,6 +31,13 @@ const row = (rank: number | null, plays: number): FootballPlayerProduction => ({
 });
 
 describe("football player index category selection", () => {
+  it("hands off name-attributed event categories to their source notebooks", () => {
+    expect(footballEventDataset("defensive")).toBe("defense");
+    expect(footballEventDataset("interceptions")).toBe("defense");
+    expect(footballEventDataset("puntReturns")).toBe("specialists");
+    expect(footballEventDataset("passing")).toBeNull();
+    expect(footballEventDataset("all")).toBeNull();
+  });
   it("uses the best ranked category for the all-players view", () => {
     const selected = productionForCategory(row(12, 40), "all");
     expect(selected?.category).toBe("receiving");
