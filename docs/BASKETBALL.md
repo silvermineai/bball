@@ -119,7 +119,7 @@ The original basketball release passed ingestion/model tests, Worker API/routing
 
 D1 coverage queries use a batch of individual counts to stay within its compound SELECT limit. Forecast counts include preserved model snapshots; the current model has 1,579 forecasts, while the release warehouse retains 28,422 basketball registrations across the preserved model fingerprints.
 
-`GET /api/basketball/research/coverage` returns those table counts plus grouped `source_receipts` with each dataset's receipt count and latest `fetched_at` value. This is the remote D1 freshness check; the homepage receipt cards are the corresponding static edition view.
+`GET /api/basketball/research/coverage` returns all 18 public basketball D1 table counts plus grouped `source_receipts` with each dataset's receipt count and latest `fetched_at` value. This is the remote D1 freshness check; the homepage receipt cards are the corresponding static edition view.
 
 `GET /api/basketball/research/forecasts?season=2027&status=upcoming&q=Duke&limit=50` exposes the D1-backed forecast record for integrations and reproducible research. It joins each stored prediction to its exact schedule row, returns the model ID and creation clock, and supports `all`, `upcoming` or `completed` status, the newest model by default (`model=latest`), `model=all` or an exact model ID, literal team-name search, bounded pagination and a `meta=1` catalog of seasons and model editions. The JSON payload is parsed from the stored forecast artifact; malformed payloads are withheld as `prediction: null` rather than making an otherwise valid page fail. This endpoint does not create, revise or recompute forecasts.
 

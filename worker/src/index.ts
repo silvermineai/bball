@@ -357,6 +357,15 @@ app.get("/api/basketball/research/coverage", async (c) => {
     forecasts: "bb_forecasts",
     player_core: "bb_player_core",
     unresolved: "bb_unresolved",
+    player_season: "bb_player_season",
+    team_season: "bb_team_season",
+    publisher_ratings: "bb_publisher_ratings",
+    player_value: "bb_player_value",
+    lineups: "bb_lineups",
+    ncaa_player_box: "bb_ncaa_player_box",
+    ncaa_player_season: "bb_ncaa_player_season",
+    ncaa_rosters: "bb_ncaa_rosters",
+    ncaa_player_shooting: "bb_ncaa_player_shooting",
   };
   const counts = await c.env.DB.batch<{ rows: number }>(
     Object.values(tables).map((table) =>

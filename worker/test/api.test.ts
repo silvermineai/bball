@@ -105,7 +105,7 @@ describe("bball api", () => {
     });
     const batch = vi
       .fn()
-      .mockResolvedValue(Array.from({ length: 9 }, () => ({ results: [{ rows: 7 }] })));
+      .mockResolvedValue(Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })));
     const response = await app.request(
       "/api/basketball/research/coverage",
       {},
@@ -120,8 +120,10 @@ describe("bball api", () => {
         latest_source_at: string | null;
       }>;
     };
-    expect(body.coverage).toHaveLength(9);
+    expect(body.coverage).toHaveLength(18);
     expect(body.coverage[0]).toEqual({ dataset: "games", rows: 7 });
+    expect(body.coverage.map((entry) => entry.dataset)).toContain("ncaa_player_box");
+    expect(body.coverage.map((entry) => entry.dataset)).toContain("publisher_ratings");
     expect(body.source_receipts).toEqual([
       {
         dataset: "player_box",
