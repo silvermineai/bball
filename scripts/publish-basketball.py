@@ -199,6 +199,44 @@ run(
         "2024",
         "2025",
         "2026",
+        "--refresh",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_matchups",
+        "--seasons",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025",
+        "2026",
+        "--refresh",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_ncaa_team_box",
+        "--seasons",
+        *[str(year) for year in range(2010, 2027)],
+        "--refresh",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_within_impact",
+        "--seasons",
+        *[str(year) for year in range(2010, 2027)],
+        "--refresh",
     ]
 )
 run([PY, "-m", "ncaa_scraper.basketball_recruiting"])
@@ -372,6 +410,9 @@ run([PY, "scripts/sync-shooting.py"])
 run([PY, "scripts/sync-recruiting.py"])
 run([PY, "scripts/sync-careers.py"])
 run([PY, "scripts/sync-ncaa-individual.py"])
+run([PY, "scripts/sync-matchup-stints.py"])
+run([PY, "scripts/sync-ncaa-team-box.py"])
+run([PY, "scripts/sync-within-impact.py"])
 run([PY, "scripts/archive-evaluation.py"])
 if not BATCH_PUBLICATION:
     run([PY, "scripts/cloudflare.py", "deploy"])

@@ -93,7 +93,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 .venv/bin/python scripts/publish-basketball.py
 ```
 
-The publisher refreshes sources, tests, builds both frontend applications, syncs D1 and deploys the Worker using credentials supplied through `~/.env`. The repository also defines a serialized weekly GitHub Actions refresh with manual sport selection in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml); it requires the same Cloudflare credentials as repository secrets. Each workflow run now executes a release-health gate that checks generated timestamps, model IDs, forecast-count bounds, rating presence and NCAA-season alignment before deployment. Football and basketball refresh scripts rebuild the shared site while leaving the other sport's data edition intact.
+The publisher refreshes sources, rebuilds the player, play-by-play, five-v-five, NCAA team-box and within-team RAPM derivatives, archives their source parquet receipts in R2, tests, builds both frontend applications, syncs D1 and deploys the Worker using credentials supplied through `~/.env`. The repository also defines a serialized weekly GitHub Actions refresh with manual sport selection in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml); it requires the same Cloudflare credentials as repository secrets. Each workflow run now executes a release-health gate that checks generated timestamps, model IDs, forecast-count bounds, rating presence and NCAA-season alignment before deployment. Football and basketball refresh scripts rebuild the shared site while leaving the other sport's data edition intact.
 
 ## Release verification
 
