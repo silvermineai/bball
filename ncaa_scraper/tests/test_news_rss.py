@@ -23,3 +23,15 @@ class NewsRssTests(unittest.TestCase):
     def test_parser_skips_incomplete_items(self):
         payload = b"<rss><channel><item><title>Missing URL</title></item></channel></rss>"
         self.assertEqual(parse_rss(payload), [])
+
+    def test_espn_basketball_feed_excludes_non_basketball_urls(self):
+        payload = b'''<?xml version="1.0"?><rss><channel>
+          <item><title>Basketball portal</title><description>Hoops.</description>
+            <link>https://www.espn.com/mens-college-basketball/story/_/id/1/portal</link>
+            <pubDate>Tue, 8 Sep 2026 16:01:09 EST</pubDate><guid>basketball</guid></item>
+          <item><title>Football portal</title><description>Football.</description>
+            <link>https://www.espn.com/college-football/story/_/id/2/portal</link>
+            <pubDate>Tue, 8 Sep 2026 16:02:09 EST</pubDate><guid>football</guid></item>
+        </channel></rss>'''
+        rows = parse_rss(payload, publisher="ESPN", sport="mens-college-basketball")
+        self.assertEqual([row["headline"] for row in rows], ["Basketball portal"])

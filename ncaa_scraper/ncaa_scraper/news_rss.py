@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 FEEDS = (
@@ -63,6 +64,15 @@ def parse_rss(
         published_raw = _text(item, "pubDate")
         if not title or not link or not published_raw:
             continue
+        # ESPN's broad NCB feed occasionally carries football or general
+        # college-sports items. Keep the published sport label truthful by
+        # accepting only URLs in ESPN's explicit men's-college-basketball
+        # namespace. NCAA.com supplies a basketball-only feed and is left
+        # unchanged.
+        if publisher == "ESPN" and sport == "mens-college-basketball":
+            path = urlsplit(link).path.rstrip("/")
+            if "/mens-college-basketball/" not in f"{path}/":
+                continue
         try:
             published = _published(published_raw)
         except (TypeError, ValueError, OverflowError):
