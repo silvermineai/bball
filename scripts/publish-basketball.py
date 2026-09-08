@@ -301,6 +301,18 @@ run_remote_migration(
         "migrations/0021_basketball_ncaa_player_box.sql",
     ]
 )
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        "bball-silvermine",
+        "--remote",
+        "--file",
+        "migrations/0022_basketball_ncaa_rosters.sql",
+    ]
+)
 run_logged(
     [
         PY,
