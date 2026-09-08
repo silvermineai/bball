@@ -18,7 +18,7 @@ import {
 import Recruiting from "./Recruiting";
 import { comparisonHref } from "../../_lib/player-comparison";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import type { BBRosters } from "../../_lib/basketball-types";
+import type { BBRoster, BBRosters } from "../../_lib/basketball-types";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
@@ -116,6 +116,11 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     sort,
   );
   const rosterMatch = (name: string, teamId: string) => rosterNameMatch(name, teamId, rosters.players);
+  const exactRoster = (name: string, teamId: string): BBRoster | null => {
+    if (rosterMatch(name, teamId) !== "exact") return null;
+    const normalized = name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+    return rosters.players.find((player) => player.team_id === teamId && player.name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase() === normalized) || null;
+  };
   const exactRosterMatches = allRows.filter((row) => rosterMatch(row.name, row.team_id) === "exact").length;
   return (
     <>
@@ -506,6 +511,15 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
                 <p className="recruiting-eligibility">
                   Current roster source check: {rosterMatch(p.name, p.team_id) === "exact" ? "exact normalized name appears in the 2026–27 listing" : rosterMatch(p.name, p.team_id) === "multiple" ? "multiple normalized name matches; review manually" : "no exact normalized name match in the 2026–27 listing"}. This check is descriptive and does not establish identity, eligibility or availability.
                 </p>
+                {exactRoster(p.name, p.team_id) && (
+                  <p className="recruiting-eligibility">
+                    <Link href={`/basketball/player/?id=${encodeURIComponent(exactRoster(p.name, p.team_id)!.id)}`}>
+                      Open the matched source player file →
+                    </Link>
+                    {exactRoster(p.name, p.team_id)!.source_url && <a href={exactRoster(p.name, p.team_id)!.source_url!} target="_blank" rel="noreferrer"> · publisher roster source ↗</a>}
+                    <br /><small>This is an exact normalized name-and-program handoff for review, not a verified identity or eligibility determination.</small>
+                  </p>
+                )}
                 {p.latest.kind === "addition" && (
                   <p className="recruiting-eligibility">
                     School-announced addition for 2026–27. Current eligibility
