@@ -22,7 +22,7 @@ import type { BBRoster, BBRosters } from "../../_lib/basketball-types";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
-export default function Announcements({ data, rosters }: { data: RecruitingRelease; rosters: BBRosters }) {
+export default function Announcements({ data }: { data: RecruitingRelease }) {
   const [view, setView] = useState<"announcements" | "observations">("announcements"),
     [team, setTeam] = useState("all"),
     [q, setQ] = useState(""),
@@ -32,6 +32,8 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     [coverageQuery, setCoverageQuery] = useState(""),
     [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "name">("reviewed"),
     [coverageStatus, setCoverageStatus] = useState<"all" | "reviewed" | "unreviewed">("all");
+  const [rosters, setRosters] = useState<BBRosters | null>(null),
+    [rosterError, setRosterError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get("view");
@@ -62,6 +64,21 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
       );
     }
   }, [hydrated, team, q, kind, sort, coverageQuery, coverageSort, coverageStatus, view]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/data/basketball/rosters.json", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The source roster release could not be loaded. Please reload.");
+        return response.json() as Promise<BBRosters>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setRosters(value);
+      })
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setRosterError(error.message);
+      });
+    return () => controller.abort();
+  }, []);
   const changeView = (next: "announcements" | "observations") => {
     setView(next);
     const url = new URL(window.location.href);
@@ -77,6 +94,12 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
+  if (rosterError) {
+    return <p className="status-error" role="alert">{rosterError}</p>;
+  }
+  if (!rosters) {
+    return <p className="empty" role="status">Loading the source roster release…</p>;
+  }
   const allRows = recruitingRows(data);
   const programSummary = summarizeRecruitingPrograms(allRows);
   const coverageRows = (rosters.team_summaries || [])

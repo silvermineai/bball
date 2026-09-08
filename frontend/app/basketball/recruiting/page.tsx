@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import Announcements from "./Announcements";
-import { getRecruiting, getRosters } from "../../_lib/basketball-data";
+import { getRecruiting } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 export const metadata = {
   title: "Basketball recruiting: school announcements and transfer evidence",
@@ -12,7 +12,6 @@ export const metadata = {
 };
 export default function Page() {
   const data = getRecruiting();
-  const rosters = getRosters();
   const news = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
   ) as {
@@ -55,7 +54,7 @@ export default function Page() {
         </div>
       </div>
       <RecruitingWire articles={recruitingNews} />
-      <Announcements data={data} rosters={rosters} />
+      <Announcements data={data} />
     </>
   );
 }
