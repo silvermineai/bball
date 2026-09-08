@@ -7,6 +7,7 @@ from ncaa_scraper.basketball import (
     ROOT,
     adjusted_factor_ratings,
     canonical_date,
+    dataset_catalog,
     ingest,
     matchup_factor_edges,
     player_index,
@@ -190,6 +191,21 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(
             self.conn.execute("SELECT count(*) FROM bb_unresolved").fetchone()[0], 1
         )
+
+    def test_dataset_catalog_reports_rows_and_receipt_freshness(self):
+        self.conn.execute(
+            "INSERT INTO bb_sources VALUES (?,?,?)",
+            ("schedule", 2026, json.dumps({"url": "https://example.test/schedule", "fetched_at": "2026-09-08T00:00:00Z"})),
+        )
+        self.conn.execute(
+            "INSERT INTO bb_games VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("1", 2026, "2026-01-01T00:00:00Z", "1", "2", "Home", "Away", 70, 65, 1, 0, 2, 0, None, None),
+        )
+        schedule = next(row for row in dataset_catalog(self.conn) if row["key"] == "schedule")
+        self.assertEqual(schedule["rows"], 1)
+        self.assertEqual(schedule["seasons"], [2026])
+        self.assertEqual(schedule["source_count"], 1)
+        self.assertEqual(schedule["latest_source_at"], "2026-09-08T00:00:00Z")
 
     def test_future_source_zeros_do_not_become_final_scores(self):
         row = {

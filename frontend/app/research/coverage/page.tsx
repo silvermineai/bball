@@ -168,6 +168,66 @@ export default function Page() {
         </div>
       </section>
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">02 / Basketball evidence inventory</div>
+            <h2>Every stat layer has a receipt.</h2>
+          </div>
+          <span className="note">
+            {count(basketball.coverage.datasets?.length ?? 0)} published layers
+          </span>
+        </div>
+        <p className="note">
+          Row counts are table-local source records. They are not deduplicated
+          person counts, and identities from NCAA releases are kept separate
+          from ESPN-derived records unless an exact source key is available.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Evidence layer</th>
+                <th className="numeric">Rows</th>
+                <th>Season span</th>
+                <th>Latest source check</th>
+                <th>Identity / provenance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(basketball.coverage.datasets ?? []).map((dataset) => (
+                <tr key={dataset.key}>
+                  <td>
+                    <strong>{dataset.label}</strong>
+                    <small>{dataset.source_count.toLocaleString()} source receipts</small>
+                  </td>
+                  <td className="numeric">{dataset.rows.toLocaleString()}</td>
+                  <td>
+                    {dataset.seasons.length
+                      ? `${dataset.seasons[0]}–${dataset.seasons[dataset.seasons.length - 1]}`
+                      : "—"}
+                  </td>
+                  <td>
+                    {dataset.latest_source_at ? date(dataset.latest_source_at) : "—"}
+                    {dataset.source_url && (
+                      <small>
+                        <a href={dataset.source_url} target="_blank" rel="noreferrer">
+                          Source release ↗
+                        </a>
+                      </small>
+                    )}
+                  </td>
+                  <td><small>{dataset.identity_note}</small></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!basketball.coverage.datasets?.length && (
+          <p className="empty">The inventory will appear after the next basketball build.</p>
+        )}
+      </section>
+
       <section className="section two-col">
         <article className="paper-panel">
           <div className="eyebrow">02 / Recruiting file</div>

@@ -86,6 +86,7 @@ export type BBOverview = {
     upcoming_games: number;
     forecast_games: number;
     baseline_estimate_games?: number;
+    datasets?: BBDatasetCoverage[];
   };
   ratings: BBTeam[];
   upcoming: BBGame[];
@@ -130,6 +131,18 @@ export type BBOverview = {
     fetched_at: string;
     sha256: string;
   }[];
+};
+
+export type BBDatasetCoverage = {
+  key: string;
+  label: string;
+  rows: number;
+  seasons: number[];
+  source_seasons: number[];
+  source_count: number;
+  latest_source_at: string | null;
+  source_url: string | null;
+  identity_note: string;
 };
 export type BBPlayer = {
   id: string;

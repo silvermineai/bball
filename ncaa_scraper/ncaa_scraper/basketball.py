@@ -1247,6 +1247,67 @@ def team_ratings(model, games, boxes, season):
     return ratings
 
 
+def dataset_catalog(conn):
+    """Describe every published basketball table without hiding sparse layers.
+
+    Counts are intentionally table-local.  A row in a source-native NCAA table
+    is not silently treated as the same identity as an ESPN-derived row.
+    """
+    specs = (
+        ("schedule", "Schedule and finals", "bb_games", "ESPN-derived schedule"),
+        ("team_box", "Team box scores", "bb_team_box", "ESPN-derived team boxes"),
+        ("player_box", "Player game box scores", "bb_player_box", "ESPN-derived player boxes"),
+        ("rosters", "Current roster observations", "bb_rosters", "ESPN-derived roster release"),
+        ("player_season", "Publisher player-season stats", "bb_player_season", "SportsDataverse player season"),
+        ("team_season", "Publisher team-season stats", "bb_team_season", "SportsDataverse team season"),
+        ("publisher_ratings", "Publisher adjusted ratings", "bb_publisher_ratings", "SportsDataverse ratings"),
+        ("publisher_player_value", "Publisher player value / BPM", "bb_player_value", "SportsDataverse player value"),
+        ("ncaa_lineups", "NCAA lineup stints", "bb_lineups", "SportsDataverse NCAA lineups"),
+        ("player_core", "ESPN source profiles", "bb_player_core", "SportsDataverse player core"),
+        ("ncaa_rapm", "NCAA lineup RAPM", "bb_impact", "SportsDataverse NCAA RAPM"),
+        ("ncaa_player_box", "NCAA player game boxes", "bb_ncaa_player_box", "SportsDataverse NCAA player boxes"),
+        ("ncaa_player_season", "NCAA player-season aggregates", "bb_ncaa_player_season", "Derived from NCAA player boxes"),
+        ("ncaa_team_rosters", "NCAA roster and school context", "bb_ncaa_rosters", "SportsDataverse NCAA rosters"),
+        ("ncaa_shots", "NCAA attributed shooting profiles", "bb_ncaa_player_shooting", "SportsDataverse NCAA shots"),
+    )
+    receipts = defaultdict(list)
+    for row in conn.execute("SELECT dataset,season,receipt_json FROM bb_sources"):
+        try:
+            receipt = json.loads(row[2])
+        except (TypeError, json.JSONDecodeError):
+            receipt = {}
+        receipts[row[0]].append({"season": row[1], **receipt})
+    catalog = []
+    for key, label, table, identity_note in specs:
+        try:
+            rows = int(conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0])
+            seasons = [
+                int(row[0])
+                for row in conn.execute(
+                    f"SELECT DISTINCT season FROM {table} WHERE season IS NOT NULL ORDER BY season"
+                )
+            ]
+        except sqlite3.OperationalError:
+            rows, seasons = 0, []
+        source_rows = receipts.get(key, [])
+        fetched = [str(item["fetched_at"]) for item in source_rows if item.get("fetched_at")]
+        urls = sorted({str(item["url"]) for item in source_rows if item.get("url")})
+        catalog.append(
+            {
+                "key": key,
+                "label": label,
+                "rows": rows,
+                "seasons": seasons,
+                "source_seasons": sorted({int(item["season"]) for item in source_rows}),
+                "source_count": len(source_rows),
+                "latest_source_at": max(fetched) if fetched else None,
+                "source_url": urls[0] if urls else None,
+                "identity_note": identity_note,
+            }
+        )
+    return catalog
+
+
 def build(conn, target=2027):
     now = utcnow()
     games, boxes, valid = load_games(conn)
@@ -1305,6 +1366,7 @@ def build(conn, target=2027):
             "baseline_estimate_games": sum(
                 g["fallback_prediction"] is not None for g in upcoming
             ),
+            "datasets": dataset_catalog(conn),
         },
         "model": model,
         "upcoming": upcoming,
