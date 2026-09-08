@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -54,7 +54,12 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   efg: "CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END",
   per40: "CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END",
   rapm_net: "rapm_net",
+  orapm: "orapm",
+  drapm: "drapm",
 }[metric]);
+
+const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "orapm" || metric === "drapm";
+const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 
 // A descriptive shortlist for readers who do not want to choose one box-score
 // category. Each component is standardized within the filtered cohort, then
@@ -143,7 +148,7 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
       ((rapm_net - rapm_mean) / NULLIF(rapm_sd, 0.0) +
        (per40_value - per40_mean) / NULLIF(per40_sd, 0.0)) / 2.0 AS value
     FROM stats s
-    WHERE rapm_net IS NOT NULL AND per40_value IS NOT NULL`;
+    WHERE rapm_net IS NOT NULL AND per40_value IS NOT NULL AND off_poss >= 500 AND def_poss >= 500`;
   const prefix = `WITH aggregate AS (${aggregate(where)}), derived AS (${derived}), stats AS (${stats}), scored AS (${scored})`;
   return {
     count: `${prefix} SELECT count(*) AS total FROM scored WHERE value IS NOT NULL`,
@@ -185,6 +190,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = clauses.join(" AND ");
   const expression = metric === "balanced_index" || metric === "impact_index" ? null : metricExpression(metric);
+  const qualification = impactQualification(metric);
   const count: { total: number } | null = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
@@ -196,7 +202,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
       })()
     : await c.env.DB.prepare(
-      `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND (${expression}) IS NOT NULL`,
+      `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND ${qualification} AND (${expression}) IS NOT NULL`,
     ).bind(...binds, minGames, minMinutes).first<{ total: number }>();
   const rows = metric === "balanced_index"
     ? await (() => {
@@ -211,7 +217,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     : await c.env.DB.prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
         SELECT aggregate.*, ${expression} AS value
-        FROM aggregate WHERE games >= ? AND minutes >= ?
+        FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification}
       )
       SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
       WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC
