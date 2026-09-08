@@ -132,6 +132,7 @@ def ingest(conn, dataset, year, rows, receipt):
             "team_season": "bb_team_season",
             "publisher_ratings": "bb_publisher_ratings",
             "publisher_player_value": "bb_player_value",
+            "ncaa_lineups": "bb_lineups",
             "ncaa_rapm": "bb_impact",
         }
         if dataset in tables:
@@ -298,6 +299,50 @@ def ingest(conn, dataset, year, rows, receipt):
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_player_value VALUES (?,?,?,?,?)", valid
             )
+        elif dataset == "ncaa_lineups":
+            grouped = {}
+            sum_fields = {
+                "duration_mins", "poss", "pts", "fga", "fgm", "rima", "rimm", "rim_ast",
+                "mida", "midm", "mid_ast", "fg2a", "fg2m", "tpa", "tpm", "tp_ast",
+                "fta", "ftm", "orb", "drb", "to", "stl", "blk", "ast", "foul",
+                "opp_poss", "opp_pts", "opp_fga", "opp_fgm", "opp_rima", "opp_rimm",
+                "opp_rim_ast", "opp_mida", "opp_midm", "opp_mid_ast", "opp_fg2a", "opp_fg2m",
+                "opp_tpa", "opp_tpm", "opp_tp_ast", "opp_fta", "opp_ftm", "opp_orb",
+                "opp_drb", "opp_to", "opp_stl", "opp_blk", "opp_ast", "opp_foul",
+            }
+            for r in rows:
+                key = identity(r["lineup_key"])
+                entry = grouped.setdefault(
+                    key,
+                    {
+                        "team": r.get("team") or key,
+                        "players": [r.get(f"player_{i}") for i in range(1, 6)],
+                        "games": set(),
+                        "stints": 0,
+                        "totals": defaultdict(float),
+                    },
+                )
+                if r.get("contest_id"):
+                    entry["games"].add(identity(r["contest_id"]))
+                entry["stints"] += 1
+                for field in sum_fields:
+                    value = number(r.get(field))
+                    if value is not None:
+                        entry["totals"][field] += value
+            output = []
+            for key, entry in grouped.items():
+                totals = {k: round(v, 4) for k, v in entry["totals"].items()}
+                totals["games"] = len(entry["games"])
+                totals["stints"] = entry["stints"]
+                totals["net_per_100"] = (
+                    round(100 * (totals.get("pts", 0) / totals["poss"] - totals.get("opp_pts", 0) / totals["opp_poss"]), 4)
+                    if totals.get("poss") and totals.get("opp_poss") else None
+                )
+                totals["plus_minus"] = round(totals.get("pts", 0) - totals.get("opp_pts", 0), 4)
+                totals["off_rtg"] = round(100 * totals["pts"] / totals["poss"], 4) if totals.get("poss") else None
+                totals["def_rtg"] = round(100 * totals["opp_pts"] / totals["opp_poss"], 4) if totals.get("opp_poss") else None
+                output.append((year, key, entry["team"], json.dumps(entry["players"]), json.dumps(totals)))
+            conn.executemany("INSERT OR REPLACE INTO bb_lineups VALUES (?,?,?,?,?)", output)
         elif dataset == "ncaa_rapm":
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_impact VALUES (?,?,?)",
@@ -1048,6 +1093,7 @@ def export_sql(conn, path):
             "bb_team_season",
             "bb_publisher_ratings",
             "bb_player_value",
+            "bb_lineups",
             "bb_rosters",
             "bb_impact",
             "bb_unresolved",
@@ -1100,6 +1146,8 @@ def main():
             if year in (2024, 2025, 2026):
                 datasets.append("team_season")
                 datasets.extend(["publisher_ratings", "publisher_player_value"])
+            if year in (2025, 2026):
+                datasets.append("ncaa_lineups")
             for dataset in datasets:
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)

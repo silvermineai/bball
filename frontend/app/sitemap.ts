@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/learn/",
     "/basketball/ratings/",
     "/basketball/boutique/",
+    "/basketball/lineups/",
     "/basketball/conferences/",
     "/basketball/programs/",
     "/basketball/compare/",
