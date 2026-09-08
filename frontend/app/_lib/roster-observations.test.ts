@@ -4,6 +4,7 @@ import {
   rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
+  priorProductionIndex,
 } from "./roster-observations";
 import type { BBRoster } from "./basketball-types";
 
@@ -98,6 +99,18 @@ describe("roster observation sorting", () => {
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
     const assists = sortRosterObservations(rows, "prior_apg");
     expect(assists.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+
+  it("calculates a cohort-relative prior production index without imputing missing rates", () => {
+    const rows = [
+      { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55).prior_production!, rpg: 3, apg: 2, spg: 1, bpg: 0, efg: 0.5 } },
+      { ...row("b", "Beta", "different_program", "B", [], 400, 0.70), prior_production: { ...row("b", "Beta", "different_program", "B", [], 400, 0.70).prior_production!, rpg: 8, apg: 6, spg: 2, bpg: 1, efg: 0.7 } },
+      { ...row("c", "Gamma", "new_to_dataset", "C", []) },
+    ];
+    const index = priorProductionIndex(rows);
+    expect(index.get("b-b")?.score).toBeGreaterThan(index.get("a-a")?.score ?? -Infinity);
+    expect(index.get("c-c")).toEqual({ score: null, components: 0 });
+    expect(sortRosterObservations(rows, "prior_index").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 });
 

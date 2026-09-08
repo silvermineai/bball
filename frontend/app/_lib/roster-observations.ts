@@ -10,7 +10,8 @@ export type RosterSortKey =
   | "prior_rpg"
   | "prior_apg"
   | "prior_ts"
-  | "prior_efg";
+  | "prior_efg"
+  | "prior_index";
 
 export type RosterStatus =
   | "all"
@@ -55,7 +56,39 @@ const rosterSorts = new Set<RosterSortKey>([
   "prior_apg",
   "prior_ts",
   "prior_efg",
+  "prior_index",
 ]);
+
+const indexMetrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg"] as const;
+type IndexMetric = (typeof indexMetrics)[number];
+export type PriorProductionIndex = { score: number | null; components: number };
+
+/**
+ * Calculate a transparent, cohort-relative production index for recruiting
+ * review. Each available rate is standardized within the visible rows and
+ * averaged; no missing source field is converted to zero.
+ */
+export function priorProductionIndex(rows: BBRoster[]) {
+  const moments = new Map<IndexMetric, { mean: number; sd: number }>();
+  for (const metric of indexMetrics) {
+    const values = rows
+      .map((row) => row.prior_production?.[metric] ?? null)
+      .filter((value): value is number => value != null && Number.isFinite(value));
+    const mean = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const variance = values.length ? values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length : 0;
+    moments.set(metric, { mean, sd: Math.sqrt(variance) });
+  }
+  return new Map(rows.map((row) => {
+    const values = indexMetrics.flatMap((metric) => {
+      const value = row.prior_production?.[metric] ?? null;
+      const moment = moments.get(metric)!;
+      return value == null || !Number.isFinite(value) || moment.sd === 0
+        ? []
+        : [(value - moment.mean) / moment.sd];
+    });
+    return [`${row.id}-${row.team_id}`, { score: values.length >= 4 ? values.reduce((sum, value) => sum + value, 0) / values.length : null, components: values.length }];
+  }));
+}
 
 /** Read the roster-observation controls from a stable, shareable URL. */
 export function parseRosterFilters(search: string): RosterFilters {
@@ -104,6 +137,7 @@ export function sortRosterObservations(
   rows: BBRoster[],
   key: RosterSortKey,
 ): BBRoster[] {
+  const index = key === "prior_index" ? priorProductionIndex(rows) : null;
   return [...rows].sort((a, b) => {
     if (key === "status") {
       const delta = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
@@ -141,6 +175,12 @@ export function sortRosterObservations(
                 : "efg";
       const av = a.prior_production?.[metric] ?? null;
       const bv = b.prior_production?.[metric] ?? null;
+      if (av == null && bv != null) return 1;
+      if (av != null && bv == null) return -1;
+      if (av != null && bv != null && bv !== av) return bv - av;
+    } else if (key === "prior_index") {
+      const av = index!.get(`${a.id}-${a.team_id}`)?.score ?? null;
+      const bv = index!.get(`${b.id}-${b.team_id}`)?.score ?? null;
       if (av == null && bv != null) return 1;
       if (av != null && bv == null) return -1;
       if (av != null && bv != null && bv !== av) return bv - av;

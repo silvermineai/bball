@@ -9,6 +9,7 @@ import {
   rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
+  priorProductionIndex,
   type RosterSortKey,
   type RosterStatus,
 } from "../../_lib/roster-observations";
@@ -78,6 +79,7 @@ export default function Recruiting() {
     ),
     sort,
   );
+  const productionIndex = priorProductionIndex(rows);
   const teamRows = [...(data?.team_summaries || [])]
     .filter((team) => team.team.toLowerCase().includes(teamQuery.toLowerCase()))
     .sort((a, b) => {
@@ -205,6 +207,7 @@ export default function Recruiting() {
             <option value="prior_apg">Prior assists per game</option>
             <option value="prior_ts">Prior true shooting</option>
             <option value="prior_efg">Prior effective FG%</option>
+            <option value="prior_index">Multi-stat prior production index</option>
             <option value="program">Current program</option>
             <option value="name">Player name</option>
           </select>
@@ -259,6 +262,15 @@ export default function Recruiting() {
             recorded workload from the preceding source season, not a
             projected role at the listed program.
           </p>
+          {sort === "prior_index" && (
+            <p className="note" style={{ marginBottom: 22 }}>
+              The multi-stat prior production index standardizes available PPG,
+              RPG, APG, steals, blocks, true shooting and effective FG% within
+              this filtered view, then averages at least four available
+              components. It is a cohort-relative research aid; it is not a
+              recruiting grade, eligibility claim or forecast input.
+            </p>
+          )}
           <section className="paper-panel recruiting-watchlist" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 8 }}>
               <div>
@@ -521,9 +533,10 @@ export default function Recruiting() {
                       : "Observed program"}
                   </th>
                   <th>Prior appearances</th>
-                  <th>Observation</th>
-                  <th>Source-listed class</th>
-                  <th>Prior recorded production</th>
+                      <th>Observation</th>
+                      <th>Source-listed class</th>
+                      {sort === "prior_index" && <th className="numeric">Prior index</th>}
+                      <th>Prior recorded production</th>
                 </tr>
               </thead>
               <tbody>
@@ -562,6 +575,14 @@ export default function Recruiting() {
                     <td>{p.previous_teams.join(", ") || "Not observed"}</td>
                     <td>{labels[p.status]}</td>
                     <td>{p.class_year || "—"}</td>
+                    {sort === "prior_index" && (
+                      <td className="numeric">
+                        {productionIndex.get(`${p.id}-${p.team_id}`)?.score == null
+                          ? "—"
+                          : productionIndex.get(`${p.id}-${p.team_id}`)!.score!.toFixed(2)}
+                        <small>{productionIndex.get(`${p.id}-${p.team_id}`)?.components ?? 0} components</small>
+                      </td>
+                    )}
                     <td>
                       {p.prior_production ? (
                         <>
