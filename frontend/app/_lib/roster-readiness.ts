@@ -7,6 +7,18 @@ export type RosterLabSort =
   | "listed"
   | "rating";
 
+export type RosterPositionGroup = "guard" | "forward" | "center" | "unreported";
+export type RosterPositionCounts = Record<RosterPositionGroup, number>;
+
+/** Normalize the source's short position labels for a descriptive roster shape. */
+export function rosterPositionGroup(position: string | null): RosterPositionGroup {
+  const value = (position || "").trim().toUpperCase();
+  if (["G", "PG", "SG", "GUARD"].includes(value)) return "guard";
+  if (["F", "SF", "PF", "FORWARD", "WING"].includes(value)) return "forward";
+  if (["C", "CENTER"].includes(value)) return "center";
+  return "unreported";
+}
+
 export type RosterLabRow = {
   teamId: string;
   team: string;
@@ -22,6 +34,7 @@ export type RosterLabRow = {
   returningShare: number | null;
   representedShare: number | null;
   incomingShare: number | null;
+  positionCounts: RosterPositionCounts;
   ratingRank: number | null;
   adjustedNet: number | null;
   upcomingGames: number;
@@ -59,6 +72,15 @@ export function buildRosterLabRows(
     .map(([teamId, players]) => {
       const count = (status: string) =>
         players.filter((player) => player.status === status).length;
+      const positionCounts: RosterPositionCounts = {
+        guard: 0,
+        forward: 0,
+        center: 0,
+        unreported: 0,
+      };
+      for (const player of players) {
+        positionCounts[rosterPositionGroup(player.position)] += 1;
+      }
       const priorMinutes = players.reduce(
         (total, player) => total + (player.prior_production?.minutes ?? 0),
         0,
@@ -100,6 +122,7 @@ export function buildRosterLabRows(
           priorMinutes > 0 ? representedPriorMinutes / priorMinutes : null,
         incomingShare:
           priorMinutes > 0 ? incomingPriorMinutes / priorMinutes : null,
+        positionCounts,
         ratingRank: rating?.rank ?? null,
         adjustedNet: rating?.adj_net ?? null,
         upcomingGames: coverage.upcoming,
@@ -154,6 +177,10 @@ export function rosterLabCsv(rows: RosterLabRow[]) {
     row.returningShare == null ? null : row.returningShare * 100,
     row.representedShare == null ? null : row.representedShare * 100,
     row.incomingShare == null ? null : row.incomingShare * 100,
+    row.positionCounts.guard,
+    row.positionCounts.forward,
+    row.positionCounts.center,
+    row.positionCounts.unreported,
     row.ratingRank,
     row.adjustedNet,
     row.upcomingGames,

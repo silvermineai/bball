@@ -21,7 +21,7 @@ export default function Page() {
         <div className="eyebrow">Roster construction / 2026–27 source view</div>
         <h1>See the workload<br /><em>that carried over.</em></h1>
         <p>
-          A program-by-program view of the source-listed roster, prior recorded minutes, independent efficiency rating and published schedule coverage. Use it to prepare questions for a matchup and to find recruiting context worth checking.
+          A program-by-program view of the source-listed roster, prior recorded minutes, source-reported roster shape, independent efficiency rating and published schedule coverage. Use it to prepare questions for a matchup and to find recruiting context worth checking.
         </p>
         <div className="hero-actions"><Link className="button" href="/basketball/recruiting/">Open recruiting evidence ↗</Link><Link className="hero-link" href="/basketball/matchups/">Open matchup slate →</Link></div>
       </div>
@@ -33,7 +33,7 @@ export default function Page() {
       </div>
       <section className="section paper-panel">
         <h2>Read the two workload shares together.</h2>
-        <p><strong>Returning minutes share</strong> is same-program listed players’ prior minutes divided by all prior minutes observed for that program. <strong>Represented workload</strong> adds prior minutes from different-program listings. The denominator is the matched source sample; players with no prior record remain visible but contribute no minutes.</p>
+        <p><strong>Returning minutes share</strong> is same-program listed players’ prior minutes divided by all prior minutes observed for that program. <strong>Represented workload</strong> adds prior minutes from different-program listings. <strong>Roster shape</strong> counts source-reported guard, forward and center labels; unreported or unfamiliar labels remain in their own count. The denominator is the matched source sample; players with no prior record remain visible but contribute no minutes.</p>
         <p className="note">These are descriptive roster observations. They do not enter the Silvermine forecast, establish transfer status or eligibility, or imply that an unlisted player left. The independent rating is historical opponent-adjusted efficiency from the model notebook.</p>
       </section>
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Program comparison</div><h2>Find the roster question.</h2></div><span className="note">Edition {rosters.season - 1}–{String(rosters.season).slice(-2)}</span></div><RosterLab rows={rows} /></section>

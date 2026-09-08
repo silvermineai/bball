@@ -80,7 +80,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
             downloadCsv(
               "basketball-roster-lab-2026-27.csv",
               toCsv(
-                ["Program", "Program ID", "Listed players", "Returning players", "Incoming prior-program players", "New-to-dataset players", "Ambiguous players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Represented prior minutes", "Returning minutes share", "Represented prior minutes share", "Incoming workload share", "Rating rank", "Adjusted net", "Upcoming games", "Forecasted games"],
+                ["Program", "Program ID", "Listed players", "Returning players", "Incoming prior-program players", "New-to-dataset players", "Ambiguous players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Represented prior minutes", "Returning minutes share", "Represented prior minutes share", "Incoming workload share", "Guards", "Forwards", "Centers", "Unreported positions", "Rating rank", "Adjusted net", "Upcoming games", "Forecasted games"],
                 rosterLabCsv(filtered),
               ),
             )
@@ -92,7 +92,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
       <div className="table-scroll">
         <table className="data-table roster-lab-table">
           <thead>
-            <tr><th>Program</th><th className="numeric">Schedule</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th>Returning minutes</th><th>Represented workload</th><th className="numeric">Rating</th></tr>
+            <tr><th>Program</th><th className="numeric">Schedule</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th>Roster shape</th><th>Returning minutes</th><th>Represented workload</th><th className="numeric">Rating</th></tr>
           </thead>
           <tbody>
             {filtered.map((row) => (
@@ -102,6 +102,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
                 <td className="numeric">{row.listed}</td>
                 <td className="numeric">{row.returning}</td>
                 <td className="numeric">{row.incoming}</td>
+                <td className="numeric"><strong>{row.positionCounts.guard}/{row.positionCounts.forward}/{row.positionCounts.center}</strong><small>G / F / C · {row.positionCounts.unreported} unreported</small></td>
                 <td><div className="signal-value"><Bar value={row.returningShare} /><strong>{percent(row.returningShare)}</strong></div><small>{Math.round(row.returningMinutes).toLocaleString()} of {Math.round(row.priorMinutes).toLocaleString()} prior min</small></td>
                 <td><div className="signal-value"><Bar value={row.representedShare} /><strong>{percent(row.representedShare)}</strong></div><small>{Math.round(row.incomingPriorMinutes).toLocaleString()} incoming prior min</small></td>
                 <td className="numeric">{row.ratingRank == null ? "—" : `#${row.ratingRank}`}<small>{row.adjustedNet == null ? "" : `${fmt(row.adjustedNet, 1)} net`}</small></td>

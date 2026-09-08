@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { BBOverview, BBRosters } from "./basketball-types";
-import { buildRosterLabRows, sortRosterLabRows } from "./roster-readiness";
+import {
+  buildRosterLabRows,
+  rosterPositionGroup,
+  sortRosterLabRows,
+} from "./roster-readiness";
 
 const rosters = (players: BBRosters["players"]): BBRosters => ({
   season: 2027,
@@ -17,6 +21,7 @@ const player = (
   team: string,
   status: string,
   minutes: number,
+  position: string | null = null,
 ) => ({
   id: `${team_id}-${status}-${minutes}`,
   name: "Player",
@@ -24,7 +29,7 @@ const player = (
   team,
   previous_teams: [],
   status,
-  position: null,
+  position,
   class_year: null,
   height: null,
   weight: null,
@@ -74,5 +79,27 @@ describe("roster lab", () => {
       overview,
     );
     expect(sortRosterLabRows(rows, "returning").map((row) => row.team)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("keeps a source-labeled position shape separate from workload signals", () => {
+    expect(rosterPositionGroup("PG")).toBe("guard");
+    expect(rosterPositionGroup("PF")).toBe("forward");
+    expect(rosterPositionGroup("C")).toBe("center");
+    expect(rosterPositionGroup("ATH")).toBe("unreported");
+    const rows = buildRosterLabRows(
+      rosters([
+        player("1", "Alpha", "same_program", 800, "G"),
+        player("1", "Alpha", "same_program", 200, "F"),
+        player("1", "Alpha", "new_to_dataset", 0, "C"),
+        player("1", "Alpha", "new_to_dataset", 0),
+      ]),
+      overview,
+    );
+    expect(rows[0].positionCounts).toEqual({
+      guard: 1,
+      forward: 1,
+      center: 1,
+      unreported: 1,
+    });
   });
 });
