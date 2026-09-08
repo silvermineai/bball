@@ -380,6 +380,27 @@ describe("bball api", () => {
     }
   });
 
+  it("returns NCAA ranking source receipt clocks with metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ value: "G" }] },
+      { results: [{ value: "Fr." }] },
+      { results: [{ dataset: "ncaa_player_box", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      sources: [{ dataset: "ncaa_player_box", fetched_at: "2026-09-08T02:12:45Z" }],
+    });
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects unsafe NCAA roster filters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-rosters?season=2009",
