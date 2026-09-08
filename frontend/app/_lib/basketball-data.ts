@@ -27,3 +27,8 @@ export function getRecruiting(): RecruitingRelease {
     ),
   );
 }
+
+/** Build the publisher's public game page for a source schedule identifier. */
+export function espnGameUrl(gameId: string): string {
+  return `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(gameId)}`;
+}

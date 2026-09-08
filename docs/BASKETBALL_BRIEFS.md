@@ -2,6 +2,8 @@
 
 The 1,579 current forecast routes at `/basketball/briefs/:id/` now connect the preseason forecast to each program's historical possession profile, schedule-adjusted Four Factor role estimates, workload leaders, exact-ID roster observations, reviewed school announcements and matching forecast ledger record. The existing matchup list and shared journal link to these routes. Pages are statically generated and deployed through Cloudflare Assets; this release does not retrain the model, rewrite forecasts or change D1 tables.
 
+Each brief also exposes the source schedule identifier as an `Open ESPN source game` link. The press room repeats that link beside each forecast card, giving readers a direct path to the publisher's game page for box-score, play-by-play or shot evidence when ESPN has published it. The link is source navigation only; Silvermine does not claim that every future game already has a completed source record.
+
 ## Evidence selection
 
 Every brief requires the two scouting profiles to match its home/away IDs, previous-season year, model ID and source edition. A mismatch stops the build rather than publishing mixed model/scouting evidence.

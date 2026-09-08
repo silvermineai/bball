@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBasketball } from "../../_lib/basketball-data";
+import { espnGameUrl, getBasketball } from "../../_lib/basketball-data";
 import type { BBGame } from "../../_lib/basketball-types";
 import { date, fmt, signed } from "../../_lib/format";
 
@@ -39,6 +39,7 @@ function GameCard({ game }: { game: BBGame }) {
       <div className="brief-archive-links">
         <Link href={`/basketball/briefs/${game.id}/`}>Open scouting brief →</Link>
         <Link href={`/basketball/compare/?a=${game.away_id}&b=${game.home_id}`}>Compare programs</Link>
+        <a href={espnGameUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN source game ↗</a>
       </div>
     </article>
   );

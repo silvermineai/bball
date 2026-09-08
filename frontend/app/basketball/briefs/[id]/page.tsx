@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  espnGameUrl,
   getBasketball,
   getRecruiting,
   getRosters,
@@ -137,6 +138,9 @@ export default async function Page({
           >
             Forecast history →
           </Link>
+          <a className="hero-link" href={espnGameUrl(g.id)} target="_blank" rel="noreferrer">
+            Open ESPN source game ↗
+          </a>
         </div>
       </header>
       <section className="brief-scoreboard" aria-label="Model forecast">
