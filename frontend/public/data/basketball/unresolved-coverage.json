@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-08T18:46:01.345537Z",
+  "total_rows": 444505,
+  "rows_with_observed_stats": 444461,
+  "rows": [
+    {
+      "dataset": "ncaa_player_box",
+      "reason": "Missing contest, team or player ID",
+      "rows": 170245,
+      "rows_with_observed_stats": 170245
+    },
+    {
+      "dataset": "ncaa_shots",
+      "reason": "Missing NCAA shooter or team ID",
+      "rows": 274215,
+      "rows_with_observed_stats": 274215
+    },
+    {
+      "dataset": "player_box",
+      "reason": "Missing athlete ID",
+      "rows": 44,
+      "rows_with_observed_stats": 0
+    },
+    {
+      "dataset": "publisher_player_value",
+      "reason": "Missing player or team ID",
+      "rows": 1,
+      "rows_with_observed_stats": 1
+    }
+  ]
+}

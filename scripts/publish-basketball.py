@@ -207,6 +207,7 @@ run(
         str(ROOT / ".local/basketball.sql"),
     ]
 )
+run([PY, "scripts/build-basketball-coverage.py"])
 run([PY, "-m", "ncaa_scraper.ncaa_individual_enrichment"])
 run(
     [

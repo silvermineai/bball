@@ -143,6 +143,13 @@ export default function Page() {
     total_rows: number;
     seasons: { season: number; rows: number }[];
   };
+  const unresolved = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "unresolved-coverage.json"), "utf8"),
+  ) as {
+    total_rows: number;
+    rows_with_observed_stats: number;
+    rows: { dataset: string; reason: string; rows: number; rows_with_observed_stats: number }[];
+  };
   const supplemental = [
     {
       key: "career-player-box",
@@ -201,6 +208,8 @@ export default function Page() {
   ];
   const footballLedger = ledger.sports.football;
   const basketballLedger = ledger.sports.basketball;
+  const unresolvedBreakdown = unresolved.rows;
+  const unresolvedObserved = unresolved.rows_with_observed_stats;
 
   return (
     <>
@@ -510,9 +519,36 @@ export default function Page() {
         </div>
       </section>
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">05 / Identity review queue</div>
+            <h2>Missing IDs do not mean missing observations.</h2>
+          </div>
+          <span className="note">{count(unresolvedObserved)} rows retain source values</span>
+        </div>
+        <p className="note">
+          Source rows are withheld from player and team joins when a required
+          identifier is absent. The original payload stays in the private
+          warehouse; this summary counts whether useful source fields remain,
+          without guessing an identity or promoting the row into a ranking.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Dataset</th><th>Reason withheld</th><th className="numeric">Rows</th><th className="numeric">Rows with source observations</th></tr></thead>
+            <tbody>{unresolvedBreakdown.map((row) => <tr key={`${row.dataset}-${row.reason}`}><td><strong>{row.dataset}</strong></td><td>{row.reason}</td><td className="numeric">{count(row.rows)}</td><td className="numeric">{count(row.rows_with_observed_stats)}</td></tr>)}</tbody>
+          </table>
+        </div>
+        <p className="note">
+          These rows remain excluded from player rankings, career totals and
+          forecast features until the source supplies a stable join key. A
+          source value is not silently attributed to a nearby player.
+        </p>
+      </section>
+
       <section className="section two-col">
         <article className="paper-panel">
-          <div className="eyebrow">05 / Recruiting file</div>
+          <div className="eyebrow">06 / Recruiting file</div>
           <h2>Useful evidence, clearly partial.</h2>
           <div className="rule-list">
             <div>
@@ -560,7 +596,7 @@ export default function Page() {
         </article>
 
         <article className="paper-panel">
-          <div className="eyebrow">06 / Forecast record</div>
+          <div className="eyebrow">07 / Forecast record</div>
           <h2>Predictions have a clock.</h2>
           <div className="rule-list">
             <div>
@@ -604,7 +640,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">07 / Basketball data library</div>
+          <div className="eyebrow">08 / Basketball data library</div>
             <h2>Choose the evidence layer.</h2>
           </div>
           <span className="note">Each dataset keeps its own source identity.</span>
@@ -673,7 +709,7 @@ export default function Page() {
 
       <section className="section banner">
         <div>
-          <div className="eyebrow">08 / Source boundary</div>
+          <div className="eyebrow">09 / Source boundary</div>
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
             Current releases come from the attributed SportsDataverse bulk
