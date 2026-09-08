@@ -14,7 +14,7 @@ const metrics = [
 ] as const;
 const schema = z.object({
   season: z.coerce.number().int().min(2025).max(2026).default(2026),
-  metric: z.string().regex(/^[a-z_]{2,20}$/).default("net_per_100"),
+  metric: z.string().regex(/^[a-z0-9_]{2,20}$/).default("net_per_100"),
   q: z.string().trim().max(120).optional(),
   minPoss: z.coerce.number().int().min(0).max(5000).default(40),
   page: z.coerce.number().int().min(0).max(250).default(0),
