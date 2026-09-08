@@ -84,11 +84,14 @@ def normalize(row, game):
     if row.get("shooting_play") is not True or row.get("type_text") not in TYPES:
         return None, "not_field_goal"
     points = row.get("points_attempted")
-    inferred = points == 0
+    # The 2024 publisher release predates points_attempted and leaves that
+    # field null when read through the shared column projection. score_value
+    # describes the attempt value on makes and misses, so it is the safe
+    # release-compatible fallback. A zero points_attempted is also a known
+    # publisher encoding for the same missing value.
+    inferred = points in (None, 0)
     if inferred:
-        points = row.get(
-            "score_value"
-        )  # This field describes attempt value even on misses.
+        points = row.get("score_value")
     if points not in (2, 3) or row.get("scoring_play") not in (True, False):
         return None, "ambiguous_outcome"
     if row.get("score_value") != points:

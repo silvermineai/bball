@@ -4,14 +4,14 @@
 
 ## Imported edition
 
-The catalog now includes the 2025 and 2026 season-ending SportsDataverse releases. The 2025 release contains 2,190,101 play-by-play events across 6,129 games; normalization accepts 713,144 field-goal attempts. The 2026 release contains 2,915,731 events across 6,275 games; normalization accepts 738,233 field-goal attempts. Each season retains its own source receipt, edition and reconciliation counts.
+The catalog includes the 2024, 2025 and 2026 season-ending SportsDataverse releases: 7,110,829 play-by-play events across 18,561 source games and 2,172,183 accepted field-goal attempts. The 2024 release contains 2,004,997 events and 720,123 accepted attempts; the 2025 release contains 2,190,101 events and 713,827 accepted attempts; the 2026 release contains 2,915,731 events and 738,233 accepted attempts. Each season retains its own source receipt, edition and reconciliation counts. The 2024 release predates `points_attempted`, so normalization falls back to its explicit `score_value` field.
 
-The 2025 edition covers 682 observed programs and 8,864 shooter identities; 10,573 of 12,258 team-game samples and 94,712 of 110,352 player-game samples reconcile. The 2026 edition covers 721 programs and 9,312 shooter identities; 12,367 of 12,550 team-game samples and 111,293 of 113,675 player-game samples reconcile. These are not verified Division I membership rosters.
+The 2024 edition covers 713 observed programs and 9,195 shooter identities; 10,345 of 12,302 team-game samples and 92,370 of 110,427 player-game samples reconcile. The 2025 edition covers 682 observed programs and 8,864 shooter identities; 10,584 of 12,270 team-game samples and 94,811 of 110,461 player-game samples reconcile. The 2026 edition covers 721 programs and 9,312 shooter identities; 12,367 of 12,550 team-game samples and 111,293 of 113,675 player-game samples reconcile. These are not verified Division I membership rosters.
 
 ## Identity, outcomes and coverage
 
 - IDs remain strings, including event IDs too large for JavaScript's exact integer range. No player is created from name matching.
-- A field-goal event requires an explicit shooting flag, supported field-goal type, team identity and made/missed flag. Attempt values of zero are recovered only from the explicit score-value field, which records attempted value even on misses. Conflicting values are excluded.
+- A field-goal event requires an explicit shooting flag, supported field-goal type, team identity and made/missed flag. Missing or zero attempt values are recovered only from the explicit score-value field, which records attempted value even on misses. Conflicting values are excluded.
 - Free throws are not included in field-goal shooting rates. Layups, dunks, tips and jumpers use source event labels; they are not inferred play calls or tracking categories.
 - Exact duplicates count once. Conflicting duplicate event payloads disqualify the game's reconciled sample; the original release remains archived.
 - Reconciliation requires FGA, FGM, 3PA and 3PM to agree exactly. Player reconciliation additionally requires the team sample to match. Missing box fields never become zero. Matching totals cannot verify event ordering or location accuracy.
@@ -21,7 +21,7 @@ The 2025 edition covers 682 observed programs and 8,864 shooter identities; 10,5
 
 The publisher documents raw coordinates relative to a basket at `(25, 0)`. The diagram places the baseline 5.25 feet behind that origin. The map omits positions outside the court, placeholders at `(25, 0)` or `(0, 0)`, three-point positions within 20 feet, layup/dunk/tip positions over ten feet, and positions differing from an explicitly stated distance by over four feet. It does not correct coordinates or manufacture missing locations.
 
-The 2026 edition has 733,313 accepted locations, 2,276 inconsistent locations and 2,644 placeholders; the 2025 edition has 185,014 accepted locations, 475 inconsistent locations and 6,228 placeholders. Beyond-half-court attempts remain in percentages while being omitted from the half-court drawing. Source coordinates are approximate and should not be treated as optical tracking. The filters are conservative heuristics, not proof of shot location.
+The 2024 edition has 45,336 accepted locations, 11 inconsistent locations and 144 placeholders; the 2025 edition has 185,695 accepted locations, 477 inconsistent locations and 6,228 placeholders; the 2026 edition has 733,313 accepted locations, 2,276 inconsistent locations and 2,644 placeholders. Beyond-half-court attempts remain in percentages while being omitted from the half-court drawing. Source coordinates are approximate and should not be treated as optical tracking. The filters are conservative heuristics, not proof of shot location.
 
 FG% is makes divided by attempts; eFG% adds half a made three-pointer to the numerator. Field-goal points per attempt excludes free throws. Filters apply to all three summaries and the event table; unavailable coordinates affect the map only.
 
@@ -35,7 +35,7 @@ The edition fingerprint includes the PBP hash, schedule/team-box/player-box hash
 
 ```bash
 # Build using the current cached source and generate bounded SQL batches.
-PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_shooting --seasons 2025 2026 --sql
+PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_shooting --seasons 2024 2025 2026 --sql
 
 # Full source refresh, validation, Cloudflare sync and site deployment.
 .venv/bin/python scripts/publish-shooting.py

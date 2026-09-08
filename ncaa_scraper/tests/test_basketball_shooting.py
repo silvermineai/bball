@@ -52,6 +52,10 @@ class ShotTests(unittest.TestCase):
         s, _ = normalize(event(points_attempted=0), self.game)
         self.assertTrue(s["inferred_value"])
         self.assertEqual(s["points"], 3)
+        legacy, reason = normalize(event(points_attempted=None), self.game)
+        self.assertIsNone(reason)
+        self.assertTrue(legacy["inferred_value"])
+        self.assertEqual(legacy["points"], 3)
         for changes in [
             {"score_value": 2},
             {"scoring_play": None},

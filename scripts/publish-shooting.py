@@ -32,6 +32,7 @@ run(
         "-m",
         "ncaa_scraper.basketball_shooting",
         "--seasons",
+        "2024",
         "2025",
         "2026",
         "--refresh",
