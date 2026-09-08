@@ -21,6 +21,11 @@ on:
         required: true
         type: boolean
         default: false
+      refresh_ncaa:
+        description: Refresh NCAA national player snapshots when robots policy permits (basketball or both)
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: research-publication
@@ -72,6 +77,11 @@ jobs:
           test -n "$CF_ACCOUNT_ID" || { echo "Missing repository secret CF_ACCOUNT_ID" >&2; exit 1; }
           test -n "$CF_API_TOKEN_ACCOUNT" || { echo "Missing repository secret CF_API_TOKEN_ACCOUNT" >&2; exit 1; }
 
+      - name: Refresh robots-permitted NCAA national player snapshots
+        if: ${{ inputs.refresh_ncaa == true && (inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '') }}
+        run: |
+          python -m ncaa_scraper.ncaa_individual --divisions 1 2 3
+
       - name: Refresh selected sources, models and publication
         env:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}
@@ -121,5 +131,6 @@ jobs:
             echo "### Research publication completed"
             echo "- Source/model selection: \`${{ inputs.sport || 'both' }}\`"
             echo "- Odds capture requested: \`${{ inputs.capture_odds || false }}\`"
+            echo "- NCAA snapshot refresh requested: \`${{ inputs.refresh_ncaa || false }}\`"
             echo "- Archive capture runs automatically after each successful Worker deployment."
           } >> "$GITHUB_STEP_SUMMARY"
