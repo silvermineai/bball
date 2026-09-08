@@ -46,7 +46,8 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
     `SELECT r.season,r.team_id,r.player_id,r.team_name,r.player_name,r.profile_json,
             s.games AS recorded_games,s.minutes AS recorded_minutes,
             s.points AS recorded_points,s.rebounds AS recorded_rebounds,
-            s.assists AS recorded_assists
+            s.assists AS recorded_assists,
+            sh.stats_json AS shooting_json
      FROM bb_ncaa_rosters r
      LEFT JOIN (
        SELECT season,player_id,team_id,SUM(games) AS games,
@@ -56,9 +57,10 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
               SUM(COALESCE(CAST(json_extract(stats_json,'$.ast') AS REAL),0)) AS assists
        FROM bb_ncaa_player_season GROUP BY season,player_id,team_id
      ) s ON s.season=r.season AND s.team_id=r.team_id AND s.player_id=r.player_id
+     LEFT JOIN bb_ncaa_player_shooting sh ON sh.season=r.season AND sh.team_id=r.team_id AND sh.player_id=r.player_id
      WHERE ${where.replaceAll("season=?", "r.season=?").replaceAll("player_name", "r.player_name").replaceAll("team_name", "r.team_name").replaceAll("player_id", "r.player_id").replaceAll("team_id", "r.team_id")}
      ORDER BY r.player_name ASC, r.team_name ASC, r.player_id ASC LIMIT 40 OFFSET ?`,
   ).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ profile_json, ...row }) => ({ ...row, profile: JSON.parse(String(profile_json)) })) });
+  return c.json({ season, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ profile_json, shooting_json, ...row }) => ({ ...row, profile: JSON.parse(String(profile_json)), shooting: shooting_json ? JSON.parse(String(shooting_json)) : null })) });
 });
