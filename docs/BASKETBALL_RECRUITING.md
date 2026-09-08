@@ -10,6 +10,8 @@ The publisher wire links to the retained ESPN article feed for context and does 
 
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
 
+The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.
+
 ## Source review
 
 `data/recruiting/announcements.json` is the curated input. Each school has an explicit program ID, publisher and exact source host. Each article stores its original URL, title, publication calendar date, date evidence, review timestamp and any necessary editorial caveat. Source pages are consulted for brief independent factual reporting with attribution. There is no school-roster crawler, page mirror or automated article-body storage in this pipeline.

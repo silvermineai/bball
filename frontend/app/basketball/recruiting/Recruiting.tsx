@@ -19,6 +19,8 @@ export default function Recruiting() {
     [q, setQ] = useState(""),
     [status, setStatus] = useState("all"),
     [sort, setSort] = useState<RosterSortKey>("status"),
+    [teamQuery, setTeamQuery] = useState(""),
+    [teamSort, setTeamSort] = useState<"returning" | "prior" | "name">("returning"),
     [page, setPage] = useState(0);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
@@ -33,6 +35,13 @@ export default function Recruiting() {
     ),
     sort,
   );
+  const teamRows = [...(data?.team_summaries || [])]
+    .filter((team) => team.team.toLowerCase().includes(teamQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (teamSort === "name") return a.team.localeCompare(b.team);
+      if (teamSort === "prior") return (b.prior_minutes ?? 0) - (a.prior_minutes ?? 0) || a.team.localeCompare(b.team);
+      return (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team);
+    });
   return (
     <>
       <div className="toolbar">
@@ -154,14 +163,50 @@ export default function Recruiting() {
                 listed view is an unconfirmed observation; this table is a
                 workload context signal, not a depth chart or eligibility claim.
               </p>
+              <div className="toolbar">
+                <label className="control">
+                  <span>PROGRAM SEARCH</span>
+                  <input
+                    type="search"
+                    value={teamQuery}
+                    maxLength={100}
+                    placeholder="Search all observed programs"
+                    onChange={(e) => setTeamQuery(e.target.value)}
+                  />
+                </label>
+                <label className="control">
+                  <span>ORDER</span>
+                  <select value={teamSort} onChange={(e) => setTeamSort(e.target.value as typeof teamSort)}>
+                    <option value="returning">Returning minutes share</option>
+                    <option value="prior">Prior minutes represented</option>
+                    <option value="name">Program name</option>
+                  </select>
+                </label>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() =>
+                    downloadCsv(
+                      "basketball-roster-team-continuity-2026-27.csv",
+                      toCsv(
+                        ["Program", "Program ID", "Listed players", "Returning players", "Different-program players", "New-to-dataset players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Returning minutes share", "Represented prior minutes share"],
+                        teamRows.map((team) => [team.team, team.team_id, team.listed_players, team.returning_players, team.transfer_players, team.new_players, team.prior_minutes, team.returning_minutes, team.incoming_prior_minutes, team.returning_minutes_share == null ? null : team.returning_minutes_share * 100, team.represented_prior_minutes_share == null ? null : team.represented_prior_minutes_share * 100]),
+                      ),
+                    )
+                  }
+                  disabled={!teamRows.length}
+                >
+                  Download team CSV ↓
+                </button>
+              </div>
+              <p className="note" role="status">
+                {teamRows.length.toLocaleString()} of {data.team_summaries.length.toLocaleString()} observed programs shown. The denominator is the source roster listing, not confirmed Division I membership.
+              </p>
               <div className="table-scroll">
                 <table className="data-table">
                   <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th className="numeric">Prior minutes</th><th className="numeric">Returning share</th></tr></thead>
                   <tbody>
-                    {[...data.team_summaries]
-                      .sort((a, b) => (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team))
-                      .slice(0, 24)
-                      .map((team) => (
+                    {teamRows.map((team) => (
                         <tr key={team.team_id}>
                           <td><Link href={`/basketball/programs/${team.team_id}/`}>{team.team}</Link><small>{team.transfer_players} different-program · {team.new_players} new to dataset</small></td>
                           <td className="numeric">{team.listed_players}</td>
