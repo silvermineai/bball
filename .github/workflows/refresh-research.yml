@@ -85,6 +85,12 @@ jobs:
         run: |
           python -m ncaa_scraper.ncaa_individual --divisions 1 2 3
 
+      - name: Refresh permitted ESPN basketball RSS context
+        # ESPN's RSS terms allow the supplied headline, summary and URL to be
+        # displayed with attribution. The refresh never fetches article pages.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: python scripts/refresh-news-rss.py
+
       - name: Refresh selected sources, models and publication
         env:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}

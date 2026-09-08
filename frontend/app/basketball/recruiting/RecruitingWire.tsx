@@ -32,7 +32,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
   };
   return <section className="section">
     <div className="section-heading"><div><div className="eyebrow">Publisher wire / recruiting context</div><h2>Follow the national conversation.</h2></div><span className="note">{filtered.length} linked stories</span></div>
-    <p className="note" style={{ marginBottom: 20 }}>These are publisher articles for context, not Silvermine-reviewed transaction records. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below. Latest retained publisher publication: {latestPublication ? date(latestPublication) : "unavailable"}. This timestamp describes the archive and is not a live-feed guarantee.</p>
+    <p className="note" style={{ marginBottom: 20 }}>These are publisher RSS headlines for context, not Silvermine-reviewed transaction records. Silvermine retains the supplied headline, summary and link, and does not fetch or rewrite linked article pages. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below. Latest retained publisher publication: {latestPublication ? date(latestPublication) : "unavailable"}.</p>
     <div className="toolbar">
       <label className="control"><span>SEARCH THE WIRE</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
       <label className="control"><span>TOPIC</span><select value={topic} onChange={(event) => { setTopic(event.target.value as RecruitingWireTopic); setPage(0); }}>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
@@ -40,7 +40,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
       <button className="button secondary" type="button" onClick={() => downloadCsv("basketball-recruiting-wire.csv", toCsv(["Published", "Headline", "Description", "Categories", "Publisher URL"], filtered.map((article) => [article.published, article.headline, article.description, article.categories.join(" | "), article.link])))}>Download CSV ↓</button>
     </div>
     {copied && <p role="status">{copied}</p>}
-    <div className="article-grid">{visible.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · ESPN</div><h2>{article.headline}</h2><p>{article.description}</p><a href={article.link} target="_blank" rel="noreferrer">Read publisher article ↗</a></article>)}</div>
+    <div className="article-grid">{visible.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · {article.publisher || "ESPN"} RSS</div><h2>{article.headline}</h2><p>{article.description}</p><a href={article.link} target="_blank" rel="noreferrer">Read publisher article ↗</a></article>)}</div>
     {!visible.length && <p className="empty">No linked stories match this search.</p>}
     <div className="pagination"><span>{filtered.length} matching stories · page {page + 1} of {pages}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
   </section>;

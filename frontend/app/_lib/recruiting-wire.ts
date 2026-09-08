@@ -5,6 +5,8 @@ export type RecruitingWireArticle = {
   published: string;
   link: string;
   categories: string[];
+  publisher?: string;
+  sport?: string;
 };
 export type RecruitingWireTopic = "all" | "transfer" | "prep" | "draft" | "eligibility";
 export type RecruitingWireFilters = { query: string; topic: RecruitingWireTopic; page: number };

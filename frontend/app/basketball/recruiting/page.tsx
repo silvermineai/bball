@@ -15,6 +15,8 @@ export default function Page() {
   const news = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
   ) as {
+    generated_at?: string;
+    attribution?: { terms?: string; method?: string };
     articles: {
       id: string;
       headline: string;
@@ -22,10 +24,11 @@ export default function Page() {
       published: string;
       link: string;
       categories: string[];
+      sport?: string;
     }[];
   };
   const recruitingNews = news.articles.filter((article) =>
-      article.categories.some((category) => /NCAA Men's Basketball/i.test(category)) &&
+      (article.sport === "mens-college-basketball" || article.categories.some((category) => /NCAA Men's Basketball/i.test(category))) &&
       /recruit|transfer|portal|commit|sign|class of|prospect/i.test(
         `${article.headline} ${article.description} ${article.categories.join(" ")}`,
       ),

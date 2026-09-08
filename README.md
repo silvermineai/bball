@@ -93,6 +93,7 @@ ncaa_scraper/ncaa_scraper/
   basketball_within_impact.py  NCAA within-team RAPM archive
   basketball_ncaa_team_box.py  NCAA season team-box profiles and recomputed rates
   analytics.py            Existing basketball analytics artifacts
+  news_rss.py             Permitted ESPN RSS context feed parser
   fetcher.py              NCAA cache reader with enforced robots checks
 
 frontend/app/             Next.js publication pages
@@ -135,6 +136,8 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 # Full refresh, validation, D1 synchronization and deployment
 .venv/bin/python scripts/publish-football.py
 .venv/bin/python scripts/publish-basketball.py
+# Refresh the permitted ESPN basketball headline wire on its own
+.venv/bin/python scripts/refresh-news-rss.py
 ```
 
 Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment also captures the immutable matchup reading archive.
@@ -144,3 +147,5 @@ Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUN
 Football and native basketball data come from the [SportsDataverse release store](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution and per-download provenance are retained. We normalize records, calculate rankings and fit an independent score model.
 
 Direct ESPN automated fetching is disabled because source terms restrict extraction and model training. NCAA requests must pass robots checks; the current source policy disallows crawling. Cached basketball data remains available. Source restrictions are never bypassed with stealth browsers or proxy rotation.
+
+The recruiting wire uses ESPN's published college-basketball RSS feed under its feed terms. Only the supplied headline, summary and article URL are retained, with ESPN attribution; linked article pages are not fetched or rewritten.
