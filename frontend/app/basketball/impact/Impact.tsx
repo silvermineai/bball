@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import type { BBImpact } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
@@ -126,7 +127,9 @@ export default function Impact() {
                   <tr key={p.player_id}>
                     <td className="rank-number">{p.rank ?? "—"}</td>
                     <td>
-                      {p.player.replaceAll(".", " ")}
+                      <Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(p.player_id)}&season=2026`}>
+                        {p.player.replaceAll(".", " ")} →
+                      </Link>
                       <small>NCAA {p.player_id}</small>
                       <small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(p.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small>
                     </td>
