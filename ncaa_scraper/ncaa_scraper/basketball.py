@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from .basketball_model import fallback_forecast, forecast, game_features, ratio, train
+from .basketball_roster_model import build as build_roster_model
 from .basketball_sources import BASKETBALL_ATTRIBUTION, client
 from .football import number
 from .football_sources import ROOT, utcnow
@@ -1339,6 +1340,7 @@ def build(conn, target=2027):
         "INSERT OR IGNORE INTO bb_models VALUES (?,?,?)",
         (model["id"], now, json.dumps(model)),
     )
+    roster_model = build_roster_model(conn, model, upcoming)
     sources = [
         json.loads(r[0])
         for r in conn.execute(
@@ -1394,6 +1396,7 @@ def build(conn, target=2027):
     season_players = player_index(conn, target - 1)
     artifacts = {
         "overview": overview,
+        "roster-model": roster_model,
         "players": season_players,
         "publisher-leaders": publisher_leaders(conn, target - 1),
         "rosters": roster_changes(conn, target, season_players),

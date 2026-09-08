@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getBasketball, getBasketballMarketComparisons, getRosters } from "../../_lib/basketball-data";
+import { getBasketball, getBasketballMarketComparisons, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import Matchups from "./Matchups";
 export const metadata = {
   title: "2026–27 college basketball matchup predictions",
@@ -32,7 +32,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
-        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} model={d.model} generatedAt={d.generated_at} />
+        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={getRosterModel().scenarios} model={d.model} generatedAt={d.generated_at} />
       </Suspense>
     </>
   );

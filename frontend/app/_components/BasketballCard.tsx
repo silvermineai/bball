@@ -2,6 +2,7 @@ import Link from "next/link";
 import type {
   BBFactorKey,
   BBGame,
+  BBRosterScenario,
   BBRosterSummary,
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
@@ -10,10 +11,12 @@ export default function BasketballCard({
   game: g,
   homeRoster,
   awayRoster,
+  rosterScenario,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
   awayRoster?: BBRosterSummary;
+  rosterScenario?: BBRosterScenario;
 }) {
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
@@ -81,6 +84,25 @@ export default function BasketballCard({
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
+          {rosterScenario && (
+            <div className="roster-context">
+              <div className="match-detail">
+                <strong>Roster challenger</strong>
+                <span className="muted">research-only</span>
+              </div>
+              <div className="match-detail muted">
+                <span>Scenario home margin</span>
+                <strong>{fmt(rosterScenario.roster_margin, 1)}</strong>
+              </div>
+              <div className="match-detail muted">
+                <span>Shift from baseline</span>
+                <span>{rosterScenario.margin_delta > 0 ? "+" : ""}{fmt(rosterScenario.margin_delta, 1)} pts</span>
+              </div>
+              <small>
+                Uses prior net efficiency and exact-ID source-listed continuity. It does not change the primary probability, range or ledger registration.
+              </small>
+            </div>
+          )}
           {g.matchup_factors && (
             <MatchupFactorSummary
               factors={g.matchup_factors}

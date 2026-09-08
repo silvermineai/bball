@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getBasketball, getBasketballMarketComparisons, getRosters } from "../../_lib/basketball-data";
+import { getBasketball, getBasketballMarketComparisons, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import Matchups from "../matchups/Matchups";
 
 export const metadata = {
@@ -26,6 +26,7 @@ export default function Page() {
           games={basketball.upcoming}
           marketComparisons={getBasketballMarketComparisons()}
           rosterSummaries={getRosters().team_summaries || []}
+          rosterScenarios={getRosterModel().scenarios}
           model={basketball.model}
           generatedAt={basketball.generated_at}
         />

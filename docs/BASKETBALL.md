@@ -62,6 +62,8 @@ The 2025–26 test covers 5,734 games and excludes 564 paired-box games involvin
 
 Possession pace is normalized to 40 minutes using the final period count, including overtime. Forecasts use regulation pace; evaluation compares against final scores, including overtime. No injury, transfer, roster or recruiting features are used in the primary model. Games involving a program outside the trained field receive a separate cold-start estimate built from latest-season team priors shrunk toward the league mean; its interval is calibrated on held-out games and the estimate is not registered in the prospective ledger. Source corrections may have been published after the historical events.
 
+The separate [roster continuity challenger](/basketball/model/) fits a chronological ridge model on prior descriptive net efficiency, exact-athlete-ID returning and represented prior-minute shares, incoming workload and listed-player count. It evaluates the 2026 transition against a prior-net baseline, then publishes a research-only margin delta for 2026–27 games when both source-listed teams have usable features. Roster snapshots have no verified pre-season publication clock, only two historical transitions are available, and the challenger does not change primary probabilities, uncertainty or ledger registrations.
+
 ## Player and team statistics
 
 The [historical player archive](BASKETBALL_CAREERS.md) adds 24 published seasons, annual stat rankings, season/program production histories and 3.68 million retained identified box-score rows. Per-season coverage and source-identity warnings are explicit; early seasons are sparse. ESPN-derived source profiles are shown alongside a player's history for position, listed size, experience and status context, while retaining the source-ID limitation.
@@ -106,6 +108,6 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
 - Expand historical player-game seasons, add more possession and location validation, and extend the weekly experiment to additional prospective seasons.
-- Add dated roster features and extend the weekly experiment to additional seasons and prospective operation. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
+- Extend the roster challenger and weekly experiment across additional dated transitions before considering any roster feature for the primary forecast. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Monitor scheduled refresh freshness against expected source coverage and investigate any failed publication run.

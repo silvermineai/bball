@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { BBOverview, BBRosters } from "./basketball-types";
+import type { BBOverview, BBRosters, BBRosterModel } from "./basketball-types";
 import type { RecruitingRelease } from "./recruiting";
 import { getLedger } from "./research-data";
 import type { Comparison, Ledger } from "./research-types";
@@ -16,6 +16,15 @@ export function getRosters(): BBRosters {
   return JSON.parse(
     fs.readFileSync(
       path.join(process.cwd(), "public/data/basketball/rosters.json"),
+      "utf8",
+    ),
+  );
+}
+
+export function getRosterModel(): BBRosterModel {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/roster-model.json"),
       "utf8",
     ),
   );

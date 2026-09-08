@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import type { BBGame, BBRosterSummary } from "../../_lib/basketball-types";
+import type { BBGame, BBRosterScenario, BBRosterSummary } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import type { BBOverview } from "../../_lib/basketball-types";
@@ -19,12 +19,14 @@ export default function Matchups({
   rosterSummaries,
   model,
   generatedAt,
+  rosterScenarios = [],
 }: {
   games: BBGame[];
   marketComparisons: Record<string, NonNullable<BBGame["market_comparisons"]>>;
   rosterSummaries: BBRosterSummary[];
   model: BBOverview["model"];
   generatedAt: string;
+  rosterScenarios?: BBRosterScenario[];
 }) {
   const params = useSearchParams();
   const initial = parseMatchupFilters(params.toString());
@@ -59,6 +61,7 @@ export default function Matchups({
     sort,
   );
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
+  const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -203,6 +206,7 @@ export default function Matchups({
             game={marketComparisons[g.id]?.length ? { ...g, market_comparisons: marketComparisons[g.id] } : g}
             homeRoster={rosterByTeam.get(g.home_id)}
             awayRoster={rosterByTeam.get(g.away_id)}
+            rosterScenario={rosterScenarioByGame.get(g.id)}
           />
         ))}
       </div>

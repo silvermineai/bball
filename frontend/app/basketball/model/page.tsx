@@ -1,4 +1,4 @@
-import { getBasketball, getRecruiting, getRosters } from "../../_lib/basketball-data";
+import { getBasketball, getRecruiting, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 import Link from "next/link";
 export const metadata = {
@@ -8,6 +8,7 @@ export default function Page() {
   const d = getBasketball(),
     e = d.model.evaluation,
     c = d.model.calibration,
+    rosterModel = getRosterModel(),
     roster = getRosters(),
     recruiting = getRecruiting(),
     rosterSummary = roster.team_summaries ?? [],
@@ -116,6 +117,34 @@ export default function Page() {
           </p>
         </section>
       </div>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Research challenger / roster continuity</div>
+            <h2>Ask what the source-listed roster changes.</h2>
+          </div>
+          <Link href="/basketball/roster-lab/">Open roster lab →</Link>
+        </div>
+        <p className="note">
+          This separate ridge model learns next-season team net efficiency from
+          prior net efficiency, exact-athlete-ID returning and represented
+          minutes, incoming workload and listed-player count. It produces a
+          margin scenario on the slate; it does not replace the primary model,
+          change win probabilities or enter the forecast ledger.
+        </p>
+        <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
+          <div><strong>{rosterModel.evaluation.teams.toLocaleString()}</strong><span>Held-out team transitions</span></div>
+          <div><strong>{fmt(rosterModel.evaluation.mae, 2)}</strong><span>Challenger MAE · net points</span></div>
+          <div><strong>{fmt(rosterModel.evaluation.baseline_mae, 2)}</strong><span>Prior-net baseline MAE</span></div>
+          <div><strong>{rosterModel.coverage.scenario_games.toLocaleString()}</strong><span>2026–27 scenario games</span></div>
+        </div>
+        <div className="paper-panel" style={{ marginTop: 22 }}>
+          <p>
+            Held-out transition {rosterModel.evaluation.held_out_transition} improved on the prior-net baseline by {fmt(rosterModel.evaluation.improvement_vs_prior_net, 2)} points per 100 possessions in this edition. The result is one chronological season comparison, not a guarantee of future accuracy.
+          </p>
+          {rosterModel.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+        </div>
+      </section>
       <section className="section">
         <div className="section-heading">
           <div>

@@ -227,6 +227,40 @@ export type BBRosterSummary = {
   returning_minutes_share: number | null;
   represented_prior_minutes_share: number | null;
 };
+export type BBRosterScenario = {
+  game_id: string;
+  home_id: string;
+  away_id: string;
+  base_margin: number;
+  roster_margin: number;
+  margin_delta: number;
+  home_predicted_net: number;
+  away_predicted_net: number;
+};
+export type BBRosterModel = {
+  version: string;
+  generated_at: string;
+  target_season: number;
+  training_seasons: number[];
+  feature_definition: string;
+  model: { coefficients: number[]; features: string[]; rows: number };
+  evaluation: {
+    held_out_transition: number;
+    teams: number;
+    mae: number | null;
+    rmse: number | null;
+    baseline_mae: number | null;
+    improvement_vs_prior_net: number | null;
+  };
+  coverage: {
+    transition_rows: Record<string, number>;
+    current_predicted_teams: number;
+    scenario_games: number;
+  };
+  limitations: string[];
+  teams: Array<Record<string, unknown>>;
+  scenarios: BBRosterScenario[];
+};
 export type BBImpact = {
   player_id: string;
   person_id: string;
