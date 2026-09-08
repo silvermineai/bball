@@ -19,7 +19,7 @@ export const ncaaPlayerRankings = new Hono<{ Bindings: Bindings }>();
 const aggregate = (where: string) => `
   SELECT season, player_id, team_id,
     MAX(player_name) AS player_name, MAX(team_name) AS team_name,
-    MAX(opponent_name) AS opponent_name, COUNT(DISTINCT contest_id) AS games,
+    SUM(games) AS games,
     SUM(COALESCE(CAST(json_extract(stats_json,'$.mins') AS REAL),0)) AS minutes,
     SUM(COALESCE(CAST(json_extract(stats_json,'$.pts') AS REAL),0)) AS points,
     SUM(COALESCE(CAST(json_extract(stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(stats_json,'$.drb') AS REAL),0)) AS rebounds,
@@ -48,7 +48,7 @@ const metricExpression = (metric: Metric) => ({
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minGames, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const seasons = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all<{ season: number }>();
+    const seasons = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
     return c.json({ seasons: seasons.results.map((row) => row.season), metrics });
   }
