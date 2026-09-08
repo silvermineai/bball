@@ -64,21 +64,21 @@ const paths = [
   ["Find a player", "/basketball/players/", "Rates, workload, shooting and game evidence across the archive."],
   ["Compare programs", "/basketball/compare/", "Turn ratings and four factors into a venue-aware matchup question."],
   ["Read the next slate", "/basketball/matchups/", "See every published 2026–27 forecast, interval and model timestamp."],
-    ["Study recruiting", "/basketball/recruiting/", "Separate announced additions, roster observations and prior production."],
-    ["Rank roster workload", "/basketball/roster-board/", "Sort source-listed 2026–27 players by prior recorded workload and rates, then open the evidence."],
+  ["Study recruiting", "/basketball/recruiting/", "Separate announced additions, roster observations and prior production."],
+  ["Rank roster workload", "/basketball/roster-board/", "Sort source-listed 2026–27 players by prior recorded workload and rates, then open the evidence."],
   ["Open NCAA leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
-    ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
-    ["Read within-team RAPM", "/basketball/impact/within-team/", "Compare source-published player impact relative to teammates across 17 seasons."],
-    ["Study team box history", "/basketball/ncaa-team-box/", "Compare NCAA-derived efficiency, tempo and Four Factor profiles across 17 seasons."],
-    ["Compare published models", "/basketball/boutique/", "Read attributed team ratings and Box Plus/Minus beside Silvermine's independent model."],
-    ["Study lineups", "/basketball/lineups/", "Use possession thresholds and lineup net ratings to ask which combinations actually worked."],
-    ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],
-    ["Search roster intel", "/basketball/ncaa-rosters/", "Use class, position, size, hometown and high-school fields as recruiting context, then verify any transaction with a dated statement."],
-    ["Trace high-school pipelines", "/basketball/ncaa-high-schools/", "Aggregate source roster rows by high-school label, then open the underlying players before drawing a recruiting conclusion."],
-    ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
-    ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
-    ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],
-    ["Open a player card", "/basketball/ncaa-player/", "Connect source-native production, shot profile, roster context, impact and recent game evidence."],
+  ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
+  ["Read within-team RAPM", "/basketball/impact/within-team/", "Compare source-published player impact relative to teammates across 17 seasons."],
+  ["Study team box history", "/basketball/ncaa-team-box/", "Compare NCAA-derived efficiency, tempo and Four Factor profiles across 17 seasons."],
+  ["Compare published models", "/basketball/boutique/", "Read attributed team ratings and Box Plus/Minus beside Silvermine's independent model."],
+  ["Study lineups", "/basketball/lineups/", "Use possession thresholds and lineup net ratings to ask which combinations actually worked."],
+  ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],
+  ["Search roster intel", "/basketball/ncaa-rosters/", "Use class, position, size, hometown and high-school fields as recruiting context, then verify any transaction with a dated statement."],
+  ["Trace high-school pipelines", "/basketball/ncaa-high-schools/", "Aggregate source roster rows by high-school label, then open the underlying players before drawing a recruiting conclusion."],
+  ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
+  ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
+  ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],
+  ["Open a player card", "/basketball/ncaa-player/", "Connect source-native production, shot profile, roster context, impact and recent game evidence."],
 ];
 
 export default function Page() {
@@ -110,7 +110,7 @@ export default function Page() {
         <div className="section-heading">
           <div>
             <div className="eyebrow">01 / Choose a starting point</div>
-            <h2>One desk, six ways in.</h2>
+            <h2>One desk, many ways in.</h2>
           </div>
         </div>
         <div className="article-grid">
