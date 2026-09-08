@@ -14,7 +14,9 @@ export default function Page() {
           across Divisions I, II and III. Search a player, compare programs and
           switch from rates to published totals for scoring, rebounding,
           shooting, minutes and defensive events while keeping the source
-          identity intact.
+          identity intact. When the NCAA ranking snapshot omits assists per
+          game, the board fills that field from the exact-ID NCAA player-box
+          release and labels it as a derived supplement.
         </p>
       </div>
       <Suspense fallback={<p role="status">Loading NCAA national records…</p>}>

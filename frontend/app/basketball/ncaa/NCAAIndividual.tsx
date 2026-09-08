@@ -86,7 +86,7 @@ export default function NCAAIndividual() {
           <div><strong>{data.season - 1}–{String(data.season).slice(-2)}</strong><span>Final statistics season</span></div>
           <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
         </div>
-        <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
           <div className="paper-panel source-gap" role="status">
             <strong>{ncaaStatLabels[stat]} is unavailable in this NCAA snapshot.</strong>

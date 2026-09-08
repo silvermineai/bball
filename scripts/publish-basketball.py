@@ -126,6 +126,7 @@ run(
         str(ROOT / ".local/basketball.sql"),
     ]
 )
+run([PY, "-m", "ncaa_scraper.ncaa_individual_enrichment"])
 run(
     [
         PY,

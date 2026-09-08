@@ -15,21 +15,21 @@ if release.get("schema_version") != 1 or release.get("season") != 2026:
 players = release.get("players")
 if not isinstance(players, list) or not players:
     raise SystemExit("NCAA individual release has no players")
-if not SQL.exists():
-    def quote(value):
-        if value is None:
-            return "NULL"
-        return "'" + str(value).replace("'", "''") + "'"
-    lines = [
-        "CREATE TABLE IF NOT EXISTS ncaa_individual_players (season INTEGER NOT NULL, division INTEGER NOT NULL CHECK(division IN (1,2,3)), player_id TEXT NOT NULL, name TEXT NOT NULL, team_name TEXT, ppg REAL, rpg REAL, apg REAL, mpg REAL, ppg_rank INTEGER, payload_json TEXT NOT NULL, PRIMARY KEY(season, division, player_id));",
-        "CREATE INDEX IF NOT EXISTS ncaa_individual_division_rank ON ncaa_individual_players(season, division, ppg_rank);",
-        "DELETE FROM ncaa_individual_players WHERE season=2026;",
-    ]
-    for player in players:
-        payload = json.dumps(player, ensure_ascii=False, separators=(",", ":"))
-        lines.append("INSERT OR REPLACE INTO ncaa_individual_players (season,division,player_id,name,team_name,ppg,rpg,apg,mpg,ppg_rank,payload_json) VALUES (" + ",".join(map(quote, [2026, player["division"], player["player_id"], player["name"], player.get("team_name"), player.get("ppg"), player.get("rpg"), player.get("apg"), player.get("mpg"), player.get("ppg_rank"), payload])) + ");")
-    SQL.parent.mkdir(parents=True, exist_ok=True)
-    SQL.write_text("\n".join(lines) + "\n")
+def quote(value):
+    if value is None:
+        return "NULL"
+    return "'" + str(value).replace("'", "''") + "'"
+
+lines = [
+    "CREATE TABLE IF NOT EXISTS ncaa_individual_players (season INTEGER NOT NULL, division INTEGER NOT NULL CHECK(division IN (1,2,3)), player_id TEXT NOT NULL, name TEXT NOT NULL, team_name TEXT, ppg REAL, rpg REAL, apg REAL, mpg REAL, ppg_rank INTEGER, payload_json TEXT NOT NULL, PRIMARY KEY(season, division, player_id));",
+    "CREATE INDEX IF NOT EXISTS ncaa_individual_division_rank ON ncaa_individual_players(season, division, ppg_rank);",
+    "DELETE FROM ncaa_individual_players WHERE season=2026;",
+]
+for player in players:
+    payload = json.dumps(player, ensure_ascii=False, separators=(",", ":"))
+    lines.append("INSERT OR REPLACE INTO ncaa_individual_players (season,division,player_id,name,team_name,ppg,rpg,apg,mpg,ppg_rank,payload_json) VALUES (" + ",".join(map(quote, [2026, player["division"], player["player_id"], player["name"], player.get("team_name"), player.get("ppg"), player.get("rpg"), player.get("apg"), player.get("mpg"), player.get("ppg_rank"), payload])) + ");")
+SQL.parent.mkdir(parents=True, exist_ok=True)
+SQL.write_text("\n".join(lines) + "\n")
 
 for path in [ROOT / "worker/migrations/0016_ncaa_individual.sql", SQL]:
     subprocess.run(
