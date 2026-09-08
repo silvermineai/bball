@@ -189,6 +189,7 @@ export default async function Page({
         </p>
       </div>
       <ManualMarketCheck
+        storageKey={`brief:${g.id}`}
         homeName={g.home_name}
         modelMargin={p.home_margin}
         modelTotal={p.total}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 
 function numberValue(value: string) {
   const parsed = Number(value);
@@ -17,20 +18,36 @@ function signedPoints(value: number) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)} pts`;
 }
 
+type SavedQuote = {
+  savedAt: string;
+  source: string;
+  spread: number | null;
+  total: number | null;
+  moneyline: number | null;
+  spreadEdge: number | null;
+  totalEdge: number | null;
+  moneylineEdge: number | null;
+};
+
 export default function ManualMarketCheck({
   homeName,
   modelMargin,
   modelTotal,
   modelHomeWinProbability,
+  storageKey,
 }: {
   homeName: string;
   modelMargin: number;
   modelTotal: number;
   modelHomeWinProbability: number;
+  storageKey?: string;
 }) {
   const [spread, setSpread] = useState("");
   const [total, setTotal] = useState("");
   const [moneyline, setMoneyline] = useState("");
+  const [source, setSource] = useState("");
+  const [history, setHistory] = useState<SavedQuote[]>([]);
+  const [savedMessage, setSavedMessage] = useState("");
   const marketSpread = numberValue(spread);
   const marketTotal = numberValue(total);
   const marketMoneyline = numberValue(moneyline);
@@ -41,6 +58,56 @@ export default function ManualMarketCheck({
     marketMoneyline == null ? null : impliedAmerican(marketMoneyline);
   const moneylineEdge =
     implied == null ? null : modelHomeWinProbability - implied;
+  const notebookKey = `silvermine-market-notebook:${storageKey || homeName}`;
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(notebookKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) setHistory(parsed.slice(0, 20));
+    } catch {
+      // Local storage is optional; the calculator remains useful when blocked.
+    }
+  }, [notebookKey]);
+  const saveQuote = () => {
+    if (!source.trim() || [marketSpread, marketTotal, marketMoneyline].every((value) => value == null)) {
+      setSavedMessage("Add a source and at least one observed line first.");
+      return;
+    }
+    const quote: SavedQuote = {
+      savedAt: new Date().toISOString(),
+      source: source.trim(),
+      spread: marketSpread,
+      total: marketTotal,
+      moneyline: marketMoneyline,
+      spreadEdge,
+      totalEdge,
+      moneylineEdge,
+    };
+    const next = [quote, ...history].slice(0, 20);
+    setHistory(next);
+    setSavedMessage("Saved locally in this browser.");
+    try {
+      window.localStorage.setItem(notebookKey, JSON.stringify(next));
+    } catch {
+      setSavedMessage("Calculated, but this browser could not save local notes.");
+    }
+  };
+  const clearHistory = () => {
+    setHistory([]);
+    setSavedMessage("Local quote history cleared.");
+    try { window.localStorage.removeItem(notebookKey); } catch { /* optional storage */ }
+  };
+  const exportHistory = () => {
+    if (!history.length) return;
+    downloadCsv(
+      "manual-market-notebook.csv",
+      toCsv(
+        ["Saved at", "Source", "Home spread", "Game total", "Home moneyline", "Spread edge", "Total edge", "Moneyline probability edge"],
+        history.map((quote) => [quote.savedAt, quote.source, quote.spread, quote.total, quote.moneyline, quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
+      ),
+    );
+  };
 
   return (
     <section className="section paper-panel manual-market-check screen-only">
@@ -94,6 +161,22 @@ export default function ManualMarketCheck({
           />
           <small>American odds, at least +100 or at most -100.</small>
         </label>
+        <label className="control">
+          <span>OBSERVED SOURCE</span>
+          <input
+            type="text"
+            maxLength={120}
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+            placeholder="Bookmaker or screen"
+          />
+          <small>Label the line so your local notes remain auditable.</small>
+        </label>
+      </div>
+      <div className="button-row" style={{ marginTop: 16 }}>
+        <button className="button secondary" type="button" onClick={saveQuote}>Save quote locally</button>
+        <span className="note">Up to 20 notes · never uploaded</span>
+        {savedMessage && <span className="note" role="status">{savedMessage}</span>}
       </div>
       <div className="manual-market-results" aria-live="polite">
         <div>
@@ -137,6 +220,33 @@ export default function ManualMarketCheck({
         = model total − observed total. This arithmetic does not account for
         vig, pushes, limits, timing or player availability.
       </p>
+      {history.length > 0 && (
+        <section className="manual-market-history">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Local notebook / Saved observations</div>
+              <h3>Keep the lines you actually saw.</h3>
+            </div>
+            <div className="button-row">
+              <button className="button secondary" type="button" onClick={exportHistory}>Export notes ↓</button>
+              <button className="button secondary" type="button" onClick={clearHistory}>Clear local notes</button>
+            </div>
+          </div>
+          <p className="note">Saved in this browser with the model values shown above. These notes are user-entered observations, not provider-verified market records.</p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Saved / source</th><th className="numeric">Spread</th><th className="numeric">Total</th><th className="numeric">Moneyline</th><th className="numeric">Edges</th></tr></thead>
+              <tbody>{history.map((quote) => <tr key={`${quote.savedAt}-${quote.source}`}>
+                <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small></td>
+                <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small></td>
+                <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small></td>
+                <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small></td>
+                <td className="numeric"><small>Spread / total / ML</small><strong>{[quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100].map((value) => value == null ? "—" : value.toFixed(1)).join(" · ")}</strong></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </section>
   );
 }
