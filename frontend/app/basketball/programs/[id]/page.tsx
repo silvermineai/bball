@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getScoutIndex, getScoutProfile } from "../../../_lib/scouting-data";
 import { date, fmt, signed } from "../../../_lib/format";
-import { getRecruiting, getRosters } from "../../../_lib/basketball-data";
+import { getBasketball, getRecruiting, getRosters } from "../../../_lib/basketball-data";
+import { buildRosterLabRows } from "../../../_lib/roster-readiness";
 import BasketballCard from "../../../_components/BasketballCard";
 import Dossier from "./Dossier";
 import ProgramRecruiting from "./ProgramRecruiting";
@@ -32,8 +33,10 @@ export default async function Page({
   if (!getScoutIndex().teams.some((t) => t.id === id)) notFound();
   const p = getScoutProfile(id),
     s = p.splits.season,
+    overview = getBasketball(),
     recruiting = getRecruiting(),
-    rosters = getRosters();
+    rosters = getRosters(),
+    rosterReadiness = buildRosterLabRows(rosters, overview).find((row) => row.teamId === id);
   return (
     <>
       <div className="dateline eyebrow">
@@ -112,6 +115,7 @@ export default async function Page({
         programName={p.name}
         recruiting={recruiting}
         rosters={rosters}
+        readiness={rosterReadiness}
       />
       <section className="section">
         <div className="section-heading">

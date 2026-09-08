@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { BBRosters } from "../../../_lib/basketball-types";
+import type { RosterLabRow } from "../../../_lib/roster-readiness";
 import {
   categoryLabels,
   eventLabels,
@@ -14,11 +15,13 @@ export default function ProgramRecruiting({
   programName,
   recruiting,
   rosters,
+  readiness,
 }: {
   teamId: string;
   programName: string;
   recruiting: RecruitingRelease;
   rosters: BBRosters;
+  readiness?: RosterLabRow;
 }) {
   const announcements = recruitingRows(recruiting).filter(
     (row) => row.team_id === teamId,
@@ -69,6 +72,61 @@ export default function ProgramRecruiting({
           <span>Prior minutes represented</span>
         </div>
       </div>
+      {readiness && (
+        <section className="paper-panel" style={{ marginTop: 24 }}>
+          <div className="section-heading" style={{ marginBottom: 8 }}>
+            <div>
+              <div className="eyebrow">Role workload watch</div>
+              <h3>Which source-listed role is represented?</h3>
+            </div>
+            <Link href={`/basketball/roster-lab/?q=${encodeURIComponent(programName)}`}>
+              Open roster lab →
+            </Link>
+          </div>
+          <p className="note">
+            Prior minutes are grouped by the source-reported position on the
+            current listing. “Unrepresented” means prior minutes not attached
+            to a same-program listing in this release; it does not establish a
+            departure, transfer, eligibility or expected role.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th className="numeric">Listed</th>
+                  <th className="numeric">Prior minutes</th>
+                  <th className="numeric">Returning minutes</th>
+                  <th className="numeric">Incoming prior minutes</th>
+                  <th className="numeric">Returning share</th>
+                  <th className="numeric">Unrepresented</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(["guard", "forward", "center"] as const).map((group) => {
+                  const workload = readiness.positionWorkload[group];
+                  const listed = readiness.positionCounts[group];
+                  const unrepresented = Math.max(0, workload.priorMinutes - workload.returningMinutes);
+                  return (
+                    <tr key={group}>
+                      <th scope="row">{group[0].toUpperCase() + group.slice(1)}</th>
+                      <td className="numeric">{listed}</td>
+                      <td className="numeric">{workload.priorMinutes ? Math.round(workload.priorMinutes).toLocaleString() : "—"}</td>
+                      <td className="numeric">{workload.returningMinutes ? Math.round(workload.returningMinutes).toLocaleString() : "—"}</td>
+                      <td className="numeric">{workload.incomingPriorMinutes ? Math.round(workload.incomingPriorMinutes).toLocaleString() : "—"}</td>
+                      <td className="numeric">{workload.returningShare == null ? "—" : `${(workload.returningShare * 100).toFixed(0)}%`}</td>
+                      <td className="numeric">{unrepresented ? Math.round(unrepresented).toLocaleString() : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="note" style={{ marginTop: 12 }}>
+            {readiness.positionCounts.unreported} listed player{readiness.positionCounts.unreported === 1 ? "" : "s"} have no recognized source position. The workload denominator is the matched prior-production sample ({Math.round(readiness.priorMinutes).toLocaleString()} minutes).
+          </p>
+        </section>
+      )}
       {!reviewed && (
         <p className="career-coverage-warning">
           No dated school announcement is in the selected review file for this
