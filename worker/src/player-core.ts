@@ -55,17 +55,17 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
     .replaceAll("season=?", "bb_player_core.season=?")
     .replaceAll("athlete_id LIKE", "bb_player_core.athlete_id LIKE");
   const rows = await c.env.DB.prepare(
-    `SELECT season,athlete_id AS id,
-      json_extract(profile_json,'$.display_name') AS name,
-      json_extract(profile_json,'$.position_name') AS position,
-      json_extract(profile_json,'$.display_height') AS height,
-      json_extract(profile_json,'$.display_weight') AS weight,
-      json_extract(profile_json,'$.jersey') AS jersey,
-      json_extract(profile_json,'$.experience_years') AS experience,
-      json_extract(profile_json,'$.status_name') AS status,
-      json_extract(profile_json,'$.current_team_id') AS team_id,
-      COALESCE(r.team_name, json_extract(profile_json,'$.current_team_id')) AS team,
-      profile_json
+    `SELECT bb_player_core.season,bb_player_core.athlete_id AS id,
+      json_extract(bb_player_core.profile_json,'$.display_name') AS name,
+      json_extract(bb_player_core.profile_json,'$.position_name') AS position,
+      json_extract(bb_player_core.profile_json,'$.display_height') AS height,
+      json_extract(bb_player_core.profile_json,'$.display_weight') AS weight,
+      json_extract(bb_player_core.profile_json,'$.jersey') AS jersey,
+      json_extract(bb_player_core.profile_json,'$.experience_years') AS experience,
+      json_extract(bb_player_core.profile_json,'$.status_name') AS status,
+      json_extract(bb_player_core.profile_json,'$.current_team_id') AS team_id,
+      COALESCE(r.team_name, json_extract(bb_player_core.profile_json,'$.current_team_id')) AS team,
+      bb_player_core.profile_json
      FROM bb_player_core
      LEFT JOIN (
        SELECT season,athlete_id,
