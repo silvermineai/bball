@@ -189,6 +189,34 @@ def check_freshness(
                     raise ValueError("basketball primary and baseline estimates exceed upcoming games")
                 if not isinstance(overview.get("ratings"), list) or not overview["ratings"]:
                     raise ValueError("basketball release has no team ratings")
+                datasets = coverage.get("datasets")
+                if isinstance(datasets, list):
+                    dataset_keys = {
+                        item.get("key")
+                        for item in datasets
+                        if isinstance(item, dict) and isinstance(item.get("key"), str)
+                    }
+                    required = {
+                        "schedule",
+                        "team_box",
+                        "player_box",
+                        "rosters",
+                        "player_season",
+                        "team_season",
+                        "publisher_ratings",
+                        "publisher_player_value",
+                        "ncaa_lineups",
+                        "player_core",
+                        "ncaa_player_box",
+                        "ncaa_team_rosters",
+                        "ncaa_shots",
+                    }
+                    missing = sorted(required - dataset_keys)
+                    if missing:
+                        raise ValueError(
+                            "basketball release is missing dataset layers: "
+                            + ", ".join(missing)
+                        )
                 ncaa = _read(root, str(prefix / "ncaa-individual.json"))
                 releases.append(
                     _season_snapshot(

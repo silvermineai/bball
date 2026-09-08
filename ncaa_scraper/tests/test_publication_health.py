@@ -161,6 +161,20 @@ class PublicationHealthTest(unittest.TestCase):
                 )
             self.assertIn("hours old", str(error.exception))
 
+    def test_basketball_inventory_rejects_missing_stat_layer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.payload()
+            payload["coverage"]["datasets"] = [{"key": "schedule"}]
+            write_release(directory, "basketball", "overview.json", payload)
+            with self.assertRaises(ValueError) as error:
+                check_freshness(
+                    Path(directory),
+                    "basketball",
+                    now=datetime(2026, 9, 8, tzinfo=timezone.utc),
+                    max_age_hours=48,
+                )
+            self.assertIn("missing dataset layers", str(error.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
