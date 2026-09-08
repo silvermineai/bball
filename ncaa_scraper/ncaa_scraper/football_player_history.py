@@ -11,6 +11,7 @@ import sqlite3
 from pathlib import Path
 
 from .football import DB_PATH, player_board, read_stats, store_rows
+from .football_careers import write as write_careers
 from .football_sources import CACHE, DATASETS, RELEASES, ROOT, ReleaseClient
 
 # SportsDataverse's public football player releases are available back to 2018.
@@ -19,7 +20,7 @@ YEARS = tuple(range(2018, 2025))
 KINDS = ("box", "passing", "rushing", "receiving", "defense", "specialists")
 LOCAL = ROOT / ".local/football-player-history"
 OUT = ROOT / "frontend/public/data/football"
-IMPLEMENTATIONS = ("football_player_history.py", "football.py", "football_sources.py")
+IMPLEMENTATIONS = ("football_player_history.py", "football.py", "football_sources.py", "football_careers.py")
 
 
 def encoded(value):
@@ -300,6 +301,9 @@ def import_history(conn, downloads, out=OUT, local=LOCAL, cache=CACHE):
     for y, board in boards.items():
         (out / f"players-{y}.json").write_text(encoded(board))
     catalog = make_catalog(conn, out)
+    # Build the cross-season index only after every season board and its catalog
+    # have been written, so the reproducibility manifest can include its hash.
+    write_careers(out)
     manifest = {
         "sources": sources,
         "dependencies": dependencies,
@@ -308,6 +312,7 @@ def import_history(conn, downloads, out=OUT, local=LOCAL, cache=CACHE):
             name: sha(out / name)
             for name in [
                 "player-catalog.json",
+                "player-careers.json",
                 *[s["file"] for s in catalog["seasons"]],
             ]
         },

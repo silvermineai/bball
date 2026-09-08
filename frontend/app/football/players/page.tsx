@@ -19,6 +19,9 @@ export default function Page() {
         </p>
       </div>
       <p className="note" style={{ marginBottom: 24 }}>
+        Want the full timeline? <Link href="/football/careers/">Search the cross-season player careers index →</Link> to compare identified athletes across the nine-season archive.
+      </p>
+      <p className="note" style={{ marginBottom: 24 }}>
         Looking for sacks, turnovers, punting or return records? The{" "}
         <Link href="/football/events/">defense and specialist notebook →</Link>{" "}
         exposes additional name-attributed game records that cannot be joined to

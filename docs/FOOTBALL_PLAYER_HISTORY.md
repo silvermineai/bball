@@ -2,6 +2,8 @@
 
 The player index now covers 2018–2026, while the defense/specialist notebook remains on its existing event editions. This release adds 24 attributed bulk files for 2018–2021 to the previously archived 18 files for 2022–2024: player box scores, passing, rushing, receiving, defensive events and specialist events. The 2018–2024 raw records are retained in Cloudflare D1 and archived with their receipts in private R2. No forecasts, model coefficients, betting observations or prospective registrations are regenerated.
 
+The cross-season career index at `/football/careers/` groups the generated season indexes by positive source athlete ID. It preserves every season/team trail, category-specific EPA totals, plays, yards, touchdowns and best source rank. Passing, rushing, receiving and event categories are kept separate; the index does not infer transfers, eligibility or a composite player value.
+
 ## Player coverage
 
 | Season        | Raw box rows | Games with box rows | Athlete/program records | Team placeholder entries excluded |
