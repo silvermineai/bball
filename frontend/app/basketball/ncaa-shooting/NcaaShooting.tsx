@@ -1,0 +1,33 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Metric = "volume" | "fg_pct" | "3p_pct" | "rim_pct" | "mid_pct" | "distance";
+type Zone = { attempts: number; makes: number; points: number };
+type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; value: number; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, Zone> } };
+type Result = { season: number; metric: Metric; min_attempts: number; page: number; page_size: number; total: number; rows: Row[] };
+type Meta = { seasons: number[]; metrics: Metric[] };
+const labels: Record<Metric, string> = { volume: "Shot attempts", fg_pct: "Overall FG%", "3p_pct": "3-point %", rim_pct: "Rim %", mid_pct: "Midrange %", distance: "Average distance" };
+const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
+const pct = (zone: Zone | undefined) => zone && zone.attempts ? `${(100 * zone.makes / zone.attempts).toFixed(1)}%` : "—";
+
+export default function NcaaShooting() {
+  const [season, setSeason] = useState("2026");
+  const [metric, setMetric] = useState<Metric>("volume");
+  const [minAttempts, setMinAttempts] = useState("50");
+  const [query, setQuery] = useState("");
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [page, setPage] = useState(0);
+  const [error, setError] = useState("");
+  useEffect(() => { fetch(`/api/basketball/research/ncaa-shooting?meta=1&season=${season}`).then((r) => { if (!r.ok) throw Error("The NCAA shooting catalog could not be loaded."); return r.json() as Promise<Meta>; }).then(setMeta).catch((e) => setError(e.message)); }, [season]);
+  useEffect(() => { const controller = new AbortController(); const params = new URLSearchParams({ season, metric, minAttempts, page: String(page) }); if (query.trim()) params.set("q", query.trim()); setResult(null); fetch(`/api/basketball/research/ncaa-shooting?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw Error("The NCAA shooting profiles could not be loaded."); return r.json() as Promise<Result>; }).then((v) => { if (!controller.signal.aborted) setResult(v); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [season, metric, minAttempts, query, page]);
+  const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
+  const reset = (fn: () => void) => { setPage(0); fn(); };
+  return <>
+    <div className="page-title"><div className="eyebrow">NCAA source archive / player shooting</div><h1>Follow the<br /><em>shot profile.</em></h1><p>Compare where players shoot, how often they convert and how their shot diet changes across seasons. Zone buckets and distance come from the attributed NCAA shot release.</p></div>
+    <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player/team profiles</span></div><div><strong>{result?.min_attempts ?? minAttempts}</strong><span>Minimum attempts</span></div><div><strong>{meta?.seasons.length ?? "—"}</strong><span>Shot seasons</span></div><div><strong>NCAA</strong><span>Identity namespace</span></div></div>
+    <div className="toolbar"><label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label><label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || Object.keys(labels) as Metric[]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label><label className="control"><span>MINIMUM ATTEMPTS</span><select value={minAttempts} onChange={(e) => reset(() => setMinAttempts(e.target.value))}>{[10, 50, 100, 200, 400].map((n) => <option key={n} value={n}>{n} attempts</option>)}</select></label><label className="control"><span>PLAYER OR TEAM</span><input type="search" maxLength={120} placeholder="Search a player or team" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label></div>
+    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA shooting profiles…</p> : <><p className="note">{result.total.toLocaleString()} qualified profiles · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_attempts} attempts.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th className="numeric">ATT</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">Rim%</th><th className="numeric">Mid%</th><th className="numeric">Avg dist.</th><th className="numeric">{labels[result.metric]}</th></tr></thead><tbody>{result.rows.map((row) => { const z = row.stats.zones || {}; return <tr key={`${row.player_id}-${row.team_id}`}><td><strong>{row.player_name || row.player_id}</strong><small>NCAA player {row.player_id}</small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td className="numeric">{row.stats.attempts.toLocaleString()}</td><td className="numeric">{pct({ attempts: row.stats.attempts, makes: row.stats.makes, points: row.stats.points })}</td><td className="numeric">{pct({ attempts: (z.abovebreak3?.attempts || 0) + (z.corner3?.attempts || 0), makes: (z.abovebreak3?.makes || 0) + (z.corner3?.makes || 0), points: 0 })}</td><td className="numeric">{pct(z.rim)}</td><td className="numeric">{pct(z.mid)}</td><td className="numeric">{row.stats.distance_count ? `${(row.stats.distance_sum / row.stats.distance_count).toFixed(1)} ft` : "—"}</td><td className="numeric"><strong>{row.value.toFixed(result.metric === "volume" ? 0 : 1)}{result.metric.endsWith("pct") ? "%" : result.metric === "distance" ? " ft" : ""}</strong></td></tr>; })}</tbody></table></div>{!result.rows.length && <p className="empty">No shooting profiles match this filter.</p>}<div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 40 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div><p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived shot release via SportsDataverse. A profile describes recorded shot locations and outcomes; it does not imply a future role or a verified match to ESPN identities.</p></>}
+  </>;
+}

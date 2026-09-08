@@ -133,6 +133,17 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid NCAA shooting profile parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-shooting?season=2018",
+      "/api/basketball/research/ncaa-shooting?metric=made_up",
+      "/api/basketball/research/ncaa-shooting?minAttempts=0",
+      "/api/basketball/research/ncaa-shooting?page=-1",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",

@@ -138,6 +138,7 @@ def ingest(conn, dataset, year, rows, receipt):
         "ncaa_player_box": "bb_ncaa_player_box",
         "ncaa_player_season": "bb_ncaa_player_season",
         "ncaa_team_rosters": "bb_ncaa_rosters",
+        "ncaa_shots": "bb_ncaa_player_shooting",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -504,6 +505,56 @@ def ingest(conn, dataset, year, rows, receipt):
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_ncaa_rosters VALUES (?,?,?,?,?,?)",
                 valid,
+            )
+        elif dataset == "ncaa_shots":
+            conn.execute(
+                "DELETE FROM bb_unresolved WHERE dataset=? AND season=?",
+                (dataset, year),
+            )
+            groups = defaultdict(lambda: {
+                "player_name": None, "team_name": None, "attempts": 0,
+                "makes": 0, "points": 0, "distance_sum": 0.0,
+                "distance_count": 0, "zones": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
+                "types": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
+            })
+            for i, r in enumerate(rows):
+                if not r.get("shooter_player_id") or not r.get("ncaa_team_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing NCAA shooter or team ID", json.dumps(r)),
+                    )
+                    continue
+                key = (identity(r["shooter_player_id"]), identity(r["ncaa_team_id"]))
+                entry = groups[key]
+                entry["player_name"] = r.get("shooter_clean_name") or r.get("shooter_id")
+                entry["team_name"] = r.get("team") or r.get("team_id")
+                made = bool(r.get("made") == "true")
+                points = number(r.get("point_value")) or 0
+                entry["attempts"] += 1
+                entry["makes"] += int(made)
+                entry["points"] += points
+                distance = number(r.get("dist_ft"))
+                if distance is not None:
+                    entry["distance_sum"] += distance
+                    entry["distance_count"] += 1
+                for bucket, value in (("zones", r.get("shot_zone") or "unknown"), ("types", r.get("shot_type") or "unknown")):
+                    item = entry[bucket][value]
+                    item["attempts"] += 1
+                    item["makes"] += int(made)
+                    item["points"] += points
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_player_shooting VALUES (?,?,?,?,?,?)",
+                [
+                    (
+                        year, player_id, team_id, entry["player_name"], entry["team_name"],
+                        json.dumps({
+                            "attempts": entry["attempts"], "makes": entry["makes"], "points": entry["points"],
+                            "distance_sum": round(entry["distance_sum"], 4), "distance_count": entry["distance_count"],
+                            "zones": entry["zones"], "types": entry["types"],
+                        }, separators=(",", ":")),
+                    )
+                    for (player_id, team_id), entry in groups.items()
+                ],
             )
         if dataset in ["participation", "player_box"]:
             conn.execute("DELETE FROM bb_participation WHERE season=?", (year,))
@@ -1256,6 +1307,7 @@ def export_sql(conn, path):
             "bb_impact",
             "bb_ncaa_player_season",
             "bb_ncaa_rosters",
+            "bb_ncaa_player_shooting",
             "bb_unresolved",
             "bb_participation",
         ]:
@@ -1294,7 +1346,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -1353,6 +1405,10 @@ def main():
             rows, receipt = c.load("ncaa_team_rosters", year, refresh=args.refresh)
             ingest(conn, "ncaa_team_rosters", year, rows, receipt)
             print(f"Imported ncaa_team_rosters/{year}: {len(rows):,}", flush=True)
+            if 2019 <= year <= 2026:
+                rows, receipt = c.load("ncaa_shots", year, refresh=args.refresh)
+                ingest(conn, "ncaa_shots", year, rows, receipt)
+                print(f"Imported ncaa_shots/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql)
