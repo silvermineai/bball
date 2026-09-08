@@ -99,7 +99,9 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
       steals / NULLIF(games, 0) AS spg_value,
       blocks / NULLIF(games, 0) AS bpg_value,
       CASE WHEN (fga + 0.475 * fta) > 0 THEN 100.0 * points / (2 * (fga + 0.475 * fta)) ELSE NULL END AS ts_value,
+      NULLIF(fga + 0.475 * fta, 0) AS ts_denominator,
       CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END AS efg_value,
+      NULLIF(fga, 0) AS efg_denominator,
       CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END AS per40_value
     FROM aggregate a
     WHERE games >= ? AND minutes >= ?`;
