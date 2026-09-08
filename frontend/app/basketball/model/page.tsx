@@ -1,4 +1,4 @@
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRecruiting, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 import Link from "next/link";
 export const metadata = {
@@ -7,7 +7,15 @@ export const metadata = {
 export default function Page() {
   const d = getBasketball(),
     e = d.model.evaluation,
-    c = d.model.calibration;
+    c = d.model.calibration,
+    roster = getRosters(),
+    recruiting = getRecruiting(),
+    rosterSummary = roster.team_summaries ?? [],
+    priorMinutes = rosterSummary.reduce((sum, row) => sum + row.prior_minutes, 0),
+    representedMinutes = rosterSummary.reduce(
+      (sum, row) => sum + row.represented_prior_minutes,
+      0,
+    );
   return (
     <>
       <div className="page-title">
@@ -108,6 +116,70 @@ export default function Page() {
           </p>
         </section>
       </div>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">The evidence boundary / 2026–27</div>
+            <h2>Know what the model can see.</h2>
+          </div>
+          <Link href="/basketball/recruiting/">Open the evidence ledger →</Link>
+        </div>
+        <p className="note">
+          These are dated source observations carried alongside the forecast.
+          They are not hidden model inputs, a transfer clearinghouse or a depth
+          chart. The primary forecast remains reproducible from the historical
+          game data described above.
+        </p>
+        <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
+          <div>
+            <strong>{roster.teams_observed.toLocaleString()}</strong>
+            <span>Programs with a listed roster</span>
+          </div>
+          <div>
+            <strong>{roster.players_observed.toLocaleString()}</strong>
+            <span>Source-listed players</span>
+          </div>
+          <div>
+            <strong>
+              {priorMinutes > 0
+                ? `${((representedMinutes / priorMinutes) * 100).toFixed(1)}%`
+                : "—"}
+            </strong>
+            <span>Prior minutes represented</span>
+          </div>
+          <div>
+            <strong>{recruiting.coverage.historical_links.toLocaleString()}</strong>
+            <span>Recruiting profiles linked to prior stats</span>
+          </div>
+        </div>
+        <div className="paper-panel" style={{ marginTop: 22 }}>
+          <div className="rule-list">
+            <div>
+              <span>Roster observation edition</span>
+              <strong>{roster.season}–{String(roster.season + 1).slice(-2)}</strong>
+            </div>
+            <div>
+              <span>Recruiting review scope</span>
+              <strong>{recruiting.coverage.programs} programs · {recruiting.coverage.sources} sources</strong>
+            </div>
+            <div>
+              <span>Dated recruiting events</span>
+              <strong>{recruiting.coverage.events.toLocaleString()}</strong>
+            </div>
+            <div>
+              <span>National recruiting coverage</span>
+              <strong>{recruiting.coverage.complete_national_coverage ? "Complete" : "Partial"}</strong>
+            </div>
+          </div>
+          <p>
+            Roster continuity uses publisher athlete IDs and prior recorded
+            minutes. An absent source row is not treated as a departure, and a
+            recruiting announcement is not treated as eligibility. Use these
+            counts to decide where staff verification is still needed before
+            turning historical production into a lineup assumption.
+          </p>
+        </div>
+      </section>
       <section className="section">
         <div className="section-heading">
           <div>
