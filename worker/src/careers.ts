@@ -1,5 +1,43 @@
 import { Hono } from "hono";
 export const careers = new Hono<{ Bindings: Env }>();
+
+/** Stream the exact historical player-box release whose receipt is active in D1. */
+careers.get("/source", async (c) => {
+  const value = c.req.query("season");
+  if (value === undefined || !/^\d{4}$/.test(value) || +value < 2003 || +value > 2026)
+    return c.json({ error: "Invalid historical source season" }, 400);
+  const season = +value;
+  const row = await c.env.DB.prepare(
+    "SELECT receipt_json FROM bb_career_seasons WHERE season=?",
+  ).bind(season).first<{ receipt_json: string }>();
+  let source: { sha256?: unknown } | null = null;
+  try {
+    const receipts = row?.receipt_json ? JSON.parse(row.receipt_json) : [];
+    source = Array.isArray(receipts)
+      ? receipts.find((item) => item && item.dataset === "player_box" && item.season === season) || null
+      : null;
+  } catch {
+    return c.json({ error: "Historical source receipt is invalid" }, 503);
+  }
+  const digest = typeof source?.sha256 === "string" ? source.sha256 : "";
+  if (!/^[a-f0-9]{64}$/.test(digest))
+    return c.json({ error: "Historical player-box source release not found" }, 404);
+  const headers = new Headers({
+    "Content-Type": "application/vnd.apache.parquet",
+    "Content-Disposition": `attachment; filename="player_box_${season}.parquet"`,
+    ETag: `"${digest}"`,
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "noindex, follow",
+  });
+  if (c.req.header("If-None-Match")?.split(",").map((tag) => tag.trim()).includes(`"${digest}"`))
+    return new Response(null, { status: 304, headers });
+  const object = await c.env.RESEARCH_ARCHIVE.get(`basketball/careers/player-box/${season}/${digest}.parquet`);
+  if (!object || !("body" in object))
+    return c.json({ error: "Historical player-box source release is temporarily unavailable" }, 503);
+  return new Response(object.body, { headers });
+});
+
 careers.get("/:id", async (c) => {
   const id = c.req.param("id"),
     value = c.req.query("season");

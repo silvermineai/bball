@@ -244,59 +244,69 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
               export respects the selected season, search, sort and qualification
               filter
             </p>
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() =>
-                downloadCsv(
-                  `basketball-players-${season}.csv`,
-                  toCsv(
-                    [
-                      "Stat rank",
-                      "Player",
-                      "NCAA ID",
-                      "Program",
-                      "Position",
-                      "Games",
-                      "Minutes per game",
-                      "Points per game",
-                      "Rebounds per game",
-                      "Assists per game",
-                      "Steals per game",
-                      "Blocks per game",
-                      "Effective FG%",
-                      "True shooting %",
-                      "Three-point FG%",
-                      "Free-throw attempt rate",
-                      "Three-point attempt share",
-                      "Turnover rate",
-                    ],
-                    rows.map((p) => [
-                      p.statRank,
-                      p.name,
-                      p.id,
-                      p.team,
-                      p.position,
-                      p.games,
-                      p.mpg,
-                      p.ppg,
-                      p.rpg,
-                      p.apg,
-                      p.spg,
-                      p.bpg,
-                      p.efg == null ? null : p.efg * 100,
-                      p.ts == null ? null : p.ts * 100,
-                      p.three_pct == null ? null : p.three_pct * 100,
-                      p.ft_rate == null ? null : p.ft_rate * 100,
-                      p.three_rate == null ? null : p.three_rate * 100,
-                      p.tov_rate == null ? null : p.tov_rate * 100,
-                    ]),
-                  ),
-                )
-              }
-            >
-              Download CSV ↓
-            </button>
+            <div className="button-row">
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    `basketball-players-${season}.csv`,
+                    toCsv(
+                      [
+                        "Stat rank",
+                        "Player",
+                        "NCAA ID",
+                        "Program",
+                        "Position",
+                        "Games",
+                        "Minutes per game",
+                        "Points per game",
+                        "Rebounds per game",
+                        "Assists per game",
+                        "Steals per game",
+                        "Blocks per game",
+                        "Effective FG%",
+                        "True shooting %",
+                        "Three-point FG%",
+                        "Free-throw attempt rate",
+                        "Three-point attempt share",
+                        "Turnover rate",
+                      ],
+                      rows.map((p) => [
+                        p.statRank,
+                        p.name,
+                        p.id,
+                        p.team,
+                        p.position,
+                        p.games,
+                        p.mpg,
+                        p.ppg,
+                        p.rpg,
+                        p.apg,
+                        p.spg,
+                        p.bpg,
+                        p.efg == null ? null : p.efg * 100,
+                        p.ts == null ? null : p.ts * 100,
+                        p.three_pct == null ? null : p.three_pct * 100,
+                        p.ft_rate == null ? null : p.ft_rate * 100,
+                        p.three_rate == null ? null : p.three_rate * 100,
+                        p.tov_rate == null ? null : p.tov_rate * 100,
+                      ]),
+                    ),
+                  )
+                }
+              >
+                Download CSV ↓
+              </button>
+              {coverage && (
+                <a
+                  className="button secondary"
+                  href={`/api/basketball/research/careers/source?season=${encodeURIComponent(season)}`}
+                >
+                  Download source parquet ↓
+                </a>
+              )}
+            </div>
           </div>
           <div className="table-scroll">
             <table className="data-table">
