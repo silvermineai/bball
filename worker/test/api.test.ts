@@ -148,7 +148,7 @@ describe("bball api", () => {
     for (const path of [
       "/api/basketball/research/ncaa-careers?fromSeason=2009",
       "/api/basketball/research/ncaa-careers?metric=made_up",
-      "/api/basketball/research/ncaa-careers?minSeasons=0",
+      "/api/basketball/research/ncaa-careers?minMinutes=-1",
       "/api/basketball/research/ncaa-careers?page=-1",
       "/api/basketball/research/ncaa-careers?fromSeason=2026&toSeason=2010",
     ]) {
