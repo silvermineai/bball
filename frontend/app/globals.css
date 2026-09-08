@@ -961,6 +961,29 @@ details {
 .ncaa-source-fields > small {
   color: var(--muted);
 }
+.ncaa-source-json {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.ncaa-source-json summary {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ncaa-source-json pre {
+  max-height: 260px;
+  overflow: auto;
+  margin: 8px 0 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 summary {
   cursor: pointer;
   font-weight: 600;

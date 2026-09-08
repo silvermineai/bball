@@ -37,6 +37,10 @@ function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
       </div>)}
     </div>
     <small>Fields remain source-reported; an unavailable value is not treated as zero.</small>
+    <details className="ncaa-source-json">
+      <summary>View full source JSON</summary>
+      <pre>{JSON.stringify(stats, null, 2)}</pre>
+    </details>
   </details>;
 }
 
