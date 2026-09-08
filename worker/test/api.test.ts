@@ -211,11 +211,9 @@ describe("bball api", () => {
     const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2027 }] },
+      { results: [{ model_id: "basketball-efficiency-v1-test", forecasts: 12, first_created_at: "2026-09-08T00:00:00Z", last_created_at: "2026-09-08T01:00:00Z" }] },
       { results: [{
         model_id: "basketball-efficiency-v1-test",
-        forecasts: 12,
-        first_created_at: "2026-09-08T00:00:00Z",
-        last_created_at: "2026-09-08T01:00:00Z",
         model_created_at: "2026-09-08T00:00:00Z",
         version: "basketball-efficiency-v1",
         target_season: 2027,

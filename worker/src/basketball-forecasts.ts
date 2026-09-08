@@ -28,37 +28,41 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const { season, status, q, model, page, limit, meta } = c.req.valid("query");
 
   if (meta === "1") {
-    const [seasons, models] = await c.env.DB.batch([
+    const [seasons, models, modelMeta] = await c.env.DB.batch([
       c.env.DB.prepare(
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
       c.env.DB.prepare(
-        `SELECT f.model_id,
-                count(*) AS forecasts,
-                MIN(f.created_at) AS first_created_at,
-                MAX(f.created_at) AS last_created_at,
-                MAX(m.created_at) AS model_created_at,
-                MAX(json_extract(m.artifact_json,'$.version')) AS version,
-                MAX(json_extract(m.artifact_json,'$.target_season')) AS target_season,
-                MAX(json_extract(m.artifact_json,'$.cutoff')) AS cutoff,
-                MAX(json_extract(m.artifact_json,'$.training_games')) AS training_games,
-                MAX(json_extract(m.artifact_json,'$.training_seasons')) AS training_seasons,
-                MAX(json_extract(m.artifact_json,'$.calibration.season')) AS calibration_season,
-                MAX(json_extract(m.artifact_json,'$.calibration.games')) AS calibration_games,
-                MAX(json_extract(m.artifact_json,'$.calibration.margin_half_width')) AS margin_half_width,
-                MAX(json_extract(m.artifact_json,'$.evaluation.season')) AS evaluation_season,
-                MAX(json_extract(m.artifact_json,'$.evaluation.games')) AS evaluation_games,
-                MAX(json_extract(m.artifact_json,'$.evaluation.winner_accuracy')) AS evaluation_winner_accuracy,
-                MAX(json_extract(m.artifact_json,'$.evaluation.margin_mae')) AS evaluation_margin_mae
-           FROM bb_forecasts f
-           LEFT JOIN bb_models m ON m.id=f.model_id
-          GROUP BY f.model_id
-          ORDER BY last_created_at DESC, f.model_id`,
+        "SELECT model_id, count(*) AS forecasts, MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at FROM bb_forecasts GROUP BY model_id ORDER BY last_created_at DESC, model_id",
+      ),
+      c.env.DB.prepare(
+        `SELECT id AS model_id, created_at AS model_created_at,
+                json_extract(artifact_json,'$.version') AS version,
+                json_extract(artifact_json,'$.target_season') AS target_season,
+                json_extract(artifact_json,'$.cutoff') AS cutoff,
+                json_extract(artifact_json,'$.training_games') AS training_games,
+                json_extract(artifact_json,'$.training_seasons') AS training_seasons,
+                json_extract(artifact_json,'$.calibration.season') AS calibration_season,
+                json_extract(artifact_json,'$.calibration.games') AS calibration_games,
+                json_extract(artifact_json,'$.calibration.margin_half_width') AS margin_half_width,
+                json_extract(artifact_json,'$.evaluation.season') AS evaluation_season,
+                json_extract(artifact_json,'$.evaluation.games') AS evaluation_games,
+                json_extract(artifact_json,'$.evaluation.winner_accuracy') AS evaluation_winner_accuracy,
+                json_extract(artifact_json,'$.evaluation.margin_mae') AS evaluation_margin_mae
+           FROM bb_models
+          ORDER BY created_at DESC, id`,
       ),
     ]);
     c.header("Cache-Control", "public, max-age=300");
+    const metadataById = new Map(
+      modelMeta.results.map((row) => {
+        const item = row as Record<string, unknown>;
+        return [item.model_id, item] as const;
+      }),
+    );
     const modelsWithMetadata = models.results.map((row) => {
-      const item = row as Record<string, unknown>;
+      const aggregate = row as Record<string, unknown>;
+      const item = { ...aggregate, ...(metadataById.get(aggregate.model_id) || {}) };
       let trainingSeasons: number[] = [];
       if (typeof item.training_seasons === "string") {
         try {
