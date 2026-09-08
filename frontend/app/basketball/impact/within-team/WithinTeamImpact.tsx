@@ -13,7 +13,7 @@ import {
   type WithinImpactSort,
 } from "../../../_lib/within-impact";
 
-type CatalogSeason = { season: number; generated_at: string; coverage: WithinImpactEdition["coverage"]; path: string };
+type CatalogSeason = { season: number; generated_at: string; coverage: WithinImpactEdition["coverage"]; path: string; source?: { sha256?: string } };
 type Catalog = { default_season: number; seasons: CatalogSeason[] };
 const fallbackSeasons = Array.from({ length: 17 }, (_, index) => 2026 - index);
 const seasonLabel = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
@@ -89,6 +89,7 @@ export default function WithinTeamImpact() {
         <label className="control"><span>MINIMUM TEAM POSSESSIONS</span><select value={minPoss} onChange={(event) => reset(() => setMinPoss(event.target.value))}><option value="0">All samples</option><option value="200">200+</option><option value="500">500+</option><option value="1000">1,000+</option><option value="1500">1,500+</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => reset(() => setSort(event.target.value as WithinImpactSort))}>{Object.entries(sortLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={share}>Copy impact link</button>
+        <a className="button secondary" href={`/api/basketball/research/impact-within-team/source?season=${encodeURIComponent(String(season))}`}>Download source parquet ↓</a>
       </div>
       {copied && <p role="status">{copied}</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !edition ? <p role="status" className="empty">Loading within-team impact rows…</p> : <>

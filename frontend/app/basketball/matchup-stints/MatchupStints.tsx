@@ -17,6 +17,7 @@ type CatalogSeason = {
   generated_at: string;
   coverage: MatchupStintEdition["coverage"];
   path: string;
+  source?: { sha256?: string };
 };
 type Catalog = { default_season: number; seasons: CatalogSeason[] };
 
@@ -97,6 +98,7 @@ export default function MatchupStints() {
         <label className="control"><span>MINIMUM POSSESSIONS</span><select value={minPoss} onChange={(event) => reset(() => setMinPoss(event.target.value))}><option value="0">All samples</option><option value="20">20+</option><option value="40">40+</option><option value="100">100+</option><option value="200">200+</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => reset(() => setSort(event.target.value as MatchupStintSort))}><option value="possessions">Most possessions</option><option value="net_per_100">Largest home edge</option><option value="games">Most games</option><option value="date">Most recent</option></select></label>
         <button className="button secondary" type="button" onClick={share}>Copy matchup link</button>
+        <a className="button secondary" href={`/api/basketball/research/matchup-stints/source?season=${encodeURIComponent(String(season))}`}>Download source parquet ↓</a>
       </div>
       {copied && <p role="status">{copied}</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !edition ? <p role="status" className="empty">Loading matchup rows…</p> : <>

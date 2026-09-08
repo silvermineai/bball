@@ -130,6 +130,7 @@ def main():
                     {
                         "season": edition["season"],
                         "generated_at": edition["generated_at"],
+                        "source": {"sha256": edition["source"]["sha256"]},
                         "coverage": edition["coverage"],
                         "path": f"/data/basketball/impact-within-team-{edition['season']}.json",
                     }
