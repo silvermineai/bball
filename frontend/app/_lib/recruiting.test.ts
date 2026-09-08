@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   recruitingRows,
   publicationDate,
+  parseRecruitingCoverageFilters,
   parseRecruitingFilters,
   recruitingFilterSearch,
   sortRecruitingRows,
@@ -146,5 +147,28 @@ describe("shareable recruiting filters", () => {
     expect(
       recruitingFilterSearch({ team: "all", q: "", kind: "all", sort: "latest" }),
     ).toBe("");
+  });
+
+  it("round-trips shareable coverage-map filters", () => {
+    const search = recruitingFilterSearch(
+      { team: "all", q: "", kind: "all", sort: "latest" },
+      { query: "North Carolina", sort: "prior", status: "unreviewed" },
+    );
+    expect(search).toBe(
+      "?coverageQ=North+Carolina&coverageSort=prior&coverageStatus=unreviewed",
+    );
+    expect(parseRecruitingCoverageFilters(search)).toEqual({
+      query: "North Carolina",
+      sort: "prior",
+      status: "unreviewed",
+    });
+  });
+
+  it("falls back for unsupported coverage controls", () => {
+    expect(parseRecruitingCoverageFilters("?coverageSort=bad&coverageStatus=bad")).toEqual({
+      query: "",
+      sort: "reviewed",
+      status: "all",
+    });
   });
 });

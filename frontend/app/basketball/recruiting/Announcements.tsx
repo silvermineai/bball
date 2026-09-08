@@ -6,6 +6,7 @@ import {
   eventLabels,
   publicationDate,
   recruitingRows,
+  parseRecruitingCoverageFilters,
   parseRecruitingFilters,
   recruitingFilterSearch,
   sortRecruitingRows,
@@ -36,15 +37,22 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     const requestedView = new URLSearchParams(window.location.search).get("view");
     if (requestedView === "observations") setView("observations");
     const filters = parseRecruitingFilters(window.location.search);
+    const coverage = parseRecruitingCoverageFilters(window.location.search);
     setTeam(filters.team);
     setQ(filters.q);
     setKind(filters.kind);
     setSort(filters.sort);
+    setCoverageQuery(coverage.query);
+    setCoverageSort(coverage.sort);
+    setCoverageStatus(coverage.status);
     setHydrated(true);
   }, []);
   useEffect(() => {
     if (!hydrated || view !== "announcements") return;
-    const next = recruitingFilterSearch({ team, q, kind, sort });
+    const next = recruitingFilterSearch(
+      { team, q, kind, sort },
+      { query: coverageQuery, sort: coverageSort, status: coverageStatus },
+    );
     const current = window.location.search;
     if (next !== current) {
       window.history.replaceState(
@@ -53,7 +61,7 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [hydrated, team, q, kind, sort, view]);
+  }, [hydrated, team, q, kind, sort, coverageQuery, coverageSort, coverageStatus, view]);
   const changeView = (next: "announcements" | "observations") => {
     setView(next);
     const url = new URL(window.location.href);

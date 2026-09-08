@@ -89,6 +89,13 @@ export type RecruitingFilters = {
   kind: string;
   sort: RecruitingSort;
 };
+export type RecruitingCoverageSort = "reviewed" | "prior" | "name";
+export type RecruitingCoverageStatus = "all" | "reviewed" | "unreviewed";
+export type RecruitingCoverageFilters = {
+  query: string;
+  sort: RecruitingCoverageSort;
+  status: RecruitingCoverageStatus;
+};
 export type RecruitingProgramSummary = {
   team_id: string;
   team_name: string;
@@ -111,6 +118,16 @@ const recruitingSorts = new Set<RecruitingSort>([
   "mpg",
   "name",
 ]);
+const recruitingCoverageSorts = new Set<RecruitingCoverageSort>([
+  "reviewed",
+  "prior",
+  "name",
+]);
+const recruitingCoverageStatuses = new Set<RecruitingCoverageStatus>([
+  "all",
+  "reviewed",
+  "unreviewed",
+]);
 
 /** Read only supported recruiting filters from a shareable query string. */
 export function parseRecruitingFilters(search: string): RecruitingFilters {
@@ -125,13 +142,37 @@ export function parseRecruitingFilters(search: string): RecruitingFilters {
   };
 }
 
+/** Read the program coverage-map controls from a shareable query string. */
+export function parseRecruitingCoverageFilters(
+  search: string,
+): RecruitingCoverageFilters {
+  const params = new URLSearchParams(search);
+  const sort = params.get("coverageSort") as RecruitingCoverageSort | null;
+  const status = params.get("coverageStatus") as RecruitingCoverageStatus | null;
+  return {
+    query: params.get("coverageQ") || "",
+    sort: sort && recruitingCoverageSorts.has(sort) ? sort : "reviewed",
+    status: status && recruitingCoverageStatuses.has(status) ? status : "all",
+  };
+}
+
 /** Serialize non-default recruiting filters for a compact shareable URL. */
-export function recruitingFilterSearch(filters: RecruitingFilters) {
+export function recruitingFilterSearch(
+  filters: RecruitingFilters,
+  coverage?: RecruitingCoverageFilters,
+) {
   const params = new URLSearchParams();
   if (filters.team !== "all") params.set("team", filters.team);
   if (filters.q) params.set("q", filters.q);
   if (filters.kind !== "all") params.set("kind", filters.kind);
   if (filters.sort !== "latest") params.set("sort", filters.sort);
+  if (coverage?.query) params.set("coverageQ", coverage.query);
+  if (coverage && coverage.sort !== "reviewed") {
+    params.set("coverageSort", coverage.sort);
+  }
+  if (coverage && coverage.status !== "all") {
+    params.set("coverageStatus", coverage.status);
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }
