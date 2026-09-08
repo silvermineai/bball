@@ -32,7 +32,9 @@ const statusLabels: Record<RosterBoardStatus, string> = {
   ambiguous: "Multiple current programs",
 };
 
-export default function RosterBoard({ data }: { data: BBRosters }) {
+export default function RosterBoard() {
+  const [data, setData] = useState<BBRosters | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<RosterBoardStatus>("all");
   const [sort, setSort] = useState<RosterBoardSort>("mpg");
@@ -57,6 +59,25 @@ export default function RosterBoard({ data }: { data: BBRosters }) {
     window.history.replaceState(window.history.state, "", url);
     setPage(0);
   }, [hydrated, query, status, sort, minimumMinutes]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/data/basketball/rosters.json", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The roster release could not be loaded. Please reload.");
+        return response.json() as Promise<BBRosters>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setData(value);
+      })
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setLoadError(error.message);
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (loadError) return <p className="status-error" role="alert">{loadError}</p>;
+  if (!data) return <p className="empty" role="status">Loading the 2026–27 roster release…</p>;
 
   const rows = rosterBoardRows(data, { query, status, sort, minimumMinutes });
   const totals = rosterBoardTotals(rows);

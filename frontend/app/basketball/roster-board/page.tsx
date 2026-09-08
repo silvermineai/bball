@@ -1,4 +1,3 @@
-import { getRosters } from "../../_lib/basketball-data";
 import RosterBoard from "./RosterBoard";
 
 export const metadata = {
@@ -26,7 +25,7 @@ export default function Page() {
           player as a departure.
         </p>
       </div>
-      <RosterBoard data={getRosters()} />
+      <RosterBoard />
     </>
   );
 }
