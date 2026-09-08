@@ -968,6 +968,12 @@ def build(conn, target=2027):
 
 
 def export_sql(conn, path):
+    # The full fitted model is already published in overview.json and is not
+    # queried by the Worker. Its JSON blob is over D1's per-statement limit on
+    # current editions, so keep the D1 table available without replaying it.
+    # This leaves the compact research tables importable and avoids a failed
+    # all-or-nothing import when the model grows.
+    excluded_tables = {"bb_models"}
     with path.open("w") as f:
         for table in [
             "bb_games",
@@ -982,7 +988,9 @@ def export_sql(conn, path):
             for row in conn.execute(f"SELECT DISTINCT season FROM {table}"):
                 f.write(f"DELETE FROM {table} WHERE season={int(row[0])};\n")
         for line in conn.iterdump():
-            if line.startswith("INSERT INTO"):
+            if line.startswith("INSERT INTO") and not any(
+                line.startswith(f'INSERT INTO "{table}"') for table in excluded_tables
+            ):
                 f.write(line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n")
 
 
