@@ -1,4 +1,4 @@
-import { getBasketball } from "../_lib/basketball-data";
+import { getBasketball, getRosterModel } from "../_lib/basketball-data";
 import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
@@ -44,6 +44,19 @@ const guides = [
 ];
 export default function Page() {
   const d = getOverview();
+  const basketball = getBasketball();
+  const rosterScenarios = new Map(
+    getRosterModel().scenarios.map((scenario) => [scenario.game_id, scenario]),
+  );
+  const rosterLensGames = basketball.upcoming
+    .filter((game) => game.prediction && rosterScenarios.has(game.id))
+    .map((game) => ({ game, scenario: rosterScenarios.get(game.id)! }))
+    .sort(
+      (a, b) =>
+        Math.abs(b.scenario.margin_delta) - Math.abs(a.scenario.margin_delta) ||
+        a.game.starts_at.localeCompare(b.game.starts_at),
+    )
+    .slice(0, 6);
   return (
     <>
       <div className="page-title">
@@ -83,8 +96,8 @@ export default function Page() {
             </p>
             <Link href="/basketball/evaluation/">Explore the experiment →</Link>
           </article>
-          {getBasketball()
-            .upcoming.filter((g) => g.prediction)
+          {basketball.upcoming
+            .filter((g) => g.prediction)
             .slice(0, 6)
             .map((g) => (
               <article className="article-card" key={g.id}>
@@ -101,6 +114,34 @@ export default function Page() {
                 </Link>
               </article>
             ))}
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recruiting lens / model disagreement</div>
+            <h2>Where roster context changes the question.</h2>
+          </div>
+          <Link href="/basketball/forecast-lab/">Open the forecast lab →</Link>
+        </div>
+        <p className="note">
+          These games have the largest absolute margin movement between the
+          primary efficiency forecast and the research-only roster-continuity
+          challenger. The challenger uses source-listed workload and publisher
+          Box BPM; it does not replace the primary probability or establish
+          availability.
+        </p>
+        <div className="article-grid">
+          {rosterLensGames.map(({ game, scenario }) => (
+            <article className="article-card" key={game.id}>
+              <div className="eyebrow">{date(game.starts_at)} · Roster lens</div>
+              <h2>{game.away_name} at {game.home_name}</h2>
+              <p>
+                Primary margin {scenario.base_margin > 0 ? "+" : ""}{scenario.base_margin.toFixed(1)} · roster lens {scenario.roster_margin > 0 ? "+" : ""}{scenario.roster_margin.toFixed(1)} · movement {scenario.margin_delta > 0 ? "+" : ""}{scenario.margin_delta.toFixed(1)} points.
+              </p>
+              <Link href={`/basketball/briefs/${game.id}/`}>Read the matchup evidence →</Link>
+            </article>
+          ))}
         </div>
       </section>
       <div className="article-grid">
