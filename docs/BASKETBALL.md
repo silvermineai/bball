@@ -118,6 +118,8 @@ The original basketball release passed ingestion/model tests, Worker API/routing
 
 D1 coverage queries use a batch of individual counts to stay within its compound SELECT limit. Forecast counts include preserved model snapshots; the current model has 1,579 forecasts, while the release warehouse retains 11,053 basketball registrations across seven model fingerprints.
 
+`GET /api/basketball/research/coverage` returns those table counts plus grouped `source_receipts` with each dataset's receipt count and latest `fetched_at` value. This is the remote D1 freshness check; the homepage receipt cards are the corresponding static edition view.
+
 ## Remaining full-goal work
 
 - Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.

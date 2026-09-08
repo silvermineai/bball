@@ -318,12 +318,20 @@ app.get("/api/basketball/research/coverage", async (c) => {
       c.env.DB.prepare(`SELECT count(*) AS rows FROM ${table}`),
     ),
   );
+  const receipts = await c.env.DB.prepare(
+    `SELECT dataset, count(*) AS source_count,
+            MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
+       FROM bb_sources
+      GROUP BY dataset
+      ORDER BY dataset`,
+  ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     coverage: Object.keys(tables).map((dataset, index) => ({
       dataset,
       rows: counts[index].results[0].rows,
     })),
+    source_receipts: receipts.results,
   });
 });
 

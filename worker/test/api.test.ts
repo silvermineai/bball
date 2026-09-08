@@ -8,6 +8,47 @@ describe("bball api", () => {
     await expect(res.json()).resolves.toMatchObject({ ok: true });
   });
 
+  it("returns D1 coverage counts alongside source receipt timestamps", async () => {
+    const prepare = vi.fn().mockReturnValue({
+      all: vi.fn().mockResolvedValue({
+        results: [
+          {
+            dataset: "player_box",
+            source_count: 3,
+            latest_source_at: "2026-09-08T00:00:00Z",
+          },
+        ],
+      }),
+    });
+    const batch = vi
+      .fn()
+      .mockResolvedValue(Array.from({ length: 9 }, () => ({ results: [{ rows: 7 }] })));
+    const response = await app.request(
+      "/api/basketball/research/coverage",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      coverage: Array<{ dataset: string; rows: number }>;
+      source_receipts: Array<{
+        dataset: string;
+        source_count: number;
+        latest_source_at: string | null;
+      }>;
+    };
+    expect(body.coverage).toHaveLength(9);
+    expect(body.coverage[0]).toEqual({ dataset: "games", rows: 7 });
+    expect(body.source_receipts).toEqual([
+      {
+        dataset: "player_box",
+        source_count: 3,
+        latest_source_at: "2026-09-08T00:00:00Z",
+      },
+    ]);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
+  });
+
   it("serves native basketball pages while preserving known archive routes", async () => {
     const fetch = vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
