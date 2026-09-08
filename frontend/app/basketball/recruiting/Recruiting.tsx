@@ -187,6 +187,8 @@ export default function Recruiting() {
             <option value="prior">Most prior programs</option>
             <option value="workload">Most prior minutes</option>
             <option value="prior_ppg">Prior points per game</option>
+            <option value="prior_rpg">Prior rebounds per game</option>
+            <option value="prior_apg">Prior assists per game</option>
             <option value="prior_ts">Prior true shooting</option>
             <option value="prior_efg">Prior effective FG%</option>
             <option value="program">Current program</option>

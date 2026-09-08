@@ -85,6 +85,20 @@ describe("roster observation sorting", () => {
     );
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
+
+  it("sorts role-specific production without filling missing values", () => {
+    const rows = sortRosterObservations(
+      [
+        { ...row("a", "Alpha", "same_program", "A", [], 300), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300).prior_production!, rpg: 4, apg: null } },
+        { ...row("b", "Beta", "different_program", "B", [], 400), prior_production: { ...row("b", "Beta", "different_program", "B", [], 400).prior_production!, rpg: 7, apg: 5 } },
+        { ...row("c", "Gamma", "new_to_dataset", "C", []) },
+      ],
+      "prior_rpg",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+    const assists = sortRosterObservations(rows, "prior_apg");
+    expect(assists.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
 });
 
 describe("shareable roster observation filters", () => {

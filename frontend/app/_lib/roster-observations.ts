@@ -7,6 +7,8 @@ export type RosterSortKey =
   | "prior"
   | "workload"
   | "prior_ppg"
+  | "prior_rpg"
+  | "prior_apg"
   | "prior_ts"
   | "prior_efg";
 
@@ -48,6 +50,8 @@ const rosterSorts = new Set<RosterSortKey>([
   "prior",
   "workload",
   "prior_ppg",
+  "prior_rpg",
+  "prior_apg",
   "prior_ts",
   "prior_efg",
 ]);
@@ -115,8 +119,23 @@ export function sortRosterObservations(
         (b.prior_production?.minutes ?? -1) -
         (a.prior_production?.minutes ?? -1);
       if (delta) return delta;
-    } else if (key === "prior_ppg" || key === "prior_ts" || key === "prior_efg") {
-      const metric = key === "prior_ppg" ? "ppg" : key === "prior_ts" ? "ts" : "efg";
+    } else if (
+      key === "prior_ppg" ||
+      key === "prior_rpg" ||
+      key === "prior_apg" ||
+      key === "prior_ts" ||
+      key === "prior_efg"
+    ) {
+      const metric =
+        key === "prior_ppg"
+          ? "ppg"
+          : key === "prior_rpg"
+            ? "rpg"
+            : key === "prior_apg"
+              ? "apg"
+              : key === "prior_ts"
+                ? "ts"
+                : "efg";
       const av = a.prior_production?.[metric] ?? null;
       const bv = b.prior_production?.[metric] ?? null;
       if (av == null && bv != null) return 1;
