@@ -68,6 +68,7 @@ const paths = [
   ["Open NCAA leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
     ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
     ["Read within-team RAPM", "/basketball/impact/within-team/", "Compare source-published player impact relative to teammates across 17 seasons."],
+    ["Study team box history", "/basketball/ncaa-team-box/", "Compare NCAA-derived efficiency, tempo and Four Factor profiles across 17 seasons."],
     ["Compare published models", "/basketball/boutique/", "Read attributed team ratings and Box Plus/Minus beside Silvermine's independent model."],
     ["Study lineups", "/basketball/lineups/", "Use possession thresholds and lineup net ratings to ask which combinations actually worked."],
     ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],

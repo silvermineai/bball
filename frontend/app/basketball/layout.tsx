@@ -26,6 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/ncaa-high-schools/">High-school pipeline</Link>
         <Link href="/basketball/ncaa-shooting/">NCAA shooting profiles</Link>
         <Link href="/basketball/team-stats/">Team stat browser</Link>
+        <Link href="/basketball/ncaa-team-box/">NCAA team box archive</Link>
         <Link href="/basketball/leaders/">National leaders</Link>
         <Link href="/basketball/ncaa/">NCAA leaderboards</Link>
         <Link href="/basketball/scouting-board/">Build a player board</Link>
