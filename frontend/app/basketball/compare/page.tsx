@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getScoutIndex } from "../../_lib/scouting-data";
-import { getBasketball, getRosters } from "../../_lib/basketball-data";
+import { getBasketball, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import { buildRosterSummary } from "../../_lib/roster-intel";
 import Compare from "./Compare";
 export const metadata = {
@@ -12,6 +12,7 @@ export const metadata = {
 export default function Page() {
   const data = getScoutIndex(),
     m = getBasketball().model,
+    rosterModel = getRosterModel(),
     rosters = buildRosterSummary(getRosters().players);
   return (
     <>
@@ -41,6 +42,7 @@ export default function Page() {
             calibration: m.calibration,
           }}
           rosters={rosters}
+          rosterModel={rosterModel}
         />
       </Suspense>
     </>

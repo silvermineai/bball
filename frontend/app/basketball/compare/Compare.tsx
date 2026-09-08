@@ -15,6 +15,7 @@ import {
   basketballScenario,
   type ScenarioModel,
 } from "../../_lib/basketball-scenario";
+import type { BBRosterModel } from "../../_lib/basketball-types";
 const factors = [
   ["efg", "Shooting · eFG%"],
   ["tov", "Turnovers / possessions"],
@@ -28,10 +29,12 @@ export default function Compare({
   teams,
   model,
   rosters,
+  rosterModel,
 }: {
   teams: { id: string; name: string }[];
   model: ScenarioModel;
   rosters: RosterSummary[];
+  rosterModel: Pick<BBRosterModel, "teams" | "feature_definition">;
 }) {
   const params = useSearchParams();
   const validId = (value: string | null) =>
@@ -81,6 +84,16 @@ export default function Compare({
   const homeId = venue === "b" ? b : a,
     awayId = venue === "b" ? a : b,
     p = basketballScenario(model, homeId, awayId, venue === "neutral");
+  const rosterByTeam = new Map(rosterModel.teams.map((team) => [team.team_id, team]));
+  const homeRosterModel = rosterByTeam.get(homeId),
+    awayRosterModel = rosterByTeam.get(awayId);
+  const rosterMarginDelta =
+    p && homeRosterModel?.predicted_net != null && homeRosterModel.prior_net != null &&
+    awayRosterModel?.predicted_net != null && awayRosterModel.prior_net != null
+      ? ((homeRosterModel.predicted_net - homeRosterModel.prior_net) -
+          (awayRosterModel.predicted_net - awayRosterModel.prior_net)) * p.pace / 100
+      : null;
+  const rosterMargin = p && rosterMarginDelta != null ? p.home_margin + rosterMarginDelta : null;
   const an = teams.find((t) => t.id === a)!.name,
     bn = teams.find((t) => t.id === b)!.name;
   const intel =
@@ -183,6 +196,25 @@ export default function Compare({
                   </strong>
                 </p>
               </div>
+              {rosterMargin != null && rosterMarginDelta != null && (
+                <div className="roster-context">
+                  <div className="match-detail">
+                    <strong>Roster continuity challenger</strong>
+                    <span className="muted">research-only</span>
+                  </div>
+                  <div className="match-detail muted">
+                    <span>Scenario home margin</span>
+                    <strong>{fmt(rosterMargin, 1)}</strong>
+                  </div>
+                  <div className="match-detail muted">
+                    <span>Shift from published margin</span>
+                    <span>{rosterMarginDelta > 0 ? "+" : ""}{fmt(rosterMarginDelta, 1)} pts</span>
+                  </div>
+                  <small>
+                    {rosterModel.feature_definition} It does not change the primary probability, uncertainty range or ledger registration.
+                  </small>
+                </div>
+              )}
             </section>
           )}
           <p className="note">

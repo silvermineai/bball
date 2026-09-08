@@ -237,6 +237,24 @@ export type BBRosterScenario = {
   home_predicted_net: number;
   away_predicted_net: number;
 };
+export type BBRosterModelTeam = {
+  season: number;
+  team_id: string;
+  team: string;
+  listed_players: number;
+  returning_players: number;
+  represented_players: number;
+  new_players: number;
+  prior_minutes: number;
+  returning_minutes: number;
+  represented_prior_minutes: number;
+  returning_minutes_share: number | null;
+  represented_minutes_share: number | null;
+  incoming_minutes_share: number | null;
+  prior_net: number | null;
+  target_net: number | null;
+  predicted_net: number | null;
+};
 export type BBRosterModel = {
   version: string;
   generated_at: string;
@@ -258,7 +276,7 @@ export type BBRosterModel = {
     scenario_games: number;
   };
   limitations: string[];
-  teams: Array<Record<string, unknown>>;
+  teams: BBRosterModelTeam[];
   scenarios: BBRosterScenario[];
 };
 export type BBImpact = {
