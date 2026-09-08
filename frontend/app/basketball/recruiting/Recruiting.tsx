@@ -282,6 +282,71 @@ export default function Recruiting() {
             ) : (
               <p className="note">No names saved yet. Use “Add to watch list” beside a row below.</p>
             )}
+            {pickedRows.length > 1 && (
+              <div className="table-scroll" style={{ marginTop: 18 }}>
+                <div className="section-heading" style={{ marginBottom: 10 }}>
+                  <p className="note">Side-by-side prior production · source IDs remain separate</p>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    onClick={() =>
+                      downloadCsv(
+                        `basketball-recruiting-watchlist-${season}.csv`,
+                        toCsv(
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Source URL"],
+                          pickedRows.map((player) => [
+                            player.name,
+                            player.id,
+                            player.team,
+                            labels[player.status],
+                            player.prior_production?.minutes,
+                            player.prior_production?.mpg,
+                            player.prior_production?.ppg,
+                            player.prior_production?.rpg,
+                            player.prior_production?.apg,
+                            player.prior_production?.ts == null ? null : player.prior_production.ts * 100,
+                            player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
+                            player.source_url,
+                          ]),
+                        ),
+                      )
+                    }
+                  >
+                    Download comparison CSV ↓
+                  </button>
+                </div>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Player</th>
+                      <th>Program / observation</th>
+                      <th className="numeric">Prior MIN</th>
+                      <th className="numeric">MPG</th>
+                      <th className="numeric">PPG</th>
+                      <th className="numeric">RPG</th>
+                      <th className="numeric">APG</th>
+                      <th className="numeric">TS%</th>
+                      <th className="numeric">eFG%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pickedRows.map((player) => (
+                      <tr key={`compare-${player.id}-${player.team_id}`}>
+                        <td><Link href={`/basketball/player/?id=${player.id}`}>{player.name}</Link><small>{player.id}</small></td>
+                        <td>{player.team}<small>{labels[player.status]}</small></td>
+                        <td className="numeric">{player.prior_production?.minutes?.toLocaleString() || "—"}</td>
+                        <td className="numeric">{player.prior_production?.mpg == null ? "—" : player.prior_production.mpg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.ppg == null ? "—" : player.prior_production.ppg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.rpg == null ? "—" : player.prior_production.rpg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.apg == null ? "—" : player.prior_production.apg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
+                        <td className="numeric">{player.prior_production?.efg == null ? "—" : `${(player.prior_production.efg * 100).toFixed(1)}%`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
           {data.unusable_rows != null && data.unusable_rows > 0 && (
             <p className="career-coverage-warning">

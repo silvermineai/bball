@@ -12,6 +12,8 @@ Announcement cards with one exact normalized name-and-program match now hand off
 
 The recruiting board supports a twelve-player watch list. It stores source IDs in repeated `rosterPick` URL parameters, so a filtered review can be shared or reopened without a server account. The school-announcement coverage map also stores its program search, evidence status and sort order in `coverageQ`, `coverageStatus` and `coverageSort`, making an unreviewed-program queue shareable. The list is a research aid for source observations; it does not alter rankings, forecasts or transaction status.
 
+When two or more names are saved, the watch list opens a side-by-side comparison of prior recorded minutes, per-game production, true shooting and effective field goal percentage, with a CSV export. It is a review aid for the selected source IDs: missing values stay blank, and the comparison does not convert a roster observation into a transfer, eligibility or projected-role claim.
+
 Announcement cards also show a conservative cross-check against the current source roster: normalized full-name plus program matches are labeled exact, multiple matches are flagged for review, and no match is reported without treating it as absence. This joins two source observations for navigation only; it does not assert identity, eligibility or availability.
 
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
