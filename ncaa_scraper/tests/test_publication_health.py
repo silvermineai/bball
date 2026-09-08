@@ -4,7 +4,11 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ncaa_scraper.publication_health import _catalog_health, check_freshness
+from ncaa_scraper.publication_health import (
+    _catalog_health,
+    _unresolved_coverage_health,
+    check_freshness,
+)
 
 
 def write_release(root, sport, name, value):
@@ -53,6 +57,12 @@ class PublicationHealthTest(unittest.TestCase):
                 "basketball",
                 "ncaa-individual.json",
                 {"generated_at": "2026-09-07T12:00:00Z", "season": 2026},
+            )
+            write_release(
+                directory,
+                "basketball",
+                "unresolved-coverage.json",
+                {"generated_at": "2026-09-07T12:00:00Z", "total_rows": 0, "rows_with_observed_stats": 0, "rows": []},
             )
             with self.assertRaises(ValueError) as error:
                 check_freshness(
@@ -174,6 +184,42 @@ class PublicationHealthTest(unittest.TestCase):
                     max_age_hours=48,
                 )
             self.assertIn("missing dataset layers", str(error.exception))
+
+    def test_unresolved_coverage_requires_matching_edition_and_totals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            overview = {"generated_at": "2026-09-08T12:00:00Z"}
+            payload = {
+                "generated_at": overview["generated_at"],
+                "total_rows": 3,
+                "rows_with_observed_stats": 2,
+                "rows": [
+                    {"dataset": "ncaa_player_box", "reason": "missing ID", "rows": 2, "rows_with_observed_stats": 2},
+                    {"dataset": "ncaa_shots", "reason": "missing ID", "rows": 1, "rows_with_observed_stats": 0},
+                ],
+            }
+            write_release(directory, "basketball", "unresolved-coverage.json", payload)
+            report = _unresolved_coverage_health(root, overview)
+            self.assertEqual(report["rows"], 3)
+            payload["rows"][0]["rows"] = 4
+            write_release(directory, "basketball", "unresolved-coverage.json", payload)
+            with self.assertRaises(ValueError) as error:
+                _unresolved_coverage_health(root, overview)
+            self.assertIn("totals do not match", str(error.exception))
+
+    def test_unresolved_coverage_rejects_stale_edition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            overview = {"generated_at": "2026-09-08T12:00:00Z"}
+            write_release(
+                directory,
+                "basketball",
+                "unresolved-coverage.json",
+                {"generated_at": "2026-09-08T11:00:00Z", "total_rows": 0, "rows_with_observed_stats": 0, "rows": []},
+            )
+            with self.assertRaises(ValueError) as error:
+                _unresolved_coverage_health(root, overview)
+            self.assertIn("does not match basketball overview edition", str(error.exception))
 
 
 if __name__ == "__main__":

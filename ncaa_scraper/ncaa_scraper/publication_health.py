@@ -143,6 +143,48 @@ def _player_catalog_health(
     return {**checked, "archive_seasons": len(seasons), "box_rows": rows}
 
 
+def _unresolved_coverage_health(
+    root: Path,
+    overview: dict,
+) -> dict:
+    """Validate the public identity-review summary against the active edition."""
+    relative = "basketball/unresolved-coverage.json"
+    payload = _read(root, str(Path("frontend/public/data") / relative))
+    generated = payload.get("generated_at")
+    overview_generated = overview.get("generated_at")
+    if not isinstance(generated, str) or not isinstance(overview_generated, str):
+        raise ValueError(f"{relative} has no generated_at timestamp")
+    if generated != overview_generated:
+        raise ValueError(f"{relative} does not match basketball overview edition")
+    total = payload.get("total_rows")
+    observed = payload.get("rows_with_observed_stats")
+    rows = payload.get("rows")
+    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in (total, observed)):
+        raise ValueError(f"{relative} has invalid totals")
+    if observed > total or not isinstance(rows, list):
+        raise ValueError(f"{relative} has invalid row coverage")
+    seen: set[tuple[str, str]] = set()
+    sum_total = 0
+    sum_observed = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError(f"{relative} has a malformed breakdown row")
+        dataset, reason = row.get("dataset"), row.get("reason")
+        row_total, row_observed = row.get("rows"), row.get("rows_with_observed_stats")
+        if not isinstance(dataset, str) or not dataset or not isinstance(reason, str) or not reason:
+            raise ValueError(f"{relative} has an invalid breakdown identity")
+        if (dataset, reason) in seen:
+            raise ValueError(f"{relative} has duplicate breakdown rows")
+        if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in (row_total, row_observed)) or row_observed > row_total:
+            raise ValueError(f"{relative} has invalid breakdown counts")
+        seen.add((dataset, reason))
+        sum_total += row_total
+        sum_observed += row_observed
+    if sum_total != total or sum_observed != observed:
+        raise ValueError(f"{relative} totals do not match its breakdown")
+    return {"release": relative, "generated_at": generated, "groups": len(rows), "rows": total, "rows_with_observed_stats": observed}
+
+
 def check_freshness(
     root: Path,
     sport: str,
@@ -226,6 +268,7 @@ def check_freshness(
                 )
                 if ncaa.get("season") != overview.get("season") - 1:
                     raise ValueError("NCAA leaderboard season does not match basketball overview")
+                releases.append(_unresolved_coverage_health(root, overview))
             else:
                 if forecast_games > upcoming_games:
                     raise ValueError("football forecasts exceed upcoming games")
