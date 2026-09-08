@@ -56,8 +56,8 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
               SUM(COALESCE(CAST(json_extract(stats_json,'$.ast') AS REAL),0)) AS assists
        FROM bb_ncaa_player_season GROUP BY season,player_id,team_id
      ) s ON s.season=r.season AND s.team_id=r.team_id AND s.player_id=r.player_id
-     WHERE ${where.replaceAll("season=?", "r.season=?").replaceAll("player_name", "r.player_name").replaceAll("team_name", "r.team_name").replaceAll("player_id", "r.player_id")}
-     ORDER BY player_name ASC, team_name ASC, player_id ASC LIMIT 40 OFFSET ?`,
+     WHERE ${where.replaceAll("season=?", "r.season=?").replaceAll("player_name", "r.player_name").replaceAll("team_name", "r.team_name").replaceAll("player_id", "r.player_id").replaceAll("team_id", "r.team_id")}
+     ORDER BY r.player_name ASC, r.team_name ASC, r.player_id ASC LIMIT 40 OFFSET ?`,
   ).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({ season, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ profile_json, ...row }) => ({ ...row, profile: JSON.parse(String(profile_json)) })) });
