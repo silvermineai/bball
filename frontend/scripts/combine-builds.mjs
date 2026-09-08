@@ -16,5 +16,9 @@ await cp("dist/basketball/assets", "dist/client/basketball/assets", {
 // two URL families to their archived R2 revision when an asset is absent.
 await writeFile(
   "dist/client/.assetsignore",
-  "/blog/game-*/\n/basketball/briefs/*/\n",
+  // Wrangler walks files with paths such as `blog/game-123/index.html`.
+  // Match the directory prefixes without a trailing slash so the archive
+  // snapshots stay available to the post-deploy R2 capture without counting
+  // toward the Workers static-asset manifest.
+  "/blog/game-*\n/basketball/briefs/[0-9]*\n",
 );
