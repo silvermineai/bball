@@ -31,6 +31,10 @@ DATASETS = {
     "player_core": (PREFIX + "player_core", "player_core_{year}.parquet"),
     "player_crosswalk": ("mbb_crosswalk", "mbb_player_crosswalk_{year}.parquet"),
     "ncaa_rapm": ("ncaa_mbb_rapm", "ncaa_mbb_rapm_{year}.parquet"),
+    "ncaa_rapm_within_team": (
+        "ncaa_mbb_rapm_within_team",
+        "ncaa_mbb_rapm_within_team_{year}.parquet",
+    ),
     # NCAA-derived player box rows use the publisher's own identity namespace.
     # Keep them separate from ESPN athlete IDs while retaining the full stat
     # vector for scouting and audit work.

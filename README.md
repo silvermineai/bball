@@ -49,6 +49,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Team stat browser | `/basketball/team-stats/` | Search 45 attributed aggregate team-season fields across 2023–24 through 2025–26, with source display values, pagination and CSV export |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
+| Within-team RAPM | `/basketball/impact/within-team/` | Compare source-published within-team player impact across 17 seasons with team possession samples |
 | NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
 | Roster observations | `/basketball/recruiting/` | Dated recruiting evidence plus an all-354-program coverage map and clearly marked unconfirmed future listings |
 | Roster impact lab | `/basketball/roster-lab/` | Compare returning workload, position continuity, class-year workload, incoming prior minutes, source-reported roster shape, efficiency rating and 2026–27 schedule coverage across source-listed programs |
@@ -87,6 +88,7 @@ ncaa_scraper/ncaa_scraper/
   basketball.py           Basketball ingestion, rankings, rosters and D1 export
   basketball_model.py     Possession efficiency model and independent calibration
   basketball_matchups.py  Source-derived five-v-five matchup stint archive
+  basketball_within_impact.py  NCAA within-team RAPM archive
   analytics.py            Existing basketball analytics artifacts
   fetcher.py              NCAA cache reader with enforced robots checks
 
