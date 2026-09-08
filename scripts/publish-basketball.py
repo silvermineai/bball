@@ -412,6 +412,7 @@ run([PY, "scripts/sync-careers.py"])
 run([PY, "scripts/sync-ncaa-individual.py"])
 run([PY, "scripts/sync-matchup-stints.py"])
 run([PY, "scripts/sync-ncaa-team-box.py"])
+run([PY, "scripts/sync-ncaa-player-box.py"])
 run([PY, "scripts/sync-within-impact.py"])
 run([PY, "scripts/archive-evaluation.py"])
 if not BATCH_PUBLICATION:

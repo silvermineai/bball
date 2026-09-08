@@ -1401,6 +1401,22 @@ def build(conn, target=2027):
             "WHERE season IS NOT NULL GROUP BY season ORDER BY season"
         )
     ]
+    source_receipts = {
+        int(row[0]): json.loads(row[1])
+        for row in conn.execute(
+            "SELECT season, receipt_json FROM bb_sources "
+            "WHERE dataset='ncaa_player_box'"
+        )
+    }
+    for season in ncaa_player_box_seasons:
+        receipt = source_receipts.get(season["season"], {})
+        season.update(
+            {
+                "sha256": receipt.get("sha256"),
+                "source_url": receipt.get("url"),
+                "fetched_at": receipt.get("fetched_at"),
+            }
+        )
     artifacts = {
         "overview": overview,
         "roster-model": roster_model,
