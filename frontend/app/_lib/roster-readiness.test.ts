@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { BBOverview, BBRosters } from "./basketball-types";
 import {
   buildRosterLabRows,
+  classExperienceWatch,
   parseRosterLabFilters,
   positionContinuityWatch,
   rosterLabFilterSearch,
   rosterPositionGroup,
+  rosterClassGroup,
   sortRosterLabRows,
 } from "./roster-readiness";
 
@@ -25,6 +27,7 @@ const player = (
   status: string,
   minutes: number,
   position: string | null = null,
+  class_year: string | null = null,
 ) => ({
   id: `${team_id}-${status}-${minutes}`,
   name: "Player",
@@ -33,7 +36,7 @@ const player = (
   previous_teams: [],
   status,
   position,
-  class_year: null,
+  class_year,
   height: null,
   weight: null,
   source_url: null,
@@ -125,6 +128,26 @@ describe("roster lab", () => {
       center: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
       unreported: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
     });
+  });
+
+  it("keeps class-year workload descriptive and finds a young workload profile", () => {
+    expect(rosterClassGroup("Freshman")).toBe("freshman");
+    expect(rosterClassGroup("Senior")).toBe("senior");
+    expect(rosterClassGroup("Graduate Student")).toBe("unreported");
+    const rows = buildRosterLabRows(
+      rosters([
+        player("1", "Alpha", "same_program", 200, "G", "Freshman"),
+        player("1", "Alpha", "different_program", 100, "F", "Senior"),
+        player("2", "Beta", "same_program", 400, "G", "Senior"),
+      ]),
+      overview,
+    );
+    const alpha = rows.find((row) => row.teamId === "1")!;
+    expect(alpha.classCounts).toEqual({ freshman: 1, sophomore: 0, junior: 0, senior: 1, unreported: 0 });
+    expect(alpha.classWorkload.freshman).toEqual({ priorMinutes: 200, returningMinutes: 200, incomingPriorMinutes: 0, returningShare: 1 });
+    expect(alpha.classWorkload.senior).toEqual({ priorMinutes: 100, returningMinutes: 0, incomingPriorMinutes: 100, returningShare: 0 });
+    expect(alpha.upperclassPriorMinutesShare).toBeCloseTo(1 / 3);
+    expect(classExperienceWatch(rows).map((row) => row.team)).toEqual(["Alpha", "Beta"]);
   });
 
   it("surfaces the thinnest observed position continuity", () => {

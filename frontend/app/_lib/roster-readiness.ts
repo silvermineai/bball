@@ -21,6 +21,16 @@ export type RosterPositionWorkload = {
   returningShare: number | null;
 };
 
+/** Source-reported class labels are normalized only for stable grouping. */
+export type RosterClassGroup = "freshman" | "sophomore" | "junior" | "senior" | "unreported";
+export type RosterClassCounts = Record<RosterClassGroup, number>;
+export type RosterClassWorkload = {
+  priorMinutes: number;
+  returningMinutes: number;
+  incomingPriorMinutes: number;
+  returningShare: number | null;
+};
+
 const rosterLabSorts = new Set<RosterLabSort>([
   "represented",
   "returning",
@@ -59,6 +69,16 @@ export function rosterPositionGroup(position: string | null): RosterPositionGrou
   return "unreported";
 }
 
+/** Normalize the source's class-year labels without inferring eligibility or age. */
+export function rosterClassGroup(classYear: string | null): RosterClassGroup {
+  const value = (classYear || "").trim().toLowerCase();
+  if (value === "freshman") return "freshman";
+  if (value === "sophomore") return "sophomore";
+  if (value === "junior") return "junior";
+  if (value === "senior") return "senior";
+  return "unreported";
+}
+
 export type RosterLabRow = {
   teamId: string;
   team: string;
@@ -76,6 +96,9 @@ export type RosterLabRow = {
   incomingShare: number | null;
   positionCounts: RosterPositionCounts;
   positionWorkload: Record<RosterPositionGroup, RosterPositionWorkload>;
+  classCounts: RosterClassCounts;
+  classWorkload: Record<RosterClassGroup, RosterClassWorkload>;
+  upperclassPriorMinutesShare: number | null;
   ratingRank: number | null;
   adjustedNet: number | null;
   upcomingGames: number;
@@ -127,18 +150,44 @@ export function buildRosterLabRows(
           ],
         ),
       ) as Record<RosterPositionGroup, RosterPositionWorkload>;
+      const classCounts: RosterClassCounts = {
+        freshman: 0,
+        sophomore: 0,
+        junior: 0,
+        senior: 0,
+        unreported: 0,
+      };
+      const classWorkload = Object.fromEntries(
+        (["freshman", "sophomore", "junior", "senior", "unreported"] as RosterClassGroup[]).map(
+          (group) => [
+            group,
+            { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+          ],
+        ),
+      ) as Record<RosterClassGroup, RosterClassWorkload>;
       for (const player of players) {
         const group = rosterPositionGroup(player.position);
         positionCounts[group] += 1;
+        const classGroup = rosterClassGroup(player.class_year);
+        classCounts[classGroup] += 1;
         const minutes = player.prior_production?.minutes ?? 0;
         positionWorkload[group].priorMinutes += minutes;
+        classWorkload[classGroup].priorMinutes += minutes;
         if (player.status === "same_program") {
           positionWorkload[group].returningMinutes += minutes;
+          classWorkload[classGroup].returningMinutes += minutes;
         } else if (player.status === "different_program") {
           positionWorkload[group].incomingPriorMinutes += minutes;
+          classWorkload[classGroup].incomingPriorMinutes += minutes;
         }
       }
       for (const workload of Object.values(positionWorkload)) {
+        workload.returningShare =
+          workload.priorMinutes > 0
+            ? workload.returningMinutes / workload.priorMinutes
+            : null;
+      }
+      for (const workload of Object.values(classWorkload)) {
         workload.returningShare =
           workload.priorMinutes > 0
             ? workload.returningMinutes / workload.priorMinutes
@@ -187,6 +236,13 @@ export function buildRosterLabRows(
           priorMinutes > 0 ? incomingPriorMinutes / priorMinutes : null,
         positionCounts,
         positionWorkload,
+        classCounts,
+        classWorkload,
+        upperclassPriorMinutesShare:
+          priorMinutes > 0
+            ? (classWorkload.junior.priorMinutes + classWorkload.senior.priorMinutes) /
+              priorMinutes
+            : null,
         ratingRank: rating?.rank ?? null,
         adjustedNet: rating?.adj_net ?? null,
         upcomingGames: coverage.upcoming,
@@ -210,6 +266,19 @@ export function positionContinuityWatch(
         (a.workload.returningShare ?? 2) - (b.workload.returningShare ?? 2) ||
         b.workload.priorMinutes - a.workload.priorMinutes ||
         a.row.team.localeCompare(b.row.team),
+    )
+    .slice(0, limit);
+}
+
+/** Find programs whose observed prior workload is least upperclass-heavy. */
+export function classExperienceWatch(rows: RosterLabRow[], limit = 5) {
+  return [...rows]
+    .filter((row) => row.upperclassPriorMinutesShare != null && row.priorMinutes > 0)
+    .sort(
+      (a, b) =>
+        (a.upperclassPriorMinutesShare ?? 2) - (b.upperclassPriorMinutesShare ?? 2) ||
+        b.priorMinutes - a.priorMinutes ||
+        a.team.localeCompare(b.team),
     )
     .slice(0, limit);
 }
@@ -272,6 +341,21 @@ export function rosterLabCsv(rows: RosterLabRow[]) {
         workload.returningShare == null ? null : workload.returningShare * 100,
       ];
     }),
+    row.classCounts.freshman,
+    row.classCounts.sophomore,
+    row.classCounts.junior,
+    row.classCounts.senior,
+    row.classCounts.unreported,
+    ...(["freshman", "sophomore", "junior", "senior"] as const).flatMap((group) => {
+      const workload = row.classWorkload[group];
+      return [
+        workload.priorMinutes,
+        workload.returningMinutes,
+        workload.incomingPriorMinutes,
+        workload.returningShare == null ? null : workload.returningShare * 100,
+      ];
+    }),
+    row.upperclassPriorMinutesShare == null ? null : row.upperclassPriorMinutesShare * 100,
     row.ratingRank,
     row.adjustedNet,
     row.upcomingGames,

@@ -9,6 +9,7 @@ import {
   parseRosterLabFilters,
   rosterLabFilterSearch,
   sortRosterLabRows,
+  classExperienceWatch,
   type RosterPositionGroup,
   type RosterLabRow,
   type RosterLabSort,
@@ -65,6 +66,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
   const lowestReturning = [...withPrior]
     .sort((a, b) => (a.returningShare ?? 2) - (b.returningShare ?? 2))
     .slice(0, 3);
+  const youngestWorkload = classExperienceWatch(rows, 5);
   const positionGroups: Array<{ key: RosterPositionGroup; label: string }> = [
     { key: "guard", label: "Guard" },
     { key: "forward", label: "Forward" },
@@ -121,7 +123,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
             downloadCsv(
               "basketball-roster-lab-2026-27.csv",
               toCsv(
-                ["Program", "Program ID", "Listed players", "Returning players", "Incoming prior-program players", "New-to-dataset players", "Ambiguous players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Represented prior minutes", "Returning minutes share", "Represented prior minutes share", "Incoming workload share", "Guards", "Forwards", "Centers", "Unreported positions", "Guard prior minutes", "Guard returning minutes", "Guard incoming prior minutes", "Guard returning share", "Forward prior minutes", "Forward returning minutes", "Forward incoming prior minutes", "Forward returning share", "Center prior minutes", "Center returning minutes", "Center incoming prior minutes", "Center returning share", "Rating rank", "Adjusted net", "Upcoming games", "Forecasted games"],
+              ["Program", "Program ID", "Listed players", "Returning players", "Incoming prior-program players", "New-to-dataset players", "Ambiguous players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Represented prior minutes", "Returning minutes share", "Represented prior minutes share", "Incoming workload share", "Guards", "Forwards", "Centers", "Unreported positions", "Guard prior minutes", "Guard returning minutes", "Guard incoming prior minutes", "Guard returning share", "Forward prior minutes", "Forward returning minutes", "Forward incoming prior minutes", "Forward returning share", "Center prior minutes", "Center returning minutes", "Center incoming prior minutes", "Center returning share", "Freshmen", "Sophomores", "Juniors", "Seniors", "Unreported class", "Freshman prior minutes", "Freshman returning minutes", "Freshman incoming prior minutes", "Freshman returning share", "Sophomore prior minutes", "Sophomore returning minutes", "Sophomore incoming prior minutes", "Sophomore returning share", "Junior prior minutes", "Junior returning minutes", "Junior incoming prior minutes", "Junior returning share", "Senior prior minutes", "Senior returning minutes", "Senior incoming prior minutes", "Senior returning share", "Upperclass prior minutes share", "Rating rank", "Adjusted net", "Upcoming games", "Forecasted games"],
                 rosterLabCsv(filtered),
               ),
             )
@@ -133,7 +135,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
       <div className="table-scroll">
         <table className="data-table roster-lab-table">
           <thead>
-            <tr><th>Program</th><th className="numeric">Schedule</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th>Roster shape</th><th>Returning minutes</th><th>Represented workload</th><th className="numeric">Rating</th></tr>
+            <tr><th>Program</th><th className="numeric">Schedule</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th>Roster shape</th><th>Class mix</th><th>Returning minutes</th><th>Represented workload</th><th className="numeric">Rating</th></tr>
           </thead>
           <tbody>
             {filtered.map((row) => (
@@ -144,6 +146,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
                 <td className="numeric">{row.returning}</td>
                 <td className="numeric">{row.incoming}</td>
                 <td className="numeric"><strong>{row.positionCounts.guard}/{row.positionCounts.forward}/{row.positionCounts.center}</strong><small>G / F / C · {row.positionCounts.unreported} unreported</small></td>
+                <td className="numeric"><strong>{row.classCounts.freshman}/{row.classCounts.sophomore}/{row.classCounts.junior}/{row.classCounts.senior}</strong><small>Fr / So / Jr / Sr · {percent(row.upperclassPriorMinutesShare)} prior upperclass</small></td>
                 <td><div className="signal-value"><Bar value={row.returningShare} /><strong>{percent(row.returningShare)}</strong></div><small>{Math.round(row.returningMinutes).toLocaleString()} of {Math.round(row.priorMinutes).toLocaleString()} prior min</small></td>
                 <td><div className="signal-value"><Bar value={row.representedShare} /><strong>{percent(row.representedShare)}</strong></div><small>{Math.round(row.incomingPriorMinutes).toLocaleString()} incoming prior min</small></td>
                 <td className="numeric">{row.ratingRank == null ? "—" : `#${row.ratingRank}`}<small>{row.adjustedNet == null ? "" : `${fmt(row.adjustedNet, 1)} net`}</small></td>
@@ -175,6 +178,29 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
                   </tr>
                 )),
               )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="paper-panel" style={{ marginTop: 28 }}>
+        <div className="eyebrow">Class-year workload watch</div>
+        <h2>Where the observed core is youngest.</h2>
+        <p className="note">
+          Upperclass workload is prior recorded minutes attached to source-listed juniors or seniors, divided by all prior minutes observed for that program. It is a recruiting and development question, not an age, eligibility or availability judgment.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Program</th><th className="numeric">Fresh / Soph / Jr / Sr</th><th className="numeric">Upperclass prior minutes</th><th className="numeric">Upperclass share</th><th className="numeric">Represented workload</th></tr></thead>
+            <tbody>
+              {youngestWorkload.map((row) => (
+                <tr key={row.teamId}>
+                  <td><Link href={`/basketball/programs/${row.teamId}/`}>{row.team}</Link><small>{row.listed} listed · {Math.round(row.priorMinutes).toLocaleString()} prior minutes</small></td>
+                  <td className="numeric">{row.classCounts.freshman} / {row.classCounts.sophomore} / {row.classCounts.junior} / {row.classCounts.senior}</td>
+                  <td className="numeric">{Math.round(row.classWorkload.junior.priorMinutes + row.classWorkload.senior.priorMinutes).toLocaleString()}</td>
+                  <td className="numeric"><strong>{percent(row.upperclassPriorMinutesShare)}</strong></td>
+                  <td className="numeric">{percent(row.representedShare)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
