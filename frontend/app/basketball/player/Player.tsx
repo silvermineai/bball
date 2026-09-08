@@ -139,6 +139,18 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                 Search school announcements →
               </Link>
             )}
+            <Link
+              className="hero-link"
+              href={`/basketball/ncaa-rankings/?q=${encodeURIComponent(selected?.name || data.profiles[0].name)}`}
+            >
+              Search NCAA source records →
+            </Link>
+            <Link
+              className="hero-link"
+              href={`/basketball/source-stats/?q=${encodeURIComponent(selected?.name || data.profiles[0].name)}`}
+            >
+              Search publisher stat fields →
+            </Link>
           </div>
         )}
       </div>
