@@ -2,9 +2,9 @@ name: Refresh research publication
 
 on:
   schedule:
-    # Weekly source refresh; manual dispatch remains available for a faster
+    # Daily source refresh; manual dispatch remains available for a faster
     # correction after a publisher releases an amended file.
-    - cron: "17 10 * * 1"
+    - cron: "17 10 * * *"
   workflow_dispatch:
     inputs:
       sport:
