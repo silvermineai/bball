@@ -162,19 +162,62 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
   const id = c.req.param("id");
   if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
   const { season, page } = c.req.valid("query");
-  const [count, result] = await Promise.all([
+  const [count, result, summaryResult] = await Promise.all([
     c.env.DB.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
       WHERE s.athlete_id=? AND s.season=? ORDER BY g.kickoff DESC,s.dataset,s.record_key LIMIT 50 OFFSET ?`)
       .bind(id, season, page * 50).all<{ dataset: string; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
+    c.env.DB.prepare(`SELECT dataset,category,team_id,stats_json
+      FROM football_stats
+      WHERE athlete_id=? AND season=? AND dataset IN ('passing','rushing','receiving','box')
+      ORDER BY dataset,category,record_key`)
+      .bind(id, season)
+      .all<{ dataset: string; category: string; team_id: string | null; stats_json: string }>(),
   ]);
   if (!count?.total) return c.json({ error: "No records found" }, 404);
   const rows = result.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(stats_json) as Record<string, string> }));
-  const first = rows[0]?.stats;
+  const summaryRows = summaryResult.results.flatMap((row) => {
+    try {
+      return [{ ...row, stats: JSON.parse(row.stats_json) as Record<string, unknown> }];
+    } catch {
+      return [];
+    }
+  });
+  const number = (value: unknown) => {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const production = summaryRows
+    .filter((row) => row.dataset !== "box")
+    .map((row) => ({
+      category: row.category,
+      team_id: row.team_id,
+      team: String(row.stats.pos_team || ""),
+      division: String(row.stats.division || "unknown"),
+      games: number(row.stats.games),
+      plays: number(row.stats.plays),
+      yards: number(row.stats.yards),
+      touchdowns: number(row.stats.passing_td ?? row.stats.rushing_td ?? row.stats.receiving_td),
+      epa: number(row.stats.TEPA),
+      epa_per_play: number(row.stats.EPAplay),
+      rank: number(row.stats.TEPA_rank),
+    }))
+    .filter((row) => row.games !== null || row.plays !== null || row.epa !== null);
+  const boxCategories = [...new Set(summaryRows.filter((row) => row.dataset === "box").map((row) => row.category))]
+    .map((category) => {
+      const categoryRows = summaryRows.filter((row) => row.dataset === "box" && row.category === category);
+      return {
+        category,
+        records: categoryRows.length,
+        games: new Set(categoryRows.map((row) => String(row.stats.game_id || "")).filter(Boolean)).size,
+      };
+    })
+    .sort((a, b) => a.category.localeCompare(b.category));
+  const first = rows[0]?.stats || (summaryRows[0]?.stats as Record<string, string> | undefined);
   const name = first?.athlete_name ?? first?.passer_player_name ?? first?.rusher_player_name ?? first?.receiver_player_name ?? id;
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ rows, total: count.total, name, season, page });
+  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories } });
 });
 
 app.get("/api/football/coverage", async (c) => {

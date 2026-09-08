@@ -8,6 +8,89 @@ describe("bball api", () => {
     await expect(res.json()).resolves.toMatchObject({ ok: true });
   });
 
+  it("returns exact-ID football season production beside the game log", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total")) {
+        return { bind: () => ({ first: async () => ({ total: 3 }) }) };
+      }
+      if (sql.includes("SELECT s.dataset")) {
+        return {
+          bind: () => ({
+            all: async () => ({
+              results: [
+                {
+                  dataset: "box",
+                  game_id: "401",
+                  category: "rushing",
+                  stats_json: JSON.stringify({
+                    athlete_name: "Example Player",
+                    game_id: "401",
+                  }),
+                  kickoff: "2025-09-01T00:00:00Z",
+                  home_name: "Home",
+                  away_name: "Away",
+                },
+              ],
+            }),
+          }),
+        };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [
+              {
+                dataset: "rushing",
+                category: "rushing",
+                team_id: "10",
+                stats_json: JSON.stringify({
+                  rusher_player_name: "Example Player",
+                  pos_team: "Example U",
+                  division: "fbs",
+                  games: "10",
+                  plays: "100",
+                  yards: "700",
+                  rushing_td: "8",
+                  TEPA: "12.5",
+                  EPAplay: "0.125",
+                  TEPA_rank: "42",
+                }),
+              },
+              {
+                dataset: "box",
+                category: "rushing",
+                team_id: "10",
+                stats_json: JSON.stringify({ game_id: "401" }),
+              },
+            ],
+          }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/football/players/123?season=2025",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      name: string;
+      summary: {
+        production: Array<{ category: string; epa: number; rank: number }>;
+        box_categories: Array<{ category: string; games: number }>;
+      };
+    };
+    expect(body.name).toBe("Example Player");
+    expect(body.summary.production[0]).toMatchObject({
+      category: "rushing",
+      epa: 12.5,
+      rank: 42,
+    });
+    expect(body.summary.box_categories).toEqual([
+      { category: "rushing", records: 1, games: 1 },
+    ]);
+  });
+
   it("returns D1 coverage counts alongside source receipt timestamps", async () => {
     const prepare = vi.fn().mockReturnValue({
       all: vi.fn().mockResolvedValue({

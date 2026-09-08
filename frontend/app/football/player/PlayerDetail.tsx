@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { date } from "../../_lib/format";
+import { date, fmt } from "../../_lib/format";
 type Row = {
   dataset: string;
   game_id: string | null;
@@ -12,7 +12,30 @@ type Row = {
   home_name: string | null;
   away_name: string | null;
 };
-type Detail = { rows: Row[]; total: number; name: string; season: number };
+type Production = {
+  category: string;
+  team_id: string | null;
+  team: string;
+  division: string;
+  games: number | null;
+  plays: number | null;
+  yards: number | null;
+  touchdowns: number | null;
+  epa: number | null;
+  epa_per_play: number | null;
+  rank: number | null;
+};
+type Detail = {
+  rows: Row[];
+  total: number;
+  name: string;
+  season: number;
+  summary?: {
+    production: Production[];
+    box_categories: { category: string; records: number; games: number }[];
+  };
+};
+const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 export default function PlayerDetail() {
   const search = useSearchParams(),
     id = search.get("id"),
@@ -75,6 +98,39 @@ export default function PlayerDetail() {
         </p>
       ) : (
         <>
+          {data.summary && (
+            <section className="section paper-panel" aria-labelledby="football-player-summary">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow">Season production / exact athlete ID</div>
+                  <h2 id="football-player-summary">The numbers behind the rank.</h2>
+                </div>
+                <span className="note">{data.season} source edition</span>
+              </div>
+              {data.summary.production.length ? (
+                <div className="raw-stat-grid">
+                  {data.summary.production.map((item) => (
+                    <div key={`${item.category}-${item.team_id || "unknown"}`}>
+                      <dt>{label(item.category)} · {item.team || "Team unavailable"}</dt>
+                      <dd>{fmt(item.epa)} EPA · {fmt(item.epa_per_play, 2)} / play</dd>
+                      <small>{fmt(item.plays, 0)} plays · {fmt(item.yards, 0)} yards · {fmt(item.touchdowns, 0)} TD · {fmt(item.games, 0)} games</small>
+                      <small>{item.rank == null ? "Unranked in this source category" : `EPA rank ${item.rank.toLocaleString()}`}</small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty">No season EPA aggregate is published for this player. The game log below retains the available source categories.</p>
+              )}
+              {data.summary.box_categories.length > 0 && (
+                <p className="note" style={{ marginTop: 16 }}>
+                  Additional box-score coverage: {data.summary.box_categories.map((item) => `${label(item.category)} (${item.games} ${item.games === 1 ? "game" : "games"})`).join(" · ")}. These categories remain source rows and are not folded into the EPA ranking.
+                </p>
+              )}
+              <p className="note" style={{ marginTop: 10 }}>
+                EPA totals and ranks are publisher aggregates for this exact athlete/team-season record. Passing, rushing and receiving totals describe separate source categories and must not be added together.
+              </p>
+            </section>
+          )}
           <p className="note">
             {data.total} records · SportsDataverse release imports ·{" "}
             {data.season}
