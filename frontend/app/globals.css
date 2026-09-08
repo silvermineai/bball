@@ -2340,6 +2340,13 @@ summary {
 .manual-market-footnote {
   margin-top: 16px;
 }
+.market-workbench > .manual-market-check {
+  margin-top: 24px;
+}
+.market-game-picker {
+  max-width: 720px;
+  margin: 22px 0 0;
+}
 .brief-explainer {
   max-width: 940px;
   margin-bottom: 24px;

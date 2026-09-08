@@ -7,6 +7,7 @@ import type { BBGame, BBOverview, BBRosterScenario } from "../../_lib/basketball
 import type { Comparison } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
+import ManualMarketCheck from "../briefs/ManualMarketCheck";
 
 type View = "all" | "scenario" | "cold-start" | "market";
 type Sort = "date" | "disagreement" | "confidence" | "uncertainty";
@@ -73,6 +74,7 @@ export default function ForecastLab({
   const [query, setQuery] = useState(initial.query);
   const [view, setView] = useState<View>(initial.view);
   const [sort, setSort] = useState<Sort>(initial.sort);
+  const [marketGameId, setMarketGameId] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
 
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function ForecastLab({
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
+  const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
@@ -137,6 +140,29 @@ export default function ForecastLab({
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest scenario shift</span></div>
         <div><strong>{overview.model.version}</strong><span>Primary model edition</span></div>
       </div>
+      {marketRow && (
+        <section className="section market-workbench">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Reader tool / Manual quote check</div>
+              <h2>Test a line against any game in view.</h2>
+            </div>
+            <span className="note">Browser only · never published</span>
+          </div>
+          <label className="control market-game-picker">
+            <span>GAME</span>
+            <select value={marketRow.game.id} onChange={(event) => setMarketGameId(event.target.value)}>
+              {rows.map((row) => <option value={row.game.id} key={row.game.id}>{row.game.away_name} at {row.game.home_name} · {date(row.game.starts_at)}</option>)}
+            </select>
+          </label>
+          <ManualMarketCheck
+            homeName={marketRow.game.home_name}
+            modelMargin={marketRow.prediction.home_margin}
+            modelTotal={marketRow.prediction.total}
+            modelHomeWinProbability={marketRow.prediction.home_win_probability}
+          />
+        </section>
+      )}
       <div className="section-heading" style={{ marginTop: 28, marginBottom: 20 }}>
         <p>{rows.length.toLocaleString()} modeled games · generated {date(overview.generated_at)} · primary cutoff {date(overview.model.cutoff)}</p>
         <button className="button secondary" type="button" onClick={exportRows}>Download comparison CSV ↓</button>
