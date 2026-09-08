@@ -17,6 +17,13 @@ const count = (value: number) => value.toLocaleString("en-US");
 export default function Page() {
   const football = getOverview();
   const basketball = getBasketball();
+  const footballPlayerCatalog = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/football/player-catalog.json"), "utf8"),
+  ) as { seasons: { season: number; box_rows: number }[] };
+  const footballArchiveRows = footballPlayerCatalog.seasons.reduce(
+    (sum, season) => sum + season.box_rows,
+    0,
+  );
   const rosters = getRosters();
   const rosterSourceProfiles = rosters.players.filter((player) => player.source_url).length;
   const recruiting = getRecruiting();
@@ -199,8 +206,8 @@ export default function Page() {
                 <strong>{count(football.coverage.games)}</strong>
               </div>
               <div>
-                <span>Historical player box rows</span>
-                <strong>{count(football.coverage.box_rows)}</strong>
+                <span>Player archive rows · 2018–26</span>
+                <strong>{count(footballArchiveRows)}</strong>
               </div>
               <div>
                 <span>Upcoming FBS forecasts</span>

@@ -124,7 +124,7 @@ The repository also defines a serialized weekly GitHub Actions refresh in [`.git
 
 ## Historical player expansion
 
-The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2022–2026: 259,017 raw player box rows, 43,344 athlete/program/season records and 57,909 name-attributed defensive/specialist events. The expansion adds 18 source files and 230,947 raw D1 records, excludes retained team placeholders from all player indexes, exposes per-season coverage and verifies source/asset hashes. The earlier 2025/2026 player counts above predate that identity correction.
+The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2018–2026: 413,386 raw player box rows and 74,774 athlete/program/season records. The nine-season catalog excludes 1,653 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
 
 ## Matchup notebooks
 
