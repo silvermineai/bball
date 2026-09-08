@@ -87,9 +87,10 @@ def build(season=2023):
     model_metadata = {
         key: model[key]
         for key in (
-            "version",
-            "target_season",
-            "training_games",
+        "version",
+        "target_season",
+        "cutoff",
+        "training_games",
             "training_seasons",
             "calibration",
             "evaluation",
