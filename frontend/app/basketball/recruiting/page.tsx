@@ -101,6 +101,12 @@ export default function Page() {
             >
               Open NCAA transfer research ↗
             </a>
+            <p className="note" style={{ marginTop: 16 }}>
+              Direct dashboards: {" "}
+              <a className="text-link" href="https://public.tableau.com/views/RES_Transfer_Dash_Final/Transfer_Dash_1" target="_blank" rel="noreferrer">DI composition ↗</a>{" · "}
+              <a className="text-link" href="https://public.tableau.com/views/DI_Transfer_Portal_2024/2026DIupdate" target="_blank" rel="noreferrer">DI portal ↗</a>{" · "}
+              <a className="text-link" href="https://public.tableau.com/views/DII_Transfer_Portal_2024/2026DIIupdate" target="_blank" rel="noreferrer">DII portal ↗</a>
+            </p>
           </article>
         </div>
         <p className="section-note">
