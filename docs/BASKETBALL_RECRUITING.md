@@ -10,6 +10,8 @@ The publisher wire links to the retained ESPN article feed for context and does 
 
 The recruiting board supports a twelve-player watch list. It stores source IDs in repeated `rosterPick` URL parameters, so a filtered review can be shared or reopened without a server account. The list is a research aid for source observations; it does not alter rankings, forecasts or transaction status.
 
+Announcement cards also show a conservative cross-check against the current source roster: normalized full-name plus program matches are labeled exact, multiple matches are flagged for review, and no match is reported without treating it as absence. This joins two source observations for navigation only; it does not assert identity, eligibility or availability.
+
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
 
 The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.

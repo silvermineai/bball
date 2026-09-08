@@ -1,3 +1,5 @@
+import type { BBRoster } from "./basketball-types";
+
 export type AnnouncementSource = {
   id: string;
   team_id: string;
@@ -189,6 +191,31 @@ export function recruitingRows(data: RecruitingRelease) {
           a.latest.source.published_on,
         ) || a.name.localeCompare(b.name),
     );
+}
+
+export type RosterNameMatch = "exact" | "multiple" | "none";
+
+const normalizedName = (value: string) =>
+  value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/gi, "")
+    .toLowerCase();
+
+/** Compare an announcement with the current source listing conservatively. */
+export function rosterNameMatch(
+  name: string,
+  teamId: string,
+  players: BBRoster[],
+): RosterNameMatch {
+  const key = normalizedName(name);
+  const matches = players.filter(
+    (player) =>
+      player.team_id === teamId &&
+      normalizedName(player.name) === key,
+  );
+  if (matches.length > 1) return "multiple";
+  return matches.length ? "exact" : "none";
 }
 
 /** Aggregate linked prior production by announcing program for roster review. */

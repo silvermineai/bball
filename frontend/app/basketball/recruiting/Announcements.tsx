@@ -10,6 +10,7 @@ import {
   recruitingFilterSearch,
   sortRecruitingRows,
   summarizeRecruitingPrograms,
+  rosterNameMatch,
   type RecruitingSort,
   type RecruitingRelease,
 } from "../../_lib/recruiting";
@@ -102,6 +103,8 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     ),
     sort,
   );
+  const rosterMatch = (name: string, teamId: string) => rosterNameMatch(name, teamId, rosters.players);
+  const exactRosterMatches = allRows.filter((row) => rosterMatch(row.name, row.team_id) === "exact").length;
   return (
     <>
       <div className="recruiting-views" aria-label="Recruiting evidence view">
@@ -153,7 +156,8 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
             </p>
             <small>
               Source review: {publicationDate(data.reviewed_at)} · These
-              announcements do not adjust the forecast model.
+              announcements do not adjust the forecast model. Exact normalized
+              name matches in the current roster source: {exactRosterMatches} of {allRows.length}; a missing match is not evidence of absence.
             </small>
           </div>
           <section className="paper-panel recruiting-program-summary">
@@ -387,6 +391,7 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
                         "Announcing program",
                         "Prior program",
                         "Latest status",
+                        "Current roster source-name match",
                         "Latest publication",
                         "Prior stat team",
                         "Games",
@@ -410,6 +415,7 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
                         p.program.name,
                         p.previous_program,
                         eventLabels[p.latest.kind],
+                        rosterMatch(p.name, p.team_id),
                         p.latest.source.published_on,
                         p.stats?.team,
                         p.stats?.games,
@@ -477,6 +483,9 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
                   Read publisher source ↗
                 </a>
                 <p className="recruiting-eligibility">{p.latest.summary}</p>
+                <p className="recruiting-eligibility">
+                  Current roster source check: {rosterMatch(p.name, p.team_id) === "exact" ? "exact normalized name appears in the 2026–27 listing" : rosterMatch(p.name, p.team_id) === "multiple" ? "multiple normalized name matches; review manually" : "no exact normalized name match in the 2026–27 listing"}. This check is descriptive and does not establish identity, eligibility or availability.
+                </p>
                 {p.latest.kind === "addition" && (
                   <p className="recruiting-eligibility">
                     School-announced addition for 2026–27. Current eligibility

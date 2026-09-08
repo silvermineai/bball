@@ -7,6 +7,7 @@ import {
   recruitingFilterSearch,
   sortRecruitingRows,
   summarizeRecruitingPrograms,
+  rosterNameMatch,
   type RecruitingRelease,
 } from "./recruiting";
 const data = JSON.parse(
@@ -41,6 +42,17 @@ describe("school announcement histories", () => {
     )!;
     expect(row.latest.kind).toBe("season_unavailable");
     expect(row.timeline.map((e) => e.kind)).toContain("addition");
+  });
+
+  it("cross-checks names against the current source roster without asserting identity", () => {
+    const players = [
+      { id: "1", name: "J.P. Estrella", team_id: "130", team: "Michigan", previous_teams: [], status: "new_to_dataset", position: "F", class_year: null, height: null, weight: null, source_url: null, prior_production: null },
+      { id: "2", name: "Twin Player", team_id: "130", team: "Michigan", previous_teams: [], status: "ambiguous", position: null, class_year: null, height: null, weight: null, source_url: null, prior_production: null },
+      { id: "3", name: "Twin-Player", team_id: "130", team: "Michigan", previous_teams: [], status: "ambiguous", position: null, class_year: null, height: null, weight: null, source_url: null, prior_production: null },
+    ];
+    expect(rosterNameMatch("JP Estrella", "130", players)).toBe("exact");
+    expect(rosterNameMatch("Missing Name", "130", players)).toBe("none");
+    expect(rosterNameMatch("Twin Player", "130", players)).toBe("multiple");
   });
   it("prioritizes a same-day planned redshirt over the addition", () => {
     const row = recruitingRows(data).find((p) => p.name === "Lincoln Cosby")!;
