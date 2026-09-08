@@ -23,9 +23,19 @@ class PublicationHealthTest(unittest.TestCase):
             "ratings": [{"id": "1"}],
         }
 
+    def football_catalog(self):
+        return {
+            "latest_source_retrieved_at": "2026-09-07T12:00:00Z",
+            "seasons": [
+                {"season": year, "box_rows": 10}
+                for year in range(2018, 2027)
+            ],
+        }
+
     def test_selected_sport_passes_timestamp_and_shape_checks(self):
         with tempfile.TemporaryDirectory() as directory:
             write_release(directory, "football", "overview.json", self.payload(2026))
+            write_release(directory, "football", "player-catalog.json", self.football_catalog())
             report = check_freshness(
                 Path(directory),
                 "football",
@@ -34,6 +44,24 @@ class PublicationHealthTest(unittest.TestCase):
             )
             self.assertTrue(report["ok"])
             self.assertEqual(report["releases"][0]["release"], "football/overview.json")
+
+    def test_basketball_requires_supplemental_catalogs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            write_release(directory, "basketball", "overview.json", self.payload())
+            write_release(
+                directory,
+                "basketball",
+                "ncaa-individual.json",
+                {"generated_at": "2026-09-07T12:00:00Z", "season": 2026},
+            )
+            with self.assertRaises(ValueError) as error:
+                check_freshness(
+                    Path(directory),
+                    "basketball",
+                    now=datetime(2026, 9, 8, tzinfo=timezone.utc),
+                    max_age_hours=48,
+                )
+            self.assertIn("history/index.json", str(error.exception))
 
     def test_basketball_requires_matching_ncaa_season(self):
         with tempfile.TemporaryDirectory() as directory:

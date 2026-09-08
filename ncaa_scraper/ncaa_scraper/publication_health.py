@@ -62,6 +62,82 @@ def _season_snapshot(release: str, payload: dict) -> dict:
     return {"release": release, "generated_at": generated, "season_snapshot": True}
 
 
+def _catalog_health(
+    root: Path,
+    relative: str,
+    payload: dict,
+    now: datetime,
+    max_age_hours: float,
+) -> list[dict]:
+    """Validate a season catalog and every compact derivative it references."""
+    seasons = payload.get("seasons")
+    if not isinstance(seasons, list) or not seasons:
+        raise ValueError(f"{relative} has no season entries")
+    timestamps: list[str] = []
+    top_generated = payload.get("generated_at")
+    if top_generated is not None:
+        if not isinstance(top_generated, str):
+            raise ValueError(f"{relative} has an invalid generated_at timestamp")
+        timestamps.append(top_generated)
+    for entry in seasons:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{relative} has a malformed season entry")
+        season = entry.get("season")
+        if not isinstance(season, int) or isinstance(season, bool):
+            raise ValueError(f"{relative} has an invalid season entry")
+        generated = entry.get("generated_at")
+        if generated is not None:
+            if not isinstance(generated, str):
+                raise ValueError(f"{relative} season {season} has an invalid timestamp")
+            timestamps.append(generated)
+        path = entry.get("path")
+        if path is not None:
+            if not isinstance(path, str) or not path.startswith("/data/"):
+                raise ValueError(f"{relative} season {season} has an invalid derivative path")
+            derivative = root / "frontend/public" / path.removeprefix("/")
+            if not derivative.exists():
+                raise ValueError(f"{relative} season {season} references missing derivative {path}")
+        coverage = entry.get("coverage")
+        if not isinstance(coverage, dict) and not isinstance(entry.get("source_rows"), int):
+            raise ValueError(f"{relative} season {season} has no coverage object")
+    if not timestamps:
+        raise ValueError(f"{relative} has no freshness timestamp")
+    # Check each timestamp so one old season cannot hide behind a fresh catalog entry.
+    checked = [_freshness(f"{relative} season", {"generated_at": value}, now, max_age_hours) for value in timestamps]
+    latest = max(checked, key=lambda value: value["generated_at"])
+    return [{"release": relative, "generated_at": latest["generated_at"], "catalog_seasons": len(seasons), "age_hours": latest["age_hours"]}]
+
+
+def _player_catalog_health(
+    root: Path,
+    now: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate the long football player archive separately from the model snapshot."""
+    relative = "football/player-catalog.json"
+    payload = _read(root, str(Path("frontend/public/data") / relative))
+    seasons = payload.get("seasons")
+    if not isinstance(seasons, list) or not seasons:
+        raise ValueError(f"{relative} has no season entries")
+    years = []
+    rows = 0
+    for entry in seasons:
+        if not isinstance(entry, dict) or not isinstance(entry.get("season"), int):
+            raise ValueError(f"{relative} has a malformed season entry")
+        years.append(entry["season"])
+        box_rows = entry.get("box_rows")
+        if not isinstance(box_rows, int) or isinstance(box_rows, bool) or box_rows < 0:
+            raise ValueError(f"{relative} has invalid box_rows")
+        rows += box_rows
+    if min(years) > 2018 or max(years) < 2026 or rows <= 0:
+        raise ValueError(f"{relative} does not cover the published 2018–2026 archive")
+    retrieved = payload.get("latest_source_retrieved_at")
+    if not isinstance(retrieved, str):
+        raise ValueError(f"{relative} has no latest_source_retrieved_at timestamp")
+    checked = _freshness(relative, {"generated_at": retrieved}, now, max_age_hours)
+    return {**checked, "archive_seasons": len(seasons), "box_rows": rows}
+
+
 def check_freshness(
     root: Path,
     sport: str,
@@ -122,6 +198,18 @@ def check_freshness(
                     raise ValueError("football forecasts exceed upcoming games")
                 if not isinstance(overview.get("ratings"), list) or not overview["ratings"]:
                     raise ValueError("football release has no team ratings")
+                releases.append(_player_catalog_health(root, now, max_age_hours))
+            if selected == "basketball":
+                for relative in (
+                    "basketball/history/index.json",
+                    "basketball/pbp-catalog.json",
+                    "basketball/matchup-stints.json",
+                    "basketball/ncaa-team-box.json",
+                    "basketball/impact-within-team.json",
+                    "basketball/shooting-catalog.json",
+                ):
+                    catalog = _read(root, str(Path("frontend/public/data") / relative))
+                    releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
         except ValueError as exc:
             errors.append(str(exc))
     report = {
