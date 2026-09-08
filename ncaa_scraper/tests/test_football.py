@@ -214,6 +214,48 @@ if __name__ == "__main__":
 
 
 class SourcePolicyTests(unittest.TestCase):
+    def test_legacy_scraper_obeys_robots_before_requesting_page(self):
+        import tempfile
+        from unittest.mock import Mock
+
+        from ncaa_scraper.scraper import BaseScraper, NCAAFetchError
+
+        response = Mock(status_code=200, text="User-agent: *\nDisallow: /\n")
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch("ncaa_scraper.scraper.requests.Session.get", return_value=response) as get,
+        ):
+            with self.assertRaises(NCAAFetchError):
+                BaseScraper(directory)._get_cached_or_fetch(
+                    "https://stats.ncaa.org/contests/1", "contest"
+                )
+            self.assertEqual(get.call_count, 1)
+            self.assertTrue(get.call_args.args[0].endswith("/robots.txt"))
+
+    def test_legacy_scraper_does_not_retry_an_interstitial(self):
+        import tempfile
+        from unittest.mock import Mock
+
+        from ncaa_scraper.scraper import BaseScraper, NCAAFetchError
+
+        robots = Mock(status_code=200, text="User-agent: *\nAllow: /\n")
+        page = Mock(status_code=200, text="akamai_validation")
+        page.raise_for_status.return_value = None
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch(
+                "ncaa_scraper.scraper.requests.Session.get",
+                side_effect=[robots, page],
+            ) as get,
+        ):
+            scraper = BaseScraper(directory)
+            scraper.delay_seconds = 0
+            with self.assertRaises(NCAAFetchError):
+                scraper._get_cached_or_fetch(
+                    "https://stats.ncaa.org/contests/1", "contest"
+                )
+            self.assertEqual(get.call_count, 2)
+
     def test_ncaa_robots_denial_never_requests_the_page(self):
         import tempfile
         from unittest.mock import Mock

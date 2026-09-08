@@ -2,60 +2,98 @@
 
 import re
 import os
-import json
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime
+from typing import Dict, List
 import logging
 from io import StringIO
+from urllib.robotparser import RobotFileParser
+from urllib.parse import urlsplit
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import pandas as pd
-import polars as pl
 import time
 
 logger = logging.getLogger(__name__)
 
 
+class NCAAFetchError(RuntimeError):
+    """Raised when a public NCAA page cannot be fetched under source policy."""
+
+
 class BaseScraper:
-    """Base scraper with common functionality"""
+    """Robots-aware, cache-first NCAA scraper with no anti-bot bypass."""
     
     def __init__(self, cache_dir: str = "./cache"):
         self.base_url = "https://stats.ncaa.org"
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
+        self.delay_seconds = 2.0
+        self._last_fetch_at = 0.0
+        self._robots: RobotFileParser | None = None
+        self._robots_checked_at = 0.0
+        self.user_agent = "SilvermineResearch/1.0 (service@silvermineai.com)"
         
         # Create session with retry strategy
         self.session = requests.Session()
         retry_strategy = Retry(
             total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
+            # Never automatically repeat rate limits or access denials. A
+            # transient server error may be retried with urllib3 backoff.
+            status_forcelist=[500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1
+            backoff_factor=1,
+            respect_retry_after_header=True,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
         
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Cache-Control': 'max-age=0',
-            'DNT': '1'
+            'User-Agent': self.user_agent,
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'en-US,en;q=0.8',
         }
         self.session.headers.update(self.headers)
+
+    def _robots_delay(self, url: str) -> float:
+        parts = urlsplit(url)
+        if parts.scheme != "https" or parts.netloc != "stats.ncaa.org":
+            raise NCAAFetchError("Only HTTPS stats.ncaa.org URLs are accepted")
+        now = time.monotonic()
+        if self._robots is None or now - self._robots_checked_at > 3600:
+            robots_url = f"{parts.scheme}://{parts.netloc}/robots.txt"
+            response = self.session.get(robots_url, timeout=30)
+            if response.status_code != 200:
+                raise NCAAFetchError(
+                    "Cannot verify NCAA robots policy; no page requested"
+                )
+            parser = RobotFileParser()
+            parser.parse(response.text.splitlines())
+            self._robots = parser
+            self._robots_checked_at = now
+        if not self._robots.can_fetch(self.user_agent, url):
+            raise NCAAFetchError(
+                "NCAA robots.txt disallows this request; use an authorized data release"
+            )
+        return max(
+            self.delay_seconds,
+            float(
+                self._robots.crawl_delay(self.user_agent)
+                or self._robots.crawl_delay("*")
+                or 0
+            ),
+        )
+
+    def _throttle(self, minimum_delay: float) -> None:
+        elapsed = time.monotonic() - self._last_fetch_at
+        if elapsed < minimum_delay:
+            time.sleep(minimum_delay - elapsed)
+        self._last_fetch_at = time.monotonic()
     
     def _get_cached_or_fetch(self, url: str, cache_key: str) -> str:
-        """Get content from cache or fetch from web"""
+        """Get cached content or make one policy-checked public request."""
         cache_path = os.path.join(self.cache_dir, f"{cache_key}.html")
         
         if os.path.exists(cache_path):
@@ -63,43 +101,25 @@ class BaseScraper:
             with open(cache_path, 'r', encoding='utf-8') as f:
                 return f.read()
         
-        logger.info(f"Fetching data from {url}")
-        
-        # First visit the main page to establish session
-        if not hasattr(self, '_session_established'):
-            logger.info("Establishing session with main page")
-            main_response = self.session.get(self.base_url, timeout=30)
-            self._session_established = True
-            time.sleep(2)
-        
-        # Add small delay to be respectful
-        time.sleep(1)
-        
-        # Update referer header for this specific request
-        self.session.headers.update({
-            'Referer': self.base_url,
-            'Sec-Fetch-Site': 'same-origin'
-        })
-        
+        logger.info("Fetching data from %s", url)
+        self._throttle(self._robots_delay(url))
         response = self.session.get(url, timeout=30)
-        
-        # Check if we got the Akamai challenge page
-        if 'akamai_validation' in response.text or 'bm-verify' in response.text:
-            logger.warning(f"Got Akamai challenge page for {url}")
-            # Try once more with different headers
-            self.session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"macOS"'
-            })
-            time.sleep(3)
-            response = self.session.get(url, timeout=30)
-        
+        if response.status_code in (401, 403, 429):
+            raise NCAAFetchError(
+                f"NCAA returned {response.status_code}; no bypass or retry attempted"
+            )
         response.raise_for_status()
-        
-        with open(cache_path, 'w', encoding='utf-8') as f:
+        if "akamai_validation" in response.text or "bm-verify" in response.text:
+            raise NCAAFetchError(
+                f"NCAA returned an anti-bot/interstitial page for {url}; no bypass attempted"
+            )
+
+        # Replace only after a complete response is written, preserving a
+        # prior good cache if the process is interrupted during serialization.
+        temporary = f"{cache_path}.tmp-{os.getpid()}"
+        with open(temporary, 'w', encoding='utf-8') as f:
             f.write(response.text)
+        os.replace(temporary, cache_path)
         
         return response.text
 
