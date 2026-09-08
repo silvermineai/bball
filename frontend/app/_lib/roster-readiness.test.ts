@@ -5,6 +5,7 @@ import {
   classExperienceWatch,
   parseRosterLabFilters,
   positionContinuityWatch,
+  positionTurnoverWatch,
   rosterLabFilterSearch,
   rosterPositionGroup,
   rosterClassGroup,
@@ -165,5 +166,26 @@ describe("roster lab", () => {
       "Beta",
     ]);
     expect(positionContinuityWatch(rows, "guard")[0].workload.returningShare).toBe(0.25);
+  });
+
+  it("keeps role turnover separate from incoming workload and recruiting conclusions", () => {
+    const rows = buildRosterLabRows(
+      rosters([
+        player("1", "Alpha", "same_program", 400, "G"),
+        player("1", "Alpha", "different_program", 200, "G"),
+        player("1", "Alpha", "new_to_dataset", 300, "F"),
+      ]),
+      overview,
+    );
+    const turnover = positionTurnoverWatch(rows);
+    expect(turnover[0]).toMatchObject({
+      group: "forward",
+      priorMinutes: 300,
+      returningMinutes: 0,
+      incomingPriorMinutes: 0,
+      unreturnedMinutes: 300,
+    });
+    expect(turnover.some((row) => row.group === "guard")).toBe(true);
+    expect(turnover.find((row) => row.group === "guard")?.incomingPriorMinutes).toBe(200);
   });
 });

@@ -10,6 +10,7 @@ import {
   rosterLabFilterSearch,
   sortRosterLabRows,
   classExperienceWatch,
+  positionTurnoverWatch,
   type RosterPositionGroup,
   type RosterLabRow,
   type RosterLabSort,
@@ -67,6 +68,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
     .sort((a, b) => (a.returningShare ?? 2) - (b.returningShare ?? 2))
     .slice(0, 3);
   const youngestWorkload = classExperienceWatch(rows, 5);
+  const roleTurnover = positionTurnoverWatch(rows, 8);
   const positionGroups: Array<{ key: RosterPositionGroup; label: string }> = [
     { key: "guard", label: "Guard" },
     { key: "forward", label: "Forward" },
@@ -181,6 +183,37 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
             </tbody>
           </table>
         </div>
+      </section>
+      <section className="paper-panel" style={{ marginTop: 28 }}>
+        <div className="eyebrow">Recruiting investigation queue</div>
+        <h2>Which prior role turned over?</h2>
+        <p className="note">
+          These rows show prior minutes in a source-reported role that are not
+          represented by same-program listings. Incoming prior minutes stay
+          visible as a separate column, so a role can show turnover while a
+          new source-listed player supplies prior workload. Open the program
+          dossier and dated announcements before drawing a recruiting
+          conclusion.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Role</th><th>Program</th><th className="numeric">Prior minutes</th><th className="numeric">Returning</th><th className="numeric">Incoming prior</th><th className="numeric">Unreturned</th><th className="numeric">Turnover share</th></tr></thead>
+            <tbody>
+              {roleTurnover.map((gap) => (
+                <tr key={`${gap.row.teamId}-${gap.group}`}>
+                  <td>{gap.group}<small>{gap.row.positionCounts[gap.group]} listed</small></td>
+                  <td><Link href={`/basketball/programs/${gap.row.teamId}/`}>{gap.row.team}</Link></td>
+                  <td className="numeric">{Math.round(gap.priorMinutes).toLocaleString()}</td>
+                  <td className="numeric">{Math.round(gap.returningMinutes).toLocaleString()}</td>
+                  <td className="numeric">{gap.incomingPriorMinutes ? Math.round(gap.incomingPriorMinutes).toLocaleString() : "—"}</td>
+                  <td className="numeric"><strong>{Math.round(gap.unreturnedMinutes).toLocaleString()}</strong></td>
+                  <td className="numeric"><strong>{percent(gap.turnoverShare)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!roleTurnover.length && <p className="empty">No positive role turnover in this source sample.</p>}
       </section>
       <section className="paper-panel" style={{ marginTop: 28 }}>
         <div className="eyebrow">Class-year workload watch</div>

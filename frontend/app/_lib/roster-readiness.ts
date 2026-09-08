@@ -20,6 +20,15 @@ export type RosterPositionWorkload = {
   incomingPriorMinutes: number;
   returningShare: number | null;
 };
+export type RosterTurnover = {
+  row: RosterLabRow;
+  group: Exclude<RosterPositionGroup, "unreported">;
+  priorMinutes: number;
+  returningMinutes: number;
+  incomingPriorMinutes: number;
+  unreturnedMinutes: number;
+  turnoverShare: number;
+};
 
 /** Source-reported class labels are normalized only for stable grouping. */
 export type RosterClassGroup = "freshman" | "sophomore" | "junior" | "senior" | "unreported";
@@ -266,6 +275,40 @@ export function positionContinuityWatch(
         (a.workload.returningShare ?? 2) - (b.workload.returningShare ?? 2) ||
         b.workload.priorMinutes - a.workload.priorMinutes ||
         a.row.team.localeCompare(b.row.team),
+    )
+    .slice(0, limit);
+}
+
+/**
+ * Surface prior workload that is not represented by same-program listings,
+ * while keeping incoming prior minutes visible. This is a recruiting
+ * investigation queue, not a departure, eligibility or roster projection.
+ */
+export function positionTurnoverWatch(rows: RosterLabRow[], limit = 8): RosterTurnover[] {
+  const groups = ["guard", "forward", "center"] as const;
+  return rows
+    .flatMap((row) =>
+      groups.map((group) => {
+        const workload = row.positionWorkload[group];
+        const unreturnedMinutes = Math.max(0, workload.priorMinutes - workload.returningMinutes);
+        return {
+          row,
+          group,
+          priorMinutes: workload.priorMinutes,
+          returningMinutes: workload.returningMinutes,
+          incomingPriorMinutes: workload.incomingPriorMinutes,
+          unreturnedMinutes,
+          turnoverShare: workload.priorMinutes > 0 ? unreturnedMinutes / workload.priorMinutes : 0,
+        } satisfies RosterTurnover;
+      }),
+    )
+    .filter((gap) => gap.unreturnedMinutes > 0)
+    .sort(
+      (a, b) =>
+        b.unreturnedMinutes - a.unreturnedMinutes ||
+        b.turnoverShare - a.turnoverShare ||
+        a.row.team.localeCompare(b.row.team) ||
+        a.group.localeCompare(b.group),
     )
     .slice(0, limit);
 }
