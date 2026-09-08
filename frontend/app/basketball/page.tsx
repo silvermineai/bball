@@ -3,6 +3,7 @@ import {
   getBasketball,
   getRosters,
   getRecruiting,
+  getRosterModel,
 } from "../_lib/basketball-data";
 import { date, fmt } from "../_lib/format";
 import BasketballCard from "../_components/BasketballCard";
@@ -51,6 +52,7 @@ export default function Page() {
   const d = getBasketball(),
     r = getRosters(),
     recruiting = getRecruiting(),
+    rosterModel = getRosterModel(),
     e = d.model.evaluation,
     leaders = getBasketballLeaders(d.season);
   return (
@@ -143,14 +145,20 @@ export default function Page() {
           {d.upcoming
             .filter((g) => g.prediction || g.fallback_prediction)
             .slice(0, 3)
-            .map((g) => (
-              <BasketballCard
-                key={g.id}
-                game={g}
-                homeRoster={r.team_summaries?.find((summary) => summary.team_id === g.home_id)}
-                awayRoster={r.team_summaries?.find((summary) => summary.team_id === g.away_id)}
-              />
-            ))}
+            .map((g) => {
+              const rosterScenario = rosterModel.scenarios.find(
+                (scenario) => scenario.game_id === g.id,
+              );
+              return (
+                <BasketballCard
+                  key={g.id}
+                  game={g}
+                  homeRoster={r.team_summaries?.find((summary) => summary.team_id === g.home_id)}
+                  awayRoster={r.team_summaries?.find((summary) => summary.team_id === g.away_id)}
+                  rosterScenario={rosterScenario}
+                />
+              );
+            })}
         </div>
       </section>
       {leaders && (
