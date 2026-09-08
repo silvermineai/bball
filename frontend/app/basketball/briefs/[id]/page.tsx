@@ -19,6 +19,7 @@ import { eventLabels, publicationDate } from "../../../_lib/recruiting";
 import { reasons } from "../../../_lib/research-types";
 import type { Metric } from "../../../_lib/scouting-types";
 import BriefNotebook from "../BriefNotebook";
+import ManualMarketCheck from "../ManualMarketCheck";
 
 export function generateStaticParams() {
   return getBasketball()
@@ -187,6 +188,12 @@ export default async function Page({
           and may change. Model edition: {date(d.generated_at)}.
         </p>
       </div>
+      <ManualMarketCheck
+        homeName={g.home_name}
+        modelMargin={p.home_margin}
+        modelTotal={p.total}
+        modelHomeWinProbability={p.home_win_probability}
+      />
       <section className="section">
         <div className="section-heading">
           <div>

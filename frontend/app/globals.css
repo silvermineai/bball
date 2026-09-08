@@ -2290,6 +2290,56 @@ summary {
   gap: 35px;
   margin-top: 24px;
 }
+.manual-market-check {
+  margin-top: 34px;
+  border-top: 2px solid var(--ink);
+}
+.manual-market-check .section-heading {
+  margin-bottom: 14px;
+}
+.manual-market-check .note {
+  max-width: 920px;
+}
+.manual-market-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+.manual-market-controls .control {
+  margin: 0;
+}
+.manual-market-controls small,
+.manual-market-results small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.manual-market-results {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 24px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.manual-market-results > div {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  background: var(--paper);
+}
+.manual-market-results span {
+  font: 10px "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.manual-market-results strong {
+  font-size: 24px;
+}
+.manual-market-footnote {
+  margin-top: 16px;
+}
 .brief-explainer {
   max-width: 940px;
   margin-bottom: 24px;
@@ -2535,7 +2585,9 @@ summary {
     font-size: 48px;
   }
   .brief-pressure-grid,
-  .brief-forecast-note {
+  .brief-forecast-note,
+  .manual-market-controls,
+  .manual-market-results {
     grid-template-columns: 1fr;
   }
   .brief-pressure,
