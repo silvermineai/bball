@@ -54,6 +54,61 @@ export default function Page() {
         </div>
       </div>
       <RecruitingWire articles={recruitingNews} />
+      <section className="section recruiting-context">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Eligibility / official context</div>
+            <h2>Keep the transfer clock at the source.</h2>
+          </div>
+          <p>
+            Portal language, eligibility and a school roster observation are
+            different evidence. Start with the NCAA rule and research pages,
+            then return to the dated source records below.
+          </p>
+        </div>
+        <div className="two-col">
+          <article className="paper-panel">
+            <div className="eyebrow">Rules and eligibility</div>
+            <h3>NCAA transfer rules and eligibility</h3>
+            <p>
+              The NCAA describes its Transfer Portal as a centralized database
+              for student-athlete transfer information. The official rules page
+              is the reference point for eligibility questions; Silvermine does
+              not infer a ruling from an announcement or roster row.
+            </p>
+            <a
+              className="text-link"
+              href="https://www.ncaa.org/eligibility-center/transfer-rules-and-eligibility/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open NCAA transfer rules ↗
+            </a>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">Aggregate research</div>
+            <h3>NCAA transfer research</h3>
+            <p>
+              NCAA research dashboards provide aggregate portal and transfer
+              composition context. They are useful for the national picture,
+              but they are not player-level transaction records for this board.
+            </p>
+            <a
+              className="text-link"
+              href="https://www.ncaa.org/what-we-do/research/student-athlete-transfer-research/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open NCAA transfer research ↗
+            </a>
+          </article>
+        </div>
+        <p className="section-note">
+          This edition keeps player-level recruiting evidence to source-linked
+          school announcements and attributed roster observations. A missing
+          announcement or portal record does not imply no transfer activity.
+        </p>
+      </section>
       <Announcements data={data} />
     </>
   );
