@@ -185,7 +185,7 @@ describe("bball api", () => {
       };
     });
     const response = await app.request(
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&q=100%25&model=basketball-efficiency-v1-test&limit=2",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&q=100%25&limit=2",
       {},
       { DB: { prepare } },
     );
@@ -193,14 +193,16 @@ describe("bball api", () => {
     const body = (await response.json()) as {
       season: number;
       status: string;
+      model: string;
       page_size: number;
       total: number;
       rows: Array<{ prediction: Record<string, unknown> | null }>;
     };
-    expect(body).toMatchObject({ season: 2027, status: "upcoming", page_size: 2, total: 2 });
+    expect(body).toMatchObject({ season: 2027, status: "upcoming", model: "latest", page_size: 2, total: 2 });
     expect(body.rows[0].prediction).toEqual({ home_margin: 4.5, home_win_probability: 0.62 });
     expect(body.rows[1].prediction).toBeNull();
     expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_models"))).toBe(true);
   });
 
   it("rejects invalid basketball forecast filters before querying D1", async () => {

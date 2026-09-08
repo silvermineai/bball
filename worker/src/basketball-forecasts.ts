@@ -8,7 +8,11 @@ const querySchema = z.object({
   season: z.coerce.number().int().min(2024).max(2035).default(2027),
   status: z.enum(["all", "upcoming", "completed"]).default("all"),
   q: z.string().trim().max(120).optional(),
-  model: z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/).optional(),
+  model: z.union([
+    z.literal("latest"),
+    z.literal("all"),
+    z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/),
+  ]).default("latest"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   meta: z.enum(["0", "1"]).default("0"),
@@ -48,7 +52,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     clauses.push("(g.home_name LIKE ? ESCAPE '\\' OR g.away_name LIKE ? ESCAPE '\\')");
     binds.push(search, search);
   }
-  if (model) {
+  if (model === "latest") {
+    clauses.push("f.model_id=(SELECT id FROM bb_models ORDER BY created_at DESC,id DESC LIMIT 1)");
+  } else if (model !== "all") {
     clauses.push("f.model_id=?");
     binds.push(model);
   }
@@ -87,7 +93,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   return c.json({
     season,
     status,
-    model: model || null,
+    model,
     query: q || null,
     page,
     page_size: limit,
