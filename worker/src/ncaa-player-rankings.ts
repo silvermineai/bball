@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net", "balanced_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -44,7 +44,7 @@ const aggregate = (where: string) => `
   FROM bb_ncaa_player_season s WHERE ${where}
   GROUP BY s.season, s.player_id, s.team_id`;
 
-const metricExpression = (metric: Exclude<Metric, "balanced_index">) => ({
+const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_index">) => ({
   ppg: "points / games",
   rpg: "rebounds / games",
   apg: "assists / games",
@@ -122,6 +122,36 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
   };
 };
 
+// Require exact-ID lineup impact and a sustained scoring rate, standardize
+// both within the filtered cohort, and average the two z-scores. This is a
+// descriptive shortlist; it never enters forecasts.
+const impactQueries = (where: string, minGames: number, minMinutes: number) => {
+  const derived = `
+    SELECT a.*,
+      CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END AS per40_value
+    FROM aggregate a
+    WHERE games >= ? AND minutes >= ?`;
+  const stats = `
+    SELECT d.*,
+      AVG(rapm_net) OVER () AS rapm_mean,
+      sqrt(max(0.0, AVG(rapm_net * rapm_net) OVER () - AVG(rapm_net) OVER () * AVG(rapm_net) OVER ())) AS rapm_sd,
+      AVG(per40_value) OVER () AS per40_mean,
+      sqrt(max(0.0, AVG(per40_value * per40_value) OVER () - AVG(per40_value) OVER () * AVG(per40_value) OVER ())) AS per40_sd
+    FROM derived d`;
+  const scored = `
+    SELECT s.*,
+      ((rapm_net - rapm_mean) / NULLIF(rapm_sd, 0.0) +
+       (per40_value - per40_mean) / NULLIF(per40_sd, 0.0)) / 2.0 AS value
+    FROM stats s
+    WHERE rapm_net IS NOT NULL AND per40_value IS NOT NULL`;
+  const prefix = `WITH aggregate AS (${aggregate(where)}), derived AS (${derived}), stats AS (${stats}), scored AS (${scored})`;
+  return {
+    count: `${prefix} SELECT count(*) AS total FROM scored WHERE value IS NOT NULL`,
+    rows: `${prefix} SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM scored WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
+    binds: [minGames, minMinutes],
+  };
+};
+
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minGames, minMinutes, q, classYear, position, page, meta } = c.req.valid("query");
   if (meta === "1") {
@@ -154,12 +184,17 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(position);
   }
   const where = clauses.join(" AND ");
-  const expression = metric === "balanced_index" ? null : metricExpression(metric);
+  const expression = metric === "balanced_index" || metric === "impact_index" ? null : metricExpression(metric);
   const count: { total: number } | null = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
       return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
     })()
+    : metric === "impact_index"
+      ? await (() => {
+        const query = impactQueries(where, minGames, minMinutes);
+        return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
+      })()
     : await c.env.DB.prepare(
       `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND (${expression}) IS NOT NULL`,
     ).bind(...binds, minGames, minMinutes).first<{ total: number }>();
@@ -168,6 +203,11 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       const query = balancedQueries(where, minGames, minMinutes);
       return c.env.DB.prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
     })()
+    : metric === "impact_index"
+      ? await (() => {
+        const query = impactQueries(where, minGames, minMinutes);
+        return c.env.DB.prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
+      })()
     : await c.env.DB.prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
         SELECT aggregate.*, ${expression} AS value
