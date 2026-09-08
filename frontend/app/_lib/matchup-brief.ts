@@ -5,6 +5,8 @@ import type { Ledger } from "./research-types";
 import {
   rosterPositionGroup,
   type RosterPositionCounts,
+  type RosterPositionGroup,
+  type RosterPositionWorkload,
 } from "./roster-readiness";
 
 export const briefFactors = [
@@ -178,6 +180,7 @@ export type BriefRosterContext = {
   priorMinutes: number;
   representedMinutesShare: number | null;
   positionCounts: RosterPositionCounts;
+  positionWorkload: Record<RosterPositionGroup, RosterPositionWorkload>;
 };
 
 /**
@@ -201,8 +204,35 @@ export function rosterContext(
     center: 0,
     unreported: 0,
   };
+  const positionWorkload = Object.fromEntries(
+    (['guard', 'forward', 'center', 'unreported'] as RosterPositionGroup[]).map(
+      (group) => [
+        group,
+        {
+          priorMinutes: 0,
+          returningMinutes: 0,
+          incomingPriorMinutes: 0,
+          returningShare: null,
+        },
+      ],
+    ),
+  ) as Record<RosterPositionGroup, RosterPositionWorkload>;
   for (const player of listed) {
-    positionCounts[rosterPositionGroup(player.position)] += 1;
+    const group = rosterPositionGroup(player.position);
+    const minutes = player.prior_production?.minutes || 0;
+    positionCounts[group] += 1;
+    positionWorkload[group].priorMinutes += minutes;
+    if (player.status === "same_program") {
+      positionWorkload[group].returningMinutes += minutes;
+    } else if (player.status === "different_program") {
+      positionWorkload[group].incomingPriorMinutes += minutes;
+    }
+  }
+  for (const workload of Object.values(positionWorkload)) {
+    workload.returningShare =
+      workload.priorMinutes > 0
+        ? workload.returningMinutes / workload.priorMinutes
+        : null;
   }
   const representedMinutes = returning.reduce(
     (sum, p) => sum + (priorById.get(p.id)?.minutes || 0),
@@ -219,6 +249,7 @@ export function rosterContext(
     representedMinutesShare:
       priorMinutes > 0 ? representedMinutes / priorMinutes : null,
     positionCounts,
+    positionWorkload,
   };
 }
 

@@ -71,6 +71,11 @@ describe("matchup evidence and scenario handoff", () => {
         expect(shape.guard + shape.forward + shape.center + shape.unreported).toBe(
           program.roster!.listed,
         );
+        for (const group of ["guard", "forward", "center"] as const) {
+          const workload = program.roster!.positionWorkload[group];
+          expect(workload.returningMinutes).toBeLessThanOrEqual(workload.priorMinutes);
+          expect(workload.returningShare == null || workload.returningShare >= 0).toBe(true);
+        }
       }
       for (const point of result.pressures) {
         expect(point.offensive.games).toBeGreaterThanOrEqual(10);

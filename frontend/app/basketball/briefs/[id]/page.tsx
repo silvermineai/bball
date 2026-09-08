@@ -551,10 +551,66 @@ export default async function Page({
                       </strong>
                     </div>
                   </div>
+                  <div className="table-scroll" style={{ marginTop: 18 }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Role workload</th>
+                          <th className="numeric">Prior min</th>
+                          <th className="numeric">Returning</th>
+                          <th className="numeric">Incoming</th>
+                          <th className="numeric">Unrepresented</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(["guard", "forward", "center"] as const).map((group) => {
+                          const workload = roster.positionWorkload[group];
+                          const unrepresented = Math.max(
+                            0,
+                            workload.priorMinutes - workload.returningMinutes,
+                          );
+                          return (
+                            <tr key={group}>
+                              <th scope="row">
+                                {group[0].toUpperCase() + group.slice(1)}
+                                <small>{roster.positionCounts[group]} listed</small>
+                              </th>
+                              <td className="numeric">
+                                {workload.priorMinutes
+                                  ? Math.round(workload.priorMinutes).toLocaleString()
+                                  : "—"}
+                              </td>
+                              <td className="numeric">
+                                {workload.returningShare == null
+                                  ? "—"
+                                  : `${fmt(workload.returningShare * 100, 0)}%`}
+                              </td>
+                              <td className="numeric">
+                                {workload.incomingPriorMinutes
+                                  ? Math.round(workload.incomingPriorMinutes).toLocaleString()
+                                  : "—"}
+                              </td>
+                              <td className="numeric">
+                                {unrepresented
+                                  ? Math.round(unrepresented).toLocaleString()
+                                  : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                   <p className="note">
                     Roster shape uses only the source-reported position labels
                     on this listing; it is descriptive and does not identify a
                     viable lineup or positional matchup.
+                  </p>
+                  <p className="note">
+                    Role rows use prior production attached to the currently
+                    listed source records. They are a narrower sample than the
+                    team denominator above; a missing or unclassified listing
+                    remains unknown.
                   </p>
                   <p className="note">
                     The percentage uses {roster.priorMinutes.toLocaleString()} recorded
