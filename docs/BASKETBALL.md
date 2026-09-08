@@ -80,7 +80,7 @@ The separate [roster continuity challenger](/basketball/model/) fits a chronolog
 
 ## Player and team statistics
 
-The [historical player archive](BASKETBALL_CAREERS.md) adds 24 published seasons, annual stat rankings, season/program production histories and 3.68 million retained identified box-score rows. Per-season coverage and source-identity warnings are explicit; early seasons are sparse. ESPN-derived source profiles are shown alongside a player's history for position, listed size, experience and status context, while retaining the source-ID limitation. The player desk also links to the exact season player-box Parquet release, archived by receipt hash in private R2 and streamed through the read-only careers API.
+The [historical player archive](BASKETBALL_CAREERS.md) adds 24 published seasons, annual stat rankings, season/program production histories and 3.68 million retained identified box-score rows. Per-season coverage and source-identity warnings are explicit; early seasons are sparse. ESPN-derived source profiles are shown alongside a player's history for position, listed size, experience and status context, while retaining the source-ID limitation. The profile browser supports shareable season/search/position/status URLs and links each source row to the program dossier and a dated recruiting-evidence search. The player desk also links to the exact season player-box Parquet release, archived by receipt hash in private R2 and streamed through the read-only careers API.
 
 The [school announcement board](BASKETBALL_RECRUITING.md) adds dated recruiting evidence with historical-stat links and later availability statements. It is a partial editorial review, separate from unconfirmed source rosters.
 
