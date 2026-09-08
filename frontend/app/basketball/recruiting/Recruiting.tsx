@@ -6,6 +6,7 @@ import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   parseRosterFilters,
+  rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
   type RosterSortKey,
@@ -20,6 +21,8 @@ const labels: Record<string, string> = {
 export default function Recruiting() {
   const [season, setSeason] = useState("2027"),
     [q, setQ] = useState(""),
+    [position, setPosition] = useState(""),
+    [classYear, setClassYear] = useState(""),
     [status, setStatus] = useState("all"),
     [sort, setSort] = useState<RosterSortKey>("status"),
     [teamQuery, setTeamQuery] = useState(""),
@@ -31,6 +34,8 @@ export default function Recruiting() {
     const filters = parseRosterFilters(window.location.search);
     setSeason(filters.season);
     setQ(filters.q);
+    setPosition(filters.position);
+    setClassYear(filters.classYear);
     setStatus(filters.status);
     setSort(filters.sort);
     setPage(filters.page);
@@ -43,6 +48,8 @@ export default function Recruiting() {
       rosterFilterSearch({
         season: season === "2026" ? "2026" : "2027",
         q,
+        position,
+        classYear,
         status: status as RosterStatus,
         sort,
         page,
@@ -51,16 +58,19 @@ export default function Recruiting() {
     params.set("view", "observations");
     url.search = params.toString();
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, page, q, season, sort, status]);
+  }, [classYear, hydrated, page, position, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
   );
+  const options = rosterFilterOptions(data?.players || []);
   const rows = sortRosterObservations(
     (data?.players || []).filter(
       (p) =>
         (p.name + " " + p.team + " " + p.previous_teams.join(" "))
           .toLowerCase()
           .includes(q.toLowerCase()) &&
+        (!position || p.position === position) &&
+        (!classYear || p.class_year === classYear) &&
         (status === "all" || p.status === status),
     ),
     sort,
@@ -90,11 +100,49 @@ export default function Recruiting() {
             onChange={(e) => {
               setSeason(e.target.value);
               setStatus("all");
+              setPosition("");
+              setClassYear("");
               setPage(0);
             }}
           >
             <option value="2027">2026–27 · Unconfirmed source listings</option>
             <option value="2026">2025–26 · Recorded game appearances</option>
+          </select>
+        </label>
+        <label className="control">
+          <span>SOURCE POSITION</span>
+          <select
+            value={position}
+            onChange={(e) => {
+              setPosition(e.target.value);
+              setPage(0);
+            }}
+          >
+            <option value="">All positions</option>
+            {position && !options.positions.includes(position) && (
+              <option value={position}>{position} · not in this sample</option>
+            )}
+            {options.positions.map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        </label>
+        <label className="control">
+          <span>SOURCE CLASS</span>
+          <select
+            value={classYear}
+            onChange={(e) => {
+              setClassYear(e.target.value);
+              setPage(0);
+            }}
+          >
+            <option value="">All classes</option>
+            {classYear && !options.classes.includes(classYear) && (
+              <option value={classYear}>{classYear} · not in this sample</option>
+            )}
+            {options.classes.map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
           </select>
         </label>
         <label className="control">

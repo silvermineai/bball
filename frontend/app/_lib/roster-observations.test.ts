@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseRosterFilters,
+  rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
 } from "./roster-observations";
@@ -88,9 +89,11 @@ describe("roster observation sorting", () => {
 
 describe("shareable roster observation filters", () => {
   it("parses supported values and ignores invalid values", () => {
-    expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3")).toEqual({
+    expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3")).toEqual({
       season: "2026",
       q: "Arizona",
+      position: "G",
+      classYear: "Senior",
       status: "different_program",
       sort: "prior_ts",
       page: 3,
@@ -98,6 +101,8 @@ describe("shareable roster observation filters", () => {
     expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4")).toEqual({
       season: "2027",
       q: "",
+      position: "",
+      classYear: "",
       status: "all",
       sort: "status",
       page: 0,
@@ -105,7 +110,16 @@ describe("shareable roster observation filters", () => {
   });
 
   it("omits defaults while preserving the exact recruiting slice", () => {
-    expect(rosterFilterSearch({ season: "2026", q: "Arizona", status: "different_program", sort: "prior_ts", page: 3 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3");
-    expect(rosterFilterSearch({ season: "2027", q: "", status: "all", sort: "status", page: 0 })).toBe("");
+    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_ts", page: 3 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3");
+    expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0 })).toBe("");
+  });
+
+  it("keeps source position and class labels stable for filters", () => {
+    expect(rosterFilterOptions([
+      row("a", "Alpha", "same_program", "A", [], undefined),
+      { ...row("b", "Beta", "new_to_dataset", "B", []), position: "F", class_year: "Junior" },
+      { ...row("c", "Gamma", "different_program", "C", []), position: "G", class_year: "Senior" },
+      { ...row("d", "Delta", "same_program", "D", []), position: "F", class_year: "Junior" },
+    ])).toEqual({ positions: ["F", "G"], classes: ["Junior", "Senior"] });
   });
 });

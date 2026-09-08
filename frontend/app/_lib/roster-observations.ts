@@ -20,6 +20,8 @@ export type RosterStatus =
 export type RosterFilters = {
   season: "2027" | "2026";
   q: string;
+  position: string;
+  classYear: string;
   status: RosterStatus;
   sort: RosterSortKey;
   page: number;
@@ -60,6 +62,8 @@ export function parseRosterFilters(search: string): RosterFilters {
   return {
     season: season === "2026" ? "2026" : "2027",
     q: params.get("rosterQ") || "",
+    position: params.get("rosterPosition") || "",
+    classYear: params.get("rosterClass") || "",
     status: status && rosterStatuses.has(status) ? status : "all",
     sort: sort && rosterSorts.has(sort) ? sort : "status",
     page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
@@ -71,11 +75,21 @@ export function rosterFilterSearch(filters: RosterFilters) {
   const params = new URLSearchParams();
   if (filters.season !== "2027") params.set("rosterSeason", filters.season);
   if (filters.q) params.set("rosterQ", filters.q);
+  if (filters.position) params.set("rosterPosition", filters.position);
+  if (filters.classYear) params.set("rosterClass", filters.classYear);
   if (filters.status !== "all") params.set("rosterStatus", filters.status);
   if (filters.sort !== "status") params.set("rosterSort", filters.sort);
   if (filters.page) params.set("rosterPage", String(filters.page));
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+/** Return stable source labels for select controls without inventing categories. */
+export function rosterFilterOptions(rows: BBRoster[]) {
+  return {
+    positions: [...new Set(rows.map((row) => row.position).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)),
+    classes: [...new Set(rows.map((row) => row.class_year).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)),
+  };
 }
 
 /** Sort roster observations for recruiting review without mutating the release. */
