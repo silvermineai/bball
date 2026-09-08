@@ -15,6 +15,7 @@ import {
   type BasketballLeaderPlayer,
 } from "../_lib/basketball-leaders";
 import { seasonLabel } from "../_lib/careers";
+import type { BBDatasetCoverage } from "../_lib/basketball-types";
 
 function getBasketballLeaders(season: number) {
   const file = path.join(
@@ -45,6 +46,23 @@ const leaderMetricLabels: Record<BasketballLeaderMetric, string> = {
   apg: "Assists per game",
   ts: "True shooting",
 };
+
+function receiptStatus(dataset: BBDatasetCoverage, editionAt: string) {
+  if (!dataset.latest_source_at) {
+    return { label: "Derived layer", className: "derived", detail: "Built from retained source rows" };
+  }
+  const lag = Math.max(
+    0,
+    Math.floor(
+      (Date.parse(editionAt) - Date.parse(dataset.latest_source_at)) /
+        (24 * 60 * 60 * 1000),
+    ),
+  );
+  if (lag <= 1) return { label: "Current receipt", className: "current", detail: "Receipt is within one day of this edition" };
+  if (lag <= 7) return { label: "Aging receipt", className: "aging", detail: `${lag} days behind this edition` };
+  return { label: "Review receipt", className: "review", detail: `${lag} days behind this edition` };
+}
+
 export const metadata = {
   title: "2026–27 basketball stats, scouting and recruiting research",
 };
@@ -127,6 +145,42 @@ export default function Page() {
           <span>Programs with efficiency ratings</span>
         </div>
       </div>
+      <section className="section source-receipts">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">00 / Source receipts</div>
+            <h2>Know how recent the evidence is.</h2>
+          </div>
+          <Link href="/research/coverage/">Full coverage desk →</Link>
+        </div>
+        <p className="note">
+          Each layer carries its own source timestamp. The label compares that
+          receipt with this edition build; derived layers have no separate
+          fetch and stay identified as derived.
+        </p>
+        <div className="source-receipt-grid">
+          {(d.coverage.datasets ?? []).map((dataset) => {
+            const status = receiptStatus(dataset, d.generated_at);
+            return (
+              <article className="source-receipt" key={dataset.key}>
+                <div className={`source-receipt-status ${status.className}`}>
+                  <span aria-hidden="true" />
+                  {status.label}
+                </div>
+                <h3>{dataset.label}</h3>
+                <div className="source-receipt-meta">
+                  <span>{dataset.rows.toLocaleString()} rows</span>
+                  <span>{dataset.seasons.length} seasons</span>
+                </div>
+                <p>{status.detail}</p>
+                {dataset.latest_source_at && (
+                  <small>Last receipt · {date(dataset.latest_source_at)}</small>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <section className="section">
         <div className="section-heading">
           <div>

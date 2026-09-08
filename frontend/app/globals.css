@@ -560,6 +560,57 @@ th,
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
+.source-receipt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.source-receipt {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: #fcfaf4;
+}
+.source-receipt h3 {
+  margin-top: 13px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+.source-receipt p,
+.source-receipt small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.source-receipt-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--ink);
+  font: 10px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.source-receipt-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font: 10px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.source-receipt-status span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.source-receipt-status.current span { background: #55764b; }
+.source-receipt-status.aging span { background: #b47a35; }
+.source-receipt-status.review span { background: var(--orange); }
+.source-receipt-status.derived span { background: #7b8790; }
 .basketball-leader-list {
   margin-top: 18px;
 }
@@ -584,9 +635,15 @@ th,
   .basketball-leader-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .source-receipt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 600px) {
   .basketball-leader-grid {
+    grid-template-columns: 1fr;
+  }
+  .source-receipt-grid {
     grid-template-columns: 1fr;
   }
 }
