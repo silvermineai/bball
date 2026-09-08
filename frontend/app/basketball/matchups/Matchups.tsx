@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { BBGame, BBRosterSummary } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import type { BBOverview } from "../../_lib/basketball-types";
 import {
   matchupFilterSearch,
   parseMatchupFilters,
@@ -15,9 +16,13 @@ import {
 export default function Matchups({
   games,
   rosterSummaries,
+  model,
+  generatedAt,
 }: {
   games: BBGame[];
   rosterSummaries: BBRosterSummary[];
+  model: BBOverview["model"];
+  generatedAt: string;
 }) {
   const params = useSearchParams();
   const initial = parseMatchupFilters(params.toString());
@@ -126,6 +131,9 @@ export default function Matchups({
       <p className="note">
         This filtered slate updates the URL, so a preparation view can be
         bookmarked or shared with the exact team, coverage and triage sort.
+      </p>
+      <p className="note">
+        Forecast edition {generatedAt.slice(0, 10)} · model {model.version} · training cutoff {model.cutoff}. Read the <Link href="/basketball/model/">model notebook</Link> for fitting windows, held-out results and limitations.
       </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>

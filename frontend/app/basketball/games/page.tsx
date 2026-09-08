@@ -10,6 +10,7 @@ export const metadata = {
 };
 
 export default function Page() {
+  const basketball = getBasketball();
   return (
     <>
       <div className="page-title">
@@ -22,8 +23,10 @@ export default function Page() {
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
         <Matchups
-          games={getBasketball().upcoming}
+          games={basketball.upcoming}
           rosterSummaries={getRosters().team_summaries || []}
+          model={basketball.model}
+          generatedAt={basketball.generated_at}
         />
       </Suspense>
     </>

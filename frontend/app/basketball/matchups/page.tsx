@@ -28,7 +28,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
-        <Matchups games={d.upcoming} rosterSummaries={rosters.team_summaries || []} />
+        <Matchups games={d.upcoming} rosterSummaries={rosters.team_summaries || []} model={d.model} generatedAt={d.generated_at} />
       </Suspense>
     </>
   );
