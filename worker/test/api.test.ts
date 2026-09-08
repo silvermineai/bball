@@ -532,6 +532,24 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("returns the NCAA shot-release receipt for shooting metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ fetched_at: "2026-09-08T02:13:00Z", sha256: "d".repeat(64) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/ncaa-shooting?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      source: { fetched_at: "2026-09-08T02:13:00Z", sha256: "d".repeat(64) },
+    });
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",
