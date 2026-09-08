@@ -28,6 +28,8 @@ The market section reads the published ledger snapshot instead of using a perman
 
 A selected registration shows its timestamp and status, including reasons for exclusion. Only an unexcluded selected record can supply comparisons. Quote capture and provider-update times are explicit, with UTC timestamps. The spread, total and moneyline difference conventions are stated separately. No qualifying odds exist in the present ledger, so the real pages correctly show unavailable comparisons. The odds account and live market collection remain unverified; this UI change does not supply those missing data.
 
+The forecast lab also includes a browser-only manual quote checker. A reader can select any game in the filtered slate and enter an observed home spread, total or American home moneyline to see the arithmetic disagreement with the published model. Inputs never leave the browser and never become a market observation, recommendation or ledger row. The checker uses the same conventions as the ledger: model home margin plus home spread, model total minus total line and model home probability minus normalized two-way implied probability.
+
 ## Workbench and preparation notes
 
 The primary link passes the published home team as program A, away team as program B, and `venue=a` for a home-designated game or `venue=neutral` for a neutral game. Previously the workbench defaulted every incoming brief to neutral. The workbench now reads a valid `venue` query value and writes program/venue selections back into the URL. Swapping programs reverses the A/B venue label while preserving the physical home program. Reloading the URL retains the scenario. Invalid venue values fall back to neutral. These scenarios still do not create forecast registrations.
