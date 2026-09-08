@@ -913,6 +913,54 @@ details {
   border-bottom: 1px solid var(--line);
   padding: 18px 0;
 }
+.ncaa-source-fields {
+  margin-top: 10px;
+  max-width: 410px;
+  border: 0;
+  padding: 0;
+  font-size: 0.74rem;
+}
+.ncaa-source-fields summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.ncaa-source-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 10px 0 6px;
+}
+.ncaa-source-field-grid strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ncaa-source-field-grid dl {
+  margin: 4px 0 0;
+}
+.ncaa-source-field-grid dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 0;
+}
+.ncaa-source-field-grid dt {
+  color: var(--muted);
+}
+.ncaa-source-field-grid dd {
+  margin: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ncaa-source-fields > small {
+  color: var(--muted);
+}
 summary {
   cursor: pointer;
   font-weight: 600;

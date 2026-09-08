@@ -15,6 +15,30 @@ const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const n = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const pct = (value: number | null | undefined) => n(value == null ? null : value * 100) + "%";
 const rate = (made: number | null | undefined, attempted: number | null | undefined) => attempted ? (made || 0) / attempted : null;
+const sourceFieldGroups = [
+  { label: "Possession", fields: [["o_poss", "Offensive possessions", "number"], ["tov", "Turnovers", "number"], ["pf", "Fouls", "number"]] },
+  { label: "Shooting", fields: [["ts_pct", "True shooting", "percent"], ["efg_pct", "Effective FG", "percent"], ["tp_pct", "Three-point", "percent"], ["ft_pct", "Free throw", "percent"]] },
+  { label: "Transition", fields: [["pts_trans", "Points", "number"], ["fga_trans", "FGA", "number"], ["tpa_trans", "3PA", "number"], ["ast_trans", "Assists", "number"]] },
+  { label: "Shot profile", fields: [["rimm", "Rim makes", "number"], ["rima", "Rim attempts", "number"], ["rim_pct", "Rim rate", "percent"], ["mida", "Mid-range attempts", "number"]] },
+  { label: "Playmaking", fields: [["pts_ast", "Assisted points", "number"], ["pts_unast", "Unassisted points", "number"], ["fgm_ast", "Assisted FGM", "number"], ["tpm_ast", "Assisted 3PM", "number"]] },
+] as const;
+
+function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
+  return <details className="ncaa-source-fields">
+    <summary>Open retained source fields</summary>
+    <div className="ncaa-source-field-grid">
+      {sourceFieldGroups.map((group) => <div key={group.label}>
+        <strong>{group.label}</strong>
+        <dl>{group.fields.map(([key, label, kind]) => {
+          const value = stats[key];
+          const display = value == null ? "—" : kind === "percent" ? pct(value) : n(value, 0);
+          return <div key={key}><dt>{label}</dt><dd>{display}</dd></div>;
+        })}</dl>
+      </div>)}
+    </div>
+    <small>Fields remain source-reported; an unavailable value is not treated as zero.</small>
+  </details>;
+}
 
 export default function NcaaPlayerBox() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -94,7 +118,7 @@ export default function NcaaPlayerBox() {
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
       {copied && <p role="status">{copied}</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `NCAA team ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n((s.orb || 0) + (s.drb || 0), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0))))}</td></tr>; })}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `NCAA team ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n((s.orb || 0) + (s.drb || 0), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0))))}</td></tr>; })}</tbody></table></div>
       {!result.rows.length && <p className="empty">No NCAA player rows match this search.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
       <p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived player box release via SportsDataverse. This archive is descriptive and does not assert eligibility, roster status or a verified identity match to ESPN records.</p>
