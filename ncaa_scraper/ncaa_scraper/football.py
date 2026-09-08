@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .football_model import forecast, train_and_evaluate
+from .football_efficiency_model import build as build_efficiency_model
 from .football_sources import (
     ATTRIBUTION,
     DATASETS,
@@ -346,7 +347,8 @@ def build(conn, season=2026):
             ).hexdigest(),
         }
     )
-    artifacts = {"overview": overview, "validation": validation}
+    efficiency_model = build_efficiency_model(conn, games, model, upcoming, season)
+    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
     for name, payload in artifacts.items():

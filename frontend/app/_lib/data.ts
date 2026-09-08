@@ -34,6 +34,35 @@ export type Game = {
     margin_difference: number | null;
   } | null;
 };
+export type FootballEfficiencyScenario = {
+  game_id: string;
+  base_margin: number;
+  challenger_margin: number;
+  margin_delta: number;
+};
+export type FootballEfficiencyModel = {
+  version: string;
+  generated_at: string;
+  target_season: number;
+  feature_definition: string;
+  evaluation: {
+    rows: number;
+    baseline_mae: number | null;
+    challenger_mae: number | null;
+    improvement_vs_primary: number | null;
+    baseline_rmse: number | null;
+    challenger_rmse: number | null;
+  };
+  coverage: {
+    advanced_rows: number;
+    training_rows: number;
+    holdout_rows: number;
+    current_scenarios: number;
+    current_teams: number;
+  };
+  limitations: string[];
+  scenarios: FootballEfficiencyScenario[];
+};
 export type Overview = {
   generated_at: string;
   season: number;
@@ -110,6 +139,14 @@ export function getOverview(): Overview {
   return JSON.parse(
     fs.readFileSync(
       path.join(process.cwd(), "public/data/football/overview.json"),
+      "utf8",
+    ),
+  );
+}
+export function getFootballEfficiencyModel(): FootballEfficiencyModel {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football/efficiency-model.json"),
       "utf8",
     ),
   );

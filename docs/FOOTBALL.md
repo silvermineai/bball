@@ -41,6 +41,8 @@ V1 artifacts retain their original normal-error/sigma interpretation for exact r
 
 There are no injury, transfer, depth-chart, recruiting, weather or coaching features yet. Unknown teams and non-FBS opponents receive no score estimate.
 
+The matchup desk also publishes a **research-only football efficiency challenger**. It uses lagged, three-season team EPA-per-play and yards-per-play rates from the retained advanced team-game records, shrinks sparse teams toward the league prior, and applies a residual correction to the published score-only margin. The challenger is shown beside eligible upcoming games as a margin scenario; it does not change the primary probability, interval, forecast registration or market ledger. On the fixed 2025 holdout, the current artifact reports the same score-only baseline and challenger errors side by side. This is one retrospective transition with incomplete 2026 source coverage, so it is a research comparison rather than a betting signal.
+
 ## Calibration release verification
 
 The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 15 Worker tests, plus Worker type checking and the combined production build. An independent database audit checked exact temporal cohorts, the fitted logistic gradient, all 744 legacy forecast reproductions, unchanged point forecasts, retained historical rows and the implementation hash. Browser checks covered desktop/mobile layout, chart hydration, the evidence download, a game brief and the forecast guide. The existing 519 KB legacy basketball bundle warning remains.
@@ -116,7 +118,7 @@ The repository also defines a serialized weekly GitHub Actions refresh in [`.git
 - Finish migrating basketball pages from TanStack to Next.js.
 - Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
-- Improve football forecasts using dated efficiency and roster features; evaluate rolling splits and test calibration stability.
+- Extend the football efficiency challenger across additional dated transitions, then evaluate rolling splits and calibration stability before considering any production change.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.

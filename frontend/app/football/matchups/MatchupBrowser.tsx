@@ -1,15 +1,17 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { Game } from "../../_lib/data";
+import type { FootballEfficiencyScenario, Game } from "../../_lib/data";
 import MatchCard from "../../_components/MatchCard";
 import { date } from "../../_lib/format";
 export default function MatchupBrowser({
   games,
   generated,
+  efficiencyScenarios = [],
 }: {
   games: Game[];
   generated: string;
+  efficiencyScenarios?: FootballEfficiencyScenario[];
 }) {
   const params = useSearchParams();
   const [query, setQuery] = useState(params.get("team") || ""),
@@ -32,6 +34,7 @@ export default function MatchupBrowser({
       (week === "all" || String(g.week) === week) &&
       (mode === "all" || g.prediction),
   );
+  const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
   return (
     <>
       <div className="toolbar">
@@ -86,7 +89,7 @@ export default function MatchupBrowser({
       </p>
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
-          <MatchCard key={g.id} game={g} />
+          <MatchCard key={g.id} game={g} efficiencyScenario={scenarioByGame.get(g.id)} />
         ))}
       </div>
       {!rows.length && (

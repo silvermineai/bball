@@ -1,9 +1,10 @@
 import { Suspense } from "react";
-import { getOverview } from "../../_lib/data";
+import { getFootballEfficiencyModel, getOverview } from "../../_lib/data";
 import MatchupBrowser from "./MatchupBrowser";
 export const metadata = { title: "2026 football matchups and forecasts" };
 export default function Page() {
   const d = getOverview();
+  const efficiencyModel = getFootballEfficiencyModel();
   return (
     <>
       <div className="page-title">
@@ -16,7 +17,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading matchups…</p>}>
-        <MatchupBrowser games={d.upcoming} generated={d.generated_at} />
+        <MatchupBrowser games={d.upcoming} generated={d.generated_at} efficiencyScenarios={efficiencyModel.scenarios} />
       </Suspense>
     </>
   );

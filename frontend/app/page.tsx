@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOverview } from "./_lib/data";
+import { getFootballEfficiencyModel, getOverview } from "./_lib/data";
 import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
 import fs from "node:fs";
@@ -38,6 +38,7 @@ const leaderCategoryLabels = {
 } as const;
 export default function Home() {
   const d = getOverview(),
+    efficiencyModel = getFootballEfficiencyModel(),
     e = d.model.evaluation,
     g = d.upcoming.find((g) => g.prediction),
     p = g?.prediction,
@@ -125,7 +126,7 @@ export default function Home() {
             .filter((g) => g.prediction)
             .slice(0, 3)
             .map((g) => (
-              <MatchCard key={g.id} game={g} />
+              <MatchCard key={g.id} game={g} efficiencyScenario={efficiencyModel.scenarios.find((scenario) => scenario.game_id === g.id)} />
             ))}
         </div>
       </section>

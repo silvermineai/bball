@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { Game } from "../_lib/data";
+import type { FootballEfficiencyScenario, Game } from "../_lib/data";
 import { fmt, kick } from "../_lib/format";
-export default function MatchCard({ game: g }: { game: Game }) {
+export default function MatchCard({ game: g, efficiencyScenario }: { game: Game; efficiencyScenario?: FootballEfficiencyScenario }) {
   const p = g.prediction;
   return (
     <article className="match-card">
@@ -49,6 +49,14 @@ export default function MatchCard({ game: g }: { game: Game }) {
           No forecast: a team is outside the model’s trained FBS field. Schedule
           retained for planning.
         </p>
+      )}
+      {efficiencyScenario && (
+        <div className="market-note">
+          <strong>Efficiency challenger · research-only</strong><br />
+          Margin {fmt(efficiencyScenario.challenger_margin)} · shift {efficiencyScenario.margin_delta > 0 ? "+" : ""}{fmt(efficiencyScenario.margin_delta)} pts
+          <br />
+          Advanced lagged rates do not change the primary probability, range or ledger.
+        </div>
       )}
       <div className="market-note">
         {g.market ? (
