@@ -9,6 +9,12 @@ export type RosterLabSort =
 
 export type RosterPositionGroup = "guard" | "forward" | "center" | "unreported";
 export type RosterPositionCounts = Record<RosterPositionGroup, number>;
+export type RosterPositionWorkload = {
+  priorMinutes: number;
+  returningMinutes: number;
+  incomingPriorMinutes: number;
+  returningShare: number | null;
+};
 
 /** Normalize the source's short position labels for a descriptive roster shape. */
 export function rosterPositionGroup(position: string | null): RosterPositionGroup {
@@ -35,6 +41,7 @@ export type RosterLabRow = {
   representedShare: number | null;
   incomingShare: number | null;
   positionCounts: RosterPositionCounts;
+  positionWorkload: Record<RosterPositionGroup, RosterPositionWorkload>;
   ratingRank: number | null;
   adjustedNet: number | null;
   upcomingGames: number;
@@ -78,8 +85,30 @@ export function buildRosterLabRows(
         center: 0,
         unreported: 0,
       };
+      const positionWorkload = Object.fromEntries(
+        (["guard", "forward", "center", "unreported"] as RosterPositionGroup[]).map(
+          (group) => [
+            group,
+            { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+          ],
+        ),
+      ) as Record<RosterPositionGroup, RosterPositionWorkload>;
       for (const player of players) {
-        positionCounts[rosterPositionGroup(player.position)] += 1;
+        const group = rosterPositionGroup(player.position);
+        positionCounts[group] += 1;
+        const minutes = player.prior_production?.minutes ?? 0;
+        positionWorkload[group].priorMinutes += minutes;
+        if (player.status === "same_program") {
+          positionWorkload[group].returningMinutes += minutes;
+        } else if (player.status === "different_program") {
+          positionWorkload[group].incomingPriorMinutes += minutes;
+        }
+      }
+      for (const workload of Object.values(positionWorkload)) {
+        workload.returningShare =
+          workload.priorMinutes > 0
+            ? workload.returningMinutes / workload.priorMinutes
+            : null;
       }
       const priorMinutes = players.reduce(
         (total, player) => total + (player.prior_production?.minutes ?? 0),
@@ -123,6 +152,7 @@ export function buildRosterLabRows(
         incomingShare:
           priorMinutes > 0 ? incomingPriorMinutes / priorMinutes : null,
         positionCounts,
+        positionWorkload,
         ratingRank: rating?.rank ?? null,
         adjustedNet: rating?.adj_net ?? null,
         upcomingGames: coverage.upcoming,
@@ -130,6 +160,24 @@ export function buildRosterLabRows(
       } satisfies RosterLabRow;
     })
     .sort((a, b) => a.team.localeCompare(b.team));
+}
+
+/** Find the lowest returning-workload positions in the observed program sample. */
+export function positionContinuityWatch(
+  rows: RosterLabRow[],
+  group: RosterPositionGroup,
+  limit = 5,
+) {
+  return rows
+    .map((row) => ({ row, workload: row.positionWorkload[group] }))
+    .filter(({ workload }) => workload.priorMinutes > 0)
+    .sort(
+      (a, b) =>
+        (a.workload.returningShare ?? 2) - (b.workload.returningShare ?? 2) ||
+        b.workload.priorMinutes - a.workload.priorMinutes ||
+        a.row.team.localeCompare(b.row.team),
+    )
+    .slice(0, limit);
 }
 
 function nullableDescending(
@@ -181,6 +229,15 @@ export function rosterLabCsv(rows: RosterLabRow[]) {
     row.positionCounts.forward,
     row.positionCounts.center,
     row.positionCounts.unreported,
+    ...(["guard", "forward", "center"] as const).flatMap((group) => {
+      const workload = row.positionWorkload[group];
+      return [
+        workload.priorMinutes,
+        workload.returningMinutes,
+        workload.incomingPriorMinutes,
+        workload.returningShare == null ? null : workload.returningShare * 100,
+      ];
+    }),
     row.ratingRank,
     row.adjustedNet,
     row.upcomingGames,

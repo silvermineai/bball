@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { BBOverview, BBRosters } from "./basketball-types";
 import {
   buildRosterLabRows,
+  positionContinuityWatch,
   rosterPositionGroup,
   sortRosterLabRows,
 } from "./roster-readiness";
@@ -101,5 +102,28 @@ describe("roster lab", () => {
       center: 1,
       unreported: 1,
     });
+    expect(rows[0].positionWorkload).toEqual({
+      guard: { priorMinutes: 800, returningMinutes: 800, incomingPriorMinutes: 0, returningShare: 1 },
+      forward: { priorMinutes: 200, returningMinutes: 200, incomingPriorMinutes: 0, returningShare: 1 },
+      center: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+      unreported: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+    });
+  });
+
+  it("surfaces the thinnest observed position continuity", () => {
+    const rows = buildRosterLabRows(
+      rosters([
+        player("1", "Alpha", "same_program", 100, "G"),
+        player("1", "Alpha", "different_program", 300, "G"),
+        player("2", "Beta", "same_program", 100, "G"),
+        player("2", "Beta", "same_program", 100, "G"),
+      ]),
+      overview,
+    );
+    expect(positionContinuityWatch(rows, "guard").map(({ row }) => row.team)).toEqual([
+      "Alpha",
+      "Beta",
+    ]);
+    expect(positionContinuityWatch(rows, "guard")[0].workload.returningShare).toBe(0.25);
   });
 });
