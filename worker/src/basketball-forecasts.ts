@@ -33,13 +33,58 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
       c.env.DB.prepare(
-        "SELECT model_id, count(*) AS forecasts, MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at FROM bb_forecasts GROUP BY model_id ORDER BY last_created_at DESC, model_id",
+        `SELECT f.model_id,
+                count(*) AS forecasts,
+                MIN(f.created_at) AS first_created_at,
+                MAX(f.created_at) AS last_created_at,
+                MAX(m.created_at) AS model_created_at,
+                MAX(json_extract(m.artifact_json,'$.version')) AS version,
+                MAX(json_extract(m.artifact_json,'$.target_season')) AS target_season,
+                MAX(json_extract(m.artifact_json,'$.cutoff')) AS cutoff,
+                MAX(json_extract(m.artifact_json,'$.training_games')) AS training_games,
+                MAX(json_extract(m.artifact_json,'$.training_seasons')) AS training_seasons,
+                MAX(json_extract(m.artifact_json,'$.calibration.season')) AS calibration_season,
+                MAX(json_extract(m.artifact_json,'$.calibration.games')) AS calibration_games,
+                MAX(json_extract(m.artifact_json,'$.calibration.margin_half_width')) AS margin_half_width,
+                MAX(json_extract(m.artifact_json,'$.evaluation.season')) AS evaluation_season,
+                MAX(json_extract(m.artifact_json,'$.evaluation.games')) AS evaluation_games,
+                MAX(json_extract(m.artifact_json,'$.evaluation.winner_accuracy')) AS evaluation_winner_accuracy,
+                MAX(json_extract(m.artifact_json,'$.evaluation.margin_mae')) AS evaluation_margin_mae
+           FROM bb_forecasts f
+           LEFT JOIN bb_models m ON m.id=f.model_id
+          GROUP BY f.model_id
+          ORDER BY last_created_at DESC, f.model_id`,
       ),
     ]);
     c.header("Cache-Control", "public, max-age=300");
+    const modelsWithMetadata = models.results.map((row) => {
+      const item = row as Record<string, unknown>;
+      let trainingSeasons: number[] = [];
+      if (typeof item.training_seasons === "string") {
+        try {
+          const parsed = JSON.parse(item.training_seasons) as unknown;
+          if (Array.isArray(parsed)) trainingSeasons = parsed.map(Number).filter(Number.isFinite);
+        } catch {
+          // A malformed artifact field is represented as an empty catalog value.
+        }
+      }
+      return {
+        ...item,
+        target_season: item.target_season == null ? null : Number(item.target_season),
+        training_games: item.training_games == null ? null : Number(item.training_games),
+        training_seasons: trainingSeasons,
+        calibration_season: item.calibration_season == null ? null : Number(item.calibration_season),
+        calibration_games: item.calibration_games == null ? null : Number(item.calibration_games),
+        margin_half_width: item.margin_half_width == null ? null : Number(item.margin_half_width),
+        evaluation_season: item.evaluation_season == null ? null : Number(item.evaluation_season),
+        evaluation_games: item.evaluation_games == null ? null : Number(item.evaluation_games),
+        evaluation_winner_accuracy: item.evaluation_winner_accuracy == null ? null : Number(item.evaluation_winner_accuracy),
+        evaluation_margin_mae: item.evaluation_margin_mae == null ? null : Number(item.evaluation_margin_mae),
+      };
+    });
     return c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
-      models: models.results,
+      models: modelsWithMetadata,
     });
   }
 

@@ -207,6 +207,49 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_models"))).toBe(true);
   });
 
+  it("publishes forecast model metadata without exposing the stored coefficient artifact", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2027 }] },
+      { results: [{
+        model_id: "basketball-efficiency-v1-test",
+        forecasts: 12,
+        first_created_at: "2026-09-08T00:00:00Z",
+        last_created_at: "2026-09-08T01:00:00Z",
+        model_created_at: "2026-09-08T00:00:00Z",
+        version: "basketball-efficiency-v1",
+        target_season: 2027,
+        cutoff: "2026-09-08T00:00:00Z",
+        training_games: 22932,
+        training_seasons: "[2023,2024,2025,2026]",
+        calibration_season: 2025,
+        calibration_games: 5701,
+        margin_half_width: 16.08,
+        evaluation_season: 2026,
+        evaluation_games: 5734,
+        evaluation_winner_accuracy: 0.67,
+        evaluation_margin_mae: 10.38,
+      }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/forecasts?meta=1&season=2027",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { models: Array<Record<string, unknown>> };
+    expect(body.models[0]).toMatchObject({
+      model_id: "basketball-efficiency-v1-test",
+      target_season: 2027,
+      training_games: 22932,
+      training_seasons: [2023, 2024, 2025, 2026],
+      calibration_season: 2025,
+      evaluation_margin_mae: 10.38,
+    });
+    expect(body.models[0]).not.toHaveProperty("efficiency");
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid basketball forecast filters before querying D1", async () => {
     const prepare = vi.fn();
     for (const path of [
