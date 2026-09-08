@@ -1,4 +1,4 @@
-"""Archive NCAA roster and shot Parquet releases and receipts in R2."""
+"""Archive NCAA roster, shot and standings Parquet releases and receipts in R2."""
 
 import hashlib
 import json
@@ -47,3 +47,5 @@ def archive(dataset: str, stem: str, seasons: range, prefix: str) -> None:
 
 archive("roster", "ncaa_mbb_team_rosters", range(2010, 2027), "ncaa-rosters")
 archive("shot", "ncaa_mbb_shots", range(2019, 2027), "ncaa-shots")
+archive("standings", "standings", range(2003, 2027), "standings")
+archive("standings", "standings", range(2003, 2027), "standings")

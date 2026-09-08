@@ -143,6 +143,13 @@ export default function Page() {
     total_rows: number;
     seasons: { season: number; rows: number }[];
   };
+  const standings = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "standings.json"), "utf8"),
+  ) as {
+    generated_at: string;
+    teams: unknown[];
+    seasons: { season: number; source_url: string | null }[];
+  };
   const unresolved = JSON.parse(
     fs.readFileSync(path.join(dataDir, "unresolved-coverage.json"), "utf8"),
   ) as {
@@ -204,6 +211,15 @@ export default function Page() {
       latest: withinImpact.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
       url: null,
       note: "Source impact rows; qualification and possession samples remain visible.",
+    },
+    {
+      key: "standings",
+      label: "Historical publisher standings",
+      rows: standings.teams.length,
+      seasons: standings.seasons.map((season) => season.season),
+      latest: standings.generated_at,
+      url: standings.seasons.at(-1)?.source_url ?? null,
+      note: "Team-season records compacted from ESPN-derived SportsDataverse standings; source labels and display values are retained.",
     },
   ];
   const footballLedger = ledger.sports.football;

@@ -18,6 +18,10 @@ DATASETS = {
         PREFIX + "team_season_stats",
         "team_season_stats_{year}.parquet",
     ),
+    "standings": (
+        PREFIX + "standings",
+        "standings_{year}.parquet",
+    ),
     "publisher_ratings": ("mbb_ratings", "mbb_ratings_{year}.parquet"),
     "publisher_player_value": (
         "mbb_player_value",

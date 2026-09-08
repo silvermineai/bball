@@ -88,6 +88,7 @@ ncaa_scraper/ncaa_scraper/
   football_model.py       Ridge forecasts and temporal holdout evaluation
   basketball_sources.py   Basketball bulk-release catalog
   basketball.py           Basketball ingestion, rankings, rosters and D1 export
+  basketball_standings.py  Compact source-native standings archive
   basketball_model.py     Possession efficiency model and independent calibration
   basketball_matchups.py  Source-derived five-v-five matchup stint archive
   basketball_within_impact.py  NCAA within-team RAPM archive

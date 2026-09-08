@@ -207,6 +207,14 @@ run(
         str(ROOT / ".local/basketball.sql"),
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.basketball_standings",
+        "--refresh",
+    ]
+)
 run([PY, "scripts/build-basketball-coverage.py"])
 run([PY, "-m", "ncaa_scraper.ncaa_individual_enrichment"])
 run(
@@ -240,6 +248,18 @@ run(
         "ncaa_scraper/tests",
         "-p",
         "test_basketball_scouting.py",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
+        "test_basketball_standings.py",
     ]
 )
 run([PY, "-m", "ncaa_scraper.basketball_scouting"])
