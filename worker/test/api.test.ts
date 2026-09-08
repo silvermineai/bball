@@ -365,6 +365,29 @@ describe("bball api", () => {
     }
   });
 
+  it("returns ESPN profile source receipt metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ value: "Guard" }] },
+      { results: [{ value: "Active" }] },
+      { results: [{ total: 123 }] },
+      { results: [{ fetched_at: "2026-09-08T01:31:13Z", sha256: "b".repeat(64) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/player-core?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      total: 123,
+      source: { fetched_at: "2026-09-08T01:31:13Z" },
+    });
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid NCAA player ranking parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-rankings?metric=made_up",

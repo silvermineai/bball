@@ -19,11 +19,12 @@ export const playerCore = new Hono<{ Bindings: Bindings }>();
 playerCore.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, position, status, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, positions, statuses, count] = await c.env.DB.batch([
+    const [seasons, positions, statuses, count, source] = await c.env.DB.batch([
       c.env.DB.prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       c.env.DB.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
+      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -31,6 +32,13 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
       positions: positions.results.map((row) => String((row as { value: string }).value)),
       statuses: statuses.results.map((row) => String((row as { value: string }).value)),
       total: Number((count.results[0] as { total: number }).total || 0),
+      source: (() => {
+        const row = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+        return {
+          fetched_at: typeof row?.fetched_at === "string" ? row.fetched_at : null,
+          sha256: typeof row?.sha256 === "string" ? row.sha256 : null,
+        };
+      })(),
     });
   }
   const clauses = ["season=?"];

@@ -18,9 +18,10 @@ type Row = {
   profile: Record<string, string>;
 };
 type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; positions: string[]; statuses: string[]; total: number };
+type Meta = { seasons: number[]; positions: string[]; statuses: string[]; total: number; source?: { fetched_at: string | null; sha256: string | null } };
 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
+const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
 
 export default function Profiles() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -104,6 +105,7 @@ export default function Profiles() {
         <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{(meta?.positions || []).map((v) => <option key={v}>{v}</option>)}</select></label>
         <label className="control"><span>STATUS</span><select value={status} onChange={(e) => reset(() => setStatus(e.target.value))}><option value="">All statuses</option>{(meta?.statuses || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       </div>
+      {meta?.source ? <p className="note" style={{ marginTop: 16 }}>ESPN-derived profile receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
         <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!exportRows.length} onClick={() => downloadCsv(`basketball-player-profiles-${season}.csv`, toCsv(["Season", "Player", "Source ID", "Program", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Team ID"], exportRows.map((r) => [label(result.season), r.name, r.id, r.team, r.position, r.height, r.weight, r.jersey, r.experience, r.status, r.team_id])))}>Download CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
         {copied && <p role="status">{copied}</p>}
