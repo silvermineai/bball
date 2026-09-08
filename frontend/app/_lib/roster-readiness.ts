@@ -1,11 +1,12 @@
-import type { BBOverview, BBRosters } from "./basketball-types";
+import type { BBOverview, BBRosterModel, BBRosters } from "./basketball-types";
 
 export type RosterLabSort =
   | "represented"
   | "returning"
   | "incoming"
   | "listed"
-  | "rating";
+  | "rating"
+  | "bpm";
 export type RosterLabFilters = {
   query: string;
   sort: RosterLabSort;
@@ -46,6 +47,7 @@ const rosterLabSorts = new Set<RosterLabSort>([
   "incoming",
   "listed",
   "rating",
+  "bpm",
 ]);
 
 /** Read the roster impact lab controls from a shareable URL. */
@@ -110,6 +112,10 @@ export type RosterLabRow = {
   upperclassPriorMinutesShare: number | null;
   ratingRank: number | null;
   adjustedNet: number | null;
+  priorBpm: number | null;
+  returningBpm: number | null;
+  representedBpm: number | null;
+  incomingBpm: number | null;
   upcomingGames: number;
   forecastedGames: number;
 };
@@ -122,8 +128,12 @@ export type RosterLabRow = {
 export function buildRosterLabRows(
   rosters: BBRosters,
   overview: BBOverview,
+  rosterModel?: BBRosterModel,
 ): RosterLabRow[] {
   const ratings = new Map(overview.ratings.map((row) => [row.id, row]));
+  const publisherValues = new Map(
+    (rosterModel?.teams ?? []).map((row) => [row.team_id, row]),
+  );
   const schedule = new Map<string, { upcoming: number; forecasted: number }>();
   for (const game of overview.upcoming) {
     for (const teamId of [game.home_id, game.away_id]) {
@@ -224,6 +234,7 @@ export function buildRosterLabRows(
       );
       const representedPriorMinutes = returningMinutes + incomingPriorMinutes;
       const rating = ratings.get(teamId);
+      const publisherValue = publisherValues.get(teamId);
       const coverage = schedule.get(teamId) ?? { upcoming: 0, forecasted: 0 };
       return {
         teamId,
@@ -254,6 +265,10 @@ export function buildRosterLabRows(
             : null,
         ratingRank: rating?.rank ?? null,
         adjustedNet: rating?.adj_net ?? null,
+        priorBpm: publisherValue?.prior_bpm ?? null,
+        returningBpm: publisherValue?.returning_bpm ?? null,
+        representedBpm: publisherValue?.represented_bpm ?? null,
+        incomingBpm: publisherValue?.incoming_bpm ?? null,
         upcomingGames: coverage.upcoming,
         forecastedGames: coverage.forecasted,
       } satisfies RosterLabRow;
@@ -348,9 +363,11 @@ export function sortRosterLabRows(
           ? nullableDescending(a.returningShare, b.returningShare)
           : sort === "incoming"
             ? nullableDescending(a.incomingPriorMinutes, b.incomingPriorMinutes)
-            : sort === "listed"
-              ? b.listed - a.listed
-              : nullableDescending(a.adjustedNet, b.adjustedNet);
+              : sort === "listed"
+                ? b.listed - a.listed
+              : sort === "rating"
+                ? nullableDescending(a.adjustedNet, b.adjustedNet)
+                : nullableDescending(a.representedBpm, b.representedBpm);
     return value || a.team.localeCompare(b.team);
   });
 }
@@ -401,6 +418,10 @@ export function rosterLabCsv(rows: RosterLabRow[]) {
     row.upperclassPriorMinutesShare == null ? null : row.upperclassPriorMinutesShare * 100,
     row.ratingRank,
     row.adjustedNet,
+    row.priorBpm,
+    row.returningBpm,
+    row.representedBpm,
+    row.incomingBpm,
     row.upcomingGames,
     row.forecastedGames,
   ]);

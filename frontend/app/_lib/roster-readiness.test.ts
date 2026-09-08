@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BBOverview, BBRosters } from "./basketball-types";
+import type { BBOverview, BBRosterModel, BBRosters } from "./basketball-types";
 import {
   buildRosterLabRows,
   classExperienceWatch,
@@ -63,9 +63,9 @@ const overview = {
 
 describe("roster lab", () => {
   it("parses and serializes shareable lab controls", () => {
-    expect(parseRosterLabFilters("?q=Arizona&sort=rating&rated=1")).toEqual({
+    expect(parseRosterLabFilters("?q=Arizona&sort=bpm&rated=1")).toEqual({
       query: "Arizona",
-      sort: "rating",
+      sort: "bpm",
       ratedOnly: true,
     });
     expect(parseRosterLabFilters("?sort=unknown&rated=0")).toEqual({
@@ -73,7 +73,7 @@ describe("roster lab", () => {
       sort: "represented",
       ratedOnly: false,
     });
-    expect(rosterLabFilterSearch({ query: "Arizona", sort: "rating", ratedOnly: true })).toBe("?q=Arizona&sort=rating&rated=1");
+    expect(rosterLabFilterSearch({ query: "Arizona", sort: "bpm", ratedOnly: true })).toBe("?q=Arizona&sort=bpm&rated=1");
     expect(rosterLabFilterSearch({ query: "", sort: "represented", ratedOnly: false })).toBe("");
   });
 
@@ -93,6 +93,17 @@ describe("roster lab", () => {
     expect(alpha.upcomingGames).toBe(1);
     expect(alpha.forecastedGames).toBe(0);
     expect(rows.find((row) => row.teamId === "2")!.returningShare).toBeNull();
+  });
+
+  it("joins source-attributed team BPM only by exact team ID", () => {
+    const rows = buildRosterLabRows(
+      rosters([player("1", "Alpha", "same_program", 800), player("2", "Beta", "same_program", 400)]),
+      overview,
+      { teams: [{ team_id: "1", prior_bpm: 2.5, returning_bpm: 1.5, represented_bpm: 2, incoming_bpm: 0.5 }] } as BBRosterModel,
+    );
+    expect(rows.find((row) => row.teamId === "1")).toMatchObject({ priorBpm: 2.5, representedBpm: 2, incomingBpm: 0.5 });
+    expect(rows.find((row) => row.teamId === "2")?.representedBpm).toBeNull();
+    expect(sortRosterLabRows(rows, "bpm").map((row) => row.team)).toEqual(["Alpha", "Beta"]);
   });
 
   it("sorts null signals after observed workload", () => {
