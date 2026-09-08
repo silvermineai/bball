@@ -13,6 +13,10 @@ describe("recruiting wire filters", () => {
     expect(filterRecruitingWire([article("Transfer portal winners"), article("2027 recruiting class")], { query: "", topic: "transfer", page: 0 }).map((row) => row.id)).toEqual(["Transfer portal winners"]);
     expect(parseRecruitingWireFilters("?wireTopic=nope&wirePage=-1")).toEqual({ query: "", topic: "all", page: 0 });
   });
+  it("keeps player availability stories in their own topic", () => {
+    expect(filterRecruitingWire([article("Guard out for the season"), article("Freshman to miss season")], { query: "", topic: "availability", page: 0 }).map((row) => row.id)).toEqual(["Guard out for the season", "Freshman to miss season"]);
+    expect(parseRecruitingWireFilters("?wireTopic=availability").topic).toBe("availability");
+  });
   it("reports the newest valid retained publication", () => {
     expect(latestRecruitingWirePublication([
       article("Older"),

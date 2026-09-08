@@ -6,7 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { filterRecruitingWire, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
 
 const PAGE_SIZE = 12;
-const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability" };
+const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability", availability: "Injuries and availability" };
 
 export default function RecruitingWire({ articles }: { articles: RecruitingWireArticle[] }) {
   const initial = typeof window === "undefined" ? { query: "", topic: "all" as RecruitingWireTopic, page: 0 } : parseRecruitingWireFilters(window.location.search);

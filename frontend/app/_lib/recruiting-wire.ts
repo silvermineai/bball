@@ -8,15 +8,16 @@ export type RecruitingWireArticle = {
   publisher?: string;
   sport?: string;
 };
-export type RecruitingWireTopic = "all" | "transfer" | "prep" | "draft" | "eligibility";
+export type RecruitingWireTopic = "all" | "transfer" | "prep" | "draft" | "eligibility" | "availability";
 export type RecruitingWireFilters = { query: string; topic: RecruitingWireTopic; page: number };
 
-const topics = new Set<RecruitingWireTopic>(["all", "transfer", "prep", "draft", "eligibility"]);
+const topics = new Set<RecruitingWireTopic>(["all", "transfer", "prep", "draft", "eligibility", "availability"]);
 const topicWords: Record<Exclude<RecruitingWireTopic, "all">, RegExp> = {
   transfer: /transfer|portal|commit|signing|addition/i,
   prep: /recruit|prospect|class of|top 100|high school/i,
   draft: /nba draft|draft pick|draft withdrawal/i,
   eligibility: /eligib|redshirt|waiver|amateur/i,
+  availability: /injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i,
 };
 
 export function parseRecruitingWireFilters(search: string): RecruitingWireFilters {

@@ -29,7 +29,7 @@ export default function Page() {
   };
   const recruitingNews = news.articles.filter((article) =>
       (article.sport === "mens-college-basketball" || article.categories.some((category) => /NCAA Men's Basketball/i.test(category))) &&
-      /recruit|transfer|portal|commit|sign|class of|prospect/i.test(
+      /recruit|transfer|portal|commit|sign|class of|prospect|injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i.test(
         `${article.headline} ${article.description} ${article.categories.join(" ")}`,
       ),
     );
