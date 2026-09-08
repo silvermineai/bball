@@ -6,7 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "poss_share" | "rapm_net" | "orapm" | "drapm" | "balanced_index" | "impact_index";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; component_count?: number; per40_value?: number | null; rank: number; rapm_net: number | null; orapm: number | null; drapm: number | null; off_poss: number | null; def_poss: number | null };
-type Result = { season: number; metric: Metric; min_games: number; min_minutes: number; page: number; page_size: number; total: number; rows: Row[] };
+type Result = { season: number; metric: Metric; min_games: number; min_minutes: number; min_volume: number; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[] };
 const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes", ast_to: "Assist-to-turnover ratio", stocks40: "Stocks per 40 minutes", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", poss_share: "Team possession share", rapm_net: "Net RAPM", orapm: "Offensive RAPM", drapm: "Defensive RAPM", balanced_index: "Balanced production index", impact_index: "Impact + production index" };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
@@ -19,6 +19,7 @@ export default function NcaaRankings() {
   const [metric, setMetric] = useState<Metric>(metricFromQuery(initial?.get("metric") || null));
   const [minGames, setMinGames] = useState(initial?.get("minGames") || "5");
   const [minMinutes, setMinMinutes] = useState(initial?.get("minMinutes") || "200");
+  const [minVolume, setMinVolume] = useState(initial?.get("minVolume") || "0");
   const [query, setQuery] = useState(initial?.get("q") || "");
   const [position, setPosition] = useState(initial?.get("position") || "");
   const [classYear, setClassYear] = useState(initial?.get("classYear") || "");
@@ -32,13 +33,13 @@ export default function NcaaRankings() {
   const [copied, setCopied] = useState("");
 
   useEffect(() => {
-    const params = new URLSearchParams({ season, metric, minGames, minMinutes });
+    const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume });
     if (query.trim()) params.set("q", query.trim());
     if (position) params.set("position", position);
     if (classYear) params.set("classYear", classYear);
     if (page) params.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [season, metric, minGames, minMinutes, query, position, classYear, page]);
+  }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page]);
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-player-rankings?meta=1&season=${season}`)
@@ -47,7 +48,7 @@ export default function NcaaRankings() {
   }, [season]);
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ season, metric, minGames, minMinutes, page: String(page) });
+    const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume, page: String(page) });
     if (query.trim()) params.set("q", query.trim());
     if (position) params.set("position", position);
     if (classYear) params.set("classYear", classYear);
@@ -57,7 +58,7 @@ export default function NcaaRankings() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, metric, minGames, minMinutes, query, position, classYear, page]);
+  }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
@@ -97,15 +98,17 @@ export default function NcaaRankings() {
       <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "poss_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>
       <label className="control"><span>MINIMUM GAMES</span><select value={minGames} onChange={(e) => reset(() => setMinGames(e.target.value))}>{[1, 5, 10, 15, 20].map((n) => <option key={n} value={n}>{n} games</option>)}</select></label>
       <label className="control"><span>MINIMUM MINUTES</span><select value={minMinutes} onChange={(e) => reset(() => setMinMinutes(e.target.value))}>{[0, 200, 400, 600, 800].map((n) => <option key={n} value={n}>{n ? `${n} minutes` : "No minute minimum"}</option>)}</select></label>
+      <label className="control"><span>MINIMUM RATE SAMPLE</span><select value={minVolume} onChange={(e) => reset(() => setMinVolume(e.target.value))}>{[0, 25, 50, 100, 200, 400].map((n) => <option key={n} value={n}>{n ? `${n} denominator units` : "No rate minimum"}</option>)}</select></label>
       <label className="control"><span>PLAYER OR TEAM</span><input type="search" maxLength={120} placeholder="Search a player or team" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
       <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{position && !meta?.positions.includes(position) && <option value={position}>{position} · not in sample</option>}{(meta?.positions || []).map((value) => <option key={value}>{value}</option>)}</select></label>
       <label className="control"><span>CLASS</span><select value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{classYear && !meta?.classes.includes(classYear) && <option value={classYear}>{classYear} · not in sample</option>}{(meta?.classes || []).map((value) => <option key={value}>{value}</option>)}</select></label>
     </div>
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes{result.min_volume ? ` · ${result.min_volume} denominator units on rate boards` : ""}.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
       {(result.metric === "rapm_net" || result.metric === "orapm" || result.metric === "drapm") && <p className="note">{labels[result.metric]} is the publisher&apos;s lineup estimate and is shown only when the exact NCAA player ID has at least 500 offensive and 500 defensive possessions. The controls above additionally require the selected box-score games and minutes.</p>}
       {(result.metric === "ast_to" || result.metric === "stocks40") && <p className="note">{result.metric === "ast_to" ? "Assist-to-turnover ratio uses recorded assists divided by recorded turnovers; zero-turnover rows remain unavailable." : "Stocks per 40 combines recorded steals and blocks and scales them to 40 minutes; it is a descriptive defensive-event rate."} It is a source-stat rate, not a forecast input.</p>}
-      {(result.metric === "tov_rate" || result.metric === "three_rate") && <p className="note">{result.metric === "tov_rate" ? "Turnover rate is recorded turnovers divided by recorded offensive possessions." : "Three-point attempt rate is recorded three-point attempts divided by field-goal attempts."} Values are percentages and remain unavailable when the source denominator is missing. It is a source-stat rate, not a forecast input.</p>}
+      {(result.metric === "tov_rate" || result.metric === "three_rate") && <p className="note">{result.metric === "tov_rate" ? "Turnover rate is recorded turnovers divided by recorded offensive possessions." : "Three-point attempt rate is recorded three-point attempts divided by field-goal attempts."} Values are percentages and remain unavailable when the source denominator is missing. The minimum rate sample control uses the matching denominator for this board. It is a source-stat rate, not a forecast input.</p>}
+      {result.metric === "ast_to" && <p className="note">The minimum rate sample control uses recorded turnovers for this board; zero-turnover rows remain unavailable. Assist-to-turnover ratio is a source-stat rate, not a forecast input.</p>}
       {result.metric === "poss_share" && <p className="note">Team possession share is the player&apos;s recorded offensive possessions divided by the sum of recorded player offensive possessions for that NCAA team-season. It describes source-recorded workload and is unavailable when the team denominator is missing; it is not a usage or role projection.</p>}
       {result.metric === "balanced_index" && <p className="note">Balanced production index is a descriptive cohort score: available points, rebounds, assists, steals, blocks, true shooting, effective FG and points per 40 are standardized within this filtered board and averaged. At least four components are required. It is a shortlist aid, not an eligibility grade or forecast input.</p>}
       {result.metric === "impact_index" && <p className="note">Impact + production index averages standardized exact-ID net RAPM and points per 40 within this filtered board. Both sources are required; lineup impact has its NCAA possession qualification, while points per 40 is a descriptive scoring rate. It is a research shortlist, not a player value claim, recruiting grade or forecast input.</p>}

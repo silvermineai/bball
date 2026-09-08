@@ -10,6 +10,7 @@ const querySchema = z.object({
   metric: z.enum(metrics).default("ppg"),
   minGames: z.coerce.number().int().min(1).max(40).default(5),
   minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
+  minVolume: z.coerce.number().int().min(0).max(10000).default(0),
   q: z.string().trim().max(120).optional(),
   classYear: z.string().trim().regex(/^[A-Za-z0-9. -]{0,20}$/).optional(),
   position: z.string().trim().regex(/^[A-Za-z0-9 -]{0,20}$/).optional(),
@@ -68,6 +69,12 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
 
 const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "orapm" || metric === "drapm";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
+const volumeColumn = (metric: Metric) => {
+  if (metric === "ts" || metric === "efg" || metric === "three_rate") return "fga";
+  if (metric === "ast_to") return "turnovers";
+  if (metric === "tov_rate" || metric === "poss_share") return "possessions";
+  return null;
+};
 
 // A descriptive shortlist for readers who do not want to choose one box-score
 // category. Each component is standardized within the filtered cohort, then
@@ -166,7 +173,7 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 };
 
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, metric, minGames, minMinutes, q, classYear, position, page, meta } = c.req.valid("query");
+  const { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta } = c.req.valid("query");
   if (meta === "1") {
     const [seasons, classes, positions] = await c.env.DB.batch([
       c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
@@ -199,6 +206,9 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const expression = metric === "balanced_index" || metric === "impact_index" ? null : metricExpression(metric);
   const qualification = impactQualification(metric);
+  const volume = volumeColumn(metric);
+  const volumeQualification = volume ? `${volume} >= ?` : "1=1";
+  const volumeBinds = volume ? [minVolume] : [];
   const count: { total: number } | null = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
@@ -210,8 +220,8 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
       })()
     : await c.env.DB.prepare(
-      `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND ${qualification} AND (${expression}) IS NOT NULL`,
-    ).bind(...binds, minGames, minMinutes).first<{ total: number }>();
+      `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND ${qualification} AND ${volumeQualification} AND (${expression}) IS NOT NULL`,
+    ).bind(...binds, minGames, minMinutes, ...volumeBinds).first<{ total: number }>();
   const rows = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
@@ -225,12 +235,12 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     : await c.env.DB.prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
         SELECT aggregate.*, ${expression} AS value
-        FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification}
+        FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}
       )
       SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
       WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
-    ).bind(...binds, minGames, minMinutes, page * 50).all();
+    ).bind(...binds, minGames, minMinutes, ...volumeBinds, page * 50).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, metric, min_games: minGames, min_minutes: minMinutes, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  return c.json({ season, metric, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
 });
