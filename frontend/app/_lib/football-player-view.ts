@@ -1,8 +1,11 @@
 export type FootballProduction = {
+  games?: number | null;
   plays: number | null;
   yards: number | null;
+  yards_per_play?: number | null;
   epa: number | null;
   epa_per_play: number | null;
+  success_rate?: number | null;
   touchdowns: number | null;
   rank: number | null;
 };

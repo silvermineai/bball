@@ -18,10 +18,13 @@ import {
   type FootballPlayerDivision,
 } from "../../_lib/football-player-view";
 type Production = {
+  games?: number | null;
   plays: number | null;
   yards: number | null;
+  yards_per_play?: number | null;
   epa: number | null;
   epa_per_play: number | null;
+  success_rate?: number | null;
   touchdowns: number | null;
   rank: number | null;
 };
@@ -134,11 +137,11 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     downloadCsv(
       `football-player-rankings-${season}-${category}-page-${page + 1}.csv`,
       toCsv(
-        ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Plays", "Yards", "Yards per play", "Touchdowns", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"],
+        ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"],
         visible.map((p) => {
           const selected = productionForCategory(p, category), s = selected?.stats;
           const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
-          return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.plays, s?.yards, yardsPerPlay, s?.touchdowns, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
+          return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
         }),
       ),
     );
@@ -281,7 +284,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         {season === "2026"
           ? "Early-season samples are incomplete."
           : "Historical coverage varies by division and category."}{" "}
-        A dash means unranked or unavailable, never zero.
+        Category games, yards per play and success rate come from the same
+        source production record; a dash means unranked or unavailable, never
+        zero.
       </p>
       {eventDataset ? (
         <section className="section paper-panel">
@@ -323,10 +328,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                   <th>Player / team</th>
                   <th>Category</th>
                   <th className="numeric">Box games</th>
+                  <th className="numeric">Stat games</th>
                   <th className="numeric">Plays</th>
                   <th className="numeric">Yards</th>
                   <th className="numeric">Yards / play</th>
                   <th className="numeric">TD</th>
+                  <th className="numeric">Success rate</th>
                   <th className="numeric">Total EPA</th>
                   <th className="numeric">EPA / play</th>
                 </tr>
@@ -355,10 +362,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                             : category)}
                       </td>
                       <td className="numeric">{p.box_games}</td>
+                      <td className="numeric">{fmt(s?.games, 0)}</td>
                       <td className="numeric">{fmt(s?.plays, 0)}</td>
                       <td className="numeric">{fmt(s?.yards, 0)}</td>
-                      <td className="numeric">{fmt(s?.yards != null && s.plays ? s.yards / s.plays : null, 2)}</td>
+                      <td className="numeric">{fmt(s?.yards_per_play ?? (s?.yards != null && s.plays ? s.yards / s.plays : null), 2)}</td>
                       <td className="numeric">{fmt(s?.touchdowns, 0)}</td>
+                      <td className="numeric">{fmt(s?.success_rate == null ? null : s.success_rate * 100, 1)}{s?.success_rate == null ? "" : "%"}</td>
                       <td className="numeric">{fmt(s?.epa)}</td>
                       <td className="numeric">{fmt(s?.epa_per_play, 2)}</td>
                     </tr>
