@@ -99,6 +99,17 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid player profile archive parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/player-core?season=2002",
+      "/api/basketball/research/player-core?season=2027",
+      "/api/basketball/research/player-core?page=-1",
+      "/api/basketball/research/player-core?position=%27%20OR%201%3D1%20--",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?season=2020",
