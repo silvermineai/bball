@@ -59,6 +59,11 @@ const metrics = [
     use: "Read net, offensive and defensive values with their possession samples. It describes recorded stints, not a guarantee about a future role.",
   },
   {
+    name: "Publisher Box Plus/Minus (BPM)",
+    value: "A source-published player value estimate expressed as points per 100 possessions, with offensive and defensive components when available.",
+    use: "Use Box BPM as a second, source-attributed lens on prior player value. It is not a Silvermine forecast, recruiting grade, eligibility ruling or identity crosswalk; missing source rows stay unavailable.",
+  },
+  {
     name: "ORAPM and DRAPM",
     value: "The offensive and defensive components of the NCAA lineup estimate, each reported in points per 100 possessions.",
     use: "Separate scoring influence from defensive influence, then check the offensive and defensive possession thresholds before comparing players.",
@@ -117,7 +122,7 @@ const paths = [
 
 const recruitingPaths = [
   ["Study recruiting", "/basketball/recruiting/", "Separate announced additions, roster observations and prior production."],
-  ["Rank roster workload", "/basketball/roster-board/", "Sort source-listed 2026–27 players by prior recorded workload and rates, then open the evidence."],
+  ["Rank roster workload", "/basketball/roster-board/", "Sort source-listed 2026–27 players by prior workload, rates or publisher Box BPM, then open the evidence."],
   ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],
   ["Search roster intel", "/basketball/ncaa-rosters/", "Use class, position, size, hometown and high-school fields as recruiting context, then verify any transaction with a dated statement."],
   ["Trace high-school pipelines", "/basketball/ncaa-high-schools/", "Aggregate source roster rows by high-school label, then open the underlying players before drawing a recruiting conclusion."],
