@@ -185,6 +185,22 @@ run(
         "--sql",
     ]
 )
+run(
+    [
+        PY,
+        "-m",
+        "ncaa_scraper.pbp_catalog",
+        "--seasons",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025",
+        "2026",
+    ]
+)
 run([PY, "-m", "ncaa_scraper.basketball_recruiting"])
 run(
     [

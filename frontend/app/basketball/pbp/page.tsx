@@ -65,7 +65,7 @@ export default function Page() {
         <div><strong>{fmt(events, 0)}</strong><span>Play events indexed</span></div>
         <div><strong>{fmt(games, 0)}</strong><span>Source game records</span></div>
         <div><strong>{catalog.seasons.length}</strong><span>Published seasons</span></div>
-        <div><strong>{fmt(current.coverage.field_goal_attempts || 0, 0)}</strong><span>Current shot attempts checked</span></div>
+        <div><strong>{fmt(current.coverage.field_goal_attempts, 0)}</strong><span>Current shot attempts checked</span></div>
       </div>
       <PbpArchive catalogUrl="/data/basketball/pbp-catalog.json" initial={initial} />
       <section className="section paper-panel">

@@ -15,6 +15,12 @@ if catalog_path.exists():
 else:
     catalog = json.loads((ROOT / "frontend/public/data/basketball/shooting.json").read_text())
     catalogs = [catalog]
+pbp_catalog_path = ROOT / "frontend/public/data/basketball/pbp-catalog.json"
+pbp_catalogs = (
+    json.loads(pbp_catalog_path.read_text())["seasons"]
+    if pbp_catalog_path.exists()
+    else catalogs
+)
 files = sorted((ROOT / ".local/shooting-sql").glob("shots-*.sql"))
 if not files:
     raise SystemExit("Generate the shooting SQL before syncing")
@@ -38,7 +44,7 @@ def run(args):
         )
 
 
-for season_catalog in catalogs:
+for season_catalog in pbp_catalogs:
     season = season_catalog["season"]
     receipt = season_catalog["source"]
     source = ROOT / f".local/basketball/play_by_play_{season}.parquet"

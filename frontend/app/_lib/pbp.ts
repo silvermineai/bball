@@ -8,16 +8,16 @@ export type PbpGame = {
   events: number;
   scoring_plays: number;
   shooting_plays: number;
-  shot_attempts: number;
-  completed: boolean;
-  matched_schedule: boolean;
+  shot_attempts?: number | null;
+  completed?: boolean;
+  matched_schedule?: boolean;
 };
 
 export type PbpSeason = {
   season: number;
   generated_at: string;
   source: { fetched_at: string; url: string; sha256: string };
-  coverage: Record<string, number>;
+  coverage: Record<string, number | null>;
   games: PbpGame[];
 };
 
