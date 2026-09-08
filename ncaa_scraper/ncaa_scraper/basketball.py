@@ -129,6 +129,7 @@ def ingest(conn, dataset, year, rows, receipt):
             "player_box": "bb_player_box",
             "rosters": "bb_rosters",
             "player_season": "bb_player_season",
+            "team_season": "bb_team_season",
             "ncaa_rapm": "bb_impact",
         }
         if dataset in tables:
@@ -232,6 +233,35 @@ def ingest(conn, dataset, year, rows, receipt):
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_player_season VALUES (?,?,?,?)",
                 [(year, t, a, json.dumps(v)) for (t, a), v in aggregates.items()],
+            )
+        elif dataset == "team_season":
+            aggregates = defaultdict(dict)
+            profiles = {}
+            for r in rows:
+                tid = identity(r["team_id"])
+                profiles[tid] = {
+                    "name": r.get("team_display_name") or r.get("team_name") or tid,
+                    "abbreviation": r.get("team_abbreviation"),
+                }
+                category = aggregates[tid].setdefault(r["category"], {})
+                category[r["stat_name"]] = {
+                    "value": number(r.get("value")),
+                    "display": r.get("display_value"),
+                    "label": r.get("stat_display_name"),
+                    "description": r.get("stat_description"),
+                }
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_team_season VALUES (?,?,?,?,?)",
+                [
+                    (
+                        year,
+                        tid,
+                        profile["name"],
+                        profile["abbreviation"],
+                        json.dumps(aggregates[tid]),
+                    )
+                    for tid, profile in profiles.items()
+                ],
             )
         elif dataset == "ncaa_rapm":
             conn.executemany(
@@ -980,6 +1010,7 @@ def export_sql(conn, path):
             "bb_team_box",
             "bb_player_box",
             "bb_player_season",
+            "bb_team_season",
             "bb_rosters",
             "bb_impact",
             "bb_unresolved",
@@ -1003,9 +1034,8 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    conn.executescript(
-        (ROOT / "worker/migrations/0009_basketball_research.sql").read_text()
-    )
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql"):
+        conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
         for year in [2024, 2025, 2026, 2027]:
@@ -1030,6 +1060,8 @@ def main():
             # attributed season into the source-stat browser.
             if year == 2025:
                 datasets.append("player_season")
+            if year in (2024, 2025, 2026):
+                datasets.append("team_season")
             for dataset in datasets:
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)
