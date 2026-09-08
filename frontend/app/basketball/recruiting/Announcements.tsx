@@ -145,6 +145,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     return rosters.players.find((player) => player.team_id === teamId && player.name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase() === normalized) || null;
   };
   const exactRosterMatches = allRows.filter((row) => rosterMatch(row.name, row.team_id) === "exact").length;
+  const sourceSeason = rosters.previous_season;
   return (
     <>
       <div className="recruiting-views" aria-label="Recruiting evidence view">
@@ -190,10 +191,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 <h2>Put announcements in roster context.</h2>
               </div>
               <div className="button-row">
-                <Link className="button secondary" href={`/basketball/ncaa-rosters/?season=${rosters.season}`}>
+                <Link className="button secondary" href={`/basketball/ncaa-rosters/?season=${sourceSeason}`}>
                   Search roster archive ↗
                 </Link>
-                <a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${rosters.season}`}>
+                <a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${sourceSeason}`}>
                   Download source parquet ↓
                 </a>
               </div>
