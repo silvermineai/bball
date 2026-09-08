@@ -59,6 +59,14 @@ export default function NcaaCareers() {
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const changeFromSeason = (value: string) => reset(() => {
+    setFromSeason(value);
+    if (Number(value) > Number(toSeason)) setToSeason(value);
+  });
+  const changeToSeason = (value: string) => reset(() => {
+    setToSeason(value);
+    if (Number(value) < Number(fromSeason)) setFromSeason(value);
+  });
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -82,8 +90,8 @@ export default function NcaaCareers() {
     <div className="page-title"><div className="eyebrow">NCAA source archive / historical player seasons</div><h1>Put the season<br /><em>in context.</em></h1><p>Search the attributed NCAA player-season archive across a historical window. Each row stays tied to its source season, player ID and program, so eras and workloads can be compared without inventing a cross-season identity join.</p></div>
     <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player-seasons</span></div><div><strong>{result ? `${result.from_season}–${result.to_season}` : "—"}</strong><span>Season window</span></div><div><strong>{result?.min_games ?? minGames}</strong><span>Minimum games</span></div><div><strong>NCAA</strong><span>Identity namespace</span></div></div>
     <div className="toolbar">
-      <label className="control"><span>FROM</span><select value={fromSeason} onChange={(e) => reset(() => setFromSeason(e.target.value))}>{seasons.slice().sort((a, b) => a - b).map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
-      <label className="control"><span>THROUGH</span><select value={toSeason} onChange={(e) => reset(() => setToSeason(e.target.value))}>{seasons.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
+      <label className="control"><span>FROM</span><select value={fromSeason} onChange={(e) => changeFromSeason(e.target.value)}>{seasons.slice().sort((a, b) => a - b).map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
+      <label className="control"><span>THROUGH</span><select value={toSeason} onChange={(e) => changeToSeason(e.target.value)}>{seasons.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
       <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || Object.keys(labels) as Metric[]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>
       <label className="control"><span>MINIMUM GAMES</span><select value={minGames} onChange={(e) => reset(() => setMinGames(e.target.value))}>{[10, 20, 40, 60, 80].map((n) => <option key={n} value={n}>{n} games</option>)}</select></label>
       <label className="control"><span>MINIMUM MINUTES</span><select value={minMinutes} onChange={(e) => reset(() => setMinMinutes(e.target.value))}>{[0, 200, 400, 600, 800].map((n) => <option key={n} value={n}>{n ? `${n} minutes` : "No minute minimum"}</option>)}</select></label>
