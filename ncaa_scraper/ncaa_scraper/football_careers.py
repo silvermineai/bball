@@ -50,7 +50,12 @@ def _text(value):
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def build(rows: Iterable[dict], seasons: Iterable[int], generated_at: str | None = None):
+def build(
+    rows: Iterable[dict],
+    seasons: Iterable[int],
+    generated_at: str | None = None,
+    source_catalog_edition: str | None = None,
+):
     """Return a career index from season-level player rows.
 
     Only positive source athlete IDs are accepted. Production totals are
@@ -172,6 +177,7 @@ def build(rows: Iterable[dict], seasons: Iterable[int], generated_at: str | None
     return {
         "schema_version": 1,
         "generated_at": generated_at or datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "source_catalog_edition": source_catalog_edition,
         "coverage": {
             "seasons": season_values,
             "source_records": source_records,
@@ -191,7 +197,9 @@ def write(public: Path = PUBLIC) -> dict:
         payload = json.loads(path.read_text())
         rows.extend(payload.get("players", []))
         seasons.append(int(payload["season"]))
-    result = build(rows, seasons)
+    catalog_path = public / "player-catalog.json"
+    catalog = json.loads(catalog_path.read_text()) if catalog_path.exists() else {}
+    result = build(rows, seasons, source_catalog_edition=catalog.get("edition"))
     (public / "player-careers.json").write_text(
         json.dumps(result, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
         + "\n"

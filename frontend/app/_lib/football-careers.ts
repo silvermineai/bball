@@ -4,7 +4,7 @@ export type CareerCategory = (typeof careerCategories)[number];
 export type CareerProduction = { plays: number; yards: number; epa: number; epa_per_play: number | null; touchdowns: number; seasons: number[]; best_rank: number | null };
 export type CareerTeam = { season: number; team_id: string; team: string; conference: string | null; division: string | null; box_games: number };
 export type CareerPlayer = { id: string; name: string; first_season: number; last_season: number; seasons: number[]; season_count: number; box_games: number; categories: string[]; teams: CareerTeam[]; production: Partial<Record<Exclude<CareerCategory, "all">, CareerProduction>> };
-export type CareerIndex = { schema_version: number; generated_at: string; coverage: { seasons: number[]; source_records: number; player_count: number; production_records: number; identified_only: boolean }; methodology: string; players: CareerPlayer[] };
+export type CareerIndex = { schema_version: number; generated_at: string; source_catalog_edition: string | null; coverage: { seasons: number[]; source_records: number; player_count: number; production_records: number; identified_only: boolean }; methodology: string; players: CareerPlayer[] };
 export type CareerFilters = { query: string; category: CareerCategory; division: "all" | "fbs" | "fcs"; minSeasons: number };
 
 export function filterFootballCareers(players: CareerPlayer[], filters: CareerFilters) {
