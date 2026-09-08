@@ -26,6 +26,7 @@ import { pbpSource } from "./pbp-source";
 import { ncaaTeamBoxSource } from "./ncaa-team-box-source";
 import { matchupStintSource } from "./matchup-stint-source";
 import { withinImpactSource } from "./within-impact-source";
+import { lineupSource } from "./lineup-source";
 
 type Bindings = Env;
 
@@ -143,6 +144,7 @@ app.route("/api/basketball/research/pbp", pbpSource);
 app.route("/api/basketball/research/ncaa-team-box", ncaaTeamBoxSource);
 app.route("/api/basketball/research/matchup-stints", matchupStintSource);
 app.route("/api/basketball/research/impact-within-team", withinImpactSource);
+app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/research/markets", markets);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);
