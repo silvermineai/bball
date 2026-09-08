@@ -20,7 +20,9 @@ type Production = {
   games: number | null;
   plays: number | null;
   yards: number | null;
+  yards_per_play: number | null;
   touchdowns: number | null;
+  success_rate: number | null;
   epa: number | null;
   epa_per_play: number | null;
   rank: number | null;
@@ -113,7 +115,8 @@ export default function PlayerDetail() {
                     <div key={`${item.category}-${item.team_id || "unknown"}`}>
                       <dt>{label(item.category)} · {item.team || "Team unavailable"}</dt>
                       <dd>{fmt(item.epa)} EPA · {fmt(item.epa_per_play, 2)} / play</dd>
-                      <small>{fmt(item.plays, 0)} plays · {fmt(item.yards, 0)} yards · {fmt(item.touchdowns, 0)} TD · {fmt(item.games, 0)} games</small>
+                      <small>{fmt(item.plays, 0)} plays · {fmt(item.yards, 0)} yards · {fmt(item.yards_per_play, 2)} yards/play · {fmt(item.touchdowns, 0)} TD · {fmt(item.games, 0)} games</small>
+                      <small>{item.success_rate == null ? "Success rate unavailable" : `${fmt(item.success_rate * 100, 1)}% source success rate`}</small>
                       <small>{item.rank == null ? "Unranked in this source category" : `EPA rank ${item.rank.toLocaleString()}`}</small>
                     </div>
                   ))}

@@ -50,6 +50,8 @@ describe("bball api", () => {
                   games: "10",
                   plays: "100",
                   yards: "700",
+                  yardsplay: "7.0",
+                  success: "0.62",
                   rushing_td: "8",
                   TEPA: "12.5",
                   EPAplay: "0.125",
@@ -76,7 +78,7 @@ describe("bball api", () => {
     const body = (await response.json()) as {
       name: string;
       summary: {
-        production: Array<{ category: string; epa: number; rank: number }>;
+        production: Array<{ category: string; epa: number; rank: number; yards_per_play: number; success_rate: number }>;
         box_categories: Array<{ category: string; games: number }>;
       };
     };
@@ -85,6 +87,8 @@ describe("bball api", () => {
       category: "rushing",
       epa: 12.5,
       rank: 42,
+      yards_per_play: 7,
+      success_rate: 0.62,
     });
     expect(body.summary.box_categories).toEqual([
       { category: "rushing", records: 1, games: 1 },
