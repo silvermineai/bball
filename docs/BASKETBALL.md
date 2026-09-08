@@ -71,7 +71,7 @@ Player impact uses the publisher's league-wide NCAA stint-ridge RAPM. Net RAPM i
 
 ## Storage and refresh
 
-D1 migrations `0009_basketball_research.sql`, `0017_basketball_team_season.sql`, `0018_basketball_boutique.sql`, `0019_basketball_lineups.sql` and `0020_basketball_player_core.sql` add separate `bb_*` tables without modifying football or legacy basketball tables. Compact player/team box-score fields are stored alongside published player-season, team-season, boutique-model, lineup and source-profile metrics, roster profiles, appearance summaries, source receipts, model artifacts and forecast snapshots. Full source downloads are cached locally under ignored `.local/basketball/`; public derivative JSON is served by Cloudflare Assets.
+D1 migrations `0009_basketball_research.sql`, `0017_basketball_team_season.sql`, `0018_basketball_boutique.sql`, `0019_basketball_lineups.sql`, `0020_basketball_player_core.sql` and `0021_basketball_ncaa_player_box.sql` add separate `bb_*` tables without modifying football or legacy basketball tables. Compact player/team box-score fields are stored alongside published player-season, team-season, boutique-model, lineup, source-profile and NCAA player-season metrics, roster profiles, appearance summaries, source receipts, model artifacts and forecast snapshots. Full source downloads are cached locally under ignored `.local/basketball/`; public derivative JSON is served by Cloudflare Assets.
 
 ```bash
 PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball --sql .local/basketball.sql

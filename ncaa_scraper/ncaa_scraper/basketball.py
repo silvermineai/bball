@@ -136,6 +136,7 @@ def ingest(conn, dataset, year, rows, receipt):
         "player_core": "bb_player_core",
         "ncaa_rapm": "bb_impact",
         "ncaa_player_box": "bb_ncaa_player_box",
+        "ncaa_player_season": "bb_ncaa_player_season",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -416,7 +417,17 @@ def ingest(conn, dataset, year, rows, receipt):
                 "tpm_unast", "tpa_unast", "tp_pct_unast", "rimm_unast", "rima_unast", "rim_pct_unast",
                 "midm_unast", "mida_unast",
             }
+            summary_fields = {
+                "mins", "o_poss", "pts", "orb", "drb", "ast", "stl", "blk", "tov", "pf",
+                "fgm", "fga", "tpm", "tpa", "ftm", "fta", "rimm", "rima", "midm", "mida",
+                "pbackm", "pbacka", "pts_trans", "orb_trans", "drb_trans", "ast_trans",
+                "stl_trans", "blk_trans", "tov_trans", "pts_half", "orb_half", "drb_half",
+                "ast_half", "stl_half", "blk_half", "tov_half", "pts_ast", "fgm_ast", "tpm_ast",
+                "rimm_ast", "midm_ast", "pts_unast", "fgm_unast", "fga_unast", "tpm_unast", "tpa_unast",
+                "rimm_unast", "rima_unast", "midm_unast", "mida_unast",
+            }
             valid = []
+            season_totals = defaultdict(lambda: {"games": set(), "totals": defaultdict(float), "player_name": None, "team_name": None})
             for i, r in enumerate(rows):
                 if not r.get("contest_id") or not r.get("team_ncaa_team_id") or not r.get("player_id"):
                     conn.execute(
@@ -425,6 +436,14 @@ def ingest(conn, dataset, year, rows, receipt):
                     )
                     continue
                 stats = {k: number(r.get(k)) for k in stat_fields if k in r}
+                summary = season_totals[(identity(r["player_id"]), identity(r["team_ncaa_team_id"]))]
+                summary["games"].add(identity(r["contest_id"]))
+                summary["player_name"] = r.get("clean_name") or r.get("player")
+                summary["team_name"] = r.get("team")
+                for field in summary_fields:
+                    value = number(r.get(field))
+                    if value is not None:
+                        summary["totals"][field] += value
                 valid.append(
                     (
                         year,
@@ -441,6 +460,17 @@ def ingest(conn, dataset, year, rows, receipt):
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_ncaa_player_box VALUES (?,?,?,?,?,?,?,?,?)",
                 valid,
+            )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_player_season VALUES (?,?,?,?,?,?,?)",
+                [
+                    (
+                        year, player_id, team_id, entry["player_name"], entry["team_name"],
+                        len(entry["games"]),
+                        json.dumps({k: round(v, 4) for k, v in entry["totals"].items()}, separators=(",", ":")),
+                    )
+                    for (player_id, team_id), entry in season_totals.items()
+                ],
             )
         if dataset in ["participation", "player_box"]:
             conn.execute("DELETE FROM bb_participation WHERE season=?", (year,))
@@ -1177,7 +1207,7 @@ def export_sql(conn, path):
     # current editions, so keep the D1 table available without replaying it.
     # This leaves the compact research tables importable and avoids a failed
     # all-or-nothing import when the model grows.
-    excluded_tables = {"bb_models"}
+    excluded_tables = {"bb_models", "bb_ncaa_player_box"}
     with path.open("w") as f:
         for table in [
             "bb_games",
@@ -1191,7 +1221,7 @@ def export_sql(conn, path):
             "bb_player_core",
             "bb_rosters",
             "bb_impact",
-            "bb_ncaa_player_box",
+            "bb_ncaa_player_season",
             "bb_unresolved",
             "bb_participation",
         ]:
@@ -1202,6 +1232,23 @@ def export_sql(conn, path):
                 line.startswith(f'INSERT INTO "{table}"') for table in excluded_tables
             ):
                 f.write(line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n")
+
+
+def export_ncaa_player_box_sql(conn, path, season=2026):
+    """Export only the current NCAA game rows; historical seasons use summaries."""
+    with path.open("w") as f:
+        f.write(f"DELETE FROM bb_ncaa_player_box WHERE season={int(season)};\n")
+        for row in conn.execute(
+            "SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE season=?",
+            (season,),
+        ):
+            values = []
+            for value in row:
+                if value is None:
+                    values.append("NULL")
+                else:
+                    values.append("'" + str(value).replace("'", "''") + "'")
+            f.write("INSERT OR REPLACE INTO bb_ncaa_player_box VALUES (" + ",".join(values) + ");\n")
 
 
 def main():
@@ -1272,6 +1319,7 @@ def main():
     build(conn)
     if args.sql:
         export_sql(conn, args.sql)
+        export_ncaa_player_box_sql(conn, args.sql.with_name("ncaa-player-box-2026.sql"))
     conn.close()
 
 

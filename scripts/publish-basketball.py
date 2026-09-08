@@ -314,6 +314,19 @@ run_logged(
     ],
     ROOT / ".local/basketball-publish-d1.log",
 )
+run_logged(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        "bball-silvermine",
+        "--remote",
+        "--file",
+        "../.local/ncaa-player-box-2026.sql",
+    ],
+    ROOT / ".local/ncaa-player-box-publish-d1.log",
+)
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
 run([PY, "scripts/sync-recruiting.py"])

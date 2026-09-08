@@ -31,7 +31,7 @@ const aggregate = (where: string) => `
     SUM(COALESCE(CAST(json_extract(stats_json,'$.tpa') AS REAL),0)) AS tpa,
     SUM(COALESCE(CAST(json_extract(stats_json,'$.tpm') AS REAL),0)) AS tpm,
     SUM(COALESCE(CAST(json_extract(stats_json,'$.fta') AS REAL),0)) AS fta
-  FROM bb_ncaa_player_box WHERE ${where}
+  FROM bb_ncaa_player_season WHERE ${where}
   GROUP BY season, player_id, team_id`;
 
 const metricExpression = (metric: Metric) => ({
