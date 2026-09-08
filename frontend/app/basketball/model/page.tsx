@@ -355,7 +355,7 @@ export default function Page() {
           <h2>Coverage and identity.</h2>
           <div className="rule-list">
             <div>
-              <span>Schedule records / 2024–27</span>
+              <span>Schedule records / 2023–27</span>
               <strong>{d.coverage.schedule_records.toLocaleString()}</strong>
             </div>
             <div>
@@ -367,7 +367,7 @@ export default function Page() {
               <strong>{d.coverage.unusable_completed_games}</strong>
             </div>
             <div>
-              <span>Player game records / 2025–26</span>
+              <span>Player game records / 2023–26</span>
               <strong>{d.coverage.player_box_rows.toLocaleString()}</strong>
             </div>
             <div>
