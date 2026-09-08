@@ -89,7 +89,7 @@ export type RecruitingFilters = {
   kind: string;
   sort: RecruitingSort;
 };
-export type RecruitingCoverageSort = "reviewed" | "prior" | "name";
+export type RecruitingCoverageSort = "reviewed" | "prior" | "unrepresented" | "name";
 export type RecruitingCoverageStatus = "all" | "reviewed" | "unreviewed";
 export type RecruitingCoverageFilters = {
   query: string;
@@ -122,6 +122,7 @@ const recruitingSorts = new Set<RecruitingSort>([
 const recruitingCoverageSorts = new Set<RecruitingCoverageSort>([
   "reviewed",
   "prior",
+  "unrepresented",
   "name",
 ]);
 const recruitingCoverageStatuses = new Set<RecruitingCoverageStatus>([

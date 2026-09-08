@@ -193,4 +193,13 @@ describe("shareable recruiting filters", () => {
       status: "all",
     });
   });
+
+  it("round-trips the workload review priority sort", () => {
+    const search = recruitingFilterSearch(
+      { team: "all", q: "", kind: "all", sort: "latest" },
+      { query: "", sort: "unrepresented", status: "unreviewed" },
+    );
+    expect(search).toBe("?coverageSort=unrepresented&coverageStatus=unreviewed");
+    expect(parseRecruitingCoverageFilters(search).sort).toBe("unrepresented");
+  });
 });
