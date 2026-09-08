@@ -23,6 +23,14 @@ const expression = (metric: Metric) => ({
   mid_pct: "CASE WHEN json_extract(stats_json,'$.zones.mid.attempts') > 0 THEN 100.0 * json_extract(stats_json,'$.zones.mid.makes') / json_extract(stats_json,'$.zones.mid.attempts') END",
   distance: "CASE WHEN json_extract(stats_json,'$.distance_count') > 0 THEN json_extract(stats_json,'$.distance_sum') / json_extract(stats_json,'$.distance_count') END",
 }[metric]);
+const qualification = (metric: Metric) => ({
+  volume: "json_extract(stats_json,'$.attempts')",
+  fg_pct: "json_extract(stats_json,'$.attempts')",
+  "3p_pct": "COALESCE(json_extract(stats_json,'$.zones.abovebreak3.attempts'),0) + COALESCE(json_extract(stats_json,'$.zones.corner3.attempts'),0)",
+  rim_pct: "COALESCE(json_extract(stats_json,'$.zones.rim.attempts'),0)",
+  mid_pct: "COALESCE(json_extract(stats_json,'$.zones.mid.attempts'),0)",
+  distance: "json_extract(stats_json,'$.distance_count')",
+}[metric]);
 
 ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minAttempts, q, page, meta } = c.req.valid("query");
@@ -40,8 +48,9 @@ ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = clauses.join(" AND ");
   const value = expression(metric);
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND json_extract(stats_json,'$.attempts') >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND json_extract(stats_json,'$.attempts') >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all();
+  const qualified = qualification(metric);
+  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>();
+  const rows = await c.env.DB.prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({ season, metric, min_attempts: minAttempts, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })) });
 });
