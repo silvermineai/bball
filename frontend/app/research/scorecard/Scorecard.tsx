@@ -141,6 +141,12 @@ export default function Scorecard() {
               : fmt(m.interval_coverage * 100) + "%"}
           </b>
         </span>
+        <span>
+          Retained odds observations <b>{data.market_observations.toLocaleString()}</b>
+        </span>
+        <span>
+          Unmatched feed events <b>{data.unmatched_events.toLocaleString()}</b>
+        </span>
       </div>
       {!m.games && (
         <p className="empty">
@@ -170,7 +176,7 @@ export default function Scorecard() {
               ? "No settled games have qualifying quotes for this sport yet."
               : "No timestamped odds-feed observations have been collected. Historical lines without a reliable pregame clock are excluded."}{" "}
             Model-versus-market errors will appear here once matched games
-            settle.
+            settle. Open the <Link href="/research/markets/">market archive</Link> for retained source observations and its <Link href="/research/markets/#market-policy">capture policy</Link> for the licensed feed workflow.
           </p>
         </div>
       ) : (
