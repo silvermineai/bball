@@ -77,6 +77,7 @@ const paths = [
     ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
     ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
     ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],
+    ["Open a player card", "/basketball/ncaa-player/", "Connect source-native production, shot profile, roster context, impact and recent game evidence."],
 ];
 
 export default function Page() {

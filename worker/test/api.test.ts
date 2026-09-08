@@ -67,6 +67,15 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid NCAA player card IDs and seasons before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-player-card/not-an-id",
+      "/api/basketball/research/ncaa-player-card/123?season=2009",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects unknown publisher stat fields before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/publisher-stats?stat=not-a-source-field",
