@@ -17,6 +17,7 @@ import LegacyRecords from "./LegacyRecords";
 import PlayerRecruitingContext from "./PlayerRecruitingContext";
 import PlayerValuePanel from "./PlayerValuePanel";
 import { comparisonHref } from "../../_lib/player-comparison";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 const statLabels: Record<StatKey, string> = {
   min: "Minutes",
   pts: "Points",
@@ -101,6 +102,25 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
     window.history.replaceState(null, "", url);
     setFilter("all");
     setPage(0);
+  };
+  const downloadGameLog = () => {
+    if (!data) return;
+    downloadCsv(
+      `basketball-player-${id}-${data.season}-game-log.csv`,
+      toCsv(
+        [
+          "Source player ID", "Season", "Date", "Team", "Team ID", "Opponent", "Opponent ID", "Venue",
+          "Final for", "Final against", "Status", ...Object.values(statLabels), "Starter", "Schedule matched", "Source issues",
+        ],
+        rows.map((r) => [
+          id, data.season, r.date, r.team, r.team_id, r.opponent, r.opponent_id, r.venue,
+          r.score_for, r.score_against, r.appearance ? "Played" : r.dnp === true ? "DNP" : "Excluded",
+          ...Object.keys(statLabels).map((key) => r.stats[key as StatKey]),
+          r.starter == null ? "unreported" : r.starter ? "yes" : "no",
+          r.schedule_matched ? "yes" : "no", r.issues.join("; "),
+        ]),
+      ),
+    );
   };
   return (
     <>
@@ -441,6 +461,9 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                   </option>
                 </select>
               </label>
+              <button className="button secondary" type="button" onClick={downloadGameLog} disabled={!rows.length}>
+                Download filtered log ↓
+              </button>
             </div>
             <p className="note">
               {data.rows.length} source rows · {totals?.dnp_records ?? 0}{" "}
