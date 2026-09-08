@@ -19,7 +19,7 @@ describe("football player source archive", () => {
     expect(response.headers.get("content-disposition")).toContain("football-player-history-sources.tar");
     expect(response.headers.get("etag")).toBe(`"${digest}"`);
     expect(await response.text()).toBe("TAR");
-    expect(env.RESEARCH_ARCHIVE.get).toHaveBeenCalledWith(key);
+    expect(env.RESEARCH_ARCHIVE.get).toHaveBeenCalledWith(key.slice("bball-research/".length));
   });
 
   it("rejects malformed manifest pointers before reading R2", async () => {

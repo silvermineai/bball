@@ -30,7 +30,7 @@ footballPlayerHistory.get("/source", async (c) => {
   if (c.req.header("If-None-Match")?.split(",").map((tag) => tag.trim()).includes(`"${digest}"`)) {
     return new Response(null, { status: 304, headers });
   }
-  const object = await c.env.RESEARCH_ARCHIVE.get(key);
+  const object = await c.env.RESEARCH_ARCHIVE.get(key.slice("bball-research/".length));
   if (!object || !("body" in object)) return c.text("Football player source archive is temporarily unavailable", 503);
   return new Response(object.body, { headers });
 });
