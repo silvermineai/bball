@@ -7,6 +7,70 @@ export type FootballProduction = {
   rank: number | null;
 };
 
+export const footballPlayerCategories = [
+  "all",
+  "passing",
+  "rushing",
+  "receiving",
+  "defensive",
+  "interceptions",
+  "fumbles",
+  "kicking",
+  "punting",
+  "kickReturns",
+  "puntReturns",
+] as const;
+export type FootballPlayerCategory = (typeof footballPlayerCategories)[number];
+export type FootballPlayerDivision = "fbs" | "all";
+export type FootballPlayerFilters = {
+  season: string;
+  category: FootballPlayerCategory;
+  division: FootballPlayerDivision;
+  query: string;
+  qualified: boolean;
+  page: number;
+};
+
+/** Read the football player board's shareable controls from a URL. */
+export function parseFootballPlayerFilters(
+  search: string,
+  supportedSeasons: number[],
+): FootballPlayerFilters {
+  const params = new URLSearchParams(search);
+  const requestedSeason = params.get("season");
+  const season =
+    requestedSeason && supportedSeasons.includes(Number(requestedSeason))
+      ? requestedSeason
+      : supportedSeasons.includes(2025)
+        ? "2025"
+        : String(supportedSeasons[0] ?? 2025);
+  const category = params.get("category") as FootballPlayerCategory | null;
+  const division = params.get("division");
+  const page = Number(params.get("page") || 0);
+  return {
+    season,
+    category:
+      category && footballPlayerCategories.includes(category) ? category : "passing",
+    division: division === "all" ? "all" : "fbs",
+    query: params.get("q") || "",
+    qualified: params.get("qualified") === "1",
+    page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
+  };
+}
+
+/** Serialize football player board controls without losing the selected slice. */
+export function footballPlayerFilterSearch(filters: FootballPlayerFilters) {
+  const params = new URLSearchParams();
+  if (filters.season !== "2025") params.set("season", filters.season);
+  if (filters.category !== "passing") params.set("category", filters.category);
+  if (filters.division !== "fbs") params.set("division", filters.division);
+  if (filters.query) params.set("q", filters.query);
+  if (filters.qualified) params.set("qualified", "1");
+  if (filters.page) params.set("page", String(filters.page));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export type FootballPlayerProduction = {
   categories: string[];
   production: Record<string, FootballProduction>;

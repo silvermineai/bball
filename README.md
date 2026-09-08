@@ -12,7 +12,7 @@ The publication covers football and men’s college basketball with a Next.js fr
 |---|---|---|
 | Football desk | `/football/` | Upcoming games, model context, national ratings and journal |
 | Matchups | `/football/matchups/` | Search by team/conference/week; projected scores, win estimates and uncertainty |
-| Player index | `/football/players/` | Search imported players; offensive EPA rankings by role and workload |
+| Player index | `/football/players/` | Search imported players; shareable season, role, division and qualification slices with offensive EPA rankings |
 | Player game logs | `/football/player/?id=…&season=2025` | Raw source statistics served from Cloudflare D1 |
 | Power ratings | `/football/ratings/` | Independent opponent-adjusted ridge team ratings |
 | Defense and specialist leaders | `/football/events/` | Browse game evidence or group sacks, turnovers, kicking, punting and returns by source name/team |

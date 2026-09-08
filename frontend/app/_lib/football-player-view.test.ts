@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  footballPlayerFilterSearch,
   hasRankedProduction,
+  parseFootballPlayerFilters,
   productionForCategory,
   type FootballPlayerProduction,
 } from "./football-player-view";
@@ -49,5 +51,64 @@ describe("football player index category selection", () => {
     };
     expect(productionForCategory(player, "all")).toBeNull();
     expect(productionForCategory(player, "defensive")).toBeNull();
+  });
+});
+
+describe("football player board URL state", () => {
+  const seasons = [2026, 2025, 2024];
+
+  it("parses supported filters and keeps the exact search query", () => {
+    expect(
+      parseFootballPlayerFilters(
+        "?season=2024&category=receiving&division=all&q=Smith%20Jr.&qualified=1&page=3",
+        seasons,
+      ),
+    ).toEqual({
+      season: "2024",
+      category: "receiving",
+      division: "all",
+      query: "Smith Jr.",
+      qualified: true,
+      page: 3,
+    });
+  });
+
+  it("falls back to the current catalog and safe defaults for invalid state", () => {
+    expect(
+      parseFootballPlayerFilters(
+        "?season=1999&category=not-a-stat&division=other&page=-2",
+        seasons,
+      ),
+    ).toEqual({
+      season: "2025",
+      category: "passing",
+      division: "fbs",
+      query: "",
+      qualified: false,
+      page: 0,
+    });
+  });
+
+  it("serializes only non-default controls for shareable links", () => {
+    expect(
+      footballPlayerFilterSearch({
+        season: "2024",
+        category: "receiving",
+        division: "all",
+        query: "Smith Jr.",
+        qualified: true,
+        page: 3,
+      }),
+    ).toBe("?season=2024&category=receiving&division=all&q=Smith+Jr.&qualified=1&page=3");
+    expect(
+      footballPlayerFilterSearch({
+        season: "2025",
+        category: "passing",
+        division: "fbs",
+        query: "",
+        qualified: false,
+        page: 0,
+      }),
+    ).toBe("");
   });
 });

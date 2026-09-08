@@ -8,7 +8,12 @@ import {
 } from "../../_lib/football-player-history";
 import {
   hasRankedProduction,
+  footballPlayerCategories,
+  footballPlayerFilterSearch,
+  parseFootballPlayerFilters,
   productionForCategory,
+  type FootballPlayerCategory,
+  type FootballPlayerDivision,
 } from "../../_lib/football-player-view";
 type Production = {
   plays: number | null;
@@ -36,20 +41,47 @@ type Board = {
   rankings: Record<string, { minimum_plays: number; qualified: number }>;
 };
 export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
-  const [season, setSeason] = useState("2025"),
-    [category, setCategory] = useState("passing"),
-    [division, setDivision] = useState("fbs"),
+  const defaultSeason = catalog.seasons.some((s) => s.season === 2025)
+    ? "2025"
+    : String(catalog.seasons[0]?.season ?? 2025);
+  const [season, setSeason] = useState(defaultSeason),
+    [category, setCategory] = useState<FootballPlayerCategory>("passing"),
+    [division, setDivision] = useState<FootballPlayerDivision>("fbs"),
     [query, setQuery] = useState(""),
     [qualified, setQualified] = useState(false),
     [page, setPage] = useState(0),
     [data, setData] = useState<Board | null>(null),
     [error, setError] = useState(""),
-    [retry, setRetry] = useState(0);
+    [retry, setRetry] = useState(0),
+    [copied, setCopied] = useState(""),
+    [hydrated, setHydrated] = useState(false);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get("season");
-    if (value) setSeason(value);
-  }, []);
+    const parsed = parseFootballPlayerFilters(
+      window.location.search,
+      catalog.seasons.map((s) => s.season),
+    );
+    setSeason(parsed.season);
+    setCategory(parsed.category);
+    setDivision(parsed.division);
+    setQuery(parsed.query);
+    setQualified(parsed.qualified);
+    setPage(parsed.page);
+    setHydrated(true);
+  }, [catalog]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    url.search = footballPlayerFilterSearch({
+      season,
+      category,
+      division,
+      query,
+      qualified,
+      page,
+    });
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, season, category, division, query, qualified, page]);
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
@@ -134,9 +166,6 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             value={season}
             onChange={(e) => {
               setSeason(e.target.value);
-              const url = new URL(window.location.href);
-              url.searchParams.set("season", e.target.value);
-              window.history.replaceState(null, "", url);
               setPage(0);
             }}
           >
@@ -154,24 +183,13 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           <select
             value={category}
             onChange={(e) => {
-              setCategory(e.target.value);
+              setCategory(e.target.value as FootballPlayerCategory);
               setQualified(false);
               setPage(0);
             }}
           >
             <option value="all">All players</option>
-            {[
-              "passing",
-              "rushing",
-              "receiving",
-              "defensive",
-              "interceptions",
-              "fumbles",
-              "kicking",
-              "punting",
-              "kickReturns",
-              "puntReturns",
-            ].map((c) => (
+            {footballPlayerCategories.filter((c) => c !== "all").map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -183,7 +201,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           <select
             value={division}
             onChange={(e) => {
-              setDivision(e.target.value);
+              setDivision(e.target.value as FootballPlayerDivision);
               setPage(0);
             }}
           >
@@ -191,6 +209,23 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             <option value="all">All imported divisions</option>
           </select>
         </label>
+      </div>
+      <div className="button-row" style={{ marginTop: 12 }}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setCopied("Player board link copied.");
+            } catch {
+              setCopied("Copy the filtered URL from your address bar.");
+            }
+          }}
+        >
+          Copy player board link
+        </button>
+        {copied && <span role="status" className="note">{copied}</span>}
       </div>
       {minimum && (
         <label

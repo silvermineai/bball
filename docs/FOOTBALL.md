@@ -59,7 +59,7 @@ The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 7,370 retained adv
 
 FBS offensive ranks use publisher total EPA separately for passing (minimum 100 plays), rushing (50) and receiving (30). These are production ranks, not all-position prospect grades. EPA can overlap between passers and receivers and must not be summed across categories. Players below thresholds remain searchable and unranked. Team affiliations refer to the selected stat season.
 
-`/api/football/players/:id?season=2025&page=0` returns up to 50 source rows with schedule context. `/api/football/coverage` returns authoritative D1 row counts. Public pages read generated static artifacts; the player log reads D1 directly.
+`/api/football/players/:id?season=2025&page=0` returns up to 50 source rows with schedule context. `/api/football/coverage` returns authoritative D1 row counts. Public pages read generated static artifacts; the player log reads D1 directly. The `/football/players/` board preserves season, category, division, search, qualification and page controls in the URL, so a coach can share a specific evaluation slice.
 
 ## Defensive and specialist event notebook
 
