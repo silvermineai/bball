@@ -36,7 +36,7 @@ for name, value in manifest["implementation_sha256"].items():
 for name, value in manifest["files"].items():
     if Path(name).name != name or sha(OUT / name) != value:
         raise SystemExit("Player catalog or index changed")
-if len(manifest["sources"]) != 18 or {
+if len(manifest["sources"]) != len(KINDS) * len(YEARS) or {
     (s["dataset"], s["season"]) for s in manifest["sources"]
 } != {(ds, y) for ds in KINDS for y in YEARS}:
     raise SystemExit("Unexpected historical player import scopes")

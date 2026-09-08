@@ -142,7 +142,7 @@ class PlayerHistoryTests(unittest.TestCase):
             out = root / "public"
             local = root / "sql"
             result = import_history(conn, downloads, out, local, cache=root)
-            self.assertEqual(len(result["sources"]), 18)
+            self.assertEqual(len(result["sources"]), len(KINDS) * len(YEARS))
             self.assertEqual(
                 conn.execute("SELECT count(*) FROM football_models").fetchone()[0], 1
             )
@@ -150,7 +150,7 @@ class PlayerHistoryTests(unittest.TestCase):
                 conn.execute(
                     "SELECT count(*) FROM football_stats WHERE athlete_id='-100'"
                 ).fetchone()[0],
-                12,
+                4 * len(YEARS),
             )
             for year in YEARS:
                 board = athlete_board(conn, year)

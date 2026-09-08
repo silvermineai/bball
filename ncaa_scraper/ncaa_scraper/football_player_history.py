@@ -13,7 +13,9 @@ from pathlib import Path
 from .football import DB_PATH, player_board, read_stats, store_rows
 from .football_sources import CACHE, DATASETS, RELEASES, ROOT, ReleaseClient
 
-YEARS = (2022, 2023, 2024)
+# SportsDataverse's public football player releases are available back to 2018.
+# Keep this archive independent from the forecast model's 2022+ evaluation window.
+YEARS = tuple(range(2018, 2025))
 KINDS = ("box", "passing", "rushing", "receiving", "defense", "specialists")
 LOCAL = ROOT / ".local/football-player-history"
 OUT = ROOT / "frontend/public/data/football"
@@ -81,7 +83,10 @@ def validate_source(dataset, year, rows, receipt, games, teams, cache=CACHE):
             valid = bool(re.fullmatch(r"[1-9]\d{0,14}", aid))
             placeholder = (
                 bool(re.fullmatch(r"-[1-9]\d{0,14}", aid))
-                and name.strip().lower() == "team"
+                # Older publisher editions spell the synthetic row as either
+                # "TEAM", " Team", or "- Team". All are team aggregates,
+                # never athlete identities.
+                and name.strip().lstrip("-").strip().lower() == "team"
             )
             if not (valid or placeholder):
                 raise ValueError("Missing or malformed athlete identity")

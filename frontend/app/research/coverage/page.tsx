@@ -125,7 +125,7 @@ export default function Page() {
               </div>
             </div>
             <p className="note">
-              The player archive spans 2022–26 and keeps defense/specialist
+              The player archive spans 2018–26 and keeps defense/specialist
               event rows separate when the source has no stable athlete ID.
               Forecasts use team identities and home field; they do not use
               injuries, depth charts or recruiting.

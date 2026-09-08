@@ -99,7 +99,7 @@ export default function Home() {
         </div>
         <div>
           <strong>{d.coverage.box_rows.toLocaleString()}</strong>
-          <span>Player box-score rows · 2025–26</span>
+          <span>Player box-score rows · 2018–26 archive</span>
         </div>
         <div>
           <strong>{d.coverage.forecast_games}</strong>
