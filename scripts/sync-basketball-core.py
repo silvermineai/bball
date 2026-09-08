@@ -81,11 +81,31 @@ def build(season=2023):
         raise ValueError("Unexpected basketball model ID")
     conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
     statements = []
-    # Models are queried only for identity and creation time by the public API;
-    # the complete fitted artifact remains in the static, hash-checked edition.
+    # Models are queried only for identity and creation time by the public API.
+    # Keep a compact, useful metadata record in D1 while the complete fitted
+    # artifact remains in the static, hash-checked edition.
+    model_metadata = {
+        key: model[key]
+        for key in (
+            "version",
+            "target_season",
+            "training_games",
+            "training_seasons",
+            "calibration",
+            "evaluation",
+        )
+        if key in model
+    }
     statements.append(
         "INSERT OR REPLACE INTO bb_models (id,created_at,artifact_json) VALUES ("
-        + ",".join(quote(v) for v in (model["id"], overview["generated_at"], "{}"))
+        + ",".join(
+            quote(v)
+            for v in (
+                model["id"],
+                overview["generated_at"],
+                json.dumps(model_metadata, separators=(",", ":")),
+            )
+        )
         + ");\n"
     )
     for game in overview["upcoming"]:
