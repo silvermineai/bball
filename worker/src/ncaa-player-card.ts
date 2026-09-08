@@ -7,8 +7,44 @@ type Bindings = Env;
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
 });
+const gamesQuerySchema = querySchema.extend({
+  page: z.coerce.number().int().min(0).max(100).default(0),
+  limit: z.coerce.number().int().min(1).max(500).default(500),
+});
 
 export const ncaaPlayerCard = new Hono<{ Bindings: Bindings }>();
+
+// Keep the card quick to load while allowing staff to retrieve the complete
+// season evidence when they need to audit every contest behind a total.
+ncaaPlayerCard.get("/:id/games", zValidator("query", gamesQuerySchema), async (c) => {
+  const playerId = c.req.param("id");
+  if (!/^\d{1,15}$/.test(playerId)) return c.json({ error: "Invalid NCAA player ID" }, 400);
+  const { season, page, limit } = c.req.valid("query");
+  const [count, result] = await c.env.DB.batch([
+    c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=? AND season=?").bind(playerId, season),
+    c.env.DB.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, season, limit, page * limit),
+  ]);
+  const total = Number((count.results[0] as { total?: number } | undefined)?.total || 0);
+  if (!total) return c.json({ error: "No NCAA game rows found" }, 404);
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({
+    player_id: playerId,
+    season,
+    page,
+    page_size: limit,
+    total,
+    rows: (result.results as Array<Record<string, unknown>>).map(({ stats_json, ...row }) => {
+      let stats: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(String(stats_json));
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stats = parsed as Record<string, unknown>;
+      } catch {
+        // Keep the row available for identity and contest auditing.
+      }
+      return { ...row, stats };
+    }),
+  });
+});
 
 ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
   const playerId = c.req.param("id");

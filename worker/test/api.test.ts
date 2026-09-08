@@ -282,9 +282,40 @@ describe("bball api", () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-card/not-an-id",
       "/api/basketball/research/ncaa-player-card/123?season=2009",
+      "/api/basketball/research/ncaa-player-card/123/games?limit=501",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }
+  });
+
+  it("serves the complete NCAA player game-log export with source fields intact", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => ({ sql, args }),
+    }));
+    const batch = vi.fn(async (statements: Array<{ sql: string }>) => statements.map((statement) => (
+      statement.sql.includes("count(*)")
+        ? { results: [{ total: 2 }] }
+        : { results: [{
+          season: 2026,
+          contest_id: "9001",
+          team_id: "77",
+          game_date: "2026-01-02",
+          team_name: "Example U",
+          opponent_name: "Sample State",
+          player_name: "Example Player",
+          stats_json: JSON.stringify({ mins: 31, pts: 18, rim_pct: 0.7 }),
+        }] }
+    )));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-card/123/games?season=2026&limit=500",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<{ stats: Record<string, unknown> }> };
+    expect(body.total).toBe(2);
+    expect(body.rows[0].stats).toEqual({ mins: 31, pts: 18, rim_pct: 0.7 });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY game_date DESC"))).toBe(true);
   });
 
   it("rejects unknown publisher stat fields before querying D1", async () => {
