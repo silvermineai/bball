@@ -484,6 +484,7 @@ run([PY, "scripts/sync-ncaa-team-box.py"])
 run([PY, "scripts/sync-ncaa-player-box.py"])
 run([PY, "scripts/sync-ncaa-source-releases.py"])
 run([PY, "scripts/sync-within-impact.py"])
+run([PY, "scripts/verify-basketball-d1.py"])
 run([PY, "scripts/archive-evaluation.py"])
 if not BATCH_PUBLICATION:
     run([PY, "scripts/cloudflare.py", "deploy"])
