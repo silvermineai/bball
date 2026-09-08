@@ -117,6 +117,8 @@ describe("bball api", () => {
       "/api/basketball/research/ncaa-player-rankings?minGames=0",
       "/api/basketball/research/ncaa-player-rankings?minMinutes=-1",
       "/api/basketball/research/ncaa-player-rankings?page=-1",
+      "/api/basketball/research/ncaa-player-rankings?position=%27%20OR%201%3D1%20--",
+      "/api/basketball/research/ncaa-player-rankings?classYear=%27%20OR%201%3D1%20--",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }

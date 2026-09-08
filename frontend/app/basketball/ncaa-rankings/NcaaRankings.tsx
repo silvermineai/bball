@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "per40";
-type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; rank: number };
+type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; rank: number };
 type Result = { season: number; metric: Metric; min_games: number; min_minutes: number; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; metrics: Metric[] };
+type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[] };
 const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes" };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
@@ -19,6 +19,8 @@ export default function NcaaRankings() {
   const [minGames, setMinGames] = useState(initial?.get("minGames") || "5");
   const [minMinutes, setMinMinutes] = useState(initial?.get("minMinutes") || "200");
   const [query, setQuery] = useState(initial?.get("q") || "");
+  const [position, setPosition] = useState(initial?.get("position") || "");
+  const [classYear, setClassYear] = useState(initial?.get("classYear") || "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(() => {
@@ -31,9 +33,11 @@ export default function NcaaRankings() {
   useEffect(() => {
     const params = new URLSearchParams({ season, metric, minGames, minMinutes });
     if (query.trim()) params.set("q", query.trim());
+    if (position) params.set("position", position);
+    if (classYear) params.set("classYear", classYear);
     if (page) params.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [season, metric, minGames, minMinutes, query, page]);
+  }, [season, metric, minGames, minMinutes, query, position, classYear, page]);
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-player-rankings?meta=1&season=${season}`)
@@ -44,13 +48,15 @@ export default function NcaaRankings() {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, metric, minGames, minMinutes, page: String(page) });
     if (query.trim()) params.set("q", query.trim());
+    if (position) params.set("position", position);
+    if (classYear) params.set("classYear", classYear);
     setResult(null);
     fetch(`/api/basketball/research/ncaa-player-rankings?${params}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw Error("The NCAA rankings could not be loaded."); return r.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, metric, minGames, minMinutes, query, page]);
+  }, [season, metric, minGames, minMinutes, query, position, classYear, page]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
@@ -67,8 +73,8 @@ export default function NcaaRankings() {
     downloadCsv(
       `ncaa-player-rankings-${season}-${metric}-page-${page + 1}.csv`,
       toCsv(
-        ["Season", "Metric", "Rank", "Player", "NCAA player ID", "Program", "NCAA team ID", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value"],
-        result.rows.map((row) => [result.season, labels[result.metric], row.rank, row.player_name, row.player_id, row.team_name, row.team_id, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value]),
+        ["Season", "Metric", "Rank", "Player", "NCAA player ID", "Program", "NCAA team ID", "Position", "Class", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value"],
+        result.rows.map((row) => [result.season, labels[result.metric], row.rank, row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value]),
       ),
     );
   };
@@ -91,11 +97,13 @@ export default function NcaaRankings() {
       <label className="control"><span>MINIMUM GAMES</span><select value={minGames} onChange={(e) => reset(() => setMinGames(e.target.value))}>{[1, 5, 10, 15, 20].map((n) => <option key={n} value={n}>{n} games</option>)}</select></label>
       <label className="control"><span>MINIMUM MINUTES</span><select value={minMinutes} onChange={(e) => reset(() => setMinMinutes(e.target.value))}>{[0, 200, 400, 600, 800].map((n) => <option key={n} value={n}>{n ? `${n} minutes` : "No minute minimum"}</option>)}</select></label>
       <label className="control"><span>PLAYER OR TEAM</span><input type="search" maxLength={120} placeholder="Search a player or team" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
+      <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{position && !meta?.positions.includes(position) && <option value={position}>{position} · not in sample</option>}{(meta?.positions || []).map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label className="control"><span>CLASS</span><select value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{classYear && !meta?.classes.includes(classYear) && <option value={classYear}>{classYear} · not in sample</option>}{(meta?.classes || []).map((value) => <option key={value}>{value}</option>)}</select></label>
     </div>
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
       {copied && <p role="status">{copied}</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">{labels[result.metric]}</th></tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.player_id}-${row.team_id}`}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.player_name || row.player_id}</strong><small>NCAA player {row.player_id}</small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.minutes, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric">{fmt(row.rebounds, 0)}</td><td className="numeric">{fmt(row.assists, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ts" || result.metric === "efg" ? 1 : 2)}{result.metric === "ts" || result.metric === "efg" ? "%" : ""}</strong></td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th>Position</th><th>Class</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">{labels[result.metric]}</th></tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.player_id}-${row.team_id}`}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.player_name || row.player_id}</strong><small>NCAA player {row.player_id}</small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td>{row.position || "—"}</td><td>{row.class_year || "—"}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.minutes, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric">{fmt(row.rebounds, 0)}</td><td className="numeric">{fmt(row.assists, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ts" || result.metric === "efg" ? 1 : 2)}{result.metric === "ts" || result.metric === "efg" ? "%" : ""}</strong></td></tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No players match this ranking filter.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
       <p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived player box release via SportsDataverse. Rankings are descriptive source statistics, not eligibility, recruiting grades or a verified identity match to ESPN records.</p>
