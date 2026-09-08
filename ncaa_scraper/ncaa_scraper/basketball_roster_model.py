@@ -188,6 +188,7 @@ def roster_features(
                 "prior_minutes": round(prior_minutes, 2),
                 "returning_minutes": round(returning_minutes, 2),
                 "represented_prior_minutes": round(represented_minutes, 2),
+                "unrepresented_prior_minutes": round(max(prior_minutes - represented_minutes, 0.0), 2),
                 "returning_minutes_share": returning_minutes / prior_minutes if prior_minutes else None,
                 "represented_minutes_share": represented_minutes / prior_minutes if prior_minutes else None,
                 "incoming_minutes_share": (represented_minutes - returning_minutes) / prior_minutes if prior_minutes else None,

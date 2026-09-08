@@ -823,6 +823,7 @@ def roster_changes(conn, target=2027, prior_players=None):
                 "returning_minutes": round(returning_minutes, 1),
                 "incoming_prior_minutes": round(incoming_minutes, 1),
                 "represented_prior_minutes": round(represented, 1),
+                "unrepresented_prior_minutes": round(max(prior_minutes - represented, 0.0), 1),
                 "returning_minutes_share": round(returning_minutes / prior_minutes, 4) if prior_minutes else None,
                 "represented_prior_minutes_share": round(represented / prior_minutes, 4) if prior_minutes else None,
             }

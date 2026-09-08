@@ -346,6 +346,7 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(summary["returning_players"], 1)
         self.assertEqual(summary["returning_minutes"], 500.0)
         self.assertEqual(summary["prior_minutes"], 500.0)
+        self.assertEqual(summary["unrepresented_prior_minutes"], 0.0)
         self.assertEqual(summary["returning_minutes_share"], 1.0)
 
     def test_roster_changes_exclude_team_placeholder_rows(self):

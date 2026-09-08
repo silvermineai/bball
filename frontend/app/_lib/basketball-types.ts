@@ -227,6 +227,7 @@ export type BBRosterSummary = {
   returning_minutes: number;
   incoming_prior_minutes: number;
   represented_prior_minutes: number;
+  unrepresented_prior_minutes: number;
   returning_minutes_share: number | null;
   represented_prior_minutes_share: number | null;
 };
@@ -251,6 +252,7 @@ export type BBRosterModelTeam = {
   prior_minutes: number;
   returning_minutes: number;
   represented_prior_minutes: number;
+  unrepresented_prior_minutes: number;
   returning_minutes_share: number | null;
   represented_minutes_share: number | null;
   incoming_minutes_share: number | null;

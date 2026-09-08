@@ -24,6 +24,8 @@ Roster player rows also carry optional source-attributed publisher Box BPM, Offe
 
 The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.
 
+The continuity table also exposes **unrepresented prior minutes**: the prior-season team total minus minutes represented by the current source IDs. It is a film and source-review queue, not a departure count, eligibility signal or forecast adjustment. The same field is available in the recorded 2025–26 view.
+
 The same workload table is available in the recorded 2025–26 view across its 727 observed programs. That historical view uses playing time on both sides of the exact-ID comparison, so it describes observed continuity and different-program records without claiming a transfer event, reason or eligibility outcome.
 
 ## Official transfer context

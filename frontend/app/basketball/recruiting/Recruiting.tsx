@@ -27,7 +27,7 @@ export default function Recruiting() {
     [status, setStatus] = useState("all"),
     [sort, setSort] = useState<RosterSortKey>("status"),
     [teamQuery, setTeamQuery] = useState(""),
-    [teamSort, setTeamSort] = useState<"returning" | "prior" | "name">("returning"),
+    [teamSort, setTeamSort] = useState<"returning" | "prior" | "unrepresented" | "name">("returning"),
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [picks, setPicks] = useState<string[]>([]),
@@ -85,6 +85,7 @@ export default function Recruiting() {
     .sort((a, b) => {
       if (teamSort === "name") return a.team.localeCompare(b.team);
       if (teamSort === "prior") return (b.prior_minutes ?? 0) - (a.prior_minutes ?? 0) || a.team.localeCompare(b.team);
+      if (teamSort === "unrepresented") return (b.unrepresented_prior_minutes ?? 0) - (a.unrepresented_prior_minutes ?? 0) || a.team.localeCompare(b.team);
       return (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team);
     });
   const pickedRows = (data?.players || []).filter((player) => picks.includes(player.id));
@@ -381,6 +382,12 @@ export default function Recruiting() {
                   ? " listed view is an unconfirmed observation; this table is a workload context signal, not a depth chart or eligibility claim."
                   : " recorded appearance view uses playing time on both sides; this table is a workload context signal, not a transfer ledger or explanation of movement."}
               </p>
+              <p className="note">
+                Unrepresented prior minutes are the prior-season team total minus
+                minutes represented by the listed source IDs. Use that column to
+                prioritize film and source review; it is not a departure count,
+                an eligibility signal or a forecast adjustment.
+              </p>
               <div className="toolbar">
                 <label className="control">
                   <span>PROGRAM SEARCH</span>
@@ -397,6 +404,7 @@ export default function Recruiting() {
                   <select value={teamSort} onChange={(e) => setTeamSort(e.target.value as typeof teamSort)}>
                     <option value="returning">Returning minutes share</option>
                     <option value="prior">Prior minutes represented</option>
+                    <option value="unrepresented">Unrepresented prior minutes</option>
                     <option value="name">Program name</option>
                   </select>
                 </label>
@@ -407,8 +415,8 @@ export default function Recruiting() {
                     downloadCsv(
                       `basketball-roster-team-continuity-${season}.csv`,
                       toCsv(
-                        ["Program", "Program ID", "Listed players", "Returning players", "Different-program players", "New-to-dataset players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Returning minutes share", "Represented prior minutes share"],
-                        teamRows.map((team) => [team.team, team.team_id, team.listed_players, team.returning_players, team.transfer_players, team.new_players, team.prior_minutes, team.returning_minutes, team.incoming_prior_minutes, team.returning_minutes_share == null ? null : team.returning_minutes_share * 100, team.represented_prior_minutes_share == null ? null : team.represented_prior_minutes_share * 100]),
+                        ["Program", "Program ID", "Listed players", "Returning players", "Different-program players", "New-to-dataset players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Represented prior minutes", "Unrepresented prior minutes", "Returning minutes share", "Represented prior minutes share"],
+                        teamRows.map((team) => [team.team, team.team_id, team.listed_players, team.returning_players, team.transfer_players, team.new_players, team.prior_minutes, team.returning_minutes, team.incoming_prior_minutes, team.represented_prior_minutes, team.unrepresented_prior_minutes, team.returning_minutes_share == null ? null : team.returning_minutes_share * 100, team.represented_prior_minutes_share == null ? null : team.represented_prior_minutes_share * 100]),
                       ),
                     )
                   }
@@ -422,7 +430,7 @@ export default function Recruiting() {
               </p>
               <div className="table-scroll">
                 <table className="data-table">
-                  <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th className="numeric">Prior minutes</th><th className="numeric">Returning share</th></tr></thead>
+                  <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">Incoming</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th><th className="numeric">Returning share</th></tr></thead>
                   <tbody>
                     {teamRows.map((team) => (
                         <tr key={team.team_id}>
@@ -431,6 +439,7 @@ export default function Recruiting() {
                           <td className="numeric">{team.returning_players}</td>
                           <td className="numeric">{team.incoming_prior_minutes ? `${Math.round(team.incoming_prior_minutes).toLocaleString()} min` : "—"}</td>
                           <td className="numeric">{team.prior_minutes ? Math.round(team.prior_minutes).toLocaleString() : "—"}</td>
+                          <td className="numeric">{team.unrepresented_prior_minutes ? `${Math.round(team.unrepresented_prior_minutes).toLocaleString()} min` : "—"}</td>
                           <td className="numeric">{team.returning_minutes_share == null ? "—" : `${(team.returning_minutes_share * 100).toFixed(1)}%`}</td>
                         </tr>
                       ))}
