@@ -203,6 +203,7 @@ def build(source, conn, path, receipt, season, write_public=True):
     audit = Counter()
     conflicted = set()
     all_pbp_games = set()
+    pbp_games = {}
     with conn:
         for batch in pq.ParquetFile(path).iter_batches(
             batch_size=8192, columns=COLUMNS
@@ -211,6 +212,22 @@ def build(source, conn, path, receipt, season, write_public=True):
                 audit["source_events"] += 1
                 gid = identity(row["game_id"])
                 all_pbp_games.add(gid)
+                if gid:
+                    entry = pbp_games.setdefault(
+                        gid,
+                        {
+                            "id": gid,
+                            "date": row.get("game_date_time"),
+                            "home": row.get("home_team_name"),
+                            "away": row.get("away_team_name"),
+                            "events": 0,
+                            "scoring_plays": 0,
+                            "shooting_plays": 0,
+                        },
+                    )
+                    entry["events"] += 1
+                    entry["scoring_plays"] += int(row.get("scoring_play") is True)
+                    entry["shooting_plays"] += int(row.get("shooting_play") is True)
                 game = games.get(gid)
                 if not game or row["season"] != season:
                     audit["events_outside_completed_schedule"] += 1
@@ -236,6 +253,33 @@ def build(source, conn, path, receipt, season, write_public=True):
     profiles = {}
     locations = Counter()
     game_ids = [r[0] for r in conn.execute("SELECT DISTINCT game_id FROM shot_stage")]
+    shot_attempts = {
+        row[0]: row[1]
+        for row in conn.execute(
+            "SELECT game_id,count(*) FROM shot_stage GROUP BY game_id"
+        )
+    }
+    for gid, entry in pbp_games.items():
+        entry["shot_attempts"] = shot_attempts.get(gid, 0)
+        game = games.get(gid)
+        if game:
+            entry.update(
+                {
+                    "date": game["starts_at"],
+                    "home": game["home_name"],
+                    "away": game["away_name"],
+                    "home_id": game["home_id"],
+                    "away_id": game["away_id"],
+                    "completed": True,
+                    "matched_schedule": True,
+                }
+            )
+        else:
+            value = entry.get("date")
+            entry["date"] = value.isoformat() if hasattr(value, "isoformat") else value
+            entry["completed"] = False
+            entry["matched_schedule"] = False
+        entry["shot_attempts"] = int(entry.get("shot_attempts") or 0)
 
     def entity(kind, eid, name):
         key = (kind, eid)
@@ -361,6 +405,8 @@ def build(source, conn, path, receipt, season, write_public=True):
             "locations": dict(locations),
             "teams": sum(k[0] == "team" for k in profiles),
             "players": sum(k[0] == "player" for k in profiles),
+            "pbp_games": len(pbp_games),
+            "pbp_events": audit["source_events"],
         }
         conn.execute(
             "INSERT INTO bb_shot_sources VALUES (?,?,?,?)",
@@ -378,6 +424,9 @@ def build(source, conn, path, receipt, season, write_public=True):
         "coverage": coverage,
         "teams": [],
         "players": [],
+        "pbp_games": sorted(
+            pbp_games.values(), key=lambda game: (game.get("date") or "", game["id"]), reverse=True
+        ),
     }
     for (kind, _), p in profiles.items():
         index[kind + "s"].append(
@@ -509,17 +558,39 @@ def main():
         path, receipt = parquet_file(client(), "pbp", season, args.refresh)
         indexes.append(build(source, conn, path, receipt, season, write_public=False))
     data = max(indexes, key=lambda index: index["season"])
-    (OUT / "shooting.json").write_text(dumps(data))
+    public_data = {key: value for key, value in data.items() if key != "pbp_games"}
+    (OUT / "shooting.json").write_text(dumps(public_data))
     if len(indexes) > 1:
         (OUT / "shooting-catalog.json").write_text(
             dumps(
                 {
                     "schema_version": 1,
                     "default_season": data["season"],
-                    "seasons": indexes,
+                    "seasons": [
+                        {key: value for key, value in index.items() if key != "pbp_games"}
+                        for index in indexes
+                    ],
                 }
             )
         )
+    (OUT / "pbp-catalog.json").write_text(
+        dumps(
+            {
+                "schema_version": 1,
+                "default_season": data["season"],
+                "seasons": [
+                    {
+                        "season": index["season"],
+                        "generated_at": index["generated_at"],
+                        "source": index["source"],
+                        "coverage": index["coverage"],
+                        "games": index["pbp_games"],
+                    }
+                    for index in indexes
+                ],
+            }
+        )
+    )
     if args.sql:
         if len(seasons) > 1:
             export_all(conn, seasons, ROOT / ".local/shooting-sql")

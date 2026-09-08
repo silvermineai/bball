@@ -36,7 +36,13 @@ export default function Page() {
   ) as { players: unknown[] };
   const shooting = JSON.parse(
     fs.readFileSync(path.join(dataDir, "shooting.json"), "utf8"),
-  ) as { coverage: { field_goal_attempts: number } };
+  ) as {
+    coverage: {
+      field_goal_attempts: number;
+      pbp_events?: number;
+      pbp_games?: number;
+    };
+  };
   const publisher = JSON.parse(
     fs.readFileSync(path.join(dataDir, "publisher-leaders.json"), "utf8"),
   ) as { metrics: unknown[] };
@@ -292,6 +298,15 @@ export default function Page() {
               <Link href="/basketball/impact/">Player impact →</Link>{" "}
               · <Link href="/basketball/shooting/">Shooting lab →</Link>
             </p>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">Play by play</div>
+            <h3>{count(shooting.coverage.pbp_events || 0)} events · {count(shooting.coverage.pbp_games || 0)} games</h3>
+            <p>
+              A searchable game index connects the retained event releases to
+              the publisher&apos;s complete source pages and shot reconciliation.
+            </p>
+            <Link href="/basketball/pbp/">Open the play-by-play archive →</Link>
           </article>
         </div>
       </section>

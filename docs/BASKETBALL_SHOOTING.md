@@ -8,6 +8,8 @@ The catalog includes the 2024, 2025 and 2026 season-ending SportsDataverse relea
 
 The 2024 edition covers 713 observed programs and 9,195 shooter identities; 10,345 of 12,302 team-game samples and 92,370 of 110,427 player-game samples reconcile. The 2025 edition covers 682 observed programs and 8,864 shooter identities; 10,584 of 12,270 team-game samples and 94,811 of 110,461 player-game samples reconcile. The 2026 edition covers 721 programs and 9,312 shooter identities; 12,367 of 12,550 team-game samples and 111,293 of 113,675 player-game samples reconcile. These are not verified Division I membership rosters.
 
+The companion play-by-play archive at /basketball/pbp/ indexes every source event by game across these retained releases. It keeps a compact game catalog rather than mirroring full event text into the client; each row links to the publisher's public ESPN game page for the complete event log. Event counts and source game IDs are descriptive coverage evidence, not a guarantee that every action has a player ID or valid location.
+
 ## Identity, outcomes and coverage
 
 - IDs remain strings, including event IDs too large for JavaScript's exact integer range. No player is created from name matching.
