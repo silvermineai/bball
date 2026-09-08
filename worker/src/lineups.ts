@@ -13,7 +13,7 @@ const metrics = [
   { key: "plus_minus", label: "Point margin", unit: "points" },
 ] as const;
 const schema = z.object({
-  season: z.coerce.number().int().min(2025).max(2026).default(2026),
+  season: z.coerce.number().int().min(2019).max(2026).default(2026),
   metric: z.string().regex(/^[a-z0-9_]{2,20}$/).default("net_per_100"),
   q: z.string().trim().max(120).optional(),
   minPoss: z.coerce.number().int().min(0).max(5000).default(40),
@@ -25,8 +25,9 @@ export const lineups = new Hono<{ Bindings: Bindings }>();
 lineups.get("/", zValidator("query", schema), async (c) => {
   const { season, metric: requested, q, minPoss, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
+    const available = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_lineups ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: [2026, 2025], metrics });
+    return c.json({ seasons: available.results.map((row) => row.season), metrics });
   }
   const metric = metrics.find((m) => m.key === requested);
   if (!metric) return c.json({ error: "Unknown lineup metric" }, 400);

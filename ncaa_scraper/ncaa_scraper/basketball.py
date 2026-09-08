@@ -1407,7 +1407,7 @@ def main():
                 datasets.append("team_season")
                 datasets.extend(["publisher_ratings", "publisher_player_value"])
                 datasets.append("player_core")
-            if year in (2025, 2026):
+            if 2019 <= year <= 2026:
                 datasets.append("ncaa_lineups")
             for dataset in datasets:
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)

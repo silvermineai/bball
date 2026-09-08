@@ -91,7 +91,7 @@ describe("bball api", () => {
 
   it("rejects invalid lineup metrics before querying D1", async () => {
     for (const path of [
-      "/api/basketball/research/lineups?season=2024",
+      "/api/basketball/research/lineups?season=2018",
       "/api/basketball/research/lineups?metric=made_up",
       "/api/basketball/research/lineups?minPoss=-1",
     ]) {
