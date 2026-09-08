@@ -43,8 +43,20 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_ncaa_rosters WHERE ${where}`).bind(...binds).first<{ total: number }>();
   const rows = await c.env.DB.prepare(
-    `SELECT season,team_id,player_id,team_name,player_name,profile_json
-     FROM bb_ncaa_rosters WHERE ${where}
+    `SELECT r.season,r.team_id,r.player_id,r.team_name,r.player_name,r.profile_json,
+            s.games AS recorded_games,s.minutes AS recorded_minutes,
+            s.points AS recorded_points,s.rebounds AS recorded_rebounds,
+            s.assists AS recorded_assists
+     FROM bb_ncaa_rosters r
+     LEFT JOIN (
+       SELECT season,player_id,team_id,SUM(games) AS games,
+              SUM(COALESCE(CAST(json_extract(stats_json,'$.mins') AS REAL),0)) AS minutes,
+              SUM(COALESCE(CAST(json_extract(stats_json,'$.pts') AS REAL),0)) AS points,
+              SUM(COALESCE(CAST(json_extract(stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(stats_json,'$.drb') AS REAL),0)) AS rebounds,
+              SUM(COALESCE(CAST(json_extract(stats_json,'$.ast') AS REAL),0)) AS assists
+       FROM bb_ncaa_player_season GROUP BY season,player_id,team_id
+     ) s ON s.season=r.season AND s.team_id=r.team_id AND s.player_id=r.player_id
+     WHERE ${where.replaceAll("season=?", "r.season=?").replaceAll("player_name", "r.player_name").replaceAll("team_name", "r.team_name").replaceAll("player_id", "r.player_id")}
      ORDER BY player_name ASC, team_name ASC, player_id ASC LIMIT 40 OFFSET ?`,
   ).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
