@@ -51,6 +51,9 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>();
   const order = direction === "desc" ? "DESC" : "ASC";
+  const rowWhere = where
+    .replaceAll("season=?", "bb_player_core.season=?")
+    .replaceAll("athlete_id LIKE", "bb_player_core.athlete_id LIKE");
   const rows = await c.env.DB.prepare(
     `SELECT season,athlete_id AS id,
       json_extract(profile_json,'$.display_name') AS name,
@@ -69,7 +72,7 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
          MAX(json_extract(profile_json,'$.team_display_name')) AS team_name
        FROM bb_rosters WHERE season=? GROUP BY season,athlete_id
      ) r ON r.season=bb_player_core.season AND r.athlete_id=bb_player_core.athlete_id
-     WHERE ${where}
+     WHERE ${rowWhere}
      ORDER BY name ${order}, id ASC LIMIT 40 OFFSET ?`,
   ).bind(season, ...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
