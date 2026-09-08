@@ -1394,6 +1394,13 @@ def build(conn, target=2027):
         else:
             r["rank"] = None
     season_players = player_index(conn, target - 1)
+    ncaa_player_box_seasons = [
+        {"season": int(row[0]), "rows": int(row[1])}
+        for row in conn.execute(
+            "SELECT season, count(*) FROM bb_ncaa_player_box "
+            "WHERE season IS NOT NULL GROUP BY season ORDER BY season"
+        )
+    ]
     artifacts = {
         "overview": overview,
         "roster-model": roster_model,
@@ -1404,6 +1411,13 @@ def build(conn, target=2027):
         "impact": {
             "season": target - 1,
             "players": impact,
+            "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
+        },
+        "ncaa-player-box-catalog": {
+            "generated_at": now,
+            "total_rows": sum(item["rows"] for item in ncaa_player_box_seasons),
+            "seasons": ncaa_player_box_seasons,
+            "source": "SportsDataverse ncaa_mbb_player_box parquet releases",
             "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
         },
     }

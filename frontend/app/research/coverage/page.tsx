@@ -130,6 +130,13 @@ export default function Page() {
   const publisher = JSON.parse(
     fs.readFileSync(path.join(dataDir, "publisher-leaders.json"), "utf8"),
   ) as { metrics: unknown[] };
+  const ncaaPlayerBox = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "ncaa-player-box-catalog.json"), "utf8"),
+  ) as {
+    generated_at: string;
+    total_rows: number;
+    seasons: { season: number; rows: number }[];
+  };
   const supplemental = [
     {
       key: "career-player-box",
@@ -139,6 +146,15 @@ export default function Page() {
       latest: history.generated_at,
       url: history.sources[0]?.[0]?.url ?? null,
       note: "SportsDataverse box rows; source IDs and incomplete fields stay explicit.",
+    },
+    {
+      key: "ncaa-player-box",
+      label: "NCAA player-game warehouse",
+      rows: ncaaPlayerBox.total_rows,
+      seasons: ncaaPlayerBox.seasons.map((season) => season.season),
+      latest: ncaaPlayerBox.generated_at,
+      url: null,
+      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves current game rows plus historical season summaries.",
     },
     {
       key: "pbp",
