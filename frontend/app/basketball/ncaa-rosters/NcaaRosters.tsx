@@ -8,10 +8,11 @@ type Zone = { attempts: number; makes: number; points: number };
 type Shooting = { attempts: number; makes: number; distance_sum: number; distance_count: number; zones: Record<string, Zone> };
 type Row = { season: number; team_id: string; player_id: string; team_name: string | null; player_name: string | null; profile: Record<string, string>; recorded_games: number | null; recorded_minutes: number | null; recorded_points: number | null; recorded_rebounds: number | null; recorded_assists: number | null; shooting: Shooting | null };
 type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; classes: string[]; positions: string[]; total: number };
+type Meta = { seasons: number[]; classes: string[]; positions: string[]; total: number; source?: { fetched_at: string | null; sha256: string | null } };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const pct = (zone: Zone | undefined) => zone && zone.attempts ? `${(100 * zone.makes / zone.attempts).toFixed(1)}%` : "—";
+const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
 
 export default function NcaaRosters() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -98,6 +99,7 @@ export default function NcaaRosters() {
       <label className="control"><span>CLASS</span><select value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{(meta?.classes || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{(meta?.positions || []).map((v) => <option key={v}>{v}</option>)}</select></label>
     </div>
+    {meta?.source ? <p className="note" style={{ marginTop: 16 }}>NCAA roster receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained source edition, not a live roster, eligibility or transfer update.</p> : null}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA roster rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching roster rows · page {page + 1} of {pages} · class, school and hometown fields are retained exactly as supplied by the source. Shooting columns appear when a same-season NCAA shot profile exists.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy roster link</button></div></div>
       {copied && <p role="status">{copied}</p>}

@@ -48,11 +48,12 @@ ncaaRosters.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, classYear, position, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, classes, positions, count] = await c.env.DB.batch([
+    const [seasons, classes, positions, count, source] = await c.env.DB.batch([
       c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_rosters WHERE season=?").bind(season),
+      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -60,6 +61,13 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
       classes: classes.results.map((row) => String((row as { value: string }).value)),
       positions: positions.results.map((row) => String((row as { value: string }).value)),
       total: Number((count.results[0] as { total: number }).total || 0),
+      source: (() => {
+        const row = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+        return {
+          fetched_at: typeof row?.fetched_at === "string" ? row.fetched_at : null,
+          sha256: typeof row?.sha256 === "string" ? row.sha256 : null,
+        };
+      })(),
     });
   }
   const clauses = ["season=?"];

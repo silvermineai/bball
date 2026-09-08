@@ -388,6 +388,29 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("returns NCAA roster source receipt metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ value: "Sr." }] },
+      { results: [{ value: "G" }] },
+      { results: [{ total: 456 }] },
+      { results: [{ fetched_at: "2026-09-08T02:48:45Z", sha256: "c".repeat(64) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/ncaa-rosters?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      total: 456,
+      source: { fetched_at: "2026-09-08T02:48:45Z" },
+    });
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid NCAA player ranking parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-rankings?metric=made_up",
