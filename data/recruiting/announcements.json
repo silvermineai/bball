@@ -61,6 +61,12 @@
       "name": "Illinois",
       "host": "fightingillini.com",
       "publisher": "Illinois Athletics"
+    },
+    {
+      "id": "150",
+      "name": "Duke",
+      "host": "goduke.com",
+      "publisher": "Duke Athletics"
     }
   ],
   "sources": [
@@ -271,6 +277,17 @@
       "published_on": "2026-05-07",
       "date_basis": "article:published_time metadata: 2026-05-07T13:08:32-04:00",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kentucky-mcbride",
+      "team_id": "96",
+      "url": "https://ukathletics.com/news/2026/04/30/forward-justin-mcbride-joins-kentucky-mens-basketball/",
+      "title": "Forward Justin McBride Joins Kentucky Men’s Basketball",
+      "publisher": "UK Athletics",
+      "published_on": "2026-04-30",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:22:08.000000+00:00",
       "review_note": null
     },
     {
@@ -491,6 +508,17 @@
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "review_note": null
+    },
+    {
+      "id": "duke-three-signees",
+      "team_id": "150",
+      "url": "https://goduke.com/news/2025/11/20/mens-basketball-scheyer-announces-three-signees-in-2026-recruiting-class",
+      "title": "Scheyer Announces Three Signees in 2026 Recruiting Class",
+      "publisher": "Duke Athletics",
+      "published_on": "2025-11-20",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:22:08.000000+00:00",
       "review_note": null
     }
   ],
@@ -781,6 +809,43 @@
       "team_id": "96",
       "category": "international",
       "previous_program": "Vanoli Cremona",
+      "stats_ref": null
+    },
+    {
+      "key": "96-justin-mcbride",
+      "name": "Justin McBride",
+      "team_id": "96",
+      "category": "transfer",
+      "previous_program": "James Madison",
+      "stats_ref": {
+        "player_id": "4685664",
+        "team_id": "256",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "150-cameron-williams",
+      "name": "Cameron Williams",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "St. Mary’s High School",
+      "stats_ref": null
+    },
+    {
+      "key": "150-bryson-howard",
+      "name": "Bryson Howard",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "Heritage High School",
+      "stats_ref": null
+    },
+    {
+      "key": "150-maxime-meyer",
+      "name": "Maxime Meyer",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "IMG Academy",
       "stats_ref": null
     },
     {
@@ -1425,6 +1490,34 @@
       "kind": "addition",
       "source_id": "kentucky-ndiaye",
       "summary": "Kentucky announced Ousmane N’Diaye as a 2026–27 addition."
+    },
+    {
+      "id": "96-justin-mcbride-addition",
+      "person_key": "96-justin-mcbride",
+      "kind": "addition",
+      "source_id": "kentucky-mcbride",
+      "summary": "Kentucky announced Justin McBride as a 2026–27 addition."
+    },
+    {
+      "id": "150-cameron-williams-addition",
+      "person_key": "150-cameron-williams",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Cameron Williams as a 2026–27 addition."
+    },
+    {
+      "id": "150-bryson-howard-addition",
+      "person_key": "150-bryson-howard",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Bryson Howard as a 2026–27 addition."
+    },
+    {
+      "id": "150-maxime-meyer-addition",
+      "person_key": "150-maxime-meyer",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Maxime Meyer as a 2026–27 addition."
     },
     {
       "id": "12-derek-dixon-addition",

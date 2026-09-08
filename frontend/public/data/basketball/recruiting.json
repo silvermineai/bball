@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "season": 2027,
-  "reviewed_at": "2026-09-05T10:09:41.078188+00:00",
+  "reviewed_at": "2026-09-08T10:22:08.000000+00:00",
   "coverage": {
-    "programs": 10,
-    "players": 71,
-    "events": 73,
-    "sources": 39,
-    "historical_links": 33,
+    "programs": 11,
+    "players": 75,
+    "events": 77,
+    "sources": 41,
+    "historical_links": 34,
     "complete_national_coverage": false
   },
   "methodology": "Selected school announcements, independently summarized. Publication dates are not effective transfer dates. A signing does not establish eligibility or current availability. Coverage is partial, including within listed programs. These records do not change model forecasts.",
@@ -16,7 +16,7 @@
     "url": "https://github.com/sportsdataverse/sportsdataverse-data",
     "license": "CC BY 4.0",
     "season": 2026,
-    "release_sha256": "6ec86c54bde79ef06ec4e8e83bcca2f82703c2d9241902d8e1b49b323884b1f0"
+    "release_sha256": "457c058fa5de4a64fc093b682d0a4137a33990b59cb1894ea627da25120de7e4"
   },
   "programs": [
     {
@@ -78,6 +78,12 @@
       "name": "Illinois",
       "host": "fightingillini.com",
       "publisher": "Illinois Athletics"
+    },
+    {
+      "id": "150",
+      "name": "Duke",
+      "host": "goduke.com",
+      "publisher": "Duke Athletics"
     }
   ],
   "sources": [
@@ -288,6 +294,17 @@
       "published_on": "2026-05-07",
       "date_basis": "article:published_time metadata: 2026-05-07T13:08:32-04:00",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "review_note": null
+    },
+    {
+      "id": "kentucky-mcbride",
+      "team_id": "96",
+      "url": "https://ukathletics.com/news/2026/04/30/forward-justin-mcbride-joins-kentucky-mens-basketball/",
+      "title": "Forward Justin McBride Joins Kentucky Men’s Basketball",
+      "publisher": "UK Athletics",
+      "published_on": "2026-04-30",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:22:08.000000+00:00",
       "review_note": null
     },
     {
@@ -509,6 +526,17 @@
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
       "review_note": null
+    },
+    {
+      "id": "duke-three-signees",
+      "team_id": "150",
+      "url": "https://goduke.com/news/2025/11/20/mens-basketball-scheyer-announces-three-signees-in-2026-recruiting-class",
+      "title": "Scheyer Announces Three Signees in 2026 Recruiting Class",
+      "publisher": "Duke Athletics",
+      "published_on": "2025-11-20",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:22:08.000000+00:00",
+      "review_note": null
     }
   ],
   "people": [
@@ -528,7 +556,15 @@
         "ppg": 6.5,
         "rpg": 5.5,
         "apg": 0.6,
+        "spg": 0.4,
+        "bpg": 2.2,
+        "topg": 0.8,
         "efg": 0.6015037593984962,
+        "ts": 0.6228589224540642,
+        "three_pct": null,
+        "ft_rate": 0.43609022556390975,
+        "three_rate": 0.0,
+        "tov_rate": 0.13473457289140392,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -549,7 +585,15 @@
         "ppg": 5.7,
         "rpg": 3.3,
         "apg": 1.0,
+        "spg": 0.6,
+        "bpg": 0.1,
+        "topg": 0.8,
         "efg": 0.5473372781065089,
+        "ts": 0.5668963723833051,
+        "three_pct": 0.33980582524271846,
+        "ft_rate": 0.28994082840236685,
+        "three_rate": 0.6094674556213018,
+        "tov_rate": 0.13496794511303564,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -570,7 +614,15 @@
         "ppg": 3.3,
         "rpg": 4.1,
         "apg": 0.3,
+        "spg": 0.7,
+        "bpg": 1.2,
+        "topg": 0.7,
         "efg": 0.6268656716417911,
+        "ts": 0.622093023255814,
+        "three_pct": null,
+        "ft_rate": 0.5970149253731343,
+        "three_rate": 0.0,
+        "tov_rate": 0.19626168224299065,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -591,7 +643,15 @@
         "ppg": 17.2,
         "rpg": 5.7,
         "apg": 2.6,
+        "spg": 0.7,
+        "bpg": 0.5,
+        "topg": 1.7,
         "efg": 0.5418660287081339,
+        "ts": 0.5776892430278885,
+        "three_pct": 0.38235294117647056,
+        "ft_rate": 0.2966507177033493,
+        "three_rate": 0.569377990430622,
+        "tov_rate": 0.10171407044641176,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -612,7 +672,15 @@
         "ppg": 5.1,
         "rpg": 2.8,
         "apg": 4.0,
+        "spg": 1.0,
+        "bpg": 0.1,
+        "topg": 1.8,
         "efg": 0.34328358208955223,
+        "ts": 0.4471101417666303,
+        "three_pct": 0.2857142857142857,
+        "ft_rate": 0.7761194029850746,
+        "three_rate": 0.26119402985074625,
+        "tov_rate": 0.24026512013256007,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -633,7 +701,15 @@
         "ppg": 8.1,
         "rpg": 2.1,
         "apg": 0.6,
+        "spg": 0.5,
+        "bpg": 0.5,
+        "topg": 1.2,
         "efg": 0.5686274509803921,
+        "ts": 0.6218442731862875,
+        "three_pct": 0.463768115942029,
+        "ft_rate": 0.48366013071895425,
+        "three_rate": 0.45098039215686275,
+        "tov_rate": 0.1530497411658789,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -654,7 +730,15 @@
         "ppg": 0.4,
         "rpg": 0.1,
         "apg": 0.0,
+        "spg": 0.1,
+        "bpg": 0.1,
+        "topg": 0.6,
         "efg": null,
+        "ts": 0.5263157894736843,
+        "three_pct": null,
+        "ft_rate": null,
+        "three_rate": null,
+        "tov_rate": 0.5839416058394161,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -683,7 +767,15 @@
         "ppg": 5.8,
         "rpg": 4.1,
         "apg": 1.1,
+        "spg": 0.8,
+        "bpg": 0.1,
+        "topg": 0.7,
         "efg": 0.47337278106508873,
+        "ts": 0.519159456118665,
+        "three_pct": 0.21739130434782608,
+        "ft_rate": 0.41420118343195267,
+        "three_rate": 0.27218934911242604,
+        "tov_rate": 0.10607734806629834,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -720,7 +812,15 @@
         "ppg": 12.8,
         "rpg": 9.1,
         "apg": 0.7,
+        "spg": 0.5,
+        "bpg": 1.0,
+        "topg": 1.7,
         "efg": 0.5418118466898955,
+        "ts": 0.5708749441049337,
+        "three_pct": 0.3125,
+        "ft_rate": 0.3554006968641115,
+        "three_rate": 0.05574912891986063,
+        "tov_rate": 0.12971851083149566,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -741,7 +841,15 @@
         "ppg": 20.4,
         "rpg": 4.0,
         "apg": 3.5,
+        "spg": 1.8,
+        "bpg": 0.3,
+        "topg": 2.1,
         "efg": 0.5806794055201698,
+        "ts": 0.6004131282992885,
+        "three_pct": 0.3584905660377358,
+        "ft_rate": 0.32908704883227174,
+        "three_rate": 0.3375796178343949,
+        "tov_rate": 0.10808597748208802,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -762,7 +870,15 @@
         "ppg": 17.7,
         "rpg": 11.3,
         "apg": 1.7,
+        "spg": 1.0,
+        "bpg": 1.2,
+        "topg": 2.8,
         "efg": 0.5290556900726392,
+        "ts": 0.5875750329412913,
+        "three_pct": 0.2698412698412698,
+        "ft_rate": 0.5060532687651331,
+        "three_rate": 0.15254237288135594,
+        "tov_rate": 0.15504515277720507,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -783,7 +899,15 @@
         "ppg": 15.2,
         "rpg": 2.7,
         "apg": 6.5,
+        "spg": 0.9,
+        "bpg": 0.2,
+        "topg": 1.6,
         "efg": 0.494475138121547,
+        "ts": 0.5595047007567071,
+        "three_pct": 0.3023255813953488,
+        "ft_rate": 0.430939226519337,
+        "three_rate": 0.23756906077348067,
+        "tov_rate": 0.10653554599467321,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -852,7 +976,15 @@
         "ppg": 10.0,
         "rpg": 5.4,
         "apg": 0.8,
+        "spg": 0.3,
+        "bpg": 0.4,
+        "topg": 0.9,
         "efg": 0.6042553191489362,
+        "ts": 0.6121499674388314,
+        "three_pct": 0.4,
+        "ft_rate": 0.3021276595744681,
+        "three_rate": 0.0425531914893617,
+        "tov_rate": 0.10042681395932714,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -873,7 +1005,15 @@
         "ppg": 9.5,
         "rpg": 5.7,
         "apg": 0.7,
+        "spg": 0.8,
+        "bpg": 0.3,
+        "topg": 1.8,
         "efg": 0.6142857142857143,
+        "ts": 0.6336853807670928,
+        "three_pct": 0.42857142857142855,
+        "ft_rate": 0.6,
+        "three_rate": 0.2,
+        "tov_rate": 0.1965163019205002,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -894,7 +1034,15 @@
         "ppg": 12.8,
         "rpg": 7.1,
         "apg": 0.5,
+        "spg": 0.8,
+        "bpg": 1.6,
+        "topg": 1.4,
         "efg": 0.5491803278688525,
+        "ts": 0.5646422983928318,
+        "three_pct": 0.28846153846153844,
+        "ft_rate": 0.32131147540983607,
+        "three_rate": 0.17049180327868851,
+        "tov_rate": 0.1067208740947783,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -915,7 +1063,15 @@
         "ppg": 16.9,
         "rpg": 3.1,
         "apg": 1.0,
+        "spg": 0.8,
+        "bpg": 0.2,
+        "topg": 0.8,
         "efg": 0.6715328467153284,
+        "ts": 0.6934103789309923,
+        "three_pct": 0.4874551971326165,
+        "ft_rate": 0.19951338199513383,
+        "three_rate": 0.6788321167883211,
+        "tov_rate": 0.06445576463249818,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -926,6 +1082,59 @@
       "team_id": "96",
       "category": "international",
       "previous_program": "Vanoli Cremona",
+      "stats": null
+    },
+    {
+      "key": "96-justin-mcbride",
+      "name": "Justin McBride",
+      "team_id": "96",
+      "category": "transfer",
+      "previous_program": "James Madison",
+      "stats": {
+        "id": "4685664",
+        "team_id": "256",
+        "team": "James Madison",
+        "season": 2026,
+        "games": 31,
+        "mpg": 27.1,
+        "ppg": 15.3,
+        "rpg": 5.6,
+        "apg": 1.5,
+        "spg": 0.4,
+        "bpg": 0.6,
+        "topg": 1.8,
+        "efg": 0.5491329479768786,
+        "ts": 0.587541146512639,
+        "three_pct": 0.4,
+        "ft_rate": 0.3439306358381503,
+        "three_rate": 0.2745664739884393,
+        "tov_rate": 0.1202120102726627,
+        "incomplete_box_games": 0,
+        "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "150-cameron-williams",
+      "name": "Cameron Williams",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "St. Mary’s High School",
+      "stats": null
+    },
+    {
+      "key": "150-bryson-howard",
+      "name": "Bryson Howard",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "Heritage High School",
+      "stats": null
+    },
+    {
+      "key": "150-maxime-meyer",
+      "name": "Maxime Meyer",
+      "team_id": "150",
+      "category": "freshman",
+      "previous_program": "IMG Academy",
       "stats": null
     },
     {
@@ -944,7 +1153,15 @@
         "ppg": 6.5,
         "rpg": 2.3,
         "apg": 2.7,
+        "spg": 0.4,
+        "bpg": 0.0,
+        "topg": 1.2,
         "efg": 0.4973544973544973,
+        "ts": 0.5252229143764504,
+        "three_pct": 0.3968253968253968,
+        "ft_rate": 0.1746031746031746,
+        "three_rate": 0.6666666666666666,
+        "tov_rate": 0.15658802925723703,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -965,7 +1182,15 @@
         "ppg": 3.6,
         "rpg": 2.4,
         "apg": 0.2,
+        "spg": 0.2,
+        "bpg": 0.3,
+        "topg": 0.5,
         "efg": 0.43902439024390244,
+        "ts": 0.49504950495049505,
+        "three_pct": 0.2962962962962963,
+        "ft_rate": 0.4878048780487805,
+        "three_rate": 0.6585365853658537,
+        "tov_rate": 0.12173913043478261,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -986,7 +1211,15 @@
         "ppg": 5.7,
         "rpg": 2.5,
         "apg": 0.3,
+        "spg": 0.3,
+        "bpg": 0.4,
+        "topg": 1.0,
         "efg": 0.5882352941176471,
+        "ts": 0.6044122091266244,
+        "three_pct": null,
+        "ft_rate": 0.45588235294117646,
+        "three_rate": 0.0,
+        "tov_rate": 0.17460713394861563,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1007,7 +1240,15 @@
         "ppg": 14.0,
         "rpg": 4.8,
         "apg": 0.8,
+        "spg": 0.6,
+        "bpg": 0.0,
+        "topg": 1.9,
         "efg": 0.6203007518796992,
+        "ts": 0.5945699984832399,
+        "three_pct": 0.25,
+        "ft_rate": 0.5037593984962406,
+        "three_rate": 0.03007518796992481,
+        "tov_rate": 0.13625049128782918,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1028,7 +1269,15 @@
         "ppg": 10.7,
         "rpg": 5.2,
         "apg": 1.7,
+        "spg": 0.5,
+        "bpg": 0.5,
+        "topg": 1.8,
         "efg": 0.5269784172661871,
+        "ts": 0.5510265700483092,
+        "three_pct": 0.29411764705882354,
+        "ft_rate": 0.4028776978417266,
+        "three_rate": 0.3057553956834532,
+        "tov_rate": 0.15768056968463887,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1049,7 +1298,15 @@
         "ppg": 0.0,
         "rpg": 0.0,
         "apg": 0.0,
+        "spg": 0.0,
+        "bpg": 0.0,
+        "topg": 0.0,
         "efg": null,
+        "ts": null,
+        "three_pct": null,
+        "ft_rate": null,
+        "three_rate": null,
+        "tov_rate": null,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and Pacific identity. The box archive records one minute in one game; this is not a full-season production sample or an eligibility determination."
       }
@@ -1070,7 +1327,15 @@
         "ppg": 1.8,
         "rpg": 2.2,
         "apg": 0.5,
+        "spg": 0.5,
+        "bpg": 0.5,
+        "topg": 0.2,
         "efg": 0.5930232558139535,
+        "ts": 0.608974358974359,
+        "three_pct": 0.23809523809523808,
+        "ft_rate": 0.18604651162790697,
+        "three_rate": 0.4883720930232558,
+        "tov_rate": 0.11363636363636365,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1099,7 +1364,15 @@
         "ppg": 12.3,
         "rpg": 3.4,
         "apg": 2.7,
+        "spg": 0.9,
+        "bpg": 0.3,
+        "topg": 1.5,
         "efg": 0.5262345679012346,
+        "ts": 0.5607734806629834,
+        "three_pct": 0.3526570048309179,
+        "ft_rate": 0.24691358024691357,
+        "three_rate": 0.6388888888888888,
+        "tov_rate": 0.11707317073170732,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1176,7 +1449,15 @@
         "ppg": 12.5,
         "rpg": 8.8,
         "apg": 2.2,
+        "spg": 0.5,
+        "bpg": 0.4,
+        "topg": 1.8,
         "efg": 0.6051660516605166,
+        "ts": 0.6282475200755786,
+        "three_pct": 0.31683168316831684,
+        "ft_rate": 0.36162361623616235,
+        "three_rate": 0.3726937269372694,
+        "tov_rate": 0.15444015444015444,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1197,7 +1478,15 @@
         "ppg": 16.4,
         "rpg": 4.0,
         "apg": 4.5,
+        "spg": 1.8,
+        "bpg": 0.3,
+        "topg": 1.9,
         "efg": 0.5543478260869565,
+        "ts": 0.5941542884523239,
+        "three_pct": 0.4074074074074074,
+        "ft_rate": 0.2826086956521739,
+        "three_rate": 0.45652173913043476,
+        "tov_rate": 0.11829319814110688,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1218,7 +1507,15 @@
         "ppg": 11.1,
         "rpg": 7.8,
         "apg": 0.4,
+        "spg": 0.3,
+        "bpg": 1.4,
+        "topg": 0.9,
         "efg": 0.6540284360189573,
+        "ts": 0.650298606502986,
+        "three_pct": null,
+        "ft_rate": 0.5260663507109005,
+        "three_rate": 0.0,
+        "tov_rate": 0.09598080383923215,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1239,7 +1536,15 @@
         "ppg": 18.2,
         "rpg": 5.9,
         "apg": 1.3,
+        "spg": 1.4,
+        "bpg": 0.5,
+        "topg": 2.2,
         "efg": 0.5577395577395577,
+        "ts": 0.5827761700429098,
+        "three_pct": 0.37735849056603776,
+        "ft_rate": 0.4864864864864865,
+        "three_rate": 0.3906633906633907,
+        "tov_rate": 0.12564348660675334,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1316,7 +1621,15 @@
         "ppg": 14.5,
         "rpg": 2.8,
         "apg": 1.8,
+        "spg": 1.8,
+        "bpg": 0.2,
+        "topg": 2.1,
         "efg": 0.5625,
+        "ts": 0.6208514917867918,
+        "three_pct": 0.373134328358209,
+        "ft_rate": 0.4769736842105263,
+        "three_rate": 0.4407894736842105,
+        "tov_rate": 0.15231599886331343,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1337,7 +1650,15 @@
         "ppg": 14.4,
         "rpg": 8.7,
         "apg": 0.8,
+        "spg": 0.4,
+        "bpg": 1.5,
+        "topg": 1.7,
         "efg": 0.5787781350482315,
+        "ts": 0.5863981133278092,
+        "three_pct": null,
+        "ft_rate": 0.5498392282958199,
+        "three_rate": 0.0,
+        "tov_rate": 0.11904093435903194,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1358,7 +1679,15 @@
         "ppg": 19.9,
         "rpg": 2.4,
         "apg": 3.8,
+        "spg": 1.4,
+        "bpg": 0.1,
+        "topg": 2.4,
         "efg": 0.48577235772357724,
+        "ts": 0.5399898115129903,
+        "three_pct": 0.32653061224489793,
+        "ft_rate": 0.4146341463414634,
+        "three_rate": 0.1991869918699187,
+        "tov_rate": 0.11695906432748539,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1379,7 +1708,15 @@
         "ppg": 8.8,
         "rpg": 3.4,
         "apg": 0.9,
+        "spg": 1.2,
+        "bpg": 0.3,
+        "topg": 0.9,
         "efg": 0.514,
+        "ts": 0.5441683294032288,
+        "three_pct": 0.35507246376811596,
+        "ft_rate": 0.216,
+        "three_rate": 0.552,
+        "tov_rate": 0.10401430196652041,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1504,7 +1841,15 @@
         "ppg": 15.8,
         "rpg": 2.5,
         "apg": 3.2,
+        "spg": 0.8,
+        "bpg": 0.3,
+        "topg": 1.9,
         "efg": 0.5223684210526316,
+        "ts": 0.5667128347183749,
+        "three_pct": 0.35,
+        "ft_rate": 0.29473684210526313,
+        "three_rate": 0.6842105263157895,
+        "tov_rate": 0.11986997155627793,
         "incomplete_box_games": 0,
         "identity_basis": "Reviewed full name and school-announced prior program match the historical box-score record."
       }
@@ -1706,6 +2051,34 @@
       "kind": "addition",
       "source_id": "kentucky-ndiaye",
       "summary": "Kentucky announced Ousmane N’Diaye as a 2026–27 addition."
+    },
+    {
+      "id": "96-justin-mcbride-addition",
+      "person_key": "96-justin-mcbride",
+      "kind": "addition",
+      "source_id": "kentucky-mcbride",
+      "summary": "Kentucky announced Justin McBride as a 2026–27 addition."
+    },
+    {
+      "id": "150-cameron-williams-addition",
+      "person_key": "150-cameron-williams",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Cameron Williams as a 2026–27 addition."
+    },
+    {
+      "id": "150-bryson-howard-addition",
+      "person_key": "150-bryson-howard",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Bryson Howard as a 2026–27 addition."
+    },
+    {
+      "id": "150-maxime-meyer-addition",
+      "person_key": "150-maxime-meyer",
+      "kind": "addition",
+      "source_id": "duke-three-signees",
+      "summary": "Duke announced Maxime Meyer as a 2026–27 addition."
     },
     {
       "id": "12-derek-dixon-addition",
@@ -2023,5 +2396,5 @@
       "summary": "Illinois announced the signing of Stefan Vaaks for its 2026–27 additions."
     }
   ],
-  "edition": "1362b72fc614359bd8fb9b6f1b74b6c93567055d2b9dc3c427cebc7a67503808"
+  "edition": "b2bd1d7f0892c94f2150ee0234226d8d19192c73026b9513030d531f42e09295"
 }

@@ -23,7 +23,9 @@ class RecruitingTests(unittest.TestCase):
 
     def test_reviewed_links_and_missing_stats(self):
         release = build(self.doc, self.box, self.programs)
-        self.assertEqual(release["coverage"]["historical_links"], 33)
+        self.assertEqual(release["coverage"]["historical_links"], 34)
+        self.assertEqual(release["coverage"]["programs"], 11)
+        self.assertEqual(release["coverage"]["events"], 77)
         self.assertFalse(release["coverage"]["complete_national_coverage"])
         self.assertTrue(
             all(
@@ -42,6 +44,8 @@ class RecruitingTests(unittest.TestCase):
         self.assertIsNone(people["62-jaden-matingou"]["stats"])
         self.assertIsNone(people["153-cade-bennerman"]["stats"])
         self.assertIsNone(people["153-neo-avdalas"]["stats"])
+        self.assertEqual(people["96-justin-mcbride"]["stats"]["id"], "4685664")
+        self.assertIsNone(people["150-cameron-williams"]["stats"])
         hampton = people["62-kellen-hampton"]["stats"]
         self.assertEqual((hampton["games"], hampton["mpg"]), (1, 1.0))
         self.assertEqual(hampton["team_id"], "279")
