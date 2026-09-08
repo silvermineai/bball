@@ -205,9 +205,69 @@ export default function Page() {
         </article>
       </section>
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">05 / Build a recruiting brief</div>
+            <h2>Move from a name to a defensible question.</h2>
+          </div>
+          <Link href="/blog/basketball-recruiting-workload/">
+            Read the recruiting field guide →
+          </Link>
+        </div>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">Step 01 / Find the source row</div>
+            <h2>Start with the roster observation.</h2>
+            <p>
+              Search the source-listed 2026–27 roster and record the season,
+              program ID and exact player label. A listed row is an observation,
+              not an eligibility ruling.
+            </p>
+            <Link href="/basketball/roster-board/">Open the roster board →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Step 02 / Read the announcement</div>
+            <h2>Keep the publisher’s date attached.</h2>
+            <p>
+              Open the school statement and any later availability update. The
+              timeline tells you what was reported and when; it does not fill in
+              an absent transaction record.
+            </p>
+            <Link href="/basketball/recruiting/">Open dated evidence →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Step 03 / Measure prior work</div>
+            <h2>Use the complete college sample.</h2>
+            <p>
+              Check games, minutes, efficiency and the game log at the prior
+              program. Keep prep and international additions separate when no
+              college box-score profile exists.
+            </p>
+            <Link href="/basketball/players/">Open the player archive →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Step 04 / Hand off to the model</div>
+            <h2>Ask what still needs confirmation.</h2>
+            <p>
+              Put the evidence beside the forecast and write the next check:
+              availability, role, health, lineup fit or opponent matchup. The
+              primary forecast stays reproducible until a reviewed model release
+              changes it.
+            </p>
+            <Link href="/basketball/model/">Read the model boundary →</Link>
+          </article>
+        </div>
+        <p className="note">
+          A missing roster observation is not evidence of departure, and prior
+          minutes are not a promise of future minutes. Preserve both statements
+          when you share a recruiting brief.
+        </p>
+      </section>
+
       <section className="section banner">
         <div>
-          <div className="eyebrow">Keep studying</div>
+          <div className="eyebrow">06 / Keep studying</div>
           <h3 style={{ marginTop: 12 }}>The journal explains the methods.</h3>
           <p>
             Read the four-factors and impact notes, then open the source and
