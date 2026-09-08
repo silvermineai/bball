@@ -90,6 +90,11 @@ def _catalog_health(
             if not isinstance(generated, str):
                 raise ValueError(f"{relative} season {season} has an invalid timestamp")
             timestamps.append(generated)
+        fetched = entry.get("fetched_at")
+        if fetched is not None:
+            if not isinstance(fetched, str):
+                raise ValueError(f"{relative} season {season} has an invalid fetched_at timestamp")
+            timestamps.append(fetched)
         path = entry.get("path")
         if path is not None:
             if not isinstance(path, str) or not path.startswith("/data/"):
@@ -98,7 +103,7 @@ def _catalog_health(
             if not derivative.exists():
                 raise ValueError(f"{relative} season {season} references missing derivative {path}")
         coverage = entry.get("coverage")
-        if not isinstance(coverage, dict) and not isinstance(entry.get("source_rows"), int):
+        if not isinstance(coverage, dict) and not isinstance(entry.get("source_rows"), int) and not isinstance(entry.get("rows"), int):
             raise ValueError(f"{relative} season {season} has no coverage object")
     if not timestamps:
         raise ValueError(f"{relative} has no freshness timestamp")
@@ -207,6 +212,7 @@ def check_freshness(
                     "basketball/ncaa-team-box.json",
                     "basketball/impact-within-team.json",
                     "basketball/shooting-catalog.json",
+                    "basketball/ncaa-player-box-catalog.json",
                 ):
                     catalog = _read(root, str(Path("frontend/public/data") / relative))
                     releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))

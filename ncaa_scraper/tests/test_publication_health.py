@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ncaa_scraper.publication_health import check_freshness
+from ncaa_scraper.publication_health import _catalog_health, check_freshness
 
 
 def write_release(root, sport, name, value):
@@ -126,6 +126,40 @@ class PublicationHealthTest(unittest.TestCase):
                     max_age_hours=48,
                 )
             self.assertIn("baseline estimates exceed", str(error.exception))
+
+    def test_national_player_catalog_checks_each_source_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = {
+                "generated_at": "2026-09-08T01:00:00Z",
+                "seasons": [
+                    {
+                        "season": 2025,
+                        "rows": 118441,
+                        "fetched_at": "2026-09-08T00:30:00Z",
+                    }
+                ],
+            }
+            write_release(directory, "basketball", "ncaa-player-box-catalog.json", catalog)
+            report = _catalog_health(
+                root,
+                "basketball/ncaa-player-box-catalog.json",
+                catalog,
+                datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                48,
+            )
+            self.assertEqual(report[0]["catalog_seasons"], 1)
+
+            catalog["seasons"][0]["fetched_at"] = "2026-09-05T00:30:00Z"
+            with self.assertRaises(ValueError) as error:
+                _catalog_health(
+                    root,
+                    "basketball/ncaa-player-box-catalog.json",
+                    catalog,
+                    datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                    48,
+                )
+            self.assertIn("hours old", str(error.exception))
 
 
 if __name__ == "__main__":
