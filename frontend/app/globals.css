@@ -499,6 +499,13 @@ th,
   color: var(--muted);
   line-height: 1.7;
 }
+.source-gap {
+  border-left: 3px solid var(--orange);
+  margin-bottom: 22px;
+}
+.source-gap p {
+  margin-bottom: 0;
+}
 .market-quotes {
   border-top: 1px solid var(--line);
   margin-top: 14px;

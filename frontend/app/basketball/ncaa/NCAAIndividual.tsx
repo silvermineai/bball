@@ -87,6 +87,12 @@ export default function NCAAIndividual() {
           <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
+          <div className="paper-panel source-gap" role="status">
+            <strong>{ncaaStatLabels[stat]} is unavailable in this NCAA snapshot.</strong>
+            <p>The source page did not publish qualifying rows for this measure in the cached final edition. Nothing is being converted to zero. For an NCAA-derived assists ranking built from the source box release, open the <a href="/basketball/ncaa-rankings/?metric=apg">player rankings archive →</a></p>
+          </div>
+        )}
         <details className="career-coverage-details" style={{ marginBottom: 24 }}>
           <summary>Published values by division and measure</summary>
           <p className="note">The matrix counts non-null values in this release. A blank source field is left blank; it is never converted to zero.</p>

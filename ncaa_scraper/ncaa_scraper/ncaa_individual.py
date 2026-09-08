@@ -39,13 +39,13 @@ SQL_PATH = REPO_ROOT / ".local" / "ncaa-individual.sql"
 YEAR = "2026.0"
 SPORT = "MBB"
 
-# Individual stat pages: stat_seq -> slug. NCAA's current navigation points
-# to 216.0 for assists per game; 140.0 is retained as a fallback because older
-# cached editions used that identifier.
+# Individual stat pages: stat_seq -> slug. The final-statistics navigation
+# currently publishes assists-per-game at 140.0. Keep the older sequence as a
+# fallback because NCAA has changed stat identifiers between editions.
 INDIVIDUAL_STATS = {
     "136.0": "ppg",       # Points Per Game (also G, FGM, 3FG, FT, PTS)
     "137.0": "rpg",       # Rebounds Per Game (also REB)
-    "216.0": "apg",       # Assists Per Game (also AST)
+    "140.0": "apg",       # Assists Per Game (also AST)
     "139.0": "spg",       # Steals Per Game
     "138.0": "bpg",       # Blocks Per Game
     "141.0": "fg_pct",    # FG% (also FGM/FGA)
@@ -56,7 +56,7 @@ INDIVIDUAL_STATS = {
     "473.0": "ast_to",    # Assist/Turnover Ratio
     "556.0": "dbl_dbl",   # Double doubles
 }
-STAT_FALLBACKS = {"apg": ("140.0",)}
+STAT_FALLBACKS = {"apg": ("216.0",)}
 
 TEAM_SCORING_STAT = "145.0"  # team Scoring Offense: G, W-L, PTS, PPG
 
