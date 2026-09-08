@@ -128,9 +128,10 @@ export default function Page() {
         <p className="note">
           This separate ridge model learns next-season team net efficiency from
           prior net efficiency, exact-athlete-ID returning and represented
-          minutes, incoming workload and listed-player count. It produces a
-          margin scenario on the slate; it does not replace the primary model,
-          change win probabilities or enter the forecast ledger.
+          minutes, incoming workload, listed-player count and minutes-weighted
+          publisher Box BPM when the exact source IDs have coverage. It
+          produces a margin scenario on the slate; it does not replace the
+          primary model, change win probabilities or enter the forecast ledger.
         </p>
         <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
           <div><strong>{rosterModel.evaluation.teams.toLocaleString()}</strong><span>Held-out team transitions</span></div>

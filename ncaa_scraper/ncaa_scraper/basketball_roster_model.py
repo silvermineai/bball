@@ -36,6 +36,23 @@ def _profile(row: sqlite3.Row) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+def _player_values(conn: sqlite3.Connection, season: int) -> dict[str, float]:
+    """Return attributed publisher Box BPM by exact source player ID."""
+    values: dict[str, float] = {}
+    for row in conn.execute(
+        "SELECT player_id,stats_json FROM bb_player_value WHERE season=?",
+        (season,),
+    ):
+        try:
+            stats = json.loads(row["stats_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        value = stats.get("box_bpm") if isinstance(stats, dict) else None
+        if isinstance(value, (int, float)) and math.isfinite(float(value)):
+            values[str(row["player_id"])] = float(value)
+    return values
+
+
 def team_net_ratings(conn: sqlite3.Connection) -> dict[int, dict[str, float]]:
     """Compute descriptive season net efficiency from paired team boxes."""
     games = {
@@ -94,6 +111,7 @@ def roster_features(
 ) -> list[dict]:
     """Build exact-athlete-ID continuity features for one source season."""
     prior: dict[str, list[dict]] = defaultdict(list)
+    prior_values = _player_values(conn, prior_participation_season)
     for row in conn.execute(
         "SELECT athlete_id,team_id,games,minutes,name FROM bb_participation WHERE season=?",
         (prior_participation_season,),
@@ -131,6 +149,27 @@ def roster_features(
         represented_minutes = sum(
             record["minutes"] for aid in ids for record in prior.get(aid, [])
         )
+        prior_value_minutes = sum(
+            record["minutes"] * prior_values[aid]
+            for aid, records in prior.items()
+            if aid in prior_values
+            for record in records
+            if record["team_id"] == team
+        )
+        returning_value_minutes = sum(
+            record["minutes"] * prior_values[aid]
+            for aid in ids
+            if aid in prior_values
+            for record in prior.get(aid, [])
+            if record["team_id"] == team
+        )
+        represented_value_minutes = sum(
+            record["minutes"] * prior_values[aid]
+            for aid in ids
+            if aid in prior_values
+            for record in prior.get(aid, [])
+        )
+        denominator = prior_minutes or 0.0
         returning_players = sum(
             any(record["team_id"] == team for record in prior.get(aid, [])) for aid in ids
         )
@@ -152,6 +191,10 @@ def roster_features(
                 "returning_minutes_share": returning_minutes / prior_minutes if prior_minutes else None,
                 "represented_minutes_share": represented_minutes / prior_minutes if prior_minutes else None,
                 "incoming_minutes_share": (represented_minutes - returning_minutes) / prior_minutes if prior_minutes else None,
+                "prior_bpm": prior_value_minutes / denominator if denominator else None,
+                "returning_bpm": returning_value_minutes / denominator if denominator else None,
+                "represented_bpm": represented_value_minutes / denominator if denominator else None,
+                "incoming_bpm": (represented_value_minutes - returning_value_minutes) / denominator if denominator else None,
                 "prior_net": prior_net,
                 "target_net": net,
             }
@@ -165,6 +208,8 @@ FEATURES = (
     "represented_minutes_share",
     "incoming_minutes_share",
     "listed_players",
+    "prior_bpm",
+    "represented_bpm",
 )
 
 
@@ -264,7 +309,7 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
         "generated_at": _now(),
         "target_season": 2027,
         "training_seasons": [2025, 2026],
-        "feature_definition": "Prior descriptive team net efficiency plus exact-athlete-ID source-listed returning, represented and incoming prior-minute shares and listed-player count.",
+        "feature_definition": "Prior descriptive team net efficiency plus exact-athlete-ID source-listed returning, represented and incoming prior-minute shares, listed-player count and minutes-weighted attributed publisher Box BPM retained by source player ID.",
         "model": production,
         "evaluation": {"held_out_transition": 2026, **evaluation},
         "coverage": {
@@ -277,6 +322,7 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
             "The challenger is research-only and does not replace the primary forecast or enter the prospective ledger.",
             "Only two historical roster transitions are available for fitting; the held-out evaluation is one season and is not a guarantee of future performance.",
             "Roster listings do not establish eligibility, availability, transfer reason, injury status or depth-chart role.",
+            "Publisher Box BPM is unavailable for some source IDs; rows without prior BPM coverage are withheld from the challenger rather than imputed.",
             "The scenario changes the primary margin by the learned team-strength delta but does not recalibrate win probability or uncertainty.",
         ],
         "teams": current_rows,

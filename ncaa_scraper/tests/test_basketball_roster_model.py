@@ -12,6 +12,8 @@ def row(i: int, target: float | None = None) -> dict:
         "represented_minutes_share": 0.4 + (i % 9) / 20,
         "incoming_minutes_share": 0.1 + (i % 5) / 30,
         "listed_players": 8 + i % 5,
+        "prior_bpm": -1.0 + i * 0.03,
+        "represented_bpm": -0.5 + i * 0.025,
         "target_net": target if target is not None else prior + 1.5,
     }
 

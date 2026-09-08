@@ -251,6 +251,10 @@ export type BBRosterModelTeam = {
   returning_minutes_share: number | null;
   represented_minutes_share: number | null;
   incoming_minutes_share: number | null;
+  prior_bpm?: number | null;
+  returning_bpm?: number | null;
+  represented_bpm?: number | null;
+  incoming_bpm?: number | null;
   prior_net: number | null;
   target_net: number | null;
   predicted_net: number | null;
