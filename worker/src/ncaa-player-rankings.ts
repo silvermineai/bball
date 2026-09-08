@@ -9,6 +9,7 @@ const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
   metric: z.enum(metrics).default("ppg"),
   minGames: z.coerce.number().int().min(1).max(40).default(5),
+  minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
@@ -46,7 +47,7 @@ const metricExpression = (metric: Metric) => ({
 }[metric]);
 
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, metric, minGames, q, page, meta } = c.req.valid("query");
+  const { season, metric, minGames, minMinutes, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
     const seasons = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
@@ -62,17 +63,17 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const expression = metricExpression(metric);
   const count = await c.env.DB.prepare(
-    `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND (${expression}) IS NOT NULL`,
-  ).bind(...binds, minGames).first<{ total: number }>();
+    `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND (${expression}) IS NOT NULL`,
+  ).bind(...binds, minGames, minMinutes).first<{ total: number }>();
   const rows = await c.env.DB.prepare(
     `WITH aggregate AS (${aggregate(where)}), ranked AS (
       SELECT aggregate.*, ${expression} AS value
-      FROM aggregate WHERE games >= ?
+      FROM aggregate WHERE games >= ? AND minutes >= ?
     )
     SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
     WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC
     LIMIT 50 OFFSET ?`,
-  ).bind(...binds, minGames, page * 50).all();
+  ).bind(...binds, minGames, minMinutes, page * 50).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, metric, min_games: minGames, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  return c.json({ season, metric, min_games: minGames, min_minutes: minMinutes, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
 });
