@@ -110,6 +110,18 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid NCAA player ranking parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-player-rankings?metric=made_up",
+      "/api/basketball/research/ncaa-player-rankings?season=2009",
+      "/api/basketball/research/ncaa-player-rankings?minGames=0",
+      "/api/basketball/research/ncaa-player-rankings?minMinutes=-1",
+      "/api/basketball/research/ncaa-player-rankings?page=-1",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",
