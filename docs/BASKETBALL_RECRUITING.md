@@ -8,7 +8,7 @@ The September 2026 review contains 71 announced additions across Arizona, Hawai 
 
 The publisher wire links to the retained ESPN article feed for context and does not copy article bodies, photographs or biographies. It is not a transaction ledger: headlines and descriptions do not establish eligibility, destination or availability. The board does not contain proprietary recruiting grades, stars, rankings, valuations or contact information. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
 
-The recruiting board supports a twelve-player watch list. It stores source IDs in repeated `rosterPick` URL parameters, so a filtered review can be shared or reopened without a server account. The list is a research aid for source observations; it does not alter rankings, forecasts or transaction status.
+The recruiting board supports a twelve-player watch list. It stores source IDs in repeated `rosterPick` URL parameters, so a filtered review can be shared or reopened without a server account. The school-announcement coverage map also stores its program search, evidence status and sort order in `coverageQ`, `coverageStatus` and `coverageSort`, making an unreviewed-program queue shareable. The list is a research aid for source observations; it does not alter rankings, forecasts or transaction status.
 
 Announcement cards also show a conservative cross-check against the current source roster: normalized full-name plus program matches are labeled exact, multiple matches are flagged for review, and no match is reported without treating it as absence. This joins two source observations for navigation only; it does not assert identity, eligibility or availability.
 
