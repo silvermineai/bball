@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   },
   description:
     "College football forecasts, player production and transparent model research. Basketball scouting and recruiting tools from Silvermine.",
+  alternates: {
+    types: { "application/rss+xml": "/feed.xml" },
+  },
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -71,6 +74,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/research/coverage/">
               Sources, coverage & limitations →
             </Link>
+            <br />
+            <a href="/feed.xml">Subscribe to the journal RSS feed ↗</a>
           </p>
         </footer>
       </body>
