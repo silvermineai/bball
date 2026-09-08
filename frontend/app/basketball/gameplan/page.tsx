@@ -6,39 +6,41 @@ import Compare from "../compare/Compare";
 
 export const metadata = {
   title: "Basketball game plan workbench",
-  alternates: { canonical: "/basketball/gameplan/" },
   description:
-    "Build a college basketball game plan from the published efficiency model, historical four factors and roster workload evidence.",
+    "Build a coach-facing college basketball matchup plan from the published model, Four Factors and source-listed roster context.",
+  alternates: { canonical: "/basketball/gameplan/" },
 };
 
 export default function Page() {
-  const data = getScoutIndex();
-  const model = getBasketball().model;
+  const scouting = getScoutIndex();
+  const basketball = getBasketball();
   const rosters = buildRosterSummary(getRosters().players);
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">The war room / 2026–27 preparation</div>
+        <div className="eyebrow">The coach&apos;s desk / 2026–27 preparation</div>
         <h1>
-          Pick the opponent.
+          Build the plan.
           <br />
-          <em>Write the plan.</em>
+          <em>Show the work.</em>
         </h1>
         <p>
-          Start with two programs, set the floor, then turn the forecast and
-          historical evidence into questions for your staff and players.
+          Choose two programs, set the floor and inspect the model terms,
+          historical splits and source-listed roster workload behind the
+          matchup. A scenario estimate is labeled separately from a scheduled
+          forecast.
         </p>
       </div>
-      <Suspense fallback={<p role="status">Loading the game plan…</p>}>
+      <Suspense fallback={<p>Loading the game-plan workbench…</p>}>
         <Compare
-          teams={data.teams.map((team) => ({ id: team.id, name: team.name }))}
+          teams={scouting.teams.map((team) => ({ id: team.id, name: team.name }))}
           model={{
-            id: model.id,
-            cutoff: model.cutoff,
-            teams: model.teams,
-            efficiency: model.efficiency,
-            tempo: model.tempo,
-            calibration: model.calibration,
+            id: basketball.model.id,
+            cutoff: basketball.model.cutoff,
+            teams: basketball.model.teams,
+            efficiency: basketball.model.efficiency,
+            tempo: basketball.model.tempo,
+            calibration: basketball.model.calibration,
           }}
           rosters={rosters}
         />
