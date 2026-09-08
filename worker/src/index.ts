@@ -23,6 +23,7 @@ import { ncaaHighSchools } from "./ncaa-high-schools";
 import { ncaaPlayerCard } from "./ncaa-player-card";
 import { footballPlayerHistory } from "./football-player-history";
 import { pbpSource } from "./pbp-source";
+import { ncaaTeamBoxSource } from "./ncaa-team-box-source";
 
 type Bindings = Env;
 
@@ -137,6 +138,7 @@ app.route("/api/basketball/research/ncaa-careers", ncaaCareers);
 app.route("/api/basketball/research/ncaa-high-schools", ncaaHighSchools);
 app.route("/api/basketball/research/ncaa-player-card", ncaaPlayerCard);
 app.route("/api/basketball/research/pbp", pbpSource);
+app.route("/api/basketball/research/ncaa-team-box", ncaaTeamBoxSource);
 app.route("/api/research/markets", markets);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);

@@ -160,7 +160,7 @@ def main():
         editions.append(edition)
         (SEASON_OUT / f"ncaa-team-box-{season}.json").write_text(json.dumps(edition, separators=(",", ":"), allow_nan=False))
         print(json.dumps({"season": season, **edition["coverage"]}), flush=True)
-    OUT.write_text(json.dumps({"schema_version": 1, "default_season": max(e["season"] for e in editions), "seasons": [{"season": e["season"], "generated_at": e["generated_at"], "coverage": e["coverage"], "path": f"/data/basketball/ncaa-team-box-{e['season']}.json"} for e in editions]}, separators=(",", ":")))
+    OUT.write_text(json.dumps({"schema_version": 1, "default_season": max(e["season"] for e in editions), "seasons": [{"season": e["season"], "generated_at": e["generated_at"], "source": {"sha256": e["source"]["sha256"]}, "coverage": e["coverage"], "path": f"/data/basketball/ncaa-team-box-{e['season']}.json"} for e in editions]}, separators=(",", ":")))
 
 
 if __name__ == "__main__":
