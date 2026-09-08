@@ -37,6 +37,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
 | Player source profiles | `/basketball/player/?id=…` | ESPN-derived identity, position, size, experience and status context across 24 seasons |
 | Player profile browser | `/basketball/player-profiles/` | Search the complete legal source-profile archive by season, position, status or player ID |
+| NCAA player box archive | `/basketball/ncaa-player-box/` | Browse current NCAA-derived game-level player production, shooting splits and playmaking context in the separate NCAA ID namespace |
 | Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Team stat browser | `/basketball/team-stats/` | Search 45 attributed aggregate team-season fields across 2023–24 through 2025–26, with source display values, pagination and CSV export |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
