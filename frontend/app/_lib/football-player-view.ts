@@ -25,6 +25,8 @@ export const footballPlayerCategories = [
 ] as const;
 export type FootballPlayerCategory = (typeof footballPlayerCategories)[number];
 export type FootballPlayerDivision = "fbs" | "all";
+export const footballPlayerSorts = ["rank", "epa", "epa_per_play", "yards_per_play", "success_rate", "plays"] as const;
+export type FootballPlayerSort = (typeof footballPlayerSorts)[number];
 
 const footballEventCategoryMap: Partial<
   Record<FootballPlayerCategory, "defense" | "specialists">
@@ -49,6 +51,7 @@ export type FootballPlayerFilters = {
   division: FootballPlayerDivision;
   query: string;
   qualified: boolean;
+  sort: FootballPlayerSort;
   page: number;
 };
 
@@ -68,6 +71,7 @@ export function parseFootballPlayerFilters(
   const category = params.get("category") as FootballPlayerCategory | null;
   const division = params.get("division");
   const page = Number(params.get("page") || 0);
+  const requestedSort = params.get("sort") as FootballPlayerSort | null;
   return {
     season,
     category:
@@ -75,6 +79,7 @@ export function parseFootballPlayerFilters(
     division: division === "all" ? "all" : "fbs",
     query: params.get("q") || "",
     qualified: params.get("qualified") === "1",
+    sort: requestedSort && footballPlayerSorts.includes(requestedSort) ? requestedSort : "rank",
     page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
   };
 }
@@ -87,6 +92,7 @@ export function footballPlayerFilterSearch(filters: FootballPlayerFilters) {
   if (filters.division !== "fbs") params.set("division", filters.division);
   if (filters.query) params.set("q", filters.query);
   if (filters.qualified) params.set("qualified", "1");
+  if (filters.sort !== "rank") params.set("sort", filters.sort);
   if (filters.page) params.set("page", String(filters.page));
   const query = params.toString();
   return query ? `?${query}` : "";

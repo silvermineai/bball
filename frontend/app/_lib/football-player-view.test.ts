@@ -77,6 +77,7 @@ describe("football player board URL state", () => {
       division: "all",
       query: "Smith Jr.",
       qualified: true,
+      sort: "rank",
       page: 3,
     });
   });
@@ -93,6 +94,7 @@ describe("football player board URL state", () => {
       division: "fbs",
       query: "",
       qualified: false,
+      sort: "rank",
       page: 0,
     });
   });
@@ -105,6 +107,7 @@ describe("football player board URL state", () => {
         division: "all",
         query: "Smith Jr.",
         qualified: true,
+        sort: "rank",
         page: 3,
       }),
     ).toBe("?season=2024&category=receiving&division=all&q=Smith+Jr.&qualified=1&page=3");
@@ -115,8 +118,25 @@ describe("football player board URL state", () => {
         division: "fbs",
         query: "",
         qualified: false,
+        sort: "rank",
         page: 0,
       }),
     ).toBe("");
+  });
+
+  it("preserves an efficiency ordering in shareable links", () => {
+    expect(parseFootballPlayerFilters("?sort=success_rate", seasons).sort).toBe("success_rate");
+    expect(parseFootballPlayerFilters("?sort=unknown", seasons).sort).toBe("rank");
+    expect(
+      footballPlayerFilterSearch({
+        season: "2025",
+        category: "passing",
+        division: "fbs",
+        query: "",
+        qualified: false,
+        sort: "yards_per_play",
+        page: 0,
+      }),
+    ).toBe("?sort=yards_per_play");
   });
 });

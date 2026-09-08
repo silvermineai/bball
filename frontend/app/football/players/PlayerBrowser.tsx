@@ -12,10 +12,12 @@ import {
   footballPlayerCategories,
   footballEventDataset,
   footballPlayerFilterSearch,
+  footballPlayerSorts,
   parseFootballPlayerFilters,
   productionForCategory,
   type FootballPlayerCategory,
   type FootballPlayerDivision,
+  type FootballPlayerSort,
 } from "../../_lib/football-player-view";
 type Production = {
   games?: number | null;
@@ -27,6 +29,14 @@ type Production = {
   success_rate?: number | null;
   touchdowns: number | null;
   rank: number | null;
+};
+const sortLabels: Record<FootballPlayerSort, string> = {
+  rank: "EPA rank",
+  epa: "Total EPA",
+  epa_per_play: "EPA per play",
+  yards_per_play: "Yards per play",
+  success_rate: "Success rate",
+  plays: "Volume (plays)",
 };
 type Player = {
   id: string;
@@ -52,6 +62,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
   const [season, setSeason] = useState(defaultSeason),
     [category, setCategory] = useState<FootballPlayerCategory>("passing"),
     [division, setDivision] = useState<FootballPlayerDivision>("fbs"),
+    [sort, setSort] = useState<FootballPlayerSort>("rank"),
     [query, setQuery] = useState(""),
     [qualified, setQualified] = useState(false),
     [page, setPage] = useState(0),
@@ -70,6 +81,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     setSeason(parsed.season);
     setCategory(parsed.category);
     setDivision(parsed.division);
+    setSort(parsed.sort);
     setQuery(parsed.query);
     setQualified(parsed.qualified);
     setPage(parsed.page);
@@ -82,12 +94,13 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       season,
       category,
       division,
+      sort,
       query,
       qualified,
       page,
     });
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, season, category, division, query, qualified, page]);
+  }, [hydrated, season, category, division, sort, query, qualified, page]);
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
@@ -125,17 +138,27 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       (category === "all" || p.categories.includes(category)) &&
       (!qualified || hasRankedProduction(p, category)),
   );
-  rows.sort(
-    (a, b) =>
-      (productionForCategory(a, category)?.stats.rank ?? 999999) -
-        (productionForCategory(b, category)?.stats.rank ?? 999999) ||
-      a.name.localeCompare(b.name),
-  );
+  const sortValue = (player: Player) => {
+    const stats = productionForCategory(player, category)?.stats;
+    if (!stats) return null;
+    if (sort === "rank") return stats.rank == null ? null : -stats.rank;
+    if (sort === "epa") return stats.epa;
+    if (sort === "epa_per_play") return stats.epa_per_play;
+    if (sort === "yards_per_play") return stats.yards_per_play ?? (stats.yards != null && stats.plays ? stats.yards / stats.plays : null);
+    if (sort === "success_rate") return stats.success_rate;
+    return stats.plays;
+  };
+  rows.sort((a, b) => {
+    const av = sortValue(a), bv = sortValue(b);
+    if (av == null && bv != null) return 1;
+    if (av != null && bv == null) return -1;
+    return (bv ?? 0) - (av ?? 0) || a.name.localeCompare(b.name);
+  });
   const minimum = data?.rankings[category]?.minimum_plays;
   const download = () => {
     const visible = rows.slice(page * 40, page * 40 + 40);
     downloadCsv(
-      `football-player-rankings-${season}-${category}-page-${page + 1}.csv`,
+      `football-player-rankings-${season}-${category}-${sort}-page-${page + 1}.csv`,
       toCsv(
         ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"],
         visible.map((p) => {
@@ -221,6 +244,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           </select>
         </label>
         <label className="control">
+          <span>ORDER BY</span>
+          <select value={sort} onChange={(e) => { setSort(e.target.value as FootballPlayerSort); setPage(0); }}>
+            {footballPlayerSorts.map((value) => <option key={value} value={value}>{sortLabels[value]}</option>)}
+          </select>
+        </label>
+        <label className="control">
           <span>DIVISION</span>
           <select
             value={division}
@@ -275,7 +304,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </label>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Ranked by total EPA within{" "}
+        Ordered by {sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
           ? "the best available ranked category per player"
           : category}. Team
