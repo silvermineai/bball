@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "poss_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -38,6 +38,7 @@ const aggregate = (where: string) => `
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tpa') AS REAL),0)) AS tpa,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tpm') AS REAL),0)) AS tpm,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.fta') AS REAL),0)) AS fta,
+    SUM(SUM(COALESCE(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL),0))) OVER (PARTITION BY s.season, s.team_id) AS team_possessions,
     (SELECT CAST(json_extract(i.data_json,'$.rapm_net') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS rapm_net,
     (SELECT CAST(json_extract(i.data_json,'$.orapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS orapm,
     (SELECT CAST(json_extract(i.data_json,'$.drapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS drapm,
@@ -59,6 +60,7 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   stocks40: "CASE WHEN minutes > 0 THEN 40.0 * (steals + blocks) / minutes ELSE NULL END",
   tov_rate: "CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END",
   three_rate: "CASE WHEN fga > 0 THEN 100.0 * tpa / fga ELSE NULL END",
+  poss_share: "CASE WHEN team_possessions > 0 THEN 100.0 * possessions / team_possessions ELSE NULL END",
   rapm_net: "rapm_net",
   orapm: "orapm",
   drapm: "drapm",
