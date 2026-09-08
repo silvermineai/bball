@@ -9,6 +9,7 @@ The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for 
 - 26,756 schedule records across season-ending years 2023–2027.
 - 25,041 completed games with usable paired team box scores; 22 other completed games excluded from efficiency calculations.
 - 799,620 identified 2023–26 player box-score rows, with 444,505 source rows preserved separately when required IDs are missing. The coverage desk breaks that queue down by dataset and shows that 444,461 of those rows still carry source observations, while none is attributed to a guessed player or team.
+- The [identity review queue](/basketball/identity-review/) exposes bounded, searchable pages of those retained source observations through a read-only D1 endpoint. It shows the original source fields, dataset, season, row index and withholding reason, and offers a page-level CSV download; it never turns a name-only match into an identity.
 - 9,990 player/team entries with recorded minutes in the player index; incomplete box-score aggregates are not presented as complete rates.
 - 2025 and 2026 publisher player-season releases (416,788 and 426,040 source rows) are grouped into 19,822 player/team records, retaining labels, values, displays and descriptions.
 - 2024, 2025 and 2026 publisher team-season releases (32,265, 31,500 and 32,715 source rows) are grouped into 717, 700 and 727 team records, retaining 45 labeled aggregate fields for the team-stat browser.
@@ -125,6 +126,8 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 `GET /api/basketball/research/coverage` returns all 18 public basketball D1 table counts plus grouped `source_receipts` with each dataset's receipt count and latest `fetched_at` value. This is the remote D1 freshness check; the homepage receipt cards are the corresponding static edition view.
 
 `GET /api/basketball/research/forecasts?season=2027&status=upcoming&q=Duke&limit=50` exposes the D1-backed forecast record for integrations and reproducible research. It joins each stored prediction to its exact schedule row, returns the model ID and creation clock, and supports `all`, `upcoming` or `completed` status, the newest model by default (`model=latest`), `model=all` or an exact model ID, literal team-name search, bounded pagination and a `meta=1` catalog of seasons and model editions. The metadata catalog includes each edition's model creation/cutoff clocks, target season, training-game count and seasons, calibration sample/range and holdout metrics without exposing coefficient vectors. The JSON payload is parsed from the stored forecast artifact; malformed payloads are withheld as `prediction: null` rather than making an otherwise valid page fail. This endpoint does not create, revise or recompute forecasts.
+
+`GET /api/basketball/research/unresolved?dataset=ncaa_player_box&season=2026&q=Duke&limit=40` returns a bounded page of source observations retained in `bb_unresolved`. Dataset, season, withholding-reason and source-JSON filters are parameterized; the response parses each original object into `source` and keeps the source row index. The endpoint is for audit and identity review only: it does not join, rank, forecast or assert a player/team identity.
 
 ## Remaining full-goal work
 

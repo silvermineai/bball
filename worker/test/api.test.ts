@@ -138,6 +138,46 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
   });
 
+  it("serves bounded unresolved source observations without attributing identities", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total FROM bb_unresolved")) {
+        return { bind: () => ({ first: async () => ({ total: 2 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [
+              {
+                dataset: "ncaa_player_box",
+                season: 2026,
+                row_index: 7,
+                reason: "Missing contest, team or player ID",
+                source_json: JSON.stringify({ contest_id: "9001", player_name: "Unresolved" }),
+              },
+            ],
+          }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/unresolved?dataset=ncaa_player_box&season=2026&q=Unresolved&limit=20",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      total: number;
+      rows: Array<{ dataset: string; season: number; source: Record<string, unknown> }>;
+    };
+    expect(body.total).toBe(2);
+    expect(body.rows[0]).toMatchObject({
+      dataset: "ncaa_player_box",
+      season: 2026,
+      source: { contest_id: "9001", player_name: "Unresolved" },
+    });
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("source_json LIKE ?"))).toBe(true);
+  });
+
   it("serves D1-backed basketball forecasts with bounded filters and parsed predictions", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
@@ -310,6 +350,8 @@ describe("bball api", () => {
       "/api/basketball/research/players/invalid",
       "/api/basketball/research/players/123?page=-1",
       "/api/basketball/research/players/123?season=2020",
+      "/api/basketball/research/unresolved?dataset=not-a-dataset",
+      "/api/basketball/research/unresolved?limit=101",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }

@@ -22,6 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/players/">Player stats</Link>
         <Link href="/basketball/player-profiles/">Player profiles</Link>
         <Link href="/basketball/source-stats/">Source stat browser</Link>
+        <Link href="/basketball/identity-review/">Identity review queue</Link>
         <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>
         <Link href="/basketball/ncaa-player/">NCAA player cards</Link>
         <Link href="/basketball/ncaa-rankings/">NCAA player rankings</Link>

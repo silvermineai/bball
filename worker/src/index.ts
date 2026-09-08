@@ -391,6 +391,83 @@ app.get("/api/basketball/research/coverage", async (c) => {
   });
 });
 
+const unresolvedResearchQuery = z.object({
+  dataset: z.enum(["all", "player_box", "ncaa_player_box", "ncaa_shots", "publisher_player_value"]).default("all"),
+  season: z.coerce.number().int().min(2000).max(2100).optional(),
+  reason: z.string().max(120).optional(),
+  q: z.string().max(120).optional(),
+  page: z.coerce.number().int().min(0).max(1000).default(0),
+  limit: z.coerce.number().int().min(1).max(100).default(40),
+});
+
+app.get(
+  "/api/basketball/research/unresolved",
+  zValidator("query", unresolvedResearchQuery),
+  async (c) => {
+    const { dataset, season, reason, q, page, limit } = c.req.valid("query");
+    const clauses = ["1=1"];
+    const binds: Array<string | number> = [];
+    if (dataset !== "all") {
+      clauses.push("dataset=?");
+      binds.push(dataset);
+    }
+    if (season != null) {
+      clauses.push("season=?");
+      binds.push(season);
+    }
+    if (reason?.trim()) {
+      clauses.push("reason LIKE ?");
+      binds.push(`%${reason.trim()}%`);
+    }
+    if (q?.trim()) {
+      clauses.push("source_json LIKE ?");
+      binds.push(`%${q.trim()}%`);
+    }
+    const where = clauses.join(" AND ");
+    const [count, rows] = await Promise.all([
+      c.env.DB.prepare(`SELECT count(*) AS total FROM bb_unresolved WHERE ${where}`)
+        .bind(...binds)
+        .first<{ total: number }>(),
+      c.env.DB.prepare(
+        `SELECT dataset,season,row_index,reason,source_json
+           FROM bb_unresolved
+          WHERE ${where}
+          ORDER BY season DESC,dataset,row_index
+          LIMIT ? OFFSET ?`,
+      )
+        .bind(...binds, limit, page * limit)
+        .all<{
+          dataset: string;
+          season: number;
+          row_index: number;
+          reason: string;
+          source_json: string;
+        }>(),
+    ]);
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json({
+      dataset,
+      season: season ?? null,
+      reason: reason?.trim() || "",
+      q: q?.trim() || "",
+      page,
+      limit,
+      total: count?.total ?? 0,
+      rows: rows.results.map(({ source_json, ...row }) => {
+        let source: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(source_json);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) source = parsed;
+        } catch {
+          // Keep malformed source payloads visible as an empty object; never
+          // let one bad row break the bounded identity-review queue.
+        }
+        return { ...row, source };
+      }),
+    });
+  },
+);
+
 const ncaaLeaderQuery = z.object({
   division: z.enum(["1", "2", "3", "all"]).default("1"),
   stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl"]).default("ppg"),

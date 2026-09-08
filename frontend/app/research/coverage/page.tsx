@@ -560,6 +560,10 @@ export default function Page() {
           forecast features until the source supplies a stable join key. A
           source value is not silently attributed to a nearby player.
         </p>
+        <p className="note">
+          <Link href="/basketball/identity-review/">Open the retained source rows →</Link>
+          {" "}Search and download a bounded page when auditing a source release.
+        </p>
       </section>
 
       <section className="section two-col">
