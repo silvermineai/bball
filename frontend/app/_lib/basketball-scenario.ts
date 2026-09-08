@@ -37,5 +37,21 @@ export function basketballScenario(
     home_win_probability: probability,
     margin_low: margin - model.calibration.margin_half_width,
     margin_high: margin + model.calibration.margin_half_width,
+    explanation: {
+      home: {
+        league: b[0],
+        own_offense: b[h + 2],
+        opponent_defense: b[a + n + 2],
+        venue: v,
+        efficiency: (home * 100) / pace,
+      },
+      away: {
+        league: b[0],
+        own_offense: b[a + 2],
+        opponent_defense: b[h + n + 2],
+        venue: -v,
+        efficiency: (away * 100) / pace,
+      },
+    },
   };
 }

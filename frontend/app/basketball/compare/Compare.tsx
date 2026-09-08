@@ -195,6 +195,48 @@ export default function Compare({
               Model assumptions and validation →
             </Link>
           </p>
+          {p && (
+            <section className="section">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow">01 / Model lens</div>
+                  <h2>See what moves the estimate.</h2>
+                </div>
+              </div>
+              <p className="note">
+                Each contribution is a fitted efficiency effect in points per
+                100 possessions. League baseline, own offense, opponent
+                defense and venue add to the displayed efficiency; they are
+                model terms, not a claim about a single player or possession.
+              </p>
+              <div className="table-scroll">
+                <table className="data-table comparison-table">
+                  <thead>
+                    <tr>
+                      <th>Model term</th>
+                      <th>{venue === "b" ? bn : an} · home</th>
+                      <th>{venue === "b" ? an : bn} · away</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ["League baseline", p.explanation.home.league, p.explanation.away.league],
+                      ["Own offense", p.explanation.home.own_offense, p.explanation.away.own_offense],
+                      ["Opponent defense", p.explanation.home.opponent_defense, p.explanation.away.opponent_defense],
+                      ["Venue effect", p.explanation.home.venue, p.explanation.away.venue],
+                      ["Estimated efficiency", p.explanation.home.efficiency, p.explanation.away.efficiency],
+                    ].map(([label, homeValue, awayValue]) => (
+                      <tr key={String(label)}>
+                        <th>{label}</th>
+                        <td className="numeric">{signed(Number(homeValue))}</td>
+                        <td className="numeric">{signed(Number(awayValue))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
           {error ? (
             <p role="alert" className="status-error">
               {error}

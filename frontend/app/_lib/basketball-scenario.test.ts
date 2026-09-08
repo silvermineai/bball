@@ -11,6 +11,16 @@ const model: ScenarioModel = published.model;
 describe("published basketball scenario parity", () => {
   it("agrees with every Python-generated scheduled forecast, to its published precision", () => {
     let checked = 0;
+    const predictionKeys = [
+      "home_score",
+      "away_score",
+      "home_margin",
+      "total",
+      "pace",
+      "home_win_probability",
+      "margin_low",
+      "margin_high",
+    ] as const;
     for (const game of published.upcoming) {
       if (!game.prediction) continue;
       const result = basketballScenario(
@@ -20,9 +30,7 @@ describe("published basketball scenario parity", () => {
         Boolean(game.neutral),
       );
       expect(result).not.toBeNull();
-      for (const key of Object.keys(result!) as (keyof NonNullable<
-        typeof result
-      >)[]) {
+      for (const key of predictionKeys) {
         expect(result![key]).toBeCloseTo(
           game.prediction[key],
           key === "home_win_probability" ? 5 : 2,
@@ -50,5 +58,22 @@ describe("published basketball scenario parity", () => {
     expect(home.home_score).toBeGreaterThan(neutral.home_score);
     expect(home.away_score).toBeLessThan(neutral.away_score);
     expect(home.pace).toBe(neutral.pace);
+  });
+
+  it("reconciles the transparent efficiency components", () => {
+    const [homeId, awayId] = model.teams;
+    const result = basketballScenario(model, homeId, awayId, false)!;
+    expect(
+      result.explanation.home.league +
+        result.explanation.home.own_offense +
+        result.explanation.home.opponent_defense +
+        result.explanation.home.venue,
+    ).toBeCloseTo(result.explanation.home.efficiency, 10);
+    expect(
+      result.explanation.away.league +
+        result.explanation.away.own_offense +
+        result.explanation.away.opponent_defense +
+        result.explanation.away.venue,
+    ).toBeCloseTo(result.explanation.away.efficiency, 10);
   });
 });
