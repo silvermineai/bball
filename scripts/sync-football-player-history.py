@@ -224,7 +224,7 @@ active = json.loads(
         "SELECT payload_json FROM football_artifacts WHERE name='football-player-history'"
     )[0]["payload_json"]
 )
-if active != manifest:
+if {key: value for key, value in active.items() if key != "archive"} != manifest:
     raise SystemExit("Active player manifest mismatch")
 # Keep the archive pointer in D1 rather than the static catalog. The tar
 # contains that catalog, so adding the pointer there would create a circular
