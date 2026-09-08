@@ -67,6 +67,10 @@ describe("matchup evidence and scenario handoff", () => {
         expect(program.roster!.representedMinutes).toBeLessThanOrEqual(
           program.roster!.priorMinutes,
         );
+        const shape = program.roster!.positionCounts;
+        expect(shape.guard + shape.forward + shape.center + shape.unreported).toBe(
+          program.roster!.listed,
+        );
       }
       for (const point of result.pressures) {
         expect(point.offensive.games).toBeGreaterThanOrEqual(10);

@@ -515,6 +515,15 @@ export default async function Page({
                       <strong>{roster.listed}</strong>
                     </div>
                     <div>
+                      <span>Roster shape · G / F / C</span>
+                      <strong>
+                        {roster.positionCounts.guard} / {roster.positionCounts.forward} / {roster.positionCounts.center}
+                        {roster.positionCounts.unreported
+                          ? ` · ${roster.positionCounts.unreported} unreported`
+                          : ""}
+                      </strong>
+                    </div>
+                    <div>
                       <span>Listed as same program</span>
                       <strong>{roster.sameProgram}</strong>
                     </div>
@@ -538,6 +547,11 @@ export default async function Page({
                       </strong>
                     </div>
                   </div>
+                  <p className="note">
+                    Roster shape uses only the source-reported position labels
+                    on this listing; it is descriptive and does not identify a
+                    viable lineup or positional matchup.
+                  </p>
                   <p className="note">
                     The percentage uses {roster.priorMinutes.toLocaleString()} recorded
                     2025–26 minutes for this program as its denominator. A

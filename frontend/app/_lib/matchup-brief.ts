@@ -2,6 +2,10 @@ import type { BBGame, BBOverview, BBRosters } from "./basketball-types";
 import type { Metric, ScoutProfile, ScoutPlayer } from "./scouting-types";
 import { recruitingRows, type RecruitingRelease } from "./recruiting";
 import type { Ledger } from "./research-types";
+import {
+  rosterPositionGroup,
+  type RosterPositionCounts,
+} from "./roster-readiness";
 
 export const briefFactors = [
   {
@@ -173,6 +177,7 @@ export type BriefRosterContext = {
   representedMinutes: number;
   priorMinutes: number;
   representedMinutesShare: number | null;
+  positionCounts: RosterPositionCounts;
 };
 
 /**
@@ -190,6 +195,15 @@ export function rosterContext(
   );
   const priorById = new Map(prior.map((p) => [p.id, p]));
   const returning = listed.filter((p) => p.status === "same_program");
+  const positionCounts: RosterPositionCounts = {
+    guard: 0,
+    forward: 0,
+    center: 0,
+    unreported: 0,
+  };
+  for (const player of listed) {
+    positionCounts[rosterPositionGroup(player.position)] += 1;
+  }
   const representedMinutes = returning.reduce(
     (sum, p) => sum + (priorById.get(p.id)?.minutes || 0),
     0,
@@ -204,6 +218,7 @@ export function rosterContext(
     priorMinutes: Math.round(priorMinutes),
     representedMinutesShare:
       priorMinutes > 0 ? representedMinutes / priorMinutes : null,
+    positionCounts,
   };
 }
 
