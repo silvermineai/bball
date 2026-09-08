@@ -342,7 +342,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </button>
             </div>
             <p className="note">
-              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move.
+              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move. Review clock: {publicationDate(data.reviewed_at)}.
             </p>
             <div className="toolbar recruiting-filters">
               <label className="control">
