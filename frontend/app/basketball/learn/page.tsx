@@ -89,6 +89,21 @@ const metrics = [
     use: "Use it as a workload context signal. It is not a usage projection and does not establish a future role.",
   },
   {
+    name: "Rim attempt rate",
+    value: "Recorded rim attempts divided by field-goal attempts in the NCAA player-box release.",
+    use: "Use it to see who pressures the paint or who may change a team’s shot profile. Pair it with rim conversion and total attempts.",
+  },
+  {
+    name: "Transition scoring share",
+    value: "Recorded transition points divided by total points.",
+    use: "Use it to identify players whose scoring depends on pace and live-ball opportunities. It describes source events, not a projected role.",
+  },
+  {
+    name: "Unassisted scoring share",
+    value: "Recorded unassisted points divided by total points.",
+    use: "Use it as a creation signal alongside usage, efficiency and lineup context. A missing point denominator remains unavailable.",
+  },
+  {
     name: "Lineup net performance",
     value: "Points scored minus points allowed per 100 shared possessions for a source-native five-v-five lineup pairing.",
     use: "Apply possession and repeat-game thresholds before treating a combination as meaningful. Lineup labels remain in the publisher’s identity namespace.",
