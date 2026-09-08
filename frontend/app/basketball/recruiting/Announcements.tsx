@@ -29,7 +29,8 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     [sort, setSort] = useState<RecruitingSort>("latest"),
     [copied, setCopied] = useState(""),
     [coverageQuery, setCoverageQuery] = useState(""),
-    [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "name">("reviewed");
+    [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "name">("reviewed"),
+    [coverageStatus, setCoverageStatus] = useState<"all" | "reviewed" | "unreviewed">("all");
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get("view");
@@ -81,7 +82,10 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
         linkedProfiles: additions?.linked_profiles || 0,
       };
     })
-    .filter((row) => row.team.toLowerCase().includes(coverageQuery.toLowerCase()))
+    .filter((row) =>
+      row.team.toLowerCase().includes(coverageQuery.toLowerCase()) &&
+      (coverageStatus === "all" || (coverageStatus === "reviewed" ? row.reviewed : !row.reviewed)),
+    )
     .sort((a, b) => {
       if (coverageSort === "name") return a.team.localeCompare(b.team);
       if (coverageSort === "prior") return (b.prior_minutes || 0) - (a.prior_minutes || 0) || a.team.localeCompare(b.team);
@@ -284,9 +288,17 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
                   <option value="name">Program name</option>
                 </select>
               </label>
+              <label className="control">
+                <span>EVIDENCE STATUS</span>
+                <select value={coverageStatus} onChange={(event) => setCoverageStatus(event.target.value as typeof coverageStatus)}>
+                  <option value="all">All source-listed programs</option>
+                  <option value="reviewed">Reviewed announcements</option>
+                  <option value="unreviewed">Roster observation only</option>
+                </select>
+              </label>
             </div>
             <p className="note" role="status">
-              {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} source-listed programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this announcement file
+              {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} source-listed programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this filtered view
             </p>
             <div className="table-scroll">
               <table className="data-table">
