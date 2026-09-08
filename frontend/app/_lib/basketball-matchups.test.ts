@@ -98,10 +98,14 @@ describe("basketball matchup triage", () => {
       month: "2026-11",
       coverage: "forecasted",
       sort: "confidence",
+      page: 0,
     });
     expect(matchupFilterSearch(filters)).toBe(
       "?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&sort=confidence",
     );
+    expect(
+      matchupFilterSearch({ team: "Kansas Jayhawks", month: "2026-11", coverage: "forecasted", sort: "confidence", page: 3 }),
+    ).toBe("?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&sort=confidence&page=3");
   });
 
   it("withholds invalid controls and omits defaults", () => {
@@ -110,9 +114,10 @@ describe("basketball matchup triage", () => {
       month: "all",
       coverage: "all",
       sort: "date",
+      page: 0,
     });
     expect(
-      matchupFilterSearch({ team: "", month: "all", coverage: "all", sort: "date" }),
+      matchupFilterSearch({ team: "", month: "all", coverage: "all", sort: "date", page: 0 }),
     ).toBe("");
   });
 });

@@ -34,10 +34,10 @@ export default function Matchups({
     [month, setMonth] = useState(initial.month),
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
-    [page, setPage] = useState(0),
+    [page, setPage] = useState(initial.page),
     [copied, setCopied] = useState("");
   useEffect(() => {
-    const next = matchupFilterSearch({ team: q, month, coverage, sort });
+    const next = matchupFilterSearch({ team: q, month, coverage, sort, page });
     if (next !== window.location.search) {
       window.history.replaceState(
         window.history.state,
@@ -45,7 +45,7 @@ export default function Matchups({
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [q, month, coverage, sort]);
+  }, [q, month, coverage, sort, page]);
   const rows = sortMatchups(
     games.filter(
       (g) =>
