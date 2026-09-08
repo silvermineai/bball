@@ -41,6 +41,11 @@ careers.get("/:id", async (c) => {
   )
     .bind(source.edition, season, id)
     .all<{ payload_json: string }>();
+  const core = await c.env.DB.prepare(
+    "SELECT season,profile_json FROM bb_player_core WHERE athlete_id=? ORDER BY season DESC",
+  )
+    .bind(id)
+    .all<{ season: number; profile_json: string }>();
   const parsedProfiles = profiles.results.map((p) => ({
     ...JSON.parse(p.payload_json),
     edition: p.edition,
@@ -67,5 +72,11 @@ careers.get("/:id", async (c) => {
     rows: logs.results.flatMap((r) => JSON.parse(r.payload_json)),
     sources: JSON.parse(source.receipt_json),
     coverage: JSON.parse(source.coverage_json),
+    core: core.results
+      .filter(({ profile_json }) => typeof profile_json === "string")
+      .map(({ season, profile_json }) => ({
+        season,
+        profile: JSON.parse(profile_json),
+      })),
   });
 });

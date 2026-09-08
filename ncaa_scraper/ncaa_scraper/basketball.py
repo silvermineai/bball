@@ -131,9 +131,10 @@ def ingest(conn, dataset, year, rows, receipt):
             "player_season": "bb_player_season",
             "team_season": "bb_team_season",
             "publisher_ratings": "bb_publisher_ratings",
-            "publisher_player_value": "bb_player_value",
-            "ncaa_lineups": "bb_lineups",
-            "ncaa_rapm": "bb_impact",
+        "publisher_player_value": "bb_player_value",
+        "ncaa_lineups": "bb_lineups",
+        "player_core": "bb_player_core",
+        "ncaa_rapm": "bb_impact",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -222,6 +223,42 @@ def ingest(conn, dataset, year, rows, receipt):
                     "INSERT OR REPLACE INTO bb_rosters VALUES (?,?,?,?)",
                     (year, identity(r["team_id"]), aid, json.dumps(profile)),
                 )
+        elif dataset == "player_core":
+            # ESPN-derived identity and roster context. Personal birth fields
+            # and age are intentionally omitted from the public profile.
+            keep = {
+                "athlete_id", "guid", "uid", "slug", "type", "first_name",
+                "last_name", "full_name", "display_name", "short_name",
+                "height", "display_height", "weight", "display_weight",
+                "jersey", "position_id", "position_name",
+                "position_abbreviation", "position_display_name",
+                "college_id", "current_team_id", "headshot_href",
+                "experience_years", "status_id", "status_name", "status_type",
+                "draft_year", "draft_round", "draft_selection", "active",
+            }
+            conn.execute(
+                "DELETE FROM bb_unresolved WHERE dataset=? AND season=?",
+                (dataset, year),
+            )
+            valid = []
+            for i, r in enumerate(rows):
+                if not r.get("athlete_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing athlete ID", json.dumps(r)),
+                    )
+                    continue
+                aid = identity(r["athlete_id"])
+                name = r.get("display_name") or r.get("full_name") or aid
+                conn.execute(
+                    "INSERT OR REPLACE INTO bb_players VALUES (?,?,?)",
+                    (aid, name, r.get("position_abbreviation") or r.get("position_id")),
+                )
+                profile = {k: v for k, v in r.items() if k in keep and v != ""}
+                valid.append((year, aid, json.dumps(profile)))
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_player_core VALUES (?,?,?)", valid
+            )
         elif dataset == "player_season":
             aggregates = defaultdict(dict)
             for r in rows:
@@ -1094,6 +1131,7 @@ def export_sql(conn, path):
             "bb_publisher_ratings",
             "bb_player_value",
             "bb_lineups",
+            "bb_player_core",
             "bb_rosters",
             "bb_impact",
             "bb_unresolved",
@@ -1117,7 +1155,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -1146,6 +1184,7 @@ def main():
             if year in (2024, 2025, 2026):
                 datasets.append("team_season")
                 datasets.extend(["publisher_ratings", "publisher_player_value"])
+                datasets.append("player_core")
             if year in (2025, 2026):
                 datasets.append("ncaa_lineups")
             for dataset in datasets:
@@ -1160,6 +1199,12 @@ def main():
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)
                 print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
+        # ESPN-derived player identity files extend back to 2003. They are
+        # kept separate from box-score identity and do not alter model inputs.
+        for year in range(2003, 2024):
+            rows, receipt = c.load("player_core", year, refresh=args.refresh)
+            ingest(conn, "player_core", year, rows, receipt)
+            print(f"Imported player_core/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql)

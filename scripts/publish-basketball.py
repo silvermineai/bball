@@ -277,6 +277,18 @@ run_remote_migration(
         "migrations/0019_basketball_lineups.sql",
     ]
 )
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        "bball-silvermine",
+        "--remote",
+        "--file",
+        "migrations/0020_basketball_player_core.sql",
+    ]
+)
 run_logged(
     [
         PY,

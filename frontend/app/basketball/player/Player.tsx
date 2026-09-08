@@ -187,6 +187,39 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               completed schedule entries in this season’s source coverage.
             </p>
           </div>
+          {data.core && data.core.length > 0 && (
+            <section className="section paper-panel">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow">ESPN-derived source profile</div>
+                  <h2>Identity and roster context.</h2>
+                </div>
+              </div>
+              <p className="note">
+                Source profile fields help orient the archive. They do not
+                establish current eligibility, a transfer destination, or a
+                unique person beyond the publisher&apos;s source ID.
+              </p>
+              <div className="strip">
+                {[
+                  ["Position", data.core.find((p) => p.season === data.season)?.profile.position_display_name || data.core.find((p) => p.season === data.season)?.profile.position_name],
+                  ["Height", data.core.find((p) => p.season === data.season)?.profile.display_height],
+                  ["Weight", data.core.find((p) => p.season === data.season)?.profile.display_weight],
+                  ["Jersey", data.core.find((p) => p.season === data.season)?.profile.jersey],
+                  ["Experience", data.core.find((p) => p.season === data.season)?.profile.experience_years],
+                  ["Status", data.core.find((p) => p.season === data.season)?.profile.status_name],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <strong>{value || "—"}</strong>
+                    <span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="note">
+                Core seasons present: {data.core.map((p) => seasonLabel(p.season)).join(" · ")}
+              </p>
+            </section>
+          )}
           {selected && selected.teams.filter((t) => t.games > 0).length > 0 && (
             <div className="hero-actions">
               {selected.teams

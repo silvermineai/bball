@@ -108,6 +108,7 @@ export type CareerData = {
   rows: CareerLog[];
   sources: CareerSource[];
   coverage: CareerCoverage;
+  core?: Array<{ season: number; profile: Record<string, string> }>;
 };
 export const seasonLabel = (year: number) =>
   `${year - 1}–${String(year).slice(-2)}`;

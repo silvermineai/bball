@@ -24,6 +24,7 @@ DATASETS = {
         "mbb_player_value_{year}.parquet",
     ),
     "ncaa_lineups": ("ncaa_mbb_lineups", "ncaa_mbb_lineups_{year}.parquet"),
+    "player_core": (PREFIX + "player_core", "player_core_{year}.parquet"),
     "player_crosswalk": ("mbb_crosswalk", "mbb_player_crosswalk_{year}.parquet"),
     "ncaa_rapm": ("ncaa_mbb_rapm", "ncaa_mbb_rapm_{year}.parquet"),
 }

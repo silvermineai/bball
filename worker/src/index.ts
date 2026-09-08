@@ -282,6 +282,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
     impact: "bb_impact",
     ncaa_individual_players: "ncaa_individual_players",
     forecasts: "bb_forecasts",
+    player_core: "bb_player_core",
     unresolved: "bb_unresolved",
   };
   const counts = await c.env.DB.batch<{ rows: number }>(
