@@ -84,7 +84,7 @@ export default function NcaaRosters() {
     <div className="page-title">
       <div className="eyebrow">NCAA source archive / roster and recruiting context</div>
       <h1>Know the<br /><em>roster story.</em></h1>
-      <p>Search the attributed NCAA roster release for class year, position, size, hometown and high school. These are source records that help frame recruiting research; they do not establish eligibility, commitment or transfer status.</p>
+      <p>Search the attributed NCAA roster release for class year, position, size, hometown and high school. These are source records that help frame recruiting research; they do not establish eligibility, commitment or transfer status. NCAA roster IDs are kept within their source season and are not treated as a cross-season person key.</p>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Roster rows in view</span></div>
