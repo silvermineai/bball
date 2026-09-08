@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sortRosterObservations } from "./roster-observations";
+import {
+  parseRosterFilters,
+  rosterFilterSearch,
+  sortRosterObservations,
+} from "./roster-observations";
 import type { BBRoster } from "./basketball-types";
 
 const row = (
@@ -9,6 +13,7 @@ const row = (
   team: string,
   previous_teams: string[],
   priorMinutes?: number,
+  priorTs?: number,
 ): BBRoster => ({
   id,
   name,
@@ -29,9 +34,10 @@ const row = (
           minutes: priorMinutes,
           mpg: priorMinutes / 20,
           ppg: 10,
-          rpg: 5,
-          apg: 2,
-          teams: ["A"],
+        rpg: 5,
+        apg: 2,
+        ts: priorTs ?? null,
+        teams: ["A"],
         },
 });
 
@@ -69,5 +75,37 @@ describe("roster observation sorting", () => {
       "workload",
     );
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+
+  it("sorts production views with missing values last", () => {
+    const rows = sortRosterObservations(
+      [row("a", "Alpha", "same_program", "A", ["A"], 240, 0.61), row("b", "Beta", "different_program", "B", ["A"], 620, 0.68), row("c", "Gamma", "new_to_dataset", "C", [])],
+      "prior_ts",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+});
+
+describe("shareable roster observation filters", () => {
+  it("parses supported values and ignores invalid values", () => {
+    expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3")).toEqual({
+      season: "2026",
+      q: "Arizona",
+      status: "different_program",
+      sort: "prior_ts",
+      page: 3,
+    });
+    expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4")).toEqual({
+      season: "2027",
+      q: "",
+      status: "all",
+      sort: "status",
+      page: 0,
+    });
+  });
+
+  it("omits defaults while preserving the exact recruiting slice", () => {
+    expect(rosterFilterSearch({ season: "2026", q: "Arizona", status: "different_program", sort: "prior_ts", page: 3 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3");
+    expect(rosterFilterSearch({ season: "2027", q: "", status: "all", sort: "status", page: 0 })).toBe("");
   });
 });

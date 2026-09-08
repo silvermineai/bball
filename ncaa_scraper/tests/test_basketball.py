@@ -223,6 +223,15 @@ class BasketballIngestTests(unittest.TestCase):
                         "ppg": 14.0,
                         "rpg": 6.0,
                         "apg": 3.0,
+                        "spg": 1.5,
+                        "bpg": 0.5,
+                        "topg": 1.2,
+                        "efg": 0.58,
+                        "ts": 0.61,
+                        "three_pct": 0.36,
+                        "ft_rate": 0.22,
+                        "three_rate": 0.41,
+                        "tov_rate": 0.14,
                     }
                 ]
             },
@@ -232,6 +241,9 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(production["minutes"], 500.0)
         self.assertEqual(production["mpg"], 25.0)
         self.assertEqual(production["ppg"], 14.0)
+        self.assertEqual(production["efg"], 0.58)
+        self.assertEqual(production["ts"], 0.61)
+        self.assertEqual(production["qualified"], True)
 
     def test_roster_changes_publish_team_workload_summary(self):
         self.conn.execute(

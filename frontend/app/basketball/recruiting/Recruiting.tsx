@@ -1,12 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { BBRosters } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
+  parseRosterFilters,
+  rosterFilterSearch,
   sortRosterObservations,
   type RosterSortKey,
+  type RosterStatus,
 } from "../../_lib/roster-observations";
 const labels: Record<string, string> = {
   same_program: "Prior program also observed",
@@ -21,7 +24,34 @@ export default function Recruiting() {
     [sort, setSort] = useState<RosterSortKey>("status"),
     [teamQuery, setTeamQuery] = useState(""),
     [teamSort, setTeamSort] = useState<"returning" | "prior" | "name">("returning"),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(0),
+    [copied, setCopied] = useState(""),
+    [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const filters = parseRosterFilters(window.location.search);
+    setSeason(filters.season);
+    setQ(filters.q);
+    setStatus(filters.status);
+    setSort(filters.sort);
+    setPage(filters.page);
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(
+      rosterFilterSearch({
+        season: season === "2026" ? "2026" : "2027",
+        q,
+        status: status as RosterStatus,
+        sort,
+        page,
+      }),
+    );
+    params.set("view", "observations");
+    url.search = params.toString();
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, page, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
   );
@@ -42,6 +72,14 @@ export default function Recruiting() {
       if (teamSort === "prior") return (b.prior_minutes ?? 0) - (a.prior_minutes ?? 0) || a.team.localeCompare(b.team);
       return (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team);
     });
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Roster observation link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   return (
     <>
       <div className="toolbar">
@@ -100,11 +138,20 @@ export default function Recruiting() {
             <option value="status">Movement signal</option>
             <option value="prior">Most prior programs</option>
             <option value="workload">Most prior minutes</option>
+            <option value="prior_ppg">Prior points per game</option>
+            <option value="prior_ts">Prior true shooting</option>
+            <option value="prior_efg">Prior effective FG%</option>
             <option value="program">Current program</option>
             <option value="name">Player name</option>
           </select>
         </label>
       </div>
+      <p className="note" style={{ marginBottom: 20 }}>
+        Production sorts use the exact prior source ID and recorded game
+        averages. True shooting and effective field goal percentage stay
+        unavailable when their source denominator is missing; they are not
+        imputed.
+      </p>
       {error ? (
         <p role="alert" className="status-error">
           {error}
@@ -227,13 +274,17 @@ export default function Recruiting() {
               {rows.length.toLocaleString()} matching observations · export
               respects the season, search, observation and sort filters
             </p>
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() =>
-                downloadCsv(
-                  `basketball-roster-observations-${season}.csv`,
-                  toCsv(
+            <div className="button-row">
+              <button className="button secondary" type="button" onClick={share}>
+                Copy observation link
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    `basketball-roster-observations-${season}.csv`,
+                    toCsv(
                     [
                       "Player",
                       "Source ID",
@@ -249,6 +300,16 @@ export default function Recruiting() {
                       "Prior points per game",
                       "Prior rebounds per game",
                       "Prior assists per game",
+                      "Prior steals per game",
+                      "Prior blocks per game",
+                      "Prior turnovers per game",
+                      "Prior effective FG%",
+                      "Prior true shooting %",
+                      "Prior 3P%",
+                      "Prior free-throw rate",
+                      "Prior 3PA rate",
+                      "Prior turnover rate",
+                      "Prior profile qualified",
                       "Prior recorded programs",
                       "Height",
                       "Weight",
@@ -269,17 +330,32 @@ export default function Recruiting() {
                       p.prior_production?.ppg,
                       p.prior_production?.rpg,
                       p.prior_production?.apg,
+                      p.prior_production?.spg,
+                      p.prior_production?.bpg,
+                      p.prior_production?.topg,
+                      p.prior_production?.efg == null ? null : p.prior_production.efg * 100,
+                      p.prior_production?.ts == null ? null : p.prior_production.ts * 100,
+                      p.prior_production?.three_pct == null ? null : p.prior_production.three_pct * 100,
+                      p.prior_production?.ft_rate == null ? null : p.prior_production.ft_rate * 100,
+                      p.prior_production?.three_rate == null ? null : p.prior_production.three_rate * 100,
+                      p.prior_production?.tov_rate == null ? null : p.prior_production.tov_rate * 100,
+                      p.prior_production?.qualified == null
+                        ? null
+                        : p.prior_production.qualified
+                          ? "yes"
+                          : "no",
                       p.prior_production?.teams?.join("; "),
                       p.height,
                       p.weight,
                       p.source_url,
                     ]),
                   ),
-                )
-              }
-            >
-              Download CSV ↓
-            </button>
+                )}
+              >
+                Download CSV ↓
+              </button>
+            </div>
+            {copied && <p role="status">{copied}</p>}
           </div>
           <div className="table-scroll">
             <table className="data-table">
@@ -329,6 +405,9 @@ export default function Recruiting() {
                           {p.prior_production.minutes.toLocaleString()} min · {p.prior_production.games} GP
                           <small>
                             {p.prior_production.ppg == null ? "—" : p.prior_production.ppg.toFixed(1)} PPG · {p.prior_production.mpg == null ? "—" : p.prior_production.mpg.toFixed(1)} MPG
+                          </small>
+                          <small>
+                            {p.prior_production.ts == null ? "—" : `${(p.prior_production.ts * 100).toFixed(1)}%`} TS · {p.prior_production.efg == null ? "—" : `${(p.prior_production.efg * 100).toFixed(1)}%`} eFG · {p.prior_production.apg == null ? "—" : p.prior_production.apg.toFixed(1)} AST/G
                           </small>
                         </>
                       ) : "No prior recorded stats"}

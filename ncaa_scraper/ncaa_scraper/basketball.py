@@ -617,16 +617,46 @@ def _prior_production(rows):
             weight for _, weight in values
         ) if values else None
 
-    values = {key: weighted(key) for key in ("ppg", "rpg", "apg")}
-    return {
+    rate_values = {
+        key: weighted(key)
+        for key in (
+            "ppg",
+            "rpg",
+            "apg",
+            "spg",
+            "bpg",
+            "topg",
+            "efg",
+            "ts",
+            "three_pct",
+            "ft_rate",
+            "three_rate",
+            "tov_rate",
+        )
+    }
+    result = {
         "games": games,
         "minutes": round(minutes, 1),
         "mpg": round(minutes / games, 1) if games else None,
-        "ppg": round(values["ppg"], 1) if values["ppg"] is not None else None,
-        "rpg": round(values["rpg"], 1) if values["rpg"] is not None else None,
-        "apg": round(values["apg"], 1) if values["apg"] is not None else None,
+        "qualified": all(
+            rate_values[key] is not None
+            for key in ("ppg", "rpg", "apg", "efg", "ts")
+        ),
         "teams": sorted({row["team"] for row in rows if row.get("team")}),
     }
+    for key, value in rate_values.items():
+        result[key] = (
+            round(
+                value,
+                3
+                if key
+                in {"efg", "ts", "three_pct", "ft_rate", "three_rate", "tov_rate"}
+                else 1,
+            )
+            if value is not None
+            else None
+        )
+    return result
 
 
 def roster_changes(conn, target=2027, prior_players=None):

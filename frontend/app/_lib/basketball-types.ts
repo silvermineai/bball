@@ -158,6 +158,16 @@ export type BBRoster = {
     ppg: number | null;
     rpg: number | null;
     apg: number | null;
+    spg?: number | null;
+    bpg?: number | null;
+    topg?: number | null;
+    efg?: number | null;
+    ts?: number | null;
+    three_pct?: number | null;
+    ft_rate?: number | null;
+    three_rate?: number | null;
+    tov_rate?: number | null;
+    qualified?: boolean;
     teams: string[];
   } | null;
 };

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   categoryLabels,
   eventLabels,
@@ -21,7 +21,7 @@ const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
 export default function Announcements({ data, rosters }: { data: RecruitingRelease; rosters: BBRosters }) {
-  const [view, setView] = useState("announcements"),
+  const [view, setView] = useState<"announcements" | "observations">("announcements"),
     [team, setTeam] = useState("all"),
     [q, setQ] = useState(""),
     [kind, setKind] = useState("all"),
@@ -29,17 +29,19 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
     [copied, setCopied] = useState(""),
     [coverageQuery, setCoverageQuery] = useState(""),
     [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "name">("reviewed");
-  const hydrated = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    const requestedView = new URLSearchParams(window.location.search).get("view");
+    if (requestedView === "observations") setView("observations");
     const filters = parseRecruitingFilters(window.location.search);
     setTeam(filters.team);
     setQ(filters.q);
     setKind(filters.kind);
     setSort(filters.sort);
-    hydrated.current = true;
+    setHydrated(true);
   }, []);
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated || view !== "announcements") return;
     const next = recruitingFilterSearch({ team, q, kind, sort });
     const current = window.location.search;
     if (next !== current) {
@@ -49,7 +51,14 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [team, q, kind, sort]);
+  }, [hydrated, team, q, kind, sort, view]);
+  const changeView = (next: "announcements" | "observations") => {
+    setView(next);
+    const url = new URL(window.location.href);
+    if (next === "observations") url.searchParams.set("view", "observations");
+    else url.searchParams.delete("view");
+    window.history.replaceState(window.history.state, "", url);
+  };
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -98,13 +107,13 @@ export default function Announcements({ data, rosters }: { data: RecruitingRelea
       <div className="recruiting-views" aria-label="Recruiting evidence view">
         <button
           aria-pressed={view === "announcements"}
-          onClick={() => setView("announcements")}
+          onClick={() => changeView("announcements")}
         >
           School announcements <span>{data.coverage.players}</span>
         </button>
         <button
           aria-pressed={view === "observations"}
-          onClick={() => setView("observations")}
+          onClick={() => changeView("observations")}
         >
           Roster observations
         </button>
