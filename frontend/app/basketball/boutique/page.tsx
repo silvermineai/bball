@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Boutique from "./Boutique";
+import { getBasketball } from "../../_lib/basketball-data";
 
 export const metadata = {
   title: "Basketball boutique ratings and player value",
@@ -8,5 +9,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <Suspense fallback={<p>Loading boutique model archive…</p>}><Boutique /></Suspense>;
+  return <Suspense fallback={<p>Loading boutique model archive…</p>}><Boutique ratings={getBasketball().ratings} /></Suspense>;
 }
