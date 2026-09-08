@@ -35,7 +35,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios, historical factors and source-listed roster movement |
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
-| Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
+| Player statistics | `/basketball/players/` | 9,990 player/team entries, shareable ranking filters, workload filters and D1 game logs |
 | Player source profiles | `/basketball/player/?id=…` | ESPN-derived identity, position, size, experience and status context across 24 seasons |
 | Player profile browser | `/basketball/player-profiles/` | Search the complete legal source-profile archive by season, position, status or player ID |
 | NCAA player box archive | `/basketball/ncaa-player-box/` | Browse 2026 NCAA-derived game-level rows plus historical 2010–25 player-season summaries with shooting splits and playmaking context in the separate NCAA ID namespace |

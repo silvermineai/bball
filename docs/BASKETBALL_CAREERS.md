@@ -1,6 +1,6 @@
 # Historical player production
 
-`/basketball/players/` searches annual production from 24 published box-score seasons, ending 2003 through 2026. `/basketball/player/?id=32284&season=2009` opens a source identity's historical record with season selection, program-level production, interactive development comparisons and complete retained game logs. The selected season is shareable in the URL. Existing links from program dossiers, recruiting and shooting profiles continue to use the same route.
+`/basketball/players/` searches annual production from 24 published box-score seasons, ending 2003 through 2026. `/basketball/player/?id=32284&season=2009` opens a source identity's historical record with season selection, program-level production, interactive development comparisons and complete retained game logs. The player index preserves season, search, sort, qualification and page controls in the URL and provides a copy-link action for sharing an exact ranking slice. Existing links from program dossiers, recruiting and shooting profiles continue to use the same route.
 
 ## What the archive contains
 

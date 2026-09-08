@@ -11,17 +11,46 @@ import {
   seasonLabel,
   type CareerCatalog,
 } from "../../_lib/careers";
+import {
+  parsePlayerIndexFilters,
+  playerIndexFilterSearch,
+  type PlayerIndexSort,
+} from "../../_lib/player-index-view";
 export default function Players({ catalog }: { catalog: CareerCatalog }) {
-  const [season, setSeason] = useState("2026");
+  const defaultSeason = catalog.seasons.some((s) => s.season === 2026)
+    ? "2026"
+    : String(catalog.seasons[0]?.season ?? 2026);
+  const [season, setSeason] = useState(defaultSeason);
   const [q, setQ] = useState(""),
-    [sort, setSort] = useState("ppg"),
+    [sort, setSort] = useState<PlayerIndexSort>("ppg"),
     [qualified, setQualified] = useState(true),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(0),
+    [copied, setCopied] = useState(""),
+    [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSeason(params.get("season") || "2026");
-    setQ(params.get("q") || "");
-  }, []);
+    const filters = parsePlayerIndexFilters(
+      window.location.search,
+      catalog.seasons.map((s) => s.season),
+    );
+    setSeason(filters.season);
+    setQ(filters.query);
+    setSort(filters.sort);
+    setQualified(filters.qualified);
+    setPage(filters.page);
+    setHydrated(true);
+  }, [catalog]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    url.search = playerIndexFilterSearch({
+      season,
+      query: q,
+      sort,
+      qualified,
+      page,
+    });
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, page, q, qualified, season, sort]);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const { data, error } = useBasketballRelease<{
     season: number;
@@ -77,9 +106,6 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             value={season}
             onChange={(e) => {
               setSeason(e.target.value);
-              const url = new URL(window.location.href);
-              url.searchParams.set("season", e.target.value);
-              window.history.replaceState(null, "", url);
               setPage(0);
             }}
           >
@@ -109,7 +135,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
           <select
             value={sort}
             onChange={(e) => {
-              setSort(e.target.value);
+              setSort(e.target.value as PlayerIndexSort);
               setPage(0);
             }}
           >
@@ -139,6 +165,23 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         />{" "}
         At least 15 games and 400 minutes, with complete box-score fields
       </label>
+      <div className="button-row" style={{ marginTop: 12 }}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setCopied("Player index link copied.");
+            } catch {
+              setCopied("Copy the filtered URL from your address bar.");
+            }
+          }}
+        >
+          Copy player index link
+        </button>
+        {copied && <span className="note" role="status">{copied}</span>}
+      </div>
       <p className="note" style={{ marginBottom: 20 }}>
         TS uses PTS / [2 × (FGA + 0.475 FTA)]. This is an estimate; the college
         free-throw coefficient differs from the commonly used NBA 0.44.
