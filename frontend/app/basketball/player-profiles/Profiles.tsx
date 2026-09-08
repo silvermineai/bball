@@ -29,8 +29,30 @@ export default function Profiles() {
   const [position, setPosition] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(0);
+  const [copied, setCopied] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedPage = Number(params.get("page") || 0);
+    setSeason(params.get("season") || "2026");
+    setQuery(params.get("q") || "");
+    setPosition(params.get("position") || "");
+    setStatus(params.get("status") || "");
+    setPage(Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0);
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams({ season });
+    if (query.trim()) params.set("q", query.trim());
+    if (position) params.set("position", position);
+    if (status) params.set("status", status);
+    if (page) params.set("page", String(page));
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
+  }, [hydrated, page, position, query, season, status]);
 
   useEffect(() => {
     fetch(`/api/basketball/research/player-core?meta=1&season=${season}`)
@@ -53,6 +75,14 @@ export default function Profiles() {
   }, [season, query, position, status, page]);
 
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Profile browser link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
   const exportRows = result?.rows || [];
   return (
@@ -75,7 +105,8 @@ export default function Profiles() {
         <label className="control"><span>STATUS</span><select value={status} onChange={(e) => reset(() => setStatus(e.target.value))}><option value="">All statuses</option>{(meta?.statuses || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       </div>
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
-        <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><button className="button secondary" type="button" disabled={!exportRows.length} onClick={() => downloadCsv(`basketball-player-profiles-${season}.csv`, toCsv(["Season", "Player", "Source ID", "Program", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Team ID"], exportRows.map((r) => [label(result.season), r.name, r.id, r.team, r.position, r.height, r.weight, r.jersey, r.experience, r.status, r.team_id])))}>Download CSV ↓</button></div>
+        <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!exportRows.length} onClick={() => downloadCsv(`basketball-player-profiles-${season}.csv`, toCsv(["Season", "Player", "Source ID", "Program", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Team ID"], exportRows.map((r) => [label(result.season), r.name, r.id, r.team, r.position, r.height, r.weight, r.jersey, r.experience, r.status, r.team_id])))}>Download CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
+        {copied && <p role="status">{copied}</p>}
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={r.id}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
         {!result.rows.length && <p className="empty">No source profiles match these filters.</p>}
         <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 40 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
