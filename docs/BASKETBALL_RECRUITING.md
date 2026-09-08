@@ -12,6 +12,8 @@ The roster-observation view also reports a team workload-continuity table. It su
 
 The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.
 
+The same workload table is available in the recorded 2025–26 view across its 727 observed programs. That historical view uses playing time on both sides of the exact-ID comparison, so it describes observed continuity and different-program records without claiming a transfer event, reason or eligibility outcome.
+
 The announcement view also includes an all-program coverage map. Each of the 354 source-listed programs is labeled either as having reviewed school announcements in this edition or as roster observation only, with announced-addition counts, linked prior profiles and workload context where available. This makes partial coverage visible instead of allowing an unlisted program to look like a confirmed zero.
 
 ## Source review

@@ -155,13 +155,14 @@ export default function Recruiting() {
               the research warehouse.
             </p>
           )}
-          {!!data.team_summaries?.length && season === "2027" && (
+          {!!data.team_summaries?.length && (
             <details className="career-coverage-details" style={{ marginBottom: 24 }}>
-              <summary>Team workload continuity ({data.team_summaries.length} programs)</summary>
+              <summary>{season === "2027" ? "Team workload continuity" : "Recorded workload movement"} ({data.team_summaries.length} programs)</summary>
               <p className="note">
                 Prior minutes are summed from the preceding source season. The
-                listed view is an unconfirmed observation; this table is a
-                workload context signal, not a depth chart or eligibility claim.
+                {season === "2027"
+                  ? " listed view is an unconfirmed observation; this table is a workload context signal, not a depth chart or eligibility claim."
+                  : " recorded appearance view uses playing time on both sides; this table is a workload context signal, not a transfer ledger or explanation of movement."}
               </p>
               <div className="toolbar">
                 <label className="control">
@@ -187,7 +188,7 @@ export default function Recruiting() {
                   type="button"
                   onClick={() =>
                     downloadCsv(
-                      "basketball-roster-team-continuity-2026-27.csv",
+                      `basketball-roster-team-continuity-${season}.csv`,
                       toCsv(
                         ["Program", "Program ID", "Listed players", "Returning players", "Different-program players", "New-to-dataset players", "Prior minutes", "Returning minutes", "Incoming prior minutes", "Returning minutes share", "Represented prior minutes share"],
                         teamRows.map((team) => [team.team, team.team_id, team.listed_players, team.returning_players, team.transfer_players, team.new_players, team.prior_minutes, team.returning_minutes, team.incoming_prior_minutes, team.returning_minutes_share == null ? null : team.returning_minutes_share * 100, team.represented_prior_minutes_share == null ? null : team.represented_prior_minutes_share * 100]),
@@ -200,7 +201,7 @@ export default function Recruiting() {
                 </button>
               </div>
               <p className="note" role="status">
-                {teamRows.length.toLocaleString()} of {data.team_summaries.length.toLocaleString()} observed programs shown. The denominator is the source roster listing, not confirmed Division I membership.
+                {teamRows.length.toLocaleString()} of {data.team_summaries.length.toLocaleString()} observed programs shown. {season === "2027" ? "The denominator is the source roster listing, not confirmed Division I membership." : "The denominator is the recorded appearance sample, which includes programs outside the primary forecast field."}
               </p>
               <div className="table-scroll">
                 <table className="data-table">
