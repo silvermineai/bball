@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "poss_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -29,6 +29,8 @@ const aggregate = (where: string) => `
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.mins') AS REAL),0)) AS minutes,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.pts') AS REAL),0)) AS points,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(s.stats_json,'$.drb') AS REAL),0)) AS rebounds,
+    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.orb') AS REAL),0)) AS offensive_rebounds,
+    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.drb') AS REAL),0)) AS defensive_rebounds,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.ast') AS REAL),0)) AS assists,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tov') AS REAL),0)) AS turnovers,
     SUM(COALESCE(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL),0)) AS possessions,
@@ -61,6 +63,13 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   stocks40: "CASE WHEN minutes > 0 THEN 40.0 * (steals + blocks) / minutes ELSE NULL END",
   tov_rate: "CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END",
   three_rate: "CASE WHEN fga > 0 THEN 100.0 * tpa / fga ELSE NULL END",
+  three_pct: "CASE WHEN tpa > 0 THEN 100.0 * tpm / tpa ELSE NULL END",
+  ft_rate: "CASE WHEN fga > 0 THEN 100.0 * fta / fga ELSE NULL END",
+  ast_rate: "CASE WHEN possessions > 0 THEN 100.0 * assists / possessions ELSE NULL END",
+  points_poss: "CASE WHEN possessions > 0 THEN points / possessions ELSE NULL END",
+  orb40: "CASE WHEN minutes > 0 THEN 40.0 * offensive_rebounds / minutes ELSE NULL END",
+  drb40: "CASE WHEN minutes > 0 THEN 40.0 * defensive_rebounds / minutes ELSE NULL END",
+  reb40: "CASE WHEN minutes > 0 THEN 40.0 * rebounds / minutes ELSE NULL END",
   poss_share: "CASE WHEN team_possessions > 0 THEN 100.0 * possessions / team_possessions ELSE NULL END",
   rapm_net: "rapm_net",
   orapm: "orapm",
@@ -70,9 +79,10 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
 const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "orapm" || metric === "drapm";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 const volumeColumn = (metric: Metric) => {
-  if (metric === "ts" || metric === "efg" || metric === "three_rate") return "fga";
+  if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate") return "fga";
+  if (metric === "three_pct") return "tpa";
   if (metric === "ast_to") return "turnovers";
-  if (metric === "tov_rate" || metric === "poss_share") return "possessions";
+  if (metric === "tov_rate" || metric === "ast_rate" || metric === "points_poss" || metric === "poss_share") return "possessions";
   return null;
 };
 
