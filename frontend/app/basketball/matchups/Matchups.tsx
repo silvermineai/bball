@@ -15,11 +15,13 @@ import {
 } from "../../_lib/basketball-matchups";
 export default function Matchups({
   games,
+  marketComparisons,
   rosterSummaries,
   model,
   generatedAt,
 }: {
   games: BBGame[];
+  marketComparisons: Record<string, NonNullable<BBGame["market_comparisons"]>>;
   rosterSummaries: BBRosterSummary[];
   model: BBOverview["model"];
   generatedAt: string;
@@ -198,7 +200,7 @@ export default function Matchups({
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <BasketballCard
             key={g.id}
-            game={g}
+            game={marketComparisons[g.id]?.length ? { ...g, market_comparisons: marketComparisons[g.id] } : g}
             homeRoster={rosterByTeam.get(g.home_id)}
             awayRoster={rosterByTeam.get(g.away_id)}
           />

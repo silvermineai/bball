@@ -40,6 +40,8 @@ export type BBGame = {
   prediction: BBPrediction | null;
   fallback_prediction?: BBPrediction | null;
   matchup_factors?: BBMatchupFactors | null;
+  /** Licensed, pregame-only quotes matched by the immutable research ledger. */
+  market_comparisons?: import("./research-types").Comparison[];
 };
 export type BBTeam = {
   id: string;

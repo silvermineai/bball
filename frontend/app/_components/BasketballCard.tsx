@@ -102,6 +102,34 @@ export default function BasketballCard({
               </small>
             </div>
           )}
+          {g.market_comparisons?.length ? (
+            <div className="market-quotes">
+              <div className="match-detail">
+                <strong>Verified pregame lines</strong>
+                <span className="muted">licensed feed</span>
+              </div>
+              {g.market_comparisons.slice(0, 3).map((quote) => (
+                <div className="market-quote" key={`${quote.provider}-${quote.bookmaker}-${quote.market}`}>
+                  <span>
+                    {quote.bookmaker} · {quote.market}
+                    <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
+                  </span>
+                  <strong>
+                    {quote.market === "h2h"
+                      ? quote.market_home_probability == null
+                        ? "—"
+                        : `${fmt(quote.market_home_probability * 100, 1)}% home`
+                      : quote.line == null
+                        ? "—"
+                        : quote.market === "totals"
+                          ? `O/U ${fmt(quote.line, 1)}`
+                          : `Home ${quote.line > 0 ? "+" : ""}${fmt(quote.line, 1)}`}
+                  </strong>
+                </div>
+              ))}
+              <small className="factor-source">Pregame quotes are displayed only when the ledger matched the exact source game and captured them before tip. They are market observations, not recommendations.</small>
+            </div>
+          ) : null}
         </>
       ) : (
         <p className="note">
@@ -115,7 +143,7 @@ export default function BasketballCard({
         {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
         roster changes are not model features.
         <br />
-        No verified pregame market line imported.{" "}
+        {g.market_comparisons?.length ? "" : "No verified pregame market line imported. "}
         <Link href="/research/scorecard/?sport=basketball">
           Check the forecast record →
         </Link>

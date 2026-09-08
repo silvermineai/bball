@@ -499,6 +499,25 @@ th,
   color: var(--muted);
   line-height: 1.7;
 }
+.market-quotes {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 11px;
+}
+.market-quote {
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 11px;
+}
+.market-quote small {
+  color: var(--muted);
+  display: block;
+  font-size: 9px;
+  margin-top: 2px;
+}
 .football-leader-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
