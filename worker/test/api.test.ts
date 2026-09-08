@@ -112,6 +112,7 @@ describe("bball api", () => {
 
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
+      "/api/research/markets?sport=baseball",
       "/api/research/markets?season=2020",
       "/api/research/markets?page=-1",
       "/api/research/markets?page=1.5",

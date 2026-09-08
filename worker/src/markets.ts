@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 type Bindings = Env;
 
 const querySchema = z.object({
+  sport: z.enum(["football", "basketball"]).default("football"),
   season: z.coerce.number().int().min(2022).max(2035).default(2025),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
@@ -14,44 +15,62 @@ const querySchema = z.object({
 export const markets = new Hono<{ Bindings: Bindings }>();
 
 markets.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, q, page, meta } = c.req.valid("query");
+  const { sport, season, q, page, meta } = c.req.valid("query");
+  const football = sport === "football";
   if (meta === "1") {
-    const [seasons, archive] = await c.env.DB.batch([
-      c.env.DB.prepare(
-        "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC",
-      ),
-      c.env.DB.prepare("SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"),
-    ]);
+    const seasonsSql = football
+      ? "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"
+      : "SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC";
+    const archiveSql = football
+      ? "SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"
+      : "SELECT count(*) AS total, count(*) AS pregame FROM audit_markets WHERE sport=?";
+    const [seasons, archive] = football
+      ? await c.env.DB.batch([c.env.DB.prepare(seasonsSql), c.env.DB.prepare(archiveSql)])
+      : await c.env.DB.batch([c.env.DB.prepare(seasonsSql).bind(sport), c.env.DB.prepare(archiveSql).bind(sport)]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
+      sport,
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       total: Number((archive.results[0] as { total: number }).total || 0),
       pregame: Number((archive.results[0] as { pregame: number | null }).pregame || 0),
     });
   }
   const search = q ? `%${q}%` : null;
-  const where = search
-    ? "g.season=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)"
-    : "g.season=?";
-  const binds: Array<string | number> = search
-    ? [season, search, search, search]
-    : [season];
+  const where = football
+    ? search
+      ? "g.season=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)"
+      : "g.season=?"
+    : search
+      ? "g.season=? AND m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)"
+      : "g.season=? AND m.sport=?";
+  const binds: Array<string | number> = football
+    ? search ? [season, search, search, search] : [season]
+    : search ? [season, sport, search, search, search, search] : [season, sport];
+  const marketTable = football ? "football_markets" : "audit_markets";
+  const gameTable = football ? "football_games" : "bb_games";
   const count = await c.env.DB.prepare(
-    `SELECT count(*) AS total FROM football_markets m
-       JOIN football_games g ON g.id=m.game_id
-      WHERE ${where}`,
+    `SELECT count(*) AS total FROM ${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>();
   const rows = await c.env.DB.prepare(
-    `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
-            m.home_spread,m.total,m.observed_at,m.source,m.is_pregame
-       FROM football_markets m
-       JOIN football_games g ON g.id=m.game_id
-      WHERE ${where}
-      ORDER BY g.kickoff DESC,m.observed_at DESC,m.game_id DESC
-      LIMIT 40 OFFSET ?`,
+    football
+      ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
+                m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
+                NULL AS market,NULL AS bookmaker,NULL AS provider
+           FROM football_markets m JOIN football_games g ON g.id=m.game_id
+          WHERE ${where}
+          ORDER BY g.kickoff DESC,m.observed_at DESC,m.game_id DESC LIMIT 40 OFFSET ?`
+      : `SELECT m.game_id,g.season,g.starts_at AS kickoff,g.home_name,g.away_name,
+                CASE WHEN m.market='spreads' THEN json_extract(m.payload_json,'$.line') END AS home_spread,
+                CASE WHEN m.market='totals' THEN json_extract(m.payload_json,'$.line') END AS total,
+                m.captured_at AS observed_at,m.provider AS source,1 AS is_pregame,
+                m.market,m.bookmaker,m.provider
+           FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
+          WHERE ${where}
+          ORDER BY g.starts_at DESC,m.captured_at DESC,m.game_id DESC LIMIT 40 OFFSET ?`,
   ).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
+    sport,
     season,
     page,
     page_size: 40,

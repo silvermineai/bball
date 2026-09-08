@@ -4,7 +4,7 @@ import Markets from "./Markets";
 export const metadata = {
   title: "Historical market archive",
   description:
-    "Browse retained college football market observations with source, matchup and capture-time context.",
+    "Browse retained college football and basketball market observations with source, matchup and capture-time context.",
 };
 
 export default function Page() {
@@ -16,16 +16,16 @@ export default function Page() {
       </div>
       <section className="ledger-intro">
         <div>
-          <div className="eyebrow">The retained line / football</div>
+          <div className="eyebrow">The retained line / football and basketball</div>
           <h1>
             Keep the line
             <br />
             <em>in view.</em>
           </h1>
           <p>
-            Search the historical market observations held in the research
-            ledger. Each row keeps its source and capture context so a coach
-            can see what evidence was available around a matchup.
+            Search historical market observations held in the research ledger.
+            Each row keeps its source and capture context so a coach can see
+            what evidence was available around a matchup.
           </p>
           <a className="hero-link" href="#market-policy">
             Read the evidence policy ↓
