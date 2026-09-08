@@ -439,7 +439,20 @@ def ingest(conn, dataset, year, rows, receipt):
                         (dataset, year, i, "Missing contest, team or player ID", json.dumps(r)),
                     )
                     continue
-                stats = {k: number(r.get(k)) for k in stat_fields if k in r}
+                # Keep the known fields plus any future numeric source fields.
+                # The release can add measures without a code change; source
+                # metadata and non-numeric labels stay outside stats_json.
+                stats = {}
+                for key, raw_value in r.items():
+                    if key in metadata:
+                        continue
+                    if raw_value in (None, ""):
+                        if key in stat_fields:
+                            stats[key] = None
+                        continue
+                    value = number(raw_value)
+                    if value is not None:
+                        stats[key] = value
                 summary = season_totals[(identity(r["player_id"]), identity(r["team_ncaa_team_id"]))]
                 summary["games"].add(identity(r["contest_id"]))
                 summary["player_name"] = r.get("clean_name") or r.get("player")

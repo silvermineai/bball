@@ -55,6 +55,9 @@ The recruiting wire uses the published ESPN and NCAA.com men’s-basketball RSS 
 
 Parquet downloads substantially reduce network transfer. The shared release client maintains polite request spacing, conditional caching and bounded retries. Every published release used for this edition is listed in the model notebook.
 
+The NCAA player-box ingester keeps every numeric source field on valid identified rows, including fields added by a later publisher release; its explicit metadata keys remain separate. Unknown non-numeric labels stay in the retained unresolved payload rather than being guessed into a stat.
+
+
 Stable ESPN athlete IDs join game appearances to roster listings. Missing player IDs are preserved in `bb_unresolved`, not fabricated or inferred from names. NCAA RAPM IDs are not joined by name to ESPN IDs. The available `mbb_player_crosswalk` release was inspected but does not supply a verified NCAA-to-ESPN mapping, so it is not used for that purpose.
 
 Public roster profiles retain basketball-relevant fields. Age and birth date are excluded. Team-attributed placeholder rows (for example, an ESPN display name of “Team”) remain in the raw warehouse but are excluded from the public player derivative. Historical program comparisons use actual recorded minutes, rather than mutable prior-season roster listings. A player absent from a partial listing is never labeled as departed. Multiple program affiliations are marked ambiguous. “New to dataset” does not mean freshman or new recruit.

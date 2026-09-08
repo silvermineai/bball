@@ -237,6 +237,33 @@ class BasketballIngestTests(unittest.TestCase):
             self.conn.execute("SELECT count(*) FROM bb_unresolved").fetchone()[0], 1
         )
 
+    def test_unknown_numeric_ncaa_source_stats_are_retained(self):
+        self.conn.executescript(
+            (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()
+        )
+        row = {
+            "contest_id": "9001",
+            "team_ncaa_team_id": "22",
+            "player_id": "77",
+            "game_date": "2026-01-01",
+            "home": "Home",
+            "away": "Away",
+            "team": "Home",
+            "player": "A. Player",
+            "clean_name": "A Player",
+            "pts": "12",
+            "future_rate": "1.25",
+            "future_missing": None,
+        }
+        ingest(self.conn, "ncaa_player_box", 2026, [row], {})
+        stats = json.loads(
+            self.conn.execute(
+                "SELECT stats_json FROM bb_ncaa_player_box"
+            ).fetchone()[0]
+        )
+        self.assertEqual(stats["future_rate"], 1.25)
+        self.assertNotIn("future_missing", stats)
+
     def test_dataset_catalog_reports_rows_and_receipt_freshness(self):
         self.conn.execute(
             "INSERT INTO bb_sources VALUES (?,?,?)",
