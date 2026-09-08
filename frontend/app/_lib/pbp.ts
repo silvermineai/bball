@@ -26,3 +26,26 @@ export type PbpCatalog = {
   default_season: number;
   seasons: PbpSeason[];
 };
+
+export type PbpFilters = { season: number; query: string };
+
+export function parsePbpFilters(
+  search: string,
+  defaultSeason: number,
+  seasons: number[],
+): PbpFilters {
+  const params = new URLSearchParams(search);
+  const requested = Number(params.get("season"));
+  return {
+    season: Number.isInteger(requested) && seasons.includes(requested) ? requested : defaultSeason,
+    query: params.get("q") || "",
+  };
+}
+
+export function pbpFilterSearch(filters: PbpFilters, defaultSeason: number) {
+  const params = new URLSearchParams();
+  if (filters.season !== defaultSeason) params.set("season", String(filters.season));
+  if (filters.query.trim()) params.set("q", filters.query.trim());
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}

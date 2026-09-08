@@ -10,6 +10,8 @@ The 2024 edition covers 713 observed programs and 9,195 shooter identities; 10,3
 
 The companion play-by-play archive at /basketball/pbp/ indexes 15,759,329 source events across 45,391 games from the 2019–20 through 2025–26 releases. It keeps a compact game catalog rather than mirroring full event text into the client; each row links to the publisher's public ESPN game page for the complete event log. The 2019–23 rows are an event index without box-score shot reconciliation fields; the 2024–26 rows retain the reconciled shooting metadata described above. Event counts and source game IDs are descriptive coverage evidence, not a guarantee that every action has a player ID or valid location.
 
+The PBP archive stores the selected season and team/matchup/game search in the URL. Copying the archive link preserves that exact source-game queue for another reviewer; the share state does not change the underlying edition or infer missing events.
+
 ## Identity, outcomes and coverage
 
 - IDs remain strings, including event IDs too large for JavaScript's exact integer range. No player is created from name matching.

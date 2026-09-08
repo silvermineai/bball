@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { PbpCatalog, PbpGame } from "../../_lib/pbp";
+import { parsePbpFilters, pbpFilterSearch, type PbpCatalog, type PbpGame } from "../../_lib/pbp";
 import { date, fmt } from "../../_lib/format";
 
 const PAGE_SIZE = 40;
@@ -18,10 +18,20 @@ export default function PbpArchive({
   initial: PbpCatalog;
 }) {
   const [catalog, setCatalog] = useState<PbpCatalog>(initial);
-  const [season, setSeason] = useState(initial.default_season);
-  const [query, setQuery] = useState("");
+  const initialFilters = typeof window === "undefined"
+    ? { season: initial.default_season, query: "" }
+    : parsePbpFilters(window.location.search, initial.default_season, initial.seasons.map((entry) => entry.season));
+  const [season, setSeason] = useState(initialFilters.season);
+  const [query, setQuery] = useState(initialFilters.query);
   const [page, setPage] = useState(0);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  useEffect(() => {
+    const next = pbpFilterSearch({ season, query }, catalog.default_season);
+    if (next !== window.location.search) {
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${next}${window.location.hash}`);
+    }
+  }, [catalog.default_season, query, season]);
   useEffect(() => {
     const controller = new AbortController();
     fetch(catalogUrl, { signal: controller.signal })
@@ -44,6 +54,14 @@ export default function PbpArchive({
   }, [active, query]);
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Archive link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   return (
     <section className="section">
       <div className="section-heading">
@@ -53,7 +71,9 @@ export default function PbpArchive({
       <div className="toolbar">
         <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setSeason(Number(event.target.value)); setPage(0); }}>{catalog.seasons.slice().sort((a, b) => b.season - a.season).map((entry) => <option key={entry.season} value={entry.season}>{entry.season - 1}–{String(entry.season).slice(-2)} · {fmt(entry.games.length, 0)} games</option>)}</select></label>
         <label className="control"><span>TEAM, MATCHUP OR GAME ID</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search source games" /></label>
+        <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
       </div>
+      {copied && <p role="status">{copied}</p>}
       {error && <p role="status" className="note">{error} Showing the embedded release snapshot.</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Matchup</th><th className="numeric">Events</th><th className="numeric">Scoring</th><th className="numeric">Shots</th><th>Source</th></tr></thead><tbody>{visible.map((game: PbpGame) => <tr key={(active?.season || "") + "-" + game.id}><td>{game.date ? date(game.date) : "—"}</td><td><strong>{game.away || "Away"} at {game.home || "Home"}</strong><small>ESPN game {game.id}</small></td><td className="numeric">{fmt(game.events, 0)}</td><td className="numeric">{fmt(game.scoring_plays, 0)}</td><td className="numeric">{fmt(game.shooting_plays, 0)}<small>{game.shot_attempts == null ? "Shot reconciliation unavailable" : `${fmt(game.shot_attempts, 0)} accepted shot attempts`}</small></td><td><a href={sourceUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN ↗</a></td></tr>)}</tbody></table></div>
       {!visible.length && <p className="empty">No source games match this search.</p>}
