@@ -173,8 +173,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <span>Players with announced additions</span>
             </div>
             <div>
-              <strong>{data.coverage.programs}</strong>
-              <span>Programs in this partial review</span>
+              <strong>
+                {data.coverage.programs}/
+                {(rosters.team_summaries || []).length.toLocaleString()}
+              </strong>
+              <span>Reviewed / source-listed programs</span>
             </div>
             <div>
               <strong>{data.coverage.historical_links}</strong>
