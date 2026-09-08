@@ -40,6 +40,7 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   }
   const metric = metrics.find((candidate) => candidate.key === (requestedMetric || metrics[0].key));
   if (!metric) return c.json({ error: "Unknown boutique metric" }, 400);
+  const sortDirection = !requestedMetric && metric.key === "rank" ? "asc" : direction;
   const table = kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value";
   const path = `$.${metric.key}`;
   const search = q ? `%${q}%` : null;
@@ -52,7 +53,7 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   const count = await c.env.DB.prepare(
     `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
   ).bind(path, ...binds).first<{ total: number; non_null: number }>();
-  const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${direction === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
+  const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
   const select = kind === "ratings"
     ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
     : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
