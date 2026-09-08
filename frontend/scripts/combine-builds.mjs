@@ -16,5 +16,5 @@ await cp("dist/basketball/assets", "dist/client/basketball/assets", {
 // two URL families to their archived R2 revision when an asset is absent.
 await writeFile(
   "dist/client/.assetsignore",
-  "/blog/game-*/\n/basketball/briefs/\n",
+  "/blog/game-*/\n/basketball/briefs/*/\n",
 );
