@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
-type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "per40";
-type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; rank: number };
+type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "per40" | "rapm_net";
+type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; rank: number; rapm_net: number | null; orapm: number | null; drapm: number | null; off_poss: number | null; def_poss: number | null };
 type Result = { season: number; metric: Metric; min_games: number; min_minutes: number; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[] };
-const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes" };
+const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes", rapm_net: "Net RAPM" };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "ppg";
@@ -74,8 +74,8 @@ export default function NcaaRankings() {
     downloadCsv(
       `ncaa-player-rankings-${season}-${metric}-page-${page + 1}.csv`,
       toCsv(
-        ["Season", "Metric", "Rank", "Player", "NCAA player ID", "Program", "NCAA team ID", "Position", "Class", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value"],
-        result.rows.map((row) => [result.season, labels[result.metric], row.rank, row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value]),
+        ["Season", "Metric", "Rank", "Player", "NCAA player ID", "Program", "NCAA team ID", "Position", "Class", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value", "ORAPM", "DRAPM", "Net RAPM", "Offensive possessions", "Defensive possessions"],
+        result.rows.map((row) => [result.season, labels[result.metric], row.rank, row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value, row.orapm, row.drapm, row.rapm_net, row.off_poss, row.def_poss]),
       ),
     );
   };
@@ -83,7 +83,7 @@ export default function NcaaRankings() {
     <div className="page-title">
       <div className="eyebrow">NCAA source archive / player rankings</div>
       <h1>Find the next<br /><em>difference maker.</em></h1>
-      <p>Rank game-level NCAA-derived production with a coach&apos;s minimum sample. Every board shows the source identity, workload and the metric used to order the list.</p>
+      <p>Rank NCAA-derived production and exact-ID impact with a coach&apos;s minimum sample. Every board shows the source identity, workload and the metric used to order the list.</p>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player/team rows</span></div>
@@ -94,7 +94,7 @@ export default function NcaaRankings() {
     </div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
-      <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40"]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>
+      <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "rapm_net"]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>
       <label className="control"><span>MINIMUM GAMES</span><select value={minGames} onChange={(e) => reset(() => setMinGames(e.target.value))}>{[1, 5, 10, 15, 20].map((n) => <option key={n} value={n}>{n} games</option>)}</select></label>
       <label className="control"><span>MINIMUM MINUTES</span><select value={minMinutes} onChange={(e) => reset(() => setMinMinutes(e.target.value))}>{[0, 200, 400, 600, 800].map((n) => <option key={n} value={n}>{n ? `${n} minutes` : "No minute minimum"}</option>)}</select></label>
       <label className="control"><span>PLAYER OR TEAM</span><input type="search" maxLength={120} placeholder="Search a player or team" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
@@ -104,10 +104,10 @@ export default function NcaaRankings() {
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
       {copied && <p role="status">{copied}</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th>Position</th><th>Class</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">{labels[result.metric]}</th></tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.player_id}-${row.team_id}`}><td className="numeric"><strong>#{row.rank}</strong></td><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}>{row.player_name || row.player_id} →</Link><small>NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td>{row.position || "—"}</td><td>{row.class_year || "—"}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.minutes, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric">{fmt(row.rebounds, 0)}</td><td className="numeric">{fmt(row.assists, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ts" || result.metric === "efg" ? 1 : 2)}{result.metric === "ts" || result.metric === "efg" ? "%" : ""}</strong></td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Program</th><th>Position</th><th>Class</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">{labels[result.metric]}</th>{result.metric === "rapm_net" && <><th className="numeric">ORAPM</th><th className="numeric">DRAPM</th><th className="numeric">Poss.</th></>}</tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.player_id}-${row.team_id}`}><td className="numeric"><strong>#{row.rank}</strong></td><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}>{row.player_name || row.player_id} →</Link><small>NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td>{row.position || "—"}</td><td>{row.class_year || "—"}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.minutes, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric">{fmt(row.rebounds, 0)}</td><td className="numeric">{fmt(row.assists, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ts" || result.metric === "efg" ? 1 : 2)}{result.metric === "ts" || result.metric === "efg" ? "%" : ""}</strong></td>{result.metric === "rapm_net" && <><td className="numeric">{fmt(row.orapm, 2)}</td><td className="numeric">{fmt(row.drapm, 2)}</td><td className="numeric">{fmt(row.off_poss, 0)} / {fmt(row.def_poss, 0)}</td></>}</tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No players match this ranking filter.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
-      <p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived player box release via SportsDataverse. Rankings are descriptive source statistics, not eligibility, recruiting grades or a verified identity match to ESPN records.</p>
+      <p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived player box release and NCAA lineup RAPM via SportsDataverse. Net RAPM is available only where the exact NCAA player ID appears in both releases; no name-only identity join is used. Rankings are descriptive source statistics, not eligibility, recruiting grades or an ESPN identity match.</p>
     </>}
   </>;
 }
