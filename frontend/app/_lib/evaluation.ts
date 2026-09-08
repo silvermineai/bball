@@ -48,6 +48,8 @@ export type EvaluationSummary = {
     metrics: Record<Method, EvaluationMetrics>;
     compared_games: number;
     weekly_fits: number;
+    calibration_games?: number;
+    calibration_weeks?: number;
   }[];
   calibration: Record<
     Method,

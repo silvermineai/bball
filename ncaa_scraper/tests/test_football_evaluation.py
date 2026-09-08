@@ -76,6 +76,11 @@ class FootballEvaluationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             calibrate_rows([row] * 100)
 
+    def test_calibration_records_the_replayed_season(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            _, rows, _ = rolling(self.games, 2023)
+        self.assertEqual(calibrate_rows(rows, season=2023)["season"], 2023)
+
 
 if __name__ == "__main__":
     unittest.main()

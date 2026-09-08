@@ -51,7 +51,7 @@ Production verification checked byte equality for the model/evidence/ledger asse
 
 ## Weekly model experiment
 
-The [weekly evaluation](FOOTBALL_EVALUATION.md) compares 44 historical refits with the frozen baseline on the same 784 games. Margin MAE falls from 14.24 to 13.64 points and probability-pick accuracy rises from 65.4% to 70.2%. This retrospective evidence is published separately; it does not replace production forecasts or prospective ledger results.
+The [weekly evaluation](FOOTBALL_EVALUATION.md) now compares two independent dated transitions (2024 and 2025), with 65 historical weekly refits and frozen-field baselines. Across the 2025 holdout, margin MAE falls from 14.24 to 13.64 points and probability-pick accuracy rises from 65.4% to 70.2%; the separate 2024 holdout is published beside it. This retrospective evidence is published separately; it does not replace production forecasts or prospective ledger results.
 
 ## Team efficiency
 

@@ -125,7 +125,7 @@ def rolling(games, season):
     return base, rows, fits
 
 
-def calibrate_rows(rows):
+def calibrate_rows(rows, season=None):
     if (
         len(rows) < 100
         or len({r["game"]["home_score"] > r["game"]["away_score"] for r in rows}) != 2
@@ -154,7 +154,7 @@ def calibrate_rows(rows):
         for r in rows
     ]
     return {
-        "season": 2024,
+        "season": int(season if season is not None else rows[0]["game"]["season"]),
         "games": len(rows),
         "logistic_coefficients": coef.tolist(),
         "margin_half_width": float(np.quantile(errors, 0.8)),
@@ -278,37 +278,77 @@ def build(conn, overview, out=OUT):
         ):
             return json.loads((out / "summary.json").read_text())
     initial, cal_rows, cal_fits = rolling(valid, 2024)
-    weekly_cal = calibrate_rows(cal_rows)
+    weekly_cal = calibrate_rows(cal_rows, season=2024)
     fixed_cal = calibrate([g for g in valid if g["season"] == 2024], initial)
     baseline, test_rows, test_fits = rolling(valid, 2025)
     fitted = {f["id"]: f["model"] for f in test_fits}
-    rows = []
-    for r in test_rows:
-        g = r["game"]
-        rows.append(
-            {
-                **{
-                    k: g[k]
-                    for k in (
-                        "id",
-                        "season",
-                        "home_id",
-                        "away_id",
-                        "home_name",
-                        "away_name",
-                        "home_score",
-                        "away_score",
-                        "neutral",
-                    )
-                },
-                "starts_at": g["kickoff"],
-                "preseason": prediction(baseline, g, fixed_cal),
-                "weekly": prediction(fitted[r["weekly_fit_id"]], g, weekly_cal),
-                "weekly_fit_id": r["weekly_fit_id"],
-                "training_before": r["training_before"],
-            }
-        )
+    def records(predictions, preseason_model, weekly_models, calibration, fixed_calibration):
+        result = []
+        for r in predictions:
+            g = r["game"]
+            result.append(
+                {
+                    **{
+                        k: g[k]
+                        for k in (
+                            "id",
+                            "season",
+                            "home_id",
+                            "away_id",
+                            "home_name",
+                            "away_name",
+                            "home_score",
+                            "away_score",
+                            "neutral",
+                        )
+                    },
+                    "starts_at": g["kickoff"],
+                    "preseason": prediction(preseason_model, g, fixed_calibration),
+                    "weekly": prediction(weekly_models[r["weekly_fit_id"]], g, calibration),
+                    "weekly_fit_id": r["weekly_fit_id"],
+                    "training_before": r["training_before"],
+                }
+            )
+        return result
+
+    rows = records(test_rows, baseline, fitted, weekly_cal, fixed_cal)
+    # Add an earlier independent transition. The 2023 rolling replay supplies
+    # calibration; the already-built 2024 replay supplies the test games.
+    earlier_initial, earlier_cal_rows, earlier_cal_fits = rolling(valid, 2023)
+    earlier_weekly_cal = calibrate_rows(earlier_cal_rows, season=2023)
+    earlier_fixed_cal = calibrate(
+        [g for g in valid if g["season"] == 2023], earlier_initial
+    )
+    earlier_rows = records(
+        cal_rows,
+        initial,
+        {f["id"]: f["model"] for f in cal_fits},
+        earlier_weekly_cal,
+        earlier_fixed_cal,
+    )
     measured = {method: metrics(rows, method) for method in ("preseason", "weekly")}
+    season_results = [
+        {
+            "season": 2024,
+            "calibration_season": 2023,
+            "stage": "independent_test",
+            "metrics": {method: metrics(earlier_rows, method) for method in ("preseason", "weekly")},
+            "compared_games": len(earlier_rows),
+            "weekly_fits": len(cal_fits),
+            "calibration_games": len(earlier_cal_rows),
+            "calibration_weeks": len(earlier_cal_fits),
+        },
+        {
+            "season": 2025,
+            "calibration_season": 2024,
+            "stage": "independent_test",
+            "metrics": measured,
+            "compared_games": len(rows),
+            "weekly_fits": len(test_fits),
+            "calibration_games": len(cal_rows),
+            "calibration_weeks": len(cal_fits),
+        },
+    ]
     for k in (
         "games",
         "margin_mae",
@@ -337,6 +377,7 @@ def build(conn, overview, out=OUT):
         "sources": receipts,
         "implementation_sha256": implementation,
         "metrics": measured,
+        "season_results": season_results,
         "calibration": {"preseason": fixed_cal, "weekly": weekly_cal},
         "paired_mae_difference": paired_difference(rows),
         "baseline_margin_mae": overview["model"]["evaluation"]["baseline_margin_mae"],
@@ -354,7 +395,8 @@ def build(conn, overview, out=OUT):
         "excluded_games": [g for g in target if g["id"] not in scored],
         "limitations": [
             "Retrospective experiment designed after the evaluation season. Historical source revisions and actual result-availability times are not reconstructed.",
-            "Earlier evaluation-season results enter later weekly fits, but never their own prediction. Calibration remains frozen from 2024; the test is a sequential replay, not a model frozen for all of 2025.",
+            "The 2023–24 and 2024–25 rolling transitions use prior-season calibration and independent following-season tests; calibration rows are not independent test performance.",
+            "Evaluation-season results enter later weekly fits only after the cutoff buffer, but never their own prediction.",
             "The 24-hour start buffer is conservative scheduling, not proof that a historical result had been reported. Calendar weeks use UTC, not source week numbers.",
             "Teams are frozen from the previous-season fit to keep both methods on the same field. New or unseen teams are excluded; performance on them is unknown.",
             "Both methods use scores, program identity and venue only. No roster, recruiting, injury, advanced efficiency or market features are included.",
@@ -365,11 +407,17 @@ def build(conn, overview, out=OUT):
     artifacts = {
         "summary.json": summary,
         "games.json": {"experiment_id": signature, "games": rows},
-        "calibration-games.json": {"experiment_id": signature, "games": cal_rows},
+        "calibration-games.json": {
+            "experiment_id": signature,
+            "games": cal_rows,
+            "earlier_transition": {"season": 2023, "games": earlier_cal_rows},
+        },
         "fits.json": {
             "experiment_id": signature,
             "initial_model": initial,
             "preseason_model": baseline,
+            "earlier_calibration_model": earlier_initial,
+            "earlier_fits": earlier_cal_fits,
             "fits": cal_fits + test_fits,
         },
         "training-games.json": {"experiment_id": signature, "games": valid},

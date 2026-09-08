@@ -8,6 +8,10 @@ const read = (name: string) =>
   JSON.parse(readFileSync(new URL(name, base), "utf8"));
 const summary = read("summary.json") as FootballEvaluationSummary;
 const games = read("games.json").games as EvaluationGame[];
+const calibrationArtifact = read("calibration-games.json") as {
+  games: unknown[];
+  earlier_transition: { season: number; games: unknown[] };
+};
 type Input = {
   id: string;
   season: number;
@@ -57,6 +61,15 @@ function prediction(
   };
 }
 describe("football weekly experiment evidence", () => {
+  it("publishes independent dated transitions", () => {
+    expect(summary.season_results?.map((result) => result.season)).toEqual([2024, 2025]);
+    expect(summary.season_results?.every((result) => result.stage === "independent_test")).toBe(true);
+    expect(summary.season_results?.every((result) => result.compared_games > 700)).toBe(true);
+    expect(calibrationArtifact.earlier_transition.season).toBe(2023);
+    expect(calibrationArtifact.earlier_transition.games).toHaveLength(summary.season_results![0].calibration_games!);
+    expect(calibrationArtifact.games).toHaveLength(summary.season_results![1].calibration_games!);
+  });
+
   it("reproduces both methods and the unchanged published holdout", () => {
     const live = JSON.parse(
       readFileSync(
