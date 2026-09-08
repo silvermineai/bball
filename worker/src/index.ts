@@ -142,7 +142,7 @@ app.get("/api/football/events/", (c) => {
 app.route("/api/football/events", footballEvents);
 
 const footballPlayerQuery = z.object({
-  season: z.coerce.number().int().min(2022).max(2035).default(2025),
+  season: z.coerce.number().int().min(2018).max(2035).default(2025),
   page: z.coerce.number().int().min(0).max(200).default(0),
 });
 
