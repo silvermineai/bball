@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   verifyPlayerIndex,
   type PlayerCatalog,
@@ -128,6 +129,20 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       a.name.localeCompare(b.name),
   );
   const minimum = data?.rankings[category]?.minimum_plays;
+  const download = () => {
+    const visible = rows.slice(page * 40, page * 40 + 40);
+    downloadCsv(
+      `football-player-rankings-${season}-${category}-page-${page + 1}.csv`,
+      toCsv(
+        ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Plays", "Yards", "Yards per play", "Touchdowns", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"],
+        visible.map((p) => {
+          const selected = productionForCategory(p, category), s = selected?.stats;
+          const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
+          return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.plays, s?.yards, yardsPerPlay, s?.touchdowns, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
+        }),
+      ),
+    );
+  };
   return (
     <>
       <div className="strip">
@@ -217,6 +232,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </label>
       </div>
       <div className="button-row" style={{ marginTop: 12 }}>
+        <button className="button secondary" type="button" onClick={download} disabled={!rows.length}>
+          Download page CSV ↓
+        </button>
         <button
           className="button secondary"
           type="button"
@@ -307,6 +325,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                   <th className="numeric">Box games</th>
                   <th className="numeric">Plays</th>
                   <th className="numeric">Yards</th>
+                  <th className="numeric">Yards / play</th>
                   <th className="numeric">TD</th>
                   <th className="numeric">Total EPA</th>
                   <th className="numeric">EPA / play</th>
@@ -338,6 +357,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                       <td className="numeric">{p.box_games}</td>
                       <td className="numeric">{fmt(s?.plays, 0)}</td>
                       <td className="numeric">{fmt(s?.yards, 0)}</td>
+                      <td className="numeric">{fmt(s?.yards != null && s.plays ? s.yards / s.plays : null, 2)}</td>
                       <td className="numeric">{fmt(s?.touchdowns, 0)}</td>
                       <td className="numeric">{fmt(s?.epa)}</td>
                       <td className="numeric">{fmt(s?.epa_per_play, 2)}</td>
