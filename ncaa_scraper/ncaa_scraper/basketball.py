@@ -1017,6 +1017,11 @@ def main():
                     else ["schedule", "rosters"]
                 )
             )
+            # The publisher's player-season release begins in 2025. Keep the
+            # 2024 box-score archive intact while importing every available
+            # attributed season into the source-stat browser.
+            if year == 2025:
+                datasets.append("player_season")
             for dataset in datasets:
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)

@@ -33,7 +33,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, venue scenarios, historical factors and source-listed roster movement |
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, workload filters and D1 game logs |
-| Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields, with D1-backed pagination and CSV export |
+| Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
 | NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
 | Roster observations | `/basketball/recruiting/` | Historical program changes and clearly marked unconfirmed future listings |
