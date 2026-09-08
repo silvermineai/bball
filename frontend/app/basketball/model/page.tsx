@@ -16,7 +16,11 @@ export default function Page() {
     representedMinutes = rosterSummary.reduce(
       (sum, row) => sum + row.represented_prior_minutes,
       0,
-    );
+    ),
+    scenarioTeams = rosterModel.teams
+      .filter((team) => team.predicted_net != null)
+      .sort((a, b) => (b.predicted_net ?? -Infinity) - (a.predicted_net ?? -Infinity))
+      .slice(0, 20);
   return (
     <>
       <div className="page-title">
@@ -144,6 +148,59 @@ export default function Page() {
             Held-out transition {rosterModel.evaluation.held_out_transition} improved on the prior-net baseline by {fmt(rosterModel.evaluation.improvement_vs_prior_net, 2)} points per 100 possessions in this edition. The result is one chronological season comparison, not a guarantee of future accuracy.
           </p>
           {rosterModel.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+        </div>
+        <div className="paper-panel" style={{ marginTop: 22 }}>
+          <div className="section-heading" style={{ marginBottom: 12 }}>
+            <div>
+              <div className="eyebrow">Scenario output / top 20</div>
+              <h3>Where the roster inputs point.</h3>
+            </div>
+            <Link href="/basketball/roster-lab/">Inspect all programs →</Link>
+          </div>
+          <p className="note">
+            Sorted by the challenger&apos;s predicted net efficiency after the
+            listed-roster inputs. This is a research scenario, not a national
+            ranking, a depth chart or an availability claim. BPM is shown only
+            when the source athlete IDs have an attributed publisher value.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Program</th>
+                  <th className="numeric">Prior net</th>
+                  <th className="numeric">Scenario net</th>
+                  <th className="numeric">Change</th>
+                  <th className="numeric">Represented BPM</th>
+                  <th className="numeric">Listed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scenarioTeams.map((team, index) => {
+                  const change = team.prior_net == null || team.predicted_net == null
+                    ? null
+                    : team.predicted_net - team.prior_net;
+                  return (
+                    <tr key={team.team_id}>
+                      <td className="rank-number">{index + 1}</td>
+                      <th scope="row">
+                        <Link href={`/basketball/programs/${encodeURIComponent(team.team_id)}/`}>
+                          {team.team}
+                        </Link>
+                        <small>{team.returning_players} returning · {team.represented_players} represented</small>
+                      </th>
+                      <td className="numeric">{fmt(team.prior_net, 1)}</td>
+                      <td className="numeric"><strong>{fmt(team.predicted_net, 1)}</strong></td>
+                      <td className="numeric">{fmt(change, 1)}</td>
+                      <td className="numeric">{fmt(team.represented_bpm, 1)}</td>
+                      <td className="numeric">{team.listed_players}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
       <section className="section">
