@@ -270,6 +270,16 @@ export default function Page() {
             <Link href="/basketball/players/">Open player statistics →</Link>
           </article>
           <article className="paper-panel">
+            <div className="eyebrow">Roster workload</div>
+            <h3>{count(rosters.players_observed)} source-listed players</h3>
+            <p>
+              Rank the 2026–27 roster release by prior minutes, scoring,
+              playmaking or shooting efficiency while keeping source status and
+              player evidence visible.
+            </p>
+            <Link href="/basketball/roster-board/">Open the roster workload board →</Link>
+          </article>
+          <article className="paper-panel">
             <div className="eyebrow">Publisher context</div>
             <h3>{publisher.metrics.length} source-native leaderboards</h3>
             <p>
