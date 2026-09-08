@@ -528,7 +528,8 @@ def ingest(conn, dataset, year, rows, receipt):
                 entry = groups[key]
                 entry["player_name"] = r.get("shooter_clean_name") or r.get("shooter_id")
                 entry["team_name"] = r.get("team") or r.get("team_id")
-                made = bool(r.get("made") == "true")
+                made_value = r.get("made")
+                made = made_value is True or made_value == 1 or str(made_value).lower() == "true"
                 points = number(r.get("point_value")) or 0
                 entry["attempts"] += 1
                 entry["makes"] += int(made)
