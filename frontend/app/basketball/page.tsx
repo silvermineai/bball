@@ -332,8 +332,11 @@ export default function Page() {
               <strong>{recruiting.coverage.players}</strong>
             </div>
             <div>
-              <span>Programs in this partial review</span>
-              <strong>{recruiting.coverage.programs}</strong>
+              <span>Reviewed / source-listed programs</span>
+              <strong>
+                {recruiting.coverage.programs}/
+                {(r.team_summaries || []).length.toLocaleString()}
+              </strong>
             </div>
             <div>
               <span>Reviewed historical stat links</span>
