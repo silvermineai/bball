@@ -469,7 +469,14 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                         </small>
                         {r.score_for != null && r.score_against != null && (
                           <small>
-                            Final {r.score_for}–{r.score_against} · game {r.id}
+                            Final {r.score_for}–{r.score_against} · game {r.id}{" "}
+                            <a
+                              href={`https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(r.id)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              ESPN source ↗
+                            </a>
                           </small>
                         )}
                       </td>

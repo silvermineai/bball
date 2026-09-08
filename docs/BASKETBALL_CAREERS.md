@@ -45,6 +45,8 @@ Each edition hashes the source file hashes, season and transformation version. P
 
 `GET /api/basketball/research/careers/:id?season=2026` returns all active season profiles and the selected season's complete retained logs. The default is the latest source season for that ID. A valid season with no records for a known ID returns an explicit empty selection. Malformed parameters return 400, absent identities or unimported seasons return 404, and an edition changing between profile/source reads returns a retryable 503. Queries bind exact IDs and pin logs to the selected profile edition. The existing `/players/:id` API remains available for publisher-computed season statistics and roster observations from the 2024–26 research tables; the native player panel now lets readers switch among those publisher-stat seasons.
 
+Each completed-game row in the native player panel links directly to its ESPN source game. That gives coaches a one-click path from a retained player log to the underlying box score and play-by-play evidence.
+
 ## Publishing and recovery
 
 ```sh
