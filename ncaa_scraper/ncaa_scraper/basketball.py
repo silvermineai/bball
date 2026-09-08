@@ -135,6 +135,7 @@ def ingest(conn, dataset, year, rows, receipt):
         "ncaa_lineups": "bb_lineups",
         "player_core": "bb_player_core",
         "ncaa_rapm": "bb_impact",
+        "ncaa_player_box": "bb_ncaa_player_box",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -384,6 +385,62 @@ def ingest(conn, dataset, year, rows, receipt):
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_impact VALUES (?,?,?)",
                 [(year, identity(r["player_id"]), json.dumps(r)) for r in rows],
+            )
+        elif dataset == "ncaa_player_box":
+            conn.execute(
+                "DELETE FROM bb_unresolved WHERE dataset=? AND season=?",
+                (dataset, year),
+            )
+            metadata = {
+                "game_date", "home", "away", "team", "player", "contest_id",
+                "home_ncaa_team_id", "home_espn_team_id", "away_ncaa_team_id",
+                "away_espn_team_id", "team_ncaa_team_id", "team_espn_team_id",
+                "player_id", "clean_name", "espn_game_id", "season",
+            }
+            stat_fields = {
+                "mins", "o_poss", "pts", "orb", "drb", "ast", "stl", "blk", "tov", "pf",
+                "ts_pct", "efg_pct", "fgm", "fga", "fg_pct", "tpm", "tpa", "tp_pct",
+                "ftm", "fta", "ft_pct", "rimm", "rima", "rim_pct", "midm", "mida", "mid_pct",
+                "pbackm", "pbacka", "pback_pct", "blk_rim", "blk_mid", "blk_three",
+                "pct_fga_trans", "pct_tpa_trans", "pct_rima_trans", "pct_fgm_trans",
+                "pct_tpm_trans", "pct_rimm_trans", "pct_fgm_ast", "pct_tpm_ast", "pct_rimm_ast",
+                "pts_trans", "orb_trans", "drb_trans", "ast_trans", "stl_trans", "blk_trans", "tov_trans",
+                "ts_pct_trans", "efg_pct_trans", "fgm_trans", "fga_trans", "fg_pct_trans", "tpm_trans",
+                "tpa_trans", "tp_pct_trans", "ftm_trans", "fta_trans", "ft_pct_trans", "rimm_trans",
+                "rima_trans", "rim_pct_trans", "midm_trans", "mida_trans", "mid_pct_trans",
+                "pts_half", "orb_half", "drb_half", "ast_half", "stl_half", "blk_half", "tov_half",
+                "ts_pct_half", "efg_pct_half", "fgm_half", "fga_half", "fg_pct_half", "tpm_half",
+                "tpa_half", "tp_pct_half", "ftm_half", "fta_half", "ft_pct_half", "rimm_half", "rima_half",
+                "rim_pct_half", "midm_half", "mida_half", "mid_pct_half", "pts_ast", "fgm_ast", "tpm_ast",
+                "rimm_ast", "midm_ast", "pts_unast", "efg_pct_unast", "fgm_unast", "fga_unast", "fg_pct_unast",
+                "tpm_unast", "tpa_unast", "tp_pct_unast", "rimm_unast", "rima_unast", "rim_pct_unast",
+                "midm_unast", "mida_unast",
+            }
+            valid = []
+            for i, r in enumerate(rows):
+                if not r.get("contest_id") or not r.get("team_ncaa_team_id") or not r.get("player_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing contest, team or player ID", json.dumps(r)),
+                    )
+                    continue
+                stats = {k: number(r.get(k)) for k in stat_fields if k in r}
+                valid.append(
+                    (
+                        year,
+                        identity(r["contest_id"]),
+                        identity(r["team_ncaa_team_id"]),
+                        identity(r["player_id"]),
+                        r.get("game_date"),
+                        r.get("team"),
+                        r.get("away") if r.get("team") == r.get("home") else r.get("home"),
+                        r.get("clean_name") or r.get("player"),
+                        json.dumps(stats, separators=(",", ":")),
+                    )
+                )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_player_box VALUES (?,?,?,?,?,?,?,?,?)",
+                valid,
             )
         if dataset in ["participation", "player_box"]:
             conn.execute("DELETE FROM bb_participation WHERE season=?", (year,))
@@ -1134,6 +1191,7 @@ def export_sql(conn, path):
             "bb_player_core",
             "bb_rosters",
             "bb_impact",
+            "bb_ncaa_player_box",
             "bb_unresolved",
             "bb_participation",
         ]:
@@ -1155,7 +1213,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -1205,6 +1263,12 @@ def main():
             rows, receipt = c.load("player_core", year, refresh=args.refresh)
             ingest(conn, "player_core", year, rows, receipt)
             print(f"Imported player_core/{year}: {len(rows):,}", flush=True)
+        # NCAA-derived advanced player box scores begin in 2010. Their player
+        # IDs are intentionally kept in a separate namespace from ESPN.
+        for year in range(2010, 2027):
+            rows, receipt = c.load("ncaa_player_box", year, refresh=args.refresh)
+            ingest(conn, "ncaa_player_box", year, rows, receipt)
+            print(f"Imported ncaa_player_box/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql)
