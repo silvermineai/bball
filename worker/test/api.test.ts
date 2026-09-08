@@ -93,6 +93,8 @@ describe("bball api", () => {
       "/api/basketball/research/boutique?kind=other",
       "/api/basketball/research/boutique?kind=ratings&metric=not_a_metric",
       "/api/basketball/research/boutique?season=2000",
+      "/api/basketball/research/boutique?kind=players&playerId=not-an-id",
+      "/api/basketball/research/boutique?kind=ratings&playerId=123",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }

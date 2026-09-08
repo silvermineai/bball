@@ -37,7 +37,7 @@ export default function PlayerValuePanel({ id, season }: { id: string; season: n
     setName(null);
     setTeam(null);
     setError("");
-    const query = new URLSearchParams({ kind: "players", season: String(season), q: id, page: "0" });
+    const query = new URLSearchParams({ kind: "players", season: String(season), playerId: id, page: "0" });
     Promise.all(
       (Object.keys(labels) as Metric[]).map(async (metric) => {
         const params = new URLSearchParams(query);

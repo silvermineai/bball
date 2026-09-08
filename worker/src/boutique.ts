@@ -22,6 +22,7 @@ const querySchema = z.object({
   season: z.coerce.number().int().min(2006).max(2026).default(2026),
   metric: z.string().regex(/^[a-z_]{2,20}$/).optional(),
   q: z.string().trim().max(120).optional(),
+  playerId: z.string().regex(/^\d{1,15}$/).optional(),
   page: z.coerce.number().int().min(0).max(250).default(0),
   direction: z.enum(["desc", "asc"]).default("desc"),
   meta: z.enum(["0", "1"]).default("0"),
@@ -29,7 +30,8 @@ const querySchema = z.object({
 
 export const boutique = new Hono<{ Bindings: Bindings }>();
 boutique.get("/", zValidator("query", querySchema), async (c) => {
-  const { kind, season, metric: requestedMetric, q, page, direction, meta } = c.req.valid("query");
+  const { kind, season, metric: requestedMetric, q, playerId, page, direction, meta } = c.req.valid("query");
+  if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
   if (meta === "1") {
     const seasons = await c.env.DB.prepare(
@@ -46,10 +48,13 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   const search = q ? `%${q}%` : null;
   const where = kind === "ratings"
     ? search ? "p.season=? AND (COALESCE(t.team_name,p.team_id) LIKE ? OR p.team_id LIKE ?)" : "p.season=?"
-    : search ? "p.season=? AND (p.player_name LIKE ? OR COALESCE(t.team_name,p.team_id) LIKE ? OR p.player_id LIKE ?)" : "p.season=?";
-  const binds: Array<string | number> = search
-    ? kind === "ratings" ? [season, search, search] : [season, search, search, search]
-    : [season];
+    : playerId ? "p.season=? AND p.player_id=?"
+      : search ? "p.season=? AND (p.player_name LIKE ? OR COALESCE(t.team_name,p.team_id) LIKE ? OR p.player_id LIKE ?)" : "p.season=?";
+  const binds: Array<string | number> = kind === "players" && playerId
+    ? [season, playerId]
+    : search
+      ? kind === "ratings" ? [season, search, search] : [season, search, search, search]
+      : [season];
   const count = await c.env.DB.prepare(
     `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
   ).bind(path, ...binds).first<{ total: number; non_null: number }>();
