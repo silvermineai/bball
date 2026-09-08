@@ -12,6 +12,7 @@ from ncaa_scraper.basketball import (
     matchup_factor_edges,
     player_index,
     publisher_leaders,
+    publisher_value_leaders,
     roster_changes,
 )
 from ncaa_scraper.basketball_model import (
@@ -360,6 +361,42 @@ class BasketballIngestTests(unittest.TestCase):
         points = next(m for m in result["metrics"] if m["key"] == "avg_points")
         self.assertEqual([r["rank"] for r in points["leaders"]], [1, 1])
         self.assertEqual([r["display"] for r in points["leaders"]], ["20", "20"])
+
+    def test_publisher_value_leaders_qualify_minutes_and_rank_ties(self):
+        self.conn.executescript(
+            """
+            CREATE TABLE bb_player_value (
+              season INTEGER NOT NULL,
+              player_id TEXT NOT NULL,
+              team_id TEXT NOT NULL,
+              player_name TEXT,
+              stats_json TEXT NOT NULL
+            );
+            CREATE TABLE bb_team_season (
+              season INTEGER NOT NULL,
+              team_id TEXT NOT NULL,
+              team_name TEXT,
+              team_abbreviation TEXT,
+              stats_json TEXT NOT NULL
+            );
+            """
+        )
+        source = lambda minutes, bpm: json.dumps(
+            {"min": minutes, "box_bpm": bpm, "box_obpm": bpm + 1, "box_dbpm": bpm - 1}
+        )
+        self.conn.executemany(
+            "INSERT INTO bb_player_value VALUES (?,?,?,?,?)",
+            [
+                (2026, "1", "T", "A Player", source(400, 8.0)),
+                (2026, "2", "U", "B Player", source(401, 8.0)),
+                (2026, "3", "V", "C Player", source(399, 20.0)),
+            ],
+        )
+        result = publisher_value_leaders(self.conn, year=2026)
+        bpm = next(m for m in result["metrics"] if m["key"] == "box_bpm")
+        self.assertEqual(result["coverage"], {"source_rows": 3, "qualified_rows": 2})
+        self.assertEqual([r["rank"] for r in bpm["leaders"]], [1, 1])
+        self.assertEqual([r["display"] for r in bpm["leaders"]], ["8.00", "8.00"])
 
 
 if __name__ == "__main__":

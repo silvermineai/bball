@@ -35,6 +35,25 @@ type PublisherMetric = {
   leaders: PublisherLeader[];
 };
 
+type PublisherValueLeader = {
+  id: string;
+  name: string;
+  team_id: string;
+  team: string;
+  minutes: number;
+  value: number;
+  display: string;
+  rank: number;
+};
+
+type PublisherValueMetric = {
+  key: string;
+  label: string;
+  unit: string;
+  description: string;
+  leaders: PublisherValueLeader[];
+};
+
 const specs: { key: Metric; label: string; description: string; percent?: boolean }[] = [
   { key: "ppg", label: "Scoring", description: "Points per game" },
   { key: "rpg", label: "Rebounding", description: "Rebounds per game" },
@@ -89,6 +108,19 @@ export default function Page() {
     minimum_games: number;
     source: string;
     metrics: PublisherMetric[];
+  };
+  const publisherValue = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/publisher-value-leaders.json"),
+      "utf8",
+    ),
+  ) as {
+    season: number;
+    minimum_minutes: number;
+    source: string;
+    identity_note: string;
+    coverage: { source_rows: number; qualified_rows: number };
+    metrics: PublisherValueMetric[];
   };
   return (
     <>
@@ -226,6 +258,60 @@ export default function Page() {
         <p className="note">
           Source: {publisher.source}. Silvermine retains the original category,
           label, description and display string in the player record.
+        </p>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              Publisher value / {publisherValue.season - 1}–{String(publisherValue.season).slice(-2)}
+            </div>
+            <h2>Value with the minutes visible.</h2>
+          </div>
+          <span className="note">
+            {publisherValue.coverage.qualified_rows.toLocaleString()} of {publisherValue.coverage.source_rows.toLocaleString()} source rows qualify
+          </span>
+        </div>
+        <p className="note">
+          Box Plus/Minus, Offensive BPM and Defensive BPM are preserved from
+          the publisher&apos;s value release. This board requires at least {publisherValue.minimum_minutes.toLocaleString()} recorded minutes so short samples do not lead the list. The player and team IDs remain in the publisher namespace; these values are descriptive context, not Silvermine forecasts or NCAA RAPM joins.
+        </p>
+        <div className="leader-grid">
+          {publisherValue.metrics.map((metric) => (
+            <section className="paper-panel" key={metric.key}>
+              <div className="eyebrow">{metric.unit}</div>
+              <h3>{metric.label}</h3>
+              <p className="note">{metric.description}</p>
+              <div className="table-scroll">
+                <table className="data-table leaders-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Player</th>
+                      <th className="numeric">BPM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metric.leaders.map((leader) => (
+                      <tr key={`${metric.key}-${leader.id}-${leader.team_id}`}>
+                        <td className="rank-number">{leader.rank}</td>
+                        <td>
+                          <Link href={`/basketball/player/?id=${leader.id}&season=${publisherValue.season}`}>
+                            {leader.name}
+                          </Link>
+                          <small>{leader.team} · {leader.minutes.toLocaleString()} min · publisher {leader.id}</small>
+                        </td>
+                        <td className="numeric">{leader.display}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+        </div>
+        <p className="note">
+          Source: {publisherValue.source}. {publisherValue.identity_note}
         </p>
       </section>
       <p className="note">

@@ -1019,6 +1019,91 @@ def publisher_leaders(conn, year=2026, limit=10):
     }
 
 
+def publisher_value_leaders(conn, year=2026, limit=10, minimum_minutes=400):
+    """Publish qualified source-native Box BPM leaderboards.
+
+    ``bb_player_value`` is a separate publisher identity namespace from the
+    ESPN-derived career archive and the NCAA RAPM release. The source's
+    minutes field is retained as the qualification denominator; no names are
+    joined across those products here.
+    """
+    team_names = {
+        row["team_id"]: row["team_name"]
+        for row in conn.execute(
+            "SELECT team_id,team_name FROM bb_team_season WHERE season=?",
+            (year,),
+        )
+    }
+    for row in conn.execute("SELECT team_id,profile_json FROM bb_rosters WHERE season=?", (year,)):
+        profile = json.loads(row["profile_json"])
+        team_names[row["team_id"]] = profile.get(
+            "team_display_name", team_names.get(row["team_id"], row["team_id"])
+        )
+    specs = (
+        ("box_bpm", "Box Plus/Minus", "Net value estimate"),
+        ("box_obpm", "Offensive Box Plus/Minus", "Offensive value estimate"),
+        ("box_dbpm", "Defensive Box Plus/Minus", "Defensive value estimate"),
+    )
+    by_metric = {key: [] for key, _, _ in specs}
+    total_rows = 0
+    qualified_rows = 0
+    for row in conn.execute(
+        "SELECT player_id,team_id,player_name,stats_json FROM bb_player_value WHERE season=?",
+        (year,),
+    ):
+        total_rows += 1
+        source = json.loads(row["stats_json"])
+        minutes = number(source.get("min"))
+        if minutes is None or minutes < minimum_minutes:
+            continue
+        qualified_rows += 1
+        for key, label, description in specs:
+            value = number(source.get(key))
+            if value is None:
+                continue
+            by_metric[key].append(
+                {
+                    "id": row["player_id"],
+                    "name": row["player_name"] or row["player_id"],
+                    "team_id": row["team_id"],
+                    "team": team_names.get(row["team_id"], row["team_id"]),
+                    "minutes": minutes,
+                    "value": value,
+                    "display": f"{value:.2f}",
+                }
+            )
+    metrics = []
+    for key, label, description in specs:
+        ranked = sorted(
+            by_metric[key],
+            key=lambda row: (-row["value"], row["name"], row["team"]),
+        )[:limit]
+        previous = None
+        rank = 0
+        for index, row in enumerate(ranked):
+            if previous is None or row["value"] != previous:
+                rank = index + 1
+            row["rank"] = rank
+            previous = row["value"]
+        metrics.append(
+            {
+                "key": key,
+                "label": label,
+                "unit": "publisher value points",
+                "description": description,
+                "leaders": ranked,
+            }
+        )
+    return {
+        "season": year,
+        "minimum_minutes": minimum_minutes,
+        "source": "SportsDataverse attributed player value release",
+        "identity_note": "Publisher player IDs and team IDs; not joined to ESPN or NCAA RAPM identities by name.",
+        "coverage": {"source_rows": total_rows, "qualified_rows": qualified_rows},
+        "metrics": metrics,
+    }
+
+
 FACTOR_FIELDS = ("efg", "tov", "orb", "ftr")
 
 
@@ -1469,6 +1554,7 @@ def build(conn, target=2027):
         "roster-model": roster_model,
         "players": season_players,
         "publisher-leaders": publisher_leaders(conn, target - 1),
+        "publisher-value-leaders": publisher_value_leaders(conn, target - 1),
         "rosters": roster_changes(conn, target, season_players),
         "rosters-2026": roster_changes(conn, 2026, player_index(conn, 2025)),
         "impact": {
