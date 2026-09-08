@@ -132,6 +132,91 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
   });
 
+  it("serves D1-backed basketball forecasts with bounded filters and parsed predictions", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 2 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [
+              {
+                game_id: "401902275",
+                model_id: "basketball-efficiency-v1-test",
+                created_at: "2026-09-08T00:00:00Z",
+                prediction_json: JSON.stringify({ home_margin: 4.5, home_win_probability: 0.62 }),
+                season: 2027,
+                starts_at: "2026-11-02T05:00:00Z",
+                home_id: "2086",
+                away_id: "322",
+                home_name: "Butler",
+                away_name: "Lafayette",
+                home_score: null,
+                away_score: null,
+                completed: 0,
+                neutral: 0,
+                time_tbd: 1,
+                venue: "Hinkle Fieldhouse",
+                broadcast: null,
+              },
+              {
+                game_id: "401902276",
+                model_id: "basketball-efficiency-v1-test",
+                created_at: "2026-09-08T00:00:00Z",
+                prediction_json: "not-json",
+                season: 2027,
+                starts_at: "2026-11-02T06:00:00Z",
+                home_id: "12",
+                away_id: "13",
+                home_name: "Arizona",
+                away_name: "Example",
+                home_score: null,
+                away_score: null,
+                completed: 0,
+                neutral: 0,
+                time_tbd: 1,
+                venue: null,
+                broadcast: null,
+              },
+            ],
+          }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&q=100%25&model=basketball-efficiency-v1-test&limit=2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      season: number;
+      status: string;
+      page_size: number;
+      total: number;
+      rows: Array<{ prediction: Record<string, unknown> | null }>;
+    };
+    expect(body).toMatchObject({ season: 2027, status: "upcoming", page_size: 2, total: 2 });
+    expect(body.rows[0].prediction).toEqual({ home_margin: 4.5, home_win_probability: 0.62 });
+    expect(body.rows[1].prediction).toBeNull();
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
+  });
+
+  it("rejects invalid basketball forecast filters before querying D1", async () => {
+    const prepare = vi.fn();
+    for (const path of [
+      "/api/basketball/research/forecasts?season=2020",
+      "/api/basketball/research/forecasts?status=settled",
+      "/api/basketball/research/forecasts?limit=101",
+      "/api/basketball/research/forecasts?model=unsafe%20model",
+      "/api/basketball/research/forecasts?page=-1",
+    ]) {
+      expect((await app.request(path, {}, { DB: { prepare } })).status).toBe(400);
+    }
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("serves native basketball pages while preserving known archive routes", async () => {
     const fetch = vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
