@@ -21,7 +21,6 @@ export default function Page() {
           qualification rules and missing values visible.
         </p>
       </div>
-      <Ratings rows={getBasketball().ratings} />
       <section className="section">
         <div className="section-heading">
           <div>
@@ -96,6 +95,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+      <Ratings rows={getBasketball().ratings} />
     </>
   );
 }
