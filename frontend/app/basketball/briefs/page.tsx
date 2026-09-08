@@ -49,6 +49,7 @@ export default function Page() {
           rosterScenarios={rosterModel.scenarios}
           model={basketball.model}
           generatedAt={basketball.generated_at}
+          scope="forecasted"
         />
       </Suspense>
     </>

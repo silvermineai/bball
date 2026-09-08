@@ -20,6 +20,7 @@ export default function Matchups({
   model,
   generatedAt,
   rosterScenarios = [],
+  scope = "all",
 }: {
   games: BBGame[];
   marketComparisons: Record<string, NonNullable<BBGame["market_comparisons"]>>;
@@ -27,6 +28,7 @@ export default function Matchups({
   model: BBOverview["model"];
   generatedAt: string;
   rosterScenarios?: BBRosterScenario[];
+  scope?: "all" | "forecasted";
 }) {
   const params = useSearchParams();
   const initial = parseMatchupFilters(params.toString());
@@ -46,15 +48,17 @@ export default function Matchups({
       );
     }
   }, [q, month, coverage, sort, page]);
+  const eligibleGames = scope === "forecasted" ? games.filter((g) => g.prediction != null) : games;
+  const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
-    games.filter(
+    eligibleGames.filter(
       (g) =>
         (g.home_name + " " + g.away_name)
           .toLowerCase()
           .includes(q.toLowerCase()) &&
         (month === "all" || g.starts_at.startsWith(month)) &&
-        (coverage === "all" ||
-          (coverage === "forecasted"
+        (effectiveCoverage === "all" ||
+          (effectiveCoverage === "forecasted"
             ? g.prediction != null
             : g.prediction == null)),
     ),
@@ -102,20 +106,27 @@ export default function Matchups({
               ))}
           </select>
         </label>
-        <label className="control">
-          <span>FORECAST</span>
-          <select
-            value={coverage}
-            onChange={(e) => {
-              setCoverage(e.target.value as MatchupCoverage);
-              setPage(0);
-            }}
-          >
-            <option value="all">All games</option>
-            <option value="forecasted">With model forecast</option>
-            <option value="unforecasted">Without primary forecast</option>
-          </select>
-        </label>
+        {scope === "forecasted" ? (
+          <div className="control" aria-label="Forecast scope">
+            <span>FORECAST</span>
+            <strong className="note">Primary forecasts only</strong>
+          </div>
+        ) : (
+          <label className="control">
+            <span>FORECAST</span>
+            <select
+              value={coverage}
+              onChange={(e) => {
+                setCoverage(e.target.value as MatchupCoverage);
+                setPage(0);
+              }}
+            >
+              <option value="all">All games</option>
+              <option value="forecasted">With model forecast</option>
+              <option value="unforecasted">Without primary forecast</option>
+            </select>
+          </label>
+        )}
         <label className="control">
           <span>SORT BY</span>
           <select
