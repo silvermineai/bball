@@ -134,6 +134,7 @@ export default function Page() {
             <h2>The season takes shape.</h2>
           </div>
           <Link href="/basketball/matchups/">Full published slate →</Link>
+          <Link href="/basketball/forecast-lab/">Compare model scenarios →</Link>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>
           The source has published {d.coverage.upcoming_games.toLocaleString()}{" "}
