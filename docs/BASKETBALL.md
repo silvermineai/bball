@@ -29,6 +29,7 @@ The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for 
 - The [five-v-five matchup archive](/basketball/matchup-stints/) covers 1,535,739 source matchup-stint rows, 47,008 source contests and 6,582,191 source possessions across season-ending years 2019–26. Each season publishes the 5,000 highest-possession lineup pairs with repeat-game counts, shared minutes, points and home-versus-away scoring margin; source-native player labels remain unjoined. The public derivative is intentionally capped for fast research, while every source parquet and retrieval receipt is retained in R2.
 - 1,629 published 2026–27 games, including 1,579 primary forecasts and 50 separately labeled cold-start estimates. This is a partial schedule.
 - 5,461 players listed under 2026–27 in the source, spanning 354 programs. Listings are unconfirmed and may carry over; they do not prove current eligibility or a roster return.
+- 30,955 source roster observations across the available 2024–25 through 2026–27 snapshots. The workload lab uses the 2026–27 snapshot; the earlier release is retained as historical roster context. The publisher does not provide a 2023–24 roster file in this source family.
 - 1,595 different-program records in the historical 2024–25 → 2025–26 appearance comparison. These are observed participation changes, not claims about transfer announcements or reasons.
 
 ## Source policy and identifiers

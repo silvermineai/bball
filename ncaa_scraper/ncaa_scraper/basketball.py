@@ -1515,6 +1515,10 @@ def main():
             # attributed season into the source-stat browser.
             if year == 2025:
                 datasets.append("player_season")
+                # The 2025 roster release is the earliest currently available
+                # source snapshot. Keep it as historical context even though
+                # the public workload lab compares 2026–27 with 2025–26.
+                datasets.append("rosters")
             if year in (2024, 2025, 2026):
                 datasets.append("team_season")
                 datasets.extend(["publisher_ratings", "publisher_player_value"])
