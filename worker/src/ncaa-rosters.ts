@@ -11,8 +11,39 @@ const querySchema = z.object({
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
 });
+const sourceSchema = z.object({
+  season: z.coerce.number().int().min(2010).max(2026),
+});
 
 export const ncaaRosters = new Hono<{ Bindings: Bindings }>();
+
+/** Stream the exact NCAA roster release whose receipt is active in D1. */
+ncaaRosters.get("/source", zValidator("query", sourceSchema), async (c) => {
+  const { season } = c.req.valid("query");
+  const row = await c.env.DB.prepare(
+    "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
+  ).bind("ncaa_team_rosters", season).first<{ receipt_json: string }>();
+  let digest = "";
+  try {
+    const receipt = row?.receipt_json ? JSON.parse(row.receipt_json) as { sha256?: unknown } : null;
+    digest = typeof receipt?.sha256 === "string" ? receipt.sha256 : "";
+  } catch {
+    return c.text("NCAA roster source receipt is invalid", 503);
+  }
+  if (!/^[a-f0-9]{64}$/.test(digest)) return c.text("NCAA roster source release not found", 404);
+  const headers = new Headers({
+    "Content-Type": "application/vnd.apache.parquet",
+    "Content-Disposition": `attachment; filename="ncaa_mbb_team_rosters_${season}.parquet"`,
+    ETag: `"${digest}"`,
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "noindex, follow",
+  });
+  if (c.req.header("If-None-Match")?.split(",").map((tag) => tag.trim()).includes(`"${digest}"`)) return new Response(null, { status: 304, headers });
+  const object = await c.env.RESEARCH_ARCHIVE.get(`basketball/ncaa-rosters/${season}/${digest}.parquet`);
+  if (!object || !("body" in object)) return c.text("NCAA roster source release is temporarily unavailable", 503);
+  return new Response(object.body, { headers });
+});
 
 ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, classYear, position, page, meta } = c.req.valid("query");
