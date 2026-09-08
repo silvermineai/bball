@@ -6,6 +6,7 @@ export type RosterBoardSort =
   | "minutes"
   | "ts"
   | "efg"
+  | "box_bpm"
   | "apg"
   | "rpg";
 
@@ -58,6 +59,7 @@ export function parseRosterBoardFilters(search: string): RosterBoardFilters {
     "minutes",
     "ts",
     "efg",
+    "box_bpm",
     "apg",
     "rpg",
   ];

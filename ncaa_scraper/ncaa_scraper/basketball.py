@@ -618,6 +618,16 @@ def _prior_production(rows):
             weight for _, weight in values
         ) if values else None
 
+    def weighted_minutes(key):
+        values = [
+            (float(row[key]), float(row.get("minutes") or 0))
+            for row in rows
+            if row.get(key) is not None and float(row.get("minutes") or 0) > 0
+        ]
+        return sum(value * weight for value, weight in values) / sum(
+            weight for _, weight in values
+        ) if values else None
+
     rate_values = {
         key: weighted(key)
         for key in (
@@ -634,6 +644,10 @@ def _prior_production(rows):
             "three_rate",
             "tov_rate",
         )
+    }
+    value_metrics = {
+        key: weighted_minutes(key)
+        for key in ("box_bpm", "box_obpm", "box_dbpm")
     }
     result = {
         "games": games,
@@ -657,6 +671,8 @@ def _prior_production(rows):
             if value is not None
             else None
         )
+    for key, value in value_metrics.items():
+        result[key] = round(value, 2) if value is not None else None
     return result
 
 
@@ -689,8 +705,39 @@ def roster_changes(conn, target=2027, prior_players=None):
             current[r["athlete_id"]].append(p)
         teams[r["team_id"]] = p.get("team_display_name", r["team_id"])
     prior_production = defaultdict(list)
+    publisher_values = {}
+    try:
+        publisher_rows = conn.execute(
+            "SELECT player_id,team_id,stats_json FROM bb_player_value WHERE season=?",
+            (target - 1,),
+        )
+    except sqlite3.OperationalError:
+        # Small ingest fixtures predate the optional publisher value table.
+        # Their roster observations remain valid; value coverage is simply null.
+        publisher_rows = ()
+    for row in publisher_rows:
+        try:
+            stats = json.loads(row["stats_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(stats, dict):
+            continue
+        values = {
+            key: stats.get(key)
+            for key in ("box_bpm", "box_obpm", "box_dbpm")
+            if isinstance(stats.get(key), (int, float))
+        }
+        if values:
+            publisher_values[(str(row["player_id"]), str(row["team_id"]))] = values
     for player in (prior_players or {}).get("players", []):
-        prior_production[player["id"]].append(player)
+        prior_production[player["id"]].append(
+            {
+                **player,
+                **publisher_values.get(
+                    (str(player.get("id")), str(player.get("team_id"))), {}
+                ),
+            }
+        )
     if target == 2026:
         current = defaultdict(list)
         for r in conn.execute(

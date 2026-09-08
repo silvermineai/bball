@@ -87,6 +87,18 @@ describe("roster observation sorting", () => {
     expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 
+  it("sorts exact source publisher value without imputing missing rows", () => {
+    const rows = sortRosterObservations(
+      [
+        { ...row("a", "Alpha", "same_program", "A", ["A"], 240), prior_production: { ...row("a", "Alpha", "same_program", "A", ["A"], 240).prior_production!, box_bpm: 2 } },
+        { ...row("b", "Beta", "different_program", "B", ["A"], 620), prior_production: { ...row("b", "Beta", "different_program", "B", ["A"], 620).prior_production!, box_bpm: 7 } },
+        row("c", "Gamma", "new_to_dataset", "C", []),
+      ],
+      "prior_bpm",
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+
   it("sorts role-specific production without filling missing values", () => {
     const rows = sortRosterObservations(
       [

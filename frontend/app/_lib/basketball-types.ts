@@ -197,6 +197,9 @@ export type BBRoster = {
     ft_rate?: number | null;
     three_rate?: number | null;
     tov_rate?: number | null;
+    box_bpm?: number | null;
+    box_obpm?: number | null;
+    box_dbpm?: number | null;
     qualified?: boolean;
     teams: string[];
   } | null;

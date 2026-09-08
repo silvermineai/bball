@@ -18,6 +18,8 @@ Announcement cards also show a conservative cross-check against the current sour
 
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
 
+Roster player rows also carry optional source-attributed publisher Box BPM, Offensive BPM and Defensive BPM when the exact prior-season athlete/team value row is present in the retained SportsDataverse release. Box BPM can be used as a transparent sort and watch-list comparison field on the roster boards, but it is not a Silvermine ranking, eligibility decision, projected role or primary forecast input. Missing publisher values remain blank rather than being imputed.
+
 The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.
 
 The same workload table is available in the recorded 2025–26 view across its 727 observed programs. That historical view uses playing time on both sides of the exact-ID comparison, so it describes observed continuity and different-program records without claiming a transfer event, reason or eligibility outcome.

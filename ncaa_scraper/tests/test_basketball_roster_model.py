@@ -1,5 +1,6 @@
 import unittest
 
+from ncaa_scraper.basketball import _prior_production
 from ncaa_scraper.basketball_roster_model import FEATURES, fit, metrics, predict
 
 
@@ -19,6 +20,16 @@ def row(i: int, target: float | None = None) -> dict:
 
 
 class RosterModelTests(unittest.TestCase):
+    def test_prior_production_preserves_publisher_value_and_weights_by_minutes(self):
+        result = _prior_production(
+            [
+                {"team": "A", "games": 10, "minutes": 100, "ppg": 10, "rpg": 4, "apg": 2, "efg": 0.5, "ts": 0.52, "box_bpm": 2.0},
+                {"team": "B", "games": 10, "minutes": 300, "ppg": 20, "rpg": 6, "apg": 4, "efg": 0.6, "ts": 0.62, "box_bpm": 6.0},
+            ]
+        )
+        self.assertEqual(result["box_bpm"], 5.0)
+        self.assertIsNone(result["box_obpm"])
+
     def test_fit_uses_declared_features_and_predicts(self):
         model = fit([row(i) for i in range(25)])
         self.assertEqual(model["features"], list(FEATURES))

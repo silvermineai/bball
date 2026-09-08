@@ -207,6 +207,7 @@ export default function Recruiting() {
             <option value="prior_apg">Prior assists per game</option>
             <option value="prior_ts">Prior true shooting</option>
             <option value="prior_efg">Prior effective FG%</option>
+            <option value="prior_bpm">Prior publisher Box BPM</option>
             <option value="prior_index">Multi-stat prior production index</option>
             <option value="program">Current program</option>
             <option value="name">Player name</option>
@@ -217,7 +218,8 @@ export default function Recruiting() {
         Production sorts use the exact prior source ID and recorded game
         averages. True shooting and effective field goal percentage stay
         unavailable when their source denominator is missing; they are not
-        imputed.
+        imputed. Box BPM is a separate source-attributed publisher value and
+        remains blank when that exact athlete/team release row is unavailable.
       </p>
       {error ? (
         <p role="alert" className="status-error">
@@ -305,7 +307,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Source URL"],
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -318,6 +320,7 @@ export default function Recruiting() {
                             player.prior_production?.apg,
                             player.prior_production?.ts == null ? null : player.prior_production.ts * 100,
                             player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
+                            player.prior_production?.box_bpm,
                             player.source_url,
                           ]),
                         ),
@@ -339,6 +342,7 @@ export default function Recruiting() {
                       <th className="numeric">APG</th>
                       <th className="numeric">TS%</th>
                       <th className="numeric">eFG%</th>
+                      <th className="numeric">Box BPM</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -353,6 +357,7 @@ export default function Recruiting() {
                         <td className="numeric">{player.prior_production?.apg == null ? "—" : player.prior_production.apg.toFixed(1)}</td>
                         <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
                         <td className="numeric">{player.prior_production?.efg == null ? "—" : `${(player.prior_production.efg * 100).toFixed(1)}%`}</td>
+                        <td className="numeric">{player.prior_production?.box_bpm == null ? "—" : player.prior_production.box_bpm.toFixed(1)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -470,6 +475,7 @@ export default function Recruiting() {
                       "Prior turnovers per game",
                       "Prior effective FG%",
                       "Prior true shooting %",
+                      "Prior Box BPM",
                       "Prior 3P%",
                       "Prior free-throw rate",
                       "Prior 3PA rate",
@@ -500,6 +506,7 @@ export default function Recruiting() {
                       p.prior_production?.topg,
                       p.prior_production?.efg == null ? null : p.prior_production.efg * 100,
                       p.prior_production?.ts == null ? null : p.prior_production.ts * 100,
+                      p.prior_production?.box_bpm,
                       p.prior_production?.three_pct == null ? null : p.prior_production.three_pct * 100,
                       p.prior_production?.ft_rate == null ? null : p.prior_production.ft_rate * 100,
                       p.prior_production?.three_rate == null ? null : p.prior_production.three_rate * 100,
@@ -592,6 +599,9 @@ export default function Recruiting() {
                           </small>
                           <small>
                             {p.prior_production.ts == null ? "—" : `${(p.prior_production.ts * 100).toFixed(1)}%`} TS · {p.prior_production.efg == null ? "—" : `${(p.prior_production.efg * 100).toFixed(1)}%`} eFG · {p.prior_production.apg == null ? "—" : p.prior_production.apg.toFixed(1)} AST/G
+                          </small>
+                          <small>
+                            {p.prior_production.box_bpm == null ? "—" : p.prior_production.box_bpm.toFixed(1)} Box BPM · publisher-attributed
                           </small>
                         </>
                       ) : "No prior recorded stats"}
