@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import Link from "next/link";
 import Announcements from "./Announcements";
 import { getRecruiting, getRosters } from "../../_lib/basketball-data";
 import { date } from "../../_lib/format";
@@ -48,6 +49,10 @@ export default function Page() {
           changed. Build your recruiting picture from dated sources and recorded
           college production.
         </p>
+        <div className="hero-actions">
+          <Link className="button" href="/basketball/ncaa-rosters/">Search NCAA roster intel ↗</Link>
+          <Link className="hero-link" href="/basketball/ncaa-rankings/">Rank recorded production →</Link>
+        </div>
       </div>
       <section className="section">
         <div className="section-heading">

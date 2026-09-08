@@ -122,6 +122,17 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects unsafe NCAA roster filters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/ncaa-rosters?season=2009",
+      "/api/basketball/research/ncaa-rosters?page=-1",
+      "/api/basketball/research/ncaa-rosters?position=%27%20OR%201%3D1%20--",
+      "/api/basketball/research/ncaa-rosters?classYear=%27%20OR%201%3D1%20--",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",
