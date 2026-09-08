@@ -58,14 +58,20 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, count] = await c.env.DB.batch([
+    const [seasons, count, source] = await c.env.DB.batch([
       c.env.DB.prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
       c.env.DB.prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
+      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
     ]);
+    const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       total: Number((count.results[0] as { total: number }).total || 0),
+      source: {
+        fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
+        sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
+      },
     });
   }
   const rawCount = await c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
