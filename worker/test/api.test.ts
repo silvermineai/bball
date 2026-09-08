@@ -492,6 +492,26 @@ describe("bball api", () => {
     }
   });
 
+  it("returns the NCAA roster receipt for high-school pipeline metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ total: 42 }] },
+      { results: [{ fetched_at: "2026-09-08T02:48:45Z", sha256: "b".repeat(64) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/ncaa-high-schools?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 42,
+      source: { fetched_at: "2026-09-08T02:48:45Z", sha256: "b".repeat(64) },
+    });
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?sport=baseball",

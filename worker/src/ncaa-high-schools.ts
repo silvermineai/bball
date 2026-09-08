@@ -27,12 +27,22 @@ const metricExpression = (metric: Metric) => ({
 ncaaHighSchools.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minPlayers, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, schools] = await c.env.DB.batch([
+    const [seasons, schools, source] = await c.env.DB.batch([
       c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
       c.env.DB.prepare("SELECT count(DISTINCT json_extract(profile_json,'$.high_school')) AS total FROM bb_ncaa_rosters WHERE season=? AND json_extract(profile_json,'$.high_school') IS NOT NULL AND json_extract(profile_json,'$.high_school') != ''").bind(season),
+      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: seasons.results.map((row) => Number((row as { season: number }).season)), total: Number((schools.results[0] as { total: number }).total || 0), metrics });
+    const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+    return c.json({
+      seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+      total: Number((schools.results[0] as { total: number }).total || 0),
+      metrics,
+      source: {
+        fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
+        sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
+      },
+    });
   }
   const clauses = ["r.season=?", "json_extract(r.profile_json,'$.high_school') IS NOT NULL", "json_extract(r.profile_json,'$.high_school') != ''"];
   const binds: Array<string | number> = [season];
