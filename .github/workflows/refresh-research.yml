@@ -114,7 +114,10 @@ jobs:
           python scripts/check-freshness.py --sport "$REFRESH_SPORT"
 
       - name: Validate and deploy combined publication
-        if: ${{ inputs.capture_odds != true }}
+        # When a scheduled run has a licensed odds key, the odds-aware
+        # publication below performs the final validation/deploy after the
+        # quote capture. Without a key, keep the normal one-pass deploy.
+        if: ${{ inputs.capture_odds != true && (github.event_name != 'schedule' || env.THE_ODDS_API_KEY == '') }}
         run: |
           npm test --prefix frontend
           npm run build --prefix frontend
@@ -123,7 +126,9 @@ jobs:
           python scripts/cloudflare.py deploy
 
       - name: Capture licensed odds snapshot
-        if: ${{ inputs.capture_odds == true }}
+        # Manual dispatch remains explicit; scheduled runs opt in only when
+        # the repository has supplied the licensed provider secret.
+        if: ${{ inputs.capture_odds == true || (github.event_name == 'schedule' && env.THE_ODDS_API_KEY != '') }}
         run: |
           test -n "$THE_ODDS_API_KEY" || { echo "capture_odds requires repository secret THE_ODDS_API_KEY" >&2; exit 1; }
           python scripts/publish-research.py --odds
