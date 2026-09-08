@@ -1,5 +1,8 @@
 """Refresh basketball releases, validate, sync Cloudflare D1 and publish the site."""
 
+import argparse
+import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -9,6 +12,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument(
+    "--batch-publication",
+    action="store_true",
+    help="Skip the frontend and Worker test/build checks (for scheduled batch runs).",
+)
+parser.add_argument(
+    "--basketball-sql-batch-start",
+    type=int,
+    metavar="N",
+    help="Resume the main basketball SQL import at batch N after a confirmed interruption.",
+)
+parser.add_argument(
+    "--ncaa-player-box-sql-batch-start",
+    type=int,
+    metavar="N",
+    help="Resume the NCAA player-box SQL import at batch N after a confirmed interruption.",
+)
+args = parser.parse_args()
+if args.batch_publication:
+    os.environ["BATCH_PUBLICATION"] = "1"
+if args.basketball_sql_batch_start is not None:
+    os.environ["BASKETBALL_SQL_BATCH_START"] = str(args.basketball_sql_batch_start)
+if args.ncaa_player_box_sql_batch_start is not None:
+    os.environ["NCAA_PLAYER_BOX_SQL_BATCH_START"] = str(args.ncaa_player_box_sql_batch_start)
 BATCH_PUBLICATION = os.getenv("BATCH_PUBLICATION") == "1"
 
 
@@ -102,6 +130,59 @@ def run_logged(args, log_path, cwd=ROOT):
         )
         print(output, file=sys.stderr)
         raise subprocess.CalledProcessError(result.returncode, args)
+
+
+def verified_sql_batches(first_path, start_env):
+    """Read the exporter manifest and return only verified batch paths."""
+    first_path = Path(first_path)
+    manifest_path = first_path.with_name(f"{first_path.stem}-manifest.json")
+    if not manifest_path.exists():
+        raise SystemExit(f"Missing SQL batch manifest: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text())
+    entries = manifest.get("files")
+    if not isinstance(entries, list) or not entries:
+        raise SystemExit(f"SQL batch manifest has no files: {manifest_path}")
+    start = int(os.getenv(start_env, "0"))
+    if start < 0 or start >= len(entries):
+        raise SystemExit(f"{start_env} must be between 0 and {len(entries) - 1}")
+    result = []
+    for index, entry in enumerate(entries):
+        target = first_path.parent / str(entry.get("name", ""))
+        if target.name != entry.get("name") or not target.exists():
+            raise SystemExit(f"Missing SQL batch listed in manifest: {target}")
+        if target.stat().st_size != int(entry.get("bytes", -1)):
+            raise SystemExit(f"SQL batch size changed: {target}")
+        if hashlib.sha256(target.read_bytes()).hexdigest() != entry.get("sha256"):
+            raise SystemExit(f"SQL batch hash changed: {target}")
+        if index >= start:
+            result.append((index, target))
+    if start:
+        print(
+            f"Resuming {first_path.stem} SQL import at batch {start} "
+            f"(set {start_env}=0 to replay the scoped delete batch).",
+            flush=True,
+        )
+    return result
+
+
+def import_sql_batches(first_path, log_prefix, start_env):
+    batches = verified_sql_batches(first_path, start_env)
+    total = len(batches) + int(os.getenv(start_env, "0"))
+    for index, target in batches:
+        run_logged(
+            [
+                PY,
+                "scripts/cloudflare.py",
+                "d1",
+                "execute",
+                "bball-silvermine",
+                "--remote",
+                "--file",
+                os.path.relpath(target, ROOT / "worker"),
+            ],
+            ROOT / ".local" / f"{log_prefix}-{index:04d}.log",
+        )
+        print(f"Imported {target.name} ({index + 1}/{total})", flush=True)
 
 
 run(
@@ -380,31 +461,15 @@ run_remote_migration(
         "migrations/0023_basketball_ncaa_shooting.sql",
     ]
 )
-run_logged(
-    [
-        PY,
-        "scripts/cloudflare.py",
-        "d1",
-        "execute",
-        "bball-silvermine",
-        "--remote",
-        "--file",
-        "../.local/basketball.sql",
-    ],
-    ROOT / ".local/basketball-publish-d1.log",
+import_sql_batches(
+    ROOT / ".local/basketball.sql",
+    "basketball-publish-d1",
+    "BASKETBALL_SQL_BATCH_START",
 )
-run_logged(
-    [
-        PY,
-        "scripts/cloudflare.py",
-        "d1",
-        "execute",
-        "bball-silvermine",
-        "--remote",
-        "--file",
-        "../.local/ncaa-player-box-2026.sql",
-    ],
-    ROOT / ".local/ncaa-player-box-publish-d1.log",
+import_sql_batches(
+    ROOT / ".local/ncaa-player-box-2026.sql",
+    "ncaa-player-box-publish-d1",
+    "NCAA_PLAYER_BOX_SQL_BATCH_START",
 )
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sqlite3
 from collections import Counter, defaultdict
@@ -1601,7 +1602,7 @@ def export_sql(conn, path):
     # This leaves the compact research tables importable and avoids a failed
     # all-or-nothing import when the model grows.
     excluded_tables = {"bb_models", "bb_ncaa_player_box"}
-    with path.open("w") as f:
+    def statements():
         for table in [
             "bb_games",
             "bb_team_box",
@@ -1621,18 +1622,20 @@ def export_sql(conn, path):
             "bb_participation",
         ]:
             for row in conn.execute(f"SELECT DISTINCT season FROM {table}"):
-                f.write(f"DELETE FROM {table} WHERE season={int(row[0])};\n")
+                yield f"DELETE FROM {table} WHERE season={int(row[0])};\n"
         for line in conn.iterdump():
             if line.startswith("INSERT INTO") and not any(
                 line.startswith(f'INSERT INTO "{table}"') for table in excluded_tables
             ):
-                f.write(line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n")
+                yield line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n"
+
+    return write_sql_batches(statements(), path)
 
 
 def export_ncaa_player_box_sql(conn, path, season=2026):
     """Export only the current NCAA game rows; historical seasons use summaries."""
-    with path.open("w") as f:
-        f.write(f"DELETE FROM bb_ncaa_player_box WHERE season={int(season)};\n")
+    def statements():
+        yield f"DELETE FROM bb_ncaa_player_box WHERE season={int(season)};\n"
         for row in conn.execute(
             "SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE season=?",
             (season,),
@@ -1643,7 +1646,84 @@ def export_ncaa_player_box_sql(conn, path, season=2026):
                     values.append("NULL")
                 else:
                     values.append("'" + str(value).replace("'", "''") + "'")
-            f.write("INSERT OR REPLACE INTO bb_ncaa_player_box VALUES (" + ",".join(values) + ");\n")
+            yield (
+                "INSERT OR REPLACE INTO bb_ncaa_player_box VALUES ("
+                + ",".join(values)
+                + ");\n"
+            )
+
+    return write_sql_batches(statements(), path)
+
+
+SQL_BATCH_BYTES = 7_500_000
+SQL_STATEMENT_BYTES = 100_000
+
+
+def write_sql_batches(statements, path, max_batch_bytes=SQL_BATCH_BYTES):
+    """Write D1-safe SQL batches and a hash manifest beside the first file.
+
+    D1 accepts individual statements below 100 KB, but a large dump can also
+    outlive Wrangler's import stream. Keeping each file below 7.5 MB makes the
+    refresh resumable and avoids asking Cloudflare to process a multi-gigabyte
+    request. The first batch carries the scoped DELETE statements; subsequent
+    batches contain only idempotent INSERT OR REPLACE statements.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path = path.with_name(f"{path.stem}-manifest.json")
+    path.unlink(missing_ok=True)
+    manifest_path.unlink(missing_ok=True)
+    for stale in path.parent.glob(f"{path.stem}-[0-9][0-9][0-9][0-9]{path.suffix}"):
+        stale.unlink()
+    batches = []
+    current = []
+    current_bytes = 0
+
+    def flush():
+        nonlocal current, current_bytes
+        if not current:
+            return
+        index = len(batches)
+        target = path if index == 0 else path.with_name(
+            f"{path.stem}-{index:04d}{path.suffix}"
+        )
+        target.write_text("".join(current))
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        batches.append(
+            {
+                "name": target.name,
+                "bytes": target.stat().st_size,
+                "sha256": digest,
+            }
+        )
+        current = []
+        current_bytes = 0
+
+    for statement in statements:
+        encoded = len(statement.encode("utf-8"))
+        if encoded >= SQL_STATEMENT_BYTES:
+            raise ValueError(
+                f"SQL statement exceeds D1's 100 KB limit ({encoded} bytes)"
+            )
+        if current and current_bytes + encoded > max_batch_bytes:
+            flush()
+        current.append(statement)
+        current_bytes += encoded
+    flush()
+    if not batches:
+        raise ValueError("SQL export produced no statements")
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "format": 1,
+                "max_batch_bytes": max_batch_bytes,
+                "files": batches,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    return [path.parent / item["name"] for item in batches]
 
 
 def main():

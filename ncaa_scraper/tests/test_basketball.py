@@ -1,6 +1,9 @@
 import json
+import hashlib
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from ncaa_scraper.basketball import (
@@ -14,6 +17,7 @@ from ncaa_scraper.basketball import (
     publisher_leaders,
     publisher_value_leaders,
     roster_changes,
+    write_sql_batches,
 )
 from ncaa_scraper.basketball_model import (
     fallback_forecast,
@@ -50,6 +54,27 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_sql_export_batches_are_hashed_and_replayable(self):
+        statements = [
+            "CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT);\n",
+            "INSERT INTO sample VALUES (1, 'one');\n",
+            "INSERT INTO sample VALUES (2, 'two');\n",
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            first = Path(folder) / "basketball.sql"
+            files = write_sql_batches(statements, first, max_batch_bytes=60)
+            self.assertEqual(len(files), 3)
+            manifest = json.loads(first.with_name("basketball-manifest.json").read_text())
+            self.assertEqual([item["name"] for item in manifest["files"]], [p.name for p in files])
+            replica = sqlite3.connect(":memory:")
+            for item in manifest["files"]:
+                content = (Path(folder) / item["name"]).read_bytes()
+                self.assertLessEqual(len(content), 60)
+                self.assertEqual(len(content), item["bytes"])
+                self.assertEqual(hashlib.sha256(content).hexdigest(), item["sha256"])
+                replica.executescript(content.decode())
+            self.assertEqual(replica.execute("SELECT count(*) FROM sample").fetchone()[0], 2)
+
     def test_possessions_require_both_boxes_and_preserve_overtime(self):
         game = sample(1, 2026)
         game["periods"] = 3
