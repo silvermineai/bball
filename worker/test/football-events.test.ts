@@ -52,6 +52,7 @@ describe("football name-attributed events", () => {
   it("rejects unsafe and incompatible filters before database access", async () => {
     for (const q of [
       "dataset=passing",
+      "view=unknown",
       "season=2025.5",
       "page=-1",
       "team=1%20OR%201=1",
@@ -62,8 +63,24 @@ describe("football name-attributed events", () => {
       "positive=1",
       "q=" + "x".repeat(101),
       "direction=sideways",
+      "view=leaders",
     ])
       expect((await footballEvents.request("/?" + q)).status).toBe(400);
+  });
+  it("groups leaders by source name and team without creating an athlete identity", async () => {
+    const env = database();
+    const response = await footballEvents.request(
+      "/?view=leaders&dataset=defense&season=2025&sort=sacks&positive=1",
+      {},
+      env,
+    );
+    expect(response.status).toBe(200);
+    const data = await response.json<{ view: string; metric: string }>();
+    expect(data.view).toBe("leaders");
+    expect(data.metric).toBe("sacks");
+    expect(env.calls[1].sql).toContain("GROUP BY player_name,team_id,division");
+    expect(env.calls[2].sql).toContain("SUM(json_extract(payload_json,'$.metrics.sacks'))");
+    expect(env.calls[2].sql).toContain("value>0");
   });
   it("pins all result queries to an immutable edition and binds literal search text", async () => {
     const env = database();

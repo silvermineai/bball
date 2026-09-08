@@ -34,7 +34,8 @@ export default function Page() {
           records across{" "}
           {Array.from(new Set(index.editions.map((e) => e.season))).join(", ")}.
           Find game-level evidence of sacks, turnovers, punts and returns, then
-          inspect exactly what the source recorded.
+          inspect exactly what the source recorded. Switch to Player leaders to
+          group one selected metric by source name and team.
         </p>
       </div>
       <aside className="event-identity">
@@ -45,8 +46,9 @@ export default function Page() {
         <p>
           These releases contain names, game IDs and team IDs, but no stable
           athlete IDs. We keep each source row separate. Repeated names do not
-          establish the same person, and these selected events cannot establish
-          complete season production or a player ranking.{" "}
+          establish the same person. The leaders view is a source-name/team
+          aggregation for triage, not a verified athlete ranking or complete
+          season production claim.{" "}
           <Link href="/football/players/">Browse identified players →</Link>
         </p>
       </aside>

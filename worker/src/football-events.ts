@@ -25,6 +25,7 @@ const metrics = {
   ],
 } as const;
 const query = z.object({
+  view: z.enum(["records", "leaders"]).default("records"),
   dataset: z.enum(["defense", "specialists"]).default("defense"),
   season: z.coerce.number().int().min(2022).max(2035).default(2025),
   edition: z
@@ -56,6 +57,11 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
   )
     return c.json(
       { error: "Choose a valid event metric for these filters" },
+      400,
+    );
+  if (q.view === "leaders" && q.sort === "date")
+    return c.json(
+      { error: "Choose a metric when browsing player leaders" },
       400,
     );
   const edition = await c.env.DB.prepare(
@@ -95,8 +101,46 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
     q.sort === "date"
       ? "kickoff"
       : `json_extract(payload_json,'$.metrics.${q.sort}')`;
-  if (q.positive === "1") conditions.push(`${sort}>0`);
+  if (q.positive === "1" && q.view === "records") conditions.push(`${sort}>0`);
   const where = conditions.join(" AND ");
+  const metric = `json_extract(payload_json,'$.metrics.${q.sort}')`;
+  if (q.view === "leaders") {
+    const grouped = `SELECT player_name,team_id,division,
+        MAX(json_extract(payload_json,'$.team')) AS team,
+        COUNT(*) AS records, COUNT(DISTINCT game_id) AS games,
+        SUM(${metric}) AS value
+      FROM football_events WHERE ${where}
+      GROUP BY player_name,team_id,division`;
+    const leaderFilter = q.positive === "1" ? "value>0" : "value IS NOT NULL";
+    const [count, rows] = await Promise.all([
+      c.env.DB.prepare(`SELECT count(*) AS total FROM (${grouped}) leaders WHERE ${leaderFilter}`)
+        .bind(...values)
+        .first<{ total: number }>(),
+      c.env.DB.prepare(
+        `SELECT * FROM (${grouped}) leaders
+         WHERE ${leaderFilter}
+         ORDER BY value IS NULL,value ${q.direction.toUpperCase()},player_name ASC,team_id ASC
+         LIMIT 40 OFFSET ?`,
+      )
+        .bind(...values, q.page * 40)
+        .all(),
+    ]);
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json({
+      view: q.view,
+      dataset: q.dataset,
+      season: q.season,
+      page: q.page,
+      page_size: 40,
+      total: count?.total ?? 0,
+      edition: edition.edition,
+      evidence: JSON.parse(edition.receipt_json),
+      coverage: JSON.parse(edition.coverage_json),
+      metric: q.sort,
+      direction: q.direction,
+      rows: rows.results,
+    });
+  }
   const [count, rows] = await Promise.all([
     c.env.DB.prepare(
       `SELECT count(*) AS total FROM football_events WHERE ${where}`,
@@ -112,6 +156,7 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
   ]);
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
+    view: q.view,
     dataset: q.dataset,
     season: q.season,
     edition: edition.edition,

@@ -60,6 +60,7 @@ export type EventRecord = {
   raw: Record<string, string>;
 };
 export type EventResponse = {
+  view: "records";
   rows: EventRecord[];
   total: number;
   page: number;
@@ -67,6 +68,29 @@ export type EventResponse = {
   edition: string;
   dataset: EventDataset;
   season: number;
+  evidence: EventEdition["evidence"];
+  coverage: EventEdition["coverage"];
+};
+export type EventLeader = {
+  player_name: string;
+  team_id: string | null;
+  team: string | null;
+  division: string;
+  records: number;
+  games: number;
+  value: number | null;
+};
+export type EventLeaderResponse = {
+  view: "leaders";
+  rows: EventLeader[];
+  total: number;
+  page: number;
+  page_size: number;
+  edition: string;
+  dataset: EventDataset;
+  season: number;
+  metric: string;
+  direction: "asc" | "desc";
   evidence: EventEdition["evidence"];
   coverage: EventEdition["coverage"];
 };
@@ -111,6 +135,23 @@ export function eventCsv(
     r.context_status,
     ...fields.map((f) => r.metrics[f.key]),
   ]);
+  return [header, ...body].map((row) => row.map(cell).join(",")).join("\r\n");
+}
+
+export function eventLeaderCsv(
+  rows: EventLeader[],
+  fields: EventField[],
+  edition: string,
+  metric: string,
+): string {
+  const cell = (value: unknown) => {
+    let text = value == null ? "" : String(value);
+    if (typeof value === "string" && /^[\s]*[=+@-]/.test(text)) text = "'" + text;
+    return '"' + text.replaceAll('"', '""') + '"';
+  };
+  const label = fields.find((field) => field.key === metric)?.label || metric;
+  const header = ["edition", "source_player_name", "team", "team_id", "division", "source_records", "games", label];
+  const body = rows.map((row) => [edition, row.player_name, row.team, row.team_id, row.division, row.records, row.games, row.value]);
   return [header, ...body].map((row) => row.map(cell).join(",")).join("\r\n");
 }
 

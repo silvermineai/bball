@@ -4,8 +4,10 @@ import { useSearchParams } from "next/navigation";
 import { date } from "../../_lib/format";
 import {
   eventCsv,
+  eventLeaderCsv,
   formatEventMetric,
   type EventIndex,
+  type EventLeaderResponse,
   type EventRecord,
   type EventResponse,
 } from "../../_lib/football-events";
@@ -16,6 +18,9 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
   const scrollRequested = useRef(false);
   const [dataset, setDataset] = useState(
     params.get("dataset") === "specialists" ? "specialists" : "defense",
+  );
+  const [view, setView] = useState<"records" | "leaders">(
+    params.get("view") === "leaders" ? "leaders" : "records",
   );
   const [season, setSeason] = useState(params.get("season") || "2025");
   const [team, setTeam] = useState(params.get("team") || "");
@@ -28,7 +33,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
   );
   const [positive, setPositive] = useState(params.get("positive") === "1");
   const [page, setPage] = useState(0),
-    [data, setData] = useState<EventResponse | null>(null),
+    [data, setData] = useState<EventResponse | EventLeaderResponse | null>(null),
     [error, setError] = useState("");
   const [selected, setSelected] = useState<EventRecord | null>(null),
     [retry, setRetry] = useState(0);
@@ -40,6 +45,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
   const valid =
     !!edition &&
     validSort &&
+    (view === "records" || sort !== "date") &&
     ["all", "fbs", "fcs"].includes(division) &&
     (!team || /^\d{1,15}$/.test(team)) &&
     (!game || /^\d{1,15}$/.test(game));
@@ -56,6 +62,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
     const controller = new AbortController();
     const q = new URLSearchParams({
       dataset,
+      view,
       season,
       edition: edition.edition,
       sort,
@@ -84,7 +91,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
                 ? "This source edition is unavailable. Reload the page for the latest index."
                 : "The event records could not be loaded. Try again.",
             );
-          const result: EventResponse = await r.json();
+          const result: EventResponse | EventLeaderResponse = await r.json();
           if (result.edition !== edition.edition)
             throw Error(
               "The returned edition does not match this notebook. Reload to continue.",
@@ -105,6 +112,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
     };
   }, [
     dataset,
+    view,
     season,
     team,
     game,
@@ -128,6 +136,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
   }, [data]);
   const reset = () => {
     setDataset("defense");
+    setView("records");
     setSeason("2025");
     setTeam("");
     setGame("");
@@ -141,14 +150,17 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
   };
   const download = () => {
     if (!data || !edition) return;
+    const csv = data.view === "leaders"
+      ? eventLeaderCsv(data.rows, fields, edition.edition, data.metric)
+      : eventCsv(data.rows, fields, edition.edition);
     const url = URL.createObjectURL(
-      new Blob([eventCsv(data.rows, fields, edition.edition)], {
+      new Blob([csv], {
         type: "text/csv;charset=utf-8",
       }),
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `football-${dataset}-${season}-page-${page + 1}.csv`;
+    a.download = `football-${view}-${dataset}-${season}-page-${page + 1}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -170,11 +182,28 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
     <>
       <div className="toolbar event-filters">
         <label className="control">
+          <span>View</span>
+          <select
+            value={view}
+            onChange={(e) => {
+              const next = e.target.value as "records" | "leaders";
+              setView(next);
+              if (next === "leaders" && sort === "date") setSort(fields[0]?.key || "sacks");
+              setPositive(false);
+              setPage(0);
+            }}
+          >
+            <option value="records">Game records</option>
+            <option value="leaders">Player leaders</option>
+          </select>
+        </label>
+        <label className="control">
           <span>Record type</span>
           <select
             value={dataset}
             onChange={(e) => {
               setDataset(e.target.value);
+              setView("records");
               setSort("date");
               setPositive(false);
               setPage(0);
@@ -206,7 +235,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
           </select>
         </label>
         <label className="control">
-          <span>Source player name</span>
+            <span>Source player name</span>
           <input
             type="search"
             maxLength={100}
@@ -361,14 +390,20 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
       ) : (
         <>
           <p className="note" role="status">
-            {data.total.toLocaleString("en-US")} matching records. Sorting
-            compares single-game source values; it is not a player ranking.
+            {data.total.toLocaleString("en-US")} {data.view === "leaders" ? "source-name/team leaders" : "matching records"}. {data.view === "leaders" ? `Grouped by source name and team; ordered by ${fields.find((f) => f.key === data.metric)?.label || data.metric}.` : "Sorting compares single-game source values; switch to Player leaders for grouped totals."}
           </p>
           <div
             className="table-scroll"
             id="football-event-results"
             tabIndex={-1}
           >
+            {data.view === "leaders" ? (
+              <table className="data-table event-table">
+                <caption className="sr-only">Name-attributed {dataset} leaders grouped by source name and team.</caption>
+                <thead><tr><th>Source name / team</th><th className="numeric">Records</th><th className="numeric">Games</th><th className="numeric">{fields.find((f) => f.key === data.metric)?.label || data.metric}</th></tr></thead>
+                <tbody>{data.rows.map((r, i) => <tr key={`${r.player_name}-${r.team_id || ""}-${r.division}`}><td><strong>#{page * data.page_size + i + 1} · {r.player_name}</strong><small>{r.team || "Unknown team"} · {r.division.toUpperCase()} · name-only source identity</small></td><td className="numeric">{r.records}</td><td className="numeric">{r.games}</td><td className="numeric"><strong>{formatEventMetric(r.value)}</strong></td></tr>)}</tbody>
+              </table>
+            ) : (
             <table className="data-table event-table">
               <caption className="sr-only">
                 Name-attributed {dataset} records. Select a source name to see
@@ -425,6 +460,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
           {!data.rows.length && (
             <p className="empty">

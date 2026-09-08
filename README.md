@@ -15,6 +15,7 @@ The publication covers football and men’s college basketball with a Next.js fr
 | Player index | `/football/players/` | Search imported players; offensive EPA rankings by role and workload |
 | Player game logs | `/football/player/?id=…&season=2025` | Raw source statistics served from Cloudflare D1 |
 | Power ratings | `/football/ratings/` | Independent opponent-adjusted ridge team ratings |
+| Defense and specialist leaders | `/football/events/` | Browse game evidence or group sacks, turnovers, kicking, punting and returns by source name/team |
 | Model notebook | `/football/methodology/` | Holdout results, source receipts, missing coverage and limitations |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
