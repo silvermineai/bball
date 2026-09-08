@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { reasons, type Ledger } from "../../_lib/research-types";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -11,9 +12,20 @@ export default function Scorecard() {
   );
   const [data, setData] = useState<Ledger | null>(null),
     [error, setError] = useState("");
-  const [query, setQuery] = useState(""),
-    [status, setStatus] = useState("all"),
-    [page, setPage] = useState(0);
+  const [query, setQuery] = useState(params.get("q") || ""),
+    [status, setStatus] = useState(params.get("status") || "all"),
+    [page, setPage] = useState(() => {
+      const value = Number(params.get("page") || 0);
+      return Number.isInteger(value) && value > 0 ? value : 0;
+    });
+  const [copied, setCopied] = useState("");
+  useEffect(() => {
+    const next = new URLSearchParams({ sport });
+    if (query.trim()) next.set("q", query.trim());
+    if (status !== "all") next.set("status", status);
+    if (page) next.set("page", String(page));
+    window.history.replaceState(null, "", `${window.location.pathname}?${next}`);
+  }, [sport, query, status, page]);
   useEffect(() => {
     const c = new AbortController();
     fetch("/data/research/ledger.json", { signal: c.signal })
@@ -49,6 +61,24 @@ export default function Scorecard() {
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Scorecard link copied.");
+    } catch {
+      setCopied("Copy the scorecard URL from your address bar.");
+    }
+  };
+  const download = () => {
+    const visible = rows.slice(page * 25, page * 25 + 25);
+    downloadCsv(
+      `forecast-scorecard-${sport}-page-${page + 1}.csv`,
+      toCsv(
+        ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"],
+        visible.map((g) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)]),
+      ),
+    );
+  };
   return (
     <>
       <div className="toolbar section" style={{ marginBottom: 20 }}>
@@ -182,10 +212,9 @@ export default function Scorecard() {
             <div className="eyebrow">02 / The game ledger</div>
             <h2>Every forecast has a trail.</h2>
           </div>
-          <span className="note">
-            {summary.registered_versions.toLocaleString()} retained versions
-          </span>
+          <div className="button-row"><span className="note">{summary.registered_versions.toLocaleString()} retained versions</span><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy scorecard link</button></div>
         </div>
+        {copied && <p role="status">{copied}</p>}
         <div className="toolbar">
           <label className="control">
             <span>PROGRAM</span>

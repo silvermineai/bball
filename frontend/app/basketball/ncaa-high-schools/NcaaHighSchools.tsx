@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Metric = "players" | "programs" | "games" | "points" | "ppg";
 type Row = { high_school: string; players: number; programs: number; games: number; points: number; value: number; rank: number };
@@ -12,14 +13,22 @@ const seasonLabel = (season: number) => `${season - 1}–${String(season).slice(
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 
 export default function NcaaHighSchools() {
-  const [season, setSeason] = useState("2026");
-  const [metric, setMetric] = useState<Metric>("players");
-  const [minPlayers, setMinPlayers] = useState("1");
-  const [query, setQuery] = useState("");
+  const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+  const initialMetric = initial?.get("metric");
+  const [season, setSeason] = useState(initial?.get("season") || "2026");
+  const [metric, setMetric] = useState<Metric>(initialMetric && Object.prototype.hasOwnProperty.call(labels, initialMetric) ? initialMetric as Metric : "players");
+  const [minPlayers, setMinPlayers] = useState(initial?.get("minPlayers") || "1");
+  const [query, setQuery] = useState(initial?.get("q") || "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [result, setResult] = useState<Result | null>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() => {
+    const value = Number(initial?.get("page") || 0);
+    return Number.isInteger(value) && value > 0 ? value : 0;
+  });
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+
+  useEffect(() => { const params = new URLSearchParams({ season, metric, minPlayers }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minPlayers, query, page]);
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-high-schools?meta=1&season=${season}`)
@@ -40,6 +49,24 @@ export default function NcaaHighSchools() {
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Pipeline link copied.");
+    } catch {
+      setCopied("Copy the pipeline URL from your address bar.");
+    }
+  };
+  const download = () => {
+    if (!result) return;
+    downloadCsv(
+      `ncaa-high-school-pipeline-${season}-${metric}-page-${page + 1}.csv`,
+      toCsv(
+        ["Season", "Metric", "Minimum players", "Rank", "High school", "Players", "Programs", "Recorded games", "Recorded points", "Value"],
+        result.rows.map((row) => [result.season, labels[result.metric], result.min_players, row.rank, row.high_school, row.players, row.programs, row.games, row.points, row.value]),
+      ),
+    );
+  };
   const seasons = meta?.seasons || Array.from({ length: 17 }, (_, i) => 2026 - i);
   return <>
     <div className="page-title"><div className="eyebrow">NCAA source archive / high-school pipeline</div><h1>Follow the<br /><em>pipeline.</em></h1><p>See which source-labeled high schools appear in NCAA rosters, how many programs they represent and how much recorded college production sits behind the roster rows. This is descriptive coverage, not a recruiting ranking.</p></div>
@@ -51,7 +78,7 @@ export default function NcaaHighSchools() {
       <label className="control"><span>HIGH SCHOOL</span><input type="search" maxLength={120} placeholder="Search a source school label" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading high-school pipeline…</p> : <>
-      <p className="note">{result.total.toLocaleString()} high-school labels · ranked by {labels[result.metric].toLowerCase()} · source roster rows only.</p>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} high-school labels · ranked by {labels[result.metric].toLowerCase()} · source roster rows only.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy pipeline link</button></div></div>{copied && <p role="status">{copied}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>High school</th><th className="numeric">Players</th><th className="numeric">Programs</th><th className="numeric">Games</th><th className="numeric">Points</th><th className="numeric">{labels[result.metric]}</th><th>Evidence</th></tr></thead><tbody>{result.rows.map((row) => <tr key={row.high_school}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.high_school}</strong></td><td className="numeric">{fmt(row.players, 0)}</td><td className="numeric">{fmt(row.programs, 0)}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ppg" ? 1 : 0)}</strong></td><td><Link href={`/basketball/ncaa-rosters/?season=${result.season}&q=${encodeURIComponent(row.high_school)}`}>Open roster rows →</Link></td></tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No source high-school labels match this filter.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
