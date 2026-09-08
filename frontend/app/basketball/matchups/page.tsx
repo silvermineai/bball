@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import Matchups from "./Matchups";
 export const metadata = {
@@ -25,6 +26,9 @@ export default function Page() {
           closest projected games or the widest uncertainty ranges. “Toss-up,”
           “Lean” and “Strong lean” describe estimated win-probability confidence;
           they are not betting advice.
+        </p>
+        <p className="note">
+          For a program-wide personnel view, compare the <Link href="/basketball/roster-lab/">roster workload lab</Link> before opening an individual brief.
         </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>

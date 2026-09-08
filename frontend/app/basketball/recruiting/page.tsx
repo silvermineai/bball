@@ -51,6 +51,7 @@ export default function Page() {
         </p>
         <div className="hero-actions">
           <Link className="button" href="/basketball/ncaa-rosters/">Search NCAA roster intel ↗</Link>
+          <Link className="button secondary" href="/basketball/roster-lab/">Compare roster workload ↗</Link>
           <Link className="hero-link" href="/basketball/ncaa-rankings/">Rank recorded production →</Link>
         </div>
       </div>

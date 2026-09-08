@@ -3786,3 +3786,14 @@ summary {
 .conference-more { display: block; width: 100%; padding: 10px; border: 0; border-top: 1px solid var(--line); background: var(--paper); color: var(--muted); cursor: pointer; font: 10px "IBM Plex Mono", monospace; }
 .conference-more:hover { color: var(--ink); }
 @media (max-width: 760px) { .conference-grid { grid-template-columns: 1fr; } .conference-toggle { font-size: 9px; } }
+
+/* Native roster impact lab */
+.check-control { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 4px; color: var(--muted); font-size: 12px; }
+.check-control input { accent-color: var(--orange); }
+.roster-lab-table td small { display: block; margin-top: 4px; color: var(--muted); font: 10px "IBM Plex Mono", monospace; line-height: 1.35; }
+.roster-lab-table .signal-value { display: flex; align-items: center; gap: 9px; min-width: 155px; }
+.roster-lab-table .signal-value strong { min-width: 48px; font: 600 12px "IBM Plex Mono", monospace; }
+.signal-bar { display: inline-block; width: 76px; height: 7px; overflow: hidden; border: 1px solid var(--line); background: #f1eee5; }
+.signal-bar > span { display: block; height: 100%; background: var(--orange); }
+.signal-bar.empty { background: repeating-linear-gradient(135deg, transparent, transparent 4px, var(--line) 4px, var(--line) 5px); }
+@media (max-width: 760px) { .roster-lab-table .signal-value { min-width: 125px; } .signal-bar { width: 56px; } }

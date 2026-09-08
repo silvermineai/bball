@@ -38,6 +38,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/compare-players/",
     "/basketball/scouting-board/",
     "/basketball/recruiting/",
+    "/basketball/roster-lab/",
     "/basketball/impact/",
     "/basketball/model/",
     "/basketball/evaluation/",
