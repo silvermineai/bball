@@ -12,6 +12,8 @@ The roster-observation view also reports a team workload-continuity table. It su
 
 The continuity table is searchable and exportable across all 354 programs in the 2026–27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.
 
+The announcement view also includes an all-program coverage map. Each of the 354 source-listed programs is labeled either as having reviewed school announcements in this edition or as roster observation only, with announced-addition counts, linked prior profiles and workload context where available. This makes partial coverage visible instead of allowing an unlisted program to look like a confirmed zero.
+
 ## Source review
 
 `data/recruiting/announcements.json` is the curated input. Each school has an explicit program ID, publisher and exact source host. Each article stores its original URL, title, publication calendar date, date evidence, review timestamp and any necessary editorial caveat. Source pages are consulted for brief independent factual reporting with attribution. There is no school-roster crawler, page mirror or automated article-body storage in this pipeline.

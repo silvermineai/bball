@@ -16,16 +16,19 @@ import {
 import Recruiting from "./Recruiting";
 import { comparisonHref } from "../../_lib/player-comparison";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import type { BBRosters } from "../../_lib/basketball-types";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
-export default function Announcements({ data }: { data: RecruitingRelease }) {
+export default function Announcements({ data, rosters }: { data: RecruitingRelease; rosters: BBRosters }) {
   const [view, setView] = useState("announcements"),
     [team, setTeam] = useState("all"),
     [q, setQ] = useState(""),
     [kind, setKind] = useState("all"),
     [sort, setSort] = useState<RecruitingSort>("latest"),
-    [copied, setCopied] = useState("");
+    [copied, setCopied] = useState(""),
+    [coverageQuery, setCoverageQuery] = useState(""),
+    [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "name">("reviewed");
   const hydrated = useRef(false);
   useEffect(() => {
     const filters = parseRecruitingFilters(window.location.search);
@@ -57,6 +60,23 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   };
   const allRows = recruitingRows(data);
   const programSummary = summarizeRecruitingPrograms(allRows);
+  const coverageRows = (rosters.team_summaries || [])
+    .map((summary) => {
+      const reviewed = data.programs.some((program) => program.id === summary.team_id);
+      const additions = programSummary.find((row) => row.team_id === summary.team_id);
+      return {
+        ...summary,
+        reviewed,
+        additions: additions?.additions || 0,
+        linkedProfiles: additions?.linked_profiles || 0,
+      };
+    })
+    .filter((row) => row.team.toLowerCase().includes(coverageQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (coverageSort === "name") return a.team.localeCompare(b.team);
+      if (coverageSort === "prior") return (b.prior_minutes || 0) - (a.prior_minutes || 0) || a.team.localeCompare(b.team);
+      return Number(b.reviewed) - Number(a.reviewed) || (b.additions - a.additions) || a.team.localeCompare(b.team);
+    });
   const rows = sortRecruitingRows(
     allRows.filter(
       (p) =>
@@ -210,6 +230,63 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     </tr>
                   ))}
                 </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="paper-panel recruiting-program-summary">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">Coverage map / 2026–27</div>
+                <h2>Know what has been reviewed.</h2>
+              </div>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    "basketball-recruiting-program-coverage.csv",
+                    toCsv(
+                      ["Program", "Program ID", "Evidence status", "Announced additions", "Linked prior profiles", "Listed players", "Returning minutes share", "Prior minutes"],
+                      coverageRows.map((row) => [row.team, row.team_id, row.reviewed ? "Reviewed school announcements" : "Roster observation only", row.additions, row.linkedProfiles, row.listed_players, row.returning_minutes_share == null ? null : row.returning_minutes_share * 100, row.prior_minutes]),
+                    ),
+                  )
+                }
+              >
+                Download coverage CSV ↓
+              </button>
+            </div>
+            <p className="note">
+              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move.
+            </p>
+            <div className="toolbar recruiting-filters">
+              <label className="control">
+                <span>PROGRAM SEARCH</span>
+                <input type="search" value={coverageQuery} onChange={(event) => setCoverageQuery(event.target.value)} placeholder="Search all observed programs" />
+              </label>
+              <label className="control">
+                <span>ORDER</span>
+                <select value={coverageSort} onChange={(event) => setCoverageSort(event.target.value as typeof coverageSort)}>
+                  <option value="reviewed">Reviewed programs first</option>
+                  <option value="prior">Prior minutes</option>
+                  <option value="name">Program name</option>
+                </select>
+              </label>
+            </div>
+            <p className="note" role="status">
+              {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} source-listed programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this announcement file
+            </p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead><tr><th>Program</th><th>Evidence status</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th></tr></thead>
+                <tbody>{coverageRows.map((row) => <tr key={row.team_id}>
+                  <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small></td>
+                  <td>{row.reviewed ? "Reviewed school announcements" : "Roster observation only"}</td>
+                  <td className="numeric">{row.additions || "—"}</td>
+                  <td className="numeric">{row.linkedProfiles || "—"}</td>
+                  <td className="numeric">{row.listed_players}</td>
+                  <td className="numeric">{row.returning_minutes_share == null ? "—" : `${(row.returning_minutes_share * 100).toFixed(1)}%`}</td>
+                  <td className="numeric">{row.prior_minutes ? Math.round(row.prior_minutes).toLocaleString() : "—"}</td>
+                </tr>)}</tbody>
               </table>
             </div>
           </section>
