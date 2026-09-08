@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getFootballEfficiencyModel, getOverview } from "./_lib/data";
+import { getFootballEfficiencyModel, getOverview, type Overview } from "./_lib/data";
 import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
 import fs from "node:fs";
@@ -36,13 +36,57 @@ const leaderCategoryLabels = {
   rushing: "Rushing EPA",
   receiving: "Receiving EPA",
 } as const;
+
+const sourceLabels: Record<string, string> = {
+  box: "Player box scores",
+  defense: "Defensive events",
+  passing: "Passing aggregates",
+  receiving: "Receiving aggregates",
+  rushing: "Rushing aggregates",
+  schedule: "Schedules and finals",
+  specialists: "Specialist events",
+  team_advanced: "Advanced team rates",
+  teams: "Team directory",
+  betting: "Historical market archive",
+};
+
+function receiptStatus(fetchedAt: string, editionAt: string) {
+  const lag = Math.max(
+    0,
+    Math.floor(
+      (Date.parse(editionAt) - Date.parse(fetchedAt)) /
+        (24 * 60 * 60 * 1000),
+    ),
+  );
+  if (lag <= 1)
+    return { label: "Current receipt", className: "current", detail: "Receipt is within one day of this edition" };
+  if (lag <= 7)
+    return { label: "Aging receipt", className: "aging", detail: `${lag} days behind this edition` };
+  return { label: "Review receipt", className: "review", detail: `${lag} days behind this edition` };
+}
+
+function groupedSources(sources: Overview["sources"]) {
+  const grouped = new Map<string, Overview["sources"]>();
+  for (const source of sources) {
+    const current = grouped.get(source.dataset) || [];
+    current.push(source);
+    grouped.set(source.dataset, current);
+  }
+  return [...grouped.entries()]
+    .map(([dataset, rows]) => {
+      const latest = [...rows].sort((a, b) => b.fetched_at.localeCompare(a.fetched_at))[0];
+      return { dataset, latest, seasons: rows.length };
+    })
+    .sort((a, b) => a.dataset.localeCompare(b.dataset));
+}
 export default function Home() {
   const d = getOverview(),
     efficiencyModel = getFootballEfficiencyModel(),
     e = d.model.evaluation,
     g = d.upcoming.find((g) => g.prediction),
     p = g?.prediction,
-    leaders = getFootballLeaders();
+    leaders = getFootballLeaders(),
+    sources = groupedSources(d.sources);
   return (
     <>
       <div className="dateline eyebrow">
@@ -111,6 +155,45 @@ export default function Home() {
           <span>Margin error · {e.season} holdout</span>
         </div>
       </div>
+      <section className="section source-receipts">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">00 / Source receipts</div>
+            <h2>Know how recent the evidence is.</h2>
+          </div>
+          <Link href="/research/coverage/">Full coverage desk →</Link>
+        </div>
+        <p className="note">
+          Each card groups the retained source receipts for one stat layer. The
+          status compares the newest retrieval with this publication edition;
+          it describes source freshness, not statistical completeness.
+        </p>
+        <div className="source-receipt-grid">
+          {sources.map(({ dataset, latest, seasons }) => {
+            const status = receiptStatus(latest.fetched_at, d.generated_at);
+            return (
+              <article className="source-receipt" key={dataset}>
+                <div className={`source-receipt-status ${status.className}`}>
+                  <span aria-hidden="true" />
+                  {status.label}
+                </div>
+                <h3>{sourceLabels[dataset] || dataset}</h3>
+                <div className="source-receipt-meta">
+                  <span>{seasons} seasons</span>
+                  <span>Latest {latest.season}</span>
+                </div>
+                <p>{status.detail}</p>
+                <small>Last receipt · {date(latest.fetched_at)}</small>
+                <small>
+                  <a href={latest.url} target="_blank" rel="noreferrer">
+                    Open source release ↗
+                  </a>
+                </small>
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <section className="section">
         <div className="section-heading">
           <div>
