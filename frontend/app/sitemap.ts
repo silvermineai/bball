@@ -27,6 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/player-profiles/",
     "/basketball/ncaa-player-box/",
     "/basketball/ncaa-rankings/",
+    "/basketball/ncaa-rosters/",
     "/basketball/source-stats/",
     "/basketball/team-stats/",
     "/basketball/leaders/",

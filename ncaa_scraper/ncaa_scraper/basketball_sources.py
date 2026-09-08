@@ -31,6 +31,7 @@ DATASETS = {
     # Keep them separate from ESPN athlete IDs while retaining the full stat
     # vector for scouting and audit work.
     "ncaa_player_box": ("ncaa_mbb_player_box", "ncaa_mbb_player_box_{year}.parquet"),
+    "ncaa_team_rosters": ("ncaa_mbb_team_rosters", "ncaa_mbb_team_rosters_{year}.parquet"),
 }
 BASKETBALL_ATTRIBUTION = {
     **ATTRIBUTION,

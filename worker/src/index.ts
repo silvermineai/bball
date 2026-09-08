@@ -16,6 +16,7 @@ import { lineups } from "./lineups";
 import { playerCore } from "./player-core";
 import { ncaaPlayerBox } from "./ncaa-player-box";
 import { ncaaPlayerRankings } from "./ncaa-player-rankings";
+import { ncaaRosters } from "./ncaa-rosters";
 
 type Bindings = Env;
 
@@ -124,6 +125,7 @@ app.route("/api/basketball/research/lineups", lineups);
 app.route("/api/basketball/research/player-core", playerCore);
 app.route("/api/basketball/research/ncaa-player-box", ncaaPlayerBox);
 app.route("/api/basketball/research/ncaa-player-rankings", ncaaPlayerRankings);
+app.route("/api/basketball/research/ncaa-rosters", ncaaRosters);
 app.route("/api/research/markets", markets);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);

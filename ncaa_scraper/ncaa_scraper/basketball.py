@@ -137,6 +137,7 @@ def ingest(conn, dataset, year, rows, receipt):
         "ncaa_rapm": "bb_impact",
         "ncaa_player_box": "bb_ncaa_player_box",
         "ncaa_player_season": "bb_ncaa_player_season",
+        "ncaa_team_rosters": "bb_ncaa_rosters",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -471,6 +472,38 @@ def ingest(conn, dataset, year, rows, receipt):
                     )
                     for (player_id, team_id), entry in season_totals.items()
                 ],
+            )
+        elif dataset == "ncaa_team_rosters":
+            conn.execute(
+                "DELETE FROM bb_unresolved WHERE dataset=? AND season=?",
+                (dataset, year),
+            )
+            valid = []
+            keep = {
+                "season", "team_id", "team", "player_id", "player", "clean_name", "name",
+                "jersey", "class", "position", "height", "ht_inches", "hometown", "high_school", "gp", "gs",
+            }
+            for i, r in enumerate(rows):
+                if not r.get("team_id") or not r.get("player_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing NCAA team or player ID", json.dumps(r)),
+                    )
+                    continue
+                profile = {k: r.get(k) for k in keep if r.get(k) not in (None, "")}
+                valid.append(
+                    (
+                        year,
+                        identity(r["team_id"]),
+                        identity(r["player_id"]),
+                        r.get("team"),
+                        r.get("clean_name") or r.get("name") or r.get("player"),
+                        json.dumps(profile, separators=(",", ":")),
+                    )
+                )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_rosters VALUES (?,?,?,?,?,?)",
+                valid,
             )
         if dataset in ["participation", "player_box"]:
             conn.execute("DELETE FROM bb_participation WHERE season=?", (year,))
@@ -1222,6 +1255,7 @@ def export_sql(conn, path):
             "bb_rosters",
             "bb_impact",
             "bb_ncaa_player_season",
+            "bb_ncaa_rosters",
             "bb_unresolved",
             "bb_participation",
         ]:
@@ -1260,7 +1294,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -1316,6 +1350,9 @@ def main():
             rows, receipt = c.load("ncaa_player_box", year, refresh=args.refresh)
             ingest(conn, "ncaa_player_box", year, rows, receipt)
             print(f"Imported ncaa_player_box/{year}: {len(rows):,}", flush=True)
+            rows, receipt = c.load("ncaa_team_rosters", year, refresh=args.refresh)
+            ingest(conn, "ncaa_team_rosters", year, rows, receipt)
+            print(f"Imported ncaa_team_rosters/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql)

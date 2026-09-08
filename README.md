@@ -39,6 +39,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Player profile browser | `/basketball/player-profiles/` | Search the complete legal source-profile archive by season, position, status or player ID |
 | NCAA player box archive | `/basketball/ncaa-player-box/` | Browse current NCAA-derived game-level player production, shooting splits and playmaking context in the separate NCAA ID namespace |
 | NCAA player rankings | `/basketball/ncaa-rankings/` | Rank current NCAA-derived player/team rows by scoring, rebounding, playmaking, defense or shooting efficiency with a configurable game minimum |
+| NCAA roster intel | `/basketball/ncaa-rosters/` | Search NCAA roster records by class, position, size, hometown and high school for recruiting context |
 | Publisher stat browser | `/basketball/source-stats/` | Search all 44 retained source-defined player-season fields across the available 2024–25 and 2025–26 releases, with D1-backed pagination and CSV export |
 | Team stat browser | `/basketball/team-stats/` | Search 45 attributed aggregate team-season fields across 2023–24 through 2025–26, with source display values, pagination and CSV export |
 | Player impact | `/basketball/impact/` | Publisher NCAA RAPM, kept in its own identity namespace |
