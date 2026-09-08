@@ -16,6 +16,9 @@ SQL = ROOT / ".local/recruiting.sql"
 PRIOR_ALIASES = {
     "Jacksonville State": "Jax State",
     "Northern Arizona": "N Arizona",
+    "Boise State": "Boise St",
+    "Mississippi State": "Mississippi St",
+    "San Diego State": "San Diego St",
     "Purdue Fort Wayne": "Purdue FW",
     "Arizona State": "Arizona St",
     "Seattle": "Seattle U",
@@ -73,10 +76,14 @@ def build(document, box_release, rated_programs):
     for source in sources.values():
         program = programs[source["team_id"]]
         url = urlsplit(source["url"])
+        official_article_path = url.path.startswith("/news/") or (
+            program["host"] == "arkansasrazorbacks.com"
+            and url.path.startswith("/razorback-basketball-")
+        )
         if (
             url.scheme != "https"
             or url.netloc != program["host"]
-            or not url.path.startswith("/news/")
+            or not official_article_path
             or url.query
             or url.fragment
         ):

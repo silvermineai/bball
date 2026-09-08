@@ -67,6 +67,24 @@
       "name": "Duke",
       "host": "goduke.com",
       "publisher": "Duke Athletics"
+    },
+    {
+      "id": "333",
+      "name": "Alabama",
+      "host": "rolltide.com",
+      "publisher": "Alabama Athletics"
+    },
+    {
+      "id": "2483",
+      "name": "Oregon",
+      "host": "goducks.com",
+      "publisher": "Oregon Athletics"
+    },
+    {
+      "id": "8",
+      "name": "Arkansas",
+      "host": "arkansasrazorbacks.com",
+      "publisher": "Arkansas Athletics"
     }
   ],
   "sources": [
@@ -520,6 +538,39 @@
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:22:08.000000+00:00",
       "review_note": null
+    },
+    {
+      "id": "alabama-seven-additions",
+      "team_id": "333",
+      "url": "https://rolltide.com/news/2026/6/3/mens-basketball-adds-seven-players-to-its-2026-27-roster",
+      "title": "Men’s Basketball Adds Seven Players to its 2026-27 Roster",
+      "publisher": "Alabama Athletics",
+      "published_on": "2026-06-03",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "review_note": null
+    },
+    {
+      "id": "oregon-portal-additions",
+      "team_id": "2483",
+      "url": "https://goducks.com/news/2026/6/1/mens-basketball-oregon-mens-basketball-retools-via-transfer-portal",
+      "title": "Oregon Men’s Basketball Retools Via Transfer Portal",
+      "publisher": "Oregon Athletics",
+      "published_on": "2026-06-01",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "review_note": null
+    },
+    {
+      "id": "arkansas-four-freshmen",
+      "team_id": "8",
+      "url": "https://arkansasrazorbacks.com/razorback-basketball-welcomes-maker-frolov-thompson-and-ourigou/",
+      "title": "Razorback Basketball Welcomes Maker, Frolov, Thompson and Ourigou",
+      "publisher": "Arkansas Athletics",
+      "published_on": "2026-07-21",
+      "date_basis": "Displayed publication date",
+      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "review_note": null
     }
   ],
   "people": [
@@ -846,6 +897,229 @@
       "team_id": "150",
       "category": "freshman",
       "previous_program": "IMG Academy",
+      "stats_ref": null
+    },
+    {
+      "key": "333-tarris-bouie",
+      "name": "Tarris Bouie",
+      "team_id": "333",
+      "category": "freshman",
+      "previous_program": "SPIRE Academy",
+      "stats_ref": null
+    },
+    {
+      "key": "333-jaxon-richardson",
+      "name": "Jaxon Richardson",
+      "team_id": "333",
+      "category": "freshman",
+      "previous_program": "Southeastern Prep Academy",
+      "stats_ref": null
+    },
+    {
+      "key": "333-qayden-samuels",
+      "name": "Qayden Samuels",
+      "team_id": "333",
+      "category": "freshman",
+      "previous_program": "Bishop McNamara High School",
+      "stats_ref": null
+    },
+    {
+      "key": "333-cole-cloer",
+      "name": "Cole Cloer",
+      "team_id": "333",
+      "category": "transfer",
+      "previous_program": "NC State",
+      "stats_ref": null
+    },
+    {
+      "key": "333-jamarion-davis-fleming",
+      "name": "Jamarion Davis-Fleming",
+      "team_id": "333",
+      "category": "transfer",
+      "previous_program": "Mississippi State",
+      "stats_ref": {
+        "player_id": "5220874",
+        "team_id": "344",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "333-drew-fielder",
+      "name": "Drew Fielder",
+      "team_id": "333",
+      "category": "transfer",
+      "previous_program": "Boise State",
+      "stats_ref": {
+        "player_id": "5082704",
+        "team_id": "68",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "333-brandon-garrison",
+      "name": "Brandon Garrison",
+      "team_id": "333",
+      "category": "transfer",
+      "previous_program": "Kentucky",
+      "stats_ref": {
+        "player_id": "4711306",
+        "team_id": "96",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-dwayne-aristode",
+      "name": "Dwayne Aristode",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "Arizona",
+      "stats_ref": {
+        "player_id": "5186456",
+        "team_id": "12",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-taylor-bol-bowen",
+      "name": "Taylor Bol Bowen",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "Alabama",
+      "stats_ref": {
+        "player_id": "4685658",
+        "team_id": "333",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-pharaoh-compton",
+      "name": "Pharaoh Compton",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "San Diego State",
+      "stats_ref": {
+        "player_id": "5061584",
+        "team_id": "21",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-jerry-easter-ii",
+      "name": "Jerry Easter II",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "USC",
+      "stats_ref": {
+        "player_id": "5101762",
+        "team_id": "30",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-jasper-johnson",
+      "name": "Jasper Johnson",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "Kentucky",
+      "stats_ref": {
+        "player_id": "5095153",
+        "team_id": "96",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-andrew-meadow",
+      "name": "Andrew Meadow",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "Boise State",
+      "stats_ref": {
+        "player_id": "5081887",
+        "team_id": "68",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-fred-payne",
+      "name": "Fred Payne",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "Boston College",
+      "stats_ref": {
+        "player_id": "4684268",
+        "team_id": "103",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-tyrone-riley-iv",
+      "name": "Tyrone Riley IV",
+      "team_id": "2483",
+      "category": "transfer",
+      "previous_program": "San Francisco",
+      "stats_ref": {
+        "player_id": "5037875",
+        "team_id": "2539",
+        "season": 2026,
+        "basis": "Reviewed full name and school-announced prior program match the historical box-score record."
+      }
+    },
+    {
+      "key": "2483-tajh-ariza",
+      "name": "Tajh Ariza",
+      "team_id": "2483",
+      "category": "freshman",
+      "previous_program": "Link Academy",
+      "stats_ref": null
+    },
+    {
+      "key": "2483-seven-spurlock",
+      "name": "Seven Spurlock",
+      "team_id": "2483",
+      "category": "freshman",
+      "previous_program": "Overtime Elite",
+      "stats_ref": null
+    },
+    {
+      "key": "8-maper-maker",
+      "name": "Maper Maker",
+      "team_id": "8",
+      "category": "freshman",
+      "previous_program": "AUNZ Prep",
+      "stats_ref": null
+    },
+    {
+      "key": "8-ilia-frolov",
+      "name": "Ilia Frolov",
+      "team_id": "8",
+      "category": "freshman",
+      "previous_program": "International prep",
+      "stats_ref": null
+    },
+    {
+      "key": "8-davion-thompson",
+      "name": "Davion Thompson",
+      "team_id": "8",
+      "category": "freshman",
+      "previous_program": "Prep school",
+      "stats_ref": null
+    },
+    {
+      "key": "8-caleb-ourigou",
+      "name": "Caleb Ourigou",
+      "team_id": "8",
+      "category": "freshman",
+      "previous_program": "Prep school",
       "stats_ref": null
     },
     {
@@ -1518,6 +1792,153 @@
       "kind": "addition",
       "source_id": "duke-three-signees",
       "summary": "Duke announced Maxime Meyer as a 2026–27 addition."
+    },
+    {
+      "id": "333-tarris-bouie-addition",
+      "person_key": "333-tarris-bouie",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Tarris Bouie as a 2026–27 addition."
+    },
+    {
+      "id": "333-jaxon-richardson-addition",
+      "person_key": "333-jaxon-richardson",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Jaxon Richardson as a 2026–27 addition."
+    },
+    {
+      "id": "333-qayden-samuels-addition",
+      "person_key": "333-qayden-samuels",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Qayden Samuels as a 2026–27 addition."
+    },
+    {
+      "id": "333-cole-cloer-addition",
+      "person_key": "333-cole-cloer",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Cole Cloer as a 2026–27 addition."
+    },
+    {
+      "id": "333-jamarion-davis-fleming-addition",
+      "person_key": "333-jamarion-davis-fleming",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Jamarion Davis-Fleming as a 2026–27 addition."
+    },
+    {
+      "id": "333-drew-fielder-addition",
+      "person_key": "333-drew-fielder",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Drew Fielder as a 2026–27 addition."
+    },
+    {
+      "id": "333-brandon-garrison-addition",
+      "person_key": "333-brandon-garrison",
+      "kind": "addition",
+      "source_id": "alabama-seven-additions",
+      "summary": "Alabama announced Brandon Garrison as a 2026–27 addition."
+    },
+    {
+      "id": "2483-dwayne-aristode-addition",
+      "person_key": "2483-dwayne-aristode",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Dwayne Aristode as a 2026–27 addition."
+    },
+    {
+      "id": "2483-taylor-bol-bowen-addition",
+      "person_key": "2483-taylor-bol-bowen",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Taylor Bol Bowen as a 2026–27 addition."
+    },
+    {
+      "id": "2483-pharaoh-compton-addition",
+      "person_key": "2483-pharaoh-compton",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Pharaoh Compton as a 2026–27 addition."
+    },
+    {
+      "id": "2483-jerry-easter-ii-addition",
+      "person_key": "2483-jerry-easter-ii",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Jerry Easter II as a 2026–27 addition."
+    },
+    {
+      "id": "2483-jasper-johnson-addition",
+      "person_key": "2483-jasper-johnson",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Jasper Johnson as a 2026–27 addition."
+    },
+    {
+      "id": "2483-andrew-meadow-addition",
+      "person_key": "2483-andrew-meadow",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Andrew Meadow as a 2026–27 addition."
+    },
+    {
+      "id": "2483-fred-payne-addition",
+      "person_key": "2483-fred-payne",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Fred Payne as a 2026–27 addition."
+    },
+    {
+      "id": "2483-tyrone-riley-iv-addition",
+      "person_key": "2483-tyrone-riley-iv",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Tyrone Riley IV as a 2026–27 addition."
+    },
+    {
+      "id": "2483-tajh-ariza-addition",
+      "person_key": "2483-tajh-ariza",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Tajh Ariza as a 2026–27 addition."
+    },
+    {
+      "id": "2483-seven-spurlock-addition",
+      "person_key": "2483-seven-spurlock",
+      "kind": "addition",
+      "source_id": "oregon-portal-additions",
+      "summary": "Oregon announced Seven Spurlock as a 2026–27 addition."
+    },
+    {
+      "id": "8-maper-maker-addition",
+      "person_key": "8-maper-maker",
+      "kind": "addition",
+      "source_id": "arkansas-four-freshmen",
+      "summary": "Arkansas announced Maper Maker as a 2026–27 addition."
+    },
+    {
+      "id": "8-ilia-frolov-addition",
+      "person_key": "8-ilia-frolov",
+      "kind": "addition",
+      "source_id": "arkansas-four-freshmen",
+      "summary": "Arkansas announced Ilia Frolov as a 2026–27 addition."
+    },
+    {
+      "id": "8-davion-thompson-addition",
+      "person_key": "8-davion-thompson",
+      "kind": "addition",
+      "source_id": "arkansas-four-freshmen",
+      "summary": "Arkansas announced Davion Thompson as a 2026–27 addition."
+    },
+    {
+      "id": "8-caleb-ourigou-addition",
+      "person_key": "8-caleb-ourigou",
+      "kind": "addition",
+      "source_id": "arkansas-four-freshmen",
+      "summary": "Arkansas announced Caleb Ourigou as a 2026–27 addition."
     },
     {
       "id": "12-derek-dixon-addition",
