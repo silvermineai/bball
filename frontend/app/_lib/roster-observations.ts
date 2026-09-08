@@ -27,6 +27,7 @@ export type RosterFilters = {
   status: RosterStatus;
   sort: RosterSortKey;
   page: number;
+  picks: string[];
 };
 
 const statusOrder: Record<string, number> = {
@@ -71,6 +72,7 @@ export function parseRosterFilters(search: string): RosterFilters {
     status: status && rosterStatuses.has(status) ? status : "all",
     sort: sort && rosterSorts.has(sort) ? sort : "status",
     page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
+    picks: [...new Set(params.getAll("rosterPick").filter((v) => /^[1-9]\d{0,14}$/.test(v)))].slice(0, 12),
   };
 }
 
@@ -84,6 +86,7 @@ export function rosterFilterSearch(filters: RosterFilters) {
   if (filters.status !== "all") params.set("rosterStatus", filters.status);
   if (filters.sort !== "status") params.set("rosterSort", filters.sort);
   if (filters.page) params.set("rosterPage", String(filters.page));
+  filters.picks.slice(0, 12).forEach((id) => params.append("rosterPick", id));
   const query = params.toString();
   return query ? `?${query}` : "";
 }

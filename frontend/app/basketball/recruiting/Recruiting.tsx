@@ -29,6 +29,7 @@ export default function Recruiting() {
     [teamSort, setTeamSort] = useState<"returning" | "prior" | "name">("returning"),
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
+    [picks, setPicks] = useState<string[]>([]),
     [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const filters = parseRosterFilters(window.location.search);
@@ -39,6 +40,7 @@ export default function Recruiting() {
     setStatus(filters.status);
     setSort(filters.sort);
     setPage(filters.page);
+    setPicks(filters.picks);
     setHydrated(true);
   }, []);
   useEffect(() => {
@@ -53,12 +55,13 @@ export default function Recruiting() {
         status: status as RosterStatus,
         sort,
         page,
+        picks,
       }),
     );
     params.set("view", "observations");
     url.search = params.toString();
     window.history.replaceState(window.history.state, "", url);
-  }, [classYear, hydrated, page, position, q, season, sort, status]);
+  }, [classYear, hydrated, page, picks, position, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
   );
@@ -82,6 +85,16 @@ export default function Recruiting() {
       if (teamSort === "prior") return (b.prior_minutes ?? 0) - (a.prior_minutes ?? 0) || a.team.localeCompare(b.team);
       return (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team);
     });
+  const pickedRows = (data?.players || []).filter((player) => picks.includes(player.id));
+  const togglePick = (id: string) => {
+    setPicks((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : current.length >= 12
+          ? current
+          : [...current, id],
+    );
+  };
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -102,6 +115,7 @@ export default function Recruiting() {
               setStatus("all");
               setPosition("");
               setClassYear("");
+              setPicks([]);
               setPage(0);
             }}
           >
@@ -245,6 +259,30 @@ export default function Recruiting() {
             recorded workload from the preceding source season, not a
             projected role at the listed program.
           </p>
+          <section className="paper-panel recruiting-watchlist" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <div>
+                <div className="eyebrow">Recruiting watch list</div>
+                <h2>Keep the names worth checking.</h2>
+              </div>
+              <span className="note">{picks.length} / 12 saved</span>
+            </div>
+            <p className="note">
+              Save source IDs while reviewing this edition. The list is stored in the shareable URL; it is a research shortlist, not a commitment or transfer ledger.
+            </p>
+            {pickedRows.length ? (
+              <div className="recruiting-watchlist-items">
+                {pickedRows.map((player) => (
+                  <div key={`${player.id}-${player.team_id}`} className="recruiting-watchlist-item">
+                    <span><strong>{player.name}</strong><small>{player.team} · {labels[player.status]}</small></span>
+                    <button className="button secondary" type="button" onClick={() => togglePick(player.id)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="note">No names saved yet. Use “Add to watch list” beside a row below.</p>
+            )}
+          </section>
           {data.unusable_rows != null && data.unusable_rows > 0 && (
             <p className="career-coverage-warning">
               {data.unusable_rows.toLocaleString()} source roster rows were
@@ -440,6 +478,16 @@ export default function Recruiting() {
                           </a>
                         </small>
                       )}
+                      <button
+                        className="button secondary recruiting-pick"
+                        type="button"
+                        aria-pressed={picks.includes(p.id)}
+                        onClick={() => togglePick(p.id)}
+                        title={picks.length >= 12 && !picks.includes(p.id) ? "Watch list limit reached" : undefined}
+                        disabled={picks.length >= 12 && !picks.includes(p.id)}
+                      >
+                        {picks.includes(p.id) ? "Remove from watch list" : "Add to watch list"}
+                      </button>
                     </td>
                     <td>
                       <Link href={`/basketball/programs/${p.team_id}/`}>

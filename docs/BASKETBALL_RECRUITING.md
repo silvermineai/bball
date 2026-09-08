@@ -8,6 +8,8 @@ The September 2026 review contains 71 announced additions across Arizona, HawaiÊ
 
 The publisher wire links to the retained ESPN article feed for context and does not copy article bodies, photographs or biographies. It is not a transaction ledger: headlines and descriptions do not establish eligibility, destination or availability. The board does not contain proprietary recruiting grades, stars, rankings, valuations or contact information. These events do not change preseason forecasts. Prep and international statistics remain outside the college box-score archive.
 
+The recruiting board supports a twelve-player watch list. It stores source IDs in repeated `rosterPick` URL parameters, so a filtered review can be shared or reopened without a server account. The list is a research aid for source observations; it does not alter rankings, forecasts or transaction status.
+
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
 
 The continuity table is searchable and exportable across all 354 programs in the 2026â€“27 source listing. Sorting by returning-minute share, represented prior minutes or program name changes the research question without changing the underlying roster observations.

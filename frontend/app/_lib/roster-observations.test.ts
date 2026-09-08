@@ -111,6 +111,7 @@ describe("shareable roster observation filters", () => {
       status: "different_program",
       sort: "prior_ts",
       page: 3,
+      picks: [],
     });
     expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4")).toEqual({
       season: "2027",
@@ -120,12 +121,18 @@ describe("shareable roster observation filters", () => {
       status: "all",
       sort: "status",
       page: 0,
+      picks: [],
     });
   });
 
   it("omits defaults while preserving the exact recruiting slice", () => {
-    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_ts", page: 3 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3");
-    expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0 })).toBe("");
+    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_ts", page: 3, picks: ["123", "456"] })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3&rosterPick=123&rosterPick=456");
+    expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [] })).toBe("");
+  });
+
+  it("limits shortlist IDs to twelve numeric source identities", () => {
+    const ids = Array.from({ length: 14 }, (_, i) => String(i + 1));
+    expect(parseRosterFilters(`?${ids.map((id) => `rosterPick=${id}`).join("&")}&rosterPick=bad&rosterPick=1`).picks).toEqual(ids.slice(0, 12));
   });
 
   it("keeps source position and class labels stable for filters", () => {
