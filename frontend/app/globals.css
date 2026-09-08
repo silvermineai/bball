@@ -1674,6 +1674,9 @@ summary {
 .recruiting-strip {
   margin-top: 0;
 }
+.recruiting-national {
+  margin-top: 28px;
+}
 .recruiting-scope {
   border-left: 3px solid var(--orange);
   padding: 4px 22px;

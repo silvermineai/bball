@@ -183,6 +183,37 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <span>Dated school statements</span>
             </div>
           </div>
+          <section className="paper-panel recruiting-national">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">National roster release / {rosters.season - 1}–{String(rosters.season).slice(-2)}</div>
+                <h2>Put announcements in roster context.</h2>
+              </div>
+              <div className="button-row">
+                <Link className="button secondary" href={`/basketball/ncaa-rosters/?season=${rosters.season}`}>
+                  Search roster archive ↗
+                </Link>
+                <a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${rosters.season}`}>
+                  Download source parquet ↓
+                </a>
+              </div>
+            </div>
+            <p>
+              The announcement file is a reviewed sample. The attributed NCAA
+              roster release gives the broader source frame for the same target
+              season, while keeping roster records separate from commitments,
+              eligibility and transfer claims.
+            </p>
+            <div className="raw-stat-grid">
+              <div><dt>{rosters.players_observed.toLocaleString()}</dt><dd>Source roster records</dd></div>
+              <div><dt>{rosters.teams_observed.toLocaleString()}</dt><dd>Programs represented</dd></div>
+              <div><dt>{rosters.prior_players_not_observed.toLocaleString()}</dt><dd>Rows without prior source profile</dd></div>
+              <div><dt>{rosters.unusable_rows?.toLocaleString() ?? "0"}</dt><dd>Unusable source rows</dd></div>
+            </div>
+            <p className="note">
+              Source edition: {rosters.previous_season}–{String(rosters.season).slice(-2)} roster release via SportsDataverse. The source download is the exact parquet release archived with a SHA-256 receipt.
+            </p>
+          </section>
           <div className="recruiting-scope">
             <span className="eyebrow">Coverage / Selected announcements</span>
             <p>
