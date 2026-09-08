@@ -82,7 +82,7 @@ export const eventLabels = {
   redshirt_announced: "Redshirt announced",
   season_unavailable: "Season unavailable",
 };
-export type RecruitingSort = "latest" | "ppg" | "mpg" | "name";
+export type RecruitingSort = "latest" | "ppg" | "mpg" | "name" | "review";
 export type RecruitingFilters = {
   team: string;
   q: string;
@@ -117,6 +117,7 @@ const recruitingSorts = new Set<RecruitingSort>([
   "ppg",
   "mpg",
   "name",
+  "review",
 ]);
 const recruitingCoverageSorts = new Set<RecruitingCoverageSort>([
   "reviewed",
@@ -182,6 +183,37 @@ type RecruitingSortable = {
   stats: { ppg: number | null; mpg: number | null } | null;
 };
 
+/**
+ * Put the records needing a human check first without turning the board into
+ * a hidden recruiting grade. The order is only an evidence triage rule:
+ * later non-addition statements, exact roster handoffs, linked production,
+ * then prior workload and publication date.
+ */
+export function sortRecruitingReviewRows<
+  T extends RecruitingSortable & {
+    team_id: string;
+    latest: RecruitingSortable["latest"] & { kind: string };
+  },
+>(rows: T[], match: (row: T) => RosterNameMatch) {
+  const matchRank: Record<RosterNameMatch, number> = { exact: 2, multiple: 1, none: 0 };
+  return [...rows].sort((a, b) => {
+    const attention = (row: T) => [
+      row.latest.kind === "addition" ? 0 : 1,
+      matchRank[match(row)],
+      row.stats ? 1 : 0,
+      row.stats?.mpg ?? -1,
+      row.latest.source.published_on,
+    ];
+    const av = attention(a);
+    const bv = attention(b);
+    for (let i = 0; i < 4; i += 1) {
+      if (av[i] !== bv[i]) return Number(bv[i]) - Number(av[i]);
+    }
+    if (av[4] !== bv[4]) return String(bv[4]).localeCompare(String(av[4]));
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export function sortRecruitingRows<T extends RecruitingSortable>(
   rows: T[],
   sort: RecruitingSort,
@@ -195,6 +227,7 @@ export function sortRecruitingRows<T extends RecruitingSortable>(
         ) || a.name.localeCompare(b.name)
       );
     }
+    if (sort === "review") return a.name.localeCompare(b.name);
     const av = a.stats?.[sort] ?? null;
     const bv = b.stats?.[sort] ?? null;
     if (av == null && bv == null) return a.name.localeCompare(b.name);

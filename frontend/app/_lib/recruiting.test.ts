@@ -7,6 +7,7 @@ import {
   parseRecruitingFilters,
   recruitingFilterSearch,
   sortRecruitingRows,
+  sortRecruitingReviewRows,
   summarizeRecruitingPrograms,
   rosterNameMatch,
   type RecruitingRelease,
@@ -72,6 +73,27 @@ describe("school announcement histories", () => {
     expect(sortRecruitingRows(rows, "name").map((p) => p.name)).toEqual(
       [...rows].map((p) => p.name).sort(),
     );
+  });
+
+  it("orders the review queue by evidence that needs attention", () => {
+    const base = {
+      team_id: "a",
+      program: { name: "Alpha" },
+      previous_program: null,
+      category: "transfer" as const,
+      timeline: [],
+    };
+    const row = (name: string, kind: string, stats: { mpg: number; ppg: number } | null) => ({
+      ...base,
+      name,
+      stats,
+      latest: { kind, source: { published_on: "2026-04-01" } },
+    });
+    const sorted = sortRecruitingReviewRows(
+      [row("No stats", "addition", null), row("Needs review", "season_unavailable", { mpg: 10, ppg: 4 }), row("Exact handoff", "addition", { mpg: 20, ppg: 8 })],
+      (value) => value.name === "Exact handoff" ? "exact" : "none",
+    );
+    expect(sorted.map((value) => value.name)).toEqual(["Needs review", "Exact handoff", "No stats"]);
   });
 });
 

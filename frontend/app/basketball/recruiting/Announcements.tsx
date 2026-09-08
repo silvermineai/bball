@@ -10,6 +10,7 @@ import {
   parseRecruitingFilters,
   recruitingFilterSearch,
   sortRecruitingRows,
+  sortRecruitingReviewRows,
   summarizeRecruitingPrograms,
   rosterNameMatch,
   type RecruitingSort,
@@ -122,28 +123,28 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       if (coverageSort === "prior") return (b.prior_minutes || 0) - (a.prior_minutes || 0) || a.team.localeCompare(b.team);
       return Number(b.reviewed) - Number(a.reviewed) || (b.additions - a.additions) || a.team.localeCompare(b.team);
     });
-  const rows = sortRecruitingRows(
-    allRows.filter(
-      (p) =>
-        (team === "all" || p.team_id === team) &&
-        (kind === "all" ||
-          (kind === "availability"
-            ? p.timeline.some((e) => e.kind !== "addition")
-            : p.category === kind)) &&
-        `${p.name} ${p.program.name} ${p.previous_program || ""}`
-          .normalize("NFKD")
-          .replace(/\p{M}/gu, "")
-          .toLowerCase()
-          .includes(q.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()),
-    ),
-    sort,
-  );
   const rosterMatch = (name: string, teamId: string) => rosterNameMatch(name, teamId, rosters.players);
   const exactRoster = (name: string, teamId: string): BBRoster | null => {
     if (rosterMatch(name, teamId) !== "exact") return null;
     const normalized = name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
     return rosters.players.find((player) => player.team_id === teamId && player.name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase() === normalized) || null;
   };
+  const matchingRows = allRows.filter(
+    (p) =>
+      (team === "all" || p.team_id === team) &&
+      (kind === "all" ||
+        (kind === "availability"
+          ? p.timeline.some((e) => e.kind !== "addition")
+          : p.category === kind)) &&
+      `${p.name} ${p.program.name} ${p.previous_program || ""}`
+        .normalize("NFKD")
+        .replace(/\p{M}/gu, "")
+        .toLowerCase()
+        .includes(q.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()),
+  );
+  const rows = sort === "review"
+    ? sortRecruitingReviewRows(matchingRows, (row) => rosterMatch(row.name, row.team_id))
+    : sortRecruitingRows(matchingRows, sort);
   const exactRosterMatches = allRows.filter((row) => rosterMatch(row.name, row.team_id) === "exact").length;
   const sourceSeason = rosters.previous_season;
   return (
@@ -435,6 +436,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 <option value="latest">Latest school publication</option>
                 <option value="ppg">Prior points per game</option>
                 <option value="mpg">Prior minutes per game</option>
+                <option value="review">Review priority</option>
                 <option value="name">Player name</option>
               </select>
             </label>
@@ -452,6 +454,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   ? "Prior points per game, highest first"
                   : sort === "mpg"
                     ? "Prior minutes per game, highest first"
+                    : sort === "review"
+                      ? "Attention update, roster handoff, linked production, then prior workload"
                     : "Alphabetical by player"}
             </p>
             <div className="button-row">
