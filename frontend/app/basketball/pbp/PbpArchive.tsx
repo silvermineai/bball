@@ -72,6 +72,7 @@ export default function PbpArchive({
         <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setSeason(Number(event.target.value)); setPage(0); }}>{catalog.seasons.slice().sort((a, b) => b.season - a.season).map((entry) => <option key={entry.season} value={entry.season}>{entry.season - 1}–{String(entry.season).slice(-2)} · {fmt(entry.games.length, 0)} games</option>)}</select></label>
         <label className="control"><span>TEAM, MATCHUP OR GAME ID</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search source games" /></label>
         <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
+        <a className="button secondary" href={`/api/basketball/research/pbp/source?season=${encodeURIComponent(String(active?.season ?? season))}`}>Download source parquet ↓</a>
       </div>
       {copied && <p role="status">{copied}</p>}
       {error && <p role="status" className="note">{error} Showing the embedded release snapshot.</p>}

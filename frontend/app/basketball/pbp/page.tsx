@@ -85,6 +85,8 @@ export default function Page() {
         <p>
           Source: <a href={current.source.url}>SportsDataverse play-by-play release</a>,
           labeled CC BY 4.0 by its publisher.{" "}
+          The retained parquet can be downloaded from the archive toolbar with
+          its immutable source hash and receipt preserved by Silvermine.{" "}
           <Link href="/basketball/model/">Read the model and source notebook →</Link>
         </p>
       </section>
