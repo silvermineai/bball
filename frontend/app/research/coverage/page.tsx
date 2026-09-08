@@ -19,11 +19,48 @@ export default function Page() {
   const basketball = getBasketball();
   const footballPlayerCatalog = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/football/player-catalog.json"), "utf8"),
-  ) as { seasons: { season: number; box_rows: number }[] };
+  ) as {
+    seasons: {
+      season: number;
+      box_rows: number;
+      box_games: number;
+      player_team_records: number;
+    }[];
+  };
   const footballArchiveRows = footballPlayerCatalog.seasons.reduce(
     (sum, season) => sum + season.box_rows,
     0,
   );
+  const footballPlayerRecords = footballPlayerCatalog.seasons.reduce(
+    (sum, season) => sum + season.player_team_records,
+    0,
+  );
+  const footballEvents = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/football/events.json"), "utf8"),
+  ) as {
+    generated_at: string;
+    editions: {
+      season: number;
+      dataset: "defense" | "specialists";
+      coverage: {
+        records: number;
+        games: number;
+        matched_context: number;
+        name_only_records: number;
+      };
+    }[];
+  };
+  const footballEventRows = footballEvents.editions.reduce(
+    (sum, edition) => sum + edition.coverage.records,
+    0,
+  );
+  const footballEventGames = footballEvents.editions.reduce(
+    (sum, edition) => sum + edition.coverage.games,
+    0,
+  );
+  const footballEventSeasons = Array.from(
+    new Set(footballEvents.editions.map((edition) => edition.season)),
+  ).sort((a, b) => a - b);
   const rosters = getRosters();
   const rosterSourceProfiles = rosters.players.filter((player) => player.source_url).length;
   const recruiting = getRecruiting();
@@ -265,7 +302,84 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">02 / Basketball evidence inventory</div>
+            <div className="eyebrow">02 / Football player evidence</div>
+            <h2>Every role has a visible source boundary.</h2>
+          </div>
+          <span className="note">
+            Generated {date(footballEvents.generated_at)}
+          </span>
+        </div>
+        <p className="note">
+          The identified archive and the event notebook are complementary. Box
+          rows use source athlete IDs and support player profiles; defensive and
+          specialist releases carry names and game context without stable
+          athlete IDs, so they remain separate and are never name-joined.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Evidence layer</th>
+                <th className="numeric">Rows</th>
+                <th>Season span</th>
+                <th className="numeric">Games</th>
+                <th>Identity / next step</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Identified player box archive</strong>
+                  <small>{footballPlayerRecords.toLocaleString()} player/program/season records</small>
+                </td>
+                <td className="numeric">{footballArchiveRows.toLocaleString()}</td>
+                <td>
+                  {footballPlayerCatalog.seasons[0]?.season}–
+                  {footballPlayerCatalog.seasons[footballPlayerCatalog.seasons.length - 1]?.season}
+                </td>
+                <td className="numeric">
+                  {footballPlayerCatalog.seasons.reduce((sum, season) => sum + season.box_games, 0).toLocaleString()}
+                </td>
+                <td>
+                  <small>Source athlete IDs; offensive and retained box categories.</small>
+                  <Link href="/football/players/">Open identified player index →</Link>
+                </td>
+              </tr>
+              {(["defense", "specialists"] as const).map((dataset) => {
+                const editions = footballEvents.editions.filter((edition) => edition.dataset === dataset);
+                const rows = editions.reduce((sum, edition) => sum + edition.coverage.records, 0);
+                const games = editions.reduce((sum, edition) => sum + edition.coverage.games, 0);
+                const label = dataset === "defense" ? "Defensive event notebook" : "Specialist event notebook";
+                return (
+                  <tr key={dataset}>
+                    <td>
+                      <strong>{label}</strong>
+                      <small>{editions.length} source editions · {footballEventSeasons[0]}–{footballEventSeasons[footballEventSeasons.length - 1]}</small>
+                    </td>
+                    <td className="numeric">{rows.toLocaleString()}</td>
+                    <td>{footballEventSeasons[0]}–{footballEventSeasons[footballEventSeasons.length - 1]}</td>
+                    <td className="numeric">{games.toLocaleString()}</td>
+                    <td>
+                      <small>Name, team and game IDs; no stable athlete ID.</small>
+                      <Link href={`/football/events/?dataset=${dataset}`}>Open event notebook →</Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">
+          The two event notebooks contain {footballEventRows.toLocaleString()} source
+          records across {footballEventGames.toLocaleString()} game contexts. A
+          repeated name is kept as a separate source row and is not a career total.
+        </p>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">03 / Basketball evidence inventory</div>
             <h2>Every stat layer has a receipt.</h2>
           </div>
           <span className="note">
@@ -325,7 +439,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">03 / Supplemental research archives</div>
+            <div className="eyebrow">04 / Supplemental research archives</div>
             <h2>The deeper player and possession files.</h2>
           </div>
           <span className="note">Source-native and derived layers</span>
@@ -376,7 +490,7 @@ export default function Page() {
 
       <section className="section two-col">
         <article className="paper-panel">
-          <div className="eyebrow">02 / Recruiting file</div>
+          <div className="eyebrow">05 / Recruiting file</div>
           <h2>Useful evidence, clearly partial.</h2>
           <div className="rule-list">
             <div>
@@ -416,7 +530,7 @@ export default function Page() {
         </article>
 
         <article className="paper-panel">
-          <div className="eyebrow">03 / Forecast record</div>
+          <div className="eyebrow">06 / Forecast record</div>
           <h2>Predictions have a clock.</h2>
           <div className="rule-list">
             <div>
@@ -460,7 +574,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">04 / Basketball data library</div>
+            <div className="eyebrow">07 / Basketball data library</div>
             <h2>Choose the evidence layer.</h2>
           </div>
           <span className="note">Each dataset keeps its own source identity.</span>
@@ -529,7 +643,7 @@ export default function Page() {
 
       <section className="section banner">
         <div>
-          <div className="eyebrow">05 / Source boundary</div>
+          <div className="eyebrow">08 / Source boundary</div>
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
             Current releases come from the attributed SportsDataverse bulk
