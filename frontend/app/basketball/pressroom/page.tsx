@@ -86,7 +86,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div><div className="eyebrow">The full forecast desk</div><h2>Open the next brief.</h2></div>
-          <Link href="/basketball/matchups/">Filter the complete slate →</Link>
+          <Link href="/basketball/briefs/">Browse every game brief →</Link>
         </div>
         <div className="article-grid">
           {games.slice(0, 12).map((game) => <GameCard key={game.id} game={game} />)}
