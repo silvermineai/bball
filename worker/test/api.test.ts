@@ -77,6 +77,18 @@ describe("bball api", () => {
     }
   });
 
+  it("rejects invalid team and boutique source parameters before querying D1", async () => {
+    for (const path of [
+      "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",
+      "/api/basketball/research/team-stats?stat=avgPoints&page=-1",
+      "/api/basketball/research/boutique?kind=other",
+      "/api/basketball/research/boutique?kind=ratings&metric=not_a_metric",
+      "/api/basketball/research/boutique?season=2000",
+    ]) {
+      expect((await app.request(path, {}, {})).status).toBe(400);
+    }
+  });
+
   it("rejects invalid market archive parameters before querying D1", async () => {
     for (const path of [
       "/api/research/markets?season=2020",

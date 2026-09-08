@@ -73,6 +73,12 @@ export default function Page() {
             </p>
             <span>Open the source stat browser →</span>
           </Link>
+          <Link className="paper-panel" href="/basketball/boutique/">
+            <div className="eyebrow">Boutique player value</div>
+            <h3>Which players add value in another model?</h3>
+            <p>Browse attributed offensive, defensive and total Box Plus/Minus across recent seasons.</p>
+            <span>Open player value archive →</span>
+          </Link>
         </div>
       </section>
       <Players

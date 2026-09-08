@@ -66,7 +66,8 @@ const paths = [
   ["Read the next slate", "/basketball/matchups/", "See every published 2026–27 forecast, interval and model timestamp."],
   ["Study recruiting", "/basketball/recruiting/", "Separate announced additions, roster observations and prior production."],
   ["Open NCAA leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
-  ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
+    ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
+    ["Compare published models", "/basketball/boutique/", "Read attributed team ratings and Box Plus/Minus beside Silvermine's independent model."],
 ];
 
 export default function Page() {

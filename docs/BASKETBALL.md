@@ -12,6 +12,7 @@ The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for 
 - 9,990 player/team entries with recorded minutes in the player index; incomplete box-score aggregates are not presented as complete rates.
 - 2025 and 2026 publisher player-season releases (416,788 and 426,040 source rows) are grouped into 19,822 player/team records, retaining labels, values, displays and descriptions.
 - 2024, 2025 and 2026 publisher team-season releases (32,265, 31,500 and 32,715 source rows) are grouped into 717, 700 and 727 team records, retaining 45 labeled aggregate fields for the team-stat browser.
+- The attributed `mbb_ratings` release adds 13,069 team-rating rows with adjusted offense, defense, net efficiency, tempo and publisher ranks across 2006–26. The companion `mbb_player_value` release adds 160,031 player/team rows with Box Plus/Minus, offensive BPM, defensive BPM and recorded minutes across the same seasons.
 - 4,974 NCAA league-wide RAPM records, kept in their original NCAA identity namespace.
 - 1,629 published 2026–27 games, including 1,579 primary forecasts and 50 separately labeled cold-start estimates. This is a partial schedule.
 - 5,461 players listed under 2026–27 in the source, spanning 354 programs. Listings are unconfirmed and may carry over; they do not prove current eligibility or a roster return.
@@ -52,7 +53,7 @@ The [historical player archive](BASKETBALL_CAREERS.md) adds 24 published seasons
 
 The [school announcement board](BASKETBALL_RECRUITING.md) adds dated recruiting evidence with historical-stat links and later availability statements. It is a partial editorial review, separate from unconfirmed source rosters.
 
-The [team-stat browser](/basketball/team-stats/) exposes the attributed team-season archive across general, offensive and defensive categories. It preserves the publisher's values, display strings and labels and does not feed those fields into Silvermine's adjusted ratings. The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from 2.9 million bulk play-by-play events, with program/player court maps, shot labels, event logs and exact box-score reconciliation. Its source release is archived in R2; versioned shot evidence is served from D1.
+The [team-stat browser](/basketball/team-stats/) exposes the attributed team-season archive across general, offensive and defensive categories. The [boutique model archive](/basketball/boutique/) adds publisher adjusted ratings and Box Plus/Minus alongside the independent Silvermine model. Both preserve source values and labels and do not feed those fields into Silvermine's adjusted ratings. The [shooting lab](BASKETBALL_SHOOTING.md) adds 738,233 field-goal attempts from 2.9 million bulk play-by-play events, with program/player court maps, shot labels, event logs and exact box-score reconciliation. Its source release is archived in R2; versioned shot evidence is served from D1.
 
 The [program scouting library and matchup workbench](BASKETBALL_SCOUTING.md) add 366 native dossiers, historical window comparisons, game efficiency charts, personnel workloads and venue scenarios. These use the existing source/model edition and preserve the distinction between historical observations and future predictions.
 
@@ -66,7 +67,7 @@ Player impact uses the publisher's league-wide NCAA stint-ridge RAPM. Net RAPM i
 
 ## Storage and refresh
 
-D1 migrations `0009_basketball_research.sql` and `0017_basketball_team_season.sql` add separate `bb_*` tables without modifying football or legacy basketball tables. Compact player/team box-score fields are stored alongside published player-season and team-season metrics, roster profiles, appearance summaries, source receipts, model artifacts and forecast snapshots. Full source downloads are cached locally under ignored `.local/basketball/`; public derivative JSON is served by Cloudflare Assets.
+D1 migrations `0009_basketball_research.sql`, `0017_basketball_team_season.sql` and `0018_basketball_boutique.sql` add separate `bb_*` tables without modifying football or legacy basketball tables. Compact player/team box-score fields are stored alongside published player-season, team-season and boutique-model metrics, roster profiles, appearance summaries, source receipts, model artifacts and forecast snapshots. Full source downloads are cached locally under ignored `.local/basketball/`; public derivative JSON is served by Cloudflare Assets.
 
 ```bash
 PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball --sql .local/basketball.sql

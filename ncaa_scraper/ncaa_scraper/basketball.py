@@ -130,6 +130,8 @@ def ingest(conn, dataset, year, rows, receipt):
             "rosters": "bb_rosters",
             "player_season": "bb_player_season",
             "team_season": "bb_team_season",
+            "publisher_ratings": "bb_publisher_ratings",
+            "publisher_player_value": "bb_player_value",
             "ncaa_rapm": "bb_impact",
         }
         if dataset in tables:
@@ -262,6 +264,39 @@ def ingest(conn, dataset, year, rows, receipt):
                     )
                     for tid, profile in profiles.items()
                 ],
+            )
+        elif dataset == "publisher_ratings":
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_publisher_ratings VALUES (?,?,?)",
+                [
+                    (year, identity(r["team_id"]), json.dumps({k: number(v) if number(v) is not None else v for k, v in r.items()}))
+                    for r in rows
+                ],
+            )
+        elif dataset == "publisher_player_value":
+            conn.execute(
+                "DELETE FROM bb_unresolved WHERE dataset=? AND season=?",
+                (dataset, year),
+            )
+            valid = []
+            for i, r in enumerate(rows):
+                if not r.get("player_id") or not r.get("team_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing player or team ID", json.dumps(r)),
+                    )
+                    continue
+                valid.append(
+                    (
+                        year,
+                        identity(r["player_id"]),
+                        identity(r["team_id"]),
+                        r.get("player"),
+                        json.dumps({k: number(v) if number(v) is not None else v for k, v in r.items()}),
+                    )
+                )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_player_value VALUES (?,?,?,?,?)", valid
             )
         elif dataset == "ncaa_rapm":
             conn.executemany(
@@ -1011,6 +1046,8 @@ def export_sql(conn, path):
             "bb_player_box",
             "bb_player_season",
             "bb_team_season",
+            "bb_publisher_ratings",
+            "bb_player_value",
             "bb_rosters",
             "bb_impact",
             "bb_unresolved",
@@ -1034,7 +1071,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -1062,7 +1099,16 @@ def main():
                 datasets.append("player_season")
             if year in (2024, 2025, 2026):
                 datasets.append("team_season")
+                datasets.extend(["publisher_ratings", "publisher_player_value"])
             for dataset in datasets:
+                rows, receipt = c.load(dataset, year, refresh=args.refresh)
+                ingest(conn, dataset, year, rows, receipt)
+                print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
+        # The boutique publisher model releases extend back to 2006. Keep
+        # those compact historical tables complete without expanding the
+        # schedule/box-score training archive in this refresh.
+        for year in range(2006, 2024):
+            for dataset in ("publisher_ratings", "publisher_player_value"):
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)
                 print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)

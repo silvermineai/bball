@@ -10,6 +10,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/pressroom/">Press room</Link>
         <Link href="/basketball/gameplan/">Game plan</Link>
         <Link href="/basketball/ratings/">Efficiency ratings</Link>
+        <Link href="/basketball/boutique/">Boutique models</Link>
         <Link href="/basketball/conferences/">Conferences</Link>
         <Link href="/basketball/programs/">Program dossiers</Link>
         <Link href="/basketball/compare/">Compare programs</Link>
