@@ -4,7 +4,7 @@ Native Next.js pages now live at `/basketball/`, `/basketball/learn/`, `/basketb
 
 The native `/basketball/ncaa/` page adds a separate NCAA identity namespace for final national individual-stat snapshots across Divisions I, II and III. The coach-facing `/basketball/gameplan/` route now runs on the native matchup workbench; other preserved archive routes remain available through the legacy shell until their native replacements are published. See [`NCAA_INDIVIDUAL.md`](NCAA_INDIVIDUAL.md) for source, cache and D1 publication details.
 
-The [reading room](/basketball/learn/) includes browser-only lessons for Four Factors, market probability and recruiting workload. The calculators apply disclosed denominators, convert American prices into raw and no-vig probabilities, and preserve unavailable results when an input is missing; calculator values never enter the model, market archive or storage.
+The [reading room](/basketball/learn/) includes browser-only lessons for Four Factors, market probability and recruiting workload. Its searchable metric explorer groups the definitions by team, player, impact, recruiting and market topics and links each definition to the evidence desk where it can be inspected. The calculators apply disclosed denominators, convert American prices into raw and no-vig probabilities, and preserve unavailable results when an input is missing; calculator values never enter the model, market archive or storage.
 
 ## Current verified import
 

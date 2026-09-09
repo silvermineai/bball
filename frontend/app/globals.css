@@ -726,6 +726,91 @@ th,
   line-height: 1.8;
   margin-top: 14px;
 }
+.metric-explorer {
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: #fcfaf4;
+}
+.metric-explorer .toolbar {
+  margin-bottom: 22px;
+}
+.metric-explorer .toolbar .control:first-child {
+  flex: 1 1 360px;
+}
+.metric-explorer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.85fr);
+  gap: 22px;
+  align-items: start;
+}
+.metric-explorer-list {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+.metric-explorer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.metric-explorer-row:hover,
+.metric-explorer-row.is-selected {
+  background: #f1ede3;
+}
+.metric-explorer-row strong,
+.metric-explorer-row small {
+  display: block;
+}
+.metric-explorer-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font: 10px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.metric-explorer-chevron {
+  color: var(--orange);
+  font: 14px "IBM Plex Mono", monospace;
+}
+.metric-explorer-detail {
+  position: sticky;
+  top: 20px;
+  margin: 0;
+  background: white;
+}
+.metric-explorer-detail h3 {
+  margin-top: 9px;
+  font: 400 clamp(24px, 2.8vw, 36px) "Libre Caslon Display", Georgia, serif;
+}
+.metric-explorer-detail p {
+  margin-top: 13px;
+}
+.metric-explorer-detail a {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--orange);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .metric-explorer {
+    padding: 16px;
+  }
+  .metric-explorer-layout {
+    grid-template-columns: 1fr;
+  }
+  .metric-explorer-detail {
+    position: static;
+  }
+}
 .model-compare-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

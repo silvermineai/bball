@@ -2,6 +2,8 @@ import Link from "next/link";
 import FourFactorsCalculator from "./FourFactorsCalculator";
 import MarketProbabilityCalculator from "./MarketProbabilityCalculator";
 import RecruitingWorkloadCalculator from "./RecruitingWorkloadCalculator";
+import MetricExplorer from "./MetricExplorer";
+import type { LearningMetric, LearningTopic } from "../../_lib/metric-explorer";
 
 export const metadata = {
   title: "Learn college basketball analytics",
@@ -123,6 +125,66 @@ const metrics = [
   },
 ];
 
+const metricTopics: Record<string, LearningTopic> = {
+  "Adjusted offense (Adj O)": "team",
+  "Adjusted defense (Adj D)": "team",
+  "Opponent-adjusted four factors": "team",
+  "Strength of schedule (SOS)": "team",
+  "Tempo": "team",
+  "Effective field-goal percentage (eFG%)": "player",
+  "Turnover rate": "player",
+  "Offensive-rebound rate": "team",
+  "True shooting (TS%)": "player",
+  RAPM: "impact",
+  "Publisher Box Plus/Minus (BPM)": "impact",
+  "ORAPM and DRAPM": "impact",
+  ORAPM: "impact",
+  "Points per 40 minutes": "player",
+  "Assist-to-turnover ratio": "player",
+  "Three-point and free-throw attempt rates": "player",
+  "Possession share": "player",
+  "Rim attempt rate": "player",
+  "Transition scoring share": "player",
+  "Unassisted scoring share": "player",
+  "Lineup net performance": "impact",
+  "Shot-location profile": "impact",
+  "Roster workload continuity": "recruiting",
+};
+
+const metricLinks: Record<string, string> = {
+  "Adjusted offense (Adj O)": "/basketball/ratings/",
+  "Adjusted defense (Adj D)": "/basketball/ratings/",
+  "Opponent-adjusted four factors": "/basketball/ratings/",
+  "Strength of schedule (SOS)": "/basketball/ratings/",
+  Tempo: "/basketball/compare/",
+  "Effective field-goal percentage (eFG%)": "/basketball/players/",
+  "Turnover rate": "/basketball/ncaa-rankings/",
+  "Offensive-rebound rate": "/basketball/ratings/",
+  "True shooting (TS%)": "/basketball/players/",
+  RAPM: "/basketball/impact/",
+  "Publisher Box Plus/Minus (BPM)": "/basketball/leaders/",
+  "ORAPM and DRAPM": "/basketball/impact/",
+  ORAPM: "/basketball/impact/",
+  "Points per 40 minutes": "/basketball/ncaa-rankings/",
+  "Assist-to-turnover ratio": "/basketball/ncaa-rankings/",
+  "Three-point and free-throw attempt rates": "/basketball/ncaa-rankings/",
+  "Possession share": "/basketball/ncaa-rankings/",
+  "Rim attempt rate": "/basketball/ncaa-shooting/",
+  "Transition scoring share": "/basketball/ncaa-shooting/",
+  "Unassisted scoring share": "/basketball/ncaa-rankings/",
+  "Lineup net performance": "/basketball/lineups/",
+  "Shot-location profile": "/basketball/shooting/",
+  "Roster workload continuity": "/basketball/roster-lab/",
+};
+
+const metricDefinitions: LearningMetric[] = metrics.map(({ name, value, use }) => ({
+  name,
+  value,
+  use,
+  topic: metricTopics[name] || "team",
+  href: metricLinks[name] || "/basketball/learn/",
+}));
+
 const paths = [
   ["Find a player", "/basketball/players/", "Rates, workload, shooting and game evidence across the archive."],
   ["Compare programs", "/basketball/compare/", "Turn ratings and four factors into a venue-aware matchup question."],
@@ -221,26 +283,7 @@ export default function Page() {
           </div>
           <Link href="/basketball/ratings/">See the full ratings table →</Link>
         </div>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Measure</th>
-                <th>What it means</th>
-                <th>How to use it</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.map((metric) => (
-                <tr key={metric.name}>
-                  <th>{metric.name}</th>
-                  <td>{metric.value}</td>
-                  <td>{metric.use}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MetricExplorer metrics={metricDefinitions} />
         <p className="note">
           Silvermine calculations are independent estimates. Publisher metrics
           retain their source labels and source identities. A missing value is
