@@ -3,6 +3,7 @@ type Numeric = number | null | undefined;
 export type TrajectoryInput = {
   season: number;
   team_id: string;
+  games: Numeric;
   stats: Record<string, Numeric>;
 };
 
@@ -47,7 +48,7 @@ export function buildNcaaPlayerTrajectory(
     .sort(([a], [b]) => b - a)
     .map(([season, seasonRows]) => {
       const games = seasonRows.reduce(
-        (total, row) => total + (finite(row.stats.games) ? row.stats.games : 0),
+        (total, row) => total + (finite(row.games) ? row.games : 0),
         0,
       );
       const minutes = completeSum(seasonRows, "mins");

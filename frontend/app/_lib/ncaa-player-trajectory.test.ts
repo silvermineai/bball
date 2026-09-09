@@ -7,16 +7,19 @@ describe("NCAA player trajectory", () => {
       {
         season: 2024,
         team_id: "a",
+        games: 10,
         stats: { games: 10, mins: 200, pts: 100, fgm: 40, fga: 80, tpm: 10, fta: 20 },
       },
       {
         season: 2024,
         team_id: "b",
+        games: 5,
         stats: { games: 5, mins: 100, pts: 50, fgm: 20, fga: 40, tpm: 5, fta: 10 },
       },
       {
         season: 2025,
         team_id: "b",
+        games: 20,
         stats: { games: 20, mins: 600, pts: 360, fgm: 120, fga: 240, tpm: 40, fta: 80 },
       },
     ]);
@@ -30,6 +33,7 @@ describe("NCAA player trajectory", () => {
       {
         season: 2026,
         team_id: "a",
+        games: 12,
         stats: { games: 12, mins: 300, pts: 180, fgm: 60, fga: null, tpm: 20, fta: 50 },
       },
     ]);
@@ -41,7 +45,7 @@ describe("NCAA player trajectory", () => {
 
   it("does not let a missing games field create a rate denominator", () => {
     const [row] = buildNcaaPlayerTrajectory([
-      { season: 2026, team_id: "a", stats: { games: null, mins: 100, pts: 40 } },
+      { season: 2026, team_id: "a", games: null, stats: { games: null, mins: 100, pts: 40 } },
     ]);
     expect(row.games).toBe(0);
     expect(row.ppg).toBeNull();
