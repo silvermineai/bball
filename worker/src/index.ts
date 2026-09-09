@@ -173,6 +173,75 @@ const footballPlayerQuery = z.object({
   page: z.coerce.number().int().min(0).max(200).default(0),
 });
 
+/**
+ * Return the compact, exact-athlete career trail used by a player dossier.
+ * The UI should not download the full career index just to open one player.
+ */
+app.get("/api/football/players/:id/career", async (c) => {
+  const id = c.req.param("id");
+  if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
+  const result = await c.env.DB.prepare(`SELECT season,dataset,category,team_id,stats_json
+    FROM football_stats
+    WHERE athlete_id=? AND dataset IN ('passing','rushing','receiving','box')
+    ORDER BY season DESC,dataset,category,record_key`).bind(id).all<{
+      season: number;
+      dataset: string;
+      category: string | null;
+      team_id: string | null;
+      stats_json: string;
+    }>();
+  const number = (value: unknown) => {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const rows = result.results.flatMap((row) => {
+    if (row.dataset === "box") return [];
+    try {
+      const stats = JSON.parse(row.stats_json) as Record<string, unknown>;
+      const team = String(stats.pos_team || stats.team_name || row.team_id || "Team unavailable");
+      return [{
+        season: row.season,
+        dataset: row.dataset,
+        category: row.category || row.dataset,
+        team_id: row.team_id,
+        team,
+        games: number(stats.games),
+        plays: number(stats.plays),
+        yards: number(stats.yards),
+        touchdowns: number(stats.passing_td ?? stats.rushing_td ?? stats.receiving_td),
+        epa: number(stats.TEPA),
+        epa_per_play: number(stats.EPAplay),
+      }];
+    } catch {
+      return [];
+    }
+  });
+  if (!rows.length) return c.json({ error: "No career records found" }, 404);
+  const boxGames = new Map<number, Set<string>>();
+  for (const row of result.results) {
+    if (row.dataset !== "box") continue;
+    try {
+      const stats = JSON.parse(row.stats_json) as Record<string, unknown>;
+      const game = String(stats.game_id || "");
+      if (!game) continue;
+      const games = boxGames.get(row.season) || new Set<string>();
+      games.add(game);
+      boxGames.set(row.season, games);
+    } catch {
+      // A malformed source row is omitted while valid career rows remain usable.
+    }
+  }
+  const seasons = [...new Set(rows.map((row) => row.season))].sort((a, b) => b - a);
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({
+    player_id: id,
+    seasons,
+    source_records: rows.length,
+    box_games: Object.fromEntries([...boxGames.entries()].map(([season, games]) => [season, games.size])),
+    rows,
+  });
+});
+
 app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), async (c) => {
   const id = c.req.param("id");
   if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);

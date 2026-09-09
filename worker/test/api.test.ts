@@ -117,6 +117,45 @@ describe("bball api", () => {
     ]);
   });
 
+  it("returns a compact exact-ID football career trail", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        all: async () => ({
+          results: sql.includes("ORDER BY season DESC")
+            ? [
+                {
+                  season: 2025,
+                  dataset: "rushing",
+                  category: "rushing",
+                  team_id: "10",
+                  stats_json: JSON.stringify({ pos_team: "Example U", games: "10", plays: "100", yards: "700", rushing_td: "8", TEPA: "12.5", EPAplay: "0.125" }),
+                },
+                {
+                  season: 2024,
+                  dataset: "rushing",
+                  category: "rushing",
+                  team_id: "9",
+                  stats_json: JSON.stringify({ pos_team: "Earlier U", games: "8", plays: "70", yards: "400", rushing_td: "4", TEPA: "4.5", EPAplay: "0.064" }),
+                },
+                {
+                  season: 2025,
+                  dataset: "box",
+                  category: "rushing",
+                  team_id: "10",
+                  stats_json: JSON.stringify({ game_id: "401" }),
+                },
+              ]
+            : [],
+        }),
+      }),
+    }));
+    const response = await app.request("/api/football/players/123/career", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { player_id: string; seasons: number[]; source_records: number; box_games: Record<string, number>; rows: Array<Record<string, unknown>> };
+    expect(body).toMatchObject({ player_id: "123", seasons: [2025, 2024], source_records: 2, box_games: { "2025": 1 } });
+    expect(body.rows[0]).toMatchObject({ season: 2025, team: "Example U", plays: 100, epa: 12.5 });
+  });
+
   it("serves bounded football forecasts from the latest registered D1 model", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT id,created_at,cutoff,artifact_json FROM football_models")) {
