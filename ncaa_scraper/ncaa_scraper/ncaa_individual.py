@@ -208,7 +208,13 @@ def export_release(conn: sqlite3.Connection) -> dict:
     updated = [p[0] for p in conn.execute("SELECT updated_at FROM ncaa_players WHERE updated_at IS NOT NULL")]
     generated = max(updated) if updated else None
     if generated:
-        generated = datetime.fromisoformat(generated.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        parsed = datetime.fromisoformat(generated.replace("Z", "+00:00"))
+        # SQLite CURRENT_TIMESTAMP is UTC but stores a naive value. Treat it
+        # as UTC explicitly; otherwise astimezone() interprets it as local
+        # time and makes a fresh release appear hours in the future.
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        generated = parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
         "schema_version": 2,
         "season": 2026,

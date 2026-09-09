@@ -39,6 +39,7 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
         self.assertEqual(release["players"][0]["name"], "A Player")
         self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
+        self.assertEqual(release["generated_at"], "2026-06-12T23:00:00Z")
 
     def test_export_release_keeps_complete_source_measure_rows(self):
         conn = sqlite3.connect(":memory:")
