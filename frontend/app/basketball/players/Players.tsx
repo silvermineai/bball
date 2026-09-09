@@ -286,7 +286,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     `basketball-players-${season}.csv`,
                     toCsv(
                       [
-                        "Stat rank",
+                        sort === "profile" ? "Profile rank" : "Stat rank",
                         "All-around profile index",
                         "Profile components",
                         "Player",
@@ -349,8 +349,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Stat rank</th>
-                  <th>Profile</th>
+                  <th>{sort === "profile" ? "Profile rank" : "Stat rank"}</th>
+                  <th>Profile index</th>
                   <th>Player / program</th>
                   <th>Pos.</th>
                   {[
@@ -379,8 +379,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                   <tr key={`${p.id}-${p.team_id}`}>
                     <td className="rank-number">{p.statRank ?? "—"}</td>
                     <td className="numeric">
-                      {p.profileRank == null ? "—" : `#${p.profileRank}`}
-                      <small>{p.profileScore == null ? "Insufficient fields" : `${fmt(p.profileScore, 1)} / 100 · ${p.profileComponents}/8 fields`}</small>
+                      {sort === "profile"
+                        ? p.profileScore == null ? "—" : fmt(p.profileScore, 1)
+                        : p.profileRank == null ? "—" : `#${p.profileRank}`}
+                      <small>{p.profileScore == null ? "Insufficient fields" : sort === "profile" ? `${p.profileComponents}/8 fields · cohort percentile` : `${fmt(p.profileScore, 1)} / 100 · ${p.profileComponents}/8 fields`}</small>
                     </td>
                     <td>
                       <Link
