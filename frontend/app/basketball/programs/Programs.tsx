@@ -1,15 +1,15 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import type { BBRosters } from "../../_lib/basketball-types";
+import type { BBRosterSummary } from "../../_lib/basketball-types";
 import type { ScoutIndex } from "../../_lib/scouting-types";
 import { fmt, signed } from "../../_lib/format";
 export default function Programs({
   teams,
-  rosters,
+  rosterSummaries,
 }: {
   teams: ScoutIndex["teams"];
-  rosters: BBRosters;
+  rosterSummaries: Pick<BBRosterSummary, "team_id" | "listed_players" | "returning_players" | "transfer_players" | "new_players">[];
 }) {
   const [q, setQ] = useState(""),
     [sort, setSort] = useState("rank");
@@ -18,14 +18,9 @@ export default function Programs({
     .sort((a, b) =>
       sort === "name"
         ? a.name.localeCompare(b.name)
-        : a.rating.rank - b.rating.rank,
+      : a.rating.rank - b.rating.rank,
     );
-  const rosterByTeam = new Map<string, BBRosters["players"]>();
-  for (const player of rosters.players) {
-    const current = rosterByTeam.get(player.team_id) ?? [];
-    current.push(player);
-    rosterByTeam.set(player.team_id, current);
-  }
+  const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   return (
     <>
       <div className="toolbar">
@@ -75,14 +70,12 @@ export default function Programs({
                 </td>
                 <td className="program-roster">
                   {(() => {
-                    const observed = rosterByTeam.get(t.id) ?? [];
-                    const count = (status: string) =>
-                      observed.filter((p) => p.status === status).length;
-                    return observed.length ? (
+                    const observed = rosterByTeam.get(t.id);
+                    return observed?.listed_players ? (
                       <>
-                        <strong>{observed.length} listed</strong>
+                        <strong>{observed.listed_players} listed</strong>
                         <small>
-                          {count("same_program")} returning · {count("different_program")} transfers · {count("new_to_dataset")} new
+                          {observed.returning_players} returning · {observed.transfer_players} transfers · {observed.new_players} new
                         </small>
                       </>
                     ) : (

@@ -26,7 +26,7 @@ export default function Page() {
           behind the production, and the games that shaped its season.
         </p>
       </div>
-      <Programs teams={data.teams} rosters={rosters} />
+      <Programs teams={data.teams} rosterSummaries={rosters.team_summaries || []} />
       <p className="note">
         The library covers the {data.teams.length} programs in the independent
         model’s rated field. It is not a verified complete Division I membership

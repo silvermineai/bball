@@ -25,7 +25,7 @@ export default function Page() {
           Four Factors, personnel workloads and game context.
         </p>
       </div>
-      <Programs teams={data.teams} rosters={getRosters()} />
+      <Programs teams={data.teams} rosterSummaries={getRosters().team_summaries || []} />
       <p className="note">
         This archive covers the {data.teams.length} programs in the independent
         model field. It is not a complete Division I membership census.

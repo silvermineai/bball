@@ -21,7 +21,7 @@ export default function Page() {
           performance, personnel and game context.
         </p>
       </div>
-      <Programs teams={data.teams} rosters={getRosters()} />
+      <Programs teams={data.teams} rosterSummaries={getRosters().team_summaries || []} />
     </>
   );
 }
