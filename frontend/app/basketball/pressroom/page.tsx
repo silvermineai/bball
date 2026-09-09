@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import { espnGameUrl, getBasketball } from "../../_lib/basketball-data";
 import type { BBGame } from "../../_lib/basketball-types";
@@ -11,6 +13,28 @@ export const metadata = {
 };
 
 const forecasted = (games: BBGame[]) => games.filter((game) => game.prediction);
+
+type NewsArticle = {
+  id: string;
+  headline: string;
+  description: string;
+  published: string;
+  link: string;
+  publisher?: string;
+  sport?: string;
+};
+
+function sourceWire(): { generated_at?: string; articles: NewsArticle[] } {
+  const release = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
+  ) as { generated_at?: string; articles?: NewsArticle[] };
+  return {
+    generated_at: release.generated_at,
+    articles: (release.articles || []).filter(
+      (article) => article.sport === "mens-college-basketball",
+    ),
+  };
+}
 
 function signal(game: BBGame) {
   const p = game.prediction!;
@@ -47,6 +71,7 @@ function GameCard({ game }: { game: BBGame }) {
 
 export default function Page() {
   const games = forecasted(getBasketball().upcoming);
+  const wire = sourceWire();
   const strongest = [...games].sort(
     (a, b) => Math.abs(b.prediction!.home_win_probability - 0.5) - Math.abs(a.prediction!.home_win_probability - 0.5),
   )[0];
@@ -82,6 +107,23 @@ export default function Page() {
         </div>
         <p className="note">Featured cards are selected from model confidence, projected closeness and interval width. The language is a writing prompt, not a human-edited article or a claim about injuries, availability or betting value.</p>
         <div className="article-grid">{featured.map((game) => <GameCard key={game.id} game={game} />)}</div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div><div className="eyebrow">Publisher wire / source context</div><h2>Read what changed around the slate.</h2></div>
+          <Link href="/basketball/recruiting/">Open the recruiting file →</Link>
+        </div>
+        <p className="note">These headlines and summaries come from permitted ESPN and NCAA.com RSS feeds. They are dated context for reporting; Silvermine does not fetch or rewrite the linked articles, and a headline does not establish eligibility, availability, injury status or a model adjustment. Latest publisher clock: {wire.generated_at ? date(wire.generated_at) : "unavailable"}.</p>
+        <div className="article-grid">
+          {wire.articles.slice(0, 6).map((article) => (
+            <article className="article-card" key={article.id}>
+              <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"} RSS</div>
+              <h3>{article.headline}</h3>
+              <p>{article.description}</p>
+              <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
+            </article>
+          ))}
+        </div>
       </section>
       <section className="section">
         <div className="section-heading">
