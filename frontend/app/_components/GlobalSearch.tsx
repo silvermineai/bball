@@ -7,6 +7,8 @@ import { combineSearchResults, searchPrograms, type SearchProgram, type SearchRe
 type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null };
 type PlayerResponse = { rows?: PlayerRow[] };
 type RatingResponse = { board?: Array<{ id?: string | number; name?: string }> };
+type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team" };
+type LegacyResponse = { results?: LegacyRow[] };
 
 let programsPromise: Promise<SearchProgram[]> | null = null;
 const loadPrograms = () => {
@@ -45,8 +47,10 @@ export default function GlobalSearch() {
         fetch(`/api/basketball/research/player-core?season=2026&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
+        fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_fbl`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
       ])
-        .then(([players, programs]) => {
+        .then(([players, programs, football]) => {
           const playerResults: SearchResult[] = (players.rows || [])
             .filter((row): row is PlayerRow & { id: string; name: string } => !!row.id && !!row.name)
             .slice(0, 5)
@@ -54,10 +58,22 @@ export default function GlobalSearch() {
               id: row.id,
               name: row.name,
               type: "player",
-              detail: [row.team, row.position].filter(Boolean).join(" · ") || "Source player",
+              sport: "basketball",
+              detail: [row.team, row.position, "Basketball"].filter(Boolean).join(" · ") || "Basketball source player",
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}&season=2026`,
             }));
-          setResults(combineSearchResults(playerResults, searchPrograms(programs, needle), 8));
+          const footballResults: SearchResult[] = (football.results || [])
+            .filter((row): row is LegacyRow & { id: string; name: string; type: "player" | "team" } => !!row.id && !!row.name && !!row.type)
+            .slice(0, 3)
+            .map((row) => ({
+              id: row.id,
+              name: row.name,
+              type: row.type === "team" ? "program" : "player",
+              sport: "football",
+              detail: row.type === "team" ? "Football program" : "Football player",
+              href: row.type === "team" ? `/scout/${encodeURIComponent(row.id)}` : `/players/${encodeURIComponent(row.id)}`,
+            }));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...footballResults], searchPrograms(programs, needle, 4), 8));
           setOpen(true);
         })
         .catch((reason: unknown) => {
@@ -84,13 +100,13 @@ export default function GlobalSearch() {
   return (
     <div className="global-search" ref={root}>
       <label>
-        <span className="sr-only">Search basketball players and programs</span>
+        <span className="sr-only">Search college basketball and football players and programs</span>
         <input
           type="search"
           value={query}
           maxLength={120}
           placeholder="Search players or programs"
-          aria-label="Search basketball players and programs"
+          aria-label="Search college basketball and football players and programs"
           aria-expanded={open}
           onFocus={() => { if (results.length) setOpen(true); }}
           onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
@@ -104,7 +120,7 @@ export default function GlobalSearch() {
           {!loading && !error && results.map((result) => (
             <Link href={result.href} role="option" className="global-search-result" key={`${result.type}-${result.id}`} onClick={() => setOpen(false)}>
               <span><strong>{result.name}</strong><small>{result.detail}</small></span>
-              <em>{result.type === "player" ? "Player" : "Program"}</em>
+              <em>{result.sport ? `${result.sport} · ` : ""}{result.type === "player" ? "Player" : "Program"}</em>
             </Link>
           ))}
           {!loading && !error && !results.length && <span className="global-search-status">No source records found.</span>}

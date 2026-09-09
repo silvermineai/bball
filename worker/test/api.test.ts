@@ -8,6 +8,28 @@ describe("bball api", () => {
     await expect(res.json()).resolves.toMatchObject({ ok: true });
   });
 
+  it("filters global search to the requested football sport", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        all: async () => ({
+          results: sql.includes("FROM teams")
+            ? [{ id: "t_alabama", name: "Alabama", sportCode: "MFB", type: "team" }]
+            : [{ id: "p_example", name: "Example Player", sportCode: "MFB", type: "player" }],
+        }),
+      }),
+    }));
+    const response = await app.request(
+      "/api/search?q=Alabama&sport=s_fbl",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { sport: string; results: Array<Record<string, unknown>> };
+    expect(body.sport).toBe("s_fbl");
+    expect(body.results[0]).toMatchObject({ id: "t_alabama", type: "team", sportCode: "MFB" });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("sport_code = ?"));
+  });
+
   it("returns exact-ID football season production beside the game log", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total")) {

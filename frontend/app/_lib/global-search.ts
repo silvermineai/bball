@@ -4,6 +4,7 @@ export type SearchResult = {
   id: string;
   name: string;
   type: "player" | "program";
+  sport?: "basketball" | "football";
   detail?: string;
   href: string;
 };
@@ -32,6 +33,7 @@ export function searchPrograms(
       id: program.id,
       name: program.name,
       type: "program",
+      sport: "basketball",
       detail: "Basketball program",
       href: `/basketball/programs/${encodeURIComponent(program.id)}/`,
     }));

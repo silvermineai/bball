@@ -815,11 +815,24 @@ app.get("/api/players/:playerId/shots", zValidator("query", playerFilterQuery), 
   return c.json({ shots });
 });
 
-app.get("/api/search", zValidator("query", z.object({ q: z.string().default("") })), async (c) => {
-  const like = `%${c.req.valid("query").q}%`;
-  const teams = await all(c.env.DB, "SELECT internal_id AS id, name, 'team' AS type FROM teams WHERE name LIKE ? LIMIT 8", like);
-  const players = await all(c.env.DB, "SELECT internal_id AS id, name, 'player' AS type FROM players WHERE name LIKE ? LIMIT 8", like);
-  return c.json({ results: [...teams, ...players] });
+app.get("/api/search", zValidator("query", z.object({
+  q: z.string().trim().max(120).default(""),
+  sport: z.enum(["all", "s_mbb", "s_fbl"]).default("all"),
+})), async (c) => {
+  const { q, sport } = c.req.valid("query");
+  const like = `%${q}%`;
+  const sportCode = sport === "s_mbb" ? "MBB" : sport === "s_fbl" ? "MFB" : null;
+  const teamsSql = sportCode
+    ? "SELECT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? AND sport_code = ? LIMIT 8"
+    : "SELECT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? LIMIT 8";
+  const playersSql = sportCode
+    ? "SELECT internal_id AS id, name, ? AS sportCode, 'player' AS type FROM players WHERE name LIKE ? AND EXISTS (SELECT 1 FROM player_game_stats WHERE player_game_stats.ncaa_player_id = players.ncaa_player_id AND player_game_stats.sport_code = ?) LIMIT 8"
+    : "SELECT internal_id AS id, name, NULL AS sportCode, 'player' AS type FROM players WHERE name LIKE ? LIMIT 8";
+  const [teams, players] = await Promise.all([
+    sportCode ? all(c.env.DB, teamsSql, like, sportCode) : all(c.env.DB, teamsSql, like),
+    sportCode ? all(c.env.DB, playersSql, sportCode, like, sportCode) : all(c.env.DB, playersSql, like),
+  ]);
+  return c.json({ sport, results: [...teams, ...players] });
 });
 
 app.get("/api/favorites", async (c) => {
