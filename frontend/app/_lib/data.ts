@@ -40,6 +40,17 @@ export type FootballEfficiencyScenario = {
   challenger_margin: number;
   margin_delta: number;
 };
+export type FootballEfficiencyTransition = {
+  test_season: number;
+  training_seasons: number[];
+  training_rows: number;
+  rows: number;
+  baseline_mae: number | null;
+  challenger_mae: number | null;
+  improvement_vs_primary: number | null;
+  baseline_rmse: number | null;
+  challenger_rmse: number | null;
+};
 export type FootballEfficiencyModel = {
   version: string;
   generated_at: string;
@@ -53,6 +64,7 @@ export type FootballEfficiencyModel = {
     baseline_rmse: number | null;
     challenger_rmse: number | null;
   };
+  transition_evaluations?: FootballEfficiencyTransition[];
   coverage: {
     advanced_rows: number;
     training_rows: number;

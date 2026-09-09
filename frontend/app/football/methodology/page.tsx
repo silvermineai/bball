@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOverview } from "../../_lib/data";
+import { getFootballEfficiencyModel, getOverview } from "../../_lib/data";
 import { date, fmt } from "../../_lib/format";
 export const metadata = {
   title: "Model methodology, data coverage and provenance",
@@ -7,7 +7,8 @@ export const metadata = {
 export default function Page() {
   const d = getOverview(),
     e = d.model.evaluation,
-    c = d.model.calibration;
+    c = d.model.calibration,
+    efficiency = getFootballEfficiencyModel();
   return (
     <>
       <div className="page-title">
@@ -174,6 +175,57 @@ export default function Page() {
           Earlier v1 forecasts remain in the{" "}
           <a href="/research/">research ledger</a>. Publishing v2 does not
           replace a game’s earliest eligible registration.
+        </p>
+      </section>
+      <section className="section paper-panel">
+        <div className="eyebrow">Research challenger / dated transitions</div>
+        <h2>Does the efficiency correction travel?</h2>
+        <p>
+          This independent experiment adds lagged EPA per play and yards per
+          play to the published score-only margin. Each test season is scored
+          by a correction fitted only on earlier transition seasons. It remains
+          a research comparison: the primary forecast, probability, interval
+          and ledger are unchanged.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <caption className="note">
+              Lower MAE is better; positive improvement means the challenger
+              reduced absolute margin error.
+            </caption>
+            <thead>
+              <tr>
+                <th>Test season</th>
+                <th>Training transitions</th>
+                <th>Games</th>
+                <th className="numeric">Primary MAE</th>
+                <th className="numeric">Challenger MAE</th>
+                <th className="numeric">Improvement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(efficiency.transition_evaluations ?? []).map((transition) => (
+                <tr key={transition.test_season}>
+                  <td>{transition.test_season}</td>
+                  <td>{transition.training_seasons.join(", ")}</td>
+                  <td>{transition.rows.toLocaleString()}</td>
+                  <td className="numeric">{fmt(transition.baseline_mae, 2)}</td>
+                  <td className="numeric">{fmt(transition.challenger_mae, 2)}</td>
+                  <td className="numeric">
+                    {transition.improvement_vs_primary == null
+                      ? "—"
+                      : `${transition.improvement_vs_primary > 0 ? "+" : ""}${fmt(transition.improvement_vs_primary, 2)} pts`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">
+          The current production scenario uses all eligible historical
+          transition rows through {efficiency.target_season - 1}. Sparse or
+          unknown teams shrink toward the league prior; no injuries, roster
+          moves, weather or market prices enter this challenger.
         </p>
       </section>
       <section className="section two-col">

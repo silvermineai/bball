@@ -1,7 +1,12 @@
 import math
 import unittest
 
-from ncaa_scraper.football_efficiency_model import _correct, _fit, _metrics
+from ncaa_scraper.football_efficiency_model import (
+    _correct,
+    _fit,
+    _metrics,
+    _transition_evaluations,
+)
 
 
 class FootballEfficiencyModelTests(unittest.TestCase):
@@ -28,6 +33,15 @@ class FootballEfficiencyModelTests(unittest.TestCase):
         self.assertEqual(metrics["rows"], 120)
         self.assertTrue(metrics["challenger_mae"] >= 0)
         self.assertTrue(metrics["baseline_mae"] >= 0)
+
+    def test_transition_evaluations_only_use_prior_seasons(self):
+        transitions = {2023: self.rows(), 2024: self.rows(), 2025: self.rows()}
+        evaluations = _transition_evaluations(transitions, 2026)
+        self.assertEqual([e["test_season"] for e in evaluations], [2024, 2025])
+        self.assertEqual(evaluations[0]["training_seasons"], [2023])
+        self.assertEqual(evaluations[1]["training_seasons"], [2023, 2024])
+        self.assertEqual(evaluations[0]["training_rows"], 120)
+        self.assertEqual(evaluations[1]["training_rows"], 240)
 
 
 if __name__ == "__main__":

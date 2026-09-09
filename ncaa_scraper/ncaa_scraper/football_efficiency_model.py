@@ -194,6 +194,42 @@ def _metrics(rows, model):
     }
 
 
+def _empty_metrics():
+    return {
+        "rows": 0,
+        "baseline_mae": None,
+        "challenger_mae": None,
+        "improvement_vs_primary": None,
+        "baseline_rmse": None,
+        "challenger_rmse": None,
+    }
+
+
+def _transition_evaluations(transitions, target_season):
+    """Score each available historical transition with prior transitions only."""
+    evaluations = []
+    # The first retained transition is used as training evidence for the next
+    # season. A two-transition minimum keeps every reported test genuinely
+    # out-of-sample while avoiding an empty pre-window in the current archive.
+    for test_season in sorted(season for season in transitions if season < target_season):
+        training_seasons = [season for season in sorted(transitions) if season < test_season]
+        training = [row for season in training_seasons for row in transitions[season]]
+        holdout = transitions.get(test_season, [])
+        model = _fit(training)
+        if not model or not holdout:
+            continue
+        metrics = _metrics(holdout, model)
+        evaluations.append(
+            {
+                "test_season": test_season,
+                "training_seasons": training_seasons,
+                "training_rows": len(training),
+                **metrics,
+            }
+        )
+    return evaluations
+
+
 def build(conn, games, primary_model, upcoming, target_season=2026):
     advanced = _advanced_rows(conn)
     transitions = {}
@@ -205,7 +241,8 @@ def build(conn, games, primary_model, upcoming, target_season=2026):
     holdout_model = _fit(training)
     production_rows = [row for rows in transitions.values() for row in rows]
     production_model = _fit(production_rows)
-    evaluation = _metrics(holdout, holdout_model) if holdout_model and holdout else {"rows": 0, "baseline_mae": None, "challenger_mae": None, "improvement_vs_primary": None, "baseline_rmse": None, "challenger_rmse": None}
+    evaluation = _metrics(holdout, holdout_model) if holdout_model and holdout else _empty_metrics()
+    transition_evaluations = _transition_evaluations(transitions, target_season)
     current_state = _feature_state(games, advanced, target_season)
     scenarios = []
     if current_state and production_model:
@@ -229,6 +266,7 @@ def build(conn, games, primary_model, upcoming, target_season=2026):
         "feature_definition": "Lagged three-season team advanced offense/defense EPA per play and yards per play, shrunk toward the prior league mean; residual correction on the published score-only margin.",
         "model": production_model,
         "evaluation": evaluation,
+        "transition_evaluations": transition_evaluations,
         "coverage": {"advanced_rows": len(advanced), "training_rows": len(production_rows), "holdout_rows": len(holdout), "current_scenarios": len(scenarios), "current_teams": len(current_state["rates"]) if current_state else 0},
         "limitations": ["Research-only challenger; primary football probabilities, intervals and ledger registrations are unchanged.", "Advanced source coverage is incomplete for 2026 and unknown teams shrink to the prior league mean.", "No injuries, transfers, depth charts, weather or coaching features are included.", "The held-out transition is one season and is not evidence of future market advantage."],
         "scenarios": scenarios,

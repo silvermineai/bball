@@ -4,9 +4,9 @@ The football-first publication is built in **Next.js 16**, React and Tailwind, s
 
 ## Published data edition
 
-The first verified import contains 18,758 schedule records across 2022–2026; 82,187 player box-score rows across 2025–2026; 12,850 player/team entries for 2025; and 1,421 for 2026. Coverage spans multiple divisions; the prediction model is FBS-vs-FBS only. This is **not** a complete roster census. Three games marked final lack scores and are excluded from modeling.
+The active forecast edition contains 18,759 schedule records across 2022–2026; 87,557 player box-score rows across 2025–2026; 12,638 player/team entries for 2025; and 5,664 for 2026. Coverage spans multiple divisions; the prediction model is FBS-vs-FBS only. This is **not** a complete roster census. Four games marked final lack scores and are excluded from modeling.
 
-The active edition uses a five-season schedule window and excludes older retained history from the production fit. The September 8, 2026 refresh forecasts 710 upcoming FBS matchups (789 current-season games, with non-FBS or unseen-team games withheld). Its fixed 2025 holdout covers 784 games and excludes 24 games involving unseen teams. Probability-pick accuracy is 65.31%; margin-pick accuracy is 64.92%. Margin MAE is 14.32 points, margin RMSE 18.09 and total MAE 13.10. A constant home-margin baseline has 15.99-point MAE on the same games. These are retrospective baseline results, not proof of market advantage.
+The active edition uses a five-season schedule window and excludes older retained history from the production fit. The September 9, 2026 refresh forecasts 710 upcoming FBS matchups (789 current-season games, with non-FBS or unseen-team games withheld). Its fixed 2025 holdout covers 784 games and excludes 24 games involving unseen teams. Probability-pick accuracy is 65.43%; margin-pick accuracy is 66.20%. Margin MAE is 14.24 points, margin RMSE 17.99 and total MAE 12.98. A constant home-margin baseline has 15.99-point MAE on the same games. These are retrospective baseline results, not proof of market advantage.
 
 The v2 change separates probability and interval calibration from the test season. Brier score is 0.211391, log loss 0.610242, and the nominal 80% margin range covers 80.61% of the test outcomes. Point forecasts and score-model errors are unchanged from v1 on this source edition. Probability-pick accuracy is lower than the margin-pick accuracy; no improvement in winner selection is claimed.
 
@@ -41,7 +41,7 @@ V1 artifacts retain their original normal-error/sigma interpretation for exact r
 
 There are no injury, transfer, depth-chart, recruiting, weather or coaching features yet. Unknown teams and non-FBS opponents receive no score estimate.
 
-The matchup desk also publishes a **research-only football efficiency challenger**. It uses lagged, three-season team EPA-per-play and yards-per-play rates from the retained advanced team-game records, shrinks sparse teams toward the league prior, and applies a residual correction to the published score-only margin. The challenger is shown beside eligible upcoming games as a margin scenario; it does not change the primary probability, interval, forecast registration or market ledger. On the fixed 2025 holdout, the current artifact reports the same score-only baseline and challenger errors side by side. This is one retrospective transition with incomplete 2026 source coverage, so it is a research comparison rather than a betting signal.
+The matchup desk also publishes a **research-only football efficiency challenger**. It uses lagged, three-season team EPA-per-play and yards-per-play rates from the retained advanced team-game records, shrinks sparse teams toward the league prior, and applies a residual correction to the published score-only margin. The challenger is shown beside eligible upcoming games as a margin scenario; it does not change the primary probability, interval, forecast registration or market ledger. The artifact reports independent 2024 and 2025 transitions: each correction is fitted only on earlier transition rows, and each table includes the score-only baseline beside challenger MAE/RMSE. The 2024 transition worsens MAE by 0.37 points while 2025 improves it by 0.03 points, so the evidence is mixed and remains a research comparison rather than a betting signal.
 
 ## Calibration release verification
 
@@ -118,7 +118,7 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 - Finish migrating basketball pages from TanStack to Next.js.
 - Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
-- Extend the football efficiency challenger across additional dated transitions, then evaluate rolling splits and calibration stability before considering any production change.
+- Extend the football efficiency challenger with more retained historical seasons and evaluate rolling splits and calibration stability before considering any production change.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.
 - Expand stats beyond the available box-score sample, extend historical advanced-team coverage, and document coverage against expected games/players.
 - Preserve completed game briefs as an archive and add deeper human-reviewed game analysis.
@@ -126,7 +126,7 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 
 ## Historical player expansion
 
-The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2018–2026: 413,386 raw player box rows and 74,774 athlete/program/season records. The nine-season catalog excludes 1,653 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
+The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2018–2026: 413,712 raw player box rows and 75,020 athlete/program/season records. The nine-season catalog excludes 1,653 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
 
 ## Matchup notebooks
 
