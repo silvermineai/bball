@@ -22,6 +22,7 @@ import { reasons } from "../../../_lib/research-types";
 import type { Metric } from "../../../_lib/scouting-types";
 import BriefNotebook from "../BriefNotebook";
 import ManualMarketCheck from "../ManualMarketCheck";
+import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
 
 export function generateStaticParams() {
   return getBasketball()
@@ -220,6 +221,7 @@ export default async function Page({
           and may change. Model edition: {date(d.generated_at)}.
         </p>
       </div>
+      <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} />
       <ManualMarketCheck
         storageKey={`brief:${g.id}`}
         homeName={g.home_name}

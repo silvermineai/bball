@@ -400,6 +400,45 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("supports an exact game lookup for brief provenance checks", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({ results: [{
+            game_id: "401902275",
+            model_id: "basketball-efficiency-v1-test",
+            created_at: "2026-09-08T00:00:00Z",
+            prediction_json: JSON.stringify({ home_margin: 4.5 }),
+            season: 2027,
+            starts_at: "2026-11-02T05:00:00Z",
+            home_id: "2086",
+            away_id: "322",
+            home_name: "Butler",
+            away_name: "Lafayette",
+            home_score: null,
+            away_score: null,
+            completed: 0,
+            neutral: 0,
+            time_tbd: 1,
+            venue: "Hinkle Fieldhouse",
+            broadcast: null,
+          }] }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/forecasts?season=2027&gameId=401902275&model=latest&limit=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ total: 1, rows: [{ game_id: "401902275" }] });
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("f.game_id=?"))).toBe(true);
+  });
+
   it("rejects invalid basketball forecast filters before querying D1", async () => {
     const prepare = vi.fn();
     for (const path of [
@@ -408,6 +447,7 @@ describe("bball api", () => {
       "/api/basketball/research/forecasts?limit=101",
       "/api/basketball/research/forecasts?model=unsafe%20model",
       "/api/basketball/research/forecasts?page=-1",
+      "/api/basketball/research/forecasts?gameId=not-a-game-id",
     ]) {
       expect((await app.request(path, {}, { DB: { prepare } })).status).toBe(400);
     }

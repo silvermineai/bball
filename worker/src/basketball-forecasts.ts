@@ -7,6 +7,7 @@ type Bindings = Env;
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2023).max(2035).default(2027),
+  gameId: z.string().trim().regex(/^\d{1,30}$/).optional(),
   status: z.enum(["all", "upcoming", "completed"]).default("all"),
   q: z.string().trim().max(120).optional(),
   model: z.union([
@@ -26,7 +27,7 @@ function escapeLike(value: string) {
 }
 
 basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, status, q, model, page, limit, meta } = c.req.valid("query");
+  const { season, gameId, status, q, model, page, limit, meta } = c.req.valid("query");
 
   if (meta === "1") {
     const [seasons, models, modelMeta] = await researchDb(c.env).batch([
@@ -95,6 +96,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
 
   const clauses = ["g.season=?"];
   const binds: Array<string | number> = [season];
+  if (gameId) {
+    clauses.push("f.game_id=?");
+    binds.push(gameId);
+  }
   if (status === "upcoming") clauses.push("g.completed=0");
   if (status === "completed") clauses.push("g.completed=1");
   if (q) {
