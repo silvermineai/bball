@@ -38,6 +38,7 @@ const sortLabels: Record<FootballPlayerSort, string> = {
   success_rate: "Success rate",
   plays: "Volume (plays)",
 };
+const exportHeaders = ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"];
 type Player = {
   id: string;
   team_id: string;
@@ -155,18 +156,16 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     return (bv ?? 0) - (av ?? 0) || a.name.localeCompare(b.name);
   });
   const minimum = data?.rankings[category]?.minimum_plays;
-  const download = () => {
-    const visible = rows.slice(page * 40, page * 40 + 40);
+  const exportRow = (p: Player) => {
+    const selected = productionForCategory(p, category), s = selected?.stats;
+    const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
+    return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
+  };
+  const download = (all = false) => {
+    const selectedRows = all ? rows : rows.slice(page * 40, page * 40 + 40);
     downloadCsv(
-      `football-player-rankings-${season}-${category}-${sort}-page-${page + 1}.csv`,
-      toCsv(
-        ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"],
-        visible.map((p) => {
-          const selected = productionForCategory(p, category), s = selected?.stats;
-          const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
-          return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
-        }),
-      ),
+      `football-player-rankings-${season}-${category}-${sort}-${all ? "all" : `page-${page + 1}`}.csv`,
+      toCsv(exportHeaders, selectedRows.map(exportRow)),
     );
   };
   return (
@@ -264,8 +263,11 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </label>
       </div>
       <div className="button-row" style={{ marginTop: 12 }}>
-        <button className="button secondary" type="button" onClick={download} disabled={!rows.length}>
+        <button className="button secondary" type="button" onClick={() => download()} disabled={!rows.length}>
           Download page CSV ↓
+        </button>
+        <button className="button secondary" type="button" onClick={() => download(true)} disabled={!rows.length}>
+          Download all matching CSV ↓
         </button>
         <button
           className="button secondary"
