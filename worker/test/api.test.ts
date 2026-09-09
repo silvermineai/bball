@@ -593,6 +593,29 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY game_date DESC"))).toBe(true);
   });
 
+  it("attaches selected-season source receipts to the NCAA player card", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => sql.includes("FROM bb_sources")
+        ? { all: async () => ({ results: [{ dataset: "ncaa_player_box", season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/ncaa-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }) }] }) }
+        : { all: async () => ({ results: [] }) },
+    }));
+    const batch = vi.fn(async () => [
+      { results: [{ season: 2026, player_id: "123", team_id: "7", player_name: "Example Player", team_name: "Example U", games: 10, stats_json: "{}" }] },
+      { results: [] },
+      { results: [] },
+      { results: [] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-card/123?season=2026",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      source_receipts: [{ dataset: "ncaa_player_box", season: 2026, url: "https://example.test/ncaa-box.parquet", sha256: "a".repeat(64) }],
+    });
+  });
+
   it("rejects unknown publisher stat fields before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/publisher-stats?stat=not-a-source-field",

@@ -56,6 +56,18 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
     c.env.DB.prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
     c.env.DB.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT 12").bind(playerId, season),
   ]);
+  const receipts = await c.env.DB.prepare(
+    "SELECT dataset,season,receipt_json FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_shots','ncaa_team_rosters','ncaa_rapm','player_season') ORDER BY dataset",
+  ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>();
+  const sourceReceipts = receipts.results.flatMap((row) => {
+    try {
+      const receipt = JSON.parse(row.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
+      if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
+      return [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+    } catch {
+      return [];
+    }
+  });
   const rows = seasons.results as Array<Record<string, unknown>>;
   const rosterRows = rosters.results as Array<Record<string, unknown>>;
   const shotRows = shooting.results as Array<Record<string, unknown>>;
@@ -68,6 +80,7 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
     rosters: rosterRows.map(({ profile_json, ...row }) => ({ ...row, profile: JSON.parse(String(profile_json)) })),
     shooting: shotRows.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })),
     games: (games.results as Array<Record<string, unknown>>).map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })),
+    source_receipts: sourceReceipts,
     identity_note: "NCAA source ID namespace; no name-only join to ESPN identities.",
   });
 });
