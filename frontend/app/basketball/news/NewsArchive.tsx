@@ -44,18 +44,41 @@ export default function NewsArchive({
   const [publisher, setPublisher] = useState(initial.publisher);
   const [page, setPage] = useState(initial.page);
   const [copied, setCopied] = useState("");
+  const [liveArticles, setLiveArticles] = useState(articles);
+  const [archiveStatus, setArchiveStatus] = useState<"loading" | "live" | "fallback">("loading");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/news?sport=mens-college-basketball&limit=100", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("news archive unavailable");
+        return response.json() as Promise<{ rows?: PublisherArticle[] }>;
+      })
+      .then((payload) => {
+        const rows = (payload.rows || []).filter((article) => article.sport === "mens-college-basketball" || !article.sport);
+        if (rows.length) {
+          setLiveArticles(rows);
+          setArchiveStatus("live");
+        } else {
+          setArchiveStatus("fallback");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError") setArchiveStatus("fallback");
+      });
+    return () => controller.abort();
+  }, [articles]);
   const publishers = useMemo(
-    () => [...new Set(articles.map((article) => article.publisher).filter(Boolean))].sort(),
-    [articles],
+    () => [...new Set(liveArticles.map((article) => article.publisher).filter(Boolean))].sort(),
+    [liveArticles],
   );
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return articles.filter((article) => {
+    return liveArticles.filter((article) => {
       if (publisher !== "all" && article.publisher !== publisher) return false;
       if (!needle) return true;
       return `${article.headline} ${article.description} ${article.categories.join(" ")}`.toLowerCase().includes(needle);
     });
-  }, [articles, publisher, query]);
+  }, [liveArticles, publisher, query]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => {
@@ -87,11 +110,12 @@ export default function NewsArchive({
   return (
     <section className="section">
       <div className="strip">
-        <div><strong>{articles.length.toLocaleString()}</strong><span>Retained headlines</span></div>
+        <div><strong>{liveArticles.length.toLocaleString()}</strong><span>Retained headlines</span></div>
         <div><strong>{publishers.length}</strong><span>Publishers</span></div>
         <div><strong>{filtered.length.toLocaleString()}</strong><span>Matches in view</span></div>
         <div><strong>{generatedAt ? date(generatedAt) : "—"}</strong><span>Release clock</span></div>
       </div>
+      <p className="note">{archiveStatus === "live" ? "Cloudflare D1 archive connected; showing the latest retained release." : archiveStatus === "fallback" ? "Cloudflare D1 archive unavailable; showing the bundled release." : "Checking the Cloudflare D1 archive…"}</p>
       <div className="toolbar">
         <label className="control"><span>SEARCH THE ARCHIVE</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
         <label className="control"><span>PUBLISHER</span><select value={publisher} onChange={(event) => { setPublisher(event.target.value); setPage(0); }}><option value="all">All publishers</option>{publishers.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
