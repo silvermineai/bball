@@ -1,8 +1,11 @@
 import { Suspense } from "react";
+import fs from "node:fs";
+import path from "node:path";
 import { getScoutIndex } from "../../_lib/scouting-data";
 import { getBasketball, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import { buildRosterSummary } from "../../_lib/roster-intel";
 import Compare from "./Compare";
+import type { PossessionStyleCatalog } from "../../_lib/possession-style";
 export const metadata = {
   title: "Basketball matchup workbench",
   alternates: { canonical: "/basketball/compare/" },
@@ -14,6 +17,15 @@ export default function Page() {
     m = getBasketball().model,
     rosterModel = getRosterModel(),
     rosters = buildRosterSummary(getRosters().players);
+  let possessionStyles: PossessionStyleCatalog["seasons"][number]["teams"] = [];
+  try {
+    const catalog = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), "public/data/basketball/ncaa-possession-style.json"), "utf8"),
+    ) as PossessionStyleCatalog;
+    possessionStyles = catalog.seasons.find((edition) => edition.season === 2026)?.teams || [];
+  } catch {
+    // The comparison workbench remains available if the optional archive is missing.
+  }
   return (
     <>
       <div className="page-title">
@@ -43,6 +55,7 @@ export default function Page() {
           }}
           rosters={rosters}
           rosterModel={rosterModel}
+          possessionStyles={possessionStyles}
         />
       </Suspense>
     </>

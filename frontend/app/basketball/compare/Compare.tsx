@@ -16,6 +16,7 @@ import {
   type ScenarioModel,
 } from "../../_lib/basketball-scenario";
 import type { BBRosterModel } from "../../_lib/basketball-types";
+import type { PossessionStyleEdition } from "../../_lib/possession-style";
 const factors = [
   ["efg", "Shooting · eFG%"],
   ["tov", "Turnovers / possessions"],
@@ -30,11 +31,13 @@ export default function Compare({
   model,
   rosters,
   rosterModel,
+  possessionStyles,
 }: {
   teams: { id: string; name: string }[];
   model: ScenarioModel;
   rosters: RosterSummary[];
   rosterModel: Pick<BBRosterModel, "teams" | "feature_definition">;
+  possessionStyles?: PossessionStyleEdition["teams"];
 }) {
   const params = useSearchParams();
   const validId = (value: string | null) =>
@@ -96,6 +99,8 @@ export default function Compare({
   const rosterMargin = p && rosterMarginDelta != null ? p.home_margin + rosterMarginDelta : null;
   const an = teams.find((t) => t.id === a)!.name,
     bn = teams.find((t) => t.id === b)!.name;
+  const possessionByTeam = new Map((possessionStyles || []).map((row) => [row.team_id, row]));
+  const styleA = possessionByTeam.get(a), styleB = possessionByTeam.get(b);
   const intel =
     data?.map((profile) => buildRosterIntel(rosters, profile)) ?? [];
   const scoreA = p ? (venue === "b" ? p.away_score : p.home_score) : null,
@@ -282,7 +287,7 @@ export default function Compare({
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">01 / Roster construction</div>
+                    <div className="eyebrow">02 / Roster construction</div>
                     <h2>Know what the source lists.</h2>
                   </div>
                   <Link href="/basketball/recruiting/">
@@ -385,10 +390,38 @@ export default function Compare({
                   ))}
                 </div>
               </section>
+              {possessionStyles?.length ? <section className="section">
+                <div className="section-heading">
+                  <div>
+                    <div className="eyebrow">03 / Possession shape</div>
+                    <h2>Compare the trip before the tip.</h2>
+                  </div>
+                  <Link href="/basketball/possession-style/">Open the full archive →</Link>
+                </div>
+                <p className="note">
+                  2025–26 NCAA source aggregates. These rates describe team
+                  possession context, not individual player credit or a new
+                  forecast input.
+                </p>
+                <div className="table-scroll">
+                  <table className="data-table comparison-table">
+                    <thead><tr><th>Source metric</th><th>{an}</th><th>{bn}</th></tr></thead>
+                    <tbody>
+                      {[
+                        ["Points / possession", styleA?.points_per_possession == null ? null : fmt(styleA.points_per_possession, 3), styleB?.points_per_possession == null ? null : fmt(styleB.points_per_possession, 3)],
+                        ["Possessions / game", styleA?.possessions_per_game == null ? null : fmt(styleA.possessions_per_game, 2), styleB?.possessions_per_game == null ? null : fmt(styleB.possessions_per_game, 2)],
+                        ["Transition share", styleA?.transition_share == null ? null : `${fmt(styleA.transition_share * 100)}%`, styleB?.transition_share == null ? null : `${fmt(styleB.transition_share * 100)}%`],
+                        ["Assisted share", styleA?.assisted_share == null ? null : `${fmt(styleA.assisted_share * 100)}%`, styleB?.assisted_share == null ? null : `${fmt(styleB.assisted_share * 100)}%`],
+                        ["Garbage-time share", styleA?.garbage_time_share == null ? null : `${fmt(styleA.garbage_time_share * 100)}%`, styleB?.garbage_time_share == null ? null : `${fmt(styleB.garbage_time_share * 100)}%`],
+                      ].map(([label, valueA, valueB]) => <tr key={String(label)}><th>{label}</th><td className="numeric">{valueA || "—"}</td><td className="numeric">{valueB || "—"}</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </section> : null}
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">02 / Attack meets resistance</div>
+                    <div className="eyebrow">04 / Attack meets resistance</div>
                     <h2>Compare both ends.</h2>
                   </div>
                   <label className="control">
@@ -475,7 +508,7 @@ export default function Compare({
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">03 / Start with the rotation</div>
+                    <div className="eyebrow">05 / Start with the rotation</div>
                     <h2>Who carried the workload?</h2>
                   </div>
                 </div>
