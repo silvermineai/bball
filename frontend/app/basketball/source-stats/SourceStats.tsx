@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { fmt } from "../../_lib/format";
+import { date, fmt } from "../../_lib/format";
 
 type Field = {
   category: "averages" | "totals" | "miscellaneous";
@@ -27,6 +27,7 @@ type Result = {
   page_size: number;
   total: number;
   non_null: number;
+  source_receipts: Array<{ dataset: string; season: number; url: string; fetched_at: string; sha256: string }>;
   rows: Row[];
 };
 
@@ -210,6 +211,7 @@ export default function SourceStats() {
       {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically.</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
         <>
+          {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Publisher player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p>
             <button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value])))}>Download CSV ↓</button>

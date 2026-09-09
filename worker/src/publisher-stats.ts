@@ -128,6 +128,18 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
       WHERE ${where}
       ORDER BY ${order} LIMIT 40 OFFSET ?`,
   ).bind(season, ...binds, page * 40).all();
+  const receipts = await c.env.DB.prepare(
+    "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset='player_season' AND season=? ORDER BY dataset,season",
+  ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>();
+  const sourceReceipts = receipts.results.flatMap((row) => {
+    try {
+      const receipt = JSON.parse(row.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
+      if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
+      return [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+    } catch {
+      return [];
+    }
+  });
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     season,
@@ -136,6 +148,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
     page_size: 40,
     total: count?.total ?? 0,
     non_null: count?.non_null ?? 0,
+    source_receipts: sourceReceipts,
     rows: rows.results.map((row) => ({
       ...row,
       value: typeof row.value === "number" ? row.value : null,

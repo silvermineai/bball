@@ -621,6 +621,25 @@ describe("bball api", () => {
     expect(countSql).toContain("count(json_extract(s.stats_json, ?))");
   });
 
+  it("returns the exact publisher player-season source receipt", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => {
+        if (sql.includes("count(*) AS total")) return { first: async () => ({ total: 1, non_null: 1 }) };
+        if (sql.includes("FROM bb_sources")) return { all: async () => ({ results: [{ dataset: "player_season", season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/player-season.parquet", fetched_at: "2026-09-08T00:00:00Z", sha256: "a".repeat(64) }) }] }) };
+        return { all: async () => ({ results: [] }) };
+      },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/publisher-stats?season=2026&category=averages&stat=avgPoints",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      source_receipts: [{ dataset: "player_season", season: 2026, url: "https://example.test/player-season.parquet", sha256: "a".repeat(64) }],
+    });
+  });
+
   it("rejects invalid team and boutique source parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",
