@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   evaluate,
+  evaluationHighlights,
   evaluationCsv,
   filterEvaluation,
   reliability,
@@ -93,5 +94,14 @@ describe("same-game model evaluation", () => {
     expect(csv).toContain(games[0].weekly_fit_id);
     expect(csv).toContain(games[0].training_before);
     expect(csv.split("\r\n")).toHaveLength(2);
+  });
+  it("selects review highlights without changing the underlying cohort", () => {
+    const sample = games.slice(0, 12);
+    const highlights = evaluationHighlights(sample);
+    expect(highlights.misses.length).toBeLessThanOrEqual(3);
+    expect(highlights.improvements.length).toBeLessThanOrEqual(3);
+    expect(highlights.misses.every((row) => row.absoluteError >= 0)).toBe(true);
+    expect(highlights.improvements.every((row) => row.improvement > 0)).toBe(true);
+    expect(new Set(highlights.misses.map((row) => row.game.id)).size).toBe(highlights.misses.length);
   });
 });

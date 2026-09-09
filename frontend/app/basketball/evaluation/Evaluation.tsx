@@ -5,6 +5,7 @@ import { date, fmt } from "../../_lib/format";
 import {
   evaluate,
   evaluationCsv,
+  evaluationHighlights,
   filterEvaluation,
   reliability,
   type EvaluationGame,
@@ -21,6 +22,8 @@ const monthLabel = (value: string) =>
   });
 const percent = (value: number | null) =>
   value === null ? "—" : fmt(value * 100) + "%";
+const sourceGameUrl = (id: string) =>
+  `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 
 export default function Evaluation({
   summary,
@@ -80,6 +83,7 @@ export default function Evaluation({
     }),
     [rows],
   );
+  const highlights = useMemo(() => evaluationHighlights(rows), [rows]);
   const bins = useMemo(
     () => ({
       preseason: reliability(rows, "preseason"),
@@ -246,6 +250,53 @@ export default function Evaluation({
           </p>
         </section>
       ) : null}
+      {games && rows.length > 0 && (
+        <section className="section" aria-label="Evaluation review queue">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Review queue / Same-game evidence</div>
+              <h2>Start with the games that teach the most.</h2>
+            </div>
+            <span className="note">Filtered selection · weekly challenger</span>
+          </div>
+          <p className="note">
+            These cards sort the current selection for editorial or coaching
+            review. A large error is a reason to inspect the source game and
+            matchup context, not a causal explanation or a model correction.
+          </p>
+          <div className="two-col evaluation-highlights">
+            <article className="paper-panel">
+              <div className="eyebrow">Largest weekly misses</div>
+              <h3>Where the forecast was most surprised.</h3>
+              {highlights.misses.map((row) => {
+                const actual = row.game.home_score - row.game.away_score;
+                return (
+                  <div className="evaluation-highlight" key={`miss-${row.game.id}`}>
+                    <strong>{row.game.away_name} at {row.game.home_name}</strong>
+                    <small>{date(row.game.starts_at)} · final {row.game.away_score}–{row.game.home_score} · predicted margin {fmt(row.game.weekly.home_margin)} · actual {fmt(actual)}</small>
+                    <span>{fmt(row.absoluteError, 1)}-point absolute margin error{row.outsideRange ? " · outside the published 80% range" : " · inside the published 80% range"}</span>
+                    <a href={sourceGameUrl(row.game.id)} target="_blank" rel="noreferrer">Open source game ↗</a>
+                  </div>
+                );
+              })}
+              {!highlights.misses.length && <p className="empty">No games in this selection.</p>}
+            </article>
+            <article className="paper-panel">
+              <div className="eyebrow">Largest weekly improvements</div>
+              <h3>Where updating helped most.</h3>
+              {highlights.improvements.map((row) => (
+                <div className="evaluation-highlight" key={`improve-${row.game.id}`}>
+                  <strong>{row.game.away_name} at {row.game.home_name}</strong>
+                  <small>{date(row.game.starts_at)} · weekly error {fmt(row.absoluteError, 1)} points · final {row.game.away_score}–{row.game.home_score}</small>
+                  <span>Weekly fit reduced absolute margin error by {fmt(row.improvement, 1)} points versus preseason</span>
+                  <a href={sourceGameUrl(row.game.id)} target="_blank" rel="noreferrer">Open source game ↗</a>
+                </div>
+              ))}
+              {!highlights.improvements.length && <p className="empty">No weekly improvement in this selection.</p>}
+            </article>
+          </div>
+        </section>
+      )}
       <section className="section">
         <div className="section-heading">
           <div>

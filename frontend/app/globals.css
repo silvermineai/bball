@@ -2491,6 +2491,30 @@ summary {
 .evaluation-key.weekly {
   background: var(--orange);
 }
+.evaluation-highlights {
+  margin-top: 18px;
+}
+.evaluation-highlight {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.evaluation-highlight:first-of-type {
+  margin-top: 10px;
+}
+.evaluation-highlight strong {
+  font-size: 15px;
+}
+.evaluation-highlight small,
+.evaluation-highlight span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.evaluation-highlight a {
+  font-size: 12px;
+  margin-top: 3px;
+}
 .evaluation-charts {
   display: grid;
   grid-template-columns: 1fr 1fr;

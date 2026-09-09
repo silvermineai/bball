@@ -85,6 +85,42 @@ export type EvaluationSummary = {
   }[];
 };
 
+export type EvaluationHighlight = {
+  game: EvaluationGame;
+  error: number;
+  absoluteError: number;
+  improvement: number;
+  outsideRange: boolean;
+};
+
+/**
+ * Select review-first games without changing any evaluation metric. A
+ * positive error means the selected model overestimated the home margin;
+ * negative means it underestimated it.
+ */
+export function evaluationHighlights(rows: EvaluationGame[], method: Method = "weekly") {
+  const highlighted: EvaluationHighlight[] = rows.map((game) => {
+    const actual = game.home_score - game.away_score;
+    const error = game[method].home_margin - actual;
+    const preseasonError = game.preseason.home_margin - actual;
+    return {
+      game,
+      error,
+      absoluteError: Math.abs(error),
+      improvement: Math.abs(preseasonError) - Math.abs(error),
+      outsideRange: actual < game[method].margin_low || actual > game[method].margin_high,
+    };
+  });
+  const misses = [...highlighted]
+    .sort((a, b) => b.absoluteError - a.absoluteError || a.game.starts_at.localeCompare(b.game.starts_at) || a.game.id.localeCompare(b.game.id))
+    .slice(0, 3);
+  const improvements = highlighted
+    .filter((row) => row.improvement > 0)
+    .sort((a, b) => b.improvement - a.improvement || a.game.starts_at.localeCompare(b.game.starts_at) || a.game.id.localeCompare(b.game.id))
+    .slice(0, 3);
+  return { misses, improvements };
+}
+
 export function evaluate(
   rows: EvaluationGame[],
   method: Method,
