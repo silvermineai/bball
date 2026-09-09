@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, type LiveForecastRow } from "./live-basketball-forecasts";
+import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -31,6 +31,20 @@ const game = (id: string, starts_at: string, current: BBGame["prediction"]): BBG
 });
 
 describe("live basketball forecast merge", () => {
+  it("requests a selected stored model edition without changing the endpoint contract", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ total: 0, page_size: 100, rows: [] }),
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, model: "edition/unsafe?value" })).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&model=edition%2Funsafe%3Fvalue",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes live scorecard comparisons by game ID", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,

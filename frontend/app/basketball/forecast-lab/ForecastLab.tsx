@@ -32,10 +32,12 @@ type Row = {
 
 type LiveModel = {
   model_id: string;
+  version?: string | null;
   forecasts: number;
   last_created_at: string | null;
   target_season: number | null;
   cutoff: string | null;
+  training_games?: number | null;
 };
 type LiveCatalog = { models: LiveModel[] };
 
@@ -89,6 +91,7 @@ export default function ForecastLab({
   const [view, setView] = useState<View>(initial.view);
   const [sort, setSort] = useState<Sort>(initial.sort);
   const [marketGameId, setMarketGameId] = useState(initial.gameId);
+  const [modelSelection, setModelSelection] = useState(initial.model);
   const [copied, setCopied] = useState("");
   const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
   const [liveCatalogError, setLiveCatalogError] = useState("");
@@ -119,7 +122,8 @@ export default function ForecastLab({
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballForecasts(controller.signal)
+    setLiveGames(null);
+    loadLiveBasketballForecasts(controller.signal, { model: modelSelection })
       .then((rows) => {
         if (!controller.signal.aborted) {
           setLiveGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
@@ -132,7 +136,7 @@ export default function ForecastLab({
         }
       });
     return () => controller.abort();
-  }, [overview.upcoming]);
+  }, [modelSelection, overview.upcoming]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -152,15 +156,19 @@ export default function ForecastLab({
   }, []);
 
   useEffect(() => {
-    const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId });
+    const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId, model: modelSelection });
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${next}`);
-  }, [marketGameId, query, sort, view]);
+  }, [marketGameId, modelSelection, query, sort, view]);
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
     const candidates = activeGames
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
-      .map((game) => modelRow(game, scenarioByGame.get(game.id), (liveMarkets || markets)[game.id]));
+      .map((game) => modelRow(
+        game,
+        modelSelection === "latest" ? scenarioByGame.get(game.id) : undefined,
+        modelSelection === "latest" ? (liveMarkets || markets)[game.id] : undefined,
+      ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
         if (view === "scenario") return !!row.scenario;
@@ -170,20 +178,24 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [activeGames, liveMarkets, markets, query, scenarioByGame, sort, view]);
+  }, [activeGames, liveMarkets, markets, modelSelection, query, scenarioByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const activeMarkets = liveMarkets || markets;
-  const verifiedMarketGames = modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length;
+  const verifiedMarketGames = modelSelection === "latest"
+    ? modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length
+    : 0;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   useEffect(() => {
     if (rows.length && !rows.some((row) => row.game.id === marketGameId)) {
       setMarketGameId(rows[0].game.id);
     }
   }, [marketGameId, rows]);
-  const liveModel = liveCatalog?.models.find((model) => model.model_id === overview.model.id) || liveCatalog?.models[0] || null;
+  const liveModel = modelSelection === "latest"
+    ? liveCatalog?.models[0] || null
+    : liveCatalog?.models.find((model) => model.model_id === modelSelection) || null;
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
@@ -223,6 +235,7 @@ export default function ForecastLab({
     <>
       <div className="toolbar">
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
+        <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{model.version || model.model_id} · {model.forecasts.toLocaleString()} rows</option>)}</select></label>
         <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
       </div>
@@ -230,12 +243,12 @@ export default function ForecastLab({
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation.</p>
+      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest scenario shift</span></div>
-        <div><strong>{overview.model.version}</strong><span>Primary model edition</span></div>
+        <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
       </div>
       <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
         <div className="paper-panel">
@@ -254,8 +267,8 @@ export default function ForecastLab({
       <section className="section" style={{ marginTop: 26 }}>
         <div className="paper-panel">
           <div className="eyebrow">Live D1 catalog / deployed record</div>
-          <h2>{liveCatalog ? `${(liveModel?.forecasts ?? 0).toLocaleString()} rows in the live edition.` : liveCatalogError ? "Live catalog unavailable." : "Checking the live catalog…"}</h2>
-          {liveCatalog ? (liveModel ? <p>{liveModel.model_id === overview.model.id ? "The deployed D1 model matches this page’s static edition." : `D1’s newest model is ${liveModel.model_id}; this page is showing ${overview.model.id}.`} Last forecast clock: {liveModel.last_created_at ? date(liveModel.last_created_at) : "unavailable"}.</p> : <p>No 2026–27 model edition is registered in D1.</p>) : <p>{liveCatalogError || "Reading the deployed forecast catalog from D1."}</p>}
+          <h2>{liveCatalog ? `${(liveModel?.forecasts ?? 0).toLocaleString()} rows in the selected edition.` : liveCatalogError ? "Live catalog unavailable." : "Checking the live catalog…"}</h2>
+          {liveCatalog ? (liveModel ? <p>{modelSelection === "latest" ? (liveModel.model_id === overview.model.id ? "The deployed D1 model matches this page’s static edition." : `D1’s newest model is ${liveModel.model_id}; this page is showing ${overview.model.id}.`) : `This historical edition is ${liveModel.model_id}.`} Last forecast clock: {liveModel.last_created_at ? date(liveModel.last_created_at) : "unavailable"}.</p> : <p>No 2026–27 model edition is registered in D1.</p>) : <p>{liveCatalogError || "Reading the deployed forecast catalog from D1."}</p>}
           <p className="note"><Link href="/research/scorecard/?sport=basketball">Open the forecast record →</Link> · <Link href="/basketball/model/">Read the model notebook →</Link></p>
         </div>
       </section>
