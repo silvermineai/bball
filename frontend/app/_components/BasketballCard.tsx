@@ -8,6 +8,9 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
+
+const sourceGameUrl = (id: string) =>
+  `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 export default function BasketballCard({
   game: g,
   homeRoster,
@@ -206,6 +209,9 @@ export default function BasketballCard({
           Read the matchup brief →
         </Link>
       )}
+      <a className="note" href={sourceGameUrl(g.id)} target="_blank" rel="noreferrer">
+        Open ESPN source game ↗
+      </a>
     </article>
   );
 }
