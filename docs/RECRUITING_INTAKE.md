@@ -14,6 +14,8 @@ Required columns are:
 record_id,season,player_name,player_source_id,from_program,from_program_id,to_program,to_program_id,status,status_date,source_published_on,source_url,source_publisher,captured_at
 ```
 
+The recruiting desk links a blank [CSV template](../frontend/public/data/recruiting-intake-template.csv) with this exact header order. It contains no sample player rows; add only records covered by the provider agreement before running the validator.
+
 `status` must be one of `reported_transfer`, `reported_commitment`, `reported_withdrawal`, `reported_eligibility`, `reported_unavailability` or `reported_update`. Dates use `YYYY-MM-DD`; `captured_at` is an ISO-8601 timestamp with a timezone. Transfer and commitment rows require `from_program`. `source_url` and the supplied `--license-url` must be HTTPS URLs. The source and status dates cannot be after the capture clock, and future captures are rejected. A stable `record_id` is recommended; when omitted, the importer derives one from the file hash and row content.
 
 The importer validates every row before writing SQL:

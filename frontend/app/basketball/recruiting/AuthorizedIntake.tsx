@@ -50,6 +50,7 @@ export default function AuthorizedIntake() {
           </div>
           <div className="button-row">
             <a className="button secondary" href="https://github.com/silvermineai/bball/blob/main/docs/RECRUITING_INTAKE.md" target="_blank" rel="noreferrer">Read import protocol ↗</a>
+            <a className="button secondary" href="/data/recruiting-intake-template.csv" download>Download CSV template ↓</a>
             <a className="hero-link" href="https://collegebasketballdata.com/terms" target="_blank" rel="noreferrer">CBBD terms ↗</a>
           </div>
         </div>
