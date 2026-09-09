@@ -137,6 +137,7 @@ const paths = [
 
 const recruitingPaths = [
   ["Study recruiting", "/basketball/recruiting/", "Separate announced additions, roster observations and prior production."],
+  ["Build a role shortlist", "/basketball/recruiting/fit/", "Choose a program need and rank source-listed candidates by transparent prior-production percentiles."],
   ["Rank roster workload", "/basketball/roster-board/", "Sort source-listed 2026–27 players by prior workload, rates or publisher Box BPM, then open the evidence."],
   ["Browse player profiles", "/basketball/player-profiles/", "Start with source identity, position and roster context before reading production or recruiting evidence."],
   ["Search roster intel", "/basketball/ncaa-rosters/", "Use class, position, size, hometown and high-school fields as recruiting context, then verify any transaction with a dated statement."],

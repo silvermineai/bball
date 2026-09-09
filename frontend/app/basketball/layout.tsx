@@ -42,6 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/impact/">Player impact</Link>
         <Link href="/basketball/impact/within-team/">Within-team RAPM</Link>
         <Link href="/basketball/recruiting/">Recruiting</Link>
+        <Link href="/basketball/recruiting/fit/">Recruiting fit board</Link>
         <Link href="/basketball/roster-lab/">Roster impact lab</Link>
         <Link href="/basketball/roster-board/">Roster workload board</Link>
         <Link href="/basketball/model/">Model notebook</Link>
