@@ -257,7 +257,35 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 <div className="eyebrow">Recruiting pulse / dated source events</div>
                 <h2 id="recruiting-pulse-title">See the calendar behind the class.</h2>
               </div>
-              <span className="note">{activity.months.length} publication months</span>
+              <div className="button-row">
+                <span className="note">{activity.months.length} publication months</span>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() =>
+                    downloadCsv(
+                      "basketball-recruiting-activity.csv",
+                      toCsv(
+                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Publisher", "Source title", "Source URL", "Checked at"],
+                        activity.events.map((event) => [
+                          event.source.published_on,
+                          eventLabels[event.kind],
+                          event.person_name,
+                          event.program_name,
+                          event.team_id,
+                          event.summary,
+                          event.source.publisher,
+                          event.source.title,
+                          event.source.url,
+                          event.source.checked_at,
+                        ]),
+                      ),
+                    )
+                  }
+                >
+                  Download activity CSV ↓
+                </button>
+              </div>
             </div>
             <p className="note">
               This rollup counts each dated school statement in the reviewed
