@@ -52,7 +52,7 @@ def box_apg(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[flo
 
 
 def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, season: int = 2026) -> dict:
-    if release.get("schema_version") != 1 or release.get("season") != season:
+    if release.get("schema_version") not in (1, 2) or release.get("season") != season:
         raise ValueError("Unsupported NCAA individual release")
     lookup = box_apg(conn, season)
     result = copy.deepcopy(release)
