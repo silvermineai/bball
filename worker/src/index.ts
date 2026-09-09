@@ -33,6 +33,7 @@ import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
 import { footballForecasts } from "./football-forecasts";
 import { researchDb } from "./research-db";
+import { researchScorecard } from "./research-scorecard";
 
 type Bindings = Env;
 
@@ -155,6 +156,7 @@ app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/basketball/research/forecasts", basketballForecasts);
 app.route("/api/basketball/research/news", news);
 app.route("/api/research/markets", markets);
+app.route("/api/research/scorecard", researchScorecard);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);
   return c.redirect(`/api/football/events${url.search}`, 308);

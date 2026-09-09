@@ -13,7 +13,9 @@ export default function Scorecard() {
     params.get("sport") === "basketball" ? "basketball" : "football",
   );
   const [data, setData] = useState<Ledger | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [source, setSource] = useState<"live" | "edition">("edition"),
+    [refreshing, setRefreshing] = useState(true);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
     [page, setPage] = useState(() => {
@@ -28,19 +30,38 @@ export default function Scorecard() {
     if (page) next.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${next}`);
   }, [sport, query, status, page]);
-  useEffect(() => {
+  const refresh = () => {
     const c = new AbortController();
-    fetch("/data/research/ledger.json", { signal: c.signal })
+    setRefreshing(true);
+    setError("");
+    fetch("/api/research/scorecard?sport=all&limit=5000", { signal: c.signal })
       .then((r) => {
-        if (!r.ok) throw Error("The research ledger could not be loaded.");
+        if (!r.ok) throw Error("The live research ledger could not be loaded.");
         return r.json();
       })
-      .then(setData)
+      .then((next) => {
+        setData(next as Ledger);
+        setSource("live");
+      })
       .catch((e) => {
-        if (e.name !== "AbortError") setError(e.message);
-      });
+        if (e.name === "AbortError") return;
+        fetch("/data/research/ledger.json", { signal: c.signal })
+          .then((r) => {
+            if (!r.ok) throw Error("The research ledger could not be loaded.");
+            return r.json();
+          })
+          .then((next) => {
+            setData(next as Ledger);
+            setSource("edition");
+          })
+          .catch((fallbackError) => {
+            if (fallbackError.name !== "AbortError") setError(fallbackError.message);
+          });
+      })
+      .finally(() => setRefreshing(false));
     return () => c.abort();
-  }, []);
+  };
+  useEffect(() => refresh(), []);
   if (error)
     return (
       <p role="alert" className="status-error">
@@ -103,9 +124,11 @@ export default function Scorecard() {
           </select>
         </label>
         <p className="note">
-          Prospective tracking started this edition. Historical backtests are
-          reported separately.
+          {source === "live" ? "Live D1 ledger · refreshed just now." : `Edition snapshot · ${date(data.generated_at)}.`} Prospective tracking is separate from historical backtests.
         </p>
+        <button className="button secondary" type="button" onClick={refresh} disabled={refreshing}>
+          {refreshing ? "Refreshing…" : "Refresh ledger"}
+        </button>
       </div>
       <div className="strip">
         <div>
