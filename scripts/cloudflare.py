@@ -34,8 +34,10 @@ result = subprocess.run(
 )
 if result.returncode:
     raise SystemExit(result.returncode)
-if sys.argv[1:2] == ["deploy"] and not any(
-    arg.startswith("--dry-run") for arg in sys.argv[2:]
+if (
+    sys.argv[1:2] == ["deploy"]
+    and not any(arg.startswith("--dry-run") for arg in sys.argv[2:])
+    and os.environ.get("SKIP_BRIEF_ARCHIVE") != "1"
 ):
     archive_python = root / ".venv/bin/python"
     if not archive_python.exists():
@@ -51,4 +53,6 @@ if sys.argv[1:2] == ["deploy"] and not any(
             file=sys.stderr,
         )
         raise SystemExit(archived.returncode)
+elif sys.argv[1:2] == ["deploy"] and os.environ.get("SKIP_BRIEF_ARCHIVE") == "1":
+    print("Skipped optional brief archive capture (SKIP_BRIEF_ARCHIVE=1).")
 raise SystemExit(0)
