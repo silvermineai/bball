@@ -61,17 +61,18 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(q.q);
   }
   const where = conditions.join(" AND ");
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`)
-    .bind(...binds)
-    .first<{ total: number }>();
-  const rows = await c.env.DB.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,
+  const [count, rows, receipts] = await Promise.all([
+    c.env.DB.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`)
+      .bind(...binds)
+      .first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,
       g.kickoff,g.home_name,g.away_name,g.home_score,g.away_score
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
       WHERE ${where}
       ORDER BY g.kickoff IS NULL,g.kickoff DESC,s.dataset ASC,s.record_key ASC
       LIMIT 40 OFFSET ?`)
-    .bind(...binds, q.page * 40)
-    .all<{
+      .bind(...binds, q.page * 40)
+      .all<{
       dataset: Dataset;
       season: number;
       record_key: string;
@@ -85,7 +86,20 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       away_name: string | null;
       home_score: number | null;
       away_score: number | null;
-    }>();
+      }>(),
+    c.env.DB.prepare(`SELECT dataset,season,receipt_json FROM football_sources WHERE season=?${q.dataset === "all" ? "" : " AND dataset=?"} ORDER BY dataset`)
+      .bind(...(q.dataset === "all" ? [q.season] : [q.season, q.dataset]))
+      .all<{ dataset: Dataset; season: number; receipt_json: string }>(),
+  ]);
+  const sourceReceipts = receipts.results.flatMap((row) => {
+    try {
+      const receipt = JSON.parse(row.receipt_json) as { url?: string; fetched_at?: string; sha256?: string };
+      if (!receipt.url || !receipt.fetched_at || !receipt.sha256) return [];
+      return [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+    } catch {
+      return [];
+    }
+  });
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     dataset: q.dataset,
@@ -93,6 +107,7 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
     page: q.page,
     page_size: 40,
     total: count?.total ?? 0,
+    source_receipts: sourceReceipts,
     filters: { q: q.q, team: q.team ?? null, game: q.game ?? null },
     rows: rows.results.flatMap(({ stats_json, ...row }) => {
       try {

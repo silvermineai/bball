@@ -7,6 +7,13 @@ describe("football source statistics", () => {
       if (sql.includes("count(*) AS total")) {
         return { bind: () => ({ first: async () => ({ total: 1 }) }) };
       }
+      if (sql.includes("FROM football_sources")) {
+        return {
+          bind: () => ({
+            all: async () => ({ results: [{ dataset: "box", season: 2025, receipt_json: JSON.stringify({ url: "https://example.test/box.csv", fetched_at: "2026-09-01T00:00:00Z", sha256: "a".repeat(64) }) }] }),
+          }),
+        };
+      }
       return {
         bind: () => ({
           all: async () => ({
@@ -39,6 +46,7 @@ describe("football source statistics", () => {
       dataset: "box",
       season: 2025,
       total: 1,
+      source_receipts: [{ dataset: "box", season: 2025, url: "https://example.test/box.csv" }],
       rows: [{
         athlete_id: "123",
         stats: { athlete_name: "Example Player", yards: "91" },
