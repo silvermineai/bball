@@ -10,7 +10,7 @@ PUBLIC = ROOT / "frontend/public/data/basketball/ncaa-individual.json"
 SQL = ROOT / ".local/ncaa-individual.sql"
 
 release = json.loads(PUBLIC.read_text())
-if release.get("schema_version") != 1 or release.get("season") != 2026:
+if release.get("schema_version") not in (1, 2) or release.get("season") != 2026:
     raise SystemExit("Unsupported NCAA individual release")
 players = release.get("players")
 if not isinstance(players, list) or not players:

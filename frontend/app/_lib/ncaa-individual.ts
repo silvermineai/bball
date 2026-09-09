@@ -32,10 +32,16 @@ export type NCAAIndividualPlayer = {
   ppg_rank: number | null;
   rpg_rank: number | null;
   apg_rank: number | null;
+  source_stats?: Record<string, {
+    headers: string[];
+    cells: string[];
+    rank: number | null;
+    value: number | null;
+  }>;
 };
 
 export type NCAAIndividualRelease = {
-  schema_version: 1;
+  schema_version: 2;
   season: number;
   generated_at: string | null;
   attribution: { publisher: string; source: string; method: string };

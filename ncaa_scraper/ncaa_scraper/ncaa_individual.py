@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS ncaa_players (
   pts INTEGER, reb INTEGER, ast INTEGER, fgm INTEGER, fga INTEGER,
   three_fgm INTEGER, three_fga INTEGER, ftm INTEGER,
   ppg_rank INTEGER, rpg_rank INTEGER, apg_rank INTEGER,
+  source_stats_json TEXT,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS ix_ncaa_players_division ON ncaa_players(division);
@@ -161,6 +162,15 @@ def _json_number(value):
     return value if isinstance(value, (int, float)) else None
 
 
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    """Create the schema and upgrade an older local snapshot cache in place."""
+    conn.executescript(SCHEMA)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")}
+    if "source_stats_json" not in columns:
+        conn.execute("ALTER TABLE ncaa_players ADD COLUMN source_stats_json TEXT")
+        conn.commit()
+
+
 def export_release(conn: sqlite3.Connection) -> dict:
     """Create a compact, public derivative of the NCAA national snapshots."""
     team_ids = {
@@ -174,6 +184,14 @@ def export_release(conn: sqlite3.Connection) -> dict:
     for row in conn.execute("SELECT * FROM ncaa_players ORDER BY division, ppg_rank IS NULL, ppg_rank, name, player_id"):
         item = dict(zip(columns, row))
         item.pop("updated_at", None)
+        raw_source_stats = item.pop("source_stats_json", None)
+        if raw_source_stats:
+            try:
+                source_stats = json.loads(raw_source_stats)
+            except (TypeError, ValueError):
+                source_stats = None
+            if isinstance(source_stats, dict) and source_stats:
+                item["source_stats"] = source_stats
         item["team_ncaa_id"] = item.get("team_ncaa_id") or team_ids.get((item["division"], team_key(item.get("team_name"))))
         item = {k: _json_number(v) if isinstance(v, (int, float)) and k not in {"player_id", "division", "games", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm", "ppg_rank", "rpg_rank", "apg_rank"} else v for k, v in item.items()}
         players.append(item)
@@ -192,13 +210,13 @@ def export_release(conn: sqlite3.Connection) -> dict:
     if generated:
         generated = datetime.fromisoformat(generated.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "season": 2026,
         "generated_at": generated,
         "attribution": {
             "publisher": "NCAA Statistics",
             "source": "https://stats.ncaa.org/rankings/national_ranking",
-            "method": "Cached final national-ranking snapshots fetched with robots.txt checks; values are a public derivative, not a page mirror.",
+            "method": "Cached final national-ranking snapshots fetched with robots.txt checks; normalized measures and complete retained source rows are a public derivative, not a page mirror.",
         },
         "coverage": {"players": len(players), "divisions": coverage},
         "players": players,
@@ -314,19 +332,43 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
             value = to_num(cells[-1])
             games = to_num(cells[5])
 
+            # Keep the complete publisher row for audit/export. The normalized
+            # columns below power the leaderboard, while this payload retains
+            # unfamiliar or newly added fields without guessing their meaning.
+            existing = conn.execute(
+                "SELECT source_stats_json FROM ncaa_players WHERE player_id=?",
+                (pid,),
+            ).fetchone()
+            source_stats = {}
+            if existing and existing[0]:
+                try:
+                    decoded = json.loads(existing[0])
+                    if isinstance(decoded, dict):
+                        source_stats.update(decoded)
+                except (TypeError, ValueError):
+                    pass
+            source_stats[slug] = {
+                "headers": headers,
+                "cells": cells,
+                "rank": rank,
+                "value": value,
+            }
+
             conn.execute(
                 """INSERT INTO ncaa_players (player_id, division, name, team_name, team_ncaa_id, conference,
-                   class_year, height, position, games)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)
+                   class_year, height, position, games, source_stats_json)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(player_id) DO UPDATE SET division=excluded.division,
                    class_year=COALESCE(excluded.class_year, ncaa_players.class_year),
                    games=COALESCE(excluded.games, ncaa_players.games),
                    team_ncaa_id=COALESCE(excluded.team_ncaa_id, ncaa_players.team_ncaa_id),
+                   source_stats_json=excluded.source_stats_json,
                    updated_at=CURRENT_TIMESTAMP""",
                 (
                     pid, div_int, pname, tname,
                     int(team_link.group(1)) if team_link else None,
                     conf, cells[2] or None, cells[3] or None, cells[4] or None, games,
+                    json.dumps(source_stats, ensure_ascii=False, separators=(",", ":")),
                 ),
             )
             conn.execute(f"UPDATE ncaa_players SET {slug}=? WHERE player_id=?", (value, pid))
@@ -363,7 +405,7 @@ def main() -> None:
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
-    conn.executescript(SCHEMA)
+    ensure_schema(conn)
     fetcher = ScraplingNCAAFetcher()
     for division in args.divisions:
         div = division if "." in division else f"{division}.0"
