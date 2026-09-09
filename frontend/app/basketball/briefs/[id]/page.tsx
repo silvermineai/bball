@@ -224,6 +224,7 @@ export default async function Page({
       <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} />
       <ManualMarketCheck
         storageKey={`brief:${g.id}`}
+        gameId={g.id}
         homeName={g.home_name}
         modelMargin={p.home_margin}
         modelMarginLow={p.margin_low}

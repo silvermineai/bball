@@ -33,6 +33,14 @@ type SavedQuote = {
   moneylineEdge: number | null;
 };
 
+type LiveForecast = {
+  home_margin: number | null;
+  total: number | null;
+  home_win_probability: number | null;
+  margin_low?: number | null;
+  margin_high?: number | null;
+};
+
 export default function ManualMarketCheck({
   homeName,
   modelMargin,
@@ -41,6 +49,7 @@ export default function ManualMarketCheck({
   modelMarginLow,
   modelMarginHigh,
   storageKey,
+  gameId,
 }: {
   homeName: string;
   modelMargin: number;
@@ -49,7 +58,10 @@ export default function ManualMarketCheck({
   modelMarginLow?: number | null;
   modelMarginHigh?: number | null;
   storageKey?: string;
+  gameId?: string;
 }) {
+  const [liveForecast, setLiveForecast] = useState<LiveForecast | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"checking" | "live" | "fallback">(gameId ? "checking" : "fallback");
   const [spread, setSpread] = useState("");
   const [total, setTotal] = useState("");
   const [moneyline, setMoneyline] = useState("");
@@ -57,14 +69,39 @@ export default function ManualMarketCheck({
   const [source, setSource] = useState("");
   const [history, setHistory] = useState<SavedQuote[]>([]);
   const [savedMessage, setSavedMessage] = useState("");
+  useEffect(() => {
+    if (!gameId) return;
+    const controller = new AbortController();
+    fetch(`/api/basketball/research/forecasts?season=2027&gameId=${encodeURIComponent(gameId)}&model=latest&status=all&limit=1`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("live forecast unavailable");
+        return response.json() as Promise<{ rows?: LiveForecast[] }>;
+      })
+      .then((payload) => {
+        if (!controller.signal.aborted) {
+          const row = payload.rows?.[0] || null;
+          setLiveForecast(row);
+          setLiveStatus(row ? "live" : "fallback");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveStatus("fallback");
+      });
+    return () => controller.abort();
+  }, [gameId]);
+  const activeMargin = liveForecast?.home_margin ?? modelMargin;
+  const activeTotal = liveForecast?.total ?? modelTotal;
+  const activeWinProbability = liveForecast?.home_win_probability ?? modelHomeWinProbability;
+  const activeMarginLow = liveForecast?.margin_low ?? modelMarginLow;
+  const activeMarginHigh = liveForecast?.margin_high ?? modelMarginHigh;
   const marketSpread = numberValue(spread);
   const marketTotal = numberValue(total);
   const marketMoneyline = numberValue(moneyline);
   const marketAwayMoneyline = numberValue(awayMoneyline);
   const spreadEdge =
-    marketSpread == null ? null : modelMargin + marketSpread;
-  const spreadCover = spreadCoverProbability(modelMargin, modelMarginLow, modelMarginHigh, marketSpread);
-  const totalEdge = marketTotal == null ? null : modelTotal - marketTotal;
+    marketSpread == null ? null : activeMargin + marketSpread;
+  const spreadCover = spreadCoverProbability(activeMargin, activeMarginLow, activeMarginHigh, marketSpread);
+  const totalEdge = marketTotal == null ? null : activeTotal - marketTotal;
   const implied =
     marketMoneyline == null ? null : impliedAmerican(marketMoneyline);
   const awayImplied =
@@ -74,7 +111,7 @@ export default function ManualMarketCheck({
       ? null
       : implied / (implied + awayImplied);
   const moneylineEdge =
-    marketHomeProbability == null ? null : modelHomeWinProbability - marketHomeProbability;
+    marketHomeProbability == null ? null : activeWinProbability - marketHomeProbability;
   const notebookKey = `silvermine-market-notebook:${storageKey || homeName}`;
   useEffect(() => {
     try {
@@ -136,7 +173,7 @@ export default function ManualMarketCheck({
           <div className="eyebrow">Reader tool / Manual quote check</div>
           <h2>Compare a line you observed.</h2>
         </div>
-        <span className="note">Browser only · never published</span>
+          <span className="note">Browser only · never published · {liveStatus === "live" ? "live model values" : liveStatus === "checking" ? "checking model edition" : "published fallback"}</span>
       </div>
       <p className="note">
         Enter a home spread, game total or both sides of a moneyline from a source
@@ -248,7 +285,7 @@ export default function ManualMarketCheck({
           <small>
             {marketHomeProbability == null
               ? "Enter both moneylines to calculate a no-vig market probability."
-              : `No-vig market ${(marketHomeProbability * 100).toFixed(1)}% · model ${(modelHomeWinProbability * 100).toFixed(1)}%`}
+              : `No-vig market ${(marketHomeProbability * 100).toFixed(1)}% · model ${(activeWinProbability * 100).toFixed(1)}%`}
           </small>
         </div>
       </div>
