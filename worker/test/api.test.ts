@@ -48,6 +48,28 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(stats_json,'$.rusher_player_name')"));
   });
 
+  it("finds historical NCAA basketball athletes in the separate research warehouse", async () => {
+    const prepare = vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) }));
+    const researchPrepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        all: async () => ({
+          results: sql.includes("bb_ncaa_player_season")
+            ? [{ id: "ncaa-42", name: "Example Veteran", sportCode: "MBB", type: "player", source: "ncaa", latest_season: 2024 }]
+            : [],
+        }),
+      }),
+    }));
+    const response = await app.request(
+      "/api/search?q=Veteran&sport=s_mbb",
+      {},
+      { DB: { prepare }, RESEARCH_DB: { prepare: researchPrepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { results: Array<Record<string, unknown>> };
+    expect(body.results).toEqual([{ id: "ncaa-42", name: "Example Veteran", sportCode: "MBB", type: "player", source: "ncaa", latest_season: 2024 }]);
+    expect(researchPrepare).toHaveBeenCalledWith(expect.stringContaining("FROM bb_ncaa_player_season"));
+  });
+
   it("returns exact-ID football season production beside the game log", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total")) {

@@ -7,7 +7,7 @@ import { combineSearchResults, searchPrograms, type SearchProgram, type SearchRe
 type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null };
 type PlayerResponse = { rows?: PlayerRow[] };
 type RatingResponse = { board?: Array<{ id?: string | number; name?: string }> };
-type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team" };
+type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team"; source?: "ncaa" | "football"; latest_season?: number };
 type LegacyResponse = { results?: LegacyRow[] };
 
 let programsPromise: Promise<SearchProgram[]> | null = null;
@@ -47,10 +47,12 @@ export default function GlobalSearch() {
         fetch(`/api/basketball/research/player-core?season=2026&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
+        fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_mbb`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
         fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_fbl`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
       ])
-        .then(([players, programs, football]) => {
+        .then(([players, programs, basketballArchive, football]) => {
           const playerResults: SearchResult[] = (players.rows || [])
             .filter((row): row is PlayerRow & { id: string; name: string } => !!row.id && !!row.name)
             .slice(0, 5)
@@ -61,6 +63,17 @@ export default function GlobalSearch() {
               sport: "basketball",
               detail: [row.team, row.position, "Basketball"].filter(Boolean).join(" · ") || "Basketball source player",
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}&season=2026`,
+            }));
+          const ncaaResults: SearchResult[] = (basketballArchive.results || [])
+            .filter((row): row is LegacyRow & { id: string; name: string; type: "player"; source: "ncaa" } => !!row.id && !!row.name && row.type === "player" && row.source === "ncaa")
+            .slice(0, 3)
+            .map((row) => ({
+              id: `ncaa-${row.id}`,
+              name: row.name,
+              type: "player",
+              sport: "basketball",
+              detail: `NCAA source player · ${row.latest_season ? `${row.latest_season - 1}–${String(row.latest_season).slice(-2)}` : "historical archive"}`,
+              href: `/basketball/ncaa-player/?id=${encodeURIComponent(row.id)}${row.latest_season ? `&season=${encodeURIComponent(row.latest_season)}` : ""}`,
             }));
           const footballResults: SearchResult[] = (football.results || [])
             .filter((row): row is LegacyRow & { id: string; name: string; type: "player" | "team" } => !!row.id && !!row.name && !!row.type)
@@ -75,7 +88,7 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...footballResults], searchPrograms(programs, needle, 4), 8));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...ncaaResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
           setOpen(true);
         })
         .catch((reason: unknown) => {

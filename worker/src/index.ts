@@ -911,12 +911,26 @@ app.get("/api/search", zValidator("query", z.object({
       AND lower(${footballName}) LIKE lower(?)
     GROUP BY athlete_id, name
     LIMIT 8`;
-  const [teams, players, footballPlayers] = await Promise.all([
+  // NCAA-derived player seasons live in the research warehouse and use a
+  // deliberately separate ID namespace. Include them in global discovery so
+  // historical players remain findable without joining names to ESPN IDs.
+  const ncaaPlayersSql = `SELECT player_id AS id, MAX(player_name) AS name, 'MBB' AS sportCode, 'player' AS type, 'ncaa' AS source,
+      MAX(season) AS latest_season
+    FROM bb_ncaa_player_season
+    WHERE lower(player_name) LIKE lower(?)
+    GROUP BY player_id
+    ORDER BY latest_season DESC, name ASC
+    LIMIT 8`;
+  const research = (c.env as Bindings & { RESEARCH_DB?: D1Database }).RESEARCH_DB;
+  const [teams, players, footballPlayers, ncaaPlayers] = await Promise.all([
     sportCode ? all(c.env.DB, teamsSql, like, sportCode) : all(c.env.DB, teamsSql, like),
     sportCode ? all(c.env.DB, playersSql, sportCode, like, sportCode) : all(c.env.DB, playersSql, like),
     sport === "all" || sport === "s_fbl" ? all(c.env.DB, footballPlayersSql, like) : Promise.resolve([]),
+    (sport === "all" || sport === "s_mbb") && research
+      ? all(research, ncaaPlayersSql, like)
+      : Promise.resolve([]),
   ]);
-  return c.json({ sport, results: [...teams, ...players, ...footballPlayers] });
+  return c.json({ sport, results: [...teams, ...players, ...footballPlayers, ...ncaaPlayers] });
 });
 
 app.get("/api/favorites", async (c) => {
