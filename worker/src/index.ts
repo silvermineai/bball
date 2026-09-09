@@ -261,13 +261,14 @@ app.get(
     const table =
       kind === "predictions" ? "audit_predictions" : "audit_game_states";
     const clock = kind === "predictions" ? "registered_at" : "observed_at";
+    const db = researchDb(c.env);
     const [count, rows] = await Promise.all([
-      c.env.DB.prepare(
+      db.prepare(
         `SELECT count(*) AS total FROM ${table} WHERE sport=? AND game_id=?`,
       )
         .bind(sport, id)
         .first<{ total: number }>(),
-      c.env.DB.prepare(
+      db.prepare(
         `SELECT * FROM ${table} WHERE sport=? AND game_id=? ORDER BY ${clock} DESC,id DESC LIMIT 25 OFFSET ?`,
       )
         .bind(sport, id, page * 25)

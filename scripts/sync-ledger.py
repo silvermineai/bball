@@ -2,10 +2,12 @@
 
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
+D1_DB_NAME = os.getenv("RESEARCH_D1_DATABASE", "bball-research-v2")
 if not (ROOT / ".local/research-ledger.sql").is_file():
     raise SystemExit("Generate the research ledger before syncing it.")
 for file in ("migrations/0010_research_ledger.sql", "../.local/research-ledger.sql"):
@@ -16,7 +18,7 @@ for file in ("migrations/0010_research_ledger.sql", "../.local/research-ledger.s
                 "scripts/cloudflare.py",
                 "d1",
                 "execute",
-                "bball-silvermine",
+                D1_DB_NAME,
                 "--remote",
                 "--file",
                 file,

@@ -23,14 +23,14 @@ describe("market archive metadata", () => {
     ]);
   });
 
-  it("keeps football market reads on the legacy database", async () => {
+  it("keeps football market reads on the research ledger", async () => {
     const legacyPrepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
-    const legacyBatch = vi.fn().mockResolvedValue([
+    const legacyBatch = vi.fn();
+    const researchPrepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const researchBatch = vi.fn().mockResolvedValue([
       { results: [{ season: 2025 }] },
       { results: [{ total: 12, pregame: 12 }] },
     ]);
-    const researchPrepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
-    const researchBatch = vi.fn();
     const response = await markets.request(
       "/?meta=1&sport=football",
       {},
@@ -40,7 +40,7 @@ describe("market archive metadata", () => {
       },
     );
     expect(response.status).toBe(200);
-    expect(legacyBatch).toHaveBeenCalled();
-    expect(researchBatch).not.toHaveBeenCalled();
+    expect(researchBatch).toHaveBeenCalled();
+    expect(legacyBatch).not.toHaveBeenCalled();
   });
 });
