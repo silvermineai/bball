@@ -760,7 +760,7 @@ describe("bball api", () => {
       { results: [{ season: 2026 }] },
       { results: [{ value: "G" }] },
       { results: [{ value: "Fr." }] },
-      { results: [{ dataset: "ncaa_player_box", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }] },
+      { results: [{ dataset: "ncaa_player_box", url: "https://example.test/ncaa-player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }] },
     ]);
     const response = await app.request(
       "/api/basketball/research/ncaa-player-rankings?meta=1&season=2026",

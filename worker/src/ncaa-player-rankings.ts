@@ -198,7 +198,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT dataset, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
+      c.env.DB.prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -206,8 +206,9 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       metrics,
       classes: classes.results.map((row) => String((row as { value: string }).value)),
       positions: positions.results.map((row) => String((row as { value: string }).value)),
-      sources: (sources.results as Array<{ dataset?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => ({
+      sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => ({
         dataset: String(row.dataset || ""),
+        url: typeof row.url === "string" ? row.url : null,
         fetched_at: typeof row.fetched_at === "string" ? row.fetched_at : null,
         sha256: typeof row.sha256 === "string" ? row.sha256 : null,
       })),
