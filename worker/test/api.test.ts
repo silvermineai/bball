@@ -470,6 +470,39 @@ describe("bball api", () => {
     }
   });
 
+  it("labels NCAA assist leaderboard provenance without inventing a publisher rank", async () => {
+    const prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "42",
+            division: 1,
+            name: "Example Player",
+            team_name: "Example U",
+            stat_value: 6.25,
+            ppg_rank: null,
+            payload_json: JSON.stringify({ player_id: 42, apg: 6.25 }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=apg&division=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      provenance: { kind: string; dataset: string; publisher_rank: boolean; derived_divisions: string[] };
+    };
+    expect(body.provenance).toMatchObject({
+      kind: "exact_id_derived",
+      dataset: "ncaa_mbb_player_box",
+      publisher_rank: false,
+      derived_divisions: ["1"],
+    });
+  });
+
   it("rejects invalid NCAA player card IDs and seasons before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-card/not-an-id",

@@ -520,7 +520,21 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,ppg_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season: 2026, division, stat, page, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
+  const provenance = stat === "apg"
+    ? {
+      kind: "exact_id_derived",
+      dataset: "ncaa_mbb_player_box",
+      source_url: "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/ncaa_mbb_player_box/ncaa_mbb_player_box_2026.parquet",
+      derived_divisions: ["1"],
+      publisher_rank: false,
+      note: "Division I values are summed from exact NCAA player IDs and divided by distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows.",
+    }
+    : {
+      kind: "publisher_snapshot",
+      dataset: "ncaa_final_national_rankings",
+      publisher_rank: stat === "ppg" || stat === "rpg",
+    };
+  return c.json({ season: 2026, division, stat, page, provenance, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
 });
 
 // Keep completed-game reading snapshots reachable from their original URLs.
