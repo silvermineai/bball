@@ -1,4 +1,5 @@
 import type { BBGame } from "./basketball-types";
+import type { Comparison } from "./research-types";
 
 export type LiveForecastRow = {
   game_id: string;
@@ -21,6 +22,10 @@ type LiveForecastPage = {
   total: number;
   page_size: number;
   rows: LiveForecastRow[];
+};
+
+type LiveScorecardResponse = {
+  games: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
 export async function loadLiveBasketballForecasts(
@@ -49,6 +54,18 @@ export async function loadLiveBasketballForecasts(
     ),
   );
   return [first, ...additional].flatMap((page) => page.rows);
+}
+
+export async function loadLiveBasketballMarketComparisons(signal?: AbortSignal) {
+  const response = await fetch(
+    "/api/research/scorecard?sport=basketball&limit=5000",
+    { signal },
+  );
+  if (!response.ok) throw new Error("Live market comparisons unavailable.");
+  const payload = await response.json() as LiveScorecardResponse;
+  return Object.fromEntries(
+    (payload.games || []).map((game) => [game.game_id, game.comparisons || []]),
+  ) as Record<string, Comparison[]>;
 }
 
 export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecastRow[]) {

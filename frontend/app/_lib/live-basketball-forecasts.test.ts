@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { mergeLiveBasketballForecasts, type LiveForecastRow } from "./live-basketball-forecasts";
+import { loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -31,6 +31,26 @@ const game = (id: string, starts_at: string, current: BBGame["prediction"]): BBG
 });
 
 describe("live basketball forecast merge", () => {
+  it("normalizes live scorecard comparisons by game ID", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ games: [
+        { game_id: "g1", comparisons: [{ provider: "test", bookmaker: "book", market: "h2h" }] },
+        { game_id: "g2" },
+      ] }),
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballMarketComparisons()).resolves.toEqual({
+      g1: [{ provider: "test", bookmaker: "book", market: "h2h" }],
+      g2: [],
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/research/scorecard?sport=basketball&limit=5000",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("replaces current predictions while preserving static evidence and unforecasted games", () => {
     const staticGames = [
       game("a", "2026-11-02T05:00:00Z", prediction(4)),

@@ -10,6 +10,7 @@ import { date, fmt, kick } from "../../_lib/format";
 import ManualMarketCheck from "../briefs/ManualMarketCheck";
 import {
   loadLiveBasketballForecasts,
+  loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import {
@@ -92,6 +93,8 @@ export default function ForecastLab({
   const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
   const [liveCatalogError, setLiveCatalogError] = useState("");
   const [liveGames, setLiveGames] = useState<BBGame[] | null>(null);
+  const [liveMarkets, setLiveMarkets] = useState<Record<string, Comparison[]> | null>(null);
+  const [liveMarketsError, setLiveMarketsError] = useState("");
   const [liveGamesError, setLiveGamesError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
   const activeGames = liveGames || overview.upcoming;
@@ -132,6 +135,23 @@ export default function ForecastLab({
   }, [overview.upcoming]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    loadLiveBasketballMarketComparisons(controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setLiveMarkets(value);
+          setLiveMarketsError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveMarketsError(reason instanceof Error ? reason.message : "Live market comparisons unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId });
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${next}`);
   }, [marketGameId, query, sort, view]);
@@ -140,7 +160,7 @@ export default function ForecastLab({
     const search = query.trim().toLowerCase();
     const candidates = activeGames
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
-      .map((game) => modelRow(game, scenarioByGame.get(game.id), markets[game.id]));
+      .map((game) => modelRow(game, scenarioByGame.get(game.id), (liveMarkets || markets)[game.id]));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
         if (view === "scenario") return !!row.scenario;
@@ -150,12 +170,13 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [activeGames, markets, query, scenarioByGame, sort, view]);
+  }, [activeGames, liveMarkets, markets, query, scenarioByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
-  const verifiedMarketGames = modeledGames.filter((game) => (markets[game.id] || []).length > 0).length;
+  const activeMarkets = liveMarkets || markets;
+  const verifiedMarketGames = modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   useEffect(() => {
     if (rows.length && !rows.some((row) => row.game.id === marketGameId)) {
@@ -226,7 +247,7 @@ export default function ForecastLab({
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
           <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
-          <p>{verifiedMarketGames ? "These rows passed the provider, participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : "No licensed odds snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a source you observed."}</p>
+          <p>{verifiedMarketGames ? "These rows passed the provider, participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : liveMarketsError ? `${liveMarketsError} No licensed odds snapshot is available in the bundled edition.` : "No licensed odds snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a source you observed."}</p>
           <p><Link href="/research/markets/">Open market archive →</Link> · <Link href="/research/scorecard/?sport=basketball">Open forecast record →</Link></p>
         </div>
       </section>

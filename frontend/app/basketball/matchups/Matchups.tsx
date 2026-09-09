@@ -16,6 +16,7 @@ import {
 } from "../../_lib/basketball-matchups";
 import {
   loadLiveBasketballForecasts,
+  loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 
@@ -58,7 +59,9 @@ export default function Matchups({
     } | null>(null),
     [liveCatalogError, setLiveCatalogError] = useState(""),
     [liveGames, setLiveGames] = useState<BBGame[] | null>(null),
-    [liveGamesError, setLiveGamesError] = useState("");
+    [liveGamesError, setLiveGamesError] = useState(""),
+    [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, NonNullable<BBGame["market_comparisons"]>> | null>(null),
+    [liveMarketsError, setLiveMarketsError] = useState("");
   const activeGames = liveGames || games;
 
   useEffect(() => {
@@ -77,6 +80,23 @@ export default function Matchups({
     });
     return () => controller.abort();
   }, [games]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadLiveBasketballMarketComparisons(controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setLiveMarketComparisons(value);
+          setLiveMarketsError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveMarketsError(reason instanceof Error ? reason.message : "Live market comparisons unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const validIds = new Set(activeGames.map((game) => game.id));
@@ -251,6 +271,13 @@ export default function Matchups({
         })() : liveCatalogError ? `${liveCatalogError} Showing the static forecast edition.` : "Checking the live forecast catalog…"}
       </p>
       <p className="note" role="status">
+        {liveMarketComparisons
+          ? `Live market comparisons: ${Object.values(liveMarketComparisons).filter((quotes) => quotes.length > 0).length.toLocaleString()} games with qualifying quotes.`
+          : liveMarketsError
+            ? `${liveMarketsError} Showing the bundled market edition.`
+            : "Checking live market comparisons…"}
+      </p>
+      <p className="note" role="status">
         {liveGames
           ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
           : liveGamesError
@@ -348,7 +375,7 @@ export default function Matchups({
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
             <BasketballCard
-              game={marketComparisons[g.id]?.length ? { ...g, market_comparisons: marketComparisons[g.id] } : g}
+              game={(liveMarketComparisons?.[g.id] || marketComparisons[g.id])?.length ? { ...g, market_comparisons: (liveMarketComparisons?.[g.id] || marketComparisons[g.id]) } : g}
               homeRoster={rosterByTeam.get(g.home_id)}
               awayRoster={rosterByTeam.get(g.away_id)}
               rosterScenario={rosterScenarioByGame.get(g.id)}
