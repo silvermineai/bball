@@ -8,6 +8,11 @@ import {
   loadLiveFootballForecasts,
   mergeLiveFootballForecasts,
 } from "../../_lib/live-football-forecasts";
+import {
+  matchesFootballMatchupSignal,
+  parseFootballMatchupSignal,
+  type FootballMatchupSignal,
+} from "../../_lib/football-matchup-view";
 export default function MatchupBrowser({
   games,
   generated,
@@ -24,7 +29,9 @@ export default function MatchupBrowser({
   const [query, setQuery] = useState(params.get("team") || ""),
     [week, setWeek] = useState(initialWeek),
     [mode, setMode] = useState<"all" | "forecast">(params.get("show") === "forecast" ? "forecast" : "all"),
+    [signal, setSignal] = useState<FootballMatchupSignal>(parseFootballMatchupSignal(params.get("signal"))),
     [page, setPage] = useState(Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage <= 250 ? requestedPage : 0),
+    [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
     [liveError, setLiveError] = useState("");
   const activeGames = liveGames || games;
@@ -42,7 +49,8 @@ export default function MatchupBrowser({
         .toLowerCase()
         .includes(query.toLowerCase()) &&
       (week === "all" || String(g.week) === week) &&
-      (mode === "all" || g.prediction),
+      (mode === "all" || g.prediction) &&
+      matchesFootballMatchupSignal(g.prediction, signal),
   );
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
 
@@ -54,10 +62,12 @@ export default function MatchupBrowser({
     else url.searchParams.delete("week");
     if (mode === "forecast") url.searchParams.set("show", mode);
     else url.searchParams.delete("show");
+    if (signal !== "all") url.searchParams.set("signal", signal);
+    else url.searchParams.delete("signal");
     if (page) url.searchParams.set("page", String(page));
     else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [mode, page, query, week]);
+  }, [mode, page, query, signal, week]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -122,7 +132,37 @@ export default function MatchupBrowser({
             <option value="forecast">With a model forecast</option>
           </select>
         </label>
+        <label className="control">
+          <span>MODEL SIGNAL</span>
+          <select
+            value={signal}
+            onChange={(e) => {
+              setSignal(e.target.value as FootballMatchupSignal);
+              setPage(0);
+            }}
+          >
+            <option value="all">All forecast signals</option>
+            <option value="toss-up">Toss-ups · under 60%</option>
+            <option value="lean">Leans · 60–74.9%</option>
+            <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setCopied("Slate link copied.");
+            } catch {
+              setCopied("Copy the filtered URL from your address bar.");
+            }
+          }}
+        >
+          Copy slate link
+        </button>
       </div>
+      {copied && <p className="note" role="status">{copied}</p>}
       <p className="note" style={{ marginBottom: 22 }}>
         {rows.length} matchups · Generated {date(generated)} · {liveGames
           ? "Live D1 forecast rows are applied to the published cards."
