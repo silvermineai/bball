@@ -24,6 +24,8 @@ type SavedQuote = {
   spread: number | null;
   total: number | null;
   moneyline: number | null;
+  awayMoneyline: number | null;
+  moneylineHomeProbability: number | null;
   spreadEdge: number | null;
   totalEdge: number | null;
   moneylineEdge: number | null;
@@ -45,19 +47,27 @@ export default function ManualMarketCheck({
   const [spread, setSpread] = useState("");
   const [total, setTotal] = useState("");
   const [moneyline, setMoneyline] = useState("");
+  const [awayMoneyline, setAwayMoneyline] = useState("");
   const [source, setSource] = useState("");
   const [history, setHistory] = useState<SavedQuote[]>([]);
   const [savedMessage, setSavedMessage] = useState("");
   const marketSpread = numberValue(spread);
   const marketTotal = numberValue(total);
   const marketMoneyline = numberValue(moneyline);
+  const marketAwayMoneyline = numberValue(awayMoneyline);
   const spreadEdge =
     marketSpread == null ? null : modelMargin + marketSpread;
   const totalEdge = marketTotal == null ? null : modelTotal - marketTotal;
   const implied =
     marketMoneyline == null ? null : impliedAmerican(marketMoneyline);
+  const awayImplied =
+    marketAwayMoneyline == null ? null : impliedAmerican(marketAwayMoneyline);
+  const marketHomeProbability =
+    implied == null || awayImplied == null || implied + awayImplied <= 0
+      ? null
+      : implied / (implied + awayImplied);
   const moneylineEdge =
-    implied == null ? null : modelHomeWinProbability - implied;
+    marketHomeProbability == null ? null : modelHomeWinProbability - marketHomeProbability;
   const notebookKey = `silvermine-market-notebook:${storageKey || homeName}`;
   useEffect(() => {
     try {
@@ -70,7 +80,7 @@ export default function ManualMarketCheck({
     }
   }, [notebookKey]);
   const saveQuote = () => {
-    if (!source.trim() || [marketSpread, marketTotal, marketMoneyline].every((value) => value == null)) {
+    if (!source.trim() || [marketSpread, marketTotal, marketMoneyline, marketAwayMoneyline].every((value) => value == null)) {
       setSavedMessage("Add a source and at least one observed line first.");
       return;
     }
@@ -80,6 +90,8 @@ export default function ManualMarketCheck({
       spread: marketSpread,
       total: marketTotal,
       moneyline: marketMoneyline,
+      awayMoneyline: marketAwayMoneyline,
+      moneylineHomeProbability: marketHomeProbability,
       spreadEdge,
       totalEdge,
       moneylineEdge,
@@ -103,8 +115,8 @@ export default function ManualMarketCheck({
     downloadCsv(
       "manual-market-notebook.csv",
       toCsv(
-        ["Saved at", "Source", "Home spread", "Game total", "Home moneyline", "Spread edge", "Total edge", "Moneyline probability edge"],
-        history.map((quote) => [quote.savedAt, quote.source, quote.spread, quote.total, quote.moneyline, quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
+        ["Saved at", "Source", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Spread edge", "Total edge", "Moneyline probability edge"],
+        history.map((quote) => [quote.savedAt, quote.source, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
       ),
     );
   };
@@ -119,7 +131,7 @@ export default function ManualMarketCheck({
         <span className="note">Browser only · never published</span>
       </div>
       <p className="note">
-        Enter a home spread, game total or {homeName} moneyline from a source
+        Enter a home spread, game total or both sides of a moneyline from a source
         you are reviewing. Results use the published forecast and stay in this
         browser; they are not a verified market observation, recommendation or
         ledger record.
@@ -160,6 +172,18 @@ export default function ManualMarketCheck({
             placeholder="+125"
           />
           <small>American odds, at least +100 or at most -100.</small>
+        </label>
+        <label className="control">
+          <span>AWAY MONEYLINE</span>
+          <input
+            inputMode="numeric"
+            type="number"
+            step="1"
+            value={awayMoneyline}
+            onChange={(event) => setAwayMoneyline(event.target.value)}
+            placeholder="-145"
+          />
+          <small>Enter both sides to remove two-way vig.</small>
         </label>
         <label className="control">
           <span>OBSERVED SOURCE</span>
@@ -209,16 +233,16 @@ export default function ManualMarketCheck({
               : `${moneylineEdge > 0 ? "+" : ""}${(moneylineEdge * 100).toFixed(1)} pp`}
           </strong>
           <small>
-            {implied == null
-              ? "Model home win probability is shown above."
-              : `Implied ${ (implied * 100).toFixed(1) }% · model ${(modelHomeWinProbability * 100).toFixed(1)}%`}
+            {marketHomeProbability == null
+              ? "Enter both moneylines to calculate a no-vig market probability."
+              : `No-vig market ${(marketHomeProbability * 100).toFixed(1)}% · model ${(modelHomeWinProbability * 100).toFixed(1)}%`}
           </small>
         </div>
       </div>
       <p className="note manual-market-footnote">
         Convention: spread edge = model home margin + home spread; total edge
         = model total − observed total. This arithmetic does not account for
-        vig, pushes, limits, timing or player availability.
+        vig, pushes, limits, timing or player availability. Moneyline edge uses both sides to remove two-way vig.
       </p>
       {history.length > 0 && (
         <section className="manual-market-history">
@@ -240,7 +264,7 @@ export default function ManualMarketCheck({
                 <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small></td>
                 <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small></td>
                 <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small></td>
-                <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small></td>
+                <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.awayMoneyline == null ? "Away —" : `Away ${quote.awayMoneyline > 0 ? "+" : ""}${quote.awayMoneyline}`}</small><small>{quote.moneylineHomeProbability == null ? "" : `No-vig home ${(quote.moneylineHomeProbability * 100).toFixed(1)}%`}</small><small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small></td>
                 <td className="numeric"><small>Spread / total / ML</small><strong>{[quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100].map((value) => value == null ? "—" : value.toFixed(1)).join(" · ")}</strong></td>
               </tr>)}</tbody>
             </table>
