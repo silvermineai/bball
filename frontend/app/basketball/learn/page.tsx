@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FourFactorsCalculator from "./FourFactorsCalculator";
 
 export const metadata = {
   title: "Learn college basketball analytics",
@@ -242,6 +243,10 @@ export default function Page() {
           retain their source labels and source identities. A missing value is
           evidence that the required field or qualifying sample was unavailable.
         </p>
+      </section>
+
+      <section className="section" aria-label="Interactive Four Factors lesson">
+        <FourFactorsCalculator />
       </section>
 
       <section className="section two-col">
