@@ -22,6 +22,15 @@ type Row = {
   comparisons: Comparison[];
 };
 
+type LiveModel = {
+  model_id: string;
+  forecasts: number;
+  last_created_at: string | null;
+  target_season: number | null;
+  cutoff: string | null;
+};
+type LiveCatalog = { models: LiveModel[] };
+
 function numeric(value: number | null | undefined, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 }
@@ -75,7 +84,27 @@ export default function ForecastLab({
   const [view, setView] = useState<View>(initial.view);
   const [sort, setSort] = useState<Sort>(initial.sort);
   const [marketGameId, setMarketGameId] = useState("");
+  const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
+  const [liveCatalogError, setLiveCatalogError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live forecast catalog is unavailable.");
+        return response.json() as Promise<LiveCatalog>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLiveCatalog(value);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError") {
+          setLiveCatalogError(reason instanceof Error ? reason.message : "The live forecast catalog is unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -107,6 +136,7 @@ export default function ForecastLab({
   const modeledGames = overview.upcoming.filter((game) => game.prediction || game.fallback_prediction);
   const verifiedMarketGames = modeledGames.filter((game) => (markets[game.id] || []).length > 0).length;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
+  const liveModel = liveCatalog?.models.find((model) => model.model_id === overview.model.id) || liveCatalog?.models[0] || null;
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
@@ -154,6 +184,14 @@ export default function ForecastLab({
           <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
           <p>{verifiedMarketGames ? "These rows passed the provider, participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : "No licensed odds snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a source you observed."}</p>
           <p><Link href="/research/markets/">Open market archive →</Link> · <Link href="/research/scorecard/?sport=basketball">Open forecast record →</Link></p>
+        </div>
+      </section>
+      <section className="section" style={{ marginTop: 26 }}>
+        <div className="paper-panel">
+          <div className="eyebrow">Live D1 catalog / deployed record</div>
+          <h2>{liveCatalog ? `${(liveModel?.forecasts ?? 0).toLocaleString()} rows in the live edition.` : liveCatalogError ? "Live catalog unavailable." : "Checking the live catalog…"}</h2>
+          {liveCatalog ? (liveModel ? <p>{liveModel.model_id === overview.model.id ? "The deployed D1 model matches this page’s static edition." : `D1’s newest model is ${liveModel.model_id}; this page is showing ${overview.model.id}.`} Last forecast clock: {liveModel.last_created_at ? date(liveModel.last_created_at) : "unavailable"}.</p> : <p>No 2026–27 model edition is registered in D1.</p>) : <p>{liveCatalogError || "Reading the deployed forecast catalog from D1."}</p>}
+          <p className="note"><Link href="/research/scorecard/?sport=basketball">Open the forecast record →</Link> · <Link href="/basketball/model/">Read the model notebook →</Link></p>
         </div>
       </section>
       {marketRow && (
