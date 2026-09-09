@@ -15,6 +15,7 @@ ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--odds", action="store_true")
+parser.add_argument("--cbbd-lines", action="store_true", help="capture authorized CBBD pregame moneylines")
 args = parser.parse_args()
 
 
@@ -46,6 +47,17 @@ run(
 )
 if args.odds:
     run([PY, "-m", "ncaa_scraper.odds_feed", "--sport", "both"])
+    run(
+        [
+            PY,
+            "-m",
+            "ncaa_scraper.research_ledger",
+            "--sql",
+            str(ROOT / ".local/research-ledger.sql"),
+        ]
+    )
+if args.cbbd_lines:
+    run([PY, "-m", "ncaa_scraper.cbbd_lines", "--season", "2027"])
     run(
         [
             PY,

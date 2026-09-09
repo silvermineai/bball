@@ -94,6 +94,7 @@ ncaa_scraper/ncaa_scraper/
   basketball_standings.py  Compact source-native standings archive
   basketball_model.py     Possession efficiency model and independent calibration
   cbbd_recruiting.py      Key-gated authorized recruiting API intake with private receipts
+  cbbd_lines.py           Key-gated CBBD pregame moneyline importer for the ledger
   basketball_matchups.py  Source-derived five-v-five matchup stint archive
   basketball_within_impact.py  NCAA within-team RAPM archive
   basketball_ncaa_team_box.py  NCAA season team-box profiles and recomputed rates
