@@ -10,15 +10,16 @@ await cp(
 await cp("dist/basketball/assets", "dist/client/basketball/assets", {
   recursive: true,
 });
-// Matchup briefs are captured into the immutable R2 reading archive by the
-// deploy wrapper. Keeping thousands of duplicate HTML snapshots in Workers
-// Assets can crowd out the public data catalogs; the Worker redirects these
-// two URL families to their archived R2 revision when an asset is absent.
+// Football game blogs are captured into the immutable R2 reading archive by
+// the deploy wrapper. Basketball briefs remain in Workers Assets so the
+// current page can ship with the latest coaching links and evidence; missing
+// or retired briefs still fall back to their archived R2 revision in the
+// Worker.
 await writeFile(
   "dist/client/.assetsignore",
   // Wrangler walks files with paths such as `blog/game-123/index.html`.
-  // Match the directory prefixes without a trailing slash so the archive
-  // snapshots stay available to the post-deploy R2 capture without counting
-  // toward the Workers static-asset manifest.
-  "/blog/game-*\n/basketball/briefs/[0-9]*\n",
+  // Match the directory prefix without a trailing slash so archive snapshots
+  // stay available to the post-deploy R2 capture without counting toward the
+  // Workers static-asset manifest.
+  "/blog/game-*\n",
 );

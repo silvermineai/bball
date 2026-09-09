@@ -244,12 +244,26 @@ def verify_pack(bundle, records):
 
 
 def sql_insert(table, rows):
+    """Build bounded multi-row inserts for reliable remote D1 imports.
+
+    The archive can contain thousands of small objects. One statement per row
+    makes Wrangler submit an unnecessarily large import job; small multi-row
+    statements keep retries idempotent while staying below the per-statement
+    size guard in the publisher.
+    """
     def quote(value):
         return "'" + str(value).replace("'", "''") + "'"
 
+    rows = list(rows)
+    if not rows:
+        return ""
+    columns = ",".join(rows[0])
     statements = []
-    for row in rows:
-        statements.append(
-            f"INSERT OR IGNORE INTO {table} ({','.join(row)}) VALUES ({','.join(quote(v) for v in row.values())});"
+    for start in range(0, len(rows), 50):
+        batch = rows[start : start + 50]
+        values = ",".join(
+            "(" + ",".join(quote(value) for value in row.values()) + ")"
+            for row in batch
         )
+        statements.append(f"INSERT OR IGNORE INTO {table} ({columns}) VALUES {values};")
     return "\n".join(statements) + "\n"
