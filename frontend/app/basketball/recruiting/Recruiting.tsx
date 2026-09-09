@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { BBRosters } from "../../_lib/basketball-types";
+import type { BBRoster, BBRosters } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
@@ -13,6 +13,47 @@ import {
   type RosterSortKey,
   type RosterStatus,
 } from "../../_lib/roster-observations";
+
+type PriorProduction = NonNullable<BBRoster["prior_production"]>;
+
+const statValue = (value: number | null | undefined, digits = 1) =>
+  value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
+
+const statPercent = (value: number | null | undefined) =>
+  value == null || !Number.isFinite(value) ? "—" : `${(value * 100).toFixed(1)}%`;
+
+function PriorProductionDetails({ production }: { production: PriorProduction }) {
+  return (
+    <details className="roster-production-details">
+      <summary>Full prior stat profile</summary>
+      <dl className="roster-stat-grid">
+        <div><dt>Games</dt><dd>{production.games.toLocaleString()}</dd></div>
+        <div><dt>Minutes</dt><dd>{production.minutes.toLocaleString()}</dd></div>
+        <div><dt>Minutes / game</dt><dd>{statValue(production.mpg)}</dd></div>
+        <div><dt>Points / game</dt><dd>{statValue(production.ppg)}</dd></div>
+        <div><dt>Rebounds / game</dt><dd>{statValue(production.rpg)}</dd></div>
+        <div><dt>Assists / game</dt><dd>{statValue(production.apg)}</dd></div>
+        <div><dt>Steals / game</dt><dd>{statValue(production.spg)}</dd></div>
+        <div><dt>Blocks / game</dt><dd>{statValue(production.bpg)}</dd></div>
+        <div><dt>Turnovers / game</dt><dd>{statValue(production.topg)}</dd></div>
+        <div><dt>True shooting</dt><dd>{statPercent(production.ts)}</dd></div>
+        <div><dt>Effective FG</dt><dd>{statPercent(production.efg)}</dd></div>
+        <div><dt>3-point rate</dt><dd>{statPercent(production.three_rate)}</dd></div>
+        <div><dt>3-point accuracy</dt><dd>{statPercent(production.three_pct)}</dd></div>
+        <div><dt>Free-throw rate</dt><dd>{statPercent(production.ft_rate)}</dd></div>
+        <div><dt>Turnover rate</dt><dd>{statPercent(production.tov_rate)}</dd></div>
+        <div><dt>Box BPM</dt><dd>{statValue(production.box_bpm)}</dd></div>
+        <div><dt>Box OBPM</dt><dd>{statValue(production.box_obpm)}</dd></div>
+        <div><dt>Box DBPM</dt><dd>{statValue(production.box_dbpm)}</dd></div>
+        <div><dt>Qualified profile</dt><dd>{production.qualified == null ? "—" : production.qualified ? "Yes" : "No"}</dd></div>
+      </dl>
+      <p className="note">
+        Source-recorded prior production for {production.teams.join(", ") || "the observed program"}. A dash means the source denominator or exact player/team row was unavailable; no value is imputed.
+      </p>
+    </details>
+  );
+}
+
 const labels: Record<string, string> = {
   same_program: "Prior program also observed",
   different_program: "Different program observed",
@@ -612,6 +653,7 @@ export default function Recruiting() {
                           <small>
                             {p.prior_production.box_bpm == null ? "—" : p.prior_production.box_bpm.toFixed(1)} Box BPM · publisher-attributed
                           </small>
+                          <PriorProductionDetails production={p.prior_production} />
                         </>
                       ) : "No prior recorded stats"}
                     </td>

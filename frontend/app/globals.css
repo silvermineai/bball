@@ -2070,6 +2070,41 @@ summary {
   margin-top: 6px;
   padding: 4px 7px;
 }
+.roster-production-details {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.roster-production-details summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.roster-stat-grid {
+  display: grid;
+  gap: 8px 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 12px 0 4px;
+}
+.roster-stat-grid div {
+  min-width: 0;
+}
+.roster-stat-grid dt {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+.roster-stat-grid dd {
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0 0;
+}
+.roster-production-details .note {
+  font-size: 10px;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
 @media (max-width: 1100px) {
   .recruiting-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2080,6 +2115,9 @@ summary {
   .recruiting-filters,
   .recruiting-review-queue {
     grid-template-columns: 1fr;
+  }
+  .roster-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .recruiting-views {
     gap: 18px;
