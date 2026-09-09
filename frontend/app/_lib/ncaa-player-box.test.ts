@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeRate, trueShooting } from "./ncaa-player-box";
+import { safeRate, safeSum, trueShooting } from "./ncaa-player-box";
 
 describe("NCAA player box rate helpers", () => {
   it("keeps missing source fields unavailable while preserving recorded zero makes", () => {
@@ -14,5 +14,11 @@ describe("NCAA player box rate helpers", () => {
     expect(trueShooting({ pts: 20, fga: null, fta: 4 })).toBeNull();
     expect(trueShooting({ pts: 20, fga: 10, fta: undefined })).toBeNull();
     expect(trueShooting({ pts: 0, fga: 10, fta: 0 })).toBe(0);
+  });
+
+  it("keeps composite rebounds unavailable when either component is missing", () => {
+    expect(safeSum(3, 7)).toBe(10);
+    expect(safeSum(null, 7)).toBeNull();
+    expect(safeSum(3, undefined)).toBeNull();
   });
 });

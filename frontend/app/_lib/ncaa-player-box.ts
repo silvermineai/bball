@@ -5,6 +5,11 @@ export function safeRate(made: number | null | undefined, attempted: number | nu
   return made != null && attempted != null && attempted > 0 ? made / attempted : null;
 }
 
+/** Sum a composite stat only when every source component is present. */
+export function safeSum(left: number | null | undefined, right: number | null | undefined) {
+  return left != null && right != null ? left + right : null;
+}
+
 /** Compute the disclosed college TS% fallback without turning missing fields into zero. */
 export function trueShooting(stats: NumericStats) {
   const points = stats.pts;
