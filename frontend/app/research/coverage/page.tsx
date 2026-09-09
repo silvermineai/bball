@@ -150,7 +150,7 @@ export default function Page() {
   ) as {
     generated_at: string;
     total_rows: number;
-    seasons: { season: number; rows: number }[];
+    seasons: { season: number; rows: number; source_url?: string }[];
   };
   const standings = JSON.parse(
     fs.readFileSync(path.join(dataDir, "standings.json"), "utf8"),
@@ -182,8 +182,8 @@ export default function Page() {
       rows: ncaaPlayerBox.total_rows,
       seasons: ncaaPlayerBox.seasons.map((season) => season.season),
       latest: ncaaPlayerBox.generated_at,
-      url: null,
-      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves current game rows plus historical season summaries.",
+      url: ncaaPlayerBox.seasons.at(-1)?.source_url ?? null,
+      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves current game rows plus historical season summaries. The source-release link opens the latest exact Parquet edition.",
     },
     {
       key: "pbp",
