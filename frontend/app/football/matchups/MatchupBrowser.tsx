@@ -18,10 +18,13 @@ export default function MatchupBrowser({
   efficiencyScenarios?: FootballEfficiencyScenario[];
 }) {
   const params = useSearchParams();
+  const requestedPage = Number(params.get("page") || 0);
+  const requestedWeek = params.get("week");
+  const initialWeek = requestedWeek && /^\d{1,2}$/.test(requestedWeek) ? requestedWeek : "all";
   const [query, setQuery] = useState(params.get("team") || ""),
-    [week, setWeek] = useState("all"),
-    [mode, setMode] = useState("all"),
-    [page, setPage] = useState(0),
+    [week, setWeek] = useState(initialWeek),
+    [mode, setMode] = useState<"all" | "forecast">(params.get("show") === "forecast" ? "forecast" : "all"),
+    [page, setPage] = useState(Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage <= 250 ? requestedPage : 0),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
     [liveError, setLiveError] = useState("");
   const activeGames = liveGames || games;
@@ -42,6 +45,19 @@ export default function MatchupBrowser({
       (mode === "all" || g.prediction),
   );
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (query.trim()) url.searchParams.set("team", query.trim());
+    else url.searchParams.delete("team");
+    if (week !== "all") url.searchParams.set("week", week);
+    else url.searchParams.delete("week");
+    if (mode === "forecast") url.searchParams.set("show", mode);
+    else url.searchParams.delete("show");
+    if (page) url.searchParams.set("page", String(page));
+    else url.searchParams.delete("page");
+    window.history.replaceState(window.history.state, "", url);
+  }, [mode, page, query, week]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,7 +114,7 @@ export default function MatchupBrowser({
           <select
             value={mode}
             onChange={(e) => {
-              setMode(e.target.value);
+              setMode(e.target.value as "all" | "forecast");
               setPage(0);
             }}
           >
