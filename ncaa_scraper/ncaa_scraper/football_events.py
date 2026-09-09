@@ -103,6 +103,49 @@ def encoded(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def leaders_for_rows(rows, dataset):
+    """Build small source-name/team leader slices without creating athlete identities."""
+    grouped = {}
+    for row in rows:
+        identity = (
+            row["player_name"],
+            row["team_id"],
+            row["team"],
+            row["division"],
+        )
+        bucket = grouped.setdefault(identity, {"records": 0, "games": set(), "values": {}})
+        bucket["records"] += 1
+        if row.get("game_id"):
+            bucket["games"].add(row["game_id"])
+        for key, _, _ in FIELDS[dataset]:
+            value = row["metrics"].get(key)
+            if value is not None:
+                bucket["values"][key] = bucket["values"].get(key, 0) + value
+    result = {}
+    for key, _, _ in FIELDS[dataset]:
+        candidates = []
+        for identity, bucket in grouped.items():
+            value = bucket["values"].get(key)
+            if value is None:
+                continue
+            candidates.append(
+                {
+                    "player_name": identity[0],
+                    "team_id": identity[1],
+                    "team": identity[2],
+                    "division": identity[3],
+                    "records": bucket["records"],
+                    "games": len(bucket["games"]),
+                    "value": value,
+                }
+            )
+        candidates.sort(
+            key=lambda row: (-row["value"], row["player_name"].casefold(), row["team_id"] or "")
+        )
+        result[key] = candidates[:5]
+    return result
+
+
 def normalize(raw, key, dataset, season, games, teams):
     tid = raw.get("def_pos_team_id") if dataset == "defense" else raw.get("pos_team_id")
     team = teams.get(tid, {})
@@ -242,6 +285,7 @@ def build(source, target, out=OUT):
                 "edition": edition,
                 "generated_at": saved,
                 "coverage": coverage,
+                "leaders": leaders_for_rows(rows, ds),
                 "evidence": evidence,
                 "fields": [
                     {"key": k, "label": label, "definition": definition}

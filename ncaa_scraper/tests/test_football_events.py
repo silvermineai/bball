@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from ncaa_scraper.football import ROOT, store_rows
-from ncaa_scraper.football_events import build, export_sql, normalize
+from ncaa_scraper.football_events import build, export_sql, leaders_for_rows, normalize
 
 
 class FootballEventTests(unittest.TestCase):
@@ -45,6 +45,15 @@ class FootballEventTests(unittest.TestCase):
         )
         self.assertEqual(r["context_status"], "team_mismatch")
         self.assertIsNone(r["game"])
+
+    def test_leaders_keep_source_name_and_team_boundaries(self):
+        rows = [
+            {"player_name": "Same Name", "team_id": "1", "team": "One", "division": "fbs", "game_id": "a", "metrics": {"sacks": 2.0}},
+            {"player_name": "Same Name", "team_id": "1", "team": "One", "division": "fbs", "game_id": "b", "metrics": {"sacks": 1.0}},
+            {"player_name": "Same Name", "team_id": "2", "team": "Two", "division": "fbs", "game_id": "c", "metrics": {"sacks": 9.0}},
+        ]
+        leaders = leaders_for_rows(rows, "defense")["sacks"]
+        self.assertEqual([(r["team_id"], r["value"], r["games"]) for r in leaders[:2]], [("2", 9.0, 1), ("1", 3.0, 2)])
 
     def test_edition_refresh_preserves_rows_and_never_merges_a_name(self):
         with tempfile.TemporaryDirectory() as folder:

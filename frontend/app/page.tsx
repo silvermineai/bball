@@ -5,6 +5,7 @@ import MatchCard from "./_components/MatchCard";
 import fs from "node:fs";
 import path from "node:path";
 import { topFootballLeaders, type LeaderPlayer } from "./_lib/football-leaders";
+import type { EventIndex, EventLeader } from "./_lib/football-events";
 
 function getFootballLeaders() {
   const catalog = JSON.parse(
@@ -28,6 +29,28 @@ function getFootballLeaders() {
     passing: topFootballLeaders(data.players, "passing"),
     rushing: topFootballLeaders(data.players, "rushing"),
     receiving: topFootballLeaders(data.players, "receiving"),
+  };
+}
+
+function getFootballEventLeaders() {
+  const index = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football/events.json"),
+      "utf8",
+    ),
+  ) as EventIndex;
+  const edition = index.editions
+    .filter((item) => item.season < 2026)
+    .sort((a, b) => b.season - a.season || a.dataset.localeCompare(b.dataset))[0];
+  if (!edition) return null;
+  const findEdition = (dataset: EventIndex["editions"][number]["dataset"]) =>
+    index.editions.find((item) => item.dataset === dataset && item.season === edition.season);
+  const defense = findEdition("defense");
+  const specialists = findEdition("specialists");
+  return {
+    season: edition.season,
+    sacks: (defense?.leaders.sacks || []) as EventLeader[],
+    kickReturns: (specialists?.leaders.kick_returns_yards || []) as EventLeader[],
   };
 }
 
@@ -86,6 +109,7 @@ export default function Home() {
     g = d.upcoming.find((g) => g.prediction),
     p = g?.prediction,
     leaders = getFootballLeaders(),
+    eventLeaders = getFootballEventLeaders(),
     sources = groupedSources(d.sources);
   return (
     <>
@@ -249,6 +273,39 @@ export default function Home() {
                         {fmt(player.epa)}
                         <small>{fmt(player.epa_per_play, 2)} / play</small>
                       </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {eventLeaders && (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">03 / Defense and specialists</div>
+              <h2>Find the pressure points.</h2>
+            </div>
+            <Link href="/football/events/">Open the event notebook →</Link>
+          </div>
+          <p className="note" style={{ marginBottom: 20 }}>
+            {eventLeaders.season} source-name/team leaders from the attributed event release. These records have no stable athlete IDs, so names are never merged into player profiles or career totals.
+          </p>
+          <div className="football-leader-grid">
+            {[
+              { key: "sacks", label: "Sacks", rows: eventLeaders.sacks, dataset: "defense" },
+              { key: "kick_returns_yards", label: "Kick-return yards", rows: eventLeaders.kickReturns, dataset: "specialists" },
+            ].map((board) => (
+              <div className="paper-panel" key={board.key}>
+                <div className="eyebrow">{board.label}</div>
+                <div className="football-leader-list">
+                  {board.rows.map((row, index) => (
+                    <Link className="football-leader-row" href={`/football/events/?dataset=${board.dataset}&view=leaders&sort=${board.key}&q=${encodeURIComponent(row.player_name)}`} key={`${row.player_name}-${row.team_id}`}>
+                      <span className="rank-number">{index + 1}</span>
+                      <span><strong>{row.player_name}</strong><small>{row.team} · {row.games} games</small></span>
+                      <span className="numeric">{fmt(row.value)}<small>{row.records} source rows</small></span>
                     </Link>
                   ))}
                 </div>

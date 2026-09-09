@@ -7,6 +7,7 @@ export type EventEdition = {
   generated_at: string;
   fields: EventField[];
   teams: { id: string; name: string; records: number }[];
+  leaders: Record<string, EventLeader[]>;
   coverage: {
     records: number;
     games: number;
