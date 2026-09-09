@@ -53,6 +53,7 @@ function parseInitial(search: string) {
   const sort = params.get("sort") as Sort | null;
   return {
     query: params.get("q") || "",
+    gameId: params.get("game") || "",
     view: view && validViews.has(view) ? view : "all",
     sort: sort && validSorts.has(sort) ? sort : "date",
   };
@@ -95,7 +96,8 @@ export default function ForecastLab({
   const [query, setQuery] = useState(initial.query);
   const [view, setView] = useState<View>(initial.view);
   const [sort, setSort] = useState<Sort>(initial.sort);
-  const [marketGameId, setMarketGameId] = useState("");
+  const [marketGameId, setMarketGameId] = useState(initial.gameId);
+  const [copied, setCopied] = useState("");
   const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
   const [liveCatalogError, setLiveCatalogError] = useState("");
   const [liveGames, setLiveGames] = useState<BBGame[] | null>(null);
@@ -143,9 +145,10 @@ export default function ForecastLab({
     if (query) next.set("q", query);
     if (view !== "all") next.set("view", view);
     if (sort !== "date") next.set("sort", sort);
+    if (marketGameId) next.set("game", marketGameId);
     const value = next.toString();
     window.history.replaceState(window.history.state, "", value ? `${window.location.pathname}?${value}` : window.location.pathname);
-  }, [query, sort, view]);
+  }, [marketGameId, query, sort, view]);
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -168,6 +171,11 @@ export default function ForecastLab({
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const verifiedMarketGames = modeledGames.filter((game) => (markets[game.id] || []).length > 0).length;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
+  useEffect(() => {
+    if (rows.length && !rows.some((row) => row.game.id === marketGameId)) {
+      setMarketGameId(rows[0].game.id);
+    }
+  }, [marketGameId, rows]);
   const liveModel = liveCatalog?.models.find((model) => model.model_id === overview.model.id) || liveCatalog?.models[0] || null;
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
@@ -195,6 +203,14 @@ export default function ForecastLab({
       ]),
     ),
   );
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Forecast lab link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
 
   return (
     <>
@@ -202,6 +218,10 @@ export default function ForecastLab({
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
         <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
+      </div>
+      <div className="button-row" style={{ marginTop: 12 }}>
+        <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
+        {copied && <span className="note" role="status">{copied}</span>}
       </div>
       <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>

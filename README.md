@@ -38,7 +38,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Five-v-five matchup archive | `/basketball/matchup-stints/` | Search 1.53 million source stint rows aggregated into high-volume five-player versus five-player pairs across 2018–19 through 2025–26 |
 | Program dossiers | `/basketball/programs/` | 366 programs with historical splits, game trends, player workloads and film questions |
 | Matchup workbench | `/basketball/compare/` | Any two rated programs, transparent model-term decomposition, venue scenarios, historical factors and source-listed roster movement |
-| Forecast lab | `/basketball/forecast-lab/` | Sort the 2026–27 slate by model confidence, uncertainty or roster-scenario disagreement; compare verified quotes when available or keep browser-only manual market notes |
+| Forecast lab | `/basketball/forecast-lab/` | Sort the 2026–27 slate by model confidence, uncertainty or roster-scenario disagreement; compare verified quotes when available or keep shareable browser-only manual market notes |
 | Market archive | `/research/markets/?sport=basketball` | Inspect retained basketball and football lines with provider, bookmaker, capture time and the evidence gates used for model comparisons |
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
 | Play-by-play archive | `/basketball/pbp/` | Search 15.8 million indexed events across eight published seasons and jump to the publisher game page for the complete event log |
