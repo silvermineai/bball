@@ -37,6 +37,10 @@ const providerCapabilities = [
 markets.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, season, q, page, meta } = c.req.valid("query");
   const football = sport === "football";
+  // Football market history remains in the legacy football store. Basketball
+  // market observations live with the rest of the research datasets so a
+  // basketball refresh never depends on the legacy database's size ceiling.
+  const db = football ? c.env.DB : researchDb(c.env);
   if (meta === "1") {
     const seasonsSql = football
       ? "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"
@@ -45,8 +49,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       ? "SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"
       : "SELECT count(*) AS total, count(*) AS pregame FROM audit_markets WHERE sport=?";
     const [seasons, archive] = football
-      ? await researchDb(c.env).batch([researchDb(c.env).prepare(seasonsSql), researchDb(c.env).prepare(archiveSql)])
-      : await researchDb(c.env).batch([researchDb(c.env).prepare(seasonsSql).bind(sport), researchDb(c.env).prepare(archiveSql).bind(sport)]);
+      ? await db.batch([db.prepare(seasonsSql), db.prepare(archiveSql)])
+      : await db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport)]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       sport,
@@ -69,10 +73,10 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     : search ? [season, sport, search, search, search, search] : [season, sport];
   const marketTable = football ? "football_markets" : "audit_markets";
   const gameTable = football ? "football_games" : "bb_games";
-  const count = await researchDb(c.env).prepare(
+  const count = await db.prepare(
     `SELECT count(*) AS total FROM ${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>();
-  const rows = await researchDb(c.env).prepare(
+  const rows = await db.prepare(
     football
       ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,

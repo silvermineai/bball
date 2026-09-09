@@ -22,4 +22,25 @@ describe("market archive metadata", () => {
       expect.objectContaining({ provider: "CollegeBasketballData.com API", markets: ["h2h"], provider_update_clock: false }),
     ]);
   });
+
+  it("keeps football market reads on the legacy database", async () => {
+    const legacyPrepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const legacyBatch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2025 }] },
+      { results: [{ total: 12, pregame: 12 }] },
+    ]);
+    const researchPrepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const researchBatch = vi.fn();
+    const response = await markets.request(
+      "/?meta=1&sport=football",
+      {},
+      {
+        DB: { prepare: legacyPrepare, batch: legacyBatch },
+        RESEARCH_DB: { prepare: researchPrepare, batch: researchBatch },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(legacyBatch).toHaveBeenCalled();
+    expect(researchBatch).not.toHaveBeenCalled();
+  });
 });
