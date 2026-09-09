@@ -26,7 +26,7 @@ export default function NcaaHighSchools() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState("");
+  const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => { const params = new URLSearchParams({ season, metric, minPlayers }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minPlayers, query, page]);
 
@@ -57,15 +57,42 @@ export default function NcaaHighSchools() {
       setCopied("Copy the pipeline URL from your address bar.");
     }
   };
+  const exportHeaders = ["Season", "Metric", "Minimum players", "Rank", "High school", "Players", "Programs", "Recorded games", "Recorded points", "Value", "Roster evidence URL"];
+  const exportRow = (row: Row, active: Result) => [active.season, labels[active.metric], active.min_players, row.rank, row.high_school, row.players, row.programs, row.games, row.points, row.value, `https://bball.silvermine.dev/basketball/ncaa-rosters/?season=${encodeURIComponent(String(active.season))}&q=${encodeURIComponent(row.high_school)}`];
   const download = () => {
     if (!result) return;
     downloadCsv(
       `ncaa-high-school-pipeline-${season}-${metric}-page-${page + 1}.csv`,
-      toCsv(
-        ["Season", "Metric", "Minimum players", "Rank", "High school", "Players", "Programs", "Recorded games", "Recorded points", "Value"],
-        result.rows.map((row) => [result.season, labels[result.metric], result.min_players, row.rank, row.high_school, row.players, row.programs, row.games, row.points, row.value]),
-      ),
+      toCsv(exportHeaders, result.rows.map((row) => exportRow(row, result))),
     );
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This cohort exceeds the bounded export window. Search for a school or raise the minimum-player filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} high-school labels…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, metric, minPlayers, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/basketball/research/ncaa-high-schools?${params}`);
+        if (!response.ok) throw new Error("The complete high-school export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} high-school labels…`);
+      }
+      downloadCsv(`ncaa-high-school-pipeline-${season}-${metric}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result))));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} high-school labels.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete high-school export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
   };
   const seasons = meta?.seasons || Array.from({ length: 17 }, (_, i) => 2026 - i);
   return <>
@@ -78,7 +105,7 @@ export default function NcaaHighSchools() {
       <label className="control"><span>HIGH SCHOOL</span><input type="search" maxLength={120} placeholder="Search a source school label" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading high-school pipeline…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} high-school labels · ranked by {labels[result.metric].toLowerCase()} · source roster rows only.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy pipeline link</button></div></div>{copied && <p role="status">{copied}</p>}
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} high-school labels · ranked by {labels[result.metric].toLowerCase()} · source roster rows only.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy pipeline link</button></div></div>{(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>High school</th><th className="numeric">Players</th><th className="numeric">Programs</th><th className="numeric">Games</th><th className="numeric">Points</th><th className="numeric">{labels[result.metric]}</th><th>Evidence</th></tr></thead><tbody>{result.rows.map((row) => <tr key={row.high_school}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.high_school}</strong></td><td className="numeric">{fmt(row.players, 0)}</td><td className="numeric">{fmt(row.programs, 0)}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ppg" ? 1 : 0)}</strong></td><td><Link href={`/basketball/ncaa-rosters/?season=${result.season}&q=${encodeURIComponent(row.high_school)}`}>Open roster rows →</Link></td></tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No source high-school labels match this filter.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
