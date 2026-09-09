@@ -18,6 +18,8 @@ The page also reports coverage for an **authorized recruiting intake**. An opera
 
 When two or more names are saved, the watch list opens a side-by-side comparison of prior recorded minutes, per-game production, true shooting and effective field goal percentage, with a CSV export. It is a review aid for the selected source IDs: missing values stay blank, and the comparison does not convert a roster observation into a transfer, eligibility or projected-role claim.
 
+The recruiting fit board provides a separate five-player private shortlist for a selected program and shows role, transparent fit score, prior workload, production, efficiency and publisher Box BPM side by side. It uses the same exact source IDs and prior-season fields as the fit ranking; missing values remain unavailable.
+
 Announcement cards also show a conservative cross-check against the current source roster: normalized full-name plus program matches are labeled exact, multiple matches are flagged for review, and no match is reported without treating it as absence. This joins two source observations for navigation only; it does not assert identity, eligibility or availability.
 
 The roster-observation view also reports a team workload-continuity table. It sums exact source-athlete-ID minutes from the preceding season for listed returning players and prior-program additions. The table is a descriptive workload signal from an unconfirmed roster snapshot; it does not establish a depth chart, eligibility, availability or a forecast adjustment.
