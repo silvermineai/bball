@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { shooting } from "./shooting";
 import { recruiting } from "./recruiting";
+import { recruitingIntake } from "./recruiting-intake";
 import { careers } from "./careers";
 import { footballEvents } from "./football-events";
 import { briefArchive, retiredBrief } from "./brief-archive";
@@ -129,6 +130,7 @@ const ingestBatchBody = z.object({
 app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
 app.route("/api/basketball/research/shooting", shooting);
 app.route("/api/basketball/research/recruiting", recruiting);
+app.route("/api/basketball/research/recruiting-intake", recruitingIntake);
 app.route("/api/basketball/research/careers", careers);
 app.route("/api/basketball/research/publisher-stats", publisherStats);
 app.route("/api/basketball/research/team-stats", teamStats);
