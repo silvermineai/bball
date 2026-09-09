@@ -113,6 +113,11 @@ export default function Page() {
               <a className="text-link" href="https://public.tableau.com/views/DI_Transfer_Portal_2024/2026DIupdate" target="_blank" rel="noreferrer">DI portal ↗</a>{" · "}
               <a className="text-link" href="https://public.tableau.com/views/DII_Transfer_Portal_2024/2026DIIupdate" target="_blank" rel="noreferrer">DII portal ↗</a>
             </p>
+            <p className="note" style={{ marginTop: 12 }}>
+              For tournament availability, verify the NCAA&apos;s official{" "}
+              <a className="text-link" href="https://www.ncaa.com/di-mens-basketball-player-availability" target="_blank" rel="noreferrer">men&apos;s availability portal ↗</a>{" "}
+              and its <a className="text-link" href="https://www.ncaa.com/di-mens-basketball-player-archive" target="_blank" rel="noreferrer">published archive ↗</a>. Silvermine links to the source rather than mirroring a protected application or turning a roster row into an availability ruling.
+            </p>
           </article>
         </div>
         <p className="section-note">
