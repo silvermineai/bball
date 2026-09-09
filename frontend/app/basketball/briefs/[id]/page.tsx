@@ -636,6 +636,9 @@ export default async function Page({
               <Link href={`/basketball/recruiting/?team=${profile.id}`}>
                 Review roster observations and announcements →
               </Link>
+              <Link href={`/basketball/recruiting/fit/?team=${profile.id}`}>
+                Build a role shortlist for {profile.name} →
+              </Link>
             </section>
           ))}
         </div>

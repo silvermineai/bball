@@ -43,6 +43,9 @@ export default function ProgramRecruiting({
         <Link href={`/basketball/recruiting/?team=${encodeURIComponent(teamId)}`}>
           Open the full recruiting file →
         </Link>
+        <Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(teamId)}`}>
+          Build a role shortlist →
+        </Link>
       </div>
       <p className="note">
         This panel keeps dated school publications, source-listed roster
