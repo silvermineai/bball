@@ -2,6 +2,8 @@ import type { BBGame } from "./basketball-types";
 
 export type LiveForecastRow = {
   game_id: string;
+  model_id?: string;
+  created_at?: string;
   season: number;
   starts_at: string;
   home_id: string;

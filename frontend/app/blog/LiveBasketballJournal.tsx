@@ -12,6 +12,7 @@ import {
 export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
   const [activeGames, setActiveGames] = useState(games);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [edition, setEdition] = useState<{ modelId: string; capturedAt: string } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -19,6 +20,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
       .then((rows) => {
         if (!controller.signal.aborted) {
           setActiveGames(mergeLiveBasketballForecasts(games, rows));
+          if (rows[0]?.model_id && rows[0].created_at) setEdition({ modelId: rows[0].model_id, capturedAt: rows[0].created_at });
           setStatus("live");
         }
       })
@@ -32,7 +34,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
     <>
       <p className="note" role="status">
         {status === "live"
-          ? "Live D1 forecasts connected; journal previews use the latest retained model rows."
+          ? `Live D1 forecasts connected; journal previews use ${edition?.modelId || "the latest retained model"}${edition?.capturedAt ? ` captured ${date(edition.capturedAt)}` : ""}.`
           : status === "fallback"
             ? "Live forecast refresh unavailable; showing the bundled journal edition."
             : "Checking the live forecast edition…"}
