@@ -12,12 +12,15 @@ import {
   loadLiveBasketballForecasts,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
+import {
+  forecastLabFilterSearch,
+  parseForecastLabFilters,
+  type ForecastLabSort,
+  type ForecastLabView,
+} from "../../_lib/forecast-lab-view";
 
-type View = "all" | "scenario" | "cold-start" | "market";
-type Sort = "date" | "disagreement" | "confidence" | "uncertainty";
-
-const validViews = new Set<View>(["all", "scenario", "cold-start", "market"]);
-const validSorts = new Set<Sort>(["date", "disagreement", "confidence", "uncertainty"]);
+type View = ForecastLabView;
+type Sort = ForecastLabSort;
 
 type Row = {
   game: BBGame;
@@ -45,18 +48,6 @@ function marketQuote(comparisons: Comparison[], market: Comparison["market"]) {
 
 function signed(value: number | null | undefined, suffix = " pts") {
   return value == null || !Number.isFinite(value) ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}`;
-}
-
-function parseInitial(search: string) {
-  const params = new URLSearchParams(search);
-  const view = params.get("view") as View | null;
-  const sort = params.get("sort") as Sort | null;
-  return {
-    query: params.get("q") || "",
-    gameId: params.get("game") || "",
-    view: view && validViews.has(view) ? view : "all",
-    sort: sort && validSorts.has(sort) ? sort : "date",
-  };
 }
 
 function modelRow(game: BBGame, scenario: BBRosterScenario | undefined, comparisons: Comparison[] | undefined): Row | null {
@@ -92,7 +83,7 @@ export default function ForecastLab({
   markets: Record<string, Comparison[]>;
 }) {
   const params = useSearchParams();
-  const initial = parseInitial(params.toString());
+  const initial = parseForecastLabFilters(params.toString());
   const [query, setQuery] = useState(initial.query);
   const [view, setView] = useState<View>(initial.view);
   const [sort, setSort] = useState<Sort>(initial.sort);
@@ -141,13 +132,8 @@ export default function ForecastLab({
   }, [overview.upcoming]);
 
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (query) next.set("q", query);
-    if (view !== "all") next.set("view", view);
-    if (sort !== "date") next.set("sort", sort);
-    if (marketGameId) next.set("game", marketGameId);
-    const value = next.toString();
-    window.history.replaceState(window.history.state, "", value ? `${window.location.pathname}?${value}` : window.location.pathname);
+    const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId });
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${next}`);
   }, [marketGameId, query, sort, view]);
 
   const rows = useMemo(() => {
