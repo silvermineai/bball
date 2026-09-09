@@ -8,6 +8,10 @@ import type { Comparison } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
 import ManualMarketCheck from "../briefs/ManualMarketCheck";
+import {
+  loadLiveBasketballForecasts,
+  mergeLiveBasketballForecasts,
+} from "../../_lib/live-basketball-forecasts";
 
 type View = "all" | "scenario" | "cold-start" | "market";
 type Sort = "date" | "disagreement" | "confidence" | "uncertainty";
@@ -94,7 +98,10 @@ export default function ForecastLab({
   const [marketGameId, setMarketGameId] = useState("");
   const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
   const [liveCatalogError, setLiveCatalogError] = useState("");
+  const [liveGames, setLiveGames] = useState<BBGame[] | null>(null);
+  const [liveGamesError, setLiveGamesError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
+  const activeGames = liveGames || overview.upcoming;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +122,23 @@ export default function ForecastLab({
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    loadLiveBasketballForecasts(controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted) {
+          setLiveGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
+          setLiveGamesError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveGamesError(reason instanceof Error ? reason.message : "Live matchup forecasts unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [overview.upcoming]);
+
+  useEffect(() => {
     const next = new URLSearchParams();
     if (query) next.set("q", query);
     if (view !== "all") next.set("view", view);
@@ -125,7 +149,7 @@ export default function ForecastLab({
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
-    const candidates = overview.upcoming
+    const candidates = activeGames
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
       .map((game) => modelRow(game, scenarioByGame.get(game.id), markets[game.id]));
     return sortRows(
@@ -137,11 +161,11 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [markets, overview.upcoming, query, scenarioByGame, sort, view]);
+  }, [activeGames, markets, query, scenarioByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
-  const modeledGames = overview.upcoming.filter((game) => game.prediction || game.fallback_prediction);
+  const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const verifiedMarketGames = modeledGames.filter((game) => (markets[game.id] || []).length > 0).length;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   const liveModel = liveCatalog?.models.find((model) => model.model_id === overview.model.id) || liveCatalog?.models[0] || null;
@@ -208,6 +232,13 @@ export default function ForecastLab({
           <p className="note"><Link href="/research/scorecard/?sport=basketball">Open the forecast record →</Link> · <Link href="/basketball/model/">Read the model notebook →</Link></p>
         </div>
       </section>
+      <p className="note" role="status">
+        {liveGames
+          ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction).length.toLocaleString()} modeled · sorting and exports use the latest registered edition.`
+          : liveGamesError
+            ? `${liveGamesError} Showing the published static edition.`
+            : "Checking live matchup rows…"}
+      </p>
       {marketRow && (
         <section className="section market-workbench">
           <div className="section-heading">
