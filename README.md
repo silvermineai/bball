@@ -147,7 +147,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 .venv/bin/python scripts/refresh-news-rss.py
 ```
 
-Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment also captures the immutable matchup reading archive.
+Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment also captures the immutable matchup reading archive. When the D1 archive reaches its storage ceiling, an asset-only deployment may set `SKIP_BRIEF_ARCHIVE=1`; current basketball brief pages remain in Workers Assets and retired pages continue to resolve through the archive fallback.
 
 ## Data policy
 
