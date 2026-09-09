@@ -62,6 +62,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Authorized recruiting feeds | `/basketball/recruiting/` | Coverage-only status for licensed CSV imports and the optional server-side CollegeBasketballData portal/player/team connector; provider payloads stay private in D1 |
 | Roster impact lab | `/basketball/roster-lab/` | Compare returning workload, position continuity, class-year workload, incoming prior minutes, source-reported roster shape, efficiency rating and 2026–27 schedule coverage across source-listed programs |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
+| Publisher news | `/basketball/news/` | Search retained ESPN and NCAA.com basketball headlines with publisher, date, source links and CSV export |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
 | Scouting archive | `/basketball/scout/` | Native program dossier index and legacy-compatible dossier links |
 
