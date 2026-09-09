@@ -1417,6 +1417,7 @@ def dataset_catalog(conn):
         ("ncaa_player_season", "NCAA player-season aggregates", "bb_ncaa_player_season", "Derived from NCAA player boxes"),
         ("ncaa_team_rosters", "NCAA roster and school context", "bb_ncaa_rosters", "SportsDataverse NCAA rosters"),
         ("ncaa_shots", "NCAA attributed shooting profiles", "bb_ncaa_player_shooting", "SportsDataverse NCAA shots"),
+        ("ncaa_possessions", "NCAA possession-style profiles", "bb_possession_style", "SportsDataverse NCAA possessions; team-season descriptive aggregates"),
     )
     receipts = defaultdict(list)
     for row in conn.execute("SELECT dataset,season,receipt_json FROM bb_sources"):
@@ -1686,6 +1687,7 @@ def export_sql(conn, path):
             "bb_ncaa_player_shooting",
             "bb_unresolved",
             "bb_participation",
+            "bb_possession_style",
         ]:
             for row in conn.execute(f"SELECT DISTINCT season FROM {table}"):
                 yield f"DELETE FROM {table} WHERE season={int(row[0])};\n"
@@ -1801,7 +1803,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()

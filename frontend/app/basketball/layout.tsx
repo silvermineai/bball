@@ -17,6 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link href="/basketball/boutique/">Boutique models</Link>
         <Link href="/basketball/lineups/">Lineup lab</Link>
         <Link href="/basketball/matchup-stints/">Five-v-five matchups</Link>
+        <Link href="/basketball/possession-style/">Possession style</Link>
         <Link href="/basketball/conferences/">Conferences</Link>
         <Link href="/basketball/standings/">Standings archive</Link>
         <Link href="/basketball/season/">Season rewind</Link>

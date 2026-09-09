@@ -32,6 +32,7 @@ import { basketballForecasts } from "./basketball-forecasts";
 import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
 import { footballForecasts } from "./football-forecasts";
+import { possessionStyle } from "./possession-style";
 import { researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
 
@@ -154,6 +155,7 @@ app.route("/api/basketball/research/matchup-stints", matchupStintSource);
 app.route("/api/basketball/research/impact-within-team", withinImpactSource);
 app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/basketball/research/forecasts", basketballForecasts);
+app.route("/api/basketball/research/possession-style", possessionStyle);
 app.route("/api/basketball/research/news", news);
 app.route("/api/research/markets", markets);
 app.route("/api/research/scorecard", researchScorecard);

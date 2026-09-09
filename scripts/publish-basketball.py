@@ -300,6 +300,17 @@ run(
     [
         PY,
         "-m",
+        "ncaa_scraper.basketball_possessions",
+        "--seasons",
+        *[str(year) for year in range(2019, 2027)],
+        "--refresh",
+        "--sql",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
         "ncaa_scraper.basketball",
         "--refresh",
         "--sql",
@@ -595,6 +606,18 @@ run_remote_migration(
         "--remote",
         "--file",
         "migrations/0023_basketball_ncaa_shooting.sql",
+    ]
+)
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        D1_DB_NAME,
+        "--remote",
+        "--file",
+        "migrations/0027_basketball_possession_style.sql",
     ]
 )
 run_remote_migration(
