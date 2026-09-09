@@ -123,6 +123,11 @@ const metrics = [
     value: "Prior recorded minutes represented by same-program or incoming source-listed players in the next roster snapshot.",
     use: "Use it to frame a recruiting question about experience and workload. It is not a transfer ledger, eligibility ruling or forecast feature.",
   },
+  {
+    name: "Possession-style profile",
+    value: "Team-season points per possession, possessions per game, and source-recorded transition, assisted and garbage-time possession shares.",
+    use: "Use it to describe how a team’s possessions were recorded across the season. It is a descriptive team context layer; it does not assign credit to individual players or feed the forecast model.",
+  },
 ];
 
 const metricTopics: Record<string, LearningTopic> = {
@@ -149,6 +154,7 @@ const metricTopics: Record<string, LearningTopic> = {
   "Lineup net performance": "impact",
   "Shot-location profile": "impact",
   "Roster workload continuity": "recruiting",
+  "Possession-style profile": "team",
 };
 
 const metricLinks: Record<string, string> = {
@@ -175,6 +181,7 @@ const metricLinks: Record<string, string> = {
   "Lineup net performance": "/basketball/lineups/",
   "Shot-location profile": "/basketball/shooting/",
   "Roster workload continuity": "/basketball/roster-lab/",
+  "Possession-style profile": "/basketball/possession-style/",
 };
 
 const metricDefinitions: LearningMetric[] = metrics.map(({ name, value, use }) => ({
@@ -198,6 +205,7 @@ const paths = [
   ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
   ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
   ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],
+  ["Read possession style", "/basketball/possession-style/", "Learn how team-season possession context is summarized without assigning individual credit."],
   ["Compare market evidence", "/research/markets/?sport=basketball", "Inspect retained lines, capture clocks and the rules that keep unverified odds out of the forecast record."],
 ];
 

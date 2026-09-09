@@ -137,6 +137,17 @@ export default function Page() {
       locations?: Record<string, number>;
     };
   };
+  const possessionStyle = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "ncaa-possession-style.json"), "utf8"),
+  ) as {
+    generated_at: string;
+    seasons: {
+      season: number;
+      generated_at: string;
+      source: { url?: string };
+      coverage: { source_rows: number; teams: number };
+    }[];
+  };
   const shotLocations = shooting.coverage.locations ?? {};
   const locatedShots = shotLocations.located ?? 0;
   const rejectedLocationShots = (shotLocations.inconsistent ?? 0) + (shotLocations.placeholder ?? 0) + (shotLocations.missing ?? 0);
@@ -229,6 +240,15 @@ export default function Page() {
       latest: standings.generated_at,
       url: standings.seasons.at(-1)?.source_url ?? null,
       note: "Team-season records compacted from ESPN-derived SportsDataverse standings; source labels and display values are retained.",
+    },
+    {
+      key: "possession-style",
+      label: "NCAA possession-style archive",
+      rows: possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.teams, 0),
+      seasons: possessionStyle.seasons.map((season) => season.season),
+      latest: possessionStyle.generated_at,
+      url: possessionStyle.seasons.at(-1)?.source.url ?? null,
+      note: `Source-attributed team-season aggregates over ${possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0).toLocaleString()} possession rows; descriptive rates stay separate from player credit and forecast features.`,
     },
   ];
   const footballLedger = ledger.sports.football;
