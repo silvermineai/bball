@@ -45,7 +45,7 @@ describe("football source statistics", () => {
         game: { id: "401", home_name: "Home", away_name: "Away" },
       }],
     });
-    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("instr(lower(s.stats_json)"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("instr(lower(s.stats_json ||"))).toBe(true);
   });
 
   it("exposes the available seasons and dataset row counts", async () => {

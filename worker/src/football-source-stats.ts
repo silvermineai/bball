@@ -57,7 +57,7 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   }
   if (q.q) {
     // instr keeps searches literal: '%' and '_' are ordinary characters.
-    conditions.push("instr(lower(s.stats_json),lower(?))>0");
+    conditions.push("instr(lower(s.stats_json || ' ' || COALESCE(s.team_id,'') || ' ' || COALESCE(s.athlete_id,'') || ' ' || COALESCE(s.category,'')),lower(?))>0");
     binds.push(q.q);
   }
   const where = conditions.join(" AND ");
