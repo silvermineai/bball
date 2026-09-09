@@ -25,6 +25,8 @@ export type RoleSummary = {
   priorMinutes: number;
   returningMinutes: number;
   incomingMinutes: number;
+  returningShare: number | null;
+  incomingShare: number | null;
   topPlayers: BBRoster[];
 };
 
@@ -105,12 +107,17 @@ function skillPercentile(player: BBRoster, pool: BBRoster[], focus: FitFocus): {
 export function buildRoleSummaries(players: BBRoster[], teamId: string): RoleSummary[] {
   return roleOrder.map((role) => {
     const rows = players.filter((player) => player.team_id === teamId && positionRole(player.position) === role);
+    const priorMinutes = rows.reduce((sum, row) => sum + (row.prior_production?.minutes || 0), 0);
+    const returningMinutes = rows.reduce((sum, row) => sum + (row.status === "same_program" ? row.prior_production?.minutes || 0 : 0), 0);
+    const incomingMinutes = rows.reduce((sum, row) => sum + (row.status === "different_program" ? row.prior_production?.minutes || 0 : 0), 0);
     return {
       role,
       listed: rows.length,
-      priorMinutes: rows.reduce((sum, row) => sum + (row.prior_production?.minutes || 0), 0),
-      returningMinutes: rows.reduce((sum, row) => sum + (row.status === "same_program" ? row.prior_production?.minutes || 0 : 0), 0),
-      incomingMinutes: rows.reduce((sum, row) => sum + (row.status === "different_program" ? row.prior_production?.minutes || 0 : 0), 0),
+      priorMinutes,
+      returningMinutes,
+      incomingMinutes,
+      returningShare: priorMinutes > 0 ? returningMinutes / priorMinutes : null,
+      incomingShare: priorMinutes > 0 ? incomingMinutes / priorMinutes : null,
       topPlayers: [...rows].sort((a, b) => (b.prior_production?.minutes || 0) - (a.prior_production?.minutes || 0)).slice(0, 3),
     };
   });
@@ -147,4 +154,3 @@ export function buildRecruitingFit(
     .filter((row) => !query || `${row.player.name} ${row.player.team} ${row.player.previous_teams.join(" ")}`.toLowerCase().includes(query))
     .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name));
 }
-

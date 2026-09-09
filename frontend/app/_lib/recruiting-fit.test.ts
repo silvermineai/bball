@@ -30,6 +30,6 @@ describe("recruiting fit", () => {
       player({ team_id: "target", position: "C", status: "same_program", prior_production: { games: 20, minutes: 600, mpg: 30, ppg: 10, rpg: 8, apg: 2, teams: ["T"] } }),
       player({ team_id: "target", position: "C", status: "different_program", prior_production: { games: 20, minutes: 300, mpg: 15, ppg: 6, rpg: 4, apg: 1, teams: ["X"] } }),
     ], "target");
-    expect(result.find((row) => row.role === "big")).toMatchObject({ listed: 2, priorMinutes: 900, returningMinutes: 600, incomingMinutes: 300 });
+    expect(result.find((row) => row.role === "big")).toMatchObject({ listed: 2, priorMinutes: 900, returningMinutes: 600, incomingMinutes: 300, returningShare: 2 / 3, incomingShare: 1 / 3 });
   });
 });
