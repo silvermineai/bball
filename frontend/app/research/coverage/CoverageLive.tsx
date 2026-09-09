@@ -240,8 +240,12 @@ export default function CoverageLive() {
             {footballRows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{footballLabel(row.dataset)}</span></div>)}
           </div><div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
-              <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th></tr></thead>
-              <tbody>{football.source_receipts.map((receipt) => <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td></tr>)}</tbody>
+              <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th><th>Status</th></tr></thead>
+              <tbody>{football.source_receipts.map((receipt) => {
+                const ageHours = receipt.latest_source_at ? Math.max(0, (Date.now() - Date.parse(receipt.latest_source_at)) / 3_600_000) : null;
+                const status = ageHours == null || !Number.isFinite(ageHours) ? "Missing clock" : ageHours > 168 ? "Stale" : "Within 7 days";
+                return <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
+              })}</tbody>
             </table>
           </div><div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Source clock</div>
