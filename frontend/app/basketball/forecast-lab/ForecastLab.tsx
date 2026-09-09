@@ -104,6 +104,8 @@ export default function ForecastLab({
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
+  const modeledGames = overview.upcoming.filter((game) => game.prediction || game.fallback_prediction);
+  const verifiedMarketGames = modeledGames.filter((game) => (markets[game.id] || []).length > 0).length;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
@@ -140,6 +142,20 @@ export default function ForecastLab({
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest scenario shift</span></div>
         <div><strong>{overview.model.version}</strong><span>Primary model edition</span></div>
       </div>
+      <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
+        <div className="paper-panel">
+          <div className="eyebrow">Release health / model clock</div>
+          <h2>{overview.coverage.forecast_games.toLocaleString()} forecasts are registered.</h2>
+          <p>Generated {date(overview.generated_at)} from a cutoff of {date(overview.model.cutoff)}. The primary fit uses {overview.model.training_games.toLocaleString()} paired games across {overview.model.training_seasons.join(", ")}.</p>
+          <p className="note">Retrospective holdout: {numeric(overview.model.evaluation.winner_accuracy * 100)}% winner accuracy · {numeric(overview.model.evaluation.margin_mae)} point margin MAE · {numeric(overview.model.evaluation.interval_coverage * 100)}% interval coverage.</p>
+        </div>
+        <div className="paper-panel">
+          <div className="eyebrow">Market evidence / availability</div>
+          <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
+          <p>{verifiedMarketGames ? "These rows passed the provider, participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : "No licensed odds snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a source you observed."}</p>
+          <p><Link href="/research/markets/">Open market archive →</Link> · <Link href="/research/scorecard/?sport=basketball">Open forecast record →</Link></p>
+        </div>
+      </section>
       {marketRow && (
         <section className="section market-workbench">
           <div className="section-heading">
