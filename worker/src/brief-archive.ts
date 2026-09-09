@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { researchDb } from "./research-db";
 
 export const briefArchive = new Hono<{ Bindings: Env }>({ strict: false });
 const hash = /^[a-f0-9]{64}$/;
@@ -18,7 +19,7 @@ briefArchive.get(
   zValidator("query", query),
   async (c) => {
     const q = c.req.valid("query");
-    const top = await c.env.DB.prepare(
+    const top = await researchDb(c.env).prepare(
       "SELECT coalesce(max(sequence),0) AS sequence FROM brief_archive_versions",
     ).first<{ sequence: number }>();
     const asof = Math.min(q.asof ?? top!.sequence, top!.sequence);
@@ -34,11 +35,11 @@ briefArchive.get(
       q.view,
       q.q,
     ];
-    const [count, rows] = await c.env.DB.batch([
-      c.env.DB.prepare(cte + " SELECT count(*) AS total FROM selected").bind(
+    const [count, rows] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare(cte + " SELECT count(*) AS total FROM selected").bind(
         ...values,
       ),
-      c.env.DB.prepare(
+      researchDb(c.env).prepare(
         cte +
           " SELECT revision,sport,game_id,season,home_name,away_name,starts_at,time_tbd,model_id,forecast_generated_at,original_path,first_recorded_at,sequence FROM selected ORDER BY starts_at,sport,game_id,sequence DESC LIMIT 24 OFFSET ?",
       ).bind(...values, q.page * 24),
@@ -67,7 +68,7 @@ export async function archiveObject(
 ) {
   if (!hash.test(digest))
     return new Response("Invalid snapshot", { status: 400 });
-  const row = await env.DB.prepare(
+  const row = await researchDb(env).prepare(
     "SELECT bundle_key,byte_offset,byte_length,raw_size,content_type FROM brief_archive_objects WHERE sha256=?",
   )
     .bind(digest)
@@ -125,7 +126,7 @@ briefArchive.get("/archive/briefs/:sport/:game/:revision", async (c) => {
     !hash.test(revision)
   )
     return c.text("Invalid archive URL", 400);
-  const found = await c.env.DB.prepare(
+  const found = await researchDb(c.env).prepare(
     "SELECT revision FROM brief_archive_versions WHERE sport=? AND game_id=? AND revision=?",
   )
     .bind(sport, game, revision)
@@ -142,7 +143,7 @@ export async function retiredBrief(
   asset: Response,
 ) {
   if (asset.status !== 404 || !gameID.test(id)) return asset;
-  const row = await env.DB.prepare(
+  const row = await researchDb(env).prepare(
     "SELECT revision FROM brief_archive_versions WHERE sport=? AND game_id=? ORDER BY sequence DESC LIMIT 1",
   )
     .bind(sport, id)

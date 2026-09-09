@@ -5,11 +5,13 @@ A failure can be retried directly without redeploying the website.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+D1_DB_NAME = os.getenv("ARCHIVE_D1_DATABASE", "bball-research-v2")
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.brief_archive import (
     WORK,
@@ -31,7 +33,7 @@ def cf(args, capture=False):
 
 def query(sql):
     return cf(
-        ["d1", "execute", "bball-silvermine", "--remote", "--command", sql, "--json"],
+        ["d1", "execute", D1_DB_NAME, "--remote", "--command", sql, "--json"],
         capture=True,
     )
 
@@ -52,7 +54,7 @@ def main():
         [
             "d1",
             "execute",
-            "bball-silvermine",
+            D1_DB_NAME,
             "--remote",
             "--file",
             str(ROOT / "worker/migrations/0015_brief_archive.sql"),
@@ -87,7 +89,7 @@ def main():
         raise ValueError("Archive statement exceeds configured D1 bound")
     file = WORK / "capture.sql"
     file.write_text(sql)
-    cf(["d1", "execute", "bball-silvermine", "--remote", "--file", str(file)])
+    cf(["d1", "execute", D1_DB_NAME, "--remote", "--file", str(file)])
     stored = {
         r["revision"]: r
         for r in selected(
