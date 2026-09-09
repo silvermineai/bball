@@ -30,6 +30,11 @@ const fallbackLabels: Record<Exclude<Dataset, "all">, string> = {
 };
 const pretty = (key: string) => key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const display = (value: unknown) => value == null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
+const exportHeaders = ["Dataset", "Season", "Record key", "Athlete ID", "Team ID", "Game ID", "Category", "Kickoff", "Source stats", "Source receipt URL", "Source retrieved", "Source SHA-256"];
+const exportRow = (result: Result, row: Row) => {
+  const receipt = result.source_receipts.find((item) => item.dataset === row.dataset && item.season === row.season);
+  return [row.dataset, row.season, row.record_key, row.athlete_id, row.team_id, row.game_id, row.category, row.kickoff, JSON.stringify(row.stats), receipt?.url, receipt?.fetched_at, receipt?.sha256];
+};
 
 export default function SourceStats() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -39,6 +44,8 @@ export default function SourceStats() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -91,6 +98,38 @@ export default function SourceStats() {
   const labels = meta?.dataset_labels || fallbackLabels;
   const change = (fn: () => void) => { setPage(0); setError(""); fn(); };
   const exportRows = result?.rows || [];
+  const downloadPage = () => {
+    if (!result) return;
+    downloadCsv(`football-source-stats-${season}-${dataset}-page-${page + 1}.csv`, toCsv(exportHeaders, exportRows.map((row) => exportRow(result, row))));
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This slice exceeds the bounded export window. Add a season, dataset, or literal search filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} source rows…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ dataset, season, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/football/source-stats?${params}`);
+        if (!response.ok) throw new Error("The complete football source export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} source rows…`);
+      }
+      downloadCsv(`football-source-stats-${season}-${dataset}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(result, row))));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} source rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete football source export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <>
       <div className="page-title">
@@ -108,8 +147,9 @@ export default function SourceStats() {
         <label className="control"><span>SOURCE DATASET</span><select value={dataset} onChange={(event) => change(() => setDataset(event.target.value as Dataset))}><option value="box">{labels.box}</option><option value="all">All retained datasets</option>{(meta?.datasets || []).filter((item) => item.dataset !== "box").map((item) => <option key={item.dataset} value={item.dataset}>{labels[item.dataset]}</option>)}</select></label>
         <label className="control"><span>STAT SEASON</span><select value={season} onChange={(event) => change(() => setSeason(event.target.value))}>{(meta?.seasons || [2025]).map((value) => <option key={value} value={value}>{value}{value === 2026 ? " · Partial season" : ""}</option>)}</select></label>
         <label className="control"><span>PLAYER, TEAM ID OR SOURCE FIELD</span><input type="search" maxLength={100} value={query} placeholder="Search literal source text" onChange={(event) => { setQuery(event.target.value); setPage(0); }} /></label>
-        {result && <button className="button secondary" type="button" onClick={() => downloadCsv(`football-source-stats-${season}-${dataset}.csv`, toCsv(["Dataset", "Season", "Record key", "Athlete ID", "Team ID", "Game ID", "Category", "Kickoff", "Source stats"], exportRows.map((row) => [row.dataset, row.season, row.record_key, row.athlete_id, row.team_id, row.game_id, row.category, row.kickoff, JSON.stringify(row.stats)])))}>Download CSV ↓</button>}
+        {result && <><button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></>}
       </div>
+      {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive and specialist releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
       {error && <p className="status-error" role="alert">{error}</p>}
       {!result ? <p className="empty" role="status">{meta ? "Loading source records…" : "Loading source catalog…"}</p> : <>
