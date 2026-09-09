@@ -1,4 +1,9 @@
-import { getBasketball, getRosterModel } from "../_lib/basketball-data";
+import {
+  getBasketball,
+  getRecruiting,
+  getRosterModel,
+  getRosters,
+} from "../_lib/basketball-data";
 import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
@@ -50,6 +55,8 @@ const guides = [
 export default function Page() {
   const d = getOverview();
   const basketball = getBasketball();
+  const recruiting = getRecruiting();
+  const rosters = getRosters();
   const rosterScenarios = new Map(
     getRosterModel().scenarios.map((scenario) => [scenario.game_id, scenario]),
   );
@@ -147,6 +154,59 @@ export default function Page() {
               <Link href={`/basketball/briefs/${game.id}/`}>Read the matchup evidence →</Link>
             </article>
           ))}
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recruiting desk / 2026–27</div>
+            <h2>Move from a name to a role.</h2>
+          </div>
+          <Link href="/basketball/recruiting/">Open the recruiting file →</Link>
+        </div>
+        <p className="note">
+          The same evidence chain runs from a dated school announcement to a
+          source-listed roster, prior college workload and a transparent fit
+          shortlist. Coverage remains partial by design; the counts below are
+          the current published edition, not a national portal census.
+        </p>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">{recruiting.coverage.players} additions · {recruiting.coverage.sources} sources</div>
+            <h2>Dated announcements</h2>
+            <p>
+              Read the source record, publication date and follow-up event
+              before treating a signing as roster evidence.
+            </p>
+            <Link href="/basketball/recruiting/">Review recruiting evidence →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">{rosters.players.length.toLocaleString()} observed players</div>
+            <h2>Roster intel</h2>
+            <p>
+              Search the NCAA-derived roster archive and keep identity,
+              position and availability questions attached to the source row.
+            </p>
+            <Link href="/basketball/ncaa-rosters/">Search roster intel →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">{recruiting.coverage.historical_links} linked stat files</div>
+            <h2>Workload continuity</h2>
+            <p>
+              Compare returning minutes and incoming production inside the
+              roster model before adjusting a matchup expectation.
+            </p>
+            <Link href="/basketball/roster-lab/">Compare roster workload →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Role-based shortlist</div>
+            <h2>Recruit the job</h2>
+            <p>
+              Filter source-listed roles against prior workload and recorded
+              production to build a reviewable recruiting shortlist.
+            </p>
+            <Link href="/basketball/recruiting/fit/">Open the fit board →</Link>
+          </article>
         </div>
       </section>
       <div className="article-grid">
