@@ -15,7 +15,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballForecasts(controller.signal)
+    loadLiveBasketballForecasts(controller.signal, { maxPages: 1 })
       .then((rows) => {
         if (!controller.signal.aborted) {
           setActiveGames(mergeLiveBasketballForecasts(games, rows));
