@@ -379,6 +379,7 @@ describe("bball api", () => {
         evaluation_games: 5734,
         evaluation_winner_accuracy: 0.67,
         evaluation_margin_mae: 10.38,
+        evaluation_interval_coverage: 0.79,
       }] },
     ]);
     const response = await app.request(
@@ -395,6 +396,7 @@ describe("bball api", () => {
       training_seasons: [2023, 2024, 2025, 2026],
       calibration_season: 2025,
       evaluation_margin_mae: 10.38,
+      evaluation_interval_coverage: 0.79,
     });
     expect(body.models[0]).not.toHaveProperty("efficiency");
     expect(batch).toHaveBeenCalledOnce();

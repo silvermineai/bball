@@ -50,7 +50,8 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(artifact_json,'$.evaluation.season') AS evaluation_season,
                 json_extract(artifact_json,'$.evaluation.games') AS evaluation_games,
                 json_extract(artifact_json,'$.evaluation.winner_accuracy') AS evaluation_winner_accuracy,
-                json_extract(artifact_json,'$.evaluation.margin_mae') AS evaluation_margin_mae
+                json_extract(artifact_json,'$.evaluation.margin_mae') AS evaluation_margin_mae,
+                json_extract(artifact_json,'$.evaluation.interval_coverage') AS evaluation_interval_coverage
            FROM bb_models
           ORDER BY created_at DESC, id`,
       ),
@@ -86,6 +87,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         evaluation_games: item.evaluation_games == null ? null : Number(item.evaluation_games),
         evaluation_winner_accuracy: item.evaluation_winner_accuracy == null ? null : Number(item.evaluation_winner_accuracy),
         evaluation_margin_mae: item.evaluation_margin_mae == null ? null : Number(item.evaluation_margin_mae),
+        evaluation_interval_coverage: item.evaluation_interval_coverage == null ? null : Number(item.evaluation_interval_coverage),
       };
     });
     return c.json({
