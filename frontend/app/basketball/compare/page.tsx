@@ -6,6 +6,7 @@ import { getBasketball, getRosterModel, getRosters } from "../../_lib/basketball
 import { buildRosterSummary } from "../../_lib/roster-intel";
 import Compare from "./Compare";
 import type { PossessionStyleCatalog } from "../../_lib/possession-style";
+import type { ShotCatalog } from "../../_lib/shooting";
 export const metadata = {
   title: "Basketball matchup workbench",
   alternates: { canonical: "/basketball/compare/" },
@@ -25,6 +26,16 @@ export default function Page() {
     possessionStyles = catalog.seasons.find((edition) => edition.season === 2026)?.teams || [];
   } catch {
     // The comparison workbench remains available if the optional archive is missing.
+  }
+  let shootingTeams: ShotCatalog["teams"] = [];
+  try {
+    const catalog = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), "public/data/basketball/shooting-catalog.json"), "utf8"),
+    ) as ShotCatalog;
+    const edition = catalog.seasons?.find((season) => season.season === 2026) || catalog.seasons?.[0];
+    shootingTeams = edition?.teams || [];
+  } catch {
+    // Shot context is optional; the model workbench remains available without it.
   }
   return (
     <>
@@ -56,6 +67,7 @@ export default function Page() {
           rosters={rosters}
           rosterModel={rosterModel}
           possessionStyles={possessionStyles}
+          shootingTeams={shootingTeams}
         />
       </Suspense>
     </>

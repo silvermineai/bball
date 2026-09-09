@@ -17,6 +17,7 @@ import {
 } from "../../_lib/basketball-scenario";
 import type { BBRosterModel } from "../../_lib/basketball-types";
 import type { PossessionStyleEdition } from "../../_lib/possession-style";
+import type { ShotOption } from "../../_lib/shooting";
 const factors = [
   ["efg", "Shooting · eFG%"],
   ["tov", "Turnovers / possessions"],
@@ -26,18 +27,34 @@ const factors = [
   ["three", "Three-point accuracy"],
   ["three_rate", "Three-point attempt share"],
 ];
+const shotSummary = (row: ShotOption | undefined) => {
+  const attempts = row?.all.attempts ?? null;
+  const made = row?.all.made ?? null;
+  const threes = row?.all.threes ?? null;
+  const threesMade = row?.all.threes_made ?? null;
+  const located = row?.all.located ?? null;
+  return {
+    attempts,
+    efg: attempts && made != null && threesMade != null ? (made + 0.5 * threesMade) / attempts : null,
+    threeRate: attempts && threes != null ? threes / attempts : null,
+    locationRate: attempts && located != null ? located / attempts : null,
+    boxGames: row?.box_games ?? null,
+  };
+};
 export default function Compare({
   teams,
   model,
   rosters,
   rosterModel,
   possessionStyles,
+  shootingTeams,
 }: {
   teams: { id: string; name: string }[];
   model: ScenarioModel;
   rosters: RosterSummary[];
   rosterModel: Pick<BBRosterModel, "teams" | "feature_definition">;
   possessionStyles?: PossessionStyleEdition["teams"];
+  shootingTeams?: ShotOption[];
 }) {
   const params = useSearchParams();
   const validId = (value: string | null) =>
@@ -101,6 +118,9 @@ export default function Compare({
     bn = teams.find((t) => t.id === b)!.name;
   const possessionByTeam = new Map((possessionStyles || []).map((row) => [row.team_id, row]));
   const styleA = possessionByTeam.get(a), styleB = possessionByTeam.get(b);
+  const shootingByTeam = new Map((shootingTeams || []).map((row) => [row.id, row]));
+  const shotsA = shootingByTeam.get(a), shotsB = shootingByTeam.get(b);
+  const shotSummaryA = shotSummary(shotsA), shotSummaryB = shotSummary(shotsB);
   const intel =
     data?.map((profile) => buildRosterIntel(rosters, profile)) ?? [];
   const scoreA = p ? (venue === "b" ? p.away_score : p.home_score) : null,
@@ -418,10 +438,44 @@ export default function Compare({
                   </table>
                 </div>
               </section> : null}
+              {shootingTeams?.length ? <section className="section">
+                <div className="section-heading">
+                  <div>
+                    <div className="eyebrow">04 / Shot profile</div>
+                    <h2>See where the attempts came from.</h2>
+                  </div>
+                  <Link href={`/basketball/shooting/?team=${encodeURIComponent(a)}`}>Open the shot lab →</Link>
+                </div>
+                <p className="note">
+                  2025–26 NCAA source shot records. eFG gives made threes their
+                  extra value; three-point share describes volume. Location
+                  coverage is shown separately, and source shots are descriptive
+                  evidence rather than optical tracking or a forecast input.
+                </p>
+                <div className="table-scroll">
+                  <table className="data-table comparison-table">
+                    <thead><tr><th>Source measure</th><th>{an}</th><th>{bn}</th></tr></thead>
+                    <tbody>
+                      {[
+                        ["Recorded attempts", shotSummaryA.attempts == null ? null : shotSummaryA.attempts.toLocaleString(), shotSummaryB.attempts == null ? null : shotSummaryB.attempts.toLocaleString()],
+                        ["Effective FG%", shotSummaryA.efg == null ? null : `${fmt(shotSummaryA.efg * 100)}%`, shotSummaryB.efg == null ? null : `${fmt(shotSummaryB.efg * 100)}%`],
+                        ["Three-point attempt share", shotSummaryA.threeRate == null ? null : `${fmt(shotSummaryA.threeRate * 100)}%`, shotSummaryB.threeRate == null ? null : `${fmt(shotSummaryB.threeRate * 100)}%`],
+                        ["Located shot share", shotSummaryA.locationRate == null ? null : `${fmt(shotSummaryA.locationRate * 100)}%`, shotSummaryB.locationRate == null ? null : `${fmt(shotSummaryB.locationRate * 100)}%`],
+                        ["Box-matched games", shotSummaryA.boxGames == null ? null : shotSummaryA.boxGames.toLocaleString(), shotSummaryB.boxGames == null ? null : shotSummaryB.boxGames.toLocaleString()],
+                      ].map(([label, valueA, valueB]) => <tr key={String(label)}><th>{label}</th><td className="numeric">{valueA || "—"}</td><td className="numeric">{valueB || "—"}</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="note">
+                  The displayed profile uses all retained source shots for the
+                  selected team edition. Open the shot lab to inspect player
+                  profiles, zones, distance and box-score reconciliation.
+                </p>
+              </section> : null}
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">04 / Attack meets resistance</div>
+                    <div className="eyebrow">05 / Attack meets resistance</div>
                     <h2>Compare both ends.</h2>
                   </div>
                   <label className="control">
@@ -508,7 +562,7 @@ export default function Compare({
               <section className="section">
                 <div className="section-heading">
                   <div>
-                    <div className="eyebrow">05 / Start with the rotation</div>
+                    <div className="eyebrow">06 / Start with the rotation</div>
                     <h2>Who carried the workload?</h2>
                   </div>
                 </div>

@@ -46,8 +46,8 @@ export type ShotOption = {
   id: string;
   name: string;
   teams: string[];
-  all: { attempts: number };
-  matched: { attempts?: number };
+  all: { attempts: number; made?: number; threes?: number; threes_made?: number; located?: number };
+  matched: { attempts?: number; made?: number; threes?: number; threes_made?: number; located?: number };
   box_games: number;
 };
 export type ShotSeason = {
