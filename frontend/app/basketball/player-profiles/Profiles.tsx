@@ -31,6 +31,8 @@ export default function Profiles() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(0);
   const [copied, setCopied] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
@@ -85,7 +87,46 @@ export default function Profiles() {
     }
   };
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
-  const exportRows = result?.rows || [];
+  const exportHeaders = ["Season", "Player", "Source ID", "ESPN profile URL", "Program", "Team ID", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Raw profile JSON"];
+  const exportRow = (row: Row, activeSeason: number) => {
+    const slug = row.profile.slug || "";
+    const sourceUrl = `https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(row.id)}${slug ? `/${encodeURIComponent(slug)}` : ""}`;
+    return [label(activeSeason), row.name, row.id, sourceUrl, row.team, row.team_id, row.position, row.height, row.weight, row.jersey, row.experience, row.status, JSON.stringify(row.profile)];
+  };
+  const download = () => {
+    if (!result) return;
+    downloadCsv(`basketball-player-profiles-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map((row) => exportRow(row, result.season))));
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This cohort exceeds the bounded export window. Search for a player or narrow the position/status filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} profiles…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        if (position) params.set("position", position);
+        if (status) params.set("status", status);
+        const response = await fetch(`/api/basketball/research/player-core?${params}`);
+        if (!response.ok) throw new Error("The complete player profile export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} profiles…`);
+      }
+      downloadCsv(`basketball-player-profiles-${season}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result.season))));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} player profiles.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete player profile export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <>
       <div className="page-title">
@@ -107,8 +148,8 @@ export default function Profiles() {
       </div>
       {meta?.source ? <p className="note" style={{ marginTop: 16 }}>ESPN-derived profile receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
-        <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!exportRows.length} onClick={() => downloadCsv(`basketball-player-profiles-${season}.csv`, toCsv(["Season", "Player", "Source ID", "Program", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Team ID"], exportRows.map((r) => [label(result.season), r.name, r.id, r.team, r.position, r.height, r.weight, r.jersey, r.experience, r.status, r.team_id])))}>Download CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
-        {copied && <p role="status">{copied}</p>}
+        <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!result.rows.length} onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
+        {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={r.id}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
         {!result.rows.length && <p className="empty">No source profiles match these filters.</p>}
         <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 40 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
