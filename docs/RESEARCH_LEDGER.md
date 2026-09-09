@@ -14,7 +14,7 @@ This prospective record is separate from each model's retrospective holdout. Reg
 
 ## Storage and selection
 
-`0010_research_ledger.sql` creates five separate `audit_*` tables in D1. The local warehouse is ignored `.local/research-ledger.sqlite3`. Predictions contain the original game participants, start time/confirmation, model cutoff, generation time, first registration time and full estimate. The `(sport,game,model)` registration is immutable. Reusing that identity with changed predictions is an error. D1 exports use `INSERT OR IGNORE`, never replacement.
+`0010_research_ledger.sql` creates five separate `audit_*` tables in the dedicated `bball-research-v2` D1. The local warehouse is ignored `.local/research-ledger.sqlite3`. Predictions contain the original game participants, start time/confirmation, model cutoff, generation time, first registration time and full estimate. The `(sport,game,model)` registration is immutable. Reusing that identity with changed predictions is an error. D1 exports use `INSERT OR IGNORE`, never replacement. Native football/scouting tables remain in `bball-silvermine`; the research store also carries the immutable brief-archive metadata from `0015_brief_archive.sql`.
 
 Game state observations preserve source URL, retrieval time and file SHA-256. Consecutive identical observations are deduplicated; corrections, including a return to a prior result, append another observation. Older observations never replace newer states. History is paginated in D1 rather than silently truncated in the UI.
 

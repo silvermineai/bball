@@ -6,6 +6,8 @@ College sports statistics, scouting and recruiting research from Silvermine.
 
 The publication covers football and men’s college basketball with a Next.js frontend, Python bulk-data pipelines, independent forecast models and Cloudflare D1 storage. Native basketball pages now include 2026–27 forecasts, efficiency ratings, player statistics, NCAA impact rankings and roster observations.
 
+Cloudflare uses two stores: `bball-silvermine` remains the native football/scouting database, while `bball-research-v2` holds basketball research datasets, both sports’ append-only forecast ledger, market evidence and immutable brief-archive metadata. This keeps scheduled research refreshes independent of the legacy store’s size ceiling.
+
 ## Football
 
 | Tool | Route | What it does |
@@ -147,7 +149,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 .venv/bin/python scripts/refresh-news-rss.py
 ```
 
-Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment also captures the immutable matchup reading archive. When the D1 archive reaches its storage ceiling, an asset-only deployment may set `SKIP_BRIEF_ARCHIVE=1`; current basketball brief pages remain in Workers Assets and retired pages continue to resolve through the archive fallback.
+Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment captures immutable matchup reading metadata in the research D1 and its content in R2. The legacy football/scouting store is no longer used for research refresh writes.
 
 ## Data policy
 
