@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseRosterFilters,
+  filterRosterObservations,
   rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
@@ -149,8 +150,10 @@ describe("shareable roster observation filters", () => {
       sort: "prior_tov_rate",
       page: 3,
       picks: [],
+      minGames: 0,
+      minMinutes: 0,
     });
-    expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4")).toEqual({
+    expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4&rosterMinGames=99&rosterMinMinutes=-1")).toEqual({
       season: "2027",
       q: "",
       position: "",
@@ -159,12 +162,14 @@ describe("shareable roster observation filters", () => {
       sort: "status",
       page: 0,
       picks: [],
+      minGames: 0,
+      minMinutes: 0,
     });
   });
 
   it("omits defaults while preserving the exact recruiting slice", () => {
-    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_tov_rate", page: 3, picks: ["123", "456"] })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterPick=123&rosterPick=456");
-    expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [] })).toBe("");
+    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_tov_rate", page: 3, picks: ["123", "456"], minGames: 10, minMinutes: 400 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterMinGames=10&rosterMinMinutes=400&rosterPick=123&rosterPick=456");
+    expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0 })).toBe("");
   });
 
   it("limits shortlist IDs to twelve numeric source identities", () => {
@@ -179,5 +184,15 @@ describe("shareable roster observation filters", () => {
       { ...row("c", "Gamma", "different_program", "C", []), position: "G", class_year: "Senior" },
       { ...row("d", "Delta", "same_program", "D", []), position: "F", class_year: "Junior" },
     ])).toEqual({ positions: ["F", "G"], classes: ["Junior", "Senior"] });
+  });
+
+  it("filters prior workload without treating missing production as zero evidence", () => {
+    const rows = [
+      { ...row("a", "Alpha", "same_program", "A", ["A"], 240), position: "G", class_year: "Junior" },
+      { ...row("b", "Beta", "different_program", "B", ["A"], 620), position: "G", class_year: "Senior" },
+      row("c", "Gamma", "new_to_dataset", "C", []),
+    ];
+    expect(filterRosterObservations(rows, { q: "", position: "G", classYear: "", status: "all", minGames: 20, minMinutes: 400 }).map((r) => r.name)).toEqual(["Beta"]);
+    expect(filterRosterObservations(rows, { q: "alpha", position: "", classYear: "Junior", status: "same_program", minGames: 0, minMinutes: 0 }).map((r) => r.name)).toEqual(["Alpha"]);
   });
 });

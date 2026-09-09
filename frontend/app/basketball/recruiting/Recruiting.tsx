@@ -6,6 +6,7 @@ import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   parseRosterFilters,
+  filterRosterObservations,
   rosterFilterOptions,
   rosterFilterSearch,
   sortRosterObservations,
@@ -69,6 +70,8 @@ export default function Recruiting() {
     [sort, setSort] = useState<RosterSortKey>("status"),
     [teamQuery, setTeamQuery] = useState(""),
     [teamSort, setTeamSort] = useState<"returning" | "prior" | "unrepresented" | "name">("returning"),
+    [minGames, setMinGames] = useState(0),
+    [minMinutes, setMinMinutes] = useState(0),
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [picks, setPicks] = useState<string[]>([]),
@@ -81,6 +84,8 @@ export default function Recruiting() {
     setClassYear(filters.classYear);
     setStatus(filters.status);
     setSort(filters.sort);
+    setMinGames(filters.minGames);
+    setMinMinutes(filters.minMinutes);
     setPage(filters.page);
     setPicks(filters.picks);
     setHydrated(true);
@@ -96,6 +101,8 @@ export default function Recruiting() {
         classYear,
         status: status as RosterStatus,
         sort,
+        minGames,
+        minMinutes,
         page,
         picks,
       }),
@@ -103,21 +110,20 @@ export default function Recruiting() {
     params.set("view", "observations");
     url.search = params.toString();
     window.history.replaceState(window.history.state, "", url);
-  }, [classYear, hydrated, page, picks, position, q, season, sort, status]);
+  }, [classYear, hydrated, minGames, minMinutes, page, picks, position, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : "rosters-2026",
   );
   const options = rosterFilterOptions(data?.players || []);
   const rows = sortRosterObservations(
-    (data?.players || []).filter(
-      (p) =>
-        (p.name + " " + p.team + " " + p.previous_teams.join(" "))
-          .toLowerCase()
-          .includes(q.toLowerCase()) &&
-        (!position || p.position === position) &&
-        (!classYear || p.class_year === classYear) &&
-        (status === "all" || p.status === status),
-    ),
+    filterRosterObservations(data?.players || [], {
+      q,
+      position,
+      classYear,
+      minGames,
+      minMinutes,
+      status: status as RosterStatus,
+    }),
     sort,
   );
   const productionIndex = priorProductionIndex(rows);
@@ -261,6 +267,20 @@ export default function Recruiting() {
             <option value="name">Player name</option>
           </select>
         </label>
+        <label className="control">
+          <span>MINIMUM PRIOR GAMES</span>
+          <select value={minGames} onChange={(e) => { setMinGames(Number(e.target.value)); setPage(0); }}>
+            <option value={0}>Any prior sample</option>
+            {[5, 10, 20, 30].map((value) => <option key={value} value={value}>{value}+ games</option>)}
+          </select>
+        </label>
+        <label className="control">
+          <span>MINIMUM PRIOR MINUTES</span>
+          <select value={minMinutes} onChange={(e) => { setMinMinutes(Number(e.target.value)); setPage(0); }}>
+            <option value={0}>Any prior workload</option>
+            {[200, 400, 600, 800].map((value) => <option key={value} value={value}>{value.toLocaleString()}+ minutes</option>)}
+          </select>
+        </label>
       </div>
       <p className="note" style={{ marginBottom: 20 }}>
         Production sorts use the exact prior source ID and recorded game
@@ -268,6 +288,8 @@ export default function Recruiting() {
         unavailable when their source denominator is missing; they are not
         imputed. Box BPM is a separate source-attributed publisher value and
         remains blank when that exact athlete/team release row is unavailable.
+        Workload thresholds apply to the preceding source season and exclude
+        rows without enough recorded games or minutes.
       </p>
       {error ? (
         <p role="alert" className="status-error">
@@ -498,7 +520,7 @@ export default function Recruiting() {
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>
               {rows.length.toLocaleString()} matching observations · export
-              respects the season, search, observation and sort filters
+              respects the season, search, observation, workload and sort filters
             </p>
             <div className="button-row">
               <button className="button secondary" type="button" onClick={share}>

@@ -63,7 +63,10 @@ export type RosterFilters = {
   sort: RosterSortKey;
   page: number;
   picks: string[];
+  minGames: number;
+  minMinutes: number;
 };
+export type RosterObservationQuery = Pick<RosterFilters, "q" | "position" | "classYear" | "status" | "minGames" | "minMinutes">;
 
 const statusOrder: Record<string, number> = {
   different_program: 0,
@@ -79,6 +82,8 @@ const rosterStatuses = new Set<RosterStatus>([
   "new_to_dataset",
   "ambiguous",
 ]);
+const rosterGameThresholds = new Set([0, 5, 10, 20, 30]);
+const rosterMinuteThresholds = new Set([0, 200, 400, 600, 800]);
 const rosterSorts = new Set<RosterSortKey>([
   "status",
   "name",
@@ -138,6 +143,8 @@ export function parseRosterFilters(search: string): RosterFilters {
   const status = params.get("rosterStatus") as RosterStatus | null;
   const sort = params.get("rosterSort") as RosterSortKey | null;
   const page = Number(params.get("rosterPage") || 0);
+  const minGames = Number(params.get("rosterMinGames") || 0);
+  const minMinutes = Number(params.get("rosterMinMinutes") || 0);
   return {
     season: season === "2026" ? "2026" : "2027",
     q: params.get("rosterQ") || "",
@@ -147,6 +154,8 @@ export function parseRosterFilters(search: string): RosterFilters {
     sort: sort && rosterSorts.has(sort) ? sort : "status",
     page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
     picks: [...new Set(params.getAll("rosterPick").filter((v) => /^[1-9]\d{0,14}$/.test(v)))].slice(0, 12),
+    minGames: Number.isInteger(minGames) && rosterGameThresholds.has(minGames) ? minGames : 0,
+    minMinutes: Number.isInteger(minMinutes) && rosterMinuteThresholds.has(minMinutes) ? minMinutes : 0,
   };
 }
 
@@ -160,6 +169,8 @@ export function rosterFilterSearch(filters: RosterFilters) {
   if (filters.status !== "all") params.set("rosterStatus", filters.status);
   if (filters.sort !== "status") params.set("rosterSort", filters.sort);
   if (filters.page) params.set("rosterPage", String(filters.page));
+  if (filters.minGames) params.set("rosterMinGames", String(filters.minGames));
+  if (filters.minMinutes) params.set("rosterMinMinutes", String(filters.minMinutes));
   filters.picks.slice(0, 12).forEach((id) => params.append("rosterPick", id));
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -171,6 +182,19 @@ export function rosterFilterOptions(rows: BBRoster[]) {
     positions: [...new Set(rows.map((row) => row.position).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)),
     classes: [...new Set(rows.map((row) => row.class_year).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)),
   };
+}
+
+/** Apply the shareable roster observation filters without changing source rows. */
+export function filterRosterObservations(rows: BBRoster[], filters: RosterObservationQuery) {
+  const query = filters.q.toLowerCase();
+  return rows.filter((row) =>
+    (row.name + " " + row.team + " " + row.previous_teams.join(" ")).toLowerCase().includes(query) &&
+    (!filters.position || row.position === filters.position) &&
+    (!filters.classYear || row.class_year === filters.classYear) &&
+    (!filters.minGames || (row.prior_production?.games ?? 0) >= filters.minGames) &&
+    (!filters.minMinutes || (row.prior_production?.minutes ?? 0) >= filters.minMinutes) &&
+    (filters.status === "all" || row.status === filters.status),
+  );
 }
 
 /** Sort roster observations for recruiting review without mutating the release. */
