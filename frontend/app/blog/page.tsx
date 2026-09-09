@@ -63,6 +63,11 @@ const guides = [
     "Count the trip before you count the score.",
     "How to read source-recorded possessions, transition share and assisted share as team context without assigning player credit.",
   ],
+  [
+    "basketball-recruiting-evidence",
+    "Build the recruiting brief from the evidence outward.",
+    "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

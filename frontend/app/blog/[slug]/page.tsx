@@ -20,6 +20,8 @@ const titles: Record<string, string> = {
     "A ranking is a question, not a verdict.",
   "basketball-possession-style":
     "Count the trip before you count the score.",
+  "basketball-recruiting-evidence":
+    "Build the recruiting brief from the evidence outward.",
 };
 export function generateStaticParams() {
   return [
@@ -183,6 +185,8 @@ export default async function Page({
         <BasketballRankingPlaybook />
       ) : slug === "basketball-possession-style" ? (
         <BasketballPossessionStyle />
+      ) : slug === "basketball-recruiting-evidence" ? (
+        <BasketballRecruitingEvidence />
       ) : (
         <>
           <p className="deck">
@@ -680,6 +684,83 @@ function BasketballPossessionStyle() {
         workbench</Link> places the profile beside the published model and
         Four Factors so the numbers stay connected to a concrete preparation
         question.
+      </p>
+    </>
+  );
+}
+
+function BasketballRecruitingEvidence() {
+  return (
+    <>
+      <p className="deck">
+        A recruiting board is most useful when every claim has a source, a
+        date and a clear boundary. Start with what a publisher actually
+        recorded, then decide what still needs a coach&apos;s confirmation.
+      </p>
+      <p>
+        The <Link href="/basketball/recruiting/">recruiting file</Link> keeps
+        school announcements, later availability statements and source-listed
+        roster observations in separate layers. The{" "}
+        <Link href="/basketball/ncaa-player/">NCAA player card</Link> keeps
+        season production, shooting, roster fields and impact in the NCAA
+        source-ID namespace. Those layers can inform one another without
+        turning a name match into a verified transfer or eligibility record.
+      </p>
+      <h2>Begin with the exact source row</h2>
+      <p>
+        Record the player label, source ID, season, program ID and publisher
+        URL before interpreting a number. A roster row is an observation of a
+        release. It is not proof that the player is currently eligible,
+        enrolled, healthy or available for the next game. A missing row is
+        equally limited: it does not prove departure.
+      </p>
+      <p>
+        NCAA rows and ESPN-derived rows use different identity systems. The
+        site keeps them separate and links between them as search handoffs when
+        useful. Do not merge two people because their names look similar, and
+        do not treat a shared school label as a crosswalk.
+      </p>
+      <h2>Put production beside the announcement</h2>
+      <p>
+        Prior minutes and rates describe recorded college work. Use games and
+        minutes to qualify a rate, then inspect the denominator: true shooting
+        needs field-goal and free-throw attempts, while three-point accuracy
+        needs three-point attempts. A blank value means the source did not
+        provide the required field or sample; it is not a zero.
+      </p>
+      <p>
+        For a broader screen, the{" "}
+        <Link href="/basketball/recruiting/fit/">role-fit board</Link> ranks
+        source-listed candidates by transparent prior-production percentiles.
+        Treat the result as a review order. It does not predict a new-school
+        role, establish a commitment or replace film.
+      </p>
+      <h2>Keep the dates in the timeline</h2>
+      <p>
+        A school announcement and a later availability statement answer
+        different questions. Keep both events, with their publisher and
+        publication date, so a later statement updates the timeline without
+        erasing the original report. The official{" "}
+        <a href="https://www.ncaa.org/eligibility-center/transfer-rules-and-eligibility/" target="_blank" rel="noreferrer">NCAA transfer rules</a>
+        {" "}remain the reference for eligibility; a school post or roster
+        listing cannot substitute for an official ruling.
+      </p>
+      <h2>Finish with a staff question</h2>
+      <p>
+        A useful brief ends with what still needs confirmation: Is the player
+        available? Which role is expected? Does the shot profile fit the
+        lineup? Can the film explain the gap between box-score production and
+        lineup impact? The{" "}
+        <Link href="/basketball/gameplan/">game-plan workbench</Link> and{" "}
+        <Link href="/basketball/roster-lab/">roster workload lab</Link> turn
+        those questions into preparation context while keeping the primary
+        forecast reproducible.
+      </p>
+      <p>
+        A defensible recruiting report says what was published, what was
+        measured, what remains unknown and what the staff should check next.
+        That structure is more durable than a single ranking or an unverified
+        portal label.
       </p>
     </>
   );
