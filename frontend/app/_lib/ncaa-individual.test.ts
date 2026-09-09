@@ -42,6 +42,15 @@ const player = (name: string, ppg: number | null, division: 1 | 2 | 3 = 1): NCAA
   ppg_rank: null,
   rpg_rank: null,
   apg_rank: null,
+  spg_rank: null,
+  bpg_rank: null,
+  fg_pct_rank: null,
+  three_pct_rank: null,
+  ft_pct_rank: null,
+  threes_pg_rank: null,
+  mpg_rank: null,
+  ast_to_rank: null,
+  dbl_dbl_rank: null,
 });
 
 describe("NCAA individual leader sorting", () => {
@@ -97,5 +106,7 @@ describe("NCAA individual leader sorting", () => {
     const row = { ...player("Ranked", 20), ppg_rank: 17, pts: 900 };
     expect(publisherRank(row, "ppg")).toBe(17);
     expect(publisherRank(row, "pts")).toBeNull();
+    expect(publisherRank({ ...row, fg_pct_rank: 42 }, "fg_pct")).toBe(42);
+    expect(publisherRank({ ...row, ast_to_rank: 9 }, "ast_to")).toBe(9);
   });
 });

@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS ncaa_players (
   pts INTEGER, reb INTEGER, ast INTEGER, fgm INTEGER, fga INTEGER,
   three_fgm INTEGER, three_fga INTEGER, ftm INTEGER,
   ppg_rank INTEGER, rpg_rank INTEGER, apg_rank INTEGER,
+  spg_rank INTEGER, bpg_rank INTEGER, fg_pct_rank INTEGER,
+  three_pct_rank INTEGER, ft_pct_rank INTEGER, threes_pg_rank INTEGER,
+  mpg_rank INTEGER, ast_to_rank INTEGER, dbl_dbl_rank INTEGER,
   source_stats_json TEXT,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -168,7 +171,14 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     columns = {row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")}
     if "source_stats_json" not in columns:
         conn.execute("ALTER TABLE ncaa_players ADD COLUMN source_stats_json TEXT")
-        conn.commit()
+    rank_columns = (
+        "spg_rank", "bpg_rank", "fg_pct_rank", "three_pct_rank", "ft_pct_rank",
+        "threes_pg_rank", "mpg_rank", "ast_to_rank", "dbl_dbl_rank",
+    )
+    for column in rank_columns:
+        if column not in columns:
+            conn.execute(f"ALTER TABLE ncaa_players ADD COLUMN {column} INTEGER")
+    conn.commit()
 
 
 def export_release(conn: sqlite3.Connection) -> dict:
@@ -192,6 +202,15 @@ def export_release(conn: sqlite3.Connection) -> dict:
                 source_stats = None
             if isinstance(source_stats, dict) and source_stats:
                 item["source_stats"] = source_stats
+                # Older local snapshots retained each publisher rank only in
+                # source_stats_json. Promote those ranks into typed columns
+                # during export so a rebuild does not need another fetch.
+                for slug in INDIVIDUAL_STATS.values():
+                    key = f"{slug}_rank"
+                    if item.get(key) is None:
+                        source_rank = source_stats.get(slug, {}).get("rank")
+                        if isinstance(source_rank, (int, float)) and source_rank == int(source_rank):
+                            item[key] = int(source_rank)
         item["team_ncaa_id"] = item.get("team_ncaa_id") or team_ids.get((item["division"], team_key(item.get("team_name"))))
         item = {k: _json_number(v) if isinstance(v, (int, float)) and k not in {"player_id", "division", "games", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm", "ppg_rank", "rpg_rank", "apg_rank"} else v for k, v in item.items()}
         players.append(item)
@@ -378,7 +397,7 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
                 ),
             )
             conn.execute(f"UPDATE ncaa_players SET {slug}=? WHERE player_id=?", (value, pid))
-            if slug in ("ppg", "rpg", "apg") and rank is not None:
+            if rank is not None:
                 conn.execute(f"UPDATE ncaa_players SET {slug}_rank=? WHERE player_id=?", (int(rank), pid))
 
             # counting stats from the PPG page (FGM, 3FG, FT, PTS) and others

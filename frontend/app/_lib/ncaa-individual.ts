@@ -32,6 +32,15 @@ export type NCAAIndividualPlayer = {
   ppg_rank: number | null;
   rpg_rank: number | null;
   apg_rank: number | null;
+  spg_rank: number | null;
+  bpg_rank: number | null;
+  fg_pct_rank: number | null;
+  three_pct_rank: number | null;
+  ft_pct_rank: number | null;
+  threes_pg_rank: number | null;
+  mpg_rank: number | null;
+  ast_to_rank: number | null;
+  dbl_dbl_rank: number | null;
   source_stats?: Record<string, {
     headers: string[];
     cells: string[];
@@ -175,6 +184,15 @@ const publisherRankKeys: Partial<Record<NCAAStatKey, keyof NCAAIndividualPlayer>
   ppg: "ppg_rank",
   rpg: "rpg_rank",
   apg: "apg_rank",
+  spg: "spg_rank",
+  bpg: "bpg_rank",
+  fg_pct: "fg_pct_rank",
+  three_pct: "three_pct_rank",
+  ft_pct: "ft_pct_rank",
+  threes_pg: "threes_pg_rank",
+  mpg: "mpg_rank",
+  ast_to: "ast_to_rank",
+  dbl_dbl: "dbl_dbl_rank",
 };
 
 /** Return a rank explicitly published for this measure, never a filtered row number. */
