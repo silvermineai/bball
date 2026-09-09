@@ -9,6 +9,7 @@ import {
   sortRecruitingRows,
   sortRecruitingReviewRows,
   summarizeRecruitingPrograms,
+  summarizeRecruitingActivity,
   rosterNameMatch,
   type RecruitingRelease,
 } from "./recruiting";
@@ -60,6 +61,13 @@ describe("school announcement histories", () => {
     const row = recruitingRows(data).find((p) => p.name === "Lincoln Cosby")!;
     expect(row.latest.kind).toBe("redshirt_announced");
     expect(row.timeline).toHaveLength(2);
+  });
+  it("rolls dated source events into a chronological activity feed", () => {
+    const activity = summarizeRecruitingActivity(data);
+    expect(activity.events).toHaveLength(data.coverage.events);
+    expect(activity.events[0].source.published_on >= activity.events.at(-1)!.source.published_on).toBe(true);
+    expect(activity.months.reduce((total, month) => total + month.events, 0)).toBe(data.coverage.events);
+    expect(activity.months.every((month) => month.players > 0 && month.programs > 0)).toBe(true);
   });
   it("preserves a publication calendar date in every local timezone", () => {
     expect(publicationDate("2026-04-28")).toBe("Apr 28, 2026");

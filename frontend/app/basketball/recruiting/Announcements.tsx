@@ -12,6 +12,7 @@ import {
   sortRecruitingRows,
   sortRecruitingReviewRows,
   summarizeRecruitingPrograms,
+  summarizeRecruitingActivity,
   rosterNameMatch,
   type RecruitingSort,
   type RecruitingRelease,
@@ -147,6 +148,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const release = liveData || data;
   const allRows = recruitingRows(release);
   const programSummary = summarizeRecruitingPrograms(allRows);
+  const activity = summarizeRecruitingActivity(release);
+  const latestActivity = activity.events.slice(0, 8);
+  const latestPublication = activity.events[0]?.source.published_on || null;
+  const activePrograms = new Set(activity.events.map((event) => event.team_id)).size;
+  const additionEvents = activity.events.filter((event) => event.kind === "addition").length;
   const coverageBaseRows = (rosters.team_summaries || [])
     .map((summary) => {
       const reviewed = release.programs.some((program) => program.id === summary.team_id);
@@ -245,6 +251,74 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <span>Dated school statements</span>
             </div>
           </div>
+          <section className="paper-panel recruiting-pulse" aria-labelledby="recruiting-pulse-title">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">Recruiting pulse / dated source events</div>
+                <h2 id="recruiting-pulse-title">See the calendar behind the class.</h2>
+              </div>
+              <span className="note">{activity.months.length} publication months</span>
+            </div>
+            <p className="note">
+              This rollup counts each dated school statement in the reviewed
+              release. A later availability or redshirt statement remains an
+              event; it does not erase the earlier addition.
+            </p>
+            <div className="strip recruiting-pulse-strip">
+              <div>
+                <strong>{additionEvents}</strong>
+                <span>Addition statements</span>
+              </div>
+              <div>
+                <strong>{activity.events.length - additionEvents}</strong>
+                <span>Later status statements</span>
+              </div>
+              <div>
+                <strong>{activePrograms}</strong>
+                <span>Programs with dated events</span>
+              </div>
+              <div>
+                <strong>{latestPublication ? publicationDate(latestPublication) : "—"}</strong>
+                <span>Latest publisher date</span>
+              </div>
+            </div>
+            <div className="recruiting-pulse-grid">
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Publication month</th><th className="numeric">Events</th><th className="numeric">Players</th><th className="numeric">Programs</th><th className="numeric">Additions</th></tr>
+                  </thead>
+                  <tbody>
+                    {activity.months.slice(0, 8).map((month) => (
+                      <tr key={month.month}>
+                        <td>{publicationDate(`${month.month}-01`)}</td>
+                        <td className="numeric">{month.events}</td>
+                        <td className="numeric">{month.players}</td>
+                        <td className="numeric">{month.programs}</td>
+                        <td className="numeric">{month.additions}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {activity.months.length > 8 && <small className="note">Showing the eight latest publication months; the player board retains every event.</small>}
+              </div>
+              <div className="recruiting-pulse-feed">
+                <div className="eyebrow">Latest source events</div>
+                {latestActivity.map((event) => (
+                  <article className="recruiting-pulse-event" key={event.id}>
+                    <div>
+                      <strong>{event.person_name}</strong>
+                      <span>{event.program_name} · {eventLabels[event.kind]}</span>
+                    </div>
+                    <p>{event.summary}</p>
+                    <a href={event.source.url} target="_blank" rel="noreferrer">
+                      {publicationDate(event.source.published_on)} · {event.source.publisher} ↗
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
           <section className="paper-panel recruiting-national">
             <div className="section-heading">
               <div>

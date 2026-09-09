@@ -268,6 +268,70 @@ export function recruitingRows(data: RecruitingRelease) {
     );
 }
 
+export type RecruitingActivityEvent = {
+  id: string;
+  kind: AnnouncementEvent["kind"];
+  summary: string;
+  person_name: string;
+  team_id: string;
+  program_name: string;
+  source: AnnouncementSource;
+};
+
+export type RecruitingActivityMonth = {
+  month: string;
+  events: number;
+  players: number;
+  programs: number;
+  additions: number;
+};
+
+/** Build a dated activity feed and month rollup from the reviewed announcement release. */
+export function summarizeRecruitingActivity(data: RecruitingRelease) {
+  const events: RecruitingActivityEvent[] = recruitingRows(data)
+    .flatMap((person) =>
+      person.timeline.map((event) => ({
+        id: event.id,
+        kind: event.kind,
+        summary: event.summary,
+        person_name: person.name,
+        team_id: person.team_id,
+        program_name: person.program.name,
+        source: event.source,
+      })),
+    )
+    .sort(
+      (a, b) =>
+        b.source.published_on.localeCompare(a.source.published_on) ||
+        a.id.localeCompare(b.id),
+    );
+  const monthMap = new Map<string, { events: number; players: Set<string>; programs: Set<string>; additions: number }>();
+  for (const event of events) {
+    const month = event.source.published_on.slice(0, 7);
+    const summary = monthMap.get(month) ?? {
+      events: 0,
+      players: new Set<string>(),
+      programs: new Set<string>(),
+      additions: 0,
+    };
+    summary.events += 1;
+    summary.players.add(event.person_name);
+    summary.programs.add(event.team_id);
+    if (event.kind === "addition") summary.additions += 1;
+    monthMap.set(month, summary);
+  }
+  const months: RecruitingActivityMonth[] = [...monthMap.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([month, summary]) => ({
+      month,
+      events: summary.events,
+      players: summary.players.size,
+      programs: summary.programs.size,
+      additions: summary.additions,
+    }));
+  return { events, months };
+}
+
 export type RosterNameMatch = "exact" | "multiple" | "none";
 
 const normalizedName = (value: string) =>

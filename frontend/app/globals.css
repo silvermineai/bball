@@ -1939,6 +1939,61 @@ summary {
 .recruiting-national {
   margin-top: 28px;
 }
+.recruiting-pulse {
+  margin-top: 28px;
+}
+.recruiting-pulse-strip {
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+}
+.recruiting-pulse-strip strong {
+  font-size: 22px;
+}
+.recruiting-pulse-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.95fr);
+  gap: 28px;
+  margin-top: 24px;
+}
+.recruiting-pulse-grid > .table-scroll > small {
+  display: block;
+  margin-top: 9px;
+}
+.recruiting-pulse-feed {
+  border-left: 2px solid var(--orange);
+  padding-left: 20px;
+}
+.recruiting-pulse-event {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.recruiting-pulse-event:last-child {
+  border-bottom: 0;
+}
+.recruiting-pulse-event > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.recruiting-pulse-event > div span,
+.recruiting-pulse-event > p,
+.recruiting-pulse-event > a {
+  font-size: 11px;
+}
+.recruiting-pulse-event > div span,
+.recruiting-pulse-event > p {
+  color: var(--muted);
+}
+.recruiting-pulse-event > p {
+  line-height: 1.5;
+  margin: 5px 0;
+}
+.recruiting-pulse-event > a {
+  color: var(--orange);
+}
 .recruiting-scope {
   border-left: 3px solid var(--orange);
   padding: 4px 22px;
@@ -2220,7 +2275,8 @@ summary {
 @media (max-width: 700px) {
   .recruiting-grid,
   .recruiting-filters,
-  .recruiting-review-queue {
+  .recruiting-review-queue,
+  .recruiting-pulse-grid {
     grid-template-columns: 1fr;
   }
   .roster-stat-grid {
@@ -2240,6 +2296,11 @@ summary {
   }
   .recruiting-review-queue {
     padding: 18px;
+  }
+  .recruiting-pulse-feed {
+    border-left: 0;
+    border-top: 2px solid var(--orange);
+    padding: 16px 0 0;
   }
   .recruiting-review-queue li {
     align-items: flex-start;
