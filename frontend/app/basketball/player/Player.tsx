@@ -630,6 +630,48 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                 </dl>
               </details>
             )}
+            {data.coverage.field_coverage && (
+              <details>
+                <summary>Season source completeness audit</summary>
+                <p className="note">
+                  Source observations include every retained source row. The
+                  appearance column is the denominator used for player rates;
+                  recorded zeroes count as observed and blank values remain
+                  unavailable.
+                </p>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th className="numeric">Source observed</th>
+                        <th className="numeric">Appearance observed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(statLabels).map(([key, label]) => {
+                        const audit = data.coverage.field_coverage?.[key];
+                        return (
+                          <tr key={key}>
+                            <th scope="row">{label}</th>
+                            <td className="numeric">
+                              {audit
+                                ? `${audit.source_observed.toLocaleString()} / ${audit.source_rows.toLocaleString()} (${audit.source_share == null ? "—" : `${(audit.source_share * 100).toFixed(1)}%`})`
+                                : "—"}
+                            </td>
+                            <td className="numeric">
+                              {audit
+                                ? `${audit.appearance_observed.toLocaleString()} / ${audit.appearance_rows.toLocaleString()} (${audit.appearance_share == null ? "—" : `${(audit.appearance_share * 100).toFixed(1)}%`})`
+                                : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
             <p>
               The archive is a retrospective source snapshot. It does not update
               current roster status or add historical knowledge to the forecast
