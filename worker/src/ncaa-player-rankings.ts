@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -198,11 +199,11 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, classes, positions, sources] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
+    const [seasons, classes, positions, sources] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -244,27 +245,27 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const count: { total: number } | null = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
-      return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
+      return researchDb(c.env).prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
     })()
     : metric === "impact_index"
       ? await (() => {
         const query = impactQueries(where, minGames, minMinutes);
-        return c.env.DB.prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
+        return researchDb(c.env).prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
       })()
-    : await c.env.DB.prepare(
+    : await researchDb(c.env).prepare(
       `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND ${qualification} AND ${volumeQualification} AND (${expression}) IS NOT NULL`,
     ).bind(...binds, minGames, minMinutes, ...volumeBinds).first<{ total: number }>();
   const rows = metric === "balanced_index"
     ? await (() => {
       const query = balancedQueries(where, minGames, minMinutes);
-      return c.env.DB.prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
+      return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
     })()
     : metric === "impact_index"
       ? await (() => {
         const query = impactQueries(where, minGames, minMinutes);
-        return c.env.DB.prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
+        return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
       })()
-    : await c.env.DB.prepare(
+    : await researchDb(c.env).prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
         SELECT aggregate.*, ${expression} AS value
         FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}

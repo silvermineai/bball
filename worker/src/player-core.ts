@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -19,12 +20,12 @@ export const playerCore = new Hono<{ Bindings: Bindings }>();
 playerCore.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, position, status, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, positions, statuses, count, source] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
-      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
+    const [seasons, positions, statuses, count, source] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -57,12 +58,12 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(status);
   }
   const where = clauses.join(" AND ");
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>();
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>();
   const order = direction === "desc" ? "DESC" : "ASC";
   const rowWhere = where
     .replaceAll("season=?", "bb_player_core.season=?")
     .replaceAll("athlete_id LIKE", "bb_player_core.athlete_id LIKE");
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     `SELECT bb_player_core.season,bb_player_core.athlete_id AS id,
       json_extract(bb_player_core.profile_json,'$.display_name') AS name,
       json_extract(bb_player_core.profile_json,'$.position_name') AS position,

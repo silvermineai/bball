@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -38,7 +39,7 @@ const qualification = (metric: Metric) => ({
 /** Stream the exact NCAA shot release whose receipt is active in D1. */
 ncaaShooting.get("/source", zValidator("query", sourceSchema), async (c) => {
   const { season } = c.req.valid("query");
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
   ).bind("ncaa_shots", season).first<{ receipt_json: string }>();
   let digest = "";
@@ -66,9 +67,9 @@ ncaaShooting.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minAttempts, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, source] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_shooting ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_shots' AND season=?").bind(season),
+    const [seasons, source] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_shooting ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_shots' AND season=?").bind(season),
     ]);
     const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
     c.header("Cache-Control", "public, max-age=300");
@@ -91,8 +92,8 @@ ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const value = expression(metric);
   const qualified = qualification(metric);
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all();
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>();
+  const rows = await researchDb(c.env).prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({ season, metric, min_attempts: minAttempts, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })) });
 });

@@ -23,6 +23,12 @@ database_name = "bball-silvermine"
 database_id = "2828733f-c393-4e9d-9f3e-c5e4c9debddd"
 migrations_dir = "migrations"
 
+[[d1_databases]]
+binding = "RESEARCH_DB"
+database_name = "bball-research-v2"
+database_id = "b0cafa63-05f2-4585-af87-c00ea8ddd600"
+migrations_dir = "migrations"
+
 [[r2_buckets]]
 binding = "RESEARCH_ARCHIVE"
 bucket_name = "bball-research"

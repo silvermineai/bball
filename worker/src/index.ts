@@ -31,6 +31,7 @@ import { lineupSource } from "./lineup-source";
 import { basketballForecasts } from "./basketball-forecasts";
 import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
+import { researchDb } from "./research-db";
 
 type Bindings = Env;
 
@@ -301,17 +302,18 @@ app.get(
     if (!/^\d{1,15}$/.test(id))
       return c.json({ error: "Invalid player ID" }, 400);
     const { season, page } = c.req.valid("query");
-    const player = await c.env.DB.prepare("SELECT * FROM bb_players WHERE id=?")
+    const db = researchDb(c.env);
+    const player = await db.prepare("SELECT * FROM bb_players WHERE id=?")
       .bind(id)
       .first();
     if (!player) return c.json({ error: "Player not found" }, 404);
     const [count, box, rosters, totals, participation] = await Promise.all([
-      c.env.DB.prepare(
+      db.prepare(
         "SELECT count(*) AS total FROM bb_player_box WHERE athlete_id=? AND season=?",
       )
         .bind(id, season)
         .first<{ total: number }>(),
-      c.env.DB.prepare(
+      db.prepare(
         `SELECT p.team_id,p.game_id,p.stats_json,g.starts_at,g.home_name,g.away_name FROM bb_player_box p
       LEFT JOIN bb_games g ON g.id=p.game_id WHERE p.athlete_id=? AND p.season=? ORDER BY g.starts_at DESC,p.game_id LIMIT 40 OFFSET ?`,
       )
@@ -324,17 +326,17 @@ app.get(
           home_name: string | null;
           away_name: string | null;
         }>(),
-      c.env.DB.prepare(
+      db.prepare(
         "SELECT season,team_id,profile_json FROM bb_rosters WHERE athlete_id=? ORDER BY season DESC,team_id",
       )
         .bind(id)
         .all<{ season: number; team_id: string; profile_json: string }>(),
-      c.env.DB.prepare(
+      db.prepare(
         "SELECT team_id,stats_json FROM bb_player_season WHERE athlete_id=? AND season=?",
       )
         .bind(id, season)
         .all<{ team_id: string; stats_json: string }>(),
-      c.env.DB.prepare(
+      db.prepare(
         "SELECT season,team_id,games,minutes FROM bb_participation WHERE athlete_id=? ORDER BY season DESC,team_id",
       )
         .bind(id)
@@ -362,6 +364,7 @@ app.get(
   },
 );
 app.get("/api/basketball/research/coverage", async (c) => {
+  const db = researchDb(c.env);
   // D1 limits compound SELECT terms; count each dataset in one batch.
   const tables = {
     games: "bb_games",
@@ -402,11 +405,11 @@ app.get("/api/basketball/research/coverage", async (c) => {
     score_mismatch_games?: number;
     valid_estimate_games?: number;
   };
-  const counts = await c.env.DB.batch<CoverageCount>([
+  const counts = await db.batch<CoverageCount>([
     ...Object.values(tables).map((table) =>
-      c.env.DB.prepare(`SELECT count(*) AS rows FROM ${table}`),
+      db.prepare(`SELECT count(*) AS rows FROM ${table}`),
     ),
-    c.env.DB.prepare(`SELECT count(*) AS total,
+    db.prepare(`SELECT count(*) AS total,
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
       sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
       sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
@@ -417,7 +420,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
     // Mirror the model's possession guards against the persisted team box rows.
     // This is intentionally a read-only diagnostic: it never changes which rows
     // are published or attributes a player identity.
-    c.env.DB.prepare(`WITH raw AS (
+    db.prepare(`WITH raw AS (
       SELECT g.id,g.periods,g.home_score,g.away_score,
         json_extract(h.stats_json,'$.field_goals_attempted') AS h_fga,
         json_extract(h.stats_json,'$.free_throws_attempted') AS h_fta,
@@ -489,7 +492,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
       FROM scored`),
   ]);
-  const receipts = await c.env.DB.prepare(
+  const receipts = await db.prepare(
     `SELECT dataset, count(*) AS source_count,
             MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
        FROM bb_sources
@@ -528,6 +531,7 @@ app.get(
   zValidator("query", unresolvedResearchQuery),
   async (c) => {
     const { dataset, season, reason, q, page, limit } = c.req.valid("query");
+    const db = researchDb(c.env);
     const clauses = ["1=1"];
     const binds: Array<string | number> = [];
     if (dataset !== "all") {
@@ -548,10 +552,10 @@ app.get(
     }
     const where = clauses.join(" AND ");
     const [count, rows] = await Promise.all([
-      c.env.DB.prepare(`SELECT count(*) AS total FROM bb_unresolved WHERE ${where}`)
+      db.prepare(`SELECT count(*) AS total FROM bb_unresolved WHERE ${where}`)
         .bind(...binds)
         .first<{ total: number }>(),
-      c.env.DB.prepare(
+      db.prepare(
         `SELECT dataset,season,row_index,reason,source_json
            FROM bb_unresolved
           WHERE ${where}
@@ -598,6 +602,7 @@ const ncaaLeaderQuery = z.object({
   page: z.coerce.number().int().min(0).max(100).default(0),
 });
 app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
+  const db = researchDb(c.env);
   const { division, stat, q, page } = c.req.valid("query");
   const where = division === "all" ? "season=?" : "season=? AND division=?";
   const binds: Array<string | number> = division === "all" ? [2026] : [2026, Number(division)];
@@ -611,7 +616,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   // one column per measure (the production database is at its size ceiling).
   const publisherRankColumn = stat === "apg" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
-  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
+  const rows = await db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   const provenance = stat === "apg"
     ? {

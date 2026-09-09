@@ -9,6 +9,8 @@ import sys
 import time
 from pathlib import Path
 
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
+
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
@@ -175,7 +177,7 @@ def import_sql_batches(first_path, log_prefix, start_env):
                 "scripts/cloudflare.py",
                 "d1",
                 "execute",
-                "bball-silvermine",
+                D1_DB_NAME,
                 "--remote",
                 "--file",
                 os.path.relpath(target, ROOT / "worker"),
@@ -404,7 +406,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0009_basketball_research.sql",
@@ -416,7 +418,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0017_basketball_team_season.sql",
@@ -428,7 +430,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0018_basketball_boutique.sql",
@@ -440,7 +442,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0019_basketball_lineups.sql",
@@ -452,7 +454,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0020_basketball_player_core.sql",
@@ -464,7 +466,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0021_basketball_ncaa_player_box.sql",
@@ -476,7 +478,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0022_basketball_ncaa_rosters.sql",
@@ -488,7 +490,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0023_basketball_ncaa_shooting.sql",
@@ -500,7 +502,7 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0026_cbbd_recruiting.sql",

@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -20,7 +21,7 @@ export const ncaaRosters = new Hono<{ Bindings: Bindings }>();
 /** Stream the exact NCAA roster release whose receipt is active in D1. */
 ncaaRosters.get("/source", zValidator("query", sourceSchema), async (c) => {
   const { season } = c.req.valid("query");
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
   ).bind("ncaa_team_rosters", season).first<{ receipt_json: string }>();
   let digest = "";
@@ -48,12 +49,12 @@ ncaaRosters.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, classYear, position, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, classes, positions, count, source] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_rosters WHERE season=?").bind(season),
-      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
+    const [seasons, classes, positions, count, source] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+      researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_rosters WHERE season=?").bind(season),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -80,8 +81,8 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
   if (classYear) { clauses.push("json_extract(profile_json,'$.class')=?"); binds.push(classYear); }
   if (position) { clauses.push("json_extract(profile_json,'$.position')=?"); binds.push(position); }
   const where = clauses.join(" AND ");
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM bb_ncaa_rosters WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_ncaa_rosters WHERE ${where}`).bind(...binds).first<{ total: number }>();
+  const rows = await researchDb(c.env).prepare(
     `SELECT r.season,r.team_id,r.player_id,r.team_name,r.player_name,r.profile_json,
             s.games AS recorded_games,s.minutes AS recorded_minutes,
             s.points AS recorded_points,s.rebounds AS recorded_rebounds,

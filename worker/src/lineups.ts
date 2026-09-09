@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -25,7 +26,7 @@ export const lineups = new Hono<{ Bindings: Bindings }>();
 lineups.get("/", zValidator("query", schema), async (c) => {
   const { season, metric: requested, q, minPoss, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
-    const available = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_lineups ORDER BY season DESC").all<{ season: number }>();
+    const available = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_lineups ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
     return c.json({ seasons: available.results.map((row) => row.season), metrics });
   }
@@ -37,9 +38,9 @@ lineups.get("/", zValidator("query", schema), async (c) => {
     ? "season=? AND json_extract(stats_json,'$.poss')>=? AND (team_name LIKE ? OR players_json LIKE ?)"
     : "season=? AND json_extract(stats_json,'$.poss')>=?";
   const binds: Array<string | number> = search ? [season, minPoss, search, search] : [season, minPoss];
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_lineups WHERE ${where}`).bind(path, ...binds).first<{ total: number; non_null: number }>();
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_lineups WHERE ${where}`).bind(path, ...binds).first<{ total: number; non_null: number }>();
   const order = `json_extract(stats_json, '${path}') IS NULL, json_extract(stats_json, '${path}') ${direction === "asc" ? "ASC" : "DESC"}, team_name ASC, lineup_key ASC`;
-  const rows = await c.env.DB.prepare(`SELECT lineup_key,team_name,players_json,stats_json FROM bb_lineups WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all<{ lineup_key: string; team_name: string; players_json: string; stats_json: string }>();
+  const rows = await researchDb(c.env).prepare(`SELECT lineup_key,team_name,players_json,stats_json FROM bb_lineups WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all<{ lineup_key: string; team_name: string; players_json: string; stats_json: string }>();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     season, metric, min_poss: minPoss, page, page_size: 40,

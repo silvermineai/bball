@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 
 type Profile = { id: string; games: { id: string }[]; [key: string]: unknown };
@@ -22,7 +23,7 @@ shooting.get("/:kind/:id", async (c) => {
     return c.json({ error: "Invalid shooting profile parameters" }, 400);
   }
   const season = +seasonText;
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     `SELECT p.payload_json,s.edition,s.receipt_json
     FROM bb_shot_profiles p JOIN bb_shot_sources s ON s.season=p.season AND s.edition=p.edition
     WHERE p.season=? AND p.kind=? AND p.entity_id=?`,
@@ -38,13 +39,13 @@ shooting.get("/:kind/:id", async (c) => {
   for (let i = 0; i < games.length; i += 40) {
     const ids = games.slice(i, i + 40);
     chunks.push(
-      c.env.DB.prepare(
+      researchDb(c.env).prepare(
         `SELECT game_id,payload_json FROM bb_shot_games WHERE edition=? AND season=? AND game_id IN (${ids.map(() => "?").join(",")}) ORDER BY game_id,part`,
       ).bind(row.edition, season, ...ids),
     );
   }
   const results = chunks.length
-    ? await c.env.DB.batch<{ game_id: string; payload_json: string }>(chunks)
+    ? await researchDb(c.env).batch<{ game_id: string; payload_json: string }>(chunks)
     : [];
   const shots = results.flatMap((result) =>
     result.results.flatMap((game) =>

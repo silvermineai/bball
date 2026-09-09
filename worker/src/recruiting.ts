@@ -1,10 +1,11 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 export const recruiting = new Hono<{ Bindings: Env }>();
 recruiting.get("/", async (c) => {
   const value = c.req.query("season") ?? "2027";
   if (!/^\d{4}$/.test(value) || +value < 2025 || +value > 2035)
     return c.json({ error: "Invalid recruiting season" }, 400);
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     `SELECT r.payload_json,r.first_recorded_at
     FROM bb_recruiting_releases r JOIN bb_recruiting_current a ON a.edition=r.edition AND a.season=r.season
     WHERE a.season=?`,

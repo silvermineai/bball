@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -27,10 +28,10 @@ const metricExpression = (metric: Metric) => ({
 ncaaHighSchools.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minPlayers, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, schools, source] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT count(DISTINCT json_extract(profile_json,'$.high_school')) AS total FROM bb_ncaa_rosters WHERE season=? AND json_extract(profile_json,'$.high_school') IS NOT NULL AND json_extract(profile_json,'$.high_school') != ''").bind(season),
-      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
+    const [seasons, schools, source] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_rosters ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT count(DISTINCT json_extract(profile_json,'$.high_school')) AS total FROM bb_ncaa_rosters WHERE season=? AND json_extract(profile_json,'$.high_school') IS NOT NULL AND json_extract(profile_json,'$.high_school') != ''").bind(season),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
@@ -67,8 +68,8 @@ ncaaHighSchools.get("/", zValidator("query", querySchema), async (c) => {
     WHERE ${where}
     GROUP BY json_extract(r.profile_json,'$.high_school')`;
   const value = metricExpression(metric);
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM (${aggregate}) schools WHERE players >= ? AND (${value}) IS NOT NULL`).bind(...binds, minPlayers).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(`WITH schools AS (${aggregate}), ranked AS (
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) schools WHERE players >= ? AND (${value}) IS NOT NULL`).bind(...binds, minPlayers).first<{ total: number }>();
+  const rows = await researchDb(c.env).prepare(`WITH schools AS (${aggregate}), ranked AS (
       SELECT schools.*, ${value} AS value FROM schools WHERE players >= ?
     ) SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
     WHERE value IS NOT NULL ORDER BY value DESC, high_school ASC LIMIT 50 OFFSET ?`).bind(...binds, minPlayers, page * 50).all();

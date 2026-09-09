@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -44,8 +45,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       ? "SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"
       : "SELECT count(*) AS total, count(*) AS pregame FROM audit_markets WHERE sport=?";
     const [seasons, archive] = football
-      ? await c.env.DB.batch([c.env.DB.prepare(seasonsSql), c.env.DB.prepare(archiveSql)])
-      : await c.env.DB.batch([c.env.DB.prepare(seasonsSql).bind(sport), c.env.DB.prepare(archiveSql).bind(sport)]);
+      ? await researchDb(c.env).batch([researchDb(c.env).prepare(seasonsSql), researchDb(c.env).prepare(archiveSql)])
+      : await researchDb(c.env).batch([researchDb(c.env).prepare(seasonsSql).bind(sport), researchDb(c.env).prepare(archiveSql).bind(sport)]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       sport,
@@ -68,10 +69,10 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     : search ? [season, sport, search, search, search, search] : [season, sport];
   const marketTable = football ? "football_markets" : "audit_markets";
   const gameTable = football ? "football_games" : "bb_games";
-  const count = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(
     `SELECT count(*) AS total FROM ${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     football
       ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,

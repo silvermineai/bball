@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -60,7 +61,7 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const { fromSeason, toSeason, metric, minGames, minMinutes, q, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
   if (meta === "1") {
-    const seasons = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
+    const seasons = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
     return c.json({ seasons: seasons.results.map((row) => row.season), metrics });
   }
@@ -93,8 +94,8 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
     FROM bb_ncaa_player_season WHERE ${where}`;
   const value = metricExpression(metric);
   const qualification = `games >= ? AND minutes >= ? AND (${value}) IS NOT NULL`;
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, minGames, minMinutes).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(`WITH historical AS (${aggregate}), ranked AS (
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, minGames, minMinutes).first<{ total: number }>();
+  const rows = await researchDb(c.env).prepare(`WITH historical AS (${aggregate}), ranked AS (
       SELECT historical.*, ${value} AS value FROM historical WHERE ${qualification}
     ) SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
     ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, minGames, minMinutes, page * 50).all();

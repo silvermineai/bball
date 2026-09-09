@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -34,7 +35,7 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
   if (meta === "1") {
-    const seasons = await c.env.DB.prepare(
+    const seasons = await researchDb(c.env).prepare(
       `SELECT DISTINCT season FROM ${kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value"} ORDER BY season DESC`,
     ).all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
@@ -55,14 +56,14 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
     : search
       ? kind === "ratings" ? [season, search, search] : [season, search, search, search]
       : [season];
-  const count = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(
     `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
   ).bind(path, ...binds).first<{ total: number; non_null: number }>();
   const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
   const select = kind === "ratings"
     ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
     : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`,
   ).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");

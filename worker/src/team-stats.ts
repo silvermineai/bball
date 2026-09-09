@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -72,7 +73,7 @@ export const teamStats = new Hono<{ Bindings: Bindings }>();
 teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const { season, category, stat, q, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
-    const seasons = await c.env.DB.prepare("SELECT DISTINCT season FROM bb_team_season ORDER BY season DESC").all<{ season: number }>();
+    const seasons = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_team_season ORDER BY season DESC").all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
     return c.json({ seasons: seasons.results.map((row) => row.season), fields });
   }
@@ -83,11 +84,11 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const search = q ? `%${q}%` : null;
   const where = search ? "season=? AND (team_name LIKE ? OR team_id LIKE ?)" : "season=?";
   const binds: Array<string | number> = search ? [season, search, search] : [season];
-  const count = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(
     `SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_team_season WHERE ${where}`,
   ).bind(valuePath, ...binds).first<{ total: number; non_null: number }>();
   const order = `json_extract(stats_json, '${valuePath}') IS NULL, json_extract(stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, team_name ASC, team_id ASC`;
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     `SELECT team_id,team_name,team_abbreviation,
             json_extract(stats_json, '${valuePath}') AS value,
             json_extract(stats_json, '${displayPath}') AS display

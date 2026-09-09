@@ -16,6 +16,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
+
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / ".local/basketball.sqlite3"
 OUT = ROOT / ".local/basketball-core.sql"
@@ -188,7 +190,7 @@ def main():
                     str(ROOT / "scripts/cloudflare.py"),
                     "d1",
                     "execute",
-                    "bball-silvermine",
+                    D1_DB_NAME,
                     "--remote",
                     "--file",
                     os.path.relpath(batch, ROOT / "worker"),

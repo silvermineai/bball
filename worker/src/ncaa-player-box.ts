@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -58,10 +59,10 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, count, source] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
-      c.env.DB.prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
-      c.env.DB.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
+    const [seasons, count, source] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
+      researchDb(c.env).prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
     ]);
     const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
     c.header("Cache-Control", "public, max-age=300");
@@ -74,7 +75,7 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       },
     });
   }
-  const rawCount = await c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
+  const rawCount = await researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
   const archiveMode = Number(rawCount?.total || 0) > 0 ? "games" : "season";
   const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
   const clauses = ["season=?"];
@@ -87,8 +88,8 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(...(archiveMode === "games" ? [search, search, search, search, search] : [search, search, search, search]));
   }
   const where = clauses.join(" AND ");
-  const count = await c.env.DB.prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>();
+  const rows = await researchDb(c.env).prepare(
     archiveMode === "games"
       ? `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
          FROM bb_ncaa_player_box WHERE ${where}

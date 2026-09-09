@@ -1,9 +1,12 @@
 """Validate and sync the cached NCAA national-stat derivative to D1."""
+import os
 
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public/data/basketball/ncaa-individual.json"
@@ -39,7 +42,7 @@ for path in [ROOT / "worker/migrations/0016_ncaa_individual.sql", SQL]:
             str(ROOT / "scripts/cloudflare.py"),
             "d1",
             "execute",
-            "bball-silvermine",
+            D1_DB_NAME,
             "--remote",
             "--file",
             str(path),

@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -20,9 +21,9 @@ ncaaPlayerCard.get("/:id/games", zValidator("query", gamesQuerySchema), async (c
   const playerId = c.req.param("id");
   if (!/^\d{1,15}$/.test(playerId)) return c.json({ error: "Invalid NCAA player ID" }, 400);
   const { season, page, limit } = c.req.valid("query");
-  const [count, result] = await c.env.DB.batch([
-    c.env.DB.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=? AND season=?").bind(playerId, season),
-    c.env.DB.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, season, limit, page * limit),
+  const [count, result] = await researchDb(c.env).batch([
+    researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=? AND season=?").bind(playerId, season),
+    researchDb(c.env).prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, season, limit, page * limit),
   ]);
   const total = Number((count.results[0] as { total?: number } | undefined)?.total || 0);
   if (!total) return c.json({ error: "No NCAA game rows found" }, 404);
@@ -50,13 +51,13 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
   const playerId = c.req.param("id");
   if (!/^\d{1,15}$/.test(playerId)) return c.json({ error: "Invalid NCAA player ID" }, 400);
   const { season } = c.req.valid("query");
-  const [seasons, rosters, shooting, games] = await c.env.DB.batch([
-    c.env.DB.prepare("SELECT season,player_id,team_id,player_name,team_name,games,stats_json FROM bb_ncaa_player_season WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
-    c.env.DB.prepare("SELECT season,team_id,team_name,player_name,profile_json FROM bb_ncaa_rosters WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
-    c.env.DB.prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
-    c.env.DB.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT 12").bind(playerId, season),
+  const [seasons, rosters, shooting, games] = await researchDb(c.env).batch([
+    researchDb(c.env).prepare("SELECT season,player_id,team_id,player_name,team_name,games,stats_json FROM bb_ncaa_player_season WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+    researchDb(c.env).prepare("SELECT season,team_id,team_name,player_name,profile_json FROM bb_ncaa_rosters WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+    researchDb(c.env).prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+    researchDb(c.env).prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT 12").bind(playerId, season),
   ]);
-  const receipts = await c.env.DB.prepare(
+  const receipts = await researchDb(c.env).prepare(
     "SELECT dataset,season,receipt_json FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_shots','ncaa_team_rosters','ncaa_rapm','player_season') ORDER BY dataset",
   ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>();
   const sourceReceipts = receipts.results.flatMap((row) => {

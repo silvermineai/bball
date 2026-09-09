@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -27,13 +28,13 @@ news.get("/", zValidator("query", querySchema), async (c) => {
     : [sport];
 
   if (meta === "1") {
-    const [summary, releases] = await c.env.DB.batch([
-      c.env.DB.prepare(
+    const [summary, releases] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare(
         `SELECT count(*) AS total, max(published) AS latest_published,
                 max(last_seen_at) AS latest_seen_at
            FROM bb_news_articles WHERE ${where}`,
       ).bind(...binds),
-      c.env.DB.prepare(
+      researchDb(c.env).prepare(
         "SELECT edition,generated_at,article_count,feeds_json FROM bb_news_releases ORDER BY generated_at DESC LIMIT 12",
       ),
     ]);
@@ -56,9 +57,9 @@ news.get("/", zValidator("query", querySchema), async (c) => {
     });
   }
 
-  const [count, rows] = await c.env.DB.batch([
-    c.env.DB.prepare(`SELECT count(*) AS total FROM bb_news_articles WHERE ${where}`).bind(...binds),
-    c.env.DB.prepare(
+  const [count, rows] = await researchDb(c.env).batch([
+    researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_news_articles WHERE ${where}`).bind(...binds),
+    researchDb(c.env).prepare(
       `SELECT id,publisher,sport,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at
          FROM bb_news_articles WHERE ${where}
         ORDER BY published DESC,id DESC LIMIT ? OFFSET ?`,

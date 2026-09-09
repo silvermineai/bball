@@ -3,11 +3,15 @@
 
 from __future__ import annotations
 
+import os
+
 import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public/data/news.json"
@@ -76,7 +80,7 @@ def main() -> None:
     statements.append("COMMIT;")
     SQL.write_text("\n".join(statements) + "\n")
     subprocess.run(
-        [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", "bball-silvermine", "--remote", "--file", str(MIGRATION)],
+        [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--file", str(MIGRATION)],
         cwd=ROOT,
         check=True,
     )
@@ -87,7 +91,7 @@ def main() -> None:
     commands = [lines[1]] + ["\n".join(lines[start : start + 5]) for start in range(2, len(lines) - 1, 5)]
     for command in commands:
         subprocess.run(
-            [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", "bball-silvermine", "--remote", "--command", command],
+            [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--command", command],
             cwd=ROOT,
             check=True,
         )

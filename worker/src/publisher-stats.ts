@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -82,7 +83,7 @@ export const publisherStats = new Hono<{ Bindings: Bindings }>();
 publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   const { season, category, stat, q, min_games, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
-    const seasons = await c.env.DB.prepare(
+    const seasons = await researchDb(c.env).prepare(
       "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
     ).all<{ season: number }>();
     c.header("Cache-Control", "public, max-age=300");
@@ -108,7 +109,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   // display string instead of inventing a numeric value. Count that display
   // path for completeness so the browser reflects the source rows accurately.
   const completenessPath = field.unit === "text" ? displayPath : valuePath;
-  const count = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(
     `SELECT count(*) AS total, count(json_extract(s.stats_json, ?)) AS non_null
        FROM bb_player_season s
        LEFT JOIN bb_players p ON p.id=s.athlete_id
@@ -120,7 +121,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   const order = field.unit === "text"
     ? "p.name ASC, s.athlete_id ASC"
     : `json_extract(s.stats_json, '${valuePath}') IS NULL, json_extract(s.stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, p.name ASC, s.athlete_id ASC`;
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     `SELECT s.athlete_id AS id,p.name,p.position,s.team_id,
             COALESCE(r.team_name,s.team_id) AS team,
             json_extract(s.stats_json, '${valuePath}') AS value,
@@ -134,7 +135,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
       WHERE ${where}
       ORDER BY ${order} LIMIT 40 OFFSET ?`,
   ).bind(season, ...binds, page * 40).all();
-  const receipts = await c.env.DB.prepare(
+  const receipts = await researchDb(c.env).prepare(
     "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset='player_season' AND season=? ORDER BY dataset,season",
   ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>();
   const sourceReceipts = receipts.results.flatMap((row) => {

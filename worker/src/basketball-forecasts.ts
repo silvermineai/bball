@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -28,14 +29,14 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const { season, status, q, model, page, limit, meta } = c.req.valid("query");
 
   if (meta === "1") {
-    const [seasons, models, modelMeta] = await c.env.DB.batch([
-      c.env.DB.prepare(
+    const [seasons, models, modelMeta] = await researchDb(c.env).batch([
+      researchDb(c.env).prepare(
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
-      c.env.DB.prepare(
+      researchDb(c.env).prepare(
         "SELECT model_id, count(*) AS forecasts, MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at FROM bb_forecasts GROUP BY model_id ORDER BY last_created_at DESC, model_id",
       ),
-      c.env.DB.prepare(
+      researchDb(c.env).prepare(
         `SELECT id AS model_id, created_at AS model_created_at,
                 json_extract(artifact_json,'$.version') AS version,
                 json_extract(artifact_json,'$.target_season') AS target_season,
@@ -108,10 +109,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(model);
   }
   const where = clauses.join(" AND ");
-  const count = await c.env.DB.prepare(
+  const count = await researchDb(c.env).prepare(
     `SELECT count(*) AS total FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(
+  const rows = await researchDb(c.env).prepare(
     `SELECT f.game_id,f.model_id,f.created_at,f.prediction_json,
             g.season,g.starts_at,g.home_id,g.away_id,g.home_name,g.away_name,
             g.home_score,g.away_score,g.completed,g.neutral,g.time_tbd,g.venue,g.broadcast

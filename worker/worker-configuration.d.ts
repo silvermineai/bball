@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	RESEARCH_ARCHIVE: R2Bucket;
 	DB: D1Database;
+	RESEARCH_DB: D1Database;
 	ASSETS: Fetcher;
 }
 declare namespace Cloudflare {

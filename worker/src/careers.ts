@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 export const careers = new Hono<{ Bindings: Env }>();
 
@@ -43,7 +44,7 @@ careers.get("/source", async (c) => {
   if (value === undefined || !/^\d{4}$/.test(value) || +value < 2003 || +value > 2026)
     return c.json({ error: "Invalid historical source season" }, 400);
   const season = +value;
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     "SELECT receipt_json FROM bb_career_seasons WHERE season=?",
   ).bind(season).first<{ receipt_json: string }>();
   let source: { sha256?: unknown } | null = null;
@@ -83,7 +84,7 @@ careers.get("/:id", async (c) => {
       (!/^\d{4}$/.test(value) || +value < 2003 || +value > 2026))
   )
     return c.json({ error: "Invalid player or historical season" }, 400);
-  const profiles = await c.env.DB.prepare(
+  const profiles = await researchDb(c.env).prepare(
     `SELECT p.season,p.payload_json,s.edition
     FROM bb_career_profiles p JOIN bb_career_seasons s ON s.season=p.season AND s.edition=p.edition
     WHERE p.athlete_id=? ORDER BY p.season DESC`,
@@ -93,7 +94,7 @@ careers.get("/:id", async (c) => {
   if (!profiles.results.length)
     return c.json({ error: "No historical box-score identity found" }, 404);
   const season = value === undefined ? profiles.results[0].season : +value;
-  const source = await c.env.DB.prepare(
+  const source = await researchDb(c.env).prepare(
     "SELECT edition,receipt_json,coverage_json FROM bb_career_seasons WHERE season=?",
   )
     .bind(season)
@@ -110,12 +111,12 @@ careers.get("/:id", async (c) => {
       { error: "A new historical edition is activating. Please reload." },
       503,
     );
-  const logs = await c.env.DB.prepare(
+  const logs = await researchDb(c.env).prepare(
     "SELECT payload_json FROM bb_career_logs WHERE edition=? AND season=? AND athlete_id=? ORDER BY part",
   )
     .bind(source.edition, season, id)
     .all<{ payload_json: string }>();
-  const core = await c.env.DB.prepare(
+  const core = await researchDb(c.env).prepare(
     "SELECT season,profile_json FROM bb_player_core WHERE athlete_id=? ORDER BY season DESC",
   )
     .bind(id)

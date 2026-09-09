@@ -1,4 +1,5 @@
 """Archive historical NCAA lineup sources and import their aggregates into D1."""
+import os
 
 import hashlib
 import json
@@ -6,6 +7,8 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / ".local/basketball"
@@ -91,7 +94,7 @@ def main() -> None:
             path = OUT / item["name"]
             if hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
                 raise SystemExit(f"SQL batch changed: {path.name}")
-            run(["d1", "execute", "bball-silvermine", "--remote", "--yes", "--file", str(path)])
+            run(["d1", "execute", D1_DB_NAME, "--remote", "--yes", "--file", str(path)])
             print(f"Imported lineup season {season} batch {index}/{len(season_files)}", flush=True)
     print("Historical lineup archive synced", flush=True)
 

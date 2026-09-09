@@ -1,4 +1,5 @@
 """Archive verified sources in R2, then activate complete D1 historical seasons."""
+import os
 
 import argparse
 import hashlib
@@ -7,6 +8,8 @@ import subprocess
 import sys
 import tarfile
 from pathlib import Path
+
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
@@ -83,7 +86,7 @@ run(
     [
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         str(ROOT / "worker/migrations/0013_basketball_careers.sql"),
@@ -95,7 +98,7 @@ result = subprocess.run(
         str(ROOT / "scripts/cloudflare.py"),
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--command",
         "SELECT season,edition FROM bb_career_seasons",
@@ -147,7 +150,7 @@ for index, path in enumerate(files):
         continue
     if path.name in checkpoint["completed"]:
         continue
-    run(["d1", "execute", "bball-silvermine", "--remote", "--file", str(path)])
+    run(["d1", "execute", D1_DB_NAME, "--remote", "--file", str(path)])
     checkpoint["completed"].append(path.name)
     save()
     print(f"Historical D1 batch {index + 1}/{len(files)} imported", flush=True)

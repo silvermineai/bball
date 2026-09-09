@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 
 /**
@@ -24,19 +25,19 @@ recruitingIntake.get("/", async (c) => {
     return c.json({ error: "Invalid recruiting intake season" }, 400);
   const season = +value;
   const [summary, providers, statuses, providerFeeds] = await Promise.all([
-    c.env.DB.prepare(
+    researchDb(c.env).prepare(
       `SELECT count(*) AS total, max(captured_at) AS latest_captured_at
        FROM bb_recruiting_intake WHERE season=?`,
     ).bind(season).first<{ total: number; latest_captured_at: string | null }>(),
-    c.env.DB.prepare(
+    researchDb(c.env).prepare(
       `SELECT provider, count(*) AS rows, max(captured_at) AS latest_captured_at
        FROM bb_recruiting_intake WHERE season=? GROUP BY provider ORDER BY latest_captured_at DESC, provider`,
     ).bind(season).all<{ provider: string; rows: number; latest_captured_at: string | null }>(),
-    c.env.DB.prepare(
+    researchDb(c.env).prepare(
       `SELECT status, count(*) AS rows FROM bb_recruiting_intake
        WHERE season=? GROUP BY status ORDER BY status`,
     ).bind(season).all<{ status: string; rows: number }>(),
-    c.env.DB.prepare(
+    researchDb(c.env).prepare(
       `SELECT provider, kind, count(*) AS rows, max(captured_at) AS latest_captured_at
        FROM bb_cbbd_recruiting WHERE season=?
        GROUP BY provider, kind ORDER BY latest_captured_at DESC, provider, kind`,

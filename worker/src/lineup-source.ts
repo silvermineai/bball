@@ -1,3 +1,4 @@
+import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -10,7 +11,7 @@ export const lineupSource = new Hono<{ Bindings: Bindings }>();
 
 lineupSource.get("/source", zValidator("query", query), async (c) => {
   const { season } = c.req.valid("query");
-  const row = await c.env.DB.prepare(
+  const row = await researchDb(c.env).prepare(
     "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
   ).bind("ncaa_lineups", season).first<{ receipt_json: string }>();
   let digest = "";

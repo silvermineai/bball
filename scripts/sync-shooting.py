@@ -1,10 +1,13 @@
 """Archive the attributed PBP file in R2 and activate a complete D1 shot edition."""
+import os
 
 import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
 
 ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
@@ -93,13 +96,13 @@ run(
     [
         "d1",
         "execute",
-        "bball-silvermine",
+        D1_DB_NAME,
         "--remote",
         "--file",
         "migrations/0011_basketball_shooting.sql",
     ]
 )
 for i, path in enumerate(files):
-    run(["d1", "execute", "bball-silvermine", "--remote", "--file", str(path)])
+    run(["d1", "execute", D1_DB_NAME, "--remote", "--file", str(path)])
     print(f"D1 shooting batch {i + 1}/{len(files)} imported", flush=True)
 print("Complete shooting edition activated", flush=True)
