@@ -54,6 +54,18 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(source["cells"][-1], "22.1")
         self.assertEqual(source["rank"], 4)
 
+    def test_export_promotes_each_source_rank_to_typed_release_field(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(SCHEMA)
+        conn.execute(
+            "INSERT INTO ncaa_players (player_id,division,name,source_stats_json,updated_at) VALUES (?,?,?,?,?)",
+            (9, 1, "Ranked Player", '{"fg_pct":{"rank":12,"value":65.4},"dbl_dbl":{"rank":33,"value":8}}', "2026-06-12 23:00:00"),
+        )
+        release = export_release(conn)
+        player = release["players"][0]
+        self.assertEqual(player["fg_pct_rank"], 12)
+        self.assertEqual(player["dbl_dbl_rank"], 33)
+
     def test_ensure_schema_upgrades_legacy_snapshot(self):
         conn = sqlite3.connect(":memory:")
         legacy_schema = SCHEMA.replace("  source_stats_json TEXT,\n", "")
