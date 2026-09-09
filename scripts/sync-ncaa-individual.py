@@ -20,19 +20,15 @@ def quote(value):
         return "NULL"
     return "'" + str(value).replace("'", "''") + "'"
 
-rank_slugs = ("ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl")
-rank_columns = ", ".join(f"{slug}_rank INTEGER" for slug in rank_slugs)
-rank_names = ",".join(f"{slug}_rank" for slug in rank_slugs)
-rank_values = ",".join(f"player.get('{slug}_rank')" for slug in rank_slugs)
 lines = [
-    f"CREATE TABLE IF NOT EXISTS ncaa_individual_players (season INTEGER NOT NULL, division INTEGER NOT NULL CHECK(division IN (1,2,3)), player_id TEXT NOT NULL, name TEXT NOT NULL, team_name TEXT, ppg REAL, rpg REAL, apg REAL, mpg REAL, {rank_columns}, payload_json TEXT NOT NULL, PRIMARY KEY(season, division, player_id));",
+    "CREATE TABLE IF NOT EXISTS ncaa_individual_players (season INTEGER NOT NULL, division INTEGER NOT NULL CHECK(division IN (1,2,3)), player_id TEXT NOT NULL, name TEXT NOT NULL, team_name TEXT, ppg REAL, rpg REAL, apg REAL, mpg REAL, ppg_rank INTEGER, payload_json TEXT NOT NULL, PRIMARY KEY(season, division, player_id));",
     "CREATE INDEX IF NOT EXISTS ncaa_individual_division_rank ON ncaa_individual_players(season, division, ppg_rank);",
     "DELETE FROM ncaa_individual_players WHERE season=2026;",
 ]
 for player in players:
     payload = json.dumps(player, ensure_ascii=False, separators=(",", ":"))
-    values = [2026, player["division"], player["player_id"], player["name"], player.get("team_name"), player.get("ppg"), player.get("rpg"), player.get("apg"), player.get("mpg"), *[player.get(f"{slug}_rank") for slug in rank_slugs], payload]
-    lines.append("INSERT OR REPLACE INTO ncaa_individual_players (season,division,player_id,name,team_name,ppg,rpg,apg,mpg," + rank_names + ",payload_json) VALUES (" + ",".join(map(quote, values)) + ");")
+    values = [2026, player["division"], player["player_id"], player["name"], player.get("team_name"), player.get("ppg"), player.get("rpg"), player.get("apg"), player.get("mpg"), player.get("ppg_rank"), payload]
+    lines.append("INSERT OR REPLACE INTO ncaa_individual_players (season,division,player_id,name,team_name,ppg,rpg,apg,mpg,ppg_rank,payload_json) VALUES (" + ",".join(map(quote, values)) + ");")
 SQL.parent.mkdir(parents=True, exist_ok=True)
 SQL.write_text("\n".join(lines) + "\n")
 

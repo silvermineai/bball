@@ -503,6 +503,38 @@ describe("bball api", () => {
     });
   });
 
+  it("returns publisher ranks from the retained source row", async () => {
+    const prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "42",
+            division: 1,
+            name: "Example Player",
+            team_name: "Example U",
+            stat_value: 12.5,
+            publisher_rank: 7,
+            payload_json: JSON.stringify({
+              player_id: 42,
+              rpg: 12.5,
+              source_stats: { rpg: { rank: 7, value: 12.5 } },
+            }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=rpg&division=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      provenance: { kind: "publisher_snapshot", publisher_rank: true },
+      rows: [{ publisher_rank: 7, rpg: 12.5 }],
+    });
+  });
+
   it("rejects invalid NCAA player card IDs and seasons before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-card/not-an-id",

@@ -517,7 +517,10 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   if (search) binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
   const columnStat = new Set(["ppg", "rpg", "apg", "mpg"]).has(stat);
   const value = columnStat ? stat : `json_extract(payload_json, '$.${stat}')`;
-  const publisherRankColumn = stat === "apg" ? "NULL" : `${stat}_rank`;
+  // The compact D1 table keeps the complete national source row in
+  // payload_json. Read publisher rank from that receipt rather than adding
+  // one column per measure (the production database is at its size ceiling).
+  const publisherRankColumn = stat === "apg" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
