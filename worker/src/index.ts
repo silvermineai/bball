@@ -381,11 +381,29 @@ app.get("/api/basketball/research/coverage", async (c) => {
     ncaa_rosters: "bb_ncaa_rosters",
     ncaa_player_shooting: "bb_ncaa_player_shooting",
   };
-  const counts = await c.env.DB.batch<{ rows: number }>(
-    Object.values(tables).map((table) =>
+  type CoverageCount = {
+    rows?: number;
+    total?: number;
+    neutral?: number;
+    missing_venue?: number;
+    unconfirmed_start?: number;
+    same_participant?: number;
+    invalid_periods?: number;
+    completed_missing_score?: number;
+  };
+  const counts = await c.env.DB.batch<CoverageCount>([
+    ...Object.values(tables).map((table) =>
       c.env.DB.prepare(`SELECT count(*) AS rows FROM ${table}`),
     ),
-  );
+    c.env.DB.prepare(`SELECT count(*) AS total,
+      sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
+      sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
+      sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
+      sum(CASE WHEN home_id=away_id THEN 1 ELSE 0 END) AS same_participant,
+      sum(CASE WHEN periods IS NULL OR periods<1 THEN 1 ELSE 0 END) AS invalid_periods,
+      sum(CASE WHEN completed=1 AND (home_score IS NULL OR away_score IS NULL) THEN 1 ELSE 0 END) AS completed_missing_score
+      FROM bb_games`),
+  ]);
   const receipts = await c.env.DB.prepare(
     `SELECT dataset, count(*) AS source_count,
             MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
@@ -400,6 +418,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
       rows: counts[index].results[0].rows,
     })),
     source_receipts: receipts.results,
+    location_validation: (() => {
+      const row = counts[Object.keys(tables).length]?.results[0];
+      return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
+    })(),
   });
 });
 

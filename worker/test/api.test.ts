@@ -109,7 +109,10 @@ describe("bball api", () => {
     });
     const batch = vi
       .fn()
-      .mockResolvedValue(Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })));
+      .mockResolvedValue([
+        ...Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })),
+        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, same_participant: 0, invalid_periods: 0, completed_missing_score: 0 }] },
+      ]);
     const response = await app.request(
       "/api/basketball/research/coverage",
       {},
@@ -135,6 +138,15 @@ describe("bball api", () => {
         latest_source_at: "2026-09-08T00:00:00Z",
       },
     ]);
+    expect((body as typeof body & { location_validation: Record<string, number> }).location_validation).toEqual({
+      total: 7,
+      neutral: 2,
+      missing_venue: 1,
+      unconfirmed_start: 3,
+      same_participant: 0,
+      invalid_periods: 0,
+      completed_missing_score: 0,
+    });
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
   });
 

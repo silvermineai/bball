@@ -6,6 +6,15 @@ import { date } from "../../_lib/format";
 type CoverageResponse = {
   coverage: Array<{ dataset: string; rows: number }>;
   source_receipts: Array<{ dataset: string; source_count: number; latest_source_at: string | null }>;
+  location_validation?: {
+    total: number;
+    neutral: number;
+    missing_venue: number;
+    unconfirmed_start: number;
+    same_participant: number;
+    invalid_periods: number;
+    completed_missing_score: number;
+  } | null;
 };
 
 const labels: Record<string, string> = {
@@ -62,7 +71,20 @@ export default function CoverageLive() {
               <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th></tr></thead>
               <tbody>{data.source_receipts.map((receipt) => <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td></tr>)}</tbody>
             </table>
-          </div></>}
+          </div>{data.location_validation && <div className="paper-panel" style={{ marginTop: 20 }}>
+            <div className="eyebrow">Schedule integrity / location fields</div>
+            <h3>Know which game context is usable.</h3>
+            <div className="raw-stat-grid">
+              <div><dt>{data.location_validation.total.toLocaleString()}</dt><dd>Schedule records checked</dd></div>
+              <div><dt>{data.location_validation.neutral.toLocaleString()}</dt><dd>Neutral-site records</dd></div>
+              <div><dt>{data.location_validation.unconfirmed_start.toLocaleString()}</dt><dd>Unconfirmed start times</dd></div>
+              <div><dt>{data.location_validation.missing_venue.toLocaleString()}</dt><dd>Missing venue labels</dd></div>
+              <div><dt>{data.location_validation.same_participant.toLocaleString()}</dt><dd>Same-side participant IDs</dd></div>
+              <div><dt>{data.location_validation.invalid_periods.toLocaleString()}</dt><dd>Invalid period counts</dd></div>
+              <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
+            </div>
+            <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
+          </div>}</>}
           {football && <><div className="eyebrow" style={{ marginTop: 28 }}>Football D1</div><div className="strip">
             {footballRows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{footballLabel(row.dataset)}</span></div>)}
           </div><div className="table-scroll" style={{ marginTop: 20 }}>
