@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import GlobalSearch from "./_components/GlobalSearch";
 export const metadata: Metadata = {
   metadataBase: new URL("https://bball.silvermine.dev"),
   title: {
@@ -36,6 +37,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <br />
               2026–27 SEASON
             </div>
+            <GlobalSearch />
           </div>
           <nav className="main-nav" aria-label="Main navigation">
             <Link href="/football/">Football desk</Link>
