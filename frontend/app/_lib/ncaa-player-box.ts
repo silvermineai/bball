@@ -10,6 +10,17 @@ export function safeSum(left: number | null | undefined, right: number | null | 
   return left != null && right != null ? left + right : null;
 }
 
+/** Compute eFG% only when makes, threes and attempts are all source-reported. */
+export function effectiveFieldGoal(
+  fieldGoalsMade: number | null | undefined,
+  threesMade: number | null | undefined,
+  fieldGoalAttempts: number | null | undefined,
+) {
+  return fieldGoalsMade != null && threesMade != null
+    ? safeRate(fieldGoalsMade + 0.5 * threesMade, fieldGoalAttempts)
+    : null;
+}
+
 /** Compute the disclosed college TS% fallback without turning missing fields into zero. */
 export function trueShooting(stats: NumericStats) {
   const points = stats.pts;
