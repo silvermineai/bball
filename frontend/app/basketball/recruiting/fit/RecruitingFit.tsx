@@ -21,14 +21,16 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     if (["creation", "shooting", "rebounding", "defense", "workload"].includes(params.get("focus") || "")) setFocus(params.get("focus") as FitFocus);
     if ([200, 400, 800].includes(Number(params.get("min")))) setMinimumMinutes(Number(params.get("min")));
     setQuery(params.get("q") || "");
+    setPicked(params.getAll("pick").slice(0, 5));
     setHydrated(true);
   }, [teams]);
   useEffect(() => {
     if (!hydrated) return;
     const params = new URLSearchParams({ team: teamId, role, focus, min: String(minimumMinutes) });
     if (query) params.set("q", query);
+    picked.slice(0, 5).forEach((id) => params.append("pick", id));
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
-  }, [focus, hydrated, minimumMinutes, query, role, teamId]);
+  }, [focus, hydrated, minimumMinutes, picked, query, role, teamId]);
   const result = useMemo(() => data ? buildRecruitingFit(data.players, { teamId, role, focus, minimumMinutes, query }) : [], [data, focus, minimumMinutes, query, role, teamId]);
   const allCandidates = useMemo(() => data ? buildRecruitingFit(data.players, { teamId, role, focus, minimumMinutes }) : [], [data, focus, minimumMinutes, role, teamId]);
   const summaries = useMemo(() => data ? buildRoleSummaries(data.players, teamId) : [], [data, teamId]);
