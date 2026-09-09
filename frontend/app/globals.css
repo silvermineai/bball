@@ -1093,6 +1093,16 @@ th,
   line-height: 1.8;
   color: var(--muted);
 }
+.article-card .journal-editorial-lens {
+  border-left: 2px solid var(--orange);
+  padding-left: 12px;
+  color: var(--ink);
+}
+.article-card .journal-editorial-lens strong {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+}
 .article-card > a {
   display: block;
   margin-top: 22px;

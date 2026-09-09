@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { BBGame } from "../_lib/basketball-types";
 import type { Comparison } from "../_lib/research-types";
 import { date } from "../_lib/format";
+import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import {
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
@@ -61,6 +62,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
           .map((g) => {
             const p = g.prediction;
             if (!p) return null;
+            const lens = basketballEditorialLens(g);
             return <article className="article-card" key={g.id}>
               <div className="eyebrow">{date(g.starts_at)} · Model brief</div>
               <h2>
@@ -72,6 +74,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
               <p className="note">
                 {p.margin_low.toFixed(1)} to {p.margin_high.toFixed(1)} home-margin range · {p.pace.toFixed(1)} possessions per 40 minutes.
               </p>
+              {lens && <p className="journal-editorial-lens"><strong>{lens.title}.</strong> {lens.body}</p>}
               {markets[g.id]?.length ? <p className="note">
                 {markets[g.id].slice(0, 2).map((quote) => `${quote.bookmaker} ${quote.market}: ${quote.model_difference > 0 ? "+" : ""}${quote.model_difference.toFixed(1)} model difference`).join(" · ")}
               </p> : null}
