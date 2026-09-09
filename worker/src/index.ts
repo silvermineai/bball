@@ -390,6 +390,14 @@ app.get("/api/basketball/research/coverage", async (c) => {
     same_participant?: number;
     invalid_periods?: number;
     completed_missing_score?: number;
+    paired_box_games?: number;
+    missing_box_games?: number;
+    missing_required_fields_games?: number;
+    negative_field_games?: number;
+    nonpositive_possession_games?: number;
+    outlier_pace_games?: number;
+    score_mismatch_games?: number;
+    valid_estimate_games?: number;
   };
   const counts = await c.env.DB.batch<CoverageCount>([
     ...Object.values(tables).map((table) =>
@@ -403,6 +411,60 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN periods IS NULL OR periods<1 THEN 1 ELSE 0 END) AS invalid_periods,
       sum(CASE WHEN completed=1 AND (home_score IS NULL OR away_score IS NULL) THEN 1 ELSE 0 END) AS completed_missing_score
       FROM bb_games`),
+    // Mirror the model's possession guards against the persisted team box rows.
+    // This is intentionally a read-only diagnostic: it never changes which rows
+    // are published or attributes a player identity.
+    c.env.DB.prepare(`WITH raw AS (
+      SELECT g.id,g.periods,g.home_score,g.away_score,
+        json_extract(h.stats_json,'$.field_goals_attempted') AS h_fga,
+        json_extract(h.stats_json,'$.free_throws_attempted') AS h_fta,
+        json_extract(h.stats_json,'$.offensive_rebounds') AS h_orb,
+        json_extract(h.stats_json,'$.turnovers') AS h_tov,
+        json_extract(h.stats_json,'$.points') AS h_points,
+        json_extract(a.stats_json,'$.field_goals_attempted') AS a_fga,
+        json_extract(a.stats_json,'$.free_throws_attempted') AS a_fta,
+        json_extract(a.stats_json,'$.offensive_rebounds') AS a_orb,
+        json_extract(a.stats_json,'$.turnovers') AS a_tov,
+        json_extract(a.stats_json,'$.points') AS a_points
+      FROM bb_games g
+      LEFT JOIN bb_team_box h ON h.game_id=g.id AND h.team_id=g.home_id
+      LEFT JOIN bb_team_box a ON a.game_id=g.id AND a.team_id=g.away_id
+      WHERE g.completed=1
+    ), calc AS (
+      SELECT raw.*,
+        CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
+          THEN h_fga + 0.475 * h_fta - h_orb + h_tov END AS h_poss,
+        CASE WHEN a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
+          THEN a_fga + 0.475 * a_fta - a_orb + a_tov END AS a_poss
+      FROM raw
+    ), scored AS (
+      SELECT calc.*,
+        CASE WHEN h_poss IS NOT NULL AND a_poss IS NOT NULL AND periods >= 2
+          THEN ((h_poss + a_poss) / 2.0) * 40.0 / (40.0 + MAX(0, periods - 2) * 5.0) END AS pace
+      FROM calc
+    )
+    SELECT count(*) AS total,
+      sum(CASE WHEN h_fga IS NULL OR h_fta IS NULL OR h_orb IS NULL OR h_tov IS NULL
+                    OR a_fga IS NULL OR a_fta IS NULL OR a_orb IS NULL OR a_tov IS NULL THEN 1 ELSE 0 END) AS missing_box_games,
+      sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
+                    AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
+                    AND (h_fga < 0 OR h_fta < 0 OR h_orb < 0 OR h_tov < 0 OR a_fga < 0 OR a_fta < 0 OR a_orb < 0 OR a_tov < 0) THEN 1 ELSE 0 END) AS negative_field_games,
+      sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
+                    AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
+                    AND periods >= 2 AND (h_poss <= 0 OR a_poss <= 0) THEN 1 ELSE 0 END) AS nonpositive_possession_games,
+      sum(CASE WHEN periods IS NULL OR periods < 2 THEN 1 ELSE 0 END) AS invalid_period_games,
+      sum(CASE WHEN pace IS NOT NULL AND (pace < 35 OR pace > 100) THEN 1 ELSE 0 END) AS outlier_pace_games,
+      sum(CASE WHEN h_points IS NOT NULL AND a_points IS NOT NULL AND home_score IS NOT NULL AND away_score IS NOT NULL
+                    AND (ABS(h_points - home_score) > 0.01 OR ABS(a_points - away_score) > 0.01) THEN 1 ELSE 0 END) AS score_mismatch_games,
+      sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
+                    AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
+                    AND h_fga >= 0 AND h_fta >= 0 AND h_orb >= 0 AND h_tov >= 0
+                    AND a_fga >= 0 AND a_fta >= 0 AND a_orb >= 0 AND a_tov >= 0
+                    AND periods >= 2 AND home_score IS NOT NULL AND away_score IS NOT NULL
+                    AND h_poss > 0 AND a_poss > 0 AND pace BETWEEN 35 AND 100 THEN 1 ELSE 0 END) AS valid_estimate_games,
+      sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
+                    AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
+      FROM scored`),
   ]);
   const receipts = await c.env.DB.prepare(
     `SELECT dataset, count(*) AS source_count,
@@ -420,6 +482,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
     source_receipts: receipts.results,
     location_validation: (() => {
       const row = counts[Object.keys(tables).length]?.results[0];
+      return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
+    })(),
+    possession_validation: (() => {
+      const row = counts[Object.keys(tables).length + 1]?.results[0];
       return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
     })(),
   });

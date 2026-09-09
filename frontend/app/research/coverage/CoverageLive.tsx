@@ -15,6 +15,17 @@ type CoverageResponse = {
     invalid_periods: number;
     completed_missing_score: number;
   } | null;
+  possession_validation?: {
+    total: number;
+    paired_box_games: number;
+    missing_box_games: number;
+    negative_field_games: number;
+    nonpositive_possession_games: number;
+    invalid_period_games: number;
+    outlier_pace_games: number;
+    score_mismatch_games: number;
+    valid_estimate_games: number;
+  } | null;
 };
 
 type Freshness = {
@@ -114,6 +125,20 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
+          </div>}{data.possession_validation && <div className="paper-panel" style={{ marginTop: 20 }}>
+            <div className="eyebrow">Possession estimate integrity</div>
+            <h3>See how much of the completed schedule is model-ready.</h3>
+            <div className="raw-stat-grid">
+              <div><dt>{data.possession_validation.total.toLocaleString()}</dt><dd>Completed games checked</dd></div>
+              <div><dt>{data.possession_validation.paired_box_games.toLocaleString()}</dt><dd>Games with all four team fields</dd></div>
+              <div><dt>{data.possession_validation.valid_estimate_games.toLocaleString()}</dt><dd>Valid possession estimates</dd></div>
+              <div><dt>{data.possession_validation.missing_box_games.toLocaleString()}</dt><dd>Missing required team box fields</dd></div>
+              <div><dt>{data.possession_validation.negative_field_games.toLocaleString()}</dt><dd>Negative box-score fields</dd></div>
+              <div><dt>{data.possession_validation.nonpositive_possession_games.toLocaleString()}</dt><dd>Nonpositive estimates</dd></div>
+              <div><dt>{data.possession_validation.outlier_pace_games.toLocaleString()}</dt><dd>Outlier pace estimates</dd></div>
+              <div><dt>{data.possession_validation.score_mismatch_games.toLocaleString()}</dt><dd>Box score / schedule mismatches</dd></div>
+            </div>
+            <p className="note">The diagnostic mirrors the model’s required FGA, FTA, offensive-rebound, turnover and period guards. Only games with valid estimates enter efficiency features; mismatch counts remain visible for review.</p>
           </div>}</>}
           {football && <><div className="eyebrow" style={{ marginTop: 28 }}>Football D1</div><div className="strip">
             {footballRows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{footballLabel(row.dataset)}</span></div>)}
