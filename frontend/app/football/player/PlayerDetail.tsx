@@ -61,56 +61,67 @@ const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (le
 export default function PlayerDetail() {
   const search = useSearchParams(),
     id = search.get("id"),
-    season = search.get("season") || "2025";
+    seasonParam = search.get("season"),
+    requestedSeason = seasonParam || "2025";
   const [page, setPage] = useState(0),
     [data, setData] = useState<Detail | null>(null),
     [career, setCareer] = useState<Career | null>(null),
+    [activeSeason, setActiveSeason] = useState(requestedSeason),
     [error, setError] = useState("");
   useEffect(() => {
     if (!id) return;
     const c = new AbortController();
     setData(null);
     setCareer(null);
+    setActiveSeason(requestedSeason);
     setError("");
-    Promise.all([
-      fetch(
-        `/api/football/players/${encodeURIComponent(id)}?season=${encodeURIComponent(season)}&page=${page}`,
+    const load = async () => {
+      let history: Career | null = null;
+      try {
+        const response = await fetch(`/api/football/players/${encodeURIComponent(id)}/career`, { signal: c.signal });
+        if (response.ok) history = await response.json() as Career;
+      } catch (e) {
+        if ((e as { name?: string }).name === "AbortError") throw e;
+      }
+      if (c.signal.aborted) return;
+      const requested = Number(requestedSeason);
+      const effective = history?.seasons.includes(requested)
+        ? requested
+        : history?.seasons[0] ?? requestedSeason;
+      setActiveSeason(String(effective));
+      const response = await fetch(
+        `/api/football/players/${encodeURIComponent(id)}?season=${encodeURIComponent(effective)}&page=${page}`,
         { signal: c.signal },
-      ).then((r) => {
-        if (!r.ok)
-          throw Error(
-            r.status === 404
-              ? "No imported records found for this player."
-              : "The game log is temporarily unavailable.",
-          );
-        return r.json() as Promise<Detail>;
-      }),
-      fetch(`/api/football/players/${encodeURIComponent(id)}/career`, { signal: c.signal })
-        .then((r) => (r.ok ? r.json() as Promise<Career> : null))
-        .catch(() => null),
-    ])
-      .then(([detail, history]) => {
-        if (!c.signal.aborted) {
-          setData(detail);
-          setCareer(history);
-        }
-      })
-      .catch((e) => {
-        if (e.name !== "AbortError") setError(e.message);
-      });
+      );
+      if (!response.ok) {
+        throw Error(
+          response.status === 404
+            ? "No imported records found for this player."
+            : "The game log is temporarily unavailable.",
+        );
+      }
+      const detail = await response.json() as Detail;
+      if (!c.signal.aborted) {
+        setData(detail);
+        setCareer(history);
+      }
+    };
+    load().catch((e: unknown) => {
+      if ((e as { name?: string }).name !== "AbortError") setError((e as Error).message);
+    });
     return () => c.abort();
-  }, [id, season, page]);
+  }, [id, requestedSeason, page]);
   return (
     <>
       <Link
         className="eyebrow"
-        href={`/football/players/?season=${encodeURIComponent(season)}`}
+        href={`/football/players/?season=${encodeURIComponent(activeSeason)}`}
       >
         ← Player index
       </Link>
       <div className="page-title">
         <div className="eyebrow" style={{ marginTop: 25 }}>
-          Source records / {season}
+          Source records / {activeSeason}
         </div>
         <h1>{data?.name || "Player game log"}</h1>
         <p>
