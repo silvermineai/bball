@@ -268,7 +268,7 @@ def build(conn, games, primary_model, upcoming, target_season=2026):
         "evaluation": evaluation,
         "transition_evaluations": transition_evaluations,
         "coverage": {"advanced_rows": len(advanced), "training_rows": len(production_rows), "holdout_rows": len(holdout), "current_scenarios": len(scenarios), "current_teams": len(current_state["rates"]) if current_state else 0},
-        "limitations": ["Research-only challenger; primary football probabilities, intervals and ledger registrations are unchanged.", "Advanced source coverage is incomplete for 2026 and unknown teams shrink to the prior league mean.", "No injuries, transfers, depth charts, weather or coaching features are included.", "The held-out transition is one season and is not evidence of future market advantage."],
+        "limitations": ["Research-only challenger; primary football probabilities, intervals and ledger registrations are unchanged.", "Advanced source coverage is incomplete for 2026 and unknown teams shrink to the prior league mean.", "No injuries, transfers, depth charts, weather or coaching features are included.", "The dated transitions are retrospective and mixed; they are not evidence of future market advantage."],
         "scenarios": scenarios,
     }
     payload["id"] = VERSION + "-" + hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:12]
