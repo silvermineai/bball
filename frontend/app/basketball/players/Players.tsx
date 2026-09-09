@@ -9,6 +9,7 @@ import { comparisonHref } from "../../_lib/player-comparison";
 import {
   rankProduction,
   seasonLabel,
+  type CareerCoverage,
   type CareerCatalog,
 } from "../../_lib/careers";
 import {
@@ -55,6 +56,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const { data, error } = useBasketballRelease<{
     season: number;
     players: BBPlayer[];
+    coverage?: CareerCoverage;
   }>(`history/players-${coverage ? season : "unsupported"}`);
   const sortKey = sort as
     | "ppg"
@@ -227,6 +229,15 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             </tbody>
           </table>
         </div>
+        {data?.coverage?.field_coverage && data.season === Number(season) && <>
+          <p className="note" style={{ marginTop: 18 }}>Field completeness uses every identified source row, then shows the subset of rows with a recorded playing appearance. A blank or null source field remains unavailable; a recorded zero counts as observed.</p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Field</th><th className="numeric">Source observed</th><th className="numeric">Source share</th><th className="numeric">Appearance observed</th><th className="numeric">Appearance share</th></tr></thead>
+              <tbody>{Object.entries(data.coverage.field_coverage).map(([field, value]) => <tr key={field}><th>{field}</th><td className="numeric">{value.source_observed.toLocaleString()} / {value.source_rows.toLocaleString()}</td><td className="numeric">{value.source_share == null ? "—" : `${(value.source_share * 100).toFixed(1)}%`}</td><td className="numeric">{value.appearance_observed.toLocaleString()} / {value.appearance_rows.toLocaleString()}</td><td className="numeric">{value.appearance_share == null ? "—" : `${(value.appearance_share * 100).toFixed(1)}%`}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </>}
       </details>
       {error ? (
         <p role="alert" className="status-error">

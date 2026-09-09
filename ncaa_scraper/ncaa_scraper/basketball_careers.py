@@ -305,6 +305,19 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
     index = []
     observed_games = set()
     identified_games = set()
+    all_logs = [log for mapping in players.values() for log in mapping.values()]
+    appearance_logs = [log for log in all_logs if log["appearance"]]
+    field_coverage = {
+        key: {
+            "source_rows": len(all_logs),
+            "source_observed": sum(log["stats"][key] is not None for log in all_logs),
+            "source_share": (sum(log["stats"][key] is not None for log in all_logs) / len(all_logs)) if all_logs else None,
+            "appearance_rows": len(appearance_logs),
+            "appearance_observed": sum(log["stats"][key] is not None for log in appearance_logs),
+            "appearance_share": (sum(log["stats"][key] is not None for log in appearance_logs) / len(appearance_logs)) if appearance_logs else None,
+        }
+        for key in FIELDS
+    }
     with conn:
         for aid, mapping in players.items():
             logs = sorted(
@@ -398,6 +411,7 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
             "completed_schedule_games": sum(g["completed"] for g in schedule.values()),
             "box_games": len(identified_games),
             "appearance_games": len(observed_games),
+            "field_coverage": field_coverage,
         }
         conn.execute(
             "INSERT OR REPLACE INTO bb_career_seasons VALUES (?,?,?,?)",

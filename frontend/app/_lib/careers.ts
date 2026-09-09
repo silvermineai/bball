@@ -17,6 +17,14 @@ export type CareerCoverage = {
   completed_schedule_games: number;
   box_games: number;
   appearance_games: number;
+  field_coverage?: Record<string, {
+    source_rows: number;
+    source_observed: number;
+    source_share: number | null;
+    appearance_rows: number;
+    appearance_observed: number;
+    appearance_share: number | null;
+  }>;
 };
 export type CareerSource = {
   dataset: string;
