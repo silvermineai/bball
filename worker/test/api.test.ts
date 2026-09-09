@@ -798,6 +798,31 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("ranks NCAA turnover rate from the lowest recorded rate first", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 2 }),
+        all: vi.fn().mockResolvedValue({ results: [
+          { player_name: "Low turnover", value: 8.2, rank: 1 },
+          { player_name: "High turnover", value: 18.4, rank: 2 },
+        ] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=tov_rate&minGames=5&minMinutes=200&minVolume=50",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { direction: string; rows: Array<{ player_name: string; rank: number }> };
+    expect(body.direction).toBe("asc");
+    expect(body.rows[0]).toMatchObject({ player_name: "Low turnover", rank: 1 });
+    const rowSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("RANK() OVER"));
+    expect(rowSql).toContain("ORDER BY value ASC");
+    expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
+  });
+
   it("rejects unsafe NCAA roster filters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-rosters?season=2009",

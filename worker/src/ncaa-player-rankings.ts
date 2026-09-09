@@ -83,6 +83,10 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
 }[metric]);
 
 const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "orapm" || metric === "drapm";
+// Turnovers are the one published player metric where a lower value is the
+// favorable direction. Keep the ordering in the API aligned with the coaching
+// interpretation shown in the UI; all other ranking metrics remain high-first.
+const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" ? "asc" : "desc";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 const volumeColumn = (metric: Metric) => {
   if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
@@ -231,6 +235,8 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = clauses.join(" AND ");
   const expression = metric === "balanced_index" || metric === "impact_index" ? null : metricExpression(metric);
+  const direction = rankingDirection(metric);
+  const rankOrder = direction === "asc" ? "ASC" : "DESC";
   const qualification = impactQualification(metric);
   const volume = volumeColumn(metric);
   const volumeQualification = volume ? `${volume} >= ?` : "1=1";
@@ -263,10 +269,10 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         SELECT aggregate.*, ${expression} AS value
         FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}
       )
-      SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
-      WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC
+      SELECT *, RANK() OVER (ORDER BY value ${rankOrder}) AS rank FROM ranked
+      WHERE value IS NOT NULL ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
     ).bind(...binds, minGames, minMinutes, ...volumeBinds, page * 50).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, metric, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  return c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
 });
