@@ -37,10 +37,9 @@ const providerCapabilities = [
 markets.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, season, q, page, meta } = c.req.valid("query");
   const football = sport === "football";
-  // Both sports' append-only market observations live with the research
-  // ledger. The legacy D1 remains reserved for the native football app and
-  // its mutable scouting tables.
-  const db = researchDb(c.env);
+  // The established football archive uses football_markets in the legacy
+  // store; basketball quotes use the append-only audit ledger in research D1.
+  const db = football ? c.env.DB : researchDb(c.env);
   if (meta === "1") {
     const seasonsSql = football
       ? "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"
