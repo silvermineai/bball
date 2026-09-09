@@ -110,7 +110,11 @@ export default function Page() {
             <Link href="/basketball/evaluation/">Explore the experiment →</Link>
           </article>
         </div>
-        <LiveBasketballJournal games={basketball.upcoming} />
+        <LiveBasketballJournal
+          games={basketball.upcoming
+            .filter((game) => game.prediction)
+            .slice(0, 12)}
+        />
       </section>
       <section className="section">
         <div className="section-heading">
