@@ -47,6 +47,7 @@ export default function Page() {
           marketComparisons={getBasketballMarketComparisons()}
           rosterSummaries={rosters.team_summaries || []}
           rosterScenarios={rosterModel.scenarios}
+          teamRatings={Object.fromEntries(basketball.ratings.map((team) => [team.id, team]))}
           model={basketball.model}
           generatedAt={basketball.generated_at}
           scope="forecasted"

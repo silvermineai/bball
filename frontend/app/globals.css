@@ -496,6 +496,11 @@ th,
   margin-top: 12px;
   padding-top: 10px;
 }
+.rating-context {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 10px;
+}
 .matchup-factors {
   border-top: 1px solid var(--line);
   margin-top: 14px;
@@ -537,6 +542,13 @@ th,
   line-height: 1.45;
 }
 .roster-context small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.rating-context small {
   display: block;
   color: var(--muted);
   font-size: 10px;

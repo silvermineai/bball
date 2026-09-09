@@ -27,6 +27,7 @@ export default function Page() {
           marketComparisons={getBasketballMarketComparisons()}
           rosterSummaries={getRosters().team_summaries || []}
           rosterScenarios={getRosterModel().scenarios}
+          teamRatings={Object.fromEntries(basketball.ratings.map((team) => [team.id, team]))}
           model={basketball.model}
           generatedAt={basketball.generated_at}
         />

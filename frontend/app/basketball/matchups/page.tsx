@@ -32,7 +32,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading slate…</p>}>
-        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={getRosterModel().scenarios} model={d.model} generatedAt={d.generated_at} />
+        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={getRosterModel().scenarios} teamRatings={Object.fromEntries(d.ratings.map((team) => [team.id, team]))} model={d.model} generatedAt={d.generated_at} />
       </Suspense>
     </>
   );

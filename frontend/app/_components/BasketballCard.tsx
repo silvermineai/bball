@@ -4,6 +4,7 @@ import type {
   BBGame,
   BBRosterScenario,
   BBRosterSummary,
+  BBTeam,
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
@@ -12,11 +13,15 @@ export default function BasketballCard({
   homeRoster,
   awayRoster,
   rosterScenario,
+  homeRating,
+  awayRating,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
   awayRoster?: BBRosterSummary;
   rosterScenario?: BBRosterScenario;
+  homeRating?: BBTeam;
+  awayRating?: BBTeam;
 }) {
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
@@ -84,6 +89,25 @@ export default function BasketballCard({
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
+          {(homeRating || awayRating) && (
+            <div className="rating-context">
+              <div className="match-detail">
+                <strong>Historical strength context</strong>
+                <span className="muted">Silvermine 2025–26</span>
+              </div>
+              <div className="match-detail muted">
+                <span>Adjusted net · H / A</span>
+                <span>{fmt(homeRating?.adj_net, 1)} / {fmt(awayRating?.adj_net, 1)}</span>
+              </div>
+              <div className="match-detail muted">
+                <span>SOS · H / A</span>
+                <span>{fmt(homeRating?.sos, 1)} / {fmt(awayRating?.sos, 1)}</span>
+              </div>
+              <small>
+                Prior opponent-adjusted team strength and schedule context. It is descriptive history; roster changes, injuries and the forecast model remain separate.
+              </small>
+            </div>
+          )}
           {rosterScenario && (
             <div className="roster-context">
               <div className="match-detail">

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import type { BBGame, BBRosterScenario, BBRosterSummary } from "../../_lib/basketball-types";
+import type { BBGame, BBRosterScenario, BBRosterSummary, BBTeam } from "../../_lib/basketball-types";
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import type { BBOverview } from "../../_lib/basketball-types";
@@ -21,6 +21,7 @@ export default function Matchups({
   model,
   generatedAt,
   rosterScenarios = [],
+  teamRatings = {},
   scope = "all",
 }: {
   games: BBGame[];
@@ -29,6 +30,7 @@ export default function Matchups({
   model: BBOverview["model"];
   generatedAt: string;
   rosterScenarios?: BBRosterScenario[];
+  teamRatings?: Record<string, BBTeam>;
   scope?: "all" | "forecasted";
 }) {
   const params = useSearchParams();
@@ -317,6 +319,8 @@ export default function Matchups({
               homeRoster={rosterByTeam.get(g.home_id)}
               awayRoster={rosterByTeam.get(g.away_id)}
               rosterScenario={rosterScenarioByGame.get(g.id)}
+              homeRating={teamRatings[g.home_id]}
+              awayRating={teamRatings[g.away_id]}
             />
             <button
               className="button secondary matchup-prep-toggle"
