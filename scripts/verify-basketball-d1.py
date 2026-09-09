@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 
 def dataset_rows(overview: dict) -> dict[str, int]:
@@ -72,7 +73,7 @@ def remote_counts(tables: list[str]) -> dict[str, int]:
             "scripts/cloudflare.py",
             "d1",
             "execute",
-            "bball-silvermine",
+            D1_DB_NAME,
             "--remote",
             "--command",
             command,
