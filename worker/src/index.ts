@@ -28,6 +28,7 @@ import { matchupStintSource } from "./matchup-stint-source";
 import { withinImpactSource } from "./within-impact-source";
 import { lineupSource } from "./lineup-source";
 import { basketballForecasts } from "./basketball-forecasts";
+import { news } from "./news";
 
 type Bindings = Env;
 
@@ -147,6 +148,7 @@ app.route("/api/basketball/research/matchup-stints", matchupStintSource);
 app.route("/api/basketball/research/impact-within-team", withinImpactSource);
 app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/basketball/research/forecasts", basketballForecasts);
+app.route("/api/basketball/research/news", news);
 app.route("/api/research/markets", markets);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);

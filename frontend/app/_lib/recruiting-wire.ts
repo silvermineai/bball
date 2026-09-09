@@ -11,6 +11,8 @@ export type RecruitingWireArticle = {
 export type RecruitingWireTopic = "all" | "transfer" | "prep" | "draft" | "eligibility" | "availability";
 export type RecruitingWireFilters = { query: string; topic: RecruitingWireTopic; page: number };
 
+const contextWords = /recruit|transfer|portal|commit|sign|class of|prospect|injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i;
+
 const topics = new Set<RecruitingWireTopic>(["all", "transfer", "prep", "draft", "eligibility", "availability"]);
 const topicWords: Record<Exclude<RecruitingWireTopic, "all">, RegExp> = {
   transfer: /transfer|portal|commit|signing|addition/i,
@@ -47,6 +49,11 @@ export function filterRecruitingWire(articles: RecruitingWireArticle[], filters:
     return (!needle || text.toLowerCase().includes(needle)) &&
       (filters.topic === "all" || topicWords[filters.topic].test(text));
   });
+}
+
+/** Keep the wire focused on roster, recruiting, eligibility and availability context. */
+export function isRecruitingWireArticle(article: RecruitingWireArticle) {
+  return contextWords.test(`${article.headline} ${article.description} ${article.categories.join(" ")}`);
 }
 
 /** Return the newest retained publisher timestamp without claiming live coverage. */

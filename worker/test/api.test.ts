@@ -306,6 +306,73 @@ describe("bball api", () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
+  it("serves the D1 publisher-news archive with parsed categories", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total FROM bb_news_articles")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [{
+              id: "story-1",
+              publisher: "ESPN",
+              sport: "mens-college-basketball",
+              headline: "Transfer portal update",
+              description: "A roster move.",
+              published: "2026-09-08T00:00:00Z",
+              link: "https://www.espn.com/mens-college-basketball/story/_/id/1",
+              categories_json: JSON.stringify(["NCAA Men's Basketball"]),
+              author: "Reporter",
+              first_seen_at: "2026-09-08T00:00:00Z",
+              last_seen_at: "2026-09-08T00:00:00Z",
+            }],
+          }),
+        }),
+      };
+    });
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ total: 1 }] },
+      { results: [{
+        id: "story-1",
+        publisher: "ESPN",
+        sport: "mens-college-basketball",
+        headline: "Transfer portal update",
+        description: "A roster move.",
+        published: "2026-09-08T00:00:00Z",
+        link: "https://www.espn.com/mens-college-basketball/story/_/id/1",
+        categories_json: JSON.stringify(["NCAA Men's Basketball"]),
+        author: "Reporter",
+        first_seen_at: "2026-09-08T00:00:00Z",
+        last_seen_at: "2026-09-08T00:00:00Z",
+      }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/news?q=portal&limit=10",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<{ categories: string[]; categories_json?: string }> };
+    expect(body.total).toBe(1);
+    expect(body.rows[0].categories).toEqual(["NCAA Men's Basketball"]);
+    expect(body.rows[0]).not.toHaveProperty("categories_json");
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
+  it("rejects unsafe publisher-news filters before querying D1", async () => {
+    const prepare = vi.fn();
+    for (const path of [
+      "/api/basketball/research/news?sport=mens_college_basketball",
+      "/api/basketball/research/news?limit=101",
+      "/api/basketball/research/news?page=-1",
+    ]) {
+      expect((await app.request(path, {}, { DB: { prepare } })).status).toBe(400);
+    }
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("serves native basketball pages while preserving known archive routes", async () => {
     const fetch = vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;

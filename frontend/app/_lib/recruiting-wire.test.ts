@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterRecruitingWire, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle } from "./recruiting-wire";
+import { filterRecruitingWire, isRecruitingWireArticle, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle } from "./recruiting-wire";
 
 const article = (headline: string, description = "") : RecruitingWireArticle => ({ id: headline, headline, description, published: "2026-06-01T00:00:00Z", link: "https://example.com", categories: ["NCAA Men's Basketball"] });
 
@@ -24,5 +24,9 @@ describe("recruiting wire filters", () => {
       { ...article("Malformed"), published: "not-a-date" },
     ])).toBe("2026-06-12T00:00:00Z");
     expect(latestRecruitingWirePublication([])).toBeNull();
+  });
+  it("keeps the live archive scoped to recruiting context", () => {
+    expect(isRecruitingWireArticle(article("Guard out for the season"))).toBe(true);
+    expect(isRecruitingWireArticle(article("Bracket history and buzzer beaters"))).toBe(false);
   });
 });

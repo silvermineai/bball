@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { filterRecruitingWire, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
+import { filterRecruitingWire, isRecruitingWireArticle, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
 
 const PAGE_SIZE = 12;
 const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability", availability: "Injuries and availability" };
@@ -14,6 +14,29 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
   const [topic, setTopic] = useState<RecruitingWireTopic>(initial.topic);
   const [page, setPage] = useState(initial.page);
   const [copied, setCopied] = useState("");
+  const [liveArticles, setLiveArticles] = useState(articles);
+  const [archiveStatus, setArchiveStatus] = useState<"loading" | "live" | "fallback">("loading");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/news?sport=mens-college-basketball&limit=100", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("news archive unavailable");
+        return response.json() as Promise<{ rows?: RecruitingWireArticle[] }>;
+      })
+      .then((payload) => {
+        const rows = (payload.rows || []).filter(isRecruitingWireArticle);
+        if (rows.length) {
+          setLiveArticles(rows);
+          setArchiveStatus("live");
+        } else {
+          setArchiveStatus("fallback");
+        }
+      })
+      .catch((error: unknown) => {
+        if ((error as { name?: string })?.name !== "AbortError") setArchiveStatus("fallback");
+      });
+    return () => controller.abort();
+  }, [articles]);
   useEffect(() => {
     const next = recruitingWireFilterSearch({ query, topic, page });
     const url = new URL(window.location.href);
@@ -21,8 +44,8 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
     if (next) for (const [key, value] of new URLSearchParams(next)) url.searchParams.set(key, value);
     window.history.replaceState(window.history.state, "", url);
   }, [page, query, topic]);
-  const filtered = useMemo(() => filterRecruitingWire(articles, { query, topic, page }), [articles, query, topic, page]);
-  const latestPublication = latestRecruitingWirePublication(articles);
+  const filtered = useMemo(() => filterRecruitingWire(liveArticles, { query, topic, page }), [liveArticles, query, topic, page]);
+  const latestPublication = latestRecruitingWirePublication(liveArticles);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => { if (page >= pages) setPage(Math.max(0, pages - 1)); }, [page, pages]);
@@ -32,7 +55,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
   };
   return <section className="section">
     <div className="section-heading"><div><div className="eyebrow">Publisher wire / recruiting context</div><h2>Follow the national conversation.</h2></div><span className="note">{filtered.length} linked stories</span></div>
-    <p className="note" style={{ marginBottom: 20 }}>These are ESPN and NCAA.com RSS headlines for context, not Silvermine-reviewed transaction records. Silvermine retains the supplied headline, summary and link, and does not fetch or rewrite linked article pages. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below. Latest retained publisher publication: {latestPublication ? date(latestPublication) : "unavailable"}.</p>
+    <p className="note" style={{ marginBottom: 20 }}>These are ESPN and NCAA.com RSS headlines for context, not Silvermine-reviewed transaction records. Silvermine retains the supplied headline, summary and link, and does not fetch or rewrite linked article pages. A headline does not establish eligibility, destination or current availability; reviewed school statements appear below. Latest retained publisher publication: {latestPublication ? date(latestPublication) : "unavailable"}. {archiveStatus === "live" ? "D1 archive connected." : archiveStatus === "fallback" ? "Showing the bundled release while the D1 archive is unavailable." : "Checking the D1 archive…"}</p>
     <div className="toolbar">
       <label className="control"><span>SEARCH THE WIRE</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
       <label className="control"><span>TOPIC</span><select value={topic} onChange={(event) => { setTopic(event.target.value as RecruitingWireTopic); setPage(0); }}>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
