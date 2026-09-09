@@ -30,6 +30,7 @@ const sourceFieldGroups = [
   { label: "Shot profile", fields: [["rimm", "Rim makes", "number"], ["rima", "Rim attempts", "number"], ["rim_pct", "Rim rate", "percent"], ["mida", "Mid-range attempts", "number"]] },
   { label: "Playmaking", fields: [["pts_ast", "Assisted points", "number"], ["pts_unast", "Unassisted points", "number"], ["fgm_ast", "Assisted FGM", "number"], ["tpm_ast", "Assisted 3PM", "number"]] },
 ] as const;
+const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "NCAA player ID", "Team", "NCAA team ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw source stats JSON"];
 
 function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
   return <details className="ncaa-source-fields">
@@ -65,6 +66,8 @@ export default function NcaaPlayerBox() {
   });
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams({ season });
@@ -109,18 +112,42 @@ export default function NcaaPlayerBox() {
       setCopied("Copy the archive URL from your address bar.");
     }
   };
+  const exportRow = (row: Row) => {
+    const s = row.stats;
+    const computedTs = rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0)));
+    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, (s.orb || 0) + (s.drb || 0), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s)];
+  };
   const download = () => {
     if (!result) return;
-    downloadCsv(
-      `ncaa-player-box-${season}-${result.archive_mode}-page-${page + 1}.csv`,
-      toCsv(
-        ["Season", "Archive mode", "Game date", "Contest ID", "Player", "NCAA player ID", "Team", "NCAA team ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw source stats JSON"],
-        result.rows.map((row) => {
-          const s = row.stats;
-          return [result.season, result.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, (s.orb || 0) + (s.drb || 0), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0))) == null ? null : rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0)))! * 100 : s.ts_pct * 100, JSON.stringify(s)];
-        }),
-      ),
-    );
+    downloadCsv(`ncaa-player-box-${season}-${result.archive_mode}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This season exceeds the bounded browser export window. Add a player, team, or ID search first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} NCAA rows…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/basketball/research/ncaa-player-box?${params}`);
+        if (!response.ok) throw new Error("The complete NCAA player export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} NCAA rows…`);
+      }
+      downloadCsv(`ncaa-player-box-${season}-${result.archive_mode}-all.csv`, toCsv(exportHeaders, rows.map(exportRow)));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} NCAA rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete NCAA player export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
   };
   return <>
     <div className="page-title">
@@ -153,7 +180,8 @@ export default function NcaaPlayerBox() {
       })}</tbody></table></div>
     </section>}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
+      {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {copied && <p role="status">{copied}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `NCAA team ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n((s.orb || 0) + (s.drb || 0), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0))))}</td></tr>; })}</tbody></table></div>
       {!result.rows.length && <p className="empty">No NCAA player rows match this search.</p>}
