@@ -3,10 +3,10 @@ import { parsePlayerIndexFilters, playerIndexFilterSearch, rankPlayerProfiles } 
 
 describe("historical player index URL state", () => {
   it("parses supported season, search, sort, qualification and page", () => {
-    expect(parsePlayerIndexFilters("?season=2025&q=Jones&sort=profile&qualified=0&page=4", [2026, 2025, 2024])).toEqual({
+    expect(parsePlayerIndexFilters("?season=2025&q=Jones&sort=ts&qualified=0&page=4", [2026, 2025, 2024])).toEqual({
       season: "2025",
       query: "Jones",
-      sort: "profile",
+      sort: "ts",
       qualified: false,
       page: 4,
     });
@@ -23,8 +23,13 @@ describe("historical player index URL state", () => {
   });
 
   it("serializes only non-default controls", () => {
-    expect(playerIndexFilterSearch({ season: "2025", query: "Jones", sort: "profile", qualified: false, page: 4 })).toBe("?season=2025&q=Jones&sort=profile&qualified=0&page=4");
+    expect(playerIndexFilterSearch({ season: "2025", query: "Jones", sort: "ts", qualified: false, page: 4 })).toBe("?season=2025&q=Jones&sort=ts&qualified=0&page=4");
     expect(playerIndexFilterSearch({ season: "2026", query: "", sort: "ppg", qualified: true, page: 0 })).toBe("");
+  });
+
+  it("round-trips the profile sort control", () => {
+    expect(parsePlayerIndexFilters("?sort=profile", [2026])).toMatchObject({ sort: "profile" });
+    expect(playerIndexFilterSearch({ season: "2026", query: "", sort: "profile", qualified: true, page: 0 })).toBe("?sort=profile");
   });
 
   it("ranks an explainable profile index with lower turnover rate favorable", () => {
