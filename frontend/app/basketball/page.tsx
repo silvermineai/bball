@@ -384,10 +384,53 @@ export default function Page() {
           Browse NCAA national leaderboards →
         </Link>
       </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">06 / Learn from the archive</div>
+            <h2>Turn a stat into a better question.</h2>
+          </div>
+          <Link href="/blog/">Read the full journal →</Link>
+        </div>
+        <p className="note" style={{ marginBottom: 20 }}>
+          Short field guides explain the measures behind the boards and show
+          how to carry source identity, workload and uncertainty into film or
+          recruiting review.
+        </p>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">Player evaluation</div>
+            <h2>A ranking is a question, not a verdict.</h2>
+            <p>
+              Use production and impact screens to choose the next piece of
+              evidence, while keeping samples and exact source IDs attached.
+            </p>
+            <Link href="/blog/basketball-ranking-playbook/">Read the ranking playbook →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Team context</div>
+            <h2>Count the trip before you count the score.</h2>
+            <p>
+              Read transition, assisted and garbage-time possession shares as
+              team context without assigning possession credit to a player.
+            </p>
+            <Link href="/blog/basketball-possession-style/">Read the possession guide →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Recruiting evidence</div>
+            <h2>Recruit the role before you recruit the name.</h2>
+            <p>
+              Connect source-listed roles and prior workload to a transparent
+              shortlist, then verify announcements and game evidence.
+            </p>
+            <Link href="/blog/basketball-recruiting-fit/">Read the recruiting guide →</Link>
+          </article>
+        </div>
+      </section>
       <section className="section paper-panel">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">06 / Market evidence</div>
+            <div className="eyebrow">07 / Market evidence</div>
             <h2>Keep the forecast beside the line.</h2>
           </div>
           <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
