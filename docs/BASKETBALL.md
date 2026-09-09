@@ -141,7 +141,7 @@ D1 coverage queries use a batch of individual counts to stay within its compound
 
 ## Remaining full-goal work
 
-- Obtain and ingest verified current recruiting/transfer/eligibility data, with dated authoritative sources and a clear distinction from roster listings.
+- Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.
 - Expand historical player-game seasons, add more possession and location validation, and extend the weekly experiment to additional prospective seasons.
 - Extend the roster challenger and weekly experiment across additional dated transitions before considering any roster feature for the primary forecast. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.

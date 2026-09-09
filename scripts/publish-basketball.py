@@ -364,6 +364,18 @@ run(
         "-s",
         "ncaa_scraper/tests",
         "-p",
+        "test_basketball_cbbd_recruiting.py",
+    ]
+)
+run(
+    [
+        PY,
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ncaa_scraper/tests",
+        "-p",
         "test_basketball_careers.py",
     ]
 )
@@ -480,6 +492,18 @@ run_remote_migration(
         "--remote",
         "--file",
         "migrations/0023_basketball_ncaa_shooting.sql",
+    ]
+)
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        "bball-silvermine",
+        "--remote",
+        "--file",
+        "migrations/0026_cbbd_recruiting.sql",
     ]
 )
 import_sql_batches(

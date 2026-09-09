@@ -10,15 +10,17 @@ describe("authorized recruiting intake coverage", () => {
     const first = vi.fn().mockResolvedValue({ total: 2, latest_captured_at: "2026-09-08T12:00:00Z" });
     const all = vi.fn()
       .mockResolvedValueOnce({ results: [{ provider: "Licensed Feed", rows: 2, latest_captured_at: "2026-09-08T12:00:00Z" }] })
-      .mockResolvedValueOnce({ results: [{ status: "reported_transfer", rows: 2 }] });
+      .mockResolvedValueOnce({ results: [{ status: "reported_transfer", rows: 2 }] })
+      .mockResolvedValueOnce({ results: [{ provider: "CollegeBasketballData.com API", kind: "portal", rows: 4, latest_captured_at: "2026-09-08T12:00:00Z" }] });
     const bind = vi.fn().mockReturnValue({ first, all });
     const prepare = vi.fn().mockReturnValue({ bind });
     const response = await recruitingIntake.request("/", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; policy: string };
+    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; policy: string };
     expect(body.total).toBe(2);
     expect(body.providers).toHaveLength(1);
     expect(body.statuses).toHaveLength(1);
+    expect(body.provider_feeds).toHaveLength(1);
     expect(body.policy).toContain("Coverage metadata only");
     expect(JSON.stringify(body)).not.toContain("player_name");
   });

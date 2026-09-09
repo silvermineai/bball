@@ -7,6 +7,7 @@ type IntakeCoverage = {
   latest_captured_at: string | null;
   providers: Array<{ provider: string; rows: number; latest_captured_at: string | null }>;
   statuses: Array<{ status: string; rows: number }>;
+  provider_feeds?: Array<{ provider: string; kind: string; rows: number; latest_captured_at: string | null }>;
   policy: string;
 };
 
@@ -29,6 +30,7 @@ export default function AuthorizedIntake() {
       .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
   }, []);
+  const providerFeeds = coverage?.provider_feeds ?? [];
   return (
     <section className="section">
       <div className="paper-panel recruiting-intake">
@@ -37,10 +39,13 @@ export default function AuthorizedIntake() {
             <div className="eyebrow">Authorized evidence intake / 2026–27</div>
             <h2>Keep verified provider records separate.</h2>
           </div>
-          <a className="button secondary" href="https://github.com/silvermineai/bball/blob/main/docs/RECRUITING_INTAKE.md" target="_blank" rel="noreferrer">Read import protocol ↗</a>
+          <div className="button-row">
+            <a className="button secondary" href="https://github.com/silvermineai/bball/blob/main/docs/RECRUITING_INTAKE.md" target="_blank" rel="noreferrer">Read import protocol ↗</a>
+            <a className="hero-link" href="https://collegebasketballdata.com/terms" target="_blank" rel="noreferrer">CBBD terms ↗</a>
+          </div>
         </div>
         <p>
-          An approved transfer or eligibility feed can be imported with its license, source clocks and stable provider IDs. Silvermine keeps those rows in an authorized D1 intake and does not merge them into school announcements, roster observations or forecast inputs.
+          An approved transfer or eligibility feed can be imported with its license, source clocks and stable provider IDs. The optional CollegeBasketballData connector is ready for a server-side <code>CBBD_API_KEY</code>; its portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge provider records into school announcements, roster observations or forecast inputs.
         </p>
         {error ? <p className="status-error" role="alert">{error}</p> : !coverage ? <p className="empty" role="status">Checking authorized intake coverage…</p> : (
           <div className="recruiting-intake-status">
@@ -49,7 +54,7 @@ export default function AuthorizedIntake() {
               <span>source-reported rows imported</span>
             </div>
             <div>
-              <strong>{coverage.providers.length.toLocaleString()}</strong>
+              <strong>{(coverage.providers.length + new Set(providerFeeds.map((feed) => feed.provider)).size).toLocaleString()}</strong>
               <span>authorized providers</span>
             </div>
             <div>
@@ -57,7 +62,10 @@ export default function AuthorizedIntake() {
               <span>latest capture clock</span>
             </div>
             <div className="recruiting-intake-detail">
-              {coverage.total ? coverage.providers.map((provider) => <span key={provider.provider}>{provider.provider} · {provider.rows.toLocaleString()} rows · {clock(provider.latest_captured_at)}</span>) : <span>No authorized provider export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
+              {coverage.total || providerFeeds.length ? <>
+                {coverage.providers.map((provider) => <span key={provider.provider}>{provider.provider} · {provider.rows.toLocaleString()} intake rows · {clock(provider.latest_captured_at)}</span>)}
+                {providerFeeds.map((feed) => <span key={`${feed.provider}-${feed.kind}`}>{feed.provider} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
+              </> : <span>No authorized provider export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
             </div>
           </div>
         )}

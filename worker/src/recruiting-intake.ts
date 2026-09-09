@@ -12,7 +12,7 @@ recruitingIntake.get("/", async (c) => {
   if (!/^\d{4}$/.test(value) || +value < 2025 || +value > 2035)
     return c.json({ error: "Invalid recruiting intake season" }, 400);
   const season = +value;
-  const [summary, providers, statuses] = await Promise.all([
+  const [summary, providers, statuses, providerFeeds] = await Promise.all([
     c.env.DB.prepare(
       `SELECT count(*) AS total, max(captured_at) AS latest_captured_at
        FROM bb_recruiting_intake WHERE season=?`,
@@ -25,6 +25,11 @@ recruitingIntake.get("/", async (c) => {
       `SELECT status, count(*) AS rows FROM bb_recruiting_intake
        WHERE season=? GROUP BY status ORDER BY status`,
     ).bind(season).all<{ status: string; rows: number }>(),
+    c.env.DB.prepare(
+      `SELECT provider, kind, count(*) AS rows, max(captured_at) AS latest_captured_at
+       FROM bb_cbbd_recruiting WHERE season=?
+       GROUP BY provider, kind ORDER BY latest_captured_at DESC, provider, kind`,
+    ).bind(season).all<{ provider: string; kind: string; rows: number; latest_captured_at: string | null }>(),
   ]);
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
@@ -33,6 +38,7 @@ recruitingIntake.get("/", async (c) => {
     latest_captured_at: summary?.latest_captured_at ?? null,
     providers: providers.results,
     statuses: statuses.results,
+    provider_feeds: providerFeeds.results,
     policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
   });
 });
