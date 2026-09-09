@@ -1,6 +1,7 @@
 import { getBasketball, getRecruiting, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 import Link from "next/link";
+import ModelIntegrity from "./ModelIntegrity";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
@@ -125,6 +126,7 @@ export default function Page() {
           </p>
         </section>
       </div>
+      <ModelIntegrity />
       <section className="section">
         <div className="section-heading">
           <div>
