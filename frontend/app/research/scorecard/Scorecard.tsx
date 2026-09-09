@@ -5,6 +5,8 @@ import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { reasons, type Ledger } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
+const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -73,10 +75,14 @@ export default function Scorecard() {
     const visible = rows.slice(page * 25, page * 25 + 25);
     downloadCsv(
       `forecast-scorecard-${sport}-page-${page + 1}.csv`,
-      toCsv(
-        ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"],
-        visible.map((g) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)]),
-      ),
+      toCsv(exportHeaders, visible.map((g) => exportRow(sport, g))),
+    );
+  };
+  const downloadAll = () => {
+    if (!rows.length) return;
+    downloadCsv(
+      `forecast-scorecard-${sport}-all.csv`,
+      toCsv(exportHeaders, rows.map((g) => exportRow(sport, g))),
     );
   };
   return (
@@ -240,7 +246,7 @@ export default function Scorecard() {
             <div className="eyebrow">02 / The game ledger</div>
             <h2>Every forecast has a trail.</h2>
           </div>
-          <div className="button-row"><span className="note">{summary.registered_versions.toLocaleString()} retained versions</span><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy scorecard link</button></div>
+          <div className="button-row"><span className="note">{summary.registered_versions.toLocaleString()} retained versions</span><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={!rows.length}>Download all matching CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy scorecard link</button></div>
         </div>
         {copied && <p role="status">{copied}</p>}
         <div className="toolbar">
