@@ -306,7 +306,7 @@ export default function Home() {
         <div>
           <div className="section-heading">
             <div>
-              <div className="eyebrow">03 / The national picture</div>
+              <div className="eyebrow">04 / The national picture</div>
               <h2>Strength, adjusted.</h2>
             </div>
             <Link href="/football/ratings/">Full ratings →</Link>
@@ -347,7 +347,7 @@ export default function Home() {
           </p>
         </div>
         <aside className="paper-panel">
-          <div className="eyebrow">04 / Show your work</div>
+          <div className="eyebrow">05 / Show your work</div>
           <h2 style={{ marginTop: 20 }}>
             A prediction is
             <br />a starting point.
@@ -387,7 +387,7 @@ export default function Home() {
       </section>
       <section className="section banner">
         <div>
-          <div className="eyebrow">From the hardwood</div>
+          <div className="eyebrow">06 / From the hardwood</div>
           <h3 style={{ marginTop: 12 }}>
             The next basketball season is taking shape.
           </h3>
@@ -404,7 +404,7 @@ export default function Home() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">05 / The journal</div>
+            <div className="eyebrow">07 / The journal</div>
             <h2>Notes from the desk.</h2>
           </div>
           <Link href="/blog/">Read the journal →</Link>
