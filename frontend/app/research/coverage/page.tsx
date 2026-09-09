@@ -132,8 +132,16 @@ export default function Page() {
       field_goal_attempts: number;
       pbp_events?: number;
       pbp_games?: number;
+      player_games?: number;
+      matched_player_games?: number;
+      locations?: Record<string, number>;
     };
   };
+  const shotLocations = shooting.coverage.locations ?? {};
+  const locatedShots = shotLocations.located ?? 0;
+  const rejectedLocationShots = (shotLocations.inconsistent ?? 0) + (shotLocations.placeholder ?? 0) + (shotLocations.missing ?? 0);
+  const locationTotal = locatedShots + rejectedLocationShots;
+  const locationShare = locationTotal ? (locatedShots / locationTotal) * 100 : null;
   const publisher = JSON.parse(
     fs.readFileSync(path.join(dataDir, "publisher-leaders.json"), "utf8"),
   ) as { metrics: unknown[] };
@@ -717,6 +725,23 @@ export default function Page() {
               <Link href="/basketball/impact/">Player impact →</Link>{" "}
               · <Link href="/basketball/shooting/">Shooting lab →</Link>
             </p>
+          </article>
+          <article className="paper-panel">
+            <div className="eyebrow">Shot-location validation</div>
+            <h3>{count(locatedShots)} located attempts{locationShare == null ? "" : ` · ${locationShare.toFixed(1)}% usable`}</h3>
+            <p>
+              Coordinates are retained only when they fall inside the court
+              bounds and agree with the stated shot type, value and distance.
+              {rejectedLocationShots ? ` ${count(rejectedLocationShots)} attempts remain visible as rejected location evidence.` : " No location rejects are present in this edition."}
+            </p>
+            <div className="rule-list">
+              <div><span>Player games reconciled to box scores</span><strong>{count(shooting.coverage.matched_player_games ?? 0)} / {count(shooting.coverage.player_games ?? 0)}</strong></div>
+              <div><span>Inconsistent coordinates</span><strong>{count(shotLocations.inconsistent ?? 0)}</strong></div>
+              <div><span>Placeholder coordinates</span><strong>{count(shotLocations.placeholder ?? 0)}</strong></div>
+              <div><span>Missing coordinates</span><strong>{count(shotLocations.missing ?? 0)}</strong></div>
+            </div>
+            <p className="note">A located attempt is event evidence, not optical tracking. Rejected or unmatched rows stay out of location-derived summaries rather than being repaired by inference.</p>
+            <Link href="/basketball/shooting/">Open the shooting evidence →</Link>
           </article>
           <article className="paper-panel">
             <div className="eyebrow">Play by play</div>
