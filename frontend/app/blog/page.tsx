@@ -7,6 +7,7 @@ import {
 import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
+import { selectBasketballWatchlist } from "../_lib/basketball-watchlist";
 import LiveBasketballJournal from "./LiveBasketballJournal";
 export const metadata = {
   title: "The journal: college basketball and football analysis",
@@ -75,6 +76,11 @@ export default function Page() {
         a.game.starts_at.localeCompare(b.game.starts_at),
     )
     .slice(0, 6);
+  const watchlist = selectBasketballWatchlist(
+    basketball.upcoming,
+    basketball.ratings,
+    6,
+  );
   return (
     <>
       <div className="page-title">
@@ -120,6 +126,55 @@ export default function Page() {
             .filter((game) => game.prediction)
             .slice(0, 12)}
         />
+      </section>
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Desk watchlist / stored evidence</div>
+            <h2>Games worth opening first.</h2>
+          </div>
+          <Link href="/basketball/matchups/">Browse the full slate →</Link>
+        </div>
+        <p className="note">
+          This watchlist is a transparent reading order from the published
+          forecast: close margins, wide stored ranges and source-rated teams
+          rise to the top. It is an editorial triage aid, not a new model or a
+          claim about game quality.
+        </p>
+        <div className="article-grid">
+          {watchlist.map((entry) => (
+            <article className="article-card" key={entry.game.id}>
+              <div className="eyebrow">
+                {date(entry.game.starts_at)} ·{" "}
+                {entry.reason === "close"
+                  ? "One-possession candidate"
+                  : entry.reason === "ranked"
+                    ? "Source-ranked matchup"
+                    : entry.reason === "variance"
+                      ? "Wide forecast range"
+                      : "Context review"}
+              </div>
+              <h2>
+                {entry.game.away_name} at {entry.game.home_name}
+              </h2>
+              <p>
+                Projected margin{" "}
+                {entry.game.prediction!.home_margin >= 0 ? "+" : ""}
+                {entry.game.prediction!.home_margin.toFixed(1)} · range{" "}
+                {entry.game.prediction!.margin_low.toFixed(1)} to{" "}
+                {entry.game.prediction!.margin_high.toFixed(1)}.
+              </p>
+              <p className="note">
+                Source ranks:{" "}
+                {entry.away_rank == null ? "—" : "#" + entry.away_rank} away ·{" "}
+                {entry.home_rank == null ? "—" : "#" + entry.home_rank} home.
+              </p>
+              <Link href={"/basketball/briefs/" + entry.game.id + "/"}>
+                Open the evidence brief →
+              </Link>
+            </article>
+          ))}
+        </div>
       </section>
       <section className="section">
         <div className="section-heading">
