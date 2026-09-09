@@ -20,6 +20,10 @@ import Recruiting from "./Recruiting";
 import { comparisonHref } from "../../_lib/player-comparison";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import type { BBRoster, BBRosters } from "../../_lib/basketball-types";
+type LiveRosterMeta = {
+  total: number;
+  source?: { fetched_at?: string | null; sha256?: string | null };
+};
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
@@ -35,6 +39,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     [coverageStatus, setCoverageStatus] = useState<"all" | "reviewed" | "unreviewed">("all");
   const [rosters, setRosters] = useState<BBRosters | null>(null),
     [rosterError, setRosterError] = useState("");
+  const [liveRosterMeta, setLiveRosterMeta] = useState<LiveRosterMeta | null>(null),
+    [liveRosterMetaError, setLiveRosterMetaError] = useState("");
   const [liveData, setLiveData] = useState<RecruitingRelease | null>(null),
     [releaseError, setReleaseError] = useState(""),
     [hydrated, setHydrated] = useState(false);
@@ -55,6 +61,24 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       });
     return () => controller.abort();
   }, []);
+  useEffect(() => {
+    if (!rosters) return;
+    const controller = new AbortController();
+    fetch(`/api/basketball/research/ncaa-rosters?season=${rosters.previous_season}&meta=1`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live roster archive metadata is unavailable.");
+        return response.json() as Promise<LiveRosterMeta>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLiveRosterMeta(value);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveRosterMetaError(reason instanceof Error ? reason.message : "The live roster archive metadata is unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [rosters]);
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get("view");
     if (requestedView === "observations") setView("observations");
@@ -251,6 +275,16 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             <p className="note">
               Source edition: {rosters.previous_season}–{String(rosters.season).slice(-2)} roster release via SportsDataverse. The source download is the exact parquet release archived with a SHA-256 receipt.
             </p>
+            {liveRosterMeta && (
+              <p className="note" role="status">
+                Live D1 archive check: {liveRosterMeta.total.toLocaleString()} rows in the {rosters.previous_season} release
+                {liveRosterMeta.source?.fetched_at ? ` (receipt fetched ${publicationDate(liveRosterMeta.source.fetched_at)}).` : "."}
+                {liveRosterMeta.total !== rosters.players_observed
+                  ? ` The planning edition above contains ${rosters.players_observed.toLocaleString()} rows for its player-level matching view.`
+                  : " The planning edition and live archive have the same row count."}
+              </p>
+            )}
+            {liveRosterMetaError && <p className="note">{liveRosterMetaError} The bundled roster edition remains available for review.</p>}
           </section>
           <div className="recruiting-scope">
             <span className="eyebrow">Coverage / Selected announcements</span>
