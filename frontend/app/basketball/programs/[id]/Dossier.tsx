@@ -8,6 +8,7 @@ import {
   type ScoutProfile,
   type SplitKey,
 } from "../../../_lib/scouting-types";
+import type { PossessionStyleRow } from "../../../_lib/possession-style";
 import EfficiencyChart from "./EfficiencyChart";
 const prompts: Record<string, string> = {
   off_efg:
@@ -26,7 +27,13 @@ const prompts: Record<string, string> = {
   def_ftr:
     "Which defenders can protect the paint without surrendering free throws?",
 };
-export default function Dossier({ profile: p }: { profile: ScoutProfile }) {
+export default function Dossier({
+  profile: p,
+  possessionStyle,
+}: {
+  profile: ScoutProfile;
+  possessionStyle?: PossessionStyleRow | null;
+}) {
   const [split, setSplit] = useState<SplitKey>("season"),
     [qualified, setQualified] = useState(true),
     [playerSort, setPlayerSort] = useState("minutes");
@@ -174,6 +181,27 @@ export default function Dossier({ profile: p }: { profile: ScoutProfile }) {
           compare qualifying programs in the model’s rated field. Source
           coverage can differ by metric.
         </p>
+        {possessionStyle && (
+          <section className="paper-panel" style={{ marginTop: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <div>
+                <div className="eyebrow">NCAA source context / {possessionStyle.season - 1}–{String(possessionStyle.season).slice(-2)}</div>
+                <h3>What did the possessions look like?</h3>
+              </div>
+              <Link href="/basketball/possession-style/">Compare possession style →</Link>
+            </div>
+            <div className="raw-stat-grid">
+              <div><dt>{fmt(possessionStyle.points_per_possession, 3)}</dt><dd>Points / source possession</dd></div>
+              <div><dt>{fmt(possessionStyle.possessions_per_game, 2)}</dt><dd>Source possessions / game</dd></div>
+              <div><dt>{possessionStyle.transition_share == null ? "—" : `${fmt(possessionStyle.transition_share * 100, 1)}%`}</dt><dd>Transition share</dd></div>
+              <div><dt>{possessionStyle.assisted_share == null ? "—" : `${fmt(possessionStyle.assisted_share * 100, 1)}%`}</dt><dd>Assisted share</dd></div>
+              <div><dt>{possessionStyle.garbage_time_share == null ? "—" : `${fmt(possessionStyle.garbage_time_share * 100, 1)}%`}</dt><dd>Garbage-time share</dd></div>
+            </div>
+            <p className="note" style={{ marginTop: 12 }}>
+              {possessionStyle.possessions.toLocaleString()} source possession rows across {possessionStyle.games.toLocaleString()} recorded team-games. These are descriptive NCAA source aggregates: they do not assign individual credit or enter the forecast.
+            </p>
+          </section>
+        )}
       </section>
       <section className="section">
         <div className="section-heading">

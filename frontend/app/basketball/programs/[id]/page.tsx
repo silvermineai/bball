@@ -1,4 +1,6 @@
 import Link from "next/link";
+import fs from "node:fs";
+import path from "node:path";
 import { notFound } from "next/navigation";
 import { getScoutIndex, getScoutProfile } from "../../../_lib/scouting-data";
 import { date, fmt, signed } from "../../../_lib/format";
@@ -7,6 +9,7 @@ import { buildRosterLabRows } from "../../../_lib/roster-readiness";
 import Dossier from "./Dossier";
 import ProgramRecruiting from "./ProgramRecruiting";
 import LiveProgramSchedule from "./LiveProgramSchedule";
+import type { PossessionStyleCatalog, PossessionStyleRow } from "../../../_lib/possession-style";
 export function generateStaticParams() {
   return getScoutIndex().teams.map((t) => ({ id: t.id }));
 }
@@ -37,6 +40,20 @@ export default async function Page({
     recruiting = getRecruiting(),
     rosters = getRosters(),
     rosterReadiness = buildRosterLabRows(rosters, overview).find((row) => row.teamId === id);
+  let possessionStyle: PossessionStyleRow | null = null;
+  try {
+    const catalog = JSON.parse(
+      fs.readFileSync(
+        path.join(process.cwd(), "public/data/basketball/ncaa-possession-style.json"),
+        "utf8",
+      ),
+    ) as PossessionStyleCatalog;
+    const edition = catalog.seasons.find((item) => item.season === 2026);
+    const row = edition?.teams.find((item) => item.team_id === id);
+    if (edition && row) possessionStyle = { ...row, season: edition.season };
+  } catch {
+    // The dossier remains useful when the optional descriptive archive is unavailable.
+  }
   return (
     <>
       <div className="dateline eyebrow">
@@ -109,7 +126,7 @@ export default async function Page({
           <span>Model tempo · possessions / 40 min</span>
         </div>
       </div>
-      <Dossier profile={p} />
+      <Dossier profile={p} possessionStyle={possessionStyle} />
       <ProgramRecruiting
         teamId={id}
         programName={p.name}
