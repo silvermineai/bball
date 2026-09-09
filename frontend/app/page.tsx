@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFootballEfficiencyModel, getOverview, type Overview } from "./_lib/data";
 import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
+import LiveFootballForecastStatus from "./_components/LiveFootballForecastStatus";
 import fs from "node:fs";
 import path from "node:path";
 import { topFootballLeaders, type LeaderPlayer } from "./_lib/football-leaders";
@@ -179,6 +180,9 @@ export default function Home() {
           <span>Margin error · {e.season} holdout</span>
         </div>
       </div>
+      <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+        <LiveFootballForecastStatus />
+      </section>
       <section className="section source-receipts">
         <div className="section-heading">
           <div>
