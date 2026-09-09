@@ -146,7 +146,7 @@ The forecast lab also reads the `meta=1` catalog from the deployed Worker after 
 
 `GET /api/basketball/research/unresolved?dataset=ncaa_player_box&season=2026&q=Duke&limit=40` returns a bounded page of source observations retained in `bb_unresolved`. Dataset, season, withholding-reason and source-JSON filters are parameterized; the response parses each original object into `source` and keeps the source row index. The endpoint is for audit and identity review only: it does not join, rank, forecast or assert a player/team identity.
 
-The shared market archive keeps its sport, season, search and page controls in the URL and offers a copy-link action, so a line review can be reopened or handed to another researcher with the same slice of retained observations.
+The shared market archive keeps its sport, season, search and page controls in the URL and offers a copy-link action, so a line review can be reopened or handed to another researcher with the same slice of retained observations. The basketball matchup slate and forecast lab hydrate their market panels from the same live scorecard endpoint, then fall back to the bundled market map if the D1 request is unavailable; this keeps upcoming-game cards aligned with the scorecard’s eligibility rules.
 
 ## Remaining full-goal work
 
