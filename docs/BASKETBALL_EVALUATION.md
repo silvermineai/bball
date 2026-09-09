@@ -54,7 +54,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_evaluation
 .venv/bin/python scripts/publish-evaluation.py
 ```
 
-The standalone publisher runs basketball tests, regenerates the experiment, tests/builds the frontend, checks/tests the Worker, dry-runs deployment, archives the evidence and deploys. The main basketball publisher also regenerates and archives the experiment. The serialized weekly publication workflow in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml) invokes the same publisher after its required repository secrets are configured.
+The standalone publisher runs basketball tests, regenerates the experiment, tests/builds the frontend, checks/tests the Worker, dry-runs deployment, archives the evidence and deploys. The main basketball publisher also regenerates and archives the experiment. The serialized daily publication workflow in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml) invokes the same publisher after its required repository secrets are configured.
 
 ## Verification
 

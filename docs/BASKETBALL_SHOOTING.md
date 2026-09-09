@@ -45,7 +45,7 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.basketball_shooting --s
 .venv/bin/python scripts/publish-shooting.py
 ```
 
-`publish-basketball.py` also refreshes shooting evidence after refreshing the underlying box scores. The R2 bucket must already exist. The weekly `.github/workflows/refresh-research.yml` job runs the combined publication and can be dispatched manually for a source correction.
+`publish-basketball.py` also refreshes shooting evidence after refreshing the underlying box scores. The R2 bucket must already exist. The daily `.github/workflows/refresh-research.yml` job runs the combined publication and can be dispatched manually for a source correction.
 
 Python tests cover made/missed semantics, exact IDs, attempt-value fallback, missing shooters, coordinate guards, reconciliation and cache integrity. Frontend tests verify that missing locations and long attempts remain in shooting denominators. Worker tests cover input validation, active-edition selection, absent profiles and exact athlete filtering across games.
 
