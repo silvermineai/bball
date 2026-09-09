@@ -40,6 +40,21 @@ Model and market errors are compared on exactly the same settled games, separate
 
 The legacy SportsDataverse betting archive remains outside this evaluation because it does not provide a verified publisher clock/bookmaker. Its importer no longer promotes future archive rows to verified pregame observations solely because they were downloaded before a scheduled game.
 
+### Licensed CSV imports
+
+When a licensed provider supplies a CSV export instead of an API credential, `market_csv.py` provides the same fail-closed path without scraping sportsbook pages. Every import requires the sport, provider name, license URL and source file. Required columns are `game_id`, `market` (`spreads`, `totals` or `h2h`), `starts_at`, `captured_at`, `updated_at`, `home_name`, `away_name`, `bookmaker`, plus a line and both decimal prices (or American prices) for the selected market. The importer checks the exact source game ID, participant names, UTC start, pregame capture and provider-update clocks, stores a file SHA-256 receipt, and rolls back the entire file if any row fails. It never infers a game from a team-name search.
+
+For example:
+
+```bash
+PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv \
+  licensed-lines.csv --sport basketball --provider "Licensed Feed" \
+  --license-url https://provider.example/terms
+PYTHONPATH=ncaa_scraper .venv/bin/python scripts/sync-ledger.py
+```
+
+The command updates the local immutable ledger and emits `.local/research-ledger.sql`; the normal validation/deployment workflow then publishes qualifying comparisons. A CSV import is an attribution and storage mechanism, not permission to redistribute the provider's raw feed.
+
 ## Refresh and publish
 
 ```bash

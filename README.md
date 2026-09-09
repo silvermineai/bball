@@ -98,6 +98,7 @@ ncaa_scraper/ncaa_scraper/
   analytics.py            Existing basketball analytics artifacts
   news_rss.py             Permitted ESPN RSS context feed parser
   fetcher.py              NCAA cache reader with enforced robots checks
+  market_csv.py           Fail-closed importer for licensed provider exports
 
 frontend/app/             Next.js publication pages
 frontend/src/             Preserved TanStack basketball application
