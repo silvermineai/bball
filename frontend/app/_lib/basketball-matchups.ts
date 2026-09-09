@@ -8,10 +8,12 @@ export type MatchupSort =
   | "uncertainty";
 
 export type MatchupCoverage = "all" | "forecasted" | "unforecasted";
+export type MatchupSignal = "all" | "toss-up" | "lean" | "strong";
 export type MatchupFilters = {
   team: string;
   month: string;
   coverage: MatchupCoverage;
+  signal: MatchupSignal;
   sort: MatchupSort;
   page: number;
   picks?: string[];
@@ -29,12 +31,14 @@ const matchupCoverages = new Set<MatchupCoverage>([
   "forecasted",
   "unforecasted",
 ]);
+const matchupSignals = new Set<MatchupSignal>(["all", "toss-up", "lean", "strong"]);
 
 /** Read only supported matchup controls from a shareable query string. */
 export function parseMatchupFilters(search: string): MatchupFilters {
   const params = new URLSearchParams(search);
   const sort = params.get("sort") as MatchupSort | null;
   const coverage = params.get("coverage") as MatchupCoverage | null;
+  const signal = params.get("signal") as MatchupSignal | null;
   const month = params.get("month") || "all";
   const parsedPage = Number(params.get("page") || 0);
   const picks = params.getAll("pick").filter(Boolean).slice(0, 12);
@@ -43,6 +47,7 @@ export function parseMatchupFilters(search: string): MatchupFilters {
     month: month === "all" || /^\d{4}-\d{2}$/.test(month) ? month : "all",
     coverage:
       coverage && matchupCoverages.has(coverage) ? coverage : "all",
+    signal: signal && matchupSignals.has(signal) ? signal : "all",
     sort: sort && matchupSorts.has(sort) ? sort : "date",
     page: Number.isInteger(parsedPage) && parsedPage >= 0 && parsedPage <= 500 ? parsedPage : 0,
     ...(picks.length ? { picks } : {}),
@@ -55,6 +60,7 @@ export function matchupFilterSearch(filters: MatchupFilters) {
   if (filters.team) params.set("team", filters.team);
   if (filters.month !== "all") params.set("month", filters.month);
   if (filters.coverage !== "all") params.set("coverage", filters.coverage);
+  if (filters.signal !== "all") params.set("signal", filters.signal);
   if (filters.sort !== "date") params.set("sort", filters.sort);
   if (filters.page > 0) params.set("page", String(filters.page));
   for (const pick of filters.picks || []) {
@@ -84,6 +90,19 @@ export function forecastSignal(prediction: BBPrediction): ForecastSignal {
           ? "Lean"
           : "Toss-up",
   };
+}
+
+/** Test a prediction against the plain-language signal bands used by the slate. */
+export function matchesMatchupSignal(
+  prediction: BBPrediction | null | undefined,
+  signal: MatchupSignal,
+) {
+  if (signal === "all") return true;
+  if (!prediction) return false;
+  const confidence = forecastSignal(prediction).confidence;
+  if (signal === "toss-up") return confidence < 0.6;
+  if (signal === "lean") return confidence >= 0.6 && confidence < 0.75;
+  return confidence >= 0.75;
 }
 
 function compareNumber(a: number | null, b: number | null, descending: boolean) {

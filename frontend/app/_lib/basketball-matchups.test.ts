@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   forecastSignal,
+  matchesMatchupSignal,
   matchupFilterSearch,
   parseMatchupFilters,
   sortMatchups,
@@ -97,6 +98,7 @@ describe("basketball matchup triage", () => {
       team: "Kansas Jayhawks",
       month: "2026-11",
       coverage: "forecasted",
+      signal: "all",
       sort: "confidence",
       page: 0,
     });
@@ -104,8 +106,8 @@ describe("basketball matchup triage", () => {
       "?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&sort=confidence",
     );
     expect(
-      matchupFilterSearch({ team: "Kansas Jayhawks", month: "2026-11", coverage: "forecasted", sort: "confidence", page: 3 }),
-    ).toBe("?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&sort=confidence&page=3");
+      matchupFilterSearch({ team: "Kansas Jayhawks", month: "2026-11", coverage: "forecasted", signal: "lean", sort: "confidence", page: 3 }),
+    ).toBe("?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&signal=lean&sort=confidence&page=3");
   });
 
   it("withholds invalid controls and omits defaults", () => {
@@ -113,11 +115,12 @@ describe("basketball matchup triage", () => {
       team: "",
       month: "all",
       coverage: "all",
+      signal: "all",
       sort: "date",
       page: 0,
     });
     expect(
-      matchupFilterSearch({ team: "", month: "all", coverage: "all", sort: "date", page: 0 }),
+      matchupFilterSearch({ team: "", month: "all", coverage: "all", signal: "all", sort: "date", page: 0 }),
     ).toBe("");
   });
 
@@ -128,9 +131,27 @@ describe("basketball matchup triage", () => {
       team: "",
       month: "all",
       coverage: "all",
+      signal: "all",
       sort: "date",
       page: 0,
       picks: filters.picks,
     })).toBe("?pick=game-a&pick=game-b&pick=game-a");
+  });
+
+  it("accepts only supported model signal filters", () => {
+    expect(parseMatchupFilters("?signal=strong").signal).toBe("strong");
+    expect(parseMatchupFilters("?signal=aggressive").signal).toBe("all");
+  });
+
+  it("uses stable confidence bands for signal filtering", () => {
+    const tossUp = game("toss", "2026-11-01T00:00:00Z", 1, 0.59).prediction;
+    const lean = game("lean", "2026-11-01T00:00:00Z", 1, 0.6).prediction;
+    const strong = game("strong", "2026-11-01T00:00:00Z", 1, 0.75).prediction;
+    expect(matchesMatchupSignal(tossUp, "toss-up")).toBe(true);
+    expect(matchesMatchupSignal(tossUp, "lean")).toBe(false);
+    expect(matchesMatchupSignal(lean, "lean")).toBe(true);
+    expect(matchesMatchupSignal(strong, "strong")).toBe(true);
+    expect(matchesMatchupSignal(undefined, "all")).toBe(true);
+    expect(matchesMatchupSignal(undefined, "strong")).toBe(false);
   });
 });

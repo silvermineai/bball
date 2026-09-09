@@ -9,9 +9,11 @@ import type { BBOverview } from "../../_lib/basketball-types";
 import { date, kick } from "../../_lib/format";
 import {
   matchupFilterSearch,
+  matchesMatchupSignal,
   parseMatchupFilters,
   sortMatchups,
   type MatchupCoverage,
+  type MatchupSignal,
   type MatchupSort,
 } from "../../_lib/basketball-matchups";
 import {
@@ -44,6 +46,7 @@ export default function Matchups({
   const [q, setQ] = useState(initial.team),
     [month, setMonth] = useState(initial.month),
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
+    [signal, setSignal] = useState<MatchupSignal>(initial.signal),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
     [page, setPage] = useState(initial.page),
     [prepIds, setPrepIds] = useState<string[]>(initial.picks || []),
@@ -142,7 +145,7 @@ export default function Matchups({
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    const next = matchupFilterSearch({ team: q, month, coverage, sort, page, picks: prepIds });
+    const next = matchupFilterSearch({ team: q, month, coverage, signal, sort, page, picks: prepIds });
     if (next !== window.location.search) {
       window.history.replaceState(
         window.history.state,
@@ -150,21 +153,23 @@ export default function Matchups({
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [q, month, coverage, sort, page, prepIds]);
+  }, [q, month, coverage, signal, sort, page, prepIds]);
   const eligibleGames = scope === "forecasted" ? activeGames.filter((g) => g.prediction != null) : activeGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
-    eligibleGames.filter(
-      (g) =>
+    eligibleGames.filter((g) => {
+      return (
         (g.home_name + " " + g.away_name)
           .toLowerCase()
           .includes(q.toLowerCase()) &&
         (month === "all" || g.starts_at.startsWith(month)) &&
+        matchesMatchupSignal(g.prediction, signal) &&
         (effectiveCoverage === "all" ||
           (effectiveCoverage === "forecasted"
             ? g.prediction != null
-            : g.prediction == null)),
-    ),
+            : g.prediction == null))
+      );
+    }),
     sort,
   );
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
@@ -239,6 +244,21 @@ export default function Matchups({
           </label>
         )}
         <label className="control">
+          <span>MODEL SIGNAL</span>
+          <select
+            value={signal}
+            onChange={(e) => {
+              setSignal(e.target.value as MatchupSignal);
+              setPage(0);
+            }}
+          >
+            <option value="all">All forecast signals</option>
+            <option value="toss-up">Toss-ups · under 60%</option>
+            <option value="lean">Leans · 60–74.9%</option>
+            <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <label className="control">
           <span>SORT BY</span>
           <select
             value={sort}
@@ -257,7 +277,7 @@ export default function Matchups({
       </div>
       <p className="note">
         This filtered slate updates the URL, so a preparation view can be
-        bookmarked or shared with the exact team, coverage and triage sort.
+        bookmarked or shared with the exact team, coverage, signal and triage sort.
       </p>
       <p className="note">
         Forecast edition {generatedAt.slice(0, 10)} · model {model.version} · training cutoff {model.cutoff}. Read the <Link href="/basketball/model/">model notebook</Link> for fitting windows, held-out results and limitations.
