@@ -21,6 +21,11 @@ on:
         required: true
         type: boolean
         default: false
+      capture_cbbd_lines:
+        description: Capture authorized CBBD basketball moneylines after the refresh
+        required: true
+        type: boolean
+        default: false
       refresh_ncaa:
         description: Refresh NCAA national player snapshots when robots policy permits (basketball or both)
         required: true
@@ -44,6 +49,7 @@ jobs:
       CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
       CF_API_TOKEN_ACCOUNT: ${{ secrets.CF_API_TOKEN_ACCOUNT }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      CBBD_API_KEY: ${{ secrets.CBBD_API_KEY }}
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -124,7 +130,7 @@ jobs:
         # When a scheduled run has a licensed odds key, the odds-aware
         # publication below performs the final validation/deploy after the
         # quote capture. Without a key, keep the normal one-pass deploy.
-        if: ${{ inputs.capture_odds != true && (github.event_name != 'schedule' || env.THE_ODDS_API_KEY == '') }}
+        if: ${{ inputs.capture_odds != true && inputs.capture_cbbd_lines != true && (github.event_name != 'schedule' || (env.THE_ODDS_API_KEY == '' && env.CBBD_API_KEY == '')) }}
         run: |
           npm test --prefix frontend
           npm run build --prefix frontend
@@ -132,13 +138,21 @@ jobs:
           npm test --prefix worker
           python scripts/cloudflare.py deploy
 
-      - name: Capture licensed odds snapshot
+      - name: Capture licensed market snapshots
         # Manual dispatch remains explicit; scheduled runs opt in only when
         # the repository has supplied the licensed provider secret.
-        if: ${{ inputs.capture_odds == true || (github.event_name == 'schedule' && env.THE_ODDS_API_KEY != '') }}
+        if: ${{ inputs.capture_odds == true || inputs.capture_cbbd_lines == true || (github.event_name == 'schedule' && (env.THE_ODDS_API_KEY != '' || env.CBBD_API_KEY != '')) }}
         run: |
-          test -n "$THE_ODDS_API_KEY" || { echo "capture_odds requires repository secret THE_ODDS_API_KEY" >&2; exit 1; }
-          python scripts/publish-research.py --odds
+          ARGS=""
+          if [ "${{ inputs.capture_odds }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ] && [ -n "$THE_ODDS_API_KEY" ]; then
+            test -n "$THE_ODDS_API_KEY" || { echo "capture_odds requires repository secret THE_ODDS_API_KEY" >&2; exit 1; }
+            ARGS="$ARGS --odds"
+          fi
+          if [ "${{ inputs.capture_cbbd_lines }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ] && [ -n "$CBBD_API_KEY" ]; then
+            test -n "$CBBD_API_KEY" || { echo "capture_cbbd_lines requires repository secret CBBD_API_KEY" >&2; exit 1; }
+            ARGS="$ARGS --cbbd-lines"
+          fi
+          python scripts/publish-research.py $ARGS
 
       - name: Record publication summary
         run: |
@@ -146,6 +160,7 @@ jobs:
             echo "### Research publication completed"
             echo "- Source/model selection: \`${{ inputs.sport || 'both' }}\`"
             echo "- Odds capture requested: \`${{ inputs.capture_odds || false }}\`"
+            echo "- CBBD lines capture requested: \`${{ inputs.capture_cbbd_lines || false }}\`"
             echo "- NCAA snapshot refresh requested: \`${{ github.event_name == 'schedule' || inputs.refresh_ncaa == true }}\`"
             echo "- Archive capture runs automatically after each successful Worker deployment."
           } >> "$GITHUB_STEP_SUMMARY"
