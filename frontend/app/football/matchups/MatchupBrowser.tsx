@@ -1,9 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { FootballEfficiencyScenario, Game } from "../../_lib/data";
 import MatchCard from "../../_components/MatchCard";
 import { date } from "../../_lib/format";
+import {
+  loadLiveFootballForecasts,
+  mergeLiveFootballForecasts,
+} from "../../_lib/live-football-forecasts";
 export default function MatchupBrowser({
   games,
   generated,
@@ -17,8 +21,11 @@ export default function MatchupBrowser({
   const [query, setQuery] = useState(params.get("team") || ""),
     [week, setWeek] = useState("all"),
     [mode, setMode] = useState("all"),
-    [page, setPage] = useState(0);
-  const rows = games.filter(
+    [page, setPage] = useState(0),
+    [liveGames, setLiveGames] = useState<Game[] | null>(null),
+    [liveError, setLiveError] = useState("");
+  const activeGames = liveGames || games;
+  const rows = activeGames.filter(
     (g) =>
       (
         g.home_name +
@@ -35,6 +42,23 @@ export default function MatchupBrowser({
       (mode === "all" || g.prediction),
   );
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadLiveFootballForecasts(controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted) {
+          setLiveGames(mergeLiveFootballForecasts(games, rows));
+          setLiveError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveError(reason instanceof Error ? reason.message : "Live football forecasts unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [games]);
   return (
     <>
       <div className="toolbar">
@@ -60,7 +84,7 @@ export default function MatchupBrowser({
             }}
           >
             <option value="all">All weeks</option>
-            {[...new Set(games.map((g) => g.week))]
+            {[...new Set(activeGames.map((g) => g.week))]
               .sort((a, b) => a - b)
               .map((w) => (
                 <option key={w} value={w}>
@@ -84,8 +108,11 @@ export default function MatchupBrowser({
         </label>
       </div>
       <p className="note" style={{ marginBottom: 22 }}>
-        {rows.length} matchups · Generated {date(generated)} · Published
-        forecasts are snapshots, not a live feed.
+        {rows.length} matchups · Generated {date(generated)} · {liveGames
+          ? "Live D1 forecast rows are applied to the published cards."
+          : liveError
+            ? `${liveError} Showing the published snapshot.`
+            : "Checking the live D1 forecast edition…"}
       </p>
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (

@@ -13,7 +13,7 @@ Cloudflare uses two stores: `bball-silvermine` remains the native football/scout
 | Tool | Route | What it does |
 |---|---|---|
 | Football desk | `/football/` | Upcoming games, model context, national ratings and journal |
-| Matchups | `/football/matchups/` | Search by team/conference/week; projected scores, win estimates and uncertainty |
+| Matchups | `/football/matchups/` | Search by team/conference/week; current D1-backed projected scores, win estimates and uncertainty with a static evidence fallback |
 | Player index | `/football/players/` | Search imported players; shareable season, role, division and qualification slices with offensive EPA rankings |
 | Player careers | `/football/careers/` | Search 35,834 identified source athletes across nine seasons, compare category-specific career EPA and workload, and follow each team trail |
 | Player game logs | `/football/player/?id=…&season=2025` | Exact-ID season production summary, EPA ranks, box-category coverage and raw source rows from Cloudflare D1 |
@@ -22,7 +22,7 @@ Cloudflare uses two stores: `bball-silvermine` remains the native football/scout
 | Model notebook | `/football/methodology/` | Holdout results, source receipts, missing coverage and limitations |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
-The current football archive contains **18,759 schedule records** across 2022–26, **264,061 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **790 upcoming FBS schedule records**, of which **711 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
+The current football archive contains **18,759 schedule records** across 2022–26, **264,061 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **789 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 

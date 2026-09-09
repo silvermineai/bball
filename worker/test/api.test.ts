@@ -95,6 +95,65 @@ describe("bball api", () => {
     ]);
   });
 
+  it("serves bounded football forecasts from the latest registered D1 model", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT id,created_at,cutoff,artifact_json FROM football_models")) {
+        return {
+          first: async () => ({
+            id: "ridge-team-calibrated-v2-test",
+            created_at: "2026-09-09T02:00:00Z",
+            cutoff: "2026-09-09T02:00:00Z",
+            artifact_json: "{}",
+          }),
+        };
+      }
+      if (sql.includes("count(*) AS total FROM football_predictions")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [{
+              game_id: "401900001",
+              model_id: "ridge-team-calibrated-v2-test",
+              created_at: "2026-09-09T02:00:00Z",
+              home_margin: 6.5,
+              total: 48.25,
+              home_win_probability: 0.64,
+              season: 2026,
+              kickoff: "2026-09-12T19:00:00Z",
+              home_id: "1",
+              away_id: "2",
+              home_name: "Home",
+              away_name: "Away",
+              home_conference: "Home Conf",
+              away_conference: "Away Conf",
+              home_division: "fbs",
+              away_division: "fbs",
+              home_score: null,
+              away_score: null,
+              completed: 0,
+              neutral: 0,
+              week: 2,
+              venue: "Stadium",
+              time_tbd: 0,
+            }],
+          }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/football/research/forecasts?season=2026&status=upcoming&limit=2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { total: number; rows: Array<{ home_margin: number; total: number; home_win_probability: number }> };
+    expect(body.total).toBe(1);
+    expect(body.rows[0]).toMatchObject({ home_margin: 6.5, total: 48.25, home_win_probability: 0.64 });
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("g.kickoff>?"))).toBe(true);
+  });
+
   it("returns D1 coverage counts alongside source receipt timestamps", async () => {
     const prepare = vi.fn().mockReturnValue({
       all: vi.fn().mockResolvedValue({
