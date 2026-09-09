@@ -87,6 +87,12 @@ export default function NCAAIndividual() {
           <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        {stat === "apg" && data.supplements?.apg && (
+          <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
+            <strong>Assists per game uses an exact-ID Division I supplement.</strong>
+            <p>{data.supplements.apg.values.toLocaleString()} Division I values for {data.supplements.apg.season - 1}–{String(data.supplements.apg.season).slice(-2)} are derived from <em>{data.supplements.apg.dataset}</em>: {data.supplements.apg.basis}. {data.supplements.apg.publisher_rank}. <a href={data.supplements.apg.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+          </div>
+        )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
           <div className="paper-panel source-gap" role="status">
             <strong>{ncaaStatLabels[stat]} is unavailable in this NCAA snapshot.</strong>

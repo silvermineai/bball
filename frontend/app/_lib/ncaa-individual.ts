@@ -49,6 +49,18 @@ export type NCAAIndividualRelease = {
     players: number;
     divisions: Record<string, { players: number; ppg: number; rpg: number; apg: number; mpg: number }>;
   };
+  supplements?: {
+    apg?: {
+      values: number;
+      season: number;
+      dataset: string;
+      basis: string;
+      source_sha256: string | null;
+      source_url: string;
+      publisher_rank: string;
+      generated_at: string;
+    };
+  };
   players: NCAAIndividualPlayer[];
 };
 
