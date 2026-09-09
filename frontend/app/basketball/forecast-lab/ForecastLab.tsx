@@ -35,6 +35,14 @@ function numeric(value: number | null | undefined, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 }
 
+function marketQuote(comparisons: Comparison[], market: Comparison["market"]) {
+  return comparisons.find((quote) => quote.market === market) || null;
+}
+
+function signed(value: number | null | undefined, suffix = " pts") {
+  return value == null || !Number.isFinite(value) ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}`;
+}
+
 function parseInitial(search: string) {
   const params = new URLSearchParams(search);
   const view = params.get("view") as View | null;
@@ -140,7 +148,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Brief"],
+      ["Scheduled start", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         row.game.away_name,
@@ -153,6 +161,12 @@ export default function ForecastLab({
         row.prediction.margin_low,
         row.prediction.margin_high,
         row.comparisons.length,
+        marketQuote(row.comparisons, "spreads")?.line,
+        marketQuote(row.comparisons, "spreads")?.model_difference,
+        marketQuote(row.comparisons, "totals")?.line,
+        marketQuote(row.comparisons, "totals")?.model_difference,
+        marketQuote(row.comparisons, "h2h")?.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100,
+        marketQuote(row.comparisons, "h2h")?.model_difference == null ? null : marketQuote(row.comparisons, "h2h")!.model_difference * 100,
         row.game.prediction ? `https://bball.silvermine.dev/basketball/briefs/${row.game.id}/` : null,
       ]),
     ),
@@ -224,8 +238,8 @@ export default function ForecastLab({
         <button className="button secondary" type="button" onClick={exportRows}>Download comparison CSV ↓</button>
       </div>
       <div className="table-scroll">
-        <table className="data-table">
-          <thead><tr><th>Game</th><th>Primary model</th><th>Roster challenger</th><th>Range / confidence</th><th>Sources</th></tr></thead>
+      <table className="data-table">
+          <thead><tr><th>Game</th><th>Primary model</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th></tr></thead>
           <tbody>{rows.map((row) => {
             const p = row.prediction;
             const confidence = Math.max(p.home_win_probability, 1 - p.home_win_probability);
@@ -234,7 +248,7 @@ export default function ForecastLab({
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary</small><small>prior net + exact-ID continuity</small></> : <span>—</span>}</td>
               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side confidence</small><small>{numeric(p.pace, 1)} possessions</small></td>
-              <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small></> : <span className="muted">No verified market quote</span>}</td>
+              <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small>{marketQuote(row.comparisons, "spreads") && <small>Spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>Total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>No-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}</> : <span className="muted">No verified market quote</span>}</td>
             </tr>;
           })}</tbody>
         </table>
