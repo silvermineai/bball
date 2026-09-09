@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import type { FootballEfficiencyScenario, Game } from "../../_lib/data";
 import MatchCard from "../../_components/MatchCard";
-import { date } from "../../_lib/format";
+import { date, kick } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   loadLiveFootballForecasts,
   mergeLiveFootballForecasts,
@@ -26,6 +28,7 @@ export default function MatchupBrowser({
   efficiencyScenarios?: FootballEfficiencyScenario[];
 }) {
   const params = useSearchParams();
+  const requestedPicks = params.get("picks") || "";
   const requestedPage = Number(params.get("page") || 0);
   const requestedWeek = params.get("week");
   const initialWeek = requestedWeek && /^\d{1,2}$/.test(requestedWeek) ? requestedWeek : "all";
@@ -35,6 +38,8 @@ export default function MatchupBrowser({
     [signal, setSignal] = useState<FootballMatchupSignal>(parseFootballMatchupSignal(params.get("signal"))),
     [sort, setSort] = useState<FootballMatchupSort>(parseFootballMatchupSort(params.get("sort"))),
     [page, setPage] = useState(Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage <= 250 ? requestedPage : 0),
+    [prepIds, setPrepIds] = useState<string[]>(() => requestedPicks.split(",").filter(Boolean).slice(0, 12)),
+    [prepHydrated, setPrepHydrated] = useState(false),
     [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
     [liveError, setLiveError] = useState("");
@@ -58,6 +63,44 @@ export default function MatchupBrowser({
   );
   const rows = sortFootballMatchups(filteredRows, sort);
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const prepRows = prepIds
+    .map((id) => activeGames.find((game) => game.id === id))
+    .filter((game): game is Game => !!game);
+
+  useEffect(() => {
+    const validIds = new Set(activeGames.map((game) => game.id));
+    const fromUrl = requestedPicks.split(",").filter((id) => validIds.has(id)).slice(0, 12);
+    let next = fromUrl;
+    if (!fromUrl.length) {
+      try {
+        const saved = JSON.parse(window.localStorage.getItem("silvermine.football.matchup-prep.v1") || "null");
+        if (Array.isArray(saved)) next = saved.filter((id): id is string => typeof id === "string" && validIds.has(id)).slice(0, 12);
+      } catch {
+        next = [];
+      }
+    }
+    setPrepIds(next);
+    setPrepHydrated(true);
+  }, [activeGames, requestedPicks]);
+  useEffect(() => {
+    if (!prepHydrated) return;
+    try {
+      window.localStorage.setItem("silvermine.football.matchup-prep.v1", JSON.stringify(prepIds.slice(0, 12)));
+    } catch {
+      // Local persistence is a convenience; private browsing may disable it.
+    }
+  }, [prepHydrated, prepIds]);
+  useEffect(() => {
+    const validIds = new Set(activeGames.map((game) => game.id));
+    const cleaned = prepIds.filter((id) => validIds.has(id)).slice(0, 12);
+    if (cleaned.length !== prepIds.length || cleaned.some((id, index) => id !== prepIds[index])) setPrepIds(cleaned);
+  }, [activeGames, prepIds]);
+
+  const togglePrep = (id: string) => {
+    setPrepIds((current) => current.includes(id)
+      ? current.filter((value) => value !== id)
+      : current.length >= 12 ? current : [...current, id]);
+  };
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -73,8 +116,10 @@ export default function MatchupBrowser({
     else url.searchParams.delete("sort");
     if (page) url.searchParams.set("page", String(page));
     else url.searchParams.delete("page");
+    if (prepIds.length) url.searchParams.set("picks", prepIds.join(","));
+    else url.searchParams.delete("picks");
     window.history.replaceState(window.history.state, "", url);
-  }, [mode, page, query, signal, sort, week]);
+  }, [mode, page, prepIds, query, signal, sort, week]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -193,9 +238,47 @@ export default function MatchupBrowser({
             ? `${liveError} Showing the published snapshot.`
             : "Checking the live D1 forecast edition…"}
       </p>
+      <div className="section-heading" style={{ marginBottom: 20 }}>
+        <p>{rows.length} games in the filtered slate</p>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() => downloadCsv(
+            "football-matchups.csv",
+            toCsv(
+              ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Model difference"],
+              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.margin_difference]),
+            ),
+          )}
+        >
+          Download CSV ↓
+        </button>
+      </div>
+      {prepRows.length > 0 && (
+        <section className="paper-panel matchup-prep-panel" aria-labelledby="football-prep-title">
+          <div className="section-heading">
+            <div><span className="eyebrow">COACH PREP</span><h2 id="football-prep-title">Prep list</h2></div>
+            <button className="button secondary" type="button" onClick={() => setPrepIds([])}>Clear list</button>
+          </div>
+          <p className="note">Keep up to 12 games across filters. The list persists on this device and travels with the copied slate URL.</p>
+          <div className="matchup-prep-list">
+            {prepRows.map((game) => (
+              <div className="matchup-prep-item" key={game.id}>
+                <div><strong>{game.away_name} at {game.home_name}</strong><small>{game.time_tbd ? `${date(game.kickoff)} · time TBD` : kick(game.kickoff)}</small></div>
+                <div className="button-row"><Link className="note" href={`/research/briefs/?sport=football&game=${encodeURIComponent(game.id)}`}>Brief ↗</Link><button className="button secondary" type="button" onClick={() => togglePrep(game.id)}>Remove</button></div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
-          <MatchCard key={g.id} game={g} efficiencyScenario={scenarioByGame.get(g.id)} />
+          <div className="matchup-card-wrap" key={g.id}>
+            <MatchCard game={g} efficiencyScenario={scenarioByGame.get(g.id)} />
+            <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
+              {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
+            </button>
+          </div>
         ))}
       </div>
       {!rows.length && (
