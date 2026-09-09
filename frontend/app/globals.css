@@ -418,6 +418,20 @@ th,
   margin-top: 4px;
   color: var(--muted);
 }
+.recruiting-workload-calculator {
+  margin: 0;
+}
+.recruiting-workload-controls {
+  margin-top: 18px;
+}
+.recruiting-workload-results {
+  margin-top: 20px;
+}
+.recruiting-workload-results small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}
 @media (max-width: 650px) {
   .matchup-prep-item {
     align-items: start;

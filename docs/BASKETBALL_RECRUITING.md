@@ -30,6 +30,8 @@ The continuity table is searchable and exportable across all 354 programs in the
 
 The continuity table also exposes **unrepresented prior minutes**: the prior-season team total minus minutes represented by the current source IDs. It is a film and source-review queue, not a departure count, eligibility signal or forecast adjustment. The same field is available in the recorded 2025–26 view.
 
+The learning room includes a browser-only workload worksheet using the same denominator rules as the roster lab. It keeps returning minutes, incoming prior minutes, combined represented minutes and unrepresented minutes separate so a reader can understand the continuity arithmetic before opening a source-listed team. Hand-entered values never become recruiting evidence or D1 rows.
+
 The same workload table is available in the recorded 2025–26 view across its 727 observed programs. That historical view uses playing time on both sides of the exact-ID comparison, so it describes observed continuity and different-program records without claiming a transfer event, reason or eligibility outcome.
 
 ## Official transfer context

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import FourFactorsCalculator from "./FourFactorsCalculator";
+import RecruitingWorkloadCalculator from "./RecruitingWorkloadCalculator";
 
 export const metadata = {
   title: "Learn college basketball analytics",
@@ -247,6 +248,10 @@ export default function Page() {
 
       <section className="section" aria-label="Interactive Four Factors lesson">
         <FourFactorsCalculator />
+      </section>
+
+      <section className="section" aria-label="Interactive recruiting workload lesson">
+        <RecruitingWorkloadCalculator />
       </section>
 
       <section className="section two-col">
