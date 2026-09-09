@@ -53,10 +53,25 @@ export default function SourceStats() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   const field = useMemo(
     () => fields.find((candidate) => `${candidate.category}:${candidate.key}` === fieldKey) || null,
     [fields, fieldKey],
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get("category");
+    const stat = params.get("stat");
+    if (category && stat) setFieldKey(`${category}:${stat}`);
+    if (params.get("season")) setSeason(params.get("season")!);
+    setQuery(params.get("q") || "");
+    setDirection(params.get("direction") === "asc" ? "asc" : "desc");
+    const requestedPage = Number(params.get("page"));
+    if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 10000) setPage(requestedPage);
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -75,6 +90,26 @@ export default function SourceStats() {
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!fields.length || fields.some((candidate) => `${candidate.category}:${candidate.key}` === fieldKey)) return;
+    setFieldKey(`${fields[0].category}:${fields[0].key}`);
+  }, [fieldKey, fields]);
+
+  useEffect(() => {
+    if (!hydrated || !field) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("season", season);
+    url.searchParams.set("category", field.category);
+    url.searchParams.set("stat", field.key);
+    if (query.trim()) url.searchParams.set("q", query.trim());
+    else url.searchParams.delete("q");
+    if (direction === "asc") url.searchParams.set("direction", direction);
+    else url.searchParams.delete("direction");
+    if (page) url.searchParams.set("page", String(page));
+    else url.searchParams.delete("page");
+    window.history.replaceState(window.history.state, "", url);
+  }, [direction, field, hydrated, page, query, season]);
 
   useEffect(() => {
     if (!field) return;
@@ -111,6 +146,14 @@ export default function SourceStats() {
   const reset = (callback: () => void) => {
     setPage(0);
     callback();
+  };
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Source stat link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
   };
   const exportRows = result?.rows || [];
   return (
@@ -161,7 +204,9 @@ export default function SourceStats() {
             <option value="asc">Lowest first</option>
           </select>
         </label>
+        <button className="button secondary" type="button" onClick={share}>Copy stat link</button>
       </div>
+      {copied && <p className="note" role="status">{copied}</p>}
       {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically.</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
         <>
