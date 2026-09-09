@@ -148,6 +148,8 @@ The forecast lab also reads the `meta=1` catalog from the deployed Worker after 
 
 The shared market archive keeps its sport, season, search and page controls in the URL and offers a copy-link action, so a line review can be reopened or handed to another researcher with the same slice of retained observations. The basketball matchup slate and forecast lab hydrate their market panels from the same live scorecard endpoint, then fall back to the bundled market map if the D1 request is unavailable; this keeps upcoming-game cards aligned with the scorecard’s eligibility rules.
 
+The basketball landing page also reports the live scorecard’s qualifying quote count and forecast denominator. It links directly to the market archive and states the provider-clock, participant-match and pre-tip requirements, so an empty quote count is visible as missing licensed coverage rather than an implied line.
+
 ## Remaining full-goal work
 
 - Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.
