@@ -141,13 +141,21 @@ def build(season=2023):
         "bb_team_season",
         "bb_publisher_ratings",
         "bb_player_value",
-        "bb_player_core",
     ):
         try:
             statements.extend(row_statements(conn, table, season))
         except sqlite3.OperationalError:
             # Optional tables are absent in small development fixtures.
             continue
+    # The main basketball SQL release clears the season-partitioned profile
+    # table before import. Re-publish every season here so a refresh cannot
+    # leave a historical season sparse when the compact core release is
+    # synced after the large edition.
+    try:
+        for core_season in range(2003, 2027):
+            statements.extend(row_statements(conn, "bb_player_core", core_season))
+    except sqlite3.OperationalError:
+        pass
     # Player identities are global, so include the current compact dictionary
     # needed by player-box lookups after adding a historical season.
     columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]
@@ -192,6 +200,7 @@ def main():
                     "execute",
                     D1_DB_NAME,
                     "--remote",
+                    "--yes",
                     "--file",
                     os.path.relpath(batch, ROOT / "worker"),
                 ],

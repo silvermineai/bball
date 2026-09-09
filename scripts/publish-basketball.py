@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -32,6 +33,11 @@ parser.add_argument(
     metavar="N",
     help="Resume the NCAA player-box SQL import at batch N after a confirmed interruption.",
 )
+parser.add_argument(
+    "--resume-d1",
+    action="store_true",
+    help="Reuse verified local artifacts and resume at the D1 import/sync phase.",
+)
 args = parser.parse_args()
 if args.batch_publication:
     os.environ["BATCH_PUBLICATION"] = "1"
@@ -39,15 +45,51 @@ if args.basketball_sql_batch_start is not None:
     os.environ["BASKETBALL_SQL_BATCH_START"] = str(args.basketball_sql_batch_start)
 if args.ncaa_player_box_sql_batch_start is not None:
     os.environ["NCAA_PLAYER_BOX_SQL_BATCH_START"] = str(args.ncaa_player_box_sql_batch_start)
+RESUME_D1 = args.resume_d1
+SOURCE_PHASE = True
+if RESUME_D1:
+    os.environ["BATCH_PUBLICATION"] = "1"
 BATCH_PUBLICATION = os.getenv("BATCH_PUBLICATION") == "1"
 
 
 def run(args, cwd=ROOT):
+    if RESUME_D1 and SOURCE_PHASE:
+        print(f"Skipping source-phase command for D1 resume: {' '.join(args)}", flush=True)
+        return
     subprocess.run(args, cwd=cwd, env=ENV, check=True)
 
 
 def run_remote_migration(args, cwd=ROOT):
     """Retry only remote migration calls when Cloudflare reports an upstream outage."""
+    try:
+        file_index = args.index("--file")
+        migration_path = cwd / str(args[file_index + 1])
+    except (ValueError, IndexError):
+        migration_path = None
+    if migration_path and migration_path.exists():
+        tables = sorted(
+            set(
+                re.findall(
+                    r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([\"`A-Za-z0-9_]+)",
+                    migration_path.read_text(),
+                    flags=re.IGNORECASE,
+                )
+            )
+        )
+        if tables:
+            quoted = ",".join("'" + table.strip('\\\"`') + "'" for table in tables)
+            probe_args = [*args[:file_index], "--command", f"SELECT count(*) AS present FROM sqlite_master WHERE type='table' AND name IN ({quoted})"]
+            probe = subprocess.run(
+                probe_args, cwd=cwd, env=ENV, check=False, capture_output=True, text=True
+            )
+            if probe.returncode == 0:
+                match = re.search(r'"present"\s*:\s*(\d+)', probe.stdout)
+                if match and int(match.group(1)) == len(tables):
+                    print(
+                        f"Skipping already-present migration {migration_path.name}",
+                        flush=True,
+                    )
+                    return
     for attempt in range(1, 4):
         result = subprocess.run(
             args, cwd=cwd, env=ENV, check=False, capture_output=True, text=True
@@ -145,8 +187,8 @@ def verified_sql_batches(first_path, start_env):
     if not isinstance(entries, list) or not entries:
         raise SystemExit(f"SQL batch manifest has no files: {manifest_path}")
     start = int(os.getenv(start_env, "0"))
-    if start < 0 or start >= len(entries):
-        raise SystemExit(f"{start_env} must be between 0 and {len(entries) - 1}")
+    if start < 0 or start > len(entries):
+        raise SystemExit(f"{start_env} must be between 0 and {len(entries)}")
     result = []
     for index, entry in enumerate(entries):
         target = first_path.parent / str(entry.get("name", ""))
@@ -171,19 +213,74 @@ def import_sql_batches(first_path, log_prefix, start_env):
     batches = verified_sql_batches(first_path, start_env)
     total = len(batches) + int(os.getenv(start_env, "0"))
     for index, target in batches:
-        run_logged(
-            [
-                PY,
-                "scripts/cloudflare.py",
-                "d1",
-                "execute",
-                D1_DB_NAME,
-                "--remote",
-                "--file",
-                os.path.relpath(target, ROOT / "worker"),
-            ],
-            ROOT / ".local" / f"{log_prefix}-{index:04d}.log",
-        )
+        # The first basketball batch contains the scoped deletes followed by
+        # thousands of forecast rows.  Cloudflare can reset a large D1 object
+        # while processing that mixed transaction, even though later batches
+        # of the same manifest import normally.  Keep the deletes first, but
+        # send that one batch as smaller statement-aligned imports so a retry
+        # never has to replay the whole multi-megabyte transaction.
+        chunks = [target]
+        if (
+            target.name in {"basketball.sql", "ncaa-player-box-2026.sql"}
+            and index == 0
+            and first_path.name in {"basketball.sql", "ncaa-player-box-2026.sql"}
+        ):
+            chunk_dir = ROOT / ".local" / "basketball-import-chunks"
+            chunk_dir.mkdir(parents=True, exist_ok=True)
+            max_bytes = 900_000
+            chunk_paths = []
+            delete_paths = []
+            insert_lines = []
+            current = []
+            current_bytes = 0
+            for line in target.read_bytes().splitlines(keepends=True):
+                if line.lstrip().startswith(b"DELETE "):
+                    # Keep each delete in its own transaction.  The research
+                    # D1 is large enough that a single transaction deleting
+                    # every season across every table can trigger a storage
+                    # reset even when the same statements are valid alone.
+                    delete_path = chunk_dir / f"{target.stem}-delete-{len(delete_paths):04d}.sql"
+                    delete_path.write_bytes(line)
+                    delete_paths.append(delete_path)
+                    continue
+                insert_lines.append(line)
+            for line in insert_lines:
+                if current and current_bytes + len(line) > max_bytes:
+                    chunk_path = chunk_dir / f"{target.stem}-{len(chunk_paths):04d}.sql"
+                    chunk_path.write_bytes(b"".join(current))
+                    chunk_paths.append(chunk_path)
+                    current = []
+                    current_bytes = 0
+                current.append(line)
+                current_bytes += len(line)
+            if current:
+                chunk_path = chunk_dir / f"{target.stem}-{len(chunk_paths):04d}.sql"
+                chunk_path.write_bytes(b"".join(current))
+                chunk_paths.append(chunk_path)
+            chunks = delete_paths + chunk_paths
+            print(
+                f"Splitting {target.name} into {len(chunks)} D1 import chunks",
+                flush=True,
+            )
+        for chunk_index, chunk in enumerate(chunks):
+            run_logged(
+                [
+                    PY,
+                    "scripts/cloudflare.py",
+                    "d1",
+                    "execute",
+                    D1_DB_NAME,
+                    "--remote",
+                    "--file",
+                    os.path.relpath(chunk, ROOT / "worker"),
+                ],
+                ROOT / ".local" / f"{log_prefix}-{index:04d}-{chunk_index:04d}.log",
+            )
+            if len(chunks) > 1:
+                print(
+                    f"Imported {chunk.name} ({chunk_index + 1}/{len(chunks)})",
+                    flush=True,
+                )
         print(f"Imported {target.name} ({index + 1}/{total})", flush=True)
 
 
@@ -395,6 +492,10 @@ run(
     ]
 )
 run([PY, "-m", "ncaa_scraper.basketball_evaluation"])
+# Everything below this point consumes the verified local artifacts.  Keeping
+# the phase boundary explicit lets an interrupted publication resume without
+# redownloading or rebuilding the source releases.
+SOURCE_PHASE = False
 if not BATCH_PUBLICATION:
     run(["npm", "test"], ROOT / "frontend")
     run(["npm", "run", "build"], ROOT / "frontend")
