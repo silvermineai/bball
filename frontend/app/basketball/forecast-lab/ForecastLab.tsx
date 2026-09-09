@@ -228,6 +228,8 @@ export default function ForecastLab({
             storageKey={`forecast-lab:${marketRow.game.id}`}
             homeName={marketRow.game.home_name}
             modelMargin={marketRow.prediction.home_margin}
+            modelMarginLow={marketRow.prediction.margin_low}
+            modelMarginHigh={marketRow.prediction.margin_high}
             modelTotal={marketRow.prediction.total}
             modelHomeWinProbability={marketRow.prediction.home_win_probability}
           />

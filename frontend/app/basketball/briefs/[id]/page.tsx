@@ -192,6 +192,8 @@ export default async function Page({
         storageKey={`brief:${g.id}`}
         homeName={g.home_name}
         modelMargin={p.home_margin}
+        modelMarginLow={p.margin_low}
+        modelMarginHigh={p.margin_high}
         modelTotal={p.total}
         modelHomeWinProbability={p.home_win_probability}
       />
