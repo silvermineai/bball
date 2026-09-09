@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { date } from "../../_lib/format";
 import { spreadCoverProbability } from "../../_lib/market-probabilities";
 
 function numberValue(value: string) {
@@ -22,6 +23,11 @@ function signedPoints(value: number) {
 type SavedQuote = {
   savedAt: string;
   source: string;
+  modelMargin?: number | null;
+  modelTotal?: number | null;
+  modelHomeWinProbability?: number | null;
+  modelMarginLow?: number | null;
+  modelMarginHigh?: number | null;
   spread: number | null;
   total: number | null;
   moneyline: number | null;
@@ -62,6 +68,7 @@ export default function ManualMarketCheck({
 }) {
   const [liveForecast, setLiveForecast] = useState<LiveForecast | null>(null);
   const [liveStatus, setLiveStatus] = useState<"checking" | "live" | "fallback">(gameId ? "checking" : "fallback");
+  const [liveModel, setLiveModel] = useState<{ model_id?: string; created_at?: string | null } | null>(null);
   const [spread, setSpread] = useState("");
   const [total, setTotal] = useState("");
   const [moneyline, setMoneyline] = useState("");
@@ -75,12 +82,13 @@ export default function ManualMarketCheck({
     fetch(`/api/basketball/research/forecasts?season=2027&gameId=${encodeURIComponent(gameId)}&model=latest&status=all&limit=1`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live forecast unavailable");
-        return response.json() as Promise<{ rows?: LiveForecast[] }>;
+        return response.json() as Promise<{ rows?: LiveForecast[]; latest_model?: { model_id?: string; created_at?: string | null } | null }>;
       })
       .then((payload) => {
         if (!controller.signal.aborted) {
           const row = payload.rows?.[0] || null;
           setLiveForecast(row);
+          setLiveModel(payload.latest_model || null);
           setLiveStatus(row ? "live" : "fallback");
         }
       })
@@ -131,6 +139,11 @@ export default function ManualMarketCheck({
     const quote: SavedQuote = {
       savedAt: new Date().toISOString(),
       source: source.trim(),
+      modelMargin: activeMargin,
+      modelTotal: activeTotal,
+      modelHomeWinProbability: activeWinProbability,
+      modelMarginLow: activeMarginLow,
+      modelMarginHigh: activeMarginHigh,
       spread: marketSpread,
       total: marketTotal,
       moneyline: marketMoneyline,
@@ -160,8 +173,8 @@ export default function ManualMarketCheck({
     downloadCsv(
       "manual-market-notebook.csv",
       toCsv(
-        ["Saved at", "Source", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
-        history.map((quote) => [quote.savedAt, quote.source, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
+        ["Saved at", "Source", "Model home margin", "Model total", "Model home probability", "Model margin low", "Model margin high", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
+        history.map((quote) => [quote.savedAt, quote.source, quote.modelMargin, quote.modelTotal, quote.modelHomeWinProbability == null ? null : quote.modelHomeWinProbability * 100, quote.modelMarginLow, quote.modelMarginHigh, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
       ),
     );
   };
@@ -173,11 +186,11 @@ export default function ManualMarketCheck({
           <div className="eyebrow">Reader tool / Manual quote check</div>
           <h2>Compare a line you observed.</h2>
         </div>
-          <span className="note">Browser only · never published · {liveStatus === "live" ? "live model values" : liveStatus === "checking" ? "checking model edition" : "published fallback"}</span>
+          <span className="note">Browser only · never published · {liveStatus === "live" ? `live model values${liveModel?.model_id ? ` · ${liveModel.model_id}` : ""}${liveModel?.created_at ? ` · captured ${date(liveModel.created_at)}` : ""}` : liveStatus === "checking" ? "checking model edition" : "published fallback"}</span>
       </div>
       <p className="note">
         Enter a home spread, game total or both sides of a moneyline from a source
-        you are reviewing. Results use the published forecast and stay in this
+        you are reviewing. Results use the current forecast when available and stay in this
         browser; they are not a verified market observation, recommendation or
         ledger record.
       </p>
@@ -315,8 +328,8 @@ export default function ManualMarketCheck({
               <thead><tr><th>Saved / source</th><th className="numeric">Spread</th><th className="numeric">Total</th><th className="numeric">Moneyline</th><th className="numeric">Edges</th></tr></thead>
               <tbody>{history.map((quote) => <tr key={`${quote.savedAt}-${quote.source}`}>
                 <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small></td>
-                <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small><small>{quote.spreadCoverProbability == null ? "" : `${(quote.spreadCoverProbability * 100).toFixed(1)}% cover approx.`}</small></td>
-                <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small></td>
+                <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small><small>{quote.spreadCoverProbability == null ? "" : `${(quote.spreadCoverProbability * 100).toFixed(1)}% cover approx.`}</small><small>{quote.modelMargin == null ? "Model margin —" : `Model ${signedPoints(quote.modelMargin)}`}</small></td>
+                <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small><small>{quote.modelTotal == null ? "Model total —" : `Model ${quote.modelTotal.toFixed(1)}`}</small></td>
                 <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.awayMoneyline == null ? "Away —" : `Away ${quote.awayMoneyline > 0 ? "+" : ""}${quote.awayMoneyline}`}</small><small>{quote.moneylineHomeProbability == null ? "" : `No-vig home ${(quote.moneylineHomeProbability * 100).toFixed(1)}%`}</small><small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small></td>
                 <td className="numeric"><small>Spread / total / ML</small><strong>{[quote.spreadEdge, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100].map((value) => value == null ? "—" : value.toFixed(1)).join(" · ")}</strong></td>
               </tr>)}</tbody>
