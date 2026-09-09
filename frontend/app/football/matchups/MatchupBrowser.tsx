@@ -11,7 +11,10 @@ import {
 import {
   matchesFootballMatchupSignal,
   parseFootballMatchupSignal,
+  parseFootballMatchupSort,
+  sortFootballMatchups,
   type FootballMatchupSignal,
+  type FootballMatchupSort,
 } from "../../_lib/football-matchup-view";
 export default function MatchupBrowser({
   games,
@@ -30,12 +33,13 @@ export default function MatchupBrowser({
     [week, setWeek] = useState(initialWeek),
     [mode, setMode] = useState<"all" | "forecast">(params.get("show") === "forecast" ? "forecast" : "all"),
     [signal, setSignal] = useState<FootballMatchupSignal>(parseFootballMatchupSignal(params.get("signal"))),
+    [sort, setSort] = useState<FootballMatchupSort>(parseFootballMatchupSort(params.get("sort"))),
     [page, setPage] = useState(Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage <= 250 ? requestedPage : 0),
     [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
     [liveError, setLiveError] = useState("");
   const activeGames = liveGames || games;
-  const rows = activeGames.filter(
+  const filteredRows = activeGames.filter(
     (g) =>
       (
         g.home_name +
@@ -52,6 +56,7 @@ export default function MatchupBrowser({
       (mode === "all" || g.prediction) &&
       matchesFootballMatchupSignal(g.prediction, signal),
   );
+  const rows = sortFootballMatchups(filteredRows, sort);
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
 
   useEffect(() => {
@@ -64,10 +69,12 @@ export default function MatchupBrowser({
     else url.searchParams.delete("show");
     if (signal !== "all") url.searchParams.set("signal", signal);
     else url.searchParams.delete("signal");
+    if (sort !== "date") url.searchParams.set("sort", sort);
+    else url.searchParams.delete("sort");
     if (page) url.searchParams.set("page", String(page));
     else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [mode, page, query, signal, week]);
+  }, [mode, page, query, signal, sort, week]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -145,6 +152,22 @@ export default function MatchupBrowser({
             <option value="toss-up">Toss-ups · under 60%</option>
             <option value="lean">Leans · 60–74.9%</option>
             <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <label className="control">
+          <span>SORT BY</span>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as FootballMatchupSort);
+              setPage(0);
+            }}
+          >
+            <option value="date">Date</option>
+            <option value="confidence">Strongest model signal</option>
+            <option value="close">Closest projected margin</option>
+            <option value="margin">Largest projected margin</option>
+            <option value="uncertainty">Widest margin range</option>
           </select>
         </label>
         <button
