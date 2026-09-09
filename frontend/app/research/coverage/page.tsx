@@ -5,6 +5,7 @@ import { getBasketball, getRecruiting, getRosters } from "../../_lib/basketball-
 import { getOverview } from "../../_lib/data";
 import { getLedger } from "../../_lib/research-data";
 import { date, fmt } from "../../_lib/format";
+import CoverageLive from "./CoverageLive";
 
 export const metadata = {
   title: "Coverage, sources and limitations",
@@ -482,6 +483,8 @@ export default function Page() {
           <p className="empty">The inventory will appear after the next basketball build.</p>
         )}
       </section>
+
+      <CoverageLive />
 
       <section className="section">
         <div className="section-heading">
