@@ -75,6 +75,17 @@ export default function GlobalSearch() {
               detail: `NCAA source player · ${row.latest_season ? `${row.latest_season - 1}–${String(row.latest_season).slice(-2)}` : "historical archive"}`,
               href: `/basketball/ncaa-player/?id=${encodeURIComponent(row.id)}${row.latest_season ? `&season=${encodeURIComponent(row.latest_season)}` : ""}`,
             }));
+          const legacyBasketballResults: SearchResult[] = (basketballArchive.results || [])
+            .filter((row): row is LegacyRow & { id: string; name: string; type: "player" } => !!row.id && !!row.name && row.type === "player" && row.source !== "ncaa")
+            .slice(0, 3)
+            .map((row) => ({
+              id: `legacy-${row.id}`,
+              name: row.name,
+              type: "player",
+              sport: "basketball",
+              detail: "Basketball source player",
+              href: `/basketball/player/?id=${encodeURIComponent(row.id)}`,
+            }));
           const footballResults: SearchResult[] = (football.results || [])
             .filter((row): row is LegacyRow & { id: string; name: string; type: "player" | "team" } => !!row.id && !!row.name && !!row.type)
             .slice(0, 3)
@@ -88,7 +99,7 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...ncaaResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
           setOpen(true);
         })
         .catch((reason: unknown) => {

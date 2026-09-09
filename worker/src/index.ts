@@ -896,11 +896,11 @@ app.get("/api/search", zValidator("query", z.object({
   const like = `%${q}%`;
   const sportCode = sport === "s_mbb" ? "MBB" : sport === "s_fbl" ? "MFB" : null;
   const teamsSql = sportCode
-    ? "SELECT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? AND sport_code = ? LIMIT 8"
-    : "SELECT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? LIMIT 8";
+    ? "SELECT DISTINCT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? AND sport_code = ? LIMIT 8"
+    : "SELECT DISTINCT internal_id AS id, name, sport_code AS sportCode, 'team' AS type FROM teams WHERE name LIKE ? LIMIT 8";
   const playersSql = sportCode
-    ? "SELECT internal_id AS id, name, ? AS sportCode, 'player' AS type FROM players WHERE name LIKE ? AND EXISTS (SELECT 1 FROM player_game_stats WHERE player_game_stats.ncaa_player_id = players.ncaa_player_id AND player_game_stats.sport_code = ?) LIMIT 8"
-    : "SELECT internal_id AS id, name, NULL AS sportCode, 'player' AS type FROM players WHERE name LIKE ? LIMIT 8";
+    ? "SELECT DISTINCT internal_id AS id, name, ? AS sportCode, 'player' AS type FROM players WHERE name LIKE ? AND EXISTS (SELECT 1 FROM player_game_stats WHERE player_game_stats.ncaa_player_id = players.ncaa_player_id AND player_game_stats.sport_code = ?) LIMIT 8"
+    : "SELECT DISTINCT internal_id AS id, name, NULL AS sportCode, 'player' AS type FROM players WHERE name LIKE ? LIMIT 8";
   // Football player aggregates live in the football source warehouse rather
   // than the NCAA basketball identity tables. Keep the name extraction
   // source-native and deduplicate an athlete across box and EPA releases.
