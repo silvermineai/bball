@@ -14,6 +14,25 @@ const querySchema = z.object({
 
 export const markets = new Hono<{ Bindings: Bindings }>();
 
+const providerCapabilities = [
+  {
+    provider: "The Odds API",
+    sports: ["football", "basketball"],
+    markets: ["h2h", "spreads", "totals"],
+    provider_update_clock: true,
+    docs_url: "https://the-odds-api.com/liveapi/guides/v4/",
+    policy: "Pregame provider-update and capture clocks are required before prospective comparison.",
+  },
+  {
+    provider: "CollegeBasketballData.com API",
+    sports: ["basketball"],
+    markets: ["h2h"],
+    provider_update_clock: false,
+    docs_url: "https://api.collegebasketballdata.com/api/lines",
+    policy: "The lines endpoint has a game start clock but no quote update clock; only captured pregame moneylines qualify.",
+  },
+];
+
 markets.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, season, q, page, meta } = c.req.valid("query");
   const football = sport === "football";
@@ -33,6 +52,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       total: Number((archive.results[0] as { total: number }).total || 0),
       pregame: Number((archive.results[0] as { pregame: number | null }).pregame || 0),
+      provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
     });
   }
   const search = q ? `%${q}%` : null;

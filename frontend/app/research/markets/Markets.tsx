@@ -3,7 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
 
-type Meta = { seasons: number[]; total: number; pregame: number };
+type Meta = {
+  seasons: number[];
+  total: number;
+  pregame: number;
+  provider_capabilities?: Array<{
+    provider: string;
+    markets: string[];
+    provider_update_clock: boolean;
+    docs_url: string;
+    policy: string;
+  }>;
+};
 type Row = {
   game_id: string;
   season: number;
@@ -111,6 +122,11 @@ export default function Markets() {
         <p>
           {meta ? `${meta.total.toLocaleString()} retained observations across ${meta.seasons.length} seasons.` : "Loading archive coverage…"} {meta?.pregame || 0} records currently carry the pregame flag. Rows are excluded from prospective odds evaluation until their timing evidence qualifies.
         </p>
+        {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market provider capabilities">
+          {meta.provider_capabilities.map((capability) => <span key={capability.provider}>
+            <strong>{capability.provider}</strong> · {capability.markets.join(", ")} · {capability.provider_update_clock ? "provider update clock required" : "capture clock only"} · <a href={capability.docs_url} target="_blank" rel="noreferrer">API reference ↗</a>
+          </span>)}
+        </div> : null}
       </div>
       <div className="toolbar">
         <label className="control"><span>SPORT</span><select value={sport} onChange={(e) => { setSport(e.target.value as typeof sport); setPage(0); setSeason("2025"); }}><option value="football">College football</option><option value="basketball">Men&apos;s college basketball</option></select></label>
