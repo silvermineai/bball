@@ -14,6 +14,71 @@ import {
   type MatchupCoverage,
   type MatchupSort,
 } from "../../_lib/basketball-matchups";
+
+type LiveForecastRow = {
+  game_id: string;
+  season: number;
+  starts_at: string;
+  home_id: string;
+  away_id: string;
+  home_name: string | null;
+  away_name: string | null;
+  neutral: number;
+  time_tbd: number;
+  venue: string | null;
+  broadcast: string | null;
+  prediction: BBGame["prediction"];
+};
+
+type LiveForecastPage = {
+  total: number;
+  page_size: number;
+  rows: LiveForecastRow[];
+};
+
+function mergeLiveForecasts(games: BBGame[], rows: LiveForecastRow[]) {
+  const staticById = new Map(games.map((game) => [game.id, game]));
+  const liveIds = new Set<string>();
+  const merged = rows.flatMap((row) => {
+    const base = staticById.get(row.game_id);
+    const names = row.home_name && row.away_name
+      ? { home_name: row.home_name, away_name: row.away_name }
+      : base
+        ? { home_name: base.home_name, away_name: base.away_name }
+        : null;
+    if (!names) return [];
+    liveIds.add(row.game_id);
+    return [{
+      ...(base || {
+        id: row.game_id,
+        season: row.season,
+        home_id: row.home_id,
+        away_id: row.away_id,
+        neutral: row.neutral,
+        time_tbd: row.time_tbd,
+        venue: row.venue || "",
+        broadcast: row.broadcast || "",
+        prediction: null,
+      }),
+      starts_at: row.starts_at,
+      home_id: row.home_id,
+      away_id: row.away_id,
+      home_name: names.home_name,
+      away_name: names.away_name,
+      neutral: row.neutral,
+      time_tbd: row.time_tbd,
+      venue: row.venue || base?.venue || "",
+      broadcast: row.broadcast || base?.broadcast || "",
+      prediction: row.prediction,
+    } satisfies BBGame];
+  });
+  // Keep scheduled rows without a current model record so the slate still
+  // shows explicitly unforecasted games.
+  return [...merged, ...games.filter((game) => !liveIds.has(game.id))].sort(
+    (a, b) => a.starts_at.localeCompare(b.starts_at) || a.id.localeCompare(b.id),
+  );
+}
+
 export default function Matchups({
   games,
   marketComparisons,
@@ -51,9 +116,47 @@ export default function Matchups({
         target_season?: number | null;
       }>;
     } | null>(null),
-    [liveCatalogError, setLiveCatalogError] = useState("");
+    [liveCatalogError, setLiveCatalogError] = useState(""),
+    [liveGames, setLiveGames] = useState<BBGame[] | null>(null),
+    [liveGamesError, setLiveGamesError] = useState("");
+  const activeGames = liveGames || games;
+
   useEffect(() => {
-    const validIds = new Set(games.map((game) => game.id));
+    const controller = new AbortController();
+    const load = async () => {
+      const firstResponse = await fetch(
+        "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0",
+        { signal: controller.signal },
+      );
+      if (!firstResponse.ok) throw new Error("Live matchup forecasts unavailable.");
+      const first = await firstResponse.json() as LiveForecastPage;
+      const pageCount = Math.ceil(first.total / Math.max(first.page_size, 1));
+      const additional = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+          fetch(
+            `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}`,
+            { signal: controller.signal },
+          ).then((response) => {
+            if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
+            return response.json() as Promise<LiveForecastPage>;
+          }),
+        ),
+      );
+      if (!controller.signal.aborted) {
+        setLiveGames(mergeLiveForecasts(games, [first, ...additional].flatMap((page) => page.rows)));
+        setLiveGamesError("");
+      }
+    };
+    load().catch((reason: unknown) => {
+      if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+        setLiveGamesError(reason instanceof Error ? reason.message : "Live matchup forecasts unavailable.");
+      }
+    });
+    return () => controller.abort();
+  }, [games]);
+
+  useEffect(() => {
+    const validIds = new Set(activeGames.map((game) => game.id));
     const fromUrl = (initial.picks || []).filter((id) => validIds.has(id)).slice(0, 12);
     let next = fromUrl;
     if (!fromUrl.length) {
@@ -66,7 +169,7 @@ export default function Matchups({
     }
     setPrepIds(next);
     setPrepHydrated(true);
-  }, [games]);
+  }, [activeGames]);
   useEffect(() => {
     if (!prepHydrated) return;
     try {
@@ -76,12 +179,12 @@ export default function Matchups({
     }
   }, [prepHydrated, prepIds]);
   useEffect(() => {
-    const validIds = new Set(games.map((game) => game.id));
+    const validIds = new Set(activeGames.map((game) => game.id));
     const cleaned = prepIds.filter((id) => validIds.has(id)).slice(0, 12);
     if (cleaned.length !== prepIds.length || cleaned.some((id, index) => id !== prepIds[index])) {
       setPrepIds(cleaned);
     }
-  }, [games, prepIds]);
+  }, [activeGames, prepIds]);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
@@ -105,7 +208,7 @@ export default function Matchups({
       );
     }
   }, [q, month, coverage, sort, page, prepIds]);
-  const eligibleGames = scope === "forecasted" ? games.filter((g) => g.prediction != null) : games;
+  const eligibleGames = scope === "forecasted" ? activeGames.filter((g) => g.prediction != null) : activeGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
     eligibleGames.filter(
@@ -124,7 +227,7 @@ export default function Matchups({
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const prepRows = prepIds
-    .map((id) => games.find((game) => game.id === id))
+    .map((id) => activeGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
   const togglePrep = (id: string) => {
     setPrepIds((current) => current.includes(id)
@@ -164,7 +267,7 @@ export default function Matchups({
             }}
           >
             <option value="all">All published months</option>
-            {[...new Set(games.map((g) => g.starts_at.slice(0, 7)))]
+            {[...new Set(activeGames.map((g) => g.starts_at.slice(0, 7)))]
               .sort()
               .map((m) => (
                 <option key={m}>{m}</option>
@@ -223,6 +326,13 @@ export default function Matchups({
           const matches = latest.model_id === model.id;
           return `Live D1 catalog: ${latest.forecasts.toLocaleString()} rows · ${latest.last_created_at ? `last captured ${latest.last_created_at.slice(0, 10)}` : "capture clock unavailable"} · ${matches ? "matches this page" : `newer than this page (${latest.model_id})`}.`;
         })() : liveCatalogError ? `${liveCatalogError} Showing the static forecast edition.` : "Checking the live forecast catalog…"}
+      </p>
+      <p className="note" role="status">
+        {liveGames
+          ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
+          : liveGamesError
+            ? `${liveGamesError} Showing the published static slate.`
+            : "Checking live matchup rows…"}
       </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>
