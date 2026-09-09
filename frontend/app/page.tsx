@@ -3,6 +3,7 @@ import { getFootballEfficiencyModel, getOverview, type Overview } from "./_lib/d
 import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
 import LiveFootballForecastStatus from "./_components/LiveFootballForecastStatus";
+import LiveFootballHeroForecast from "./_components/LiveFootballHeroForecast";
 import fs from "node:fs";
 import path from "node:path";
 import { topFootballLeaders, type LeaderPlayer } from "./_lib/football-leaders";
@@ -142,24 +143,7 @@ export default function Home() {
           </div>
         </div>
         <div className="field">
-          <div className="field-card">
-            <div className="eyebrow">On the board / week {g?.week}</div>
-            <div className="score-line">
-              <span>{g?.away_name}</span>
-              <strong>{fmt(p?.away_score)}</strong>
-            </div>
-            <div className="score-line">
-              <span>{g?.home_name}</span>
-              <strong>{fmt(p?.home_score)}</strong>
-            </div>
-            <div className="field-note">
-              MODEL ESTIMATE · NOT A RESULT
-              <br />
-              HOME WIN PROBABILITY{" "}
-              {fmt(p ? p.home_win_probability * 100 : null)}%<br />
-              Calibrated score model · uncertainty included
-            </div>
-          </div>
+          <LiveFootballHeroForecast fallback={{ week: g?.week, home_name: g?.home_name, away_name: g?.away_name, home_score: p?.home_score, away_score: p?.away_score, home_win_probability: p?.home_win_probability }} />
         </div>
       </section>
       <div className="strip">
