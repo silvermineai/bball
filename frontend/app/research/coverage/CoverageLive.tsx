@@ -42,6 +42,27 @@ type CareerArchiveResponse = {
   latest_receipt?: string | null;
 };
 
+type ForecastMeta = {
+  seasons?: number[];
+  models?: Array<{
+    model_id?: string;
+    forecasts?: number;
+    target_season?: number | null;
+    last_created_at?: string | null;
+  }>;
+};
+
+type RecruitingMeta = {
+  edition?: string;
+  coverage?: {
+    events?: number;
+    players?: number;
+    programs?: number;
+    sources?: number;
+    complete_national_coverage?: boolean;
+  };
+};
+
 type Freshness = {
   label: string;
   detail: string;
@@ -78,15 +99,18 @@ export default function CoverageLive() {
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [football, setFootball] = useState<CoverageResponse | null>(null);
   const [career, setCareer] = useState<CareerArchiveResponse | null>(null);
+  const [basketballForecast, setBasketballForecast] = useState<ForecastMeta | null>(null);
+  const [footballForecast, setFootballForecast] = useState<ForecastMeta | null>(null);
+  const [recruiting, setRecruiting] = useState<RecruitingMeta | null>(null);
   const [error, setError] = useState("");
   const [footballError, setFootballError] = useState("");
   const [careerError, setCareerError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    const load = (url: string, onValue: (value: CoverageResponse) => void, onError: (value: string) => void) => fetch(url, { signal: controller.signal })
+    const load = <T,>(url: string, onValue: (value: T) => void, onError: (value: string) => void) => fetch(url, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live D1 coverage check is unavailable.");
-        return response.json() as Promise<CoverageResponse>;
+        return response.json() as Promise<T>;
       })
       .then((value) => { if (!controller.signal.aborted) onValue(value); })
       .catch((reason: unknown) => {
@@ -94,6 +118,9 @@ export default function CoverageLive() {
       });
     void load("/api/basketball/research/coverage", setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
+    void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
+    void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);
+    void load<RecruitingMeta>("/api/basketball/research/recruiting?season=2027", setRecruiting, () => undefined);
     void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live career archive check is unavailable.");
@@ -111,6 +138,8 @@ export default function CoverageLive() {
   const footballLabel = (dataset: string) => dataset === "games" ? "Games" : `${dataset.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())} rows`;
   const basketballFreshness = data ? freshness(data.source_receipts) : null;
   const footballFreshness = football ? freshness(football.source_receipts) : null;
+  const basketballModel = basketballForecast?.models?.[0];
+  const footballModel = footballForecast?.models?.[0];
   return (
     <section className="section" aria-live="polite">
       <div className="section-heading">
@@ -123,6 +152,23 @@ export default function CoverageLive() {
       <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
       {error && <p className="status-error" role="alert">Basketball: {error}</p>}
       {footballError && <p className="status-error" role="alert">Football: {footballError}</p>}
+      {(basketballModel || footballModel || recruiting?.coverage) && <div className="strip" style={{ marginTop: 20 }}>
+        <div>
+          <strong>{basketballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
+          <span>Basketball forecasts · {basketballModel?.target_season ?? 2027}</span>
+          <small>{basketballModel?.model_id || "Model metadata unavailable"}</small>
+        </div>
+        <div>
+          <strong>{footballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
+          <span>Football forecasts · {footballModel?.target_season ?? 2026}</span>
+          <small>{footballModel?.model_id || "Model metadata unavailable"}</small>
+        </div>
+        <div>
+          <strong>{recruiting?.coverage?.players?.toLocaleString() ?? "—"}</strong>
+          <span>Reviewed recruiting players</span>
+          <small>{recruiting?.coverage?.programs?.toLocaleString() ?? "—"} programs · {recruiting?.coverage?.events?.toLocaleString() ?? "—"} dated statements</small>
+        </div>
+      </div>}
       {!data && !football ? <p className="empty" role="status">Loading remote coverage…</p> : (
         <>
           {data && <><div className="eyebrow" style={{ marginTop: 20 }}>Basketball D1</div><div className="strip">
