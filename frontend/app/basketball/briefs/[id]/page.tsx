@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -74,6 +76,35 @@ function EvidenceTime({ value }: { value: string }) {
     </time>
   );
 }
+
+type PublisherArticle = {
+  id: string;
+  headline: string;
+  description: string;
+  published: string;
+  link: string;
+  publisher?: string;
+  sport?: string;
+};
+
+function relatedPublisherArticles(game: { home_name: string; away_name: string }) {
+  const release = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
+  ) as { articles?: PublisherArticle[] };
+  const text = (article: PublisherArticle) =>
+    `${article.headline} ${article.description}`.toLowerCase();
+  const terms = [game.home_name, game.away_name]
+    .map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim())
+    .flatMap((name) => {
+      const first = name.split(" ")[0] || "";
+      return [name, first.length >= 5 && !["state", "college", "university"].includes(first) ? first : ""];
+    })
+    .filter(Boolean);
+  return (release.articles || [])
+    .filter((article) => article.sport === "mens-college-basketball" && terms.some((term) => text(article).includes(term)))
+    .slice(0, 4);
+}
+
 export default async function Page({
   params,
 }: {
@@ -100,7 +131,8 @@ export default async function Page({
     "Check the forecast record and capture time before using a market comparison.",
   ];
   const record = evidence.ledger,
-    quotes = record && !record.exclusion ? record.comparisons : [];
+    quotes = record && !record.exclusion ? record.comparisons : [],
+    publisherArticles = relatedPublisherArticles(g);
   return (
     <article className="matchup-brief">
       <header className="page-title">
@@ -746,10 +778,32 @@ export default async function Page({
           ))}
         </div>
       </section>
+      {publisherArticles.length ? (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">07 / Publisher context</div>
+              <h2>What the source wire is saying.</h2>
+            </div>
+            <Link href="/basketball/recruiting/">Open the full source wire →</Link>
+          </div>
+          <p className="note">These dated headlines are retained from permitted ESPN and NCAA.com RSS feeds and are shown as reporting context. They do not alter the forecast or establish an injury, eligibility, transfer or availability decision.</p>
+          <div className="article-grid">
+            {publisherArticles.map((article) => (
+              <article className="article-card" key={article.id}>
+                <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"} RSS</div>
+                <h3>{article.headline}</h3>
+                <p>{article.description}</p>
+                <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <section className="section brief-market">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">07 / Compare only matching records</div>
+            <div className="eyebrow">08 / Compare only matching records</div>
             <h2>The forecast and market trail.</h2>
           </div>
         </div>
