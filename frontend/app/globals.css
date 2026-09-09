@@ -1752,6 +1752,56 @@ summary {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
 }
+.recruiting-review-queue {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.85fr) minmax(0, 1.5fr);
+  gap: 28px;
+  padding: 22px;
+  margin: 22px 0 26px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--orange);
+  background: color-mix(in srgb, var(--paper) 84%, var(--orange) 16%);
+}
+.recruiting-review-queue h3 {
+  margin: 5px 0 8px;
+  font-size: 20px;
+}
+.recruiting-review-queue p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.recruiting-review-queue ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 25px;
+}
+.recruiting-review-queue li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0 8px 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.recruiting-review-queue li:last-child {
+  border-bottom: 0;
+}
+.recruiting-review-queue li > div {
+  display: grid;
+  gap: 3px;
+}
+.recruiting-review-queue li span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.recruiting-review-queue li > a {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
 .recruiting-results {
   font-size: 12px;
   margin-top: 25px;
@@ -1929,7 +1979,8 @@ summary {
 }
 @media (max-width: 700px) {
   .recruiting-grid,
-  .recruiting-filters {
+  .recruiting-filters,
+  .recruiting-review-queue {
     grid-template-columns: 1fr;
   }
   .recruiting-views {
@@ -1943,6 +1994,14 @@ summary {
   }
   .recruiting-scope {
     padding-left: 16px;
+  }
+  .recruiting-review-queue {
+    padding: 18px;
+  }
+  .recruiting-review-queue li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
   }
 }
 

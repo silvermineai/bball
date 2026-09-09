@@ -103,7 +103,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   }
   const allRows = recruitingRows(data);
   const programSummary = summarizeRecruitingPrograms(allRows);
-  const coverageRows = (rosters.team_summaries || [])
+  const coverageBaseRows = (rosters.team_summaries || [])
     .map((summary) => {
       const reviewed = data.programs.some((program) => program.id === summary.team_id);
       const additions = programSummary.find((row) => row.team_id === summary.team_id);
@@ -113,7 +113,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
         additions: additions?.additions || 0,
         linkedProfiles: additions?.linked_profiles || 0,
       };
-    })
+    });
+  const coverageRows = coverageBaseRows
     .filter((row) =>
       row.team.toLowerCase().includes(coverageQuery.toLowerCase()) &&
       (coverageStatus === "all" || (coverageStatus === "reviewed" ? row.reviewed : !row.reviewed)),
@@ -124,6 +125,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       if (coverageSort === "unrepresented") return (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || a.team.localeCompare(b.team);
       return Number(b.reviewed) - Number(a.reviewed) || (b.additions - a.additions) || a.team.localeCompare(b.team);
     });
+  const reviewQueueRows = [...coverageBaseRows]
+    .filter((row) => !row.reviewed)
+    .sort((a, b) => (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || (b.prior_minutes || 0) - (a.prior_minutes || 0) || a.team.localeCompare(b.team))
+    .slice(0, 6);
   const rosterMatch = (name: string, teamId: string) => rosterNameMatch(name, teamId, rosters.players);
   const exactRoster = (name: string, teamId: string): BBRoster | null => {
     if (rosterMatch(name, teamId) !== "exact") return null;
@@ -374,7 +379,40 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             <p className="note" role="status">
               {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} source-listed programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this filtered view
             </p>
-            <div className="table-scroll">
+            {!!reviewQueueRows.length && (
+              <div className="recruiting-review-queue" aria-label="Programs needing source review">
+                <div>
+                  <div className="eyebrow">Coach review queue</div>
+                  <h3>Start where the roster evidence is largest.</h3>
+                  <p>
+                    These source-listed programs have no dated school announcement in this edition. The order uses prior minutes that are not represented by a reviewed addition, so it is a research queue rather than a recruiting grade.
+                  </p>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    onClick={() => {
+                      setCoverageStatus("unreviewed");
+                      setCoverageSort("unrepresented");
+                      document.getElementById("recruiting-coverage-table")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                  >
+                    Show full review queue ↓
+                  </button>
+                </div>
+                <ol>
+                  {reviewQueueRows.map((row) => (
+                    <li key={row.team_id}>
+                      <div>
+                        <Link href={`/basketball/programs/${row.team_id}/`}><strong>{row.team}</strong> ↗</Link>
+                        <span>{row.unrepresented_prior_minutes ? `${Math.round(row.unrepresented_prior_minutes).toLocaleString()} prior min unrepresented` : "No linked prior minutes"} · {row.listed_players} listed</span>
+                      </div>
+                      <Link href={`/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(row.team)}`}>Review roster rows →</Link>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            <div className="table-scroll" id="recruiting-coverage-table">
               <table className="data-table">
                 <thead><tr><th>Program</th><th>Evidence status</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th></tr></thead>
                 <tbody>{coverageRows.map((row) => <tr key={row.team_id}>
