@@ -20,6 +20,7 @@ type CoverageResponse = {
     paired_box_games: number;
     missing_box_games: number;
     negative_field_games: number;
+    impossible_shooting_games?: number;
     nonpositive_possession_games: number;
     invalid_period_games: number;
     outlier_pace_games: number;
@@ -134,11 +135,12 @@ export default function CoverageLive() {
               <div><dt>{data.possession_validation.valid_estimate_games.toLocaleString()}</dt><dd>Valid possession estimates</dd></div>
               <div><dt>{data.possession_validation.missing_box_games.toLocaleString()}</dt><dd>Missing required team box fields</dd></div>
               <div><dt>{data.possession_validation.negative_field_games.toLocaleString()}</dt><dd>Negative box-score fields</dd></div>
+              <div><dt>{data.possession_validation.impossible_shooting_games?.toLocaleString() ?? "—"}</dt><dd>Impossible shooting totals</dd></div>
               <div><dt>{data.possession_validation.nonpositive_possession_games.toLocaleString()}</dt><dd>Nonpositive estimates</dd></div>
               <div><dt>{data.possession_validation.outlier_pace_games.toLocaleString()}</dt><dd>Outlier pace estimates</dd></div>
               <div><dt>{data.possession_validation.score_mismatch_games.toLocaleString()}</dt><dd>Box score / schedule mismatches</dd></div>
             </div>
-            <p className="note">The diagnostic mirrors the model’s required FGA, FTA, offensive-rebound, turnover and period guards. Only games with valid estimates enter efficiency features; mismatch counts remain visible for review.</p>
+            <p className="note">The diagnostic mirrors the model’s required FGA, FTA, offensive-rebound, turnover, shooting-total and period guards. Only games with valid estimates enter efficiency features; mismatch counts remain visible for review.</p>
           </div>}</>}
           {football && <><div className="eyebrow" style={{ marginTop: 28 }}>Football D1</div><div className="strip">
             {footballRows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{footballLabel(row.dataset)}</span></div>)}

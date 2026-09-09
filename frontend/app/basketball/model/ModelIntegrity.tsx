@@ -9,6 +9,7 @@ type Integrity = {
   paired_box_games: number;
   missing_box_games: number;
   invalid_period_games: number;
+  impossible_shooting_games?: number;
   outlier_pace_games: number;
   score_mismatch_games: number;
 };
@@ -60,7 +61,7 @@ export default function ModelIntegrity() {
             <div><dt>{(data.total - data.valid_estimate_games).toLocaleString()}</dt><dd>Games withheld from features</dd></div>
           </div>
           <p className="note" style={{ marginTop: 16 }}>
-            Withheld diagnostics: {data.missing_box_games.toLocaleString()} missing-field games · {data.invalid_period_games.toLocaleString()} invalid-period games · {data.outlier_pace_games.toLocaleString()} pace outliers · {data.score_mismatch_games.toLocaleString()} schedule/box-score mismatches.
+            Withheld diagnostics: {data.missing_box_games.toLocaleString()} missing-field games · {data.impossible_shooting_games?.toLocaleString() ?? "—"} impossible-shooting games · {data.invalid_period_games.toLocaleString()} invalid-period games · {data.outlier_pace_games.toLocaleString()} pace outliers · {data.score_mismatch_games.toLocaleString()} schedule/box-score mismatches.
           </p>
         </>
       )}

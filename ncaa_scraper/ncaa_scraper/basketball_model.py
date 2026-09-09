@@ -17,6 +17,15 @@ def ratio(numerator, denominator):
     return numerator / denominator if denominator > 0 else None
 
 
+def valid_count(value):
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
+
+
 def game_features(game, boxes):
     """Require two valid final box scores. Missing values are not imputed to zero."""
     if not game["completed"] or game["periods"] is None or game["periods"] < 2:
@@ -30,7 +39,28 @@ def game_features(game, boxes):
             "offensive_rebounds",
             "turnovers",
         ]
-        if box is None or any(box.get(k) is None or box[k] < 0 for k in required):
+        if box is None or any(not valid_count(box.get(k)) for k in required):
+            return None
+        optional = {
+            key: box.get(key)
+            for key in (
+                "field_goals_made",
+                "three_point_field_goals_attempted",
+                "three_point_field_goals_made",
+            )
+        }
+        if any(value is not None and not valid_count(value) for value in optional.values()):
+            return None
+        fga = box.get("field_goals_attempted")
+        fgm = optional["field_goals_made"]
+        tpa = optional["three_point_field_goals_attempted"]
+        tpm = optional["three_point_field_goals_made"]
+        if (
+            (fgm is not None and fgm > fga)
+            or (tpa is not None and tpa > fga)
+            or (tpm is not None and tpa is not None and tpm > tpa)
+            or (tpm is not None and fgm is not None and tpm > fgm)
+        ):
             return None
         if game[f"{side}_score"] is None:
             return None

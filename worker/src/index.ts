@@ -396,6 +396,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
     missing_box_games?: number;
     missing_required_fields_games?: number;
     negative_field_games?: number;
+    impossible_shooting_games?: number;
     nonpositive_possession_games?: number;
     outlier_pace_games?: number;
     score_mismatch_games?: number;
@@ -422,11 +423,17 @@ app.get("/api/basketball/research/coverage", async (c) => {
         json_extract(h.stats_json,'$.free_throws_attempted') AS h_fta,
         json_extract(h.stats_json,'$.offensive_rebounds') AS h_orb,
         json_extract(h.stats_json,'$.turnovers') AS h_tov,
+        json_extract(h.stats_json,'$.field_goals_made') AS h_fgm,
+        json_extract(h.stats_json,'$.three_point_field_goals_attempted') AS h_tpa,
+        json_extract(h.stats_json,'$.three_point_field_goals_made') AS h_tpm,
         json_extract(h.stats_json,'$.points') AS h_points,
         json_extract(a.stats_json,'$.field_goals_attempted') AS a_fga,
         json_extract(a.stats_json,'$.free_throws_attempted') AS a_fta,
         json_extract(a.stats_json,'$.offensive_rebounds') AS a_orb,
         json_extract(a.stats_json,'$.turnovers') AS a_tov,
+        json_extract(a.stats_json,'$.field_goals_made') AS a_fgm,
+        json_extract(a.stats_json,'$.three_point_field_goals_attempted') AS a_tpa,
+        json_extract(a.stats_json,'$.three_point_field_goals_made') AS a_tpm,
         json_extract(a.stats_json,'$.points') AS a_points
       FROM bb_games g
       LEFT JOIN bb_team_box h ON h.game_id=g.id AND h.team_id=g.home_id
@@ -451,6 +458,14 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
                     AND (h_fga < 0 OR h_fta < 0 OR h_orb < 0 OR h_tov < 0 OR a_fga < 0 OR a_fta < 0 OR a_orb < 0 OR a_tov < 0) THEN 1 ELSE 0 END) AS negative_field_games,
+      sum(CASE WHEN
+                    (h_fgm IS NOT NULL AND (h_fgm < 0 OR h_fgm > h_fga))
+                    OR (h_tpa IS NOT NULL AND (h_tpa < 0 OR h_tpa > h_fga))
+                    OR (h_tpm IS NOT NULL AND (h_tpm < 0 OR (h_tpa IS NOT NULL AND h_tpm > h_tpa) OR (h_fgm IS NOT NULL AND h_tpm > h_fgm)))
+                    OR (a_fgm IS NOT NULL AND (a_fgm < 0 OR a_fgm > a_fga))
+                    OR (a_tpa IS NOT NULL AND (a_tpa < 0 OR a_tpa > a_fga))
+                    OR (a_tpm IS NOT NULL AND (a_tpm < 0 OR (a_tpa IS NOT NULL AND a_tpm > a_tpa) OR (a_fgm IS NOT NULL AND a_tpm > a_fgm)))
+                  THEN 1 ELSE 0 END) AS impossible_shooting_games,
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
                     AND periods >= 2 AND (h_poss <= 0 OR a_poss <= 0) THEN 1 ELSE 0 END) AS nonpositive_possession_games,
@@ -462,6 +477,12 @@ app.get("/api/basketball/research/coverage", async (c) => {
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
                     AND h_fga >= 0 AND h_fta >= 0 AND h_orb >= 0 AND h_tov >= 0
                     AND a_fga >= 0 AND a_fta >= 0 AND a_orb >= 0 AND a_tov >= 0
+                    AND (h_fgm IS NULL OR (h_fgm >= 0 AND h_fgm <= h_fga))
+                    AND (h_tpa IS NULL OR (h_tpa >= 0 AND h_tpa <= h_fga))
+                    AND (h_tpm IS NULL OR (h_tpm >= 0 AND (h_tpa IS NULL OR h_tpm <= h_tpa) AND (h_fgm IS NULL OR h_tpm <= h_fgm)))
+                    AND (a_fgm IS NULL OR (a_fgm >= 0 AND a_fgm <= a_fga))
+                    AND (a_tpa IS NULL OR (a_tpa >= 0 AND a_tpa <= a_fga))
+                    AND (a_tpm IS NULL OR (a_tpm >= 0 AND (a_tpa IS NULL OR a_tpm <= a_tpa) AND (a_fgm IS NULL OR a_tpm <= a_fgm)))
                     AND periods >= 2 AND home_score IS NOT NULL AND away_score IS NOT NULL
                     AND h_poss > 0 AND a_poss > 0 AND pace BETWEEN 35 AND 100 THEN 1 ELSE 0 END) AS valid_estimate_games,
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL

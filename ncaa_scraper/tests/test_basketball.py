@@ -113,6 +113,29 @@ class BasketballModelTests(unittest.TestCase):
         boxes[(game["id"], game["away_id"])]["free_throws_attempted"] = None
         self.assertIsNone(game_features(game, boxes))
 
+    def test_possessions_withhold_impossible_shooting_totals(self):
+        game = sample(2, 2026)
+        base = {
+            "field_goals_attempted": 60,
+            "field_goals_made": 30,
+            "three_point_field_goals_attempted": 20,
+            "three_point_field_goals_made": 8,
+            "free_throws_attempted": 20,
+            "offensive_rebounds": 10,
+            "turnovers": 12,
+        }
+        for key, value in [
+            ("field_goals_made", 61),
+            ("three_point_field_goals_attempted", 61),
+            ("three_point_field_goals_made", 21),
+        ]:
+            boxes = {
+                (game["id"], game["home_id"]): base.copy(),
+                (game["id"], game["away_id"]): base.copy(),
+            }
+            boxes[(game["id"], game["home_id"])][key] = value
+            self.assertIsNone(game_features(game, boxes))
+
     def test_three_windows_are_separate_and_future_results_cannot_leak(self):
         games = [sample(i, y) for y in [2024, 2025, 2026] for i in range(180)]
         cutoff = "2026-09-05T00:00:00Z"
