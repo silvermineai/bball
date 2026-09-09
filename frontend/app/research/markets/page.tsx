@@ -60,9 +60,11 @@ export default function Page() {
             <h3>What a row contains</h3>
             <p>
               The archive joins a retained market observation to the game
-              record: season, teams, scheduled kickoff, home spread, total,
-              source and observed time. A row can be downloaded from the desk
-              for further review.
+              record: season, teams, scheduled kickoff, line or decimal
+              prices, source and observed time. Moneyline rows also show the
+              no-vig-style two-sided implied home probability calculated from
+              the retained prices. A row can be downloaded from the desk for
+              further review.
             </p>
           </div>
           <div className="paper-panel">

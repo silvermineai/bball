@@ -2,7 +2,7 @@
 
 The shared Next.js scorecard lives at `/research/scorecard/`. Individual game history at `/research/game/?sport=football&id=…` reads Cloudflare D1 through a paginated, read-only API. Basketball uses `sport=basketball`.
 
-The historical market archive lives at `/research/markets/` and reads retained football archive observations plus any matched basketball/football `audit_markets` quotes through `/api/research/markets`. It is a searchable, paginated research view with CSV export and a sport selector. Every row carries its source and observed time and is explicitly excluded from prospective odds evaluation; the scorecard only uses observations that pass its provider, capture-time, participant and kickoff checks.
+The historical market archive lives at `/research/markets/` and reads retained football archive observations plus any matched basketball/football `audit_markets` quotes through `/api/research/markets`. It is a searchable, paginated research view with CSV export and a sport selector. Basketball rows expose retained decimal prices and the two-sided implied home probability for moneylines. Every row carries its source and observed time and is explicitly excluded from prospective odds evaluation; the scorecard only uses observations that pass its provider, capture-time, participant and kickoff checks.
 
 ## Current edition
 

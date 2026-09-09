@@ -12,6 +12,10 @@ type Row = {
   away_name: string;
   home_spread: number | null;
   total: number | null;
+  home_price: number | null;
+  away_price: number | null;
+  over_price: number | null;
+  under_price: number | null;
   observed_at: string | null;
   source: string | null;
   is_pregame: number;
@@ -32,6 +36,14 @@ const clock = (value: string | null) =>
         timeZone: "UTC",
       }).format(new Date(value)) + " UTC"
     : "—";
+
+const price = (value: number | null) => value == null ? "—" : value.toFixed(2);
+const homeImplied = (row: Row) => {
+  if (row.home_price == null || row.away_price == null) return null;
+  const home = 1 / row.home_price;
+  const away = 1 / row.away_price;
+  return home / (home + away);
+};
 
 export default function Markets() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -79,8 +91,8 @@ export default function Markets() {
   const download = () => {
     if (!data) return;
     const lines = [
-      ["season", "away", "home", "kickoff", "home_spread", "total", "observed_at", "source", "is_pregame"],
-      ...data.rows.map((r) => [r.season, r.away_name, r.home_name, r.kickoff, r.home_spread, r.total, r.observed_at, r.source, r.is_pregame]),
+      ["season", "away", "home", "kickoff", "market", "home_spread", "total", "home_price_decimal", "away_price_decimal", "over_price_decimal", "under_price_decimal", "home_implied_probability", "observed_at", "source", "is_pregame"],
+      ...data.rows.map((r) => [r.season, r.away_name, r.home_name, r.kickoff, r.market, r.home_spread, r.total, r.home_price, r.away_price, r.over_price, r.under_price, homeImplied(r), r.observed_at, r.source, r.is_pregame]),
     ];
     const csv = lines.map((line) => line.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -108,7 +120,7 @@ export default function Markets() {
       </div>
       {error ? <div className="status-error" role="alert">{error}</div> : !data ? <p className="empty" role="status">Loading retained observations…</p> : <>
         <p className="note" role="status">{data.total.toLocaleString()} observations · page {page + 1} of {pages} · every row labelled as archival reference</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line</th><th>Observed</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? `O/U ${fmt(r.total)}` : r.market === "h2h" ? "Moneyline" : fmt(r.home_spread)}</td><td>{clock(r.observed_at)}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Observed</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
         {!data.rows.length && <p className="empty">No retained rows match this search.</p>}
         <div className="pagination"><button className="button secondary" disabled={page === 0} onClick={() => setPage((n) => n - 1)}>Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage((n) => n + 1)}>Next</button></div>
       </>}

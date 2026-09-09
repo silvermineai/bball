@@ -55,6 +55,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     football
       ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
+                NULL AS home_price,NULL AS away_price,NULL AS over_price,NULL AS under_price,
                 NULL AS market,NULL AS bookmaker,NULL AS provider
            FROM football_markets m JOIN football_games g ON g.id=m.game_id
           WHERE ${where}
@@ -62,6 +63,10 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       : `SELECT m.game_id,g.season,g.starts_at AS kickoff,g.home_name,g.away_name,
                 CASE WHEN m.market='spreads' THEN json_extract(m.payload_json,'$.line') END AS home_spread,
                 CASE WHEN m.market='totals' THEN json_extract(m.payload_json,'$.line') END AS total,
+                json_extract(m.payload_json,'$.home_price') AS home_price,
+                json_extract(m.payload_json,'$.away_price') AS away_price,
+                json_extract(m.payload_json,'$.over_price') AS over_price,
+                json_extract(m.payload_json,'$.under_price') AS under_price,
                 m.captured_at AS observed_at,m.provider AS source,1 AS is_pregame,
                 m.market,m.bookmaker,m.provider
            FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
