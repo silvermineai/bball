@@ -32,6 +32,10 @@ const sourceFieldGroups = [
 ] as const;
 const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "NCAA player ID", "NCAA player source URL", "Team", "NCAA team ID", "Opponent", "NCAA contest source URL", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw source stats JSON"];
 
+const prettySourceField = (key: string) => key
+  .replaceAll("_", " ")
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
 function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
   return <details className="ncaa-source-fields">
     <summary>Open retained source fields</summary>
@@ -46,6 +50,14 @@ function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
       </div>)}
     </div>
     <small>Fields remain source-reported; an unavailable value is not treated as zero.</small>
+    <details className="ncaa-source-all-fields">
+      <summary>Inspect all {Object.keys(stats).length} retained fields</summary>
+      <dl className="raw-stat-grid">
+        {Object.entries(stats).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => (
+          <div key={key}><dt>{prettySourceField(key)} <code>{key}</code></dt><dd>{value == null ? "—" : String(value)}</dd></div>
+        ))}
+      </dl>
+    </details>
     <details className="ncaa-source-json">
       <summary>View full source JSON</summary>
       <pre>{JSON.stringify(stats, null, 2)}</pre>
