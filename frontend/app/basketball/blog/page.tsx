@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export const metadata = {
   title: "Basketball journal",
@@ -8,5 +8,22 @@ export const metadata = {
 };
 
 export default function Page() {
-  redirect("/blog/");
+  return (
+    <section className="page-title">
+      <div className="eyebrow">Basketball journal</div>
+      <h1>Read the game beyond the box score.</h1>
+      <p>
+        Game analysis, model explainers and recruiting research live in The
+        Coaching Annual journal.
+      </p>
+      <div className="hero-actions">
+        <Link className="button" href="/blog/">
+          Open the journal ↗
+        </Link>
+        <Link className="hero-link" href="/basketball/matchups/">
+          Read a matchup first →
+        </Link>
+      </div>
+    </section>
+  );
 }
