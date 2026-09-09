@@ -18,6 +18,12 @@ import {
   rankPlayerProfiles,
   type PlayerIndexSort,
 } from "../../_lib/player-index-view";
+
+type LiveArchiveMeta = {
+  seasons?: Array<{ season: number }>;
+  latest_receipt?: string | null;
+};
+
 export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const defaultSeason = catalog.seasons.some((s) => s.season === 2026)
     ? "2026"
@@ -29,6 +35,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [hydrated, setHydrated] = useState(false);
+  const [liveArchive, setLiveArchive] = useState<LiveArchiveMeta | null>(null);
+  const [liveArchiveStatus, setLiveArchiveStatus] = useState<"checking" | "live" | "fallback">("checking");
   useEffect(() => {
     const filters = parsePlayerIndexFilters(
       window.location.search,
@@ -41,6 +49,24 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     setPage(filters.page);
     setHydrated(true);
   }, [catalog]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("live career archive unavailable");
+        return response.json() as Promise<LiveArchiveMeta>;
+      })
+      .then((payload) => {
+        if (!controller.signal.aborted) {
+          setLiveArchive(payload);
+          setLiveArchiveStatus("live");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveArchiveStatus("fallback");
+      });
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     if (!hydrated) return;
     const url = new URL(window.location.href);
@@ -113,6 +139,13 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
           <span>Selected season · completed schedule entries</span>
         </div>
       </div>
+      <p className="note" role="status">
+        {liveArchiveStatus === "live" && liveArchive
+          ? `Cloudflare D1 career archive connected · ${(liveArchive.seasons || []).length} seasons${liveArchive.latest_receipt ? ` · latest receipt ${new Date(liveArchive.latest_receipt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}.`
+          : liveArchiveStatus === "fallback"
+            ? "Cloudflare D1 career archive unavailable; showing the verified bundled release."
+            : "Checking the Cloudflare D1 career archive…"}
+      </p>
       <div className="toolbar">
         <label className="control">
           <span>STAT SEASON</span>

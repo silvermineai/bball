@@ -40,6 +40,30 @@ function database({ mismatch = false, none = false } = {}) {
   return { DB: { prepare } };
 }
 describe("historical careers API", () => {
+  it("reports bounded D1 archive metadata without exposing player rows", async () => {
+    const prepare = vi.fn((sql: string) => {
+      const result = {
+        results: sql.includes("bb_career_seasons") ? [{
+          season: 2026,
+          edition: "edition-2026",
+          coverage_json: JSON.stringify({ identified_rows: 12, player_team_entries: 8, appearance_games: 20, completed_schedule_games: 21, missing_identity: 2 }),
+          receipt_json: JSON.stringify([{ fetched_at: "2026-09-09T12:00:00Z" }]),
+        }] : [],
+      };
+      return {
+        all: async () => result,
+        bind: vi.fn(() => ({ all: async () => result })),
+      };
+    });
+    const response = await careers.request("/meta", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    const data = await response.json() as { seasons: Array<Record<string, unknown>>; latest_receipt: string };
+    expect(data.seasons).toHaveLength(1);
+    expect(data.seasons[0]).toMatchObject({ season: 2026, identified_rows: 12, player_team_entries: 8, latest_receipt: "2026-09-09T12:00:00Z" });
+    expect(data.latest_receipt).toBe("2026-09-09T12:00:00Z");
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("coverage_json"));
+  });
+
   it("streams the exact historical player-box release and honors validators", async () => {
     const get = vi.fn(async () => ({ body: new Response("PARQUET").body }));
     const bindings = {

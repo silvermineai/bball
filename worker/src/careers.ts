@@ -12,6 +12,48 @@ type CareerHistoryIndex = {
   }>;
 };
 
+/** Expose archive coverage metadata without returning the player warehouse. */
+careers.get("/meta", async (c) => {
+  const result = await researchDb(c.env).prepare(
+    "SELECT season,edition,coverage_json,receipt_json FROM bb_career_seasons ORDER BY season DESC",
+  ).all<{ season: number; edition: string; coverage_json: string; receipt_json: string }>();
+  const seasons = result.results.map((row) => {
+    let coverage: Record<string, unknown> = {};
+    let receipts: unknown[] = [];
+    try {
+      const parsed = JSON.parse(row.coverage_json);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) coverage = parsed as Record<string, unknown>;
+    } catch {
+      // Keep the season visible while marking malformed coverage as absent.
+    }
+    try {
+      const parsed = JSON.parse(row.receipt_json);
+      if (Array.isArray(parsed)) receipts = parsed;
+    } catch {
+      // Receipt details are optional metadata for this bounded endpoint.
+    }
+    const latestReceipt = receipts
+      .map((receipt) => receipt && typeof receipt === "object" ? (receipt as Record<string, unknown>) : null)
+      .filter((receipt): receipt is Record<string, unknown> => !!receipt)
+      .map((receipt) => typeof receipt.fetched_at === "string" ? receipt.fetched_at : null)
+      .filter((value): value is string => value !== null)
+      .sort()
+      .at(-1) || null;
+    return {
+      season: row.season,
+      edition: row.edition,
+      identified_rows: typeof coverage.identified_rows === "number" ? coverage.identified_rows : null,
+      player_team_entries: typeof coverage.player_team_entries === "number" ? coverage.player_team_entries : null,
+      appearance_games: typeof coverage.appearance_games === "number" ? coverage.appearance_games : null,
+      completed_schedule_games: typeof coverage.completed_schedule_games === "number" ? coverage.completed_schedule_games : null,
+      missing_identity: typeof coverage.missing_identity === "number" ? coverage.missing_identity : null,
+      latest_receipt: latestReceipt,
+    };
+  });
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ seasons, latest_receipt: seasons.map((row) => row.latest_receipt).filter((value): value is string => value !== null).sort().at(-1) || null });
+});
+
 /**
  * The D1 season row is the release authority. The static history index carries
  * the field-level audit added after the initial warehouse import, so only
