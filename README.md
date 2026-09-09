@@ -56,6 +56,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Within-team RAPM | `/basketball/impact/within-team/` | Compare source-published within-team player impact across 17 seasons with team possession samples |
 | NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
 | Roster observations | `/basketball/recruiting/` | Searchable publisher recruiting wire plus dated school evidence, an all-354-program coverage map and clearly marked unconfirmed future listings |
+| Authorized recruiting feeds | `/basketball/recruiting/` | Coverage-only status for licensed CSV imports and the optional server-side CollegeBasketballData portal/player/team connector; provider payloads stay private in D1 |
 | Roster impact lab | `/basketball/roster-lab/` | Compare returning workload, position continuity, class-year workload, incoming prior minutes, source-reported roster shape, efficiency rating and 2026–27 schedule coverage across source-listed programs |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
@@ -92,6 +93,7 @@ ncaa_scraper/ncaa_scraper/
   basketball.py           Basketball ingestion, rankings, rosters and D1 export
   basketball_standings.py  Compact source-native standings archive
   basketball_model.py     Possession efficiency model and independent calibration
+  cbbd_recruiting.py      Key-gated authorized recruiting API intake with private receipts
   basketball_matchups.py  Source-derived five-v-five matchup stint archive
   basketball_within_impact.py  NCAA within-team RAPM archive
   basketball_ncaa_team_box.py  NCAA season team-box profiles and recomputed rates

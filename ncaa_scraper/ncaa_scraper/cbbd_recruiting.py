@@ -272,7 +272,10 @@ def main() -> None:
     parser.add_argument("--season", type=int, action="append", dest="seasons", default=None)
     parser.add_argument("--sql", type=Path, default=DEFAULT_SQL)
     args = parser.parse_args()
-    rows = fetch_release(args.seasons or [2027])
+    try:
+        rows = fetch_release(args.seasons or [2027])
+    except (RuntimeError, ValueError) as error:
+        parser.error(str(error))
     args.sql.parent.mkdir(parents=True, exist_ok=True)
     args.sql.write_text(sql_export(rows))
     print(json.dumps({"rows": len(rows), "seasons": args.seasons or [2027], "sql": str(args.sql)}))
