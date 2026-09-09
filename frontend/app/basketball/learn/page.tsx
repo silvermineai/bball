@@ -2,6 +2,7 @@ import Link from "next/link";
 import FourFactorsCalculator from "./FourFactorsCalculator";
 import MarketProbabilityCalculator from "./MarketProbabilityCalculator";
 import RecruitingWorkloadCalculator from "./RecruitingWorkloadCalculator";
+import ScoreProjectionCalculator from "./ScoreProjectionCalculator";
 import MetricExplorer from "./MetricExplorer";
 import type { LearningMetric, LearningTopic } from "../../_lib/metric-explorer";
 
@@ -301,6 +302,10 @@ export default function Page() {
 
       <section className="section" aria-label="Interactive Four Factors lesson">
         <FourFactorsCalculator />
+      </section>
+
+      <section className="section" aria-label="Interactive score projection lesson">
+        <ScoreProjectionCalculator />
       </section>
 
       <section className="section" aria-label="Interactive market probability lesson">
