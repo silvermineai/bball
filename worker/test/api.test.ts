@@ -598,6 +598,7 @@ describe("bball api", () => {
       "/api/basketball/research/publisher-stats?stat=not-a-source-field",
       "/api/basketball/research/publisher-stats?category=totals&stat=avgPoints",
       "/api/basketball/research/publisher-stats?page=-1",
+      "/api/basketball/research/publisher-stats?min_games=-1",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }
@@ -638,6 +639,23 @@ describe("bball api", () => {
     expect(await response.json()).toMatchObject({
       source_receipts: [{ dataset: "player_season", season: 2026, url: "https://example.test/player-season.parquet", sha256: "a".repeat(64) }],
     });
+  });
+
+  it("applies the source games-played threshold to publisher rows", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => sql.includes("count(*) AS total")
+        ? { first: async () => ({ total: 1, non_null: 1 }) }
+        : { all: async () => ({ results: [] }) },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/publisher-stats?season=2026&category=averages&stat=avgPoints&min_games=15",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const sql = prepare.mock.calls.find(([query]) => String(query).includes("count(*) AS total"))?.[0];
+    expect(String(sql)).toContain("gamesPlayed.value");
+    expect(String(sql)).toContain(">= ?");
   });
 
   it("rejects invalid team and boutique source parameters before querying D1", async () => {

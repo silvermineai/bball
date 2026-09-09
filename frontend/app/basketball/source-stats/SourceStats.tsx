@@ -50,6 +50,7 @@ export default function SourceStats() {
   const [season, setSeason] = useState("2026");
   const [fieldKey, setFieldKey] = useState("averages:avgPoints");
   const [query, setQuery] = useState("");
+  const [minGames, setMinGames] = useState("0");
   const [direction, setDirection] = useState<"desc" | "asc">("desc");
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
@@ -68,6 +69,8 @@ export default function SourceStats() {
     if (category && stat) setFieldKey(`${category}:${stat}`);
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
+    const requestedMinGames = Number(params.get("minGames") || 0);
+    if (Number.isInteger(requestedMinGames) && requestedMinGames >= 0 && requestedMinGames <= 50) setMinGames(String(requestedMinGames));
     setDirection(params.get("direction") === "asc" ? "asc" : "desc");
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 10000) setPage(requestedPage);
@@ -105,12 +108,14 @@ export default function SourceStats() {
     url.searchParams.set("stat", field.key);
     if (query.trim()) url.searchParams.set("q", query.trim());
     else url.searchParams.delete("q");
+    if (minGames !== "0") url.searchParams.set("minGames", minGames);
+    else url.searchParams.delete("minGames");
     if (direction === "asc") url.searchParams.set("direction", direction);
     else url.searchParams.delete("direction");
     if (page) url.searchParams.set("page", String(page));
     else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [direction, field, hydrated, page, query, season]);
+  }, [direction, field, hydrated, minGames, page, query, season]);
 
   useEffect(() => {
     if (!field) return;
@@ -123,8 +128,9 @@ export default function SourceStats() {
       stat: field.key,
       page: String(page),
       direction,
-    });
+      });
     if (query.trim()) params.set("q", query.trim());
+    if (minGames !== "0") params.set("min_games", minGames);
     fetch(`/api/basketball/research/publisher-stats?${params}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The source statistics could not be loaded. Please reload.");
@@ -135,7 +141,7 @@ export default function SourceStats() {
         if (reason.name !== "AbortError") setError(reason.message);
       });
     return () => controller.abort();
-  }, [field, season, page, direction, query]);
+  }, [field, season, page, direction, query, minGames]);
 
   const grouped = useMemo(
     () => fields.reduce<Record<string, Field[]>>((groups, candidate) => {
@@ -199,6 +205,17 @@ export default function SourceStats() {
           <input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search names or programs" />
         </label>
         <label className="control">
+          <span>MINIMUM GAMES</span>
+          <select value={minGames} onChange={(event) => reset(() => setMinGames(event.target.value))}>
+            <option value="0">All records</option>
+            <option value="5">5+ games</option>
+            <option value="10">10+ games</option>
+            <option value="15">15+ games</option>
+            <option value="20">20+ games</option>
+            <option value="30">30+ games</option>
+          </select>
+        </label>
+        <label className="control">
           <span>ORDER</span>
           <select value={direction} onChange={(event) => reset(() => setDirection(event.target.value as "desc" | "asc"))}>
             <option value="desc">Highest first</option>
@@ -208,7 +225,7 @@ export default function SourceStats() {
         <button className="button secondary" type="button" onClick={share}>Copy stat link</button>
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
-      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically.</p>}
+      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing source records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
       {error ? <p role="alert" className="status-error">{error}</p> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
         <>
           {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Publisher player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}

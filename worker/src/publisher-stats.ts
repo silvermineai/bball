@@ -71,6 +71,7 @@ const querySchema = z.object({
   category: z.enum(["averages", "totals", "miscellaneous"]).default("averages"),
   stat: z.string().regex(/^[A-Za-z0-9-]{1,80}$/).default("avgPoints"),
   q: z.string().trim().max(120).optional(),
+  min_games: z.coerce.number().int().min(0).max(50).default(0),
   page: z.coerce.number().int().min(0).max(250).default(0),
   direction: z.enum(["desc", "asc"]).default("desc"),
   meta: z.enum(["0", "1"]).default("0"),
@@ -79,7 +80,7 @@ const querySchema = z.object({
 export const publisherStats = new Hono<{ Bindings: Bindings }>();
 
 publisherStats.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, category, stat, q, page, direction, meta } = c.req.valid("query");
+  const { season, category, stat, q, min_games, page, direction, meta } = c.req.valid("query");
   if (meta === "1") {
     const seasons = await c.env.DB.prepare(
       "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
@@ -92,12 +93,17 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   const valuePath = `$.${field.category}.${field.key}.value`;
   const displayPath = `$.${field.category}.${field.key}.display`;
   const search = q ? `%${q}%` : null;
-  const where = search
-    ? "s.season=? AND (p.name LIKE ? OR COALESCE(r.team_name,s.team_id) LIKE ? OR s.athlete_id LIKE ?)"
-    : "s.season=?";
-  const binds: Array<string | number> = search
-    ? [season, search, search, search]
-    : [season];
+  const conditions = ["s.season=?"];
+  const binds: Array<string | number> = [season];
+  if (search) {
+    conditions.push("(p.name LIKE ? OR COALESCE(r.team_name,s.team_id) LIKE ? OR s.athlete_id LIKE ?)");
+    binds.push(search, search, search);
+  }
+  if (min_games > 0) {
+    conditions.push("COALESCE(json_extract(s.stats_json, '$.averages.gamesPlayed.value'), 0) >= ?");
+    binds.push(min_games);
+  }
+  const where = conditions.join(" AND ");
   // Compound made-attempted fields intentionally retain their publisher
   // display string instead of inventing a numeric value. Count that display
   // path for completeness so the browser reflects the source rows accurately.
