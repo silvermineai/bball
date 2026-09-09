@@ -2311,6 +2311,48 @@ summary {
 .career-selected-row {
   background: #e9eddc;
 }
+.trajectory-list {
+  display: grid;
+  gap: 8px;
+}
+.trajectory-row {
+  display: grid;
+  grid-template-columns: 130px minmax(100px, 1fr) minmax(170px, 220px);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+}
+.trajectory-row.is-selected {
+  border-color: var(--ink);
+  background: #e9eddc;
+}
+.trajectory-label {
+  display: grid;
+  gap: 3px;
+}
+.trajectory-label small,
+.trajectory-stats span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.trajectory-track {
+  height: 14px;
+  background: var(--line);
+  overflow: hidden;
+}
+.trajectory-bar {
+  display: block;
+  height: 100%;
+  background: var(--orange);
+}
+.trajectory-stats {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+}
 .career-season-link {
   background: none;
   border: 0;
@@ -2367,6 +2409,15 @@ summary {
   }
   .career-bar strong {
     font-size: 22px;
+  }
+  .trajectory-row {
+    grid-template-columns: 82px minmax(70px, 1fr);
+    gap: 8px;
+    padding: 10px 6px;
+  }
+  .trajectory-stats {
+    grid-column: 2;
+    text-align: left;
   }
 }
 .career-development .section-heading {
