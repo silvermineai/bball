@@ -480,6 +480,7 @@ describe("bball api", () => {
             name: "Example Player",
             team_name: "Example U",
             stat_value: 6.25,
+            total_count: 1,
             ppg_rank: null,
             payload_json: JSON.stringify({ player_id: 42, apg: 6.25 }),
           }],
@@ -494,6 +495,9 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       provenance: { kind: string; dataset: string; publisher_rank: boolean; derived_divisions: string[] };
+      total: number;
+      limit: number;
+      pages: number;
     };
     expect(body.provenance).toMatchObject({
       kind: "exact_id_derived",
@@ -501,6 +505,7 @@ describe("bball api", () => {
       publisher_rank: false,
       derived_divisions: ["1"],
     });
+    expect(body).toMatchObject({ total: 1, limit: 40, pages: 1 });
   });
 
   it("returns publisher ranks from the retained source row", async () => {

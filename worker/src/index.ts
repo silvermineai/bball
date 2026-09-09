@@ -522,7 +522,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   // one column per measure (the production database is at its size ceiling).
   const publisherRankColumn = stat === "apg" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
-  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
+  const rows = await c.env.DB.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
   const provenance = stat === "apg"
     ? {
@@ -538,7 +538,8 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       dataset: "ncaa_final_national_rankings",
       publisher_rank: true,
     };
-  return c.json({ season: 2026, division, stat, page, provenance, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
+  const total = rows.results.length ? Number((rows.results[0] as Record<string, unknown>).total_count || 0) : 0;
+  return c.json({ season: 2026, division, stat, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, total_count, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
 });
 
 // Keep completed-game reading snapshots reachable from their original URLs.
