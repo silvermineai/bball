@@ -91,6 +91,26 @@ describe("historical careers API", () => {
     expect(data.identity_review_required).toBe(false);
     expect(env.DB.prepare.mock.calls[0][0]).toContain("s.edition=p.edition");
   });
+  it("attaches field coverage only when the static audit matches the D1 edition", async () => {
+    const env = {
+      ...database(),
+      ASSETS: {
+        fetch: vi.fn(async () => new Response(JSON.stringify({
+          seasons: [{
+            season: 2026,
+            edition: "one",
+            field_coverage: { pts: { source_observed: 7, appearance_observed: 6 } },
+          }],
+        }), { status: 200, headers: { "Content-Type": "application/json" } })),
+      },
+    };
+    const response = await careers.request("/123", {}, env);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as {
+      coverage: { field_coverage?: { pts?: { source_observed: number } } };
+    };
+    expect(data.coverage.field_coverage?.pts?.source_observed).toBe(7);
+  });
   it("does not mix logs and summaries across an activating edition", async () => {
     expect(
       (await careers.request("/123", {}, database({ mismatch: true }))).status,

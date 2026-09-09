@@ -1,6 +1,42 @@
 import { Hono } from "hono";
 export const careers = new Hono<{ Bindings: Env }>();
 
+type CareerCoverage = Record<string, unknown>;
+
+type CareerHistoryIndex = {
+  seasons?: Array<{
+    season?: unknown;
+    edition?: unknown;
+    field_coverage?: unknown;
+  }>;
+};
+
+/**
+ * The D1 season row is the release authority. The static history index carries
+ * the field-level audit added after the initial warehouse import, so only
+ * merge it when both artifacts name the same immutable edition.
+ */
+async function matchingFieldCoverage(
+  c: { env: Env; req: { url: string } },
+  season: number,
+  edition: string,
+): Promise<CareerCoverage | null> {
+  try {
+    const response = await c.env.ASSETS?.fetch(
+      new Request(new URL("/data/basketball/history/index.json", c.req.url)),
+    );
+    if (!response?.ok) return null;
+    const index = (await response.json()) as CareerHistoryIndex;
+    const record = index.seasons?.find((entry) => Number(entry.season) === season);
+    if (record?.edition !== edition || !record.field_coverage || typeof record.field_coverage !== "object") {
+      return null;
+    }
+    return record.field_coverage as CareerCoverage;
+  } catch {
+    return null;
+  }
+}
+
 /** Stream the exact historical player-box release whose receipt is active in D1. */
 careers.get("/source", async (c) => {
   const value = c.req.query("season");
@@ -100,6 +136,17 @@ careers.get("/:id", async (c) => {
   const years = profiles.results.map((p) => p.season);
   const identityReviewRequired =
     names.size > 1 || Math.max(...years) - Math.min(...years) > 8;
+  let coverage: CareerCoverage;
+  try {
+    const parsed = JSON.parse(source.coverage_json) as unknown;
+    coverage = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as CareerCoverage
+      : {};
+  } catch {
+    return c.json({ error: "Historical coverage is invalid" }, 503);
+  }
+  const fieldCoverage = await matchingFieldCoverage(c, season, source.edition);
+  if (fieldCoverage) coverage = { ...coverage, field_coverage: fieldCoverage };
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     id,
@@ -109,7 +156,7 @@ careers.get("/:id", async (c) => {
     identity_review_required: identityReviewRequired,
     rows: logs.results.flatMap((r) => JSON.parse(r.payload_json)),
     sources: JSON.parse(source.receipt_json),
-    coverage: JSON.parse(source.coverage_json),
+    coverage,
     core: core.results
       .filter(({ profile_json }) => typeof profile_json === "string")
       .map(({ season, profile_json }) => ({
