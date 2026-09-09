@@ -179,6 +179,12 @@ export default function Page() {
                 {dataset.latest_source_at && (
                   <small>Last receipt · {date(dataset.latest_source_at)}</small>
                 )}
+                {dataset.identity_note && <small>{dataset.identity_note}</small>}
+                {dataset.source_url && (
+                  <a className="text-link" href={dataset.source_url} target="_blank" rel="noreferrer">
+                    Open source release ↗
+                  </a>
+                )}
               </article>
             );
           })}
