@@ -832,6 +832,32 @@ describe("bball api", () => {
     }
   });
 
+  it("publishes the expanded historical player metric catalog", async () => {
+    const prepare = vi.fn(() => ({
+      all: vi.fn().mockResolvedValue({ results: [{ season: 2026 }] }),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-careers?meta=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      metrics: expect.arrayContaining([
+        "efg",
+        "three_pct",
+        "ft_pct",
+        "per40",
+        "stocks40",
+        "ast_to",
+        "tov_rate",
+        "three_rate",
+        "reb40",
+      ]),
+    });
+  });
+
   it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-high-schools?season=2009",
