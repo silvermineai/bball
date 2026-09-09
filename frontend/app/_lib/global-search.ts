@@ -1,4 +1,5 @@
 export type SearchProgram = { id: string; name: string };
+export type SearchRecruitingPerson = { key: string; name: string; category?: string };
 
 export type SearchResult = {
   id: string;
@@ -36,6 +37,32 @@ export function searchPrograms(
       sport: "basketball",
       detail: "Basketball program",
       href: `/basketball/programs/${encodeURIComponent(program.id)}/`,
+    }));
+}
+
+/** Find announced recruiting people without treating an announcement as a player identity join. */
+export function searchRecruitingPeople(
+  people: SearchRecruitingPerson[],
+  query: string,
+  limit = 4,
+): SearchResult[] {
+  const needle = normalize(query);
+  if (!needle) return [];
+  return people
+    .filter((person) => normalize(person.name).includes(needle))
+    .sort((a, b) => {
+      const aName = normalize(a.name);
+      const bName = normalize(b.name);
+      return Number(!aName.startsWith(needle)) - Number(!bName.startsWith(needle)) || aName.localeCompare(bName) || a.key.localeCompare(b.key);
+    })
+    .slice(0, limit)
+    .map((person) => ({
+      id: `recruiting-${person.key}`,
+      name: person.name,
+      type: "player",
+      sport: "basketball",
+      detail: `Recruiting evidence${person.category ? ` · ${person.category.replaceAll("_", " ")}` : ""}`,
+      href: `/basketball/recruiting/?q=${encodeURIComponent(person.name)}`,
     }));
 }
 

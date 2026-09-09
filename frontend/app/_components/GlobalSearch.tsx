@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { combineSearchResults, searchPrograms, type SearchProgram, type SearchResult } from "../_lib/global-search";
+import { combineSearchResults, searchPrograms, searchRecruitingPeople, type SearchProgram, type SearchResult, type SearchRecruitingPerson } from "../_lib/global-search";
 
 type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null };
 type PlayerResponse = { rows?: PlayerRow[] };
 type RatingResponse = { board?: Array<{ id?: string | number; name?: string }> };
 type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team"; source?: "ncaa" | "football"; latest_season?: number };
 type LegacyResponse = { results?: LegacyRow[] };
+type RecruitingResponse = { people?: SearchRecruitingPerson[] };
 
 let programsPromise: Promise<SearchProgram[]> | null = null;
+let recruitingPromise: Promise<SearchRecruitingPerson[]> | null = null;
 const loadPrograms = () => {
   programsPromise ??= fetch("/data/ratings.json")
     .then((response) => {
@@ -21,6 +23,13 @@ const loadPrograms = () => {
       .filter((row): row is { id: string | number; name: string } => row.id != null && !!row.name)
       .map((row) => ({ id: String(row.id), name: row.name })));
   return programsPromise;
+};
+const loadRecruiting = () => {
+  recruitingPromise ??= fetch("/api/basketball/research/recruiting?season=2027")
+    .then((response) => response.ok ? response.json() as Promise<RecruitingResponse> : { people: [] })
+    .then((payload) => payload.people || [])
+    .catch(() => []);
+  return recruitingPromise;
 };
 
 export default function GlobalSearch() {
@@ -47,12 +56,13 @@ export default function GlobalSearch() {
         fetch(`/api/basketball/research/player-core?season=2026&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
+        loadRecruiting(),
         fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_mbb`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
         fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_fbl`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
       ])
-        .then(([players, programs, basketballArchive, football]) => {
+        .then(([players, programs, recruitingPeople, basketballArchive, football]) => {
           const playerResults: SearchResult[] = (players.rows || [])
             .filter((row): row is PlayerRow & { id: string; name: string } => !!row.id && !!row.name)
             .slice(0, 5)
@@ -86,6 +96,7 @@ export default function GlobalSearch() {
               detail: "Basketball source player",
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}`,
             }));
+          const recruitingResults = searchRecruitingPeople(recruitingPeople, needle, 3);
           const footballResults: SearchResult[] = (football.results || [])
             .filter((row): row is LegacyRow & { id: string; name: string; type: "player" | "team" } => !!row.id && !!row.name && !!row.type)
             .slice(0, 3)
@@ -99,7 +110,7 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
           setOpen(true);
         })
         .catch((reason: unknown) => {
