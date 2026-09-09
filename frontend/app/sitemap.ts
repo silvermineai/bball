@@ -51,6 +51,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/forecast-lab/",
     "/basketball/gameplan/",
     "/basketball/film/",
+    "/basketball/season/",
     ...getBasketball()
       .upcoming.filter((g) => g.prediction)
       .map((g) => `/basketball/briefs/${g.id}/`),

@@ -921,6 +921,24 @@ th,
   font-size: 34px;
   margin: 20px 0 14px;
 }
+.article-card h3 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 16px 0 10px;
+}
+.season-review-score {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  color: var(--ink) !important;
+  font-family: Georgia, serif;
+  font-size: 30px !important;
+  line-height: 1 !important;
+  margin: 12px 0 !important;
+}
+.season-review-score .winner {
+  color: var(--orange);
+}
 .article-card p {
   font-size: 13px;
   line-height: 1.8;
