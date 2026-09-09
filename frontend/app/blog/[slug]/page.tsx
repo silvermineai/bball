@@ -262,9 +262,10 @@ function BasketballRecruitingFit() {
       <p>
         The selected program’s role cards show listed players and the prior
         minutes attached to exact source IDs. Returning and incoming minutes
-        stay separate. They describe what the release represents; they do not
-        prove that a player left, transferred, is eligible or will play the
-        same role next season.
+        stay separate, and minutes attached to ambiguous source rows remain in
+        an explicit unclassified bucket. They describe what the release
+        represents; they do not prove that a player left, transferred, is
+        eligible or will play the same role next season.
       </p>
       <h2>Read the fit score as a sorting aid</h2>
       <p>
