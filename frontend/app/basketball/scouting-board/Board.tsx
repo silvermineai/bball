@@ -34,6 +34,8 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
     [page, setPage] = useState(0),
     [copied, setCopied] = useState("");
   const [shareFallback, setShareFallback] = useState("");
+  const [watchlistStatus, setWatchlistStatus] = useState("");
+  const watchlistReady = useRef(new Set<number>());
   const cache = useRef(new Map<number, SeasonPlayers>());
   const coverage = catalog.seasons.find((s) => s.season === season);
   useEffect(() => {
@@ -101,6 +103,39 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
     const url = new URL(window.location.href);
     url.search = boardParams({ ...state, ...patch, invalid: false });
     window.history[replace ? "replaceState" : "pushState"](null, "", url);
+  };
+  useEffect(() => {
+    if (!ready || watchlistReady.current.has(season)) return;
+    watchlistReady.current.add(season);
+    if (selected.length || new URLSearchParams(params.toString()).getAll("pick").length) return;
+    try {
+      const raw = window.localStorage.getItem(`silvermine.scouting-board:${season}`);
+      const saved = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(saved) && saved.length) {
+        const valid = saved.filter((value): value is string => typeof value === "string").slice(0, 3);
+        if (valid.length) {
+          update({ selected: valid }, true);
+          setWatchlistStatus("Loaded this season's private watchlist.");
+        }
+      }
+    } catch {
+      // URL sharing remains available when browser storage is blocked.
+    }
+  }, [params, ready, season, selected.length]);
+  useEffect(() => {
+    if (!ready || !watchlistReady.current.has(season)) return;
+    try {
+      const key = `silvermine.scouting-board:${season}`;
+      if (selected.length) window.localStorage.setItem(key, JSON.stringify(selected.slice(0, 3)));
+      else window.localStorage.removeItem(key);
+    } catch {
+      // The board remains usable without private browser persistence.
+    }
+  }, [ready, season, selected]);
+  const clearWatchlist = () => {
+    update({ selected: [] });
+    setWatchlistStatus("Private watchlist cleared for this season.");
+    try { window.localStorage.removeItem(`silvermine.scouting-board:${season}`); } catch { /* optional storage */ }
   };
   const download = () => {
     if (!ready) return;
@@ -280,7 +315,8 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
           box-score fields. Rankings and percentiles use qualified
           player/program records in the selected source season, before search,
           position and workload filters. Team labels describe that season.
-          Changing seasons clears the shortlist.
+          Changing seasons opens that season’s private watchlist when one has
+          been saved; an explicit shared URL always takes precedence.
         </p>
         {!coverage ? (
           <p className="empty">Choose a supported stat season.</p>
@@ -362,9 +398,10 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
                   <small>{picks.map((r) => r.player.name).join(" · ")}</small>
                 )}
               </span>
-              <a className="hero-link" href="#player-shortlist">
-                Review shortlist ↓
-              </a>
+              <span>
+                <a className="hero-link" href="#player-shortlist">Review shortlist ↓</a>
+                {watchlistStatus && <small role="status">{watchlistStatus}</small>}
+              </span>
             </div>
             <div className="table-scroll">
               <table className="data-table board-results">
@@ -593,9 +630,9 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
           {selected.length > 0 && (
             <button
               className="hero-link"
-              onClick={() => update({ selected: [] })}
+              onClick={clearWatchlist}
             >
-              Clear shortlist
+              Clear private watchlist
             </button>
           )}
           {picks.length > 0 && (
