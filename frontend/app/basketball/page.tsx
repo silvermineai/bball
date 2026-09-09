@@ -16,6 +16,7 @@ import {
 } from "../_lib/basketball-leaders";
 import { seasonLabel } from "../_lib/careers";
 import type { BBDatasetCoverage } from "../_lib/basketball-types";
+import LiveBasketballForecastStatus from "../_components/LiveBasketballForecastStatus";
 
 function getBasketballLeaders(season: number) {
   const file = path.join(
@@ -148,6 +149,7 @@ export default function Page() {
           <span>Programs with efficiency ratings</span>
         </div>
       </div>
+      <LiveBasketballForecastStatus />
       <section className="section source-receipts">
         <div className="section-heading">
           <div>
