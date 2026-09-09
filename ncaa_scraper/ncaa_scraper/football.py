@@ -225,9 +225,16 @@ def player_board(conn, year):
 
 def build(conn, season=2026):
     now = utcnow()
+    # The active forecast edition is a five-season window. Older schedule rows
+    # may be retained locally for player-history work; they must not silently
+    # change the production model when a refresh reuses that warehouse.
+    first_season = season - 4
     games = [
         dict(r)
-        for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")
+        for r in conn.execute(
+            "SELECT * FROM football_games WHERE season BETWEEN ? AND ? ORDER BY kickoff,id",
+            (first_season, season),
+        )
     ]
     validation = {}
     model = train_and_evaluate(games, now, season, validation_out=validation)
