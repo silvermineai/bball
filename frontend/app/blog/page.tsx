@@ -7,6 +7,7 @@ import {
 import Link from "next/link";
 import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
+import LiveBasketballJournal from "./LiveBasketballJournal";
 export const metadata = {
   title: "The journal: college basketball and football analysis",
 };
@@ -108,25 +109,8 @@ export default function Page() {
             </p>
             <Link href="/basketball/evaluation/">Explore the experiment →</Link>
           </article>
-          {basketball.upcoming
-            .filter((g) => g.prediction)
-            .slice(0, 6)
-            .map((g) => (
-              <article className="article-card" key={g.id}>
-                <div className="eyebrow">{date(g.starts_at)} · Model brief</div>
-                <h2>
-                  {g.away_name} vs {g.home_name}
-                </h2>
-                <p>
-                  Score estimates, pace, uncertainty and questions for the
-                  scouting room.
-                </p>
-                <Link href={`/basketball/briefs/${g.id}/`}>
-                  Read the preview →
-                </Link>
-              </article>
-            ))}
         </div>
+        <LiveBasketballJournal games={basketball.upcoming} />
       </section>
       <section className="section">
         <div className="section-heading">
