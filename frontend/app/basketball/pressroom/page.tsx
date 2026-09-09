@@ -4,6 +4,7 @@ import Link from "next/link";
 import { espnGameUrl, getBasketball } from "../../_lib/basketball-data";
 import type { BBGame } from "../../_lib/basketball-types";
 import { date, fmt, signed } from "../../_lib/format";
+import LivePressroomForecasts from "./LivePressroomForecasts";
 
 export const metadata = {
   title: "Basketball press room",
@@ -130,9 +131,7 @@ export default function Page() {
           <div><div className="eyebrow">The full forecast desk</div><h2>Open the next brief.</h2></div>
           <Link href="/basketball/briefs/">Browse every game brief →</Link>
         </div>
-        <div className="article-grid">
-          {games.slice(0, 12).map((game) => <GameCard key={game.id} game={game} />)}
-        </div>
+        <LivePressroomForecasts games={games.slice(0, 24)} />
       </section>
       <p className="note">Forecasts use historical team efficiency and venue only. They do not include injuries, transfers, eligibility, current lineup confirmation or bookmaker prices. Read the <Link href="/basketball/model/">model notebook</Link> and the <Link href="/research/scorecard/?sport=basketball">forecast record</Link> for methods and timing.</p>
     </>
