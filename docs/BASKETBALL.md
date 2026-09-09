@@ -141,6 +141,8 @@ The forecast lab also reads the `meta=1` catalog from the deployed Worker after 
 
 `GET /api/basketball/research/unresolved?dataset=ncaa_player_box&season=2026&q=Duke&limit=40` returns a bounded page of source observations retained in `bb_unresolved`. Dataset, season, withholding-reason and source-JSON filters are parameterized; the response parses each original object into `source` and keeps the source row index. The endpoint is for audit and identity review only: it does not join, rank, forecast or assert a player/team identity.
 
+The shared market archive keeps its sport, season, search and page controls in the URL and offers a copy-link action, so a line review can be reopened or handed to another researcher with the same slice of retained observations.
+
 ## Remaining full-goal work
 
 - Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.

@@ -64,6 +64,23 @@ export default function Markets() {
   const [page, setPage] = useState(0);
   const [data, setData] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedSport = params.get("sport");
+    if (requestedSport === "football" || requestedSport === "basketball") {
+      setSport(requestedSport);
+    }
+    if (params.get("season")) setSeason(params.get("season")!);
+    setQuery(params.get("q") || "");
+    const requestedPage = Number(params.get("page"));
+    if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 10000) {
+      setPage(requestedPage);
+    }
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     fetch(`/api/research/markets?meta=1&sport=${sport}`)
@@ -78,6 +95,27 @@ export default function Markets() {
       })
       .catch((e) => setError(e.message));
   }, [sport]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("sport", sport);
+    url.searchParams.set("season", season);
+    if (query.trim()) url.searchParams.set("q", query.trim());
+    else url.searchParams.delete("q");
+    if (page) url.searchParams.set("page", String(page));
+    else url.searchParams.delete("page");
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, page, query, season, sport]);
+
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Market archive link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -133,7 +171,9 @@ export default function Markets() {
         <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}>{(meta?.seasons || [2025]).map((s) => <option key={s}>{s}</option>)}</select></label>
         <label className="control"><span>TEAM OR SOURCE</span><input type="search" maxLength={120} placeholder="Try Alabama or SportsDataverse" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
         <button className="button secondary" type="button" onClick={download} disabled={!data?.rows.length}>Download CSV</button>
+        <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
       </div>
+      {copied && <p className="note" role="status">{copied}</p>}
       {error ? <div className="status-error" role="alert">{error}</div> : !data ? <p className="empty" role="status">Loading retained observations…</p> : <>
         <p className="note" role="status">{data.total.toLocaleString()} observations · page {page + 1} of {pages} · every row labelled as archival reference</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Observed</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
