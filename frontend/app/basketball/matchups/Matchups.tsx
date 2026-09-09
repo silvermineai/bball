@@ -37,7 +37,29 @@ export default function Matchups({
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
     [page, setPage] = useState(initial.page),
-    [copied, setCopied] = useState("");
+    [copied, setCopied] = useState(""),
+    [liveCatalog, setLiveCatalog] = useState<{
+      models?: Array<{
+        model_id: string;
+        forecasts: number;
+        last_created_at: string | null;
+        target_season?: number | null;
+      }>;
+    } | null>(null),
+    [liveCatalogError, setLiveCatalogError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Live forecast catalog unavailable.");
+        return response.json() as Promise<typeof liveCatalog>;
+      })
+      .then((value) => { if (!controller.signal.aborted) setLiveCatalog(value); })
+      .catch((reason: Error) => {
+        if (reason.name !== "AbortError" && !controller.signal.aborted) setLiveCatalogError(reason.message);
+      });
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     const next = matchupFilterSearch({ team: q, month, coverage, sort, page });
     if (next !== window.location.search) {
@@ -150,6 +172,14 @@ export default function Matchups({
       </p>
       <p className="note">
         Forecast edition {generatedAt.slice(0, 10)} · model {model.version} · training cutoff {model.cutoff}. Read the <Link href="/basketball/model/">model notebook</Link> for fitting windows, held-out results and limitations.
+      </p>
+      <p className="note" role="status">
+        {liveCatalog ? (() => {
+          const latest = liveCatalog.models?.find((item) => item.target_season === 2027) || liveCatalog.models?.[0];
+          if (!latest) return "Live D1 catalog has no registered 2026–27 model; showing the static edition.";
+          const matches = latest.model_id === model.id;
+          return `Live D1 catalog: ${latest.forecasts.toLocaleString()} rows · ${latest.last_created_at ? `last captured ${latest.last_created_at.slice(0, 10)}` : "capture clock unavailable"} · ${matches ? "matches this page" : `newer than this page (${latest.model_id})`}.`;
+        })() : liveCatalogError ? `${liveCatalogError} Showing the static forecast edition.` : "Checking the live forecast catalog…"}
       </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>
