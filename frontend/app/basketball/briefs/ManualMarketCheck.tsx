@@ -24,6 +24,8 @@ function signedPoints(value: number) {
 type SavedQuote = {
   savedAt: string;
   source: string;
+  modelId?: string | null;
+  modelCapturedAt?: string | null;
   modelMargin?: number | null;
   modelTotal?: number | null;
   modelHomeWinProbability?: number | null;
@@ -43,6 +45,8 @@ type SavedQuote = {
 };
 
 type LiveForecast = {
+  model_id?: string;
+  created_at?: string | null;
   home_margin: number | null;
   total: number | null;
   home_win_probability: number | null;
@@ -91,7 +95,7 @@ export default function ManualMarketCheck({
         if (!controller.signal.aborted) {
           const row = payload.rows?.[0] || null;
           setLiveForecast(row);
-          setLiveModel(payload.latest_model || null);
+          setLiveModel(row ? { model_id: row.model_id, created_at: row.created_at } : payload.latest_model || null);
           setLiveStatus(row ? "live" : "fallback");
         }
       })
@@ -146,6 +150,8 @@ export default function ManualMarketCheck({
     const quote: SavedQuote = {
       savedAt: new Date().toISOString(),
       source: source.trim(),
+      modelId: liveModel?.model_id || null,
+      modelCapturedAt: liveModel?.created_at || null,
       modelMargin: activeMargin,
       modelTotal: activeTotal,
       modelHomeWinProbability: activeWinProbability,
@@ -182,8 +188,8 @@ export default function ManualMarketCheck({
     downloadCsv(
       "manual-market-notebook.csv",
       toCsv(
-        ["Saved at", "Source", "Model home margin", "Model total", "Model home probability", "Model margin low", "Model margin high", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Home moneyline expected return", "Away moneyline expected return", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
-        history.map((quote) => [quote.savedAt, quote.source, quote.modelMargin, quote.modelTotal, quote.modelHomeWinProbability == null ? null : quote.modelHomeWinProbability * 100, quote.modelMarginLow, quote.modelMarginHigh, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.homeMoneylineExpectedValue == null ? null : quote.homeMoneylineExpectedValue * 100, quote.awayMoneylineExpectedValue == null ? null : quote.awayMoneylineExpectedValue * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
+        ["Saved at", "Source", "Model ID", "Model captured at", "Model home margin", "Model total", "Model home probability", "Model margin low", "Model margin high", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Home moneyline expected return", "Away moneyline expected return", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
+        history.map((quote) => [quote.savedAt, quote.source, quote.modelId, quote.modelCapturedAt, quote.modelMargin, quote.modelTotal, quote.modelHomeWinProbability == null ? null : quote.modelHomeWinProbability * 100, quote.modelMarginLow, quote.modelMarginHigh, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.homeMoneylineExpectedValue == null ? null : quote.homeMoneylineExpectedValue * 100, quote.awayMoneylineExpectedValue == null ? null : quote.awayMoneylineExpectedValue * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
       ),
     );
   };
@@ -338,12 +344,12 @@ export default function ManualMarketCheck({
               <button className="button secondary" type="button" onClick={clearHistory}>Clear local notes</button>
             </div>
           </div>
-          <p className="note">Saved in this browser with the model values shown above. These notes are user-entered observations, not provider-verified market records.</p>
+          <p className="note">Saved in this browser with the model values and edition clock shown above. These notes are user-entered observations, not provider-verified market records.</p>
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr><th>Saved / source</th><th className="numeric">Spread</th><th className="numeric">Total</th><th className="numeric">Moneyline</th><th className="numeric">Edges</th></tr></thead>
               <tbody>{history.map((quote) => <tr key={`${quote.savedAt}-${quote.source}`}>
-                <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small></td>
+                <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small><small>{quote.modelId ? `Model ${quote.modelId}` : "Model edition unavailable"}{quote.modelCapturedAt ? ` · ${date(quote.modelCapturedAt)}` : ""}</small></td>
                 <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small><small>{quote.spreadCoverProbability == null ? "" : `${(quote.spreadCoverProbability * 100).toFixed(1)}% cover approx.`}</small><small>{quote.modelMargin == null ? "Model margin —" : `Model ${signedPoints(quote.modelMargin)}`}</small></td>
                 <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small><small>{quote.modelTotal == null ? "Model total —" : `Model ${quote.modelTotal.toFixed(1)}`}</small></td>
                 <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.awayMoneyline == null ? "Away —" : `Away ${quote.awayMoneyline > 0 ? "+" : ""}${quote.awayMoneyline}`}</small><small>{quote.moneylineHomeProbability == null ? "" : `No-vig home ${(quote.moneylineHomeProbability * 100).toFixed(1)}%`}</small><small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small><small>{quote.homeMoneylineExpectedValue == null ? "" : `Home EV ${(quote.homeMoneylineExpectedValue * 100).toFixed(1)}%`}</small><small>{quote.awayMoneylineExpectedValue == null ? "" : `Away EV ${(quote.awayMoneylineExpectedValue * 100).toFixed(1)}%`}</small></td>
