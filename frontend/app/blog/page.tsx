@@ -125,6 +125,25 @@ export default function Page() {
             </p>
             <Link href="/basketball/evaluation/">Explore the experiment →</Link>
           </article>
+          <article className="article-card">
+            <div className="eyebrow">Basketball / Player evaluation</div>
+            <h2>A ranking is a question, not a verdict.</h2>
+            <p>
+              Move from an NCAA production or impact screen to a reviewable
+              scouting question. Keep the sample, source identity and next
+              piece of evidence attached to the name.
+            </p>
+            <Link href="/blog/basketball-ranking-playbook/">Read the playbook →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Basketball / Team context</div>
+            <h2>Count the trip before you count the score.</h2>
+            <p>
+              Learn how source-recorded possessions, transition share and
+              assisted share describe a team without assigning player credit.
+            </p>
+            <Link href="/blog/basketball-possession-style/">Read the field guide →</Link>
+          </article>
         </div>
         <LiveBasketballJournal
           games={basketball.upcoming

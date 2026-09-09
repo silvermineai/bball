@@ -440,6 +440,15 @@ export default function Home() {
             </p>
             <Link href="/blog/market-comparison/">Read the methodology →</Link>
           </article>
+          <article className="article-card">
+            <div className="eyebrow">Basketball / Team context · 4 min read</div>
+            <h2>Count the trip before you count the score.</h2>
+            <p>
+              A practical guide to possession style, transition share and
+              assisted share in the 2026–27 basketball research archive.
+            </p>
+            <Link href="/blog/basketball-possession-style/">Read the field guide →</Link>
+          </article>
         </div>
       </section>
     </>
