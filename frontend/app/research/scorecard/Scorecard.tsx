@@ -177,6 +177,45 @@ export default function Scorecard() {
           Unmatched feed events <b>{data.unmatched_events.toLocaleString()}</b>
         </span>
       </div>
+      {m.reliability?.length ? (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="reliability-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Probability calibration / settled non-ties</div>
+              <h2 id="reliability-title">Does 70% mean about 70%?</h2>
+            </div>
+            <span className="note">Observed rate vs forecast average</span>
+          </div>
+          <p className="note">
+            Each row groups settled games by the forecast probability recorded before the scheduled start. Tied finals are excluded because they do not produce a home-win outcome. Empty probability bands stay hidden; a small sample can swing the observed rate substantially.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Forecast band</th><th className="numeric">Games</th><th className="numeric">Average forecast</th><th className="numeric">Observed home wins</th><th className="numeric">Calibration gap</th></tr></thead>
+              <tbody>
+                {m.reliability.map((bin) => {
+                  const gap = bin.predicted != null && bin.observed != null ? bin.observed - bin.predicted : null;
+                  return (
+                    <tr key={`${bin.lower}-${bin.upper}`}>
+                      <td>{fmt(bin.lower * 100, 0)}–{fmt(bin.upper * 100, 0)}%</td>
+                      <td className="numeric">{bin.games.toLocaleString()}</td>
+                      <td className="numeric">{bin.predicted == null ? "—" : `${fmt(bin.predicted * 100, 1)}%`}</td>
+                      <td className="numeric">{bin.observed == null ? "—" : `${fmt(bin.observed * 100, 1)}%`}</td>
+                      <td className="numeric">{gap == null ? "—" : `${gap >= 0 ? "+" : ""}${fmt(gap * 100, 1)} pts`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="reliability-title">
+          <div className="eyebrow">Probability calibration</div>
+          <h3 id="reliability-title" style={{ marginTop: 8 }}>Waiting for settled non-tie games.</h3>
+          <p>No reliability bins are shown until this sport has settled binary outcomes in the registered ledger.</p>
+        </section>
+      )}
       <section className="paper-panel" style={{ marginTop: 24 }} aria-live="polite">
         <div className="eyebrow">Licensed odds feed / capture status</div>
         <h3 style={{ marginTop: 8 }}>

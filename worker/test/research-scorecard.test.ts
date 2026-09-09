@@ -61,4 +61,41 @@ describe("live research scorecard", () => {
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7 });
     expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, games_with_comparisons: 0 });
   });
+
+  it("publishes settled probability reliability bins", async () => {
+    const selected = {
+      id: "registration-settled",
+      sport: "basketball",
+      game_id: "game-settled",
+      model_id: "model-1",
+      generated_at: "2026-01-01T00:00:00.000000Z",
+      registered_at: "2026-01-01T00:01:00.000000Z",
+      starts_at: "2026-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home", away_id: "away", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 5, total: 145, home_win_probability: 0.7, margin_low: -8, margin_high: 18 },
+      }),
+      state_json: JSON.stringify({ home_id: "home", away_id: "away", starts_at: "2026-01-02T00:00:00.000000Z", time_tbd: 0, completed: 1, home_score: 80, away_score: 70 }),
+      exclusion: null,
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("ROW_NUMBER() OVER") ? { results: [selected] } : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request("/?sport=basketball&season=2027&limit=5000", {}, { RESEARCH_DB: { prepare } as never });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { sports: { basketball: { metrics: { reliability: Array<{ lower: number; upper: number; games: number; predicted: number; observed: number }> } } } };
+    expect(body.sports.basketball.metrics.reliability).toEqual([{ lower: 0.7, upper: 0.8, games: 1, predicted: 0.7, observed: 1 }]);
+  });
 });

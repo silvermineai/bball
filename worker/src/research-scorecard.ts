@@ -182,6 +182,17 @@ function metrics(rows: Json[]): Json {
     return [-Math.log(Math.max(1e-12, Math.min(1 - 1e-12, likelihood)))];
   });
   const interval = settled.filter((row) => number(row.margin_low) !== null && number(row.margin_high) !== null && number(row.actual_margin) !== null);
+  const reliability = Array.from({ length: 10 }, (_, index) => {
+    const lower = index / 10;
+    const upper = (index + 1) / 10;
+    const bucket = binary.filter((row) => {
+      const probability = number(row.home_win_probability);
+      return probability !== null && probability >= lower && (index === 9 ? probability <= upper : probability < upper);
+    });
+    const predicted = bucket.flatMap((row) => number(row.home_win_probability) === null ? [] : [Number(row.home_win_probability)]);
+    const observed = bucket.flatMap((row) => number(row.actual_margin) === null ? [] : [Number(row.actual_margin) > 0 ? 1 : 0]);
+    return bucket.length ? { lower, upper, games: bucket.length, predicted: mean(predicted), observed: mean(observed) } : null;
+  }).filter((bin): bin is { lower: number; upper: number; games: number; predicted: number | null; observed: number | null } => bin !== null);
   return {
     games: settled.length,
     binary_games: binary.length,
@@ -193,6 +204,7 @@ function metrics(rows: Json[]): Json {
     log_loss: mean(logLoss),
     interval_games: interval.length,
     interval_coverage: mean(interval.map((row) => Number(Number(row.margin_low) <= Number(row.actual_margin) && Number(row.actual_margin) <= Number(row.margin_high)))),
+    reliability,
   };
 }
 

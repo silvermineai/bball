@@ -49,6 +49,13 @@ export type Metrics = {
   log_loss: number | null;
   interval_games: number;
   interval_coverage: number | null;
+  reliability?: {
+    lower: number;
+    upper: number;
+    games: number;
+    predicted: number | null;
+    observed: number | null;
+  }[];
 };
 export type SportSummary = {
   games: number;
