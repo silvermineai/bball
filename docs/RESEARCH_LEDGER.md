@@ -46,6 +46,8 @@ The legacy SportsDataverse betting archive remains outside this evaluation becau
 
 When a licensed provider supplies a CSV export instead of an API credential, `market_csv.py` provides the same fail-closed path without scraping sportsbook pages. Every import requires the sport, provider name, license URL and source file. Required columns are `game_id`, `market` (`spreads`, `totals` or `h2h`), `starts_at`, `captured_at`, `updated_at`, `home_name`, `away_name`, `bookmaker`, plus a line and both decimal prices (or American prices) for the selected market. The importer checks the exact source game ID, participant names, UTC start, pregame capture and provider-update clocks, stores a file SHA-256 receipt, and rolls back the entire file if any row fails. It never infers a game from a team-name search.
 
+The market desk provides a header-only [CSV template](../frontend/public/data/research/market-import-template.csv) so an operator can start an authorized export without copying the schema from this document. It contains no provider data and is only a shape guide; the importer still requires the provider identity, license URL and all market-specific values.
+
 For example:
 
 ```bash

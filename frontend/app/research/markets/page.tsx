@@ -94,6 +94,10 @@ export default function Page() {
             public copy of a licensed feed. See the repository&apos;s{" "}
             <a href="https://github.com/silvermineai/bball/blob/main/docs/RESEARCH_LEDGER.md#licensed-csv-imports" target="_blank" rel="noreferrer">CSV import instructions ↗</a>.
           </p>
+          <div className="button-row">
+            <a className="button secondary" href="/data/research/market-import-template.csv" download>Download CSV template ↓</a>
+            <a className="hero-link" href="/research/scorecard/?sport=basketball">Open basketball scorecard →</a>
+          </div>
         </div>
         <div className="paper-panel" style={{ marginTop: 24 }}>
           <p>
