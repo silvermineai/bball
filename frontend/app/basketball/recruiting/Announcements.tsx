@@ -35,7 +35,26 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     [coverageStatus, setCoverageStatus] = useState<"all" | "reviewed" | "unreviewed">("all");
   const [rosters, setRosters] = useState<BBRosters | null>(null),
     [rosterError, setRosterError] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  const [liveData, setLiveData] = useState<RecruitingRelease | null>(null),
+    [releaseError, setReleaseError] = useState(""),
+    [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live recruiting edition is unavailable.");
+        return response.json() as Promise<RecruitingRelease>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLiveData(value);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setReleaseError(reason instanceof Error ? reason.message : "The live recruiting edition is unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get("view");
     if (requestedView === "observations") setView("observations");
@@ -101,11 +120,12 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   if (!rosters) {
     return <p className="empty" role="status">Loading the source roster release…</p>;
   }
-  const allRows = recruitingRows(data);
+  const release = liveData || data;
+  const allRows = recruitingRows(release);
   const programSummary = summarizeRecruitingPrograms(allRows);
   const coverageBaseRows = (rosters.team_summaries || [])
     .map((summary) => {
-      const reviewed = data.programs.some((program) => program.id === summary.team_id);
+      const reviewed = release.programs.some((program) => program.id === summary.team_id);
       const additions = programSummary.find((row) => row.team_id === summary.team_id);
       return {
         ...summary,
@@ -160,7 +180,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           aria-pressed={view === "announcements"}
           onClick={() => changeView("announcements")}
         >
-          School announcements <span>{data.coverage.players}</span>
+          School announcements <span>{release.coverage.players}</span>
         </button>
         <button
           aria-pressed={view === "observations"}
@@ -169,28 +189,35 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           Roster observations
         </button>
       </div>
+      <p className="note" role="status">
+        {liveData
+          ? "Cloudflare D1 reviewed recruiting edition connected; showing the latest retained source file."
+          : releaseError
+            ? `${releaseError} Showing the bundled reviewed release.`
+            : "Checking the live reviewed recruiting edition…"}
+      </p>
       {view === "observations" ? (
         <Recruiting />
       ) : (
         <>
           <div className="strip recruiting-strip">
             <div>
-              <strong>{data.coverage.players}</strong>
+              <strong>{release.coverage.players}</strong>
               <span>Players with announced additions</span>
             </div>
             <div>
               <strong>
-                {data.coverage.programs}/
+                {release.coverage.programs}/
                 {(rosters.team_summaries || []).length.toLocaleString()}
               </strong>
               <span>Reviewed / source-listed programs</span>
             </div>
             <div>
-              <strong>{data.coverage.historical_links}</strong>
+              <strong>{release.coverage.historical_links}</strong>
               <span>Prior college stat profiles linked</span>
             </div>
             <div>
-              <strong>{data.coverage.events}</strong>
+              <strong>{release.coverage.events}</strong>
               <span>Dated school statements</span>
             </div>
           </div>
@@ -228,7 +255,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           <div className="recruiting-scope">
             <span className="eyebrow">Coverage / Selected announcements</span>
             <p>
-              {[...data.programs]
+              {[...release.programs]
                 .map((p) => p.name)
                 .sort((a, b) => a.localeCompare(b))
                 .join(", ")}
@@ -237,7 +264,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               record here. Additions are not a count of available players.
             </p>
             <small>
-              Source review: {publicationDate(data.reviewed_at)} · These
+              Source review: {publicationDate(release.reviewed_at)} · These
               announcements do not adjust the forecast model. Exact normalized
               name matches in the current roster source: {exactRosterMatches} of {allRows.length}; a missing match is not evidence of absence.
             </small>
@@ -351,7 +378,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </button>
             </div>
             <p className="note">
-              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move. Review clock: {publicationDate(data.reviewed_at)}.
+              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move. Review clock: {publicationDate(release.reviewed_at)}.
             </p>
             <div className="toolbar recruiting-filters">
               <label className="control">
@@ -442,13 +469,13 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <span>ANNOUNCING PROGRAM</span>
               <select value={team} onChange={(e) => setTeam(e.target.value)}>
                 <option value="all">All reviewed programs</option>
-                {!data.programs.some((p) => p.id === team) &&
+                {!release.programs.some((p) => p.id === team) &&
                   team !== "all" && (
                     <option value={team}>
                       Program {team} · no reviewed records
                     </option>
                   )}
-                {[...data.programs]
+                {[...release.programs]
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map((p) => (
                     <option key={p.id} value={p.id}>
@@ -761,7 +788,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           )}
           <section className="section paper-panel">
             <h2>Every record has a paper trail.</h2>
-            <p>{data.methodology}</p>
+            <p>{release.methodology}</p>
             <p>
               Dates above are the publisher’s calendar dates, not when a player
               signed or entered the portal. Our review timestamps show when we
@@ -772,10 +799,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             </p>
             <p>
               Historical stats come from{" "}
-              <a href={data.stats_source.url}>
+              <a href={release.stats_source.url}>
                 SportsDataverse’s attributed bulk releases
               </a>{" "}
-              ({data.stats_source.license}). Links require a reviewed match of
+              ({release.stats_source.license}). Links require a reviewed match of
               the full player name and the school-announced prior program.
               College production describes past appearances; it does not project
               a player’s role at a new school. Announcement records contain our
