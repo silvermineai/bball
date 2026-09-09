@@ -80,7 +80,7 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.unconfirmed_start.toLocaleString()}</dt><dd>Unconfirmed start times</dd></div>
               <div><dt>{data.location_validation.missing_venue.toLocaleString()}</dt><dd>Missing venue labels</dd></div>
               <div><dt>{data.location_validation.same_participant.toLocaleString()}</dt><dd>Same-side participant IDs</dd></div>
-              <div><dt>{data.location_validation.invalid_periods.toLocaleString()}</dt><dd>Invalid period counts</dd></div>
+              <div><dt>{data.location_validation.invalid_periods.toLocaleString()}</dt><dd>Missing/invalid period fields</dd></div>
               <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
