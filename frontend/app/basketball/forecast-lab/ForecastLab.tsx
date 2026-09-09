@@ -317,9 +317,10 @@ export default function ForecastLab({
             </select>
           </label>
           <ManualMarketCheck
-            key={marketRow.game.id}
-            storageKey={`forecast-lab:${marketRow.game.id}`}
+            key={`${marketRow.game.id}:${modelSelection}`}
+            storageKey={`forecast-lab:${modelSelection}:${marketRow.game.id}`}
             gameId={marketRow.game.id}
+            modelId={modelSelection}
             homeName={marketRow.game.home_name}
             modelMargin={marketRow.prediction.home_margin}
             modelMarginLow={marketRow.prediction.margin_low}

@@ -56,6 +56,7 @@ type LiveForecast = {
 
 export default function ManualMarketCheck({
   homeName,
+  modelId,
   modelMargin,
   modelTotal,
   modelHomeWinProbability,
@@ -65,6 +66,7 @@ export default function ManualMarketCheck({
   gameId,
 }: {
   homeName: string;
+  modelId?: string;
   modelMargin: number;
   modelTotal: number;
   modelHomeWinProbability: number;
@@ -86,7 +88,8 @@ export default function ManualMarketCheck({
   useEffect(() => {
     if (!gameId) return;
     const controller = new AbortController();
-    fetch(`/api/basketball/research/forecasts?season=2027&gameId=${encodeURIComponent(gameId)}&model=latest&status=all&limit=1`, { signal: controller.signal })
+    const selectedModel = modelId || "latest";
+    fetch(`/api/basketball/research/forecasts?season=2027&gameId=${encodeURIComponent(gameId)}&model=${encodeURIComponent(selectedModel)}&status=all&limit=1`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live forecast unavailable");
         return response.json() as Promise<{ rows?: LiveForecast[]; latest_model?: { model_id?: string; created_at?: string | null } | null }>;
@@ -103,7 +106,7 @@ export default function ManualMarketCheck({
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveStatus("fallback");
       });
     return () => controller.abort();
-  }, [gameId]);
+  }, [gameId, modelId]);
   const activeMargin = liveForecast?.home_margin ?? modelMargin;
   const activeTotal = liveForecast?.total ?? modelTotal;
   const activeWinProbability = liveForecast?.home_win_probability ?? modelHomeWinProbability;
