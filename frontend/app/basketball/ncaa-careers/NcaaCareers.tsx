@@ -32,7 +32,7 @@ export default function NcaaCareers() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState("");
+  const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams({ fromSeason, toSeason, metric, minGames, minMinutes });
@@ -76,15 +76,45 @@ export default function NcaaCareers() {
       setCopied("Copy the leaderboard URL from your address bar.");
     }
   };
+  const exportHeaders = ["From season", "Through season", "Metric", "Rank", "Season", "Player", "NCAA player ID", "NCAA player source URL", "Program", "NCAA team ID", "NCAA team source URL", "Games", "Minutes", "Points", "Rebounds", "Assists", "Value"];
+  const exportRow = (row: Row, active: Result) => [active.from_season, active.to_season, labels[active.metric], row.rank, row.season, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, row.games, row.minutes, row.points, row.rebounds, row.assists, row.value];
   const download = () => {
     if (!result) return;
     downloadCsv(
       `ncaa-historical-leaderboard-${fromSeason}-${toSeason}-${metric}-page-${page + 1}.csv`,
       toCsv(
-        ["From season", "Through season", "Metric", "Rank", "Season", "Player", "NCAA player ID", "Program", "NCAA team ID", "Games", "Minutes", "Points", "Rebounds", "Assists", "Value"],
-        result.rows.map((row) => [result.from_season, result.to_season, labels[result.metric], row.rank, row.season, row.player_name, row.player_id, row.team_name, row.team_id, row.games, row.minutes, row.points, row.rebounds, row.assists, row.value]),
+        exportHeaders,
+        result.rows.map((row) => exportRow(row, result)),
       ),
     );
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This cohort exceeds the bounded export window. Add a player, season, metric or workload filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} player-seasons…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ fromSeason, toSeason, metric, minGames, minMinutes, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/basketball/research/ncaa-careers?${params}`);
+        if (!response.ok) throw new Error("The complete NCAA career export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} player-seasons…`);
+      }
+      downloadCsv(`ncaa-historical-leaderboard-${fromSeason}-${toSeason}-${metric}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result))));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} player-season rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete NCAA career export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
   };
   const seasons = meta?.seasons || Array.from({ length: 17 }, (_, i) => 2026 - i);
   return <>
@@ -99,8 +129,8 @@ export default function NcaaCareers() {
       <label className="control"><span>PLAYER</span><input type="search" maxLength={120} placeholder="Search a player" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA career records…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player-seasons · ranked by {labels[result.metric].toLowerCase()} · at least {result.min_games} games and {result.min_minutes} recorded minutes.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button></div></div>
-      {copied && <p role="status">{copied}</p>}
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player-seasons · ranked by {labels[result.metric].toLowerCase()} · at least {result.min_games} games and {result.min_minutes} recorded minutes.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button></div></div>
+      {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Season / program</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">{labels[result.metric]}</th></tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.season}-${row.player_id}-${row.team_id}`}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.player_name || row.player_id}</strong><small>NCAA player {row.player_id}</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}>Open source player card →</Link></small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small></td><td><strong>{row.team_name || row.team_id}</strong><small>{seasonLabel(row.season)} · NCAA team {row.team_id}</small></td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.minutes, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric">{fmt(row.rebounds, 0)}</td><td className="numeric">{fmt(row.assists, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ts" ? 1 : result.metric === "points" || result.metric === "minutes" ? 0 : 2)}{result.metric === "ts" ? "%" : ""}</strong></td></tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No historical player-seasons match this filter.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
