@@ -372,6 +372,36 @@ export default function Page() {
           Browse NCAA national leaderboards →
         </Link>
       </section>
+      <section className="section paper-panel">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">06 / Market evidence</div>
+            <h2>Keep the forecast beside the line.</h2>
+          </div>
+          <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
+        </div>
+        <p>
+          The research ledger compares a model with a market only when the
+          quote has a provider update clock, an exact participant and start
+          time match, and a captured-before-tip timestamp. Historical lines
+          without that evidence remain labeled as archival reference instead
+          of being treated as a betting edge.
+        </p>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">Forecast record</div>
+            <h3>Measure the model on settled games.</h3>
+            <p>Review margin error, winner accuracy, calibration and the source state behind every registered 2026–27 forecast.</p>
+            <Link href="/research/scorecard/?sport=basketball">Open the basketball scorecard →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">Capture protocol</div>
+            <h3>Read the clock with the number.</h3>
+            <p>Browse provider, bookmaker, market, price and observed-time fields without turning a stale or unmatched quote into a recommendation.</p>
+            <Link href="/research/markets/?sport=basketball#market-policy">Read the evidence policy →</Link>
+          </article>
+        </div>
+      </section>
     </>
   );
 }
