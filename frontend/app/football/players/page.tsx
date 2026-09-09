@@ -27,6 +27,9 @@ export default function Page() {
         exposes additional name-attributed game records that cannot be joined to
         these profiles by athlete ID.
       </p>
+      <p className="note" style={{ marginBottom: 24 }}>
+        Need a field that is not on the ranking board? <Link href="/football/source-stats/">Search every retained source record →</Link> by dataset, season or literal source text.
+      </p>
       <PlayerBrowser
         catalog={JSON.parse(
           fs.readFileSync(

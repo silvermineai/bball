@@ -30,6 +30,7 @@ import { withinImpactSource } from "./within-impact-source";
 import { lineupSource } from "./lineup-source";
 import { basketballForecasts } from "./basketball-forecasts";
 import { news } from "./news";
+import { footballSourceStats } from "./football-source-stats";
 
 type Bindings = Env;
 
@@ -158,6 +159,7 @@ app.get("/api/football/events/", (c) => {
 });
 app.route("/api/football/events", footballEvents);
 app.route("/api/football/player-history", footballPlayerHistory);
+app.route("/api/football/source-stats", footballSourceStats);
 
 const footballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2018).max(2035).default(2025),
