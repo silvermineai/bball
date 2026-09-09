@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public/data/news.json"

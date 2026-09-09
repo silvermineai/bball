@@ -9,7 +9,7 @@ import sys
 import tarfile
 from pathlib import Path
 
-D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-silvermine")
+D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
