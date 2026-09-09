@@ -229,7 +229,15 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
 app.get("/api/football/coverage", async (c) => {
   const result = await c.env.DB.prepare(`SELECT 'games' AS dataset,count(*) AS rows FROM football_games
     UNION ALL SELECT dataset,count(*) FROM football_stats GROUP BY dataset`).all();
-  return c.json({ coverage: result.results });
+  const receipts = await c.env.DB.prepare(
+    `SELECT dataset, count(*) AS source_count,
+            MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
+       FROM football_sources
+      GROUP BY dataset
+      ORDER BY dataset`,
+  ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>();
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ coverage: result.results, source_receipts: receipts.results });
 });
 
 const researchHistoryQuery = z.object({

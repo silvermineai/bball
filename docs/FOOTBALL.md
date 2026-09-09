@@ -131,3 +131,5 @@ The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2018–20
 ## Matchup notebooks
 
 The [football matchup notebooks](FOOTBALL_BRIEFS.md) add two-sided unit comparisons, prior-season EPA leaders and private film notes to all 744 forecast briefs. Readers can select prior/current team seasons and FBS/all-opponent samples, inspect denominators and source receipts, and open the exact prospective game record. All forecast, statistics and ledger artifacts remain unchanged by this presentation release.
+
+The [coverage desk](/research/coverage/) also performs a read-only live D1 check for football. `GET /api/football/coverage` returns table row counts for games and each retained football stat dataset plus source-receipt counts and the latest recorded retrieval clock. The page shows this beside the basketball warehouse check; counts are source rows, not a complete player census.

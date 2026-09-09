@@ -138,6 +138,30 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
   });
 
+  it("returns football D1 coverage counts and source receipt timestamps", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("football_sources")) {
+        return {
+          all: vi.fn().mockResolvedValue({
+            results: [{ dataset: "box", source_count: 2, latest_source_at: "2026-09-08T00:00:00Z" }],
+          }),
+        };
+      }
+      return {
+        all: vi.fn().mockResolvedValue({
+          results: [{ dataset: "games", rows: 12 }, { dataset: "box", rows: 34 }],
+        }),
+      };
+    });
+    const response = await app.request("/api/football/coverage", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      coverage: [{ dataset: "games", rows: 12 }, { dataset: "box", rows: 34 }],
+      source_receipts: [{ dataset: "box", source_count: 2, latest_source_at: "2026-09-08T00:00:00Z" }],
+    });
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("football_sources"))).toBe(true);
+  });
+
   it("serves bounded unresolved source observations without attributing identities", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("count(*) AS total FROM bb_unresolved")) {
