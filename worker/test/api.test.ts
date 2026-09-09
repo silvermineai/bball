@@ -271,7 +271,7 @@ describe("bball api", () => {
       .fn()
       .mockResolvedValue([
         ...Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })),
-        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, same_participant: 0, invalid_periods: 0, completed_missing_score: 0 }] },
+        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0 }] },
         { results: [{ total: 6, paired_box_games: 5, missing_box_games: 1, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 1, score_mismatch_games: 0, valid_estimate_games: 4 }] },
       ]);
     const response = await app.request(
@@ -304,9 +304,12 @@ describe("bball api", () => {
       neutral: 2,
       missing_venue: 1,
       unconfirmed_start: 3,
+      missing_participant: 0,
       same_participant: 0,
       invalid_periods: 0,
       completed_missing_score: 0,
+      negative_score: 0,
+      unfinished_with_score: 0,
     });
     expect((body as typeof body & { possession_validation: Record<string, number> }).possession_validation).toEqual({
       total: 6,
@@ -320,6 +323,8 @@ describe("bball api", () => {
       valid_estimate_games: 4,
     });
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_sources"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("missing_participant"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("unfinished_with_score"))).toBe(true);
     expect(prepare.mock.calls.some(([query]) => String(query).includes("json_extract(h.stats_json"))).toBe(true);
   });
 

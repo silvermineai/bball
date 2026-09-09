@@ -12,9 +12,12 @@ type CoverageResponse = {
     neutral: number;
     missing_venue: number;
     unconfirmed_start: number;
+    missing_participant?: number;
     same_participant: number;
     invalid_periods: number;
     completed_missing_score: number;
+    negative_score?: number;
+    unfinished_with_score?: number;
   } | null;
   possession_validation?: {
     total: number;
@@ -202,9 +205,12 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.neutral.toLocaleString()}</dt><dd>Neutral-site records</dd></div>
               <div><dt>{data.location_validation.unconfirmed_start.toLocaleString()}</dt><dd>Unconfirmed start times</dd></div>
               <div><dt>{data.location_validation.missing_venue.toLocaleString()}</dt><dd>Missing venue labels</dd></div>
+              <div><dt>{data.location_validation.missing_participant?.toLocaleString() ?? "—"}</dt><dd>Missing participant IDs</dd></div>
               <div><dt>{data.location_validation.same_participant.toLocaleString()}</dt><dd>Same-side participant IDs</dd></div>
               <div><dt>{data.location_validation.invalid_periods.toLocaleString()}</dt><dd>Missing/invalid period fields</dd></div>
               <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
+              <div><dt>{data.location_validation.negative_score?.toLocaleString() ?? "—"}</dt><dd>Completed rows with negative score</dd></div>
+              <div><dt>{data.location_validation.unfinished_with_score?.toLocaleString() ?? "—"}</dt><dd>Unfinished rows carrying scores</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
           </div>}{data.possession_validation && <div className="paper-panel" style={{ marginTop: 20 }}>

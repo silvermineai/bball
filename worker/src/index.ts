@@ -475,6 +475,9 @@ app.get("/api/basketball/research/coverage", async (c) => {
     same_participant?: number;
     invalid_periods?: number;
     completed_missing_score?: number;
+    missing_participant?: number;
+    negative_score?: number;
+    unfinished_with_score?: number;
     paired_box_games?: number;
     missing_box_games?: number;
     missing_required_fields_games?: number;
@@ -493,9 +496,12 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
       sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
       sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
+      sum(CASE WHEN home_id IS NULL OR home_id='' OR away_id IS NULL OR away_id='' THEN 1 ELSE 0 END) AS missing_participant,
       sum(CASE WHEN home_id=away_id THEN 1 ELSE 0 END) AS same_participant,
       sum(CASE WHEN periods IS NULL OR periods<1 THEN 1 ELSE 0 END) AS invalid_periods,
-      sum(CASE WHEN completed=1 AND (home_score IS NULL OR away_score IS NULL) THEN 1 ELSE 0 END) AS completed_missing_score
+      sum(CASE WHEN completed=1 AND (home_score IS NULL OR away_score IS NULL) THEN 1 ELSE 0 END) AS completed_missing_score,
+      sum(CASE WHEN completed=1 AND (home_score < 0 OR away_score < 0) THEN 1 ELSE 0 END) AS negative_score,
+      sum(CASE WHEN completed=0 AND (home_score IS NOT NULL OR away_score IS NOT NULL) THEN 1 ELSE 0 END) AS unfinished_with_score
       FROM bb_games`),
     // Mirror the model's possession guards against the persisted team box rows.
     // This is intentionally a read-only diagnostic: it never changes which rows
