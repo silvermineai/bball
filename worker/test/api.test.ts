@@ -30,6 +30,24 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("sport_code = ?"));
   });
 
+  it("finds football athletes from the football source warehouse", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        all: async () => ({
+          results: sql.includes("FROM football_stats")
+            ? [{ id: "4918111", name: "A'Marion Peterson", sportCode: "MFB", type: "player" }]
+            : [],
+        }),
+      }),
+    }));
+    const response = await app.request("/api/search?q=Peterson&sport=s_fbl", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { results: Array<Record<string, unknown>> };
+    expect(body.results).toEqual([{ id: "4918111", name: "A'Marion Peterson", sportCode: "MFB", type: "player" }]);
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("FROM football_stats"));
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(stats_json,'$.rusher_player_name')"));
+  });
+
   it("returns exact-ID football season production beside the game log", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total")) {

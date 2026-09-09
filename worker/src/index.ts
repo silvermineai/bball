@@ -897,11 +897,22 @@ app.get("/api/search", zValidator("query", z.object({
   const playersSql = sportCode
     ? "SELECT internal_id AS id, name, ? AS sportCode, 'player' AS type FROM players WHERE name LIKE ? AND EXISTS (SELECT 1 FROM player_game_stats WHERE player_game_stats.ncaa_player_id = players.ncaa_player_id AND player_game_stats.sport_code = ?) LIMIT 8"
     : "SELECT internal_id AS id, name, NULL AS sportCode, 'player' AS type FROM players WHERE name LIKE ? LIMIT 8";
-  const [teams, players] = await Promise.all([
+  // Football player aggregates live in the football source warehouse rather
+  // than the NCAA basketball identity tables. Keep the name extraction
+  // source-native and deduplicate an athlete across box and EPA releases.
+  const footballName = "COALESCE(json_extract(stats_json,'$.athlete_name'),json_extract(stats_json,'$.passer_player_name'),json_extract(stats_json,'$.rusher_player_name'),json_extract(stats_json,'$.receiver_player_name'))";
+  const footballPlayersSql = `SELECT athlete_id AS id, ${footballName} AS name, 'MFB' AS sportCode, 'player' AS type
+    FROM football_stats
+    WHERE athlete_id IS NOT NULL AND dataset IN ('box','passing','rushing','receiving')
+      AND lower(${footballName}) LIKE lower(?)
+    GROUP BY athlete_id, name
+    LIMIT 8`;
+  const [teams, players, footballPlayers] = await Promise.all([
     sportCode ? all(c.env.DB, teamsSql, like, sportCode) : all(c.env.DB, teamsSql, like),
     sportCode ? all(c.env.DB, playersSql, sportCode, like, sportCode) : all(c.env.DB, playersSql, like),
+    sport === "all" || sport === "s_fbl" ? all(c.env.DB, footballPlayersSql, like) : Promise.resolve([]),
   ]);
-  return c.json({ sport, results: [...teams, ...players] });
+  return c.json({ sport, results: [...teams, ...players, ...footballPlayers] });
 });
 
 app.get("/api/favorites", async (c) => {

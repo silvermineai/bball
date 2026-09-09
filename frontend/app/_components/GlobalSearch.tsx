@@ -71,7 +71,9 @@ export default function GlobalSearch() {
               type: row.type === "team" ? "program" : "player",
               sport: "football",
               detail: row.type === "team" ? "Football program" : "Football player",
-              href: row.type === "team" ? `/scout/${encodeURIComponent(row.id)}` : `/players/${encodeURIComponent(row.id)}`,
+              href: row.type === "team"
+                ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
+                : `/football/player/?id=${encodeURIComponent(row.id)}&season=2025`,
             }));
           setResults(combineSearchResults([...playerResults.slice(0, 3), ...footballResults], searchPrograms(programs, needle, 4), 8));
           setOpen(true);
