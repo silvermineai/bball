@@ -113,6 +113,18 @@ describe("roster observation sorting", () => {
     expect(assists.map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 
+  it("sorts defensive events and shot-profile rates with missing values last", () => {
+    const rows = [
+      { ...row("a", "Alpha", "same_program", "A", [], 300), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300).prior_production!, spg: 1.1, bpg: 0.2, three_pct: null, tov_rate: 0.18 } },
+      { ...row("b", "Beta", "different_program", "B", [], 400), prior_production: { ...row("b", "Beta", "different_program", "B", [], 400).prior_production!, spg: 2.3, bpg: 1.4, three_pct: 0.42, tov_rate: 0.11 } },
+      { ...row("c", "Gamma", "new_to_dataset", "C", []) },
+    ];
+    expect(sortRosterObservations(rows, "prior_spg").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+    expect(sortRosterObservations(rows, "prior_bpg").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+    expect(sortRosterObservations(rows, "prior_three_pct").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+    expect(sortRosterObservations(rows, "prior_tov_rate").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+
   it("calculates a cohort-relative prior production index without imputing missing rates", () => {
     const rows = [
       { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55).prior_production!, rpg: 3, apg: 2, spg: 1, bpg: 0, efg: 0.5 } },
@@ -128,13 +140,13 @@ describe("roster observation sorting", () => {
 
 describe("shareable roster observation filters", () => {
   it("parses supported values and ignores invalid values", () => {
-    expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3")).toEqual({
+    expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3")).toEqual({
       season: "2026",
       q: "Arizona",
       position: "G",
       classYear: "Senior",
       status: "different_program",
-      sort: "prior_ts",
+      sort: "prior_tov_rate",
       page: 3,
       picks: [],
     });
@@ -151,7 +163,7 @@ describe("shareable roster observation filters", () => {
   });
 
   it("omits defaults while preserving the exact recruiting slice", () => {
-    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_ts", page: 3, picks: ["123", "456"] })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_ts&rosterPage=3&rosterPick=123&rosterPick=456");
+    expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_tov_rate", page: 3, picks: ["123", "456"] })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterPick=123&rosterPick=456");
     expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [] })).toBe("");
   });
 

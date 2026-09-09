@@ -247,8 +247,14 @@ export default function Recruiting() {
             <option value="prior_ppg">Prior points per game</option>
             <option value="prior_rpg">Prior rebounds per game</option>
             <option value="prior_apg">Prior assists per game</option>
+            <option value="prior_spg">Prior steals per game</option>
+            <option value="prior_bpg">Prior blocks per game</option>
             <option value="prior_ts">Prior true shooting</option>
             <option value="prior_efg">Prior effective FG%</option>
+            <option value="prior_three_pct">Prior three-point accuracy</option>
+            <option value="prior_ft_rate">Prior free-throw rate</option>
+            <option value="prior_three_rate">Prior three-point attempt rate</option>
+            <option value="prior_tov_rate">Prior turnover rate</option>
             <option value="prior_bpm">Prior publisher Box BPM</option>
             <option value="prior_index">Multi-stat prior production index</option>
             <option value="program">Current program</option>

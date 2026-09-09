@@ -9,8 +9,14 @@ export type RosterSortKey =
   | "prior_ppg"
   | "prior_rpg"
   | "prior_apg"
+  | "prior_spg"
+  | "prior_bpg"
   | "prior_ts"
   | "prior_efg"
+  | "prior_three_pct"
+  | "prior_ft_rate"
+  | "prior_three_rate"
+  | "prior_tov_rate"
   | "prior_bpm"
   | "prior_index";
 
@@ -20,6 +26,33 @@ export type RosterStatus =
   | "different_program"
   | "new_to_dataset"
   | "ambiguous";
+
+type PriorProductionSort =
+  | "prior_ppg"
+  | "prior_rpg"
+  | "prior_apg"
+  | "prior_spg"
+  | "prior_bpg"
+  | "prior_ts"
+  | "prior_efg"
+  | "prior_three_pct"
+  | "prior_ft_rate"
+  | "prior_three_rate"
+  | "prior_tov_rate"
+  | "prior_bpm";
+type PriorRateMetric =
+  | "ppg"
+  | "rpg"
+  | "apg"
+  | "spg"
+  | "bpg"
+  | "ts"
+  | "efg"
+  | "three_pct"
+  | "ft_rate"
+  | "three_rate"
+  | "tov_rate"
+  | "box_bpm";
 
 export type RosterFilters = {
   season: "2027" | "2026";
@@ -55,8 +88,14 @@ const rosterSorts = new Set<RosterSortKey>([
   "prior_ppg",
   "prior_rpg",
   "prior_apg",
+  "prior_spg",
+  "prior_bpg",
   "prior_ts",
   "prior_efg",
+  "prior_three_pct",
+  "prior_ft_rate",
+  "prior_three_rate",
+  "prior_tov_rate",
   "prior_bpm",
   "prior_index",
 ]);
@@ -158,31 +197,29 @@ export function sortRosterObservations(
         (b.prior_production?.minutes ?? -1) -
         (a.prior_production?.minutes ?? -1);
       if (delta) return delta;
-    } else if (
-      key === "prior_ppg" ||
-      key === "prior_rpg" ||
-      key === "prior_apg" ||
-      key === "prior_ts" ||
-      key === "prior_efg" ||
-      key === "prior_bpm"
-    ) {
-      const metric =
-        key === "prior_ppg"
-          ? "ppg"
-          : key === "prior_rpg"
-            ? "rpg"
-            : key === "prior_apg"
-              ? "apg"
-              : key === "prior_ts"
-            ? "ts"
-            : key === "prior_efg"
-              ? "efg"
-              : "box_bpm";
+    } else if (key.startsWith("prior_") && key !== "prior_index") {
+      const metric = ({
+        prior_ppg: "ppg",
+        prior_rpg: "rpg",
+        prior_apg: "apg",
+        prior_spg: "spg",
+        prior_bpg: "bpg",
+        prior_ts: "ts",
+        prior_efg: "efg",
+        prior_three_pct: "three_pct",
+        prior_ft_rate: "ft_rate",
+        prior_three_rate: "three_rate",
+        prior_tov_rate: "tov_rate",
+        prior_bpm: "box_bpm",
+      } as Record<PriorProductionSort, PriorRateMetric>)[key as PriorProductionSort];
+      if (!metric) return 0;
       const av = a.prior_production?.[metric] ?? null;
       const bv = b.prior_production?.[metric] ?? null;
       if (av == null && bv != null) return 1;
       if (av != null && bv == null) return -1;
-      if (av != null && bv != null && bv !== av) return bv - av;
+      if (av != null && bv != null && bv !== av) {
+        return metric === "tov_rate" ? av - bv : bv - av;
+      }
     } else if (key === "prior_index") {
       const av = index!.get(`${a.id}-${a.team_id}`)?.score ?? null;
       const bv = index!.get(`${b.id}-${b.team_id}`)?.score ?? null;

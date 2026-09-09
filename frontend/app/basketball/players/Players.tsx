@@ -84,7 +84,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "tov_rate";
   const ranked = sort === "profile"
     ? profileRows
-    : rankProduction(basePlayers, (p) => p[sortKey]).map((p) => ({
+    : rankProduction(basePlayers, (p) => sortKey === "tov_rate" && p[sortKey] != null ? -p[sortKey] : p[sortKey]).map((p) => ({
       ...p,
       ...profileByKey.get(`${p.id}-${p.team_id}`),
     }));
