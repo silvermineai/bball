@@ -315,7 +315,8 @@ def build(conn, season=2026):
         "upcoming_games": len(upcoming),
         "forecast_games": sum(g["prediction"] is not None for g in upcoming),
         "box_rows": conn.execute(
-            "SELECT count(*) FROM football_stats WHERE dataset='box'"
+            "SELECT count(*) FROM football_stats WHERE dataset='box' AND season BETWEEN ? AND ?",
+            (season - 1, season),
         ).fetchone()[0],
         "market_observations": conn.execute(
             "SELECT count(*) FROM football_markets"
