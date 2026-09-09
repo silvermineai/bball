@@ -30,7 +30,7 @@ const sourceFieldGroups = [
   { label: "Shot profile", fields: [["rimm", "Rim makes", "number"], ["rima", "Rim attempts", "number"], ["rim_pct", "Rim rate", "percent"], ["mida", "Mid-range attempts", "number"]] },
   { label: "Playmaking", fields: [["pts_ast", "Assisted points", "number"], ["pts_unast", "Unassisted points", "number"], ["fgm_ast", "Assisted FGM", "number"], ["tpm_ast", "Assisted 3PM", "number"]] },
 ] as const;
-const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "NCAA player ID", "Team", "NCAA team ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw source stats JSON"];
+const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "NCAA player ID", "NCAA player source URL", "Team", "NCAA team ID", "Opponent", "NCAA contest source URL", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw source stats JSON"];
 
 function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
   return <details className="ncaa-source-fields">
@@ -115,7 +115,7 @@ export default function NcaaPlayerBox() {
   const exportRow = (row: Row) => {
     const s = row.stats;
     const computedTs = rate(s.pts, 2 * ((s.fga || 0) + 0.475 * (s.fta || 0)));
-    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, (s.orb || 0) + (s.drb || 0), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s)];
+    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, row.opponent_name, row.contest_id ? `https://stats.ncaa.org/game/index/${encodeURIComponent(row.contest_id)}` : null, s.mins, s.pts, (s.orb || 0) + (s.drb || 0), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s)];
   };
   const download = () => {
     if (!result) return;
