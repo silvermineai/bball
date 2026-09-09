@@ -21,6 +21,8 @@ const coachLenses: Array<{ key: string; label: string; metric: Metric; minGames:
   { key: "efficiency", label: "Shot efficiency", metric: "ts", minGames: "10", minMinutes: "400", minVolume: "100", description: "True shooting with at least 100 field-goal-attempt units." },
   { key: "defense", label: "Defensive events", metric: "stocks40", minGames: "10", minMinutes: "400", minVolume: "0", description: "Steals plus blocks per 40; event production, not total defense." },
 ];
+const exportHeaders = ["Season", "Metric", "Rank", "Percentile", "Player", "NCAA player ID", "Program", "NCAA team ID", "Position", "Class", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value", "Balanced components available", "Balanced PPG", "Balanced RPG", "Balanced APG", "Balanced SPG", "Balanced BPG", "Balanced TS %", "Balanced TS denominator", "Balanced eFG %", "Balanced eFG denominator", "Balanced P40", "Impact RAPM net", "Impact P40", "Impact ORAPM", "Impact DRAPM", "Impact offensive possessions", "Impact defensive possessions"];
+const exportRow = (result: Result, row: Row) => [result.season, labels[result.metric], row.rank, percentile(row.rank, result.total).toFixed(1), row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value, row.component_count == null ? null : `${row.component_count}/8`, row.ppg_value, row.rpg_value, row.apg_value, row.spg_value, row.bpg_value, row.ts_value, row.ts_denominator, row.efg_value, row.efg_denominator, row.per40_value, row.rapm_net, row.per40_value, row.orapm, row.drapm, row.off_poss, row.def_poss];
 
 export default function NcaaRankings() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -40,6 +42,8 @@ export default function NcaaRankings() {
   });
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume });
@@ -84,10 +88,40 @@ export default function NcaaRankings() {
     downloadCsv(
       `ncaa-player-rankings-${season}-${metric}-page-${page + 1}.csv`,
       toCsv(
-        ["Season", "Metric", "Rank", "Percentile", "Player", "NCAA player ID", "Program", "NCAA team ID", "Position", "Class", "Games", "Minutes", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Value", "Balanced components available", "Balanced PPG", "Balanced RPG", "Balanced APG", "Balanced SPG", "Balanced BPG", "Balanced TS %", "Balanced TS denominator", "Balanced eFG %", "Balanced eFG denominator", "Balanced P40", "Impact RAPM net", "Impact P40", "Impact ORAPM", "Impact DRAPM", "Impact offensive possessions", "Impact defensive possessions"],
-        result.rows.map((row) => [result.season, labels[result.metric], row.rank, percentile(row.rank, result.total).toFixed(1), row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.games, row.minutes, row.points, row.rebounds, row.assists, row.steals, row.blocks, row.value, row.component_count == null ? null : `${row.component_count}/8`, row.ppg_value, row.rpg_value, row.apg_value, row.spg_value, row.bpg_value, row.ts_value, row.ts_denominator, row.efg_value, row.efg_denominator, row.per40_value, row.rapm_net, row.per40_value, row.orapm, row.drapm, row.off_poss, row.def_poss]),
+        exportHeaders,
+        result.rows.map((row) => exportRow(result, row)),
       ),
     );
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / result.page_size);
+    if (totalPages > 1001) {
+      setExportMessage("This cohort exceeds the bounded export window. Add a player, team, or sample filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume, page: String(requestedPage) });
+        if (query.trim()) params.set("q", query.trim());
+        if (position) params.set("position", position);
+        if (classYear) params.set("classYear", classYear);
+        const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params}`);
+        if (!response.ok) throw new Error("The complete ranking export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
+      }
+      downloadCsv(`ncaa-player-rankings-${season}-${metric}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(result, row))));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} ranked rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete ranking export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
   };
   return <>
     <div className="page-title">
@@ -127,7 +161,8 @@ export default function NcaaRankings() {
     </div>
     {meta?.sources?.length ? <p className="note" style={{ marginTop: 16 }}>Source receipts for {label(Number(season))}: {meta.sources.map((source) => <span key={source.dataset}> <strong>{source.dataset.replace(/^ncaa_/, "NCAA ")}</strong> · {sourceDate(source.fetched_at)}{source.url ? <> · <a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a></> : " · release URL unavailable"}</span>)}. These timestamps describe the retained release, not live roster status.</p> : null}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes{result.min_volume ? ` · ${result.min_volume} denominator units on rate boards` : ""}. Percentile is calculated against this full qualified cohort, so it remains meaningful when you move between pages.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} · minimum {result.min_games} games and {result.min_minutes} recorded minutes{result.min_volume ? ` · ${result.min_volume} denominator units on rate boards` : ""}. Percentile is calculated against this full qualified cohort, so it remains meaningful when you move between pages.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
+      {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {(result.metric === "rapm_net" || result.metric === "orapm" || result.metric === "drapm") && <p className="note">{labels[result.metric]} is the publisher&apos;s lineup estimate and is shown only when the exact NCAA player ID has at least 500 offensive and 500 defensive possessions. The controls above additionally require the selected box-score games and minutes.</p>}
       {(result.metric === "ast_to" || result.metric === "stocks40") && <p className="note">{result.metric === "ast_to" ? "Assist-to-turnover ratio uses recorded assists divided by recorded turnovers; zero-turnover rows remain unavailable." : "Stocks per 40 combines recorded steals and blocks and scales them to 40 minutes; it is a descriptive defensive-event rate."} It is a source-stat rate, not a forecast input.</p>}
       {(result.metric === "tov_rate" || result.metric === "three_rate" || result.metric === "three_pct" || result.metric === "ft_rate" || result.metric === "ast_rate" || result.metric === "points_poss" || result.metric === "rim_rate" || result.metric === "transition_share" || result.metric === "unassisted_share") && <p className="note">{result.metric === "tov_rate" ? "Turnover rate is recorded turnovers divided by recorded offensive possessions." : result.metric === "three_rate" ? "Three-point attempt rate is recorded three-point attempts divided by field-goal attempts." : result.metric === "three_pct" ? "Three-point accuracy is recorded makes divided by recorded three-point attempts." : result.metric === "ft_rate" ? "Free-throw attempt rate is recorded free-throw attempts divided by field-goal attempts." : result.metric === "ast_rate" ? "Assist rate here is recorded assists divided by recorded offensive possessions." : result.metric === "points_poss" ? "Points per recorded possession divides source points by recorded offensive possessions." : result.metric === "rim_rate" ? "Rim attempt rate is recorded rim attempts divided by field-goal attempts." : result.metric === "transition_share" ? "Transition scoring share is recorded transition points divided by total points." : "Unassisted scoring share is recorded unassisted points divided by total points."} Values remain unavailable when the source denominator is missing. The minimum rate sample control uses the matching denominator where applicable. These are descriptive source rates, not forecast inputs.</p>}
