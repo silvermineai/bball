@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { BBTeam } from "../../_lib/basketball-types";
 import { fmt } from "../../_lib/format";
@@ -31,7 +31,32 @@ const sortLabels: Record<RatingSortKey, string> = {
 };
 export default function Ratings({ rows }: { rows: BBTeam[] }) {
   const [q, setQ] = useState(""),
-    [sort, setSort] = useState<RatingSortKey>("adj_net");
+    [sort, setSort] = useState<RatingSortKey>("adj_net"),
+    [hydrated, setHydrated] = useState(false),
+    [copied, setCopied] = useState("");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQ(params.get("q") || "");
+    const requestedSort = params.get("sort") as RatingSortKey | null;
+    if (requestedSort && Object.prototype.hasOwnProperty.call(sortLabels, requestedSort)) setSort(requestedSort);
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort !== "adj_net") params.set("sort", sort);
+    const query = params.toString();
+    window.history.replaceState(window.history.state, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
+  }, [hydrated, q, sort]);
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Ratings link copied.");
+    } catch {
+      setCopied("Copy the filtered ratings URL from your address bar.");
+    }
+  };
   const filtered = sortTeamRatings(
     rows.filter((r) => r.name.toLowerCase().includes(q.toLowerCase())),
     sort,
@@ -61,7 +86,9 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
             ))}
           </select>
         </label>
+        <button className="button secondary" type="button" onClick={share}>Copy ratings link</button>
       </div>
+      {copied && <p className="note" role="status">{copied}</p>}
       <div className="section-heading" style={{ marginTop: 20 }}>
         <p>{filtered.length.toLocaleString()} matching programs · export respects the current search and sort</p>
         <button
