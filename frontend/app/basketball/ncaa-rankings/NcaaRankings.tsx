@@ -14,6 +14,13 @@ const fmt = (value: number | null | undefined, digits = 1) => value == null ? "â
 const percentile = (rank: number, total: number) => total <= 1 ? 100 : Math.max(0, Math.min(100, 100 * (total - rank) / (total - 1)));
 const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "ppg";
 const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
+const coachLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
+  { key: "all-around", label: "All-around", metric: "balanced_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Eight-component production screen with an audit trail." },
+  { key: "impact", label: "Verified impact", metric: "impact_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Exact-ID RAPM plus scoring rate; 500 offensive and defensive possessions." },
+  { key: "creator", label: "Lead creator", metric: "apg", minGames: "10", minMinutes: "400", minVolume: "0", description: "Recorded assists per game with a steadier workload." },
+  { key: "efficiency", label: "Shot efficiency", metric: "ts", minGames: "10", minMinutes: "400", minVolume: "100", description: "True shooting with at least 100 field-goal-attempt units." },
+  { key: "defense", label: "Defensive events", metric: "stocks40", minGames: "10", minMinutes: "400", minVolume: "0", description: "Steals plus blocks per 40; event production, not total defense." },
+];
 
 export default function NcaaRankings() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -95,6 +102,19 @@ export default function NcaaRankings() {
       <div><strong>{meta?.seasons.length ?? "â€”"}</strong><span>Source seasons</span></div>
       <div><strong>NCAA</strong><span>Identity namespace</span></div>
     </div>
+    <section className="paper-panel" aria-label="Coach scouting lenses" style={{ marginTop: 24 }}>
+      <div className="section-heading" style={{ marginBottom: 12 }}>
+        <div><div className="eyebrow">Coach board / Quick lenses</div><h2>Start with the question.</h2></div>
+        <span className="note">Every lens keeps the source ID and cutoff visible.</span>
+      </div>
+      <div className="button-row" role="group" aria-label="Coach scouting lenses">
+        {coachLenses.map((lens) => {
+          const active = metric === lens.metric && minGames === lens.minGames && minMinutes === lens.minMinutes && minVolume === lens.minVolume;
+          return <button key={lens.key} type="button" className={`button ${active ? "" : "secondary"}`} aria-pressed={active} onClick={() => { setPage(0); setMetric(lens.metric); setMinGames(lens.minGames); setMinMinutes(lens.minMinutes); setMinVolume(lens.minVolume); }}>{lens.label}</button>;
+        })}
+      </div>
+      <p className="note" style={{ marginTop: 12 }}>{coachLenses.find((lens) => metric === lens.metric && minGames === lens.minGames && minMinutes === lens.minMinutes && minVolume === lens.minVolume)?.description || "Custom metric and qualification settings. Use the controls below to tune the cohort."}</p>
+    </section>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || ["ppg", "rpg", "apg", "spg", "bpg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>
