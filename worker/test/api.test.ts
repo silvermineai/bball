@@ -794,6 +794,23 @@ describe("bball api", () => {
     }
   });
 
+  it("returns boutique model source receipts in the catalog", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/ratings.parquet", fetched_at: "2026-09-08T00:00:00Z", sha256: "c".repeat(64) }) }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=ratings&meta=1",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      source_receipts: [{ season: 2026, url: "https://example.test/ratings.parquet", sha256: "c".repeat(64) }],
+    });
+  });
+
   it("rejects invalid lineup metrics before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/lineups?season=2018",

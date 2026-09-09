@@ -35,11 +35,25 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
   if (meta === "1") {
-    const seasons = await researchDb(c.env).prepare(
-      `SELECT DISTINCT season FROM ${kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value"} ORDER BY season DESC`,
-    ).all<{ season: number }>();
+    const db = researchDb(c.env);
+    const dataset = kind === "ratings" ? "publisher_ratings" : "publisher_player_value";
+    const [seasons, sources] = await db.batch([
+      db.prepare(`SELECT DISTINCT season FROM ${kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value"} ORDER BY season DESC`),
+      db.prepare("SELECT season,receipt_json FROM bb_sources WHERE dataset=? ORDER BY season DESC").bind(dataset),
+    ]);
+    const sourceReceipts = sources.results.flatMap((row) => {
+      const item = row as { season?: number; receipt_json?: string };
+      if (typeof item.season !== "number" || typeof item.receipt_json !== "string") return [];
+      try {
+        const receipt = JSON.parse(item.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
+        if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
+        return [{ season: item.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+      } catch {
+        return [];
+      }
+    });
     c.header("Cache-Control", "public, max-age=300");
-    return c.json({ kind, seasons: seasons.results.map((row) => row.season), metrics });
+    return c.json({ kind, seasons: seasons.results.map((row) => Number((row as { season: number }).season)), metrics, source_receipts: sourceReceipts });
   }
   const metric = metrics.find((candidate) => candidate.key === (requestedMetric || metrics[0].key));
   if (!metric) return c.json({ error: "Unknown boutique metric" }, 400);
