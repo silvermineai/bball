@@ -357,6 +357,25 @@ export default async function Page({
             historical tempo gap alone does not identify a tactical winner.
           </p>
         </div>
+        <div className="paper-panel" style={{ marginTop: 24 }}>
+          <div className="eyebrow">Five-v-five archive / source-native handoff</div>
+          <h3>See which lineups actually shared the floor.</h3>
+          <p>
+            The matchup-stint archive keeps each publisher-native five-player
+            group beside the opposing five, with possessions, repeat games and
+            scoring margin. Search these teams to turn the factor question into
+            a film assignment; the source IDs remain separate from the forecast
+            and recruiting identities.
+          </p>
+          <div className="button-row" style={{ marginTop: 14 }}>
+            <Link className="button secondary" href={`/basketball/matchup-stints/?season=2026&q=${encodeURIComponent(home.name)}`}>
+              Search {home.name} lineups →
+            </Link>
+            <Link className="button secondary" href={`/basketball/matchup-stints/?season=2026&q=${encodeURIComponent(away.name)}`}>
+              Search {away.name} lineups →
+            </Link>
+          </div>
+        </div>
       </section>
       <section className="section">
         <div className="section-heading">
