@@ -52,6 +52,11 @@ const guides = [
     "Recruit the role before you recruit the name.",
     "How to use source-listed roster roles, prior workload and transparent fit percentiles to build a defensible recruiting shortlist.",
   ],
+  [
+    "basketball-ranking-playbook",
+    "A ranking is a question, not a verdict.",
+    "How to move from NCAA player rankings and impact screens to a reviewable matchup or recruiting decision.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

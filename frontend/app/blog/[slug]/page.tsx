@@ -16,6 +16,8 @@ const titles: Record<string, string> = {
     "A rate is only as useful as its denominator.",
   "basketball-recruiting-fit":
     "Recruit the role before you recruit the name.",
+  "basketball-ranking-playbook":
+    "A ranking is a question, not a verdict.",
 };
 export function generateStaticParams() {
   return [
@@ -175,6 +177,8 @@ export default async function Page({
         <BasketballPlayerRates />
       ) : slug === "basketball-recruiting-fit" ? (
         <BasketballRecruitingFit />
+      ) : slug === "basketball-ranking-playbook" ? (
+        <BasketballRankingPlaybook />
       ) : (
         <>
           <p className="deck">
@@ -549,6 +553,79 @@ function BasketballImpact() {
         <Link href="/basketball/gameplan/">game-plan workbench</Link> turns those
         questions into matchup preparation while keeping the forecast model’s
         roster limitations explicit.
+      </p>
+    </>
+  );
+}
+
+function BasketballRankingPlaybook() {
+  const b = getBasketball();
+  return (
+    <>
+      <p className="deck">
+        The best player board does not tell a coach whom to recruit. It makes
+        the evidence behind a shortlist easy to inspect, compare and challenge.
+      </p>
+      <p>
+        The <Link href="/basketball/ncaa-rankings/">NCAA rankings board</Link>
+        offers {b.coverage.player_box_rows.toLocaleString()} source-linked player
+        rows across counting stats, rates, possession context and lineup
+        impact. Every row keeps its NCAA player and team IDs, season, games and
+        minutes visible. Those fields establish what the release recorded; they
+        do not establish a current roster spot, eligibility or a future role.
+      </p>
+      <h2>Choose the question before the metric</h2>
+      <p>
+        Use points per game or points per 40 when the question is scoring
+        volume, then check minutes and games. Use true shooting or effective
+        field-goal percentage to study shot efficiency, and read the matching
+        attempt denominator beside the rate. Assist-to-turnover ratio, turnover
+        rate and team possession share describe ball security and involvement;
+        they are not interchangeable definitions of creation. Rebounding and
+        stocks per 40 can surface a role, but they still need lineup and
+        matchup context.
+      </p>
+      <h2>Use the two composite views as screens</h2>
+      <p>
+        The balanced production index standardizes eight available components—
+        points, rebounds, assists, steals, blocks, true shooting, effective
+        field goal percentage and points per 40—within the filtered board and
+        averages the components that meet their denominators. At least four
+        components are required. It is useful for finding broadly productive
+        players, while its component audit shows what is missing.
+      </p>
+      <p>
+        The impact + production index requires an exact-ID net RAPM record and
+        points per 40. RAPM must include at least 500 offensive and 500
+        defensive possessions. That makes the screen narrower and more useful
+        for a lineup question, but a missing RAPM row is missing evidence, not
+        zero value. Open the{" "}
+        <Link href="/basketball/impact/">impact board</Link> to inspect the
+        possession sample before drawing a conclusion.
+      </p>
+      <h2>Turn a rank into a recruiting workflow</h2>
+      <p>
+        Start with a role: secondary creator, spacing wing, defensive rebounder
+        or point-of-attack defender. Filter the ranking to a meaningful sample,
+        open the{" "}
+        <Link href="/basketball/ncaa-player/">source player card</Link>, and
+        inspect the game-level record. Then search the{" "}
+        <Link href="/basketball/recruiting/">dated recruiting file</Link> and{" "}
+        <Link href="/basketball/recruiting/fit/">fit board</Link>. A school
+        announcement can confirm what was published and when; it cannot by
+        itself confirm availability, eligibility or the minutes a player will
+        receive.
+      </p>
+      <h2>Keep the denominator in the report</h2>
+      <p>
+        A shortlist should name the season, source release, sample thresholds,
+        metric and missing fields alongside each player. Compare similar roles
+        and competition where possible. If a player ranks highly on a rate but
+        has a small attempt or possession sample, write that limitation into
+        the scouting note. The{" "}
+        <Link href="/basketball/model/">model notebook</Link> keeps these
+        descriptive rankings separate from the 2026–27 matchup forecast, so a
+        leaderboard never silently becomes a prediction input.
       </p>
     </>
   );
