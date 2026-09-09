@@ -8,6 +8,14 @@ type IntakeCoverage = {
   providers: Array<{ provider: string; rows: number; latest_captured_at: string | null }>;
   statuses: Array<{ status: string; rows: number }>;
   provider_feeds?: Array<{ provider: string; kind: string; rows: number; latest_captured_at: string | null }>;
+  provider_capabilities?: Array<{
+    provider: string;
+    kinds: string[];
+    season_field: string;
+    event_date_available: boolean;
+    docs_url: string;
+    policy: string;
+  }>;
   policy: string;
 };
 
@@ -31,6 +39,7 @@ export default function AuthorizedIntake() {
     return () => controller.abort();
   }, []);
   const providerFeeds = coverage?.provider_feeds ?? [];
+  const providerCapabilities = coverage?.provider_capabilities ?? [];
   return (
     <section className="section">
       <div className="paper-panel recruiting-intake">
@@ -67,6 +76,11 @@ export default function AuthorizedIntake() {
                 {providerFeeds.map((feed) => <span key={`${feed.provider}-${feed.kind}`}>{feed.provider} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
               </> : <span>No authorized provider export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
             </div>
+            {providerCapabilities.length > 0 && <div className="recruiting-intake-detail">
+              {providerCapabilities.map((capability) => <span key={capability.provider}>
+                <strong>{capability.provider}</strong> · {capability.kinds.join(", ")} · {capability.event_date_available ? "event dates available" : "season-level dates only"} · <a href={capability.docs_url} target="_blank" rel="noreferrer">API reference ↗</a>
+              </span>)}
+            </div>}
           </div>
         )}
         <p className="note">{coverage?.policy || "Rows are never used to infer eligibility or current availability. A missing import is unavailable evidence, not a zero."}</p>

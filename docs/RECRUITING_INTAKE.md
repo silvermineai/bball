@@ -4,7 +4,7 @@ The recruiting page separates the reviewed school-announcement file and source-l
 
 The optional [`cbbd_recruiting` connector](../ncaa_scraper/ncaa_scraper/cbbd_recruiting.py) supports the licensed CollegeBasketballData API. It requests the portal, player-recruiting and team-recruiting endpoints server-side with `CBBD_API_KEY` from the environment or `~/.env`, retains each response in the separate private D1 table `bb_cbbd_recruiting`, and publishes only provider/kind counts and capture clocks through the coverage endpoint. The portal API supplies a season and eligibility field but no event date; the connector therefore does not fabricate a transfer date or merge these rows into the dated school-announcement board. Review the [CollegeBasketballData terms](https://collegebasketballdata.com/terms) and keep the key out of source control.
 
-The public endpoint `/api/basketball/research/recruiting-intake?season=2027` exposes coverage metadata only: row count, provider names, status counts and latest capture clocks. It never republishes the provider payload. Intake records do not alter forecasts, roster status, school-announcement history or an eligibility determination.
+The public endpoint `/api/basketball/research/recruiting-intake?season=2027` exposes coverage metadata only: row count, provider names, status counts, latest capture clocks and provider capabilities. Its CBBD capability record identifies `year` as the season field and explicitly marks event dates unavailable. It never republishes the provider payload. Intake records do not alter forecasts, roster status, school-announcement history or an eligibility determination.
 
 ## CSV contract
 

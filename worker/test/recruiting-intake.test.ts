@@ -16,11 +16,18 @@ describe("authorized recruiting intake coverage", () => {
     const prepare = vi.fn().mockReturnValue({ bind });
     const response = await recruitingIntake.request("/", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; policy: string };
+    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; policy: string };
     expect(body.total).toBe(2);
     expect(body.providers).toHaveLength(1);
     expect(body.statuses).toHaveLength(1);
     expect(body.provider_feeds).toHaveLength(1);
+    expect(body.provider_capabilities).toEqual([
+      expect.objectContaining({
+        provider: "CollegeBasketballData.com API",
+        kinds: ["portal", "players", "teams"],
+        event_date_available: false,
+      }),
+    ]);
     expect(body.policy).toContain("Coverage metadata only");
     expect(JSON.stringify(body)).not.toContain("player_name");
   });

@@ -7,6 +7,17 @@ import { Hono } from "hono";
  */
 export const recruitingIntake = new Hono<{ Bindings: Env }>();
 
+const providerCapabilities = [
+  {
+    provider: "CollegeBasketballData.com API",
+    kinds: ["portal", "players", "teams"],
+    season_field: "year",
+    event_date_available: false,
+    docs_url: "https://api.collegebasketballdata.com/api/recruiting",
+    policy: "Season-level provider records stay separate from dated school announcements.",
+  },
+];
+
 recruitingIntake.get("/", async (c) => {
   const value = c.req.query("season") ?? "2027";
   if (!/^\d{4}$/.test(value) || +value < 2025 || +value > 2035)
@@ -39,6 +50,7 @@ recruitingIntake.get("/", async (c) => {
     providers: providers.results,
     statuses: statuses.results,
     provider_feeds: providerFeeds.results,
+    provider_capabilities: providerCapabilities,
     policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
   });
 });
