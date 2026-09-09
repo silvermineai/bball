@@ -216,7 +216,11 @@ app.get("/api/football/players/:id/career", async (c) => {
       return [];
     }
   });
-  if (!rows.length) return c.json({ error: "No career records found" }, 404);
+  // Some source athletes only have box-score records (for example, a
+  // defensive player without a published EPA aggregate). Keep those IDs
+  // navigable so the dossier can still select the newest season and show the
+  // underlying source rows.
+  if (!result.results.length) return c.json({ error: "No career records found" }, 404);
   const boxGames = new Map<number, Set<string>>();
   for (const row of result.results) {
     if (row.dataset !== "box") continue;
@@ -231,7 +235,7 @@ app.get("/api/football/players/:id/career", async (c) => {
       // A malformed source row is omitted while valid career rows remain usable.
     }
   }
-  const seasons = [...new Set(rows.map((row) => row.season))].sort((a, b) => b - a);
+  const seasons = [...new Set((rows.length ? rows : result.results).map((row) => row.season))].sort((a, b) => b - a);
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     player_id: id,

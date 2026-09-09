@@ -176,7 +176,7 @@ export default function PlayerDetail() {
               </p>
             </section>
           )}
-          {career && <FootballCareerPanel career={career} selectedSeason={data.season} name={data.name} />}
+          {career?.rows.length ? <FootballCareerPanel career={career} selectedSeason={data.season} name={data.name} /> : null}
           <p className="note">
             {data.total} records · SportsDataverse release imports ·{" "}
             {data.season}
