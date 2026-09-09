@@ -38,6 +38,14 @@ type LiveModel = {
   target_season: number | null;
   cutoff: string | null;
   training_games?: number | null;
+  training_seasons?: number[];
+  calibration_season?: number | null;
+  calibration_games?: number | null;
+  margin_half_width?: number | null;
+  evaluation_season?: number | null;
+  evaluation_games?: number | null;
+  evaluation_winner_accuracy?: number | null;
+  evaluation_margin_mae?: number | null;
 };
 type LiveCatalog = { models: LiveModel[] };
 
@@ -196,6 +204,14 @@ export default function ForecastLab({
   const liveModel = modelSelection === "latest"
     ? liveCatalog?.models[0] || null
     : liveCatalog?.models.find((model) => model.model_id === modelSelection) || null;
+  const selectedTrainingGames = liveModel?.training_games ?? (modelSelection === "latest" ? overview.model.training_games : null);
+  const selectedTrainingSeasons = liveModel?.training_seasons?.length ? liveModel.training_seasons : (modelSelection === "latest" ? overview.model.training_seasons : []);
+  const selectedCutoff = liveModel?.cutoff || (modelSelection === "latest" ? overview.model.cutoff : null);
+  const selectedEvaluation = liveModel?.evaluation_games != null && liveModel.evaluation_winner_accuracy != null && liveModel.evaluation_margin_mae != null
+    ? liveModel
+    : modelSelection === "latest"
+      ? { evaluation_games: overview.model.evaluation.games, evaluation_winner_accuracy: overview.model.evaluation.winner_accuracy, evaluation_margin_mae: overview.model.evaluation.margin_mae }
+      : null;
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
@@ -253,9 +269,9 @@ export default function ForecastLab({
       <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
         <div className="paper-panel">
           <div className="eyebrow">Release health / model clock</div>
-          <h2>{overview.coverage.forecast_games.toLocaleString()} forecasts are registered.</h2>
-          <p>Generated {date(overview.generated_at)} from a cutoff of {date(overview.model.cutoff)}. The primary fit uses {overview.model.training_games.toLocaleString()} paired games across {overview.model.training_seasons.join(", ")}.</p>
-          <p className="note">Retrospective holdout: {numeric(overview.model.evaluation.winner_accuracy * 100)}% winner accuracy · {numeric(overview.model.evaluation.margin_mae)} point margin MAE · {numeric(overview.model.evaluation.interval_coverage * 100)}% interval coverage.</p>
+          <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
+          <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
+          <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
         </div>
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
@@ -269,6 +285,12 @@ export default function ForecastLab({
           <div className="eyebrow">Live D1 catalog / deployed record</div>
           <h2>{liveCatalog ? `${(liveModel?.forecasts ?? 0).toLocaleString()} rows in the selected edition.` : liveCatalogError ? "Live catalog unavailable." : "Checking the live catalog…"}</h2>
           {liveCatalog ? (liveModel ? <p>{modelSelection === "latest" ? (liveModel.model_id === overview.model.id ? "The deployed D1 model matches this page’s static edition." : `D1’s newest model is ${liveModel.model_id}; this page is showing ${overview.model.id}.`) : `This historical edition is ${liveModel.model_id}.`} Last forecast clock: {liveModel.last_created_at ? date(liveModel.last_created_at) : "unavailable"}.</p> : <p>No 2026–27 model edition is registered in D1.</p>) : <p>{liveCatalogError || "Reading the deployed forecast catalog from D1."}</p>}
+          {liveModel && <div className="rule-list" style={{ marginTop: 18 }}>
+            <div><span>Target season</span><strong>{liveModel.target_season ?? "—"}</strong></div>
+            <div><span>Calibration sample</span><strong>{liveModel.calibration_games != null ? `${liveModel.calibration_games.toLocaleString()} games` : "—"}</strong></div>
+            <div><span>Interval half-width</span><strong>{liveModel.margin_half_width != null ? `${numeric(liveModel.margin_half_width)} pts` : "—"}</strong></div>
+            <div><span>Holdout result</span><strong>{liveModel.evaluation_winner_accuracy != null ? `${numeric(liveModel.evaluation_winner_accuracy * 100)}% winner` : "—"}</strong></div>
+          </div>}
           <p className="note"><Link href="/research/scorecard/?sport=basketball">Open the forecast record →</Link> · <Link href="/basketball/model/">Read the model notebook →</Link></p>
         </div>
       </section>
