@@ -396,6 +396,15 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                           Compare this season →
                         </Link>
                       </small>
+                      <small>
+                        <a
+                          href={`https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(p.id)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          ESPN source ↗
+                        </a>
+                      </small>
                     </td>
                     <td>{p.position || "—"}</td>
                     {[

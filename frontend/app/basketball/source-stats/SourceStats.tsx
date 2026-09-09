@@ -273,7 +273,7 @@ export default function SourceStats() {
             <table className="data-table">
               <thead><tr><th>Player</th><th>Program</th><th>Pos.</th><th className="numeric">Games</th><th className="numeric">{result.field.label}</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={`${row.id}-${row.team_id}`}>
-                <td><Link href={`/basketball/player/?id=${row.id}&season=${season}`}>{row.name || row.id}</Link><small>Source ID {row.id}</small></td>
+                <td><Link href={`/basketball/player/?id=${row.id}&season=${season}`}>{row.name || row.id}</Link><small>Source ID {row.id}</small><small><a href={`https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(row.id)}`} target="_blank" rel="noreferrer">ESPN source ↗</a></small></td>
                 <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small></td>
                 <td>{row.position || "—"}</td>
                 <td className="numeric">{row.games == null ? "—" : fmt(row.games, 0)}</td>
