@@ -5,7 +5,7 @@ import Players from "./Players";
 export const metadata = {
   title: "College basketball player statistics, rankings and impact",
   description:
-    "Search historical player production, build weighted rankings, browse NCAA national leaderboards and inspect separate RAPM impact records.",
+    "Search historical player production, rank an explainable all-around profile, browse NCAA national leaderboards and inspect separate RAPM impact records.",
 };
 export default function Page() {
   return (

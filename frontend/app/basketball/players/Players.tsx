@@ -15,6 +15,7 @@ import {
 import {
   parsePlayerIndexFilters,
   playerIndexFilterSearch,
+  rankPlayerProfiles,
   type PlayerIndexSort,
 } from "../../_lib/player-index-view";
 export default function Players({ catalog }: { catalog: CareerCatalog }) {
@@ -58,6 +59,16 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     players: BBPlayer[];
     coverage?: CareerCoverage;
   }>(`history/players-${coverage ? season : "unsupported"}`);
+  const basePlayers = (data?.season === +season ? data.players : []).filter(
+    (p) => !qualified || p.qualified,
+  );
+  const profileRows = rankPlayerProfiles(basePlayers);
+  const profileByKey = new Map(
+    profileRows.map((p) => [
+      `${p.id}-${p.team_id}`,
+      { profileScore: p.profileScore, profileComponents: p.profileComponents, profileRank: p.profileRank },
+    ]),
+  );
   const sortKey = sort as
     | "ppg"
     | "rpg"
@@ -71,12 +82,13 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "ft_rate"
     | "three_rate"
     | "tov_rate";
-  const rows = rankProduction(
-    (data?.season === +season ? data.players : []).filter(
-      (p) => !qualified || p.qualified,
-    ),
-    (p) => p[sortKey],
-  ).filter((p) =>
+  const ranked = sort === "profile"
+    ? profileRows
+    : rankProduction(basePlayers, (p) => p[sortKey]).map((p) => ({
+      ...p,
+      ...profileByKey.get(`${p.id}-${p.team_id}`),
+    }));
+  const rows = ranked.filter((p) =>
     (p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()),
   );
   return (
@@ -142,6 +154,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             }}
           >
             <option value="ppg">Points per game</option>
+            <option value="profile">All-around profile index</option>
             <option value="rpg">Rebounds per game</option>
             <option value="apg">Assists per game</option>
             <option value="ts">True shooting</option>
@@ -192,6 +205,15 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         this season and qualification setting before search filters; ties share
         rank. The source includes some opponents outside Division I.
       </p>
+      {sort === "profile" && (
+        <p className="note" style={{ marginBottom: 20 }}>
+          The all-around profile index averages within-cohort percentiles for
+          PPG, RPG, APG, steals, blocks, true shooting, effective FG% and
+          turnover rate (where lower is favorable). It requires at least four
+          available components, ranks the qualified season before search
+          filters, and is a research shortlist rather than a player value model.
+        </p>
+      )}
       {coverage &&
         coverage.appearance_games < coverage.completed_schedule_games * 0.8 && (
           <p className="career-coverage-warning">
@@ -265,6 +287,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     toCsv(
                       [
                         "Stat rank",
+                        "All-around profile index",
+                        "Profile components",
                         "Player",
                         "NCAA ID",
                         "Program",
@@ -285,6 +309,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       ],
                       rows.map((p) => [
                         p.statRank,
+                        p.profileScore,
+                        p.profileComponents,
                         p.name,
                         p.id,
                         p.team,
@@ -324,6 +350,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
               <thead>
                 <tr>
                   <th>Stat rank</th>
+                  <th>Profile</th>
                   <th>Player / program</th>
                   <th>Pos.</th>
                   {[
@@ -351,6 +378,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                 {rows.slice(page * 40, page * 40 + 40).map((p) => (
                   <tr key={`${p.id}-${p.team_id}`}>
                     <td className="rank-number">{p.statRank ?? "—"}</td>
+                    <td className="numeric">
+                      {p.profileRank == null ? "—" : `#${p.profileRank}`}
+                      <small>{p.profileScore == null ? "Insufficient fields" : `${fmt(p.profileScore, 1)} / 100 · ${p.profileComponents}/8 fields`}</small>
+                    </td>
                     <td>
                       <Link
                         href={`/basketball/player/?id=${p.id}&season=${season}`}
