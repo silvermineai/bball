@@ -304,8 +304,14 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
   const loaded = await Promise.all(seasons.map(async ({ code, season: target }) => ({ code, season: target, data: target === null ? { rows: [], registeredVersions: 0 } : await loadSport(db, code, target, now) })));
   const games = loaded.flatMap((item) => item.data.rows);
   const summaries = Object.fromEntries(loaded.map(({ code, data }) => [code, summary(data.rows, data.registeredVersions)]));
-  const marketCount = await db.prepare("SELECT count(*) AS total FROM audit_markets").first<{ total: number }>();
-  const unmatchedCount = await db.prepare("SELECT count(*) AS total FROM audit_unmatched").first<{ total: number }>();
+  // Keep top-level coverage counts aligned with the requested sport. Without
+  // this filter, a basketball scorecard would report football quotes once a
+  // licensed feed is active, which would make the landing-page market status
+  // misleading.
+  const scope = sport === "all" ? "" : " WHERE sport=?";
+  const scopeBinds = sport === "all" ? [] : [sport];
+  const marketCount = await db.prepare(`SELECT count(*) AS total FROM audit_markets${scope}`).bind(...scopeBinds).first<{ total: number }>();
+  const unmatchedCount = await db.prepare(`SELECT count(*) AS total FROM audit_unmatched${scope}`).bind(...scopeBinds).first<{ total: number }>();
   return { loaded, games, summaries, market_observations: Number(marketCount?.total || 0), unmatched_events: Number(unmatchedCount?.total || 0) };
 }
 

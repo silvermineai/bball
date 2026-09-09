@@ -32,7 +32,13 @@ describe("live research scorecard", () => {
       exclusion: null,
     };
     const prepare = vi.fn((sql: string) => {
-      const first = async () => sql.includes("MAX(CAST") ? { season: 2027 } : sql.includes("audit_predictions") ? { total: 1 } : { total: 0 };
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        if (sql.includes("audit_markets") && sql.includes("WHERE sport=?")) return { total: 7 };
+        if (sql.includes("audit_unmatched") && sql.includes("WHERE sport=?")) return { total: 3 };
+        return { total: 0 };
+      };
       return {
         first,
         bind: (..._args: unknown[]) => ({
@@ -47,9 +53,11 @@ describe("live research scorecard", () => {
       { RESEARCH_DB: { prepare } as never },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { live: boolean; total: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
+    const body = await response.json() as { live: boolean; total: number; market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
     expect(body.live).toBe(true);
     expect(body.total).toBe(1);
+    expect(body.market_observations).toBe(7);
+    expect(body.unmatched_events).toBe(3);
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7 });
     expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, games_with_comparisons: 0 });
   });
