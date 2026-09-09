@@ -54,6 +54,8 @@ export default function SourceStats() {
   const [direction, setDirection] = useState<"desc" | "asc">("desc");
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -163,6 +165,39 @@ export default function SourceStats() {
     }
   };
   const exportRows = result?.rows || [];
+  const exportAll = async () => {
+    if (!result || exporting) return;
+    const pages = Math.ceil(result.total / result.page_size);
+    if (pages > 251) {
+      setExportMessage("This slice is larger than the bounded export window. Add a search or minimum-games filter first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
+    try {
+      const rows: Row[] = [];
+      for (let requestedPage = 0; requestedPage < pages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, category: result.field.category, stat: result.field.key, page: String(requestedPage), direction });
+        if (query.trim()) params.set("q", query.trim());
+        if (minGames !== "0") params.set("min_games", minGames);
+        const response = await fetch(`/api/basketball/research/publisher-stats?${params}`);
+        if (!response.ok) throw new Error("The complete source export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
+      }
+      const receipt = result.source_receipts[0];
+      downloadCsv(
+        `publisher-${result.field.key}-${season}-all.csv`,
+        toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Source release URL", "Source retrieved", "Source SHA-256"], rows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, receipt?.url, receipt?.fetched_at, receipt?.sha256])),
+      );
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} matching rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete source export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <>
       <div className="page-title">
@@ -231,8 +266,9 @@ export default function SourceStats() {
           {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Publisher player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p>
-            <button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value])))}>Download CSV ↓</button>
+            <div className="button-row"><button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value])))}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={exportAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div>
           </div>
+          {exportMessage && <p className="note" role="status">{exportMessage}</p>}
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr><th>Player</th><th>Program</th><th>Pos.</th><th className="numeric">Games</th><th className="numeric">{result.field.label}</th></tr></thead>
