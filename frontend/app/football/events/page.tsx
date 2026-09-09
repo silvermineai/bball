@@ -49,7 +49,8 @@ export default function Page() {
           establish the same person. The leaders view is a source-name/team
           aggregation for triage, not a verified athlete ranking or complete
           season production claim.{" "}
-          <Link href="/football/players/">Browse identified players →</Link>
+          <Link href="/football/players/">Browse identified players →</Link>{" "}·{" "}
+          <Link href="/football/source-stats/">Search every retained source row →</Link>
         </p>
       </aside>
       <Suspense
