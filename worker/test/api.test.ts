@@ -520,6 +520,24 @@ describe("bball api", () => {
     }
   });
 
+  it("counts publisher display strings for compound source fields", async () => {
+    const first = vi.fn(async () => ({ total: 12, non_null: 12 }));
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => sql.includes("count(*) AS total")
+        ? { first }
+        : { all: async () => ({ results: [] }) },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/publisher-stats?season=2026&category=averages&stat=avgFieldGoalsMade-avgFieldGoalsAttempted",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ total: 12, non_null: 12 });
+    const countSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("count(*) AS total"))?.[0]);
+    expect(countSql).toContain("count(json_extract(s.stats_json, ?))");
+  });
+
   it("rejects invalid team and boutique source parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",

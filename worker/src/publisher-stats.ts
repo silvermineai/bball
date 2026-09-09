@@ -98,6 +98,10 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   const binds: Array<string | number> = search
     ? [season, search, search, search]
     : [season];
+  // Compound made-attempted fields intentionally retain their publisher
+  // display string instead of inventing a numeric value. Count that display
+  // path for completeness so the browser reflects the source rows accurately.
+  const completenessPath = field.unit === "text" ? displayPath : valuePath;
   const count = await c.env.DB.prepare(
     `SELECT count(*) AS total, count(json_extract(s.stats_json, ?)) AS non_null
        FROM bb_player_season s
@@ -106,7 +110,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
                   FROM bb_rosters WHERE season=? GROUP BY season,team_id,athlete_id) r
          ON r.season=s.season AND r.team_id=s.team_id AND r.athlete_id=s.athlete_id
       WHERE ${where}`,
-  ).bind(valuePath, season, ...binds).first<{ total: number; non_null: number }>();
+  ).bind(completenessPath, season, ...binds).first<{ total: number; non_null: number }>();
   const order = field.unit === "text"
     ? "p.name ASC, s.athlete_id ASC"
     : `json_extract(s.stats_json, '${valuePath}') IS NULL, json_extract(s.stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, p.name ASC, s.athlete_id ASC`;
