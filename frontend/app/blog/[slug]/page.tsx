@@ -2,7 +2,7 @@ import Link from "next/link";
 import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 const titles: Record<string, string> = {
   "reading-the-forecast": "What a preseason model knows. And what it misses.",
@@ -14,6 +14,8 @@ const titles: Record<string, string> = {
     "An announcement is a starting point, not a depth chart.",
   "basketball-player-rates":
     "A rate is only as useful as its denominator.",
+  "basketball-recruiting-fit":
+    "Recruit the role before you recruit the name.",
 };
 export function generateStaticParams() {
   return [
@@ -171,6 +173,8 @@ export default async function Page({
         <BasketballRecruitingWorkload />
       ) : slug === "basketball-player-rates" ? (
         <BasketballPlayerRates />
+      ) : slug === "basketball-recruiting-fit" ? (
+        <BasketballRecruitingFit />
       ) : (
         <>
           <p className="deck">
@@ -233,6 +237,70 @@ export default async function Page({
         .
       </p>
     </article>
+  );
+}
+
+function BasketballRecruitingFit() {
+  const b = getBasketball();
+  const rosters = getRosters();
+  return (
+    <>
+      <p className="deck">
+        A recruiting board should answer a role question before it ranks a
+        player. Start with the source-listed roster, identify the workload that
+        is already represented, and then compare candidates against a clear
+        priority.
+      </p>
+      <p>
+        The <Link href="/basketball/recruiting/fit/">recruiting fit board</Link>{" "}
+        uses the {rosters.players.length.toLocaleString()} source-listed player
+        rows in the current 2026–27 roster release. It groups source position
+        labels into guard, wing and big roles, then lets you choose creation,
+        shooting, rebounding, defensive events or workload as the priority.
+      </p>
+      <h2>Start with the role room</h2>
+      <p>
+        The selected program’s role cards show listed players and the prior
+        minutes attached to exact source IDs. Returning and incoming minutes
+        stay separate. They describe what the release represents; they do not
+        prove that a player left, transferred, is eligible or will play the
+        same role next season.
+      </p>
+      <h2>Read the fit score as a sorting aid</h2>
+      <p>
+        Candidates are filtered outside the selected program and require a
+        prior production record plus the chosen minimum workload. The board
+        combines a 70% percentile for the selected skill priority with a 30%
+        percentile for prior minutes. Creation blends assists and points;
+        shooting blends true shooting and effective field goal percentage;
+        defense blends steals and blocks. Missing source fields remain missing
+        rather than receiving a guessed value.
+      </p>
+      <p>
+        Percentiles make the units comparable, but they do not make the score a
+        fitted transfer model. A high workload can reflect a different role,
+        and a strong shooting percentile can come from a small sample. Open the
+        source roster, the prior game log and the dated announcement before
+        making a recruiting conclusion.
+      </p>
+      <h2>Keep the evidence boundary visible</h2>
+      <p>
+        The recruiting file currently contains selected school announcements,
+        while the roster release provides the broader source frame. The fit
+        board joins those layers only through exact source IDs when a player
+        link exists. It does not infer a portal transaction from a different
+        program label or turn a roster observation into an availability claim.
+      </p>
+      <p>
+        Once a shortlist is built, use the{" "}
+        <Link href="/basketball/player-profiles/">player profile browser</Link>,{" "}
+        <Link href="/basketball/recruiting/">dated recruiting file</Link> and{" "}
+        <Link href="/basketball/programs/">program dossier</Link> together.
+        The model forecasts {b.coverage.forecast_games.toLocaleString()} games
+        for 2026–27, but recruiting evidence remains a staff verification layer
+        outside the primary forecast.
+      </p>
+    </>
   );
 }
 

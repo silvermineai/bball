@@ -12,6 +12,7 @@ const guideItems = [
   ["basketball-impact", "Read impact with the lineup context intact.", "How to use ORAPM, DRAPM, net RAPM and possession samples."],
   ["basketball-recruiting-workload", "An announcement is a starting point, not a depth chart.", "How to connect school statements, roster observations and prior workload."],
   ["basketball-player-rates", "A rate is only as useful as its denominator.", "How to read player efficiency and impact rankings responsibly."],
+  ["basketball-recruiting-fit", "Recruit the role before you recruit the name.", "How to build a defensible recruiting shortlist from source-listed roles and prior workload."],
 ] as const;
 
 function escapeXml(value: string) {

@@ -41,6 +41,11 @@ const guides = [
     "A rate is only as useful as its denominator.",
     "How to read NCAA player efficiency, workload and impact rankings while keeping volume, sample size and identity boundaries visible.",
   ],
+  [
+    "basketball-recruiting-fit",
+    "Recruit the role before you recruit the name.",
+    "How to use source-listed roster roles, prior workload and transparent fit percentiles to build a defensible recruiting shortlist.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();
