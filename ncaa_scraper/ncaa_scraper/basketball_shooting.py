@@ -138,16 +138,20 @@ def counts(shots):
 
 def matches(shots, box):
     values = [box.get(k) for k in BOX_KEYS]
-    return (
-        all(
-            isinstance(v, (int, float))
-            and not isinstance(v, bool)
-            and math.isfinite(v)
-            and v >= 0
-            for v in values
-        )
-        and counts(shots) == values
-    )
+    if not all(
+        isinstance(v, (int, float))
+        and not isinstance(v, bool)
+        and math.isfinite(v)
+        and v >= 0
+        for v in values
+    ):
+        return False
+    fga, fgm, tpa, tpm = values
+    # A source row can be internally impossible even when its four values
+    # happen to match the event count. Keep that sample out of reconciliation.
+    if fgm > fga or tpa > fga or tpm > tpa:
+        return False
+    return counts(shots) == values
 
 
 def summarize(shots):

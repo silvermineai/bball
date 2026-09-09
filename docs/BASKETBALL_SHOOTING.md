@@ -18,7 +18,7 @@ The PBP archive stores the selected season and team/matchup/game search in the U
 - A field-goal event requires an explicit shooting flag, supported field-goal type, team identity and made/missed flag. Missing or zero attempt values are recovered only from the explicit score-value field, which records attempted value even on misses. Conflicting values are excluded.
 - Free throws are not included in field-goal shooting rates. Layups, dunks, tips and jumpers use source event labels; they are not inferred play calls or tracking categories.
 - Exact duplicates count once. Conflicting duplicate event payloads disqualify the game's reconciled sample; the original release remains archived.
-- Reconciliation requires FGA, FGM, 3PA and 3PM to agree exactly. Player reconciliation additionally requires the team sample to match. Missing box fields never become zero. Matching totals cannot verify event ordering or location accuracy.
+- Reconciliation requires FGA, FGM, 3PA and 3PM to agree exactly and rejects internally impossible totals (made shots above attempts, threes above total attempts or made threes above threes attempted). Player reconciliation additionally requires the team sample to match. Missing box fields never become zero. Matching totals cannot verify event ordering or location accuracy.
 - All imported attempts remain inspectable by clearing the matched-games filter. Counts explain how many shot-game samples match and how many corresponding box-score games exist. A player with multiple recorded affiliations retains all games under the same source identity.
 
 ## Court locations

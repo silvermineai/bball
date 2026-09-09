@@ -99,6 +99,16 @@ class ShotTests(unittest.TestCase):
             self.assertFalse(matches([miss, made], {**box, key: None}))
             self.assertFalse(matches([miss, made], {**box, key: box[key] + 1}))
 
+    def test_reconciliation_rejects_impossible_box_totals(self):
+        miss, _ = normalize(event(), self.game)
+        made, _ = normalize(event(scoring_play=True), self.game)
+        for box in [
+            {"field_goals_attempted": 2, "field_goals_made": 3, "three_point_field_goals_attempted": 2, "three_point_field_goals_made": 1},
+            {"field_goals_attempted": 2, "field_goals_made": 1, "three_point_field_goals_attempted": 3, "three_point_field_goals_made": 1},
+            {"field_goals_attempted": 2, "field_goals_made": 1, "three_point_field_goals_attempted": 1, "three_point_field_goals_made": 2},
+        ]:
+            self.assertFalse(matches([miss, made], box))
+
 
 class CacheTests(unittest.TestCase):
     def test_cached_large_release_requires_matching_receipt(self):
