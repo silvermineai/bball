@@ -76,6 +76,23 @@ export default function Page() {
             </p>
           </div>
         </div>
+        <div id="csv-import" className="paper-panel" style={{ marginTop: 24 }}>
+          <h3>Bring an authorized provider export</h3>
+          <p>
+            If an approved feed supplies a CSV instead of an API credential,
+            the operator can import it through the same exact-match ledger
+            path. The importer requires the provider name, license URL, exact
+            source game ID, UTC start, capture/update clocks, bookmaker and
+            both prices. It rejects name-only joins, post-start captures and
+            any file containing an invalid row, then stores a file hash with
+            the accepted observations.
+          </p>
+          <p className="note">
+            This keeps raw provider access on the server and does not make a
+            public copy of a licensed feed. See the repository&apos;s{" "}
+            <a href="https://github.com/silvermineai/bball/blob/main/docs/RESEARCH_LEDGER.md#licensed-csv-imports" target="_blank" rel="noreferrer">CSV import instructions ↗</a>.
+          </p>
+        </div>
         <div className="paper-panel" style={{ marginTop: 24 }}>
           <p>
             Read the selection rules in the{" "}

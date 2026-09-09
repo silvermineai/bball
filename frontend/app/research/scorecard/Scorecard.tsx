@@ -165,7 +165,8 @@ export default function Scorecard() {
             <code>THE_ODDS_API_KEY=…</code> in <code>~/.env</code>, then{" "}
             <code>python -m ncaa_scraper.odds_feed --sport both</code>. Keys
             never enter frontend code or logs. Read the{" "}
-            <Link href="/research/markets/#market-policy">capture policy →</Link>
+            <Link href="/research/markets/#market-policy">capture policy →</Link>{" "}
+            · <Link href="/research/markets/#csv-import">licensed CSV import →</Link>
           </p>
         )}
       </section>
