@@ -386,6 +386,44 @@ th,
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
+.matchup-card-wrap {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.matchup-prep-toggle {
+  width: 100%;
+  text-align: left;
+}
+.matchup-prep-panel {
+  margin: 0 0 24px;
+}
+.matchup-prep-list {
+  display: grid;
+  gap: 8px;
+}
+.matchup-prep-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.matchup-prep-item strong,
+.matchup-prep-item small {
+  display: block;
+}
+.matchup-prep-item small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+@media (max-width: 650px) {
+  .matchup-prep-item {
+    align-items: start;
+    flex-direction: column;
+  }
+}
 .match-card {
   background: #fcfaf4;
   border: 1px solid var(--line);

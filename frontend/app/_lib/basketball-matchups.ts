@@ -14,6 +14,7 @@ export type MatchupFilters = {
   coverage: MatchupCoverage;
   sort: MatchupSort;
   page: number;
+  picks?: string[];
 };
 
 const matchupSorts = new Set<MatchupSort>([
@@ -36,6 +37,7 @@ export function parseMatchupFilters(search: string): MatchupFilters {
   const coverage = params.get("coverage") as MatchupCoverage | null;
   const month = params.get("month") || "all";
   const parsedPage = Number(params.get("page") || 0);
+  const picks = params.getAll("pick").filter(Boolean).slice(0, 12);
   return {
     team: params.get("team") || "",
     month: month === "all" || /^\d{4}-\d{2}$/.test(month) ? month : "all",
@@ -43,6 +45,7 @@ export function parseMatchupFilters(search: string): MatchupFilters {
       coverage && matchupCoverages.has(coverage) ? coverage : "all",
     sort: sort && matchupSorts.has(sort) ? sort : "date",
     page: Number.isInteger(parsedPage) && parsedPage >= 0 && parsedPage <= 500 ? parsedPage : 0,
+    ...(picks.length ? { picks } : {}),
   };
 }
 
@@ -54,6 +57,9 @@ export function matchupFilterSearch(filters: MatchupFilters) {
   if (filters.coverage !== "all") params.set("coverage", filters.coverage);
   if (filters.sort !== "date") params.set("sort", filters.sort);
   if (filters.page > 0) params.set("page", String(filters.page));
+  for (const pick of filters.picks || []) {
+    if (pick) params.append("pick", pick);
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }

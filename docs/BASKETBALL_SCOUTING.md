@@ -30,6 +30,8 @@ Hypothetical comparisons are not scheduled games and do not enter the prospectiv
 
 The roster impact lab also joins the challenger’s minutes-weighted publisher Box BPM fields by exact team ID. It can sort programs by represented Box BPM and exports prior, returning, represented and incoming BPM alongside workload and rating context. Missing source values remain unavailable; the fields are descriptive publisher context and do not change the primary forecast.
 
+The matchup workbench now includes a bounded coach prep list. Add up to 12 source-ID games from the slate, keep them in browser storage across sessions, remove them from the list, and share the exact picks through repeated `pick=` URL parameters. Saved games retain their brief links when a primary forecast is available; the list is a planning aid and does not alter forecasts or the prospective ledger.
+
 Program selections and venue now persist in the comparison URL (`a`, `b`, `venue=neutral|a|b`). Incoming matchup briefs preserve their actual designated floor, and swapping programs retains the physical home team. The [expanded briefs](BASKETBALL_BRIEFS.md) use the same scouting edition and link into the workbench.
 
 ## Rebuild and publish

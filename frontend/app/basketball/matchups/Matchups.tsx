@@ -6,6 +6,7 @@ import type { BBGame, BBRosterScenario, BBRosterSummary } from "../../_lib/baske
 import BasketballCard from "../../_components/BasketballCard";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import type { BBOverview } from "../../_lib/basketball-types";
+import { date, kick } from "../../_lib/format";
 import {
   matchupFilterSearch,
   parseMatchupFilters,
@@ -37,6 +38,8 @@ export default function Matchups({
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
     [page, setPage] = useState(initial.page),
+    [prepIds, setPrepIds] = useState<string[]>(initial.picks || []),
+    [prepHydrated, setPrepHydrated] = useState(false),
     [copied, setCopied] = useState(""),
     [liveCatalog, setLiveCatalog] = useState<{
       models?: Array<{
@@ -47,6 +50,36 @@ export default function Matchups({
       }>;
     } | null>(null),
     [liveCatalogError, setLiveCatalogError] = useState("");
+  useEffect(() => {
+    const validIds = new Set(games.map((game) => game.id));
+    const fromUrl = (initial.picks || []).filter((id) => validIds.has(id)).slice(0, 12);
+    let next = fromUrl;
+    if (!fromUrl.length) {
+      try {
+        const saved = JSON.parse(window.localStorage.getItem("silvermine.basketball.matchup-prep.v1") || "null");
+        if (Array.isArray(saved)) next = saved.filter((id): id is string => typeof id === "string" && validIds.has(id)).slice(0, 12);
+      } catch {
+        next = [];
+      }
+    }
+    setPrepIds(next);
+    setPrepHydrated(true);
+  }, [games]);
+  useEffect(() => {
+    if (!prepHydrated) return;
+    try {
+      window.localStorage.setItem("silvermine.basketball.matchup-prep.v1", JSON.stringify(prepIds.slice(0, 12)));
+    } catch {
+      // Local persistence is a convenience; private browsing may disable it.
+    }
+  }, [prepHydrated, prepIds]);
+  useEffect(() => {
+    const validIds = new Set(games.map((game) => game.id));
+    const cleaned = prepIds.filter((id) => validIds.has(id)).slice(0, 12);
+    if (cleaned.length !== prepIds.length || cleaned.some((id, index) => id !== prepIds[index])) {
+      setPrepIds(cleaned);
+    }
+  }, [games, prepIds]);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
@@ -61,7 +94,7 @@ export default function Matchups({
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    const next = matchupFilterSearch({ team: q, month, coverage, sort, page });
+    const next = matchupFilterSearch({ team: q, month, coverage, sort, page, picks: prepIds });
     if (next !== window.location.search) {
       window.history.replaceState(
         window.history.state,
@@ -69,7 +102,7 @@ export default function Matchups({
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [q, month, coverage, sort, page]);
+  }, [q, month, coverage, sort, page, prepIds]);
   const eligibleGames = scope === "forecasted" ? games.filter((g) => g.prediction != null) : games;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
@@ -88,6 +121,14 @@ export default function Matchups({
   );
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const prepRows = prepIds
+    .map((id) => games.find((game) => game.id === id))
+    .filter((game): game is BBGame => !!game);
+  const togglePrep = (id: string) => {
+    setPrepIds((current) => current.includes(id)
+      ? current.filter((value) => value !== id)
+      : current.length >= 12 ? current : [...current, id]);
+  };
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -240,15 +281,52 @@ export default function Matchups({
         </Link>
       </div>
       {copied && <p role="status">{copied}</p>}
+      {prepRows.length > 0 && (
+        <section className="paper-panel matchup-prep-panel" aria-labelledby="matchup-prep-title">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">COACH PREP</span>
+              <h2 id="matchup-prep-title">Prep list</h2>
+            </div>
+            <button className="button secondary" type="button" onClick={() => setPrepIds([])}>
+              Clear list
+            </button>
+          </div>
+          <p className="note">Keep up to 12 games across filters. The list persists on this device and travels with the copied slate URL.</p>
+          <div className="matchup-prep-list">
+            {prepRows.map((game) => (
+              <div className="matchup-prep-item" key={game.id}>
+                <div>
+                  <strong>{game.away_name} at {game.home_name}</strong>
+                  <small>{game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
+                </div>
+                <div className="button-row">
+                  {game.prediction && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}
+                  <button className="button secondary" type="button" onClick={() => togglePrep(game.id)}>Remove</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
-          <BasketballCard
-            key={g.id}
-            game={marketComparisons[g.id]?.length ? { ...g, market_comparisons: marketComparisons[g.id] } : g}
-            homeRoster={rosterByTeam.get(g.home_id)}
-            awayRoster={rosterByTeam.get(g.away_id)}
-            rosterScenario={rosterScenarioByGame.get(g.id)}
-          />
+          <div className="matchup-card-wrap" key={g.id}>
+            <BasketballCard
+              game={marketComparisons[g.id]?.length ? { ...g, market_comparisons: marketComparisons[g.id] } : g}
+              homeRoster={rosterByTeam.get(g.home_id)}
+              awayRoster={rosterByTeam.get(g.away_id)}
+              rosterScenario={rosterScenarioByGame.get(g.id)}
+            />
+            <button
+              className="button secondary matchup-prep-toggle"
+              type="button"
+              aria-pressed={prepIds.includes(g.id)}
+              onClick={() => togglePrep(g.id)}
+            >
+              {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
+            </button>
+          </div>
         ))}
       </div>
       {!rows.length && (

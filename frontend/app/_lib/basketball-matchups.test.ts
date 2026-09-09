@@ -120,4 +120,17 @@ describe("basketball matchup triage", () => {
       matchupFilterSearch({ team: "", month: "all", coverage: "all", sort: "date", page: 0 }),
     ).toBe("");
   });
+
+  it("round-trips a bounded prep pick list", () => {
+    const filters = parseMatchupFilters("?pick=game-a&pick=game-b&pick=game-a");
+    expect(filters.picks).toEqual(["game-a", "game-b", "game-a"]);
+    expect(matchupFilterSearch({
+      team: "",
+      month: "all",
+      coverage: "all",
+      sort: "date",
+      page: 0,
+      picks: filters.picks,
+    })).toBe("?pick=game-a&pick=game-b&pick=game-a");
+  });
 });
