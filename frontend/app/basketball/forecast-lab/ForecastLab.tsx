@@ -263,6 +263,7 @@ export default function ForecastLab({
           <ManualMarketCheck
             key={marketRow.game.id}
             storageKey={`forecast-lab:${marketRow.game.id}`}
+            gameId={marketRow.game.id}
             homeName={marketRow.game.home_name}
             modelMargin={marketRow.prediction.home_margin}
             modelMarginLow={marketRow.prediction.margin_low}
