@@ -10,6 +10,7 @@ import { buildRecruitingFit, buildRoleSummaries, focusDescriptions, focusLabels,
 const focusValueLabels: Record<FitFocus, string> = { creation: "APG", shooting: "TS%", rebounding: "RPG", defense: "SPG", workload: "Minutes" };
 const displayRole = (role: FitRole | "unknown") => role === "unknown" ? "Unknown role" : roleLabels[role];
 const shortlistKey = (teamId: string) => `silvermine.recruiting.fit-shortlist:${teamId}`;
+const notesKey = (teamId: string) => `silvermine.recruiting.fit-notes:${teamId}`;
 
 function readShortlist(teamId: string): string[] {
   if (!teamId || typeof window === "undefined") return [];
@@ -21,9 +22,20 @@ function readShortlist(teamId: string): string[] {
   }
 }
 
+function readNotes(teamId: string): Record<string, string> {
+  if (!teamId || typeof window === "undefined") return {};
+  try {
+    const value = JSON.parse(window.localStorage.getItem(notesKey(teamId)) || "{}");
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string").slice(0, 50));
+  } catch {
+    return {};
+  }
+}
+
 export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
   const fallbackTeam = [...teams].sort((a, b) => (a.rank || 999) - (b.rank || 999) || a.name.localeCompare(b.name))[0]?.id || "";
-  const [teamId, setTeamId] = useState(fallbackTeam), [role, setRole] = useState<FitRole>("any"), [focus, setFocus] = useState<FitFocus>("creation"), [minimumMinutes, setMinimumMinutes] = useState(400), [query, setQuery] = useState(""), [page, setPage] = useState(0), [picked, setPicked] = useState<string[]>([]), [hydrated, setHydrated] = useState(false), [copied, setCopied] = useState(""), [savedMessage, setSavedMessage] = useState("");
+  const [teamId, setTeamId] = useState(fallbackTeam), [role, setRole] = useState<FitRole>("any"), [focus, setFocus] = useState<FitFocus>("creation"), [minimumMinutes, setMinimumMinutes] = useState(400), [query, setQuery] = useState(""), [page, setPage] = useState(0), [picked, setPicked] = useState<string[]>([]), [notes, setNotes] = useState<Record<string, string>>({}), [hydrated, setHydrated] = useState(false), [copied, setCopied] = useState(""), [savedMessage, setSavedMessage] = useState("");
   const { data, error } = useBasketballRelease<BBRosters>("rosters");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -35,6 +47,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     const requestedTeam = params.get("team") && teams.some((team) => team.id === params.get("team")) ? params.get("team")! : fallbackTeam;
     const urlPicks = params.getAll("pick").slice(0, 5);
     setPicked(urlPicks.length ? urlPicks : readShortlist(requestedTeam));
+    setNotes(readNotes(requestedTeam));
     setHydrated(true);
   }, [fallbackTeam, teams]);
   useEffect(() => {
@@ -45,10 +58,11 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
     try {
       window.localStorage.setItem(shortlistKey(teamId), JSON.stringify(picked.slice(0, 5)));
+      window.localStorage.setItem(notesKey(teamId), JSON.stringify(notes));
     } catch {
       // The board remains usable when private browser storage is unavailable.
     }
-  }, [focus, hydrated, minimumMinutes, picked, query, role, teamId]);
+  }, [focus, hydrated, minimumMinutes, notes, picked, query, role, teamId]);
   const result = useMemo(() => data ? buildRecruitingFit(data.players, { teamId, role, focus, minimumMinutes, query }) : [], [data, focus, minimumMinutes, query, role, teamId]);
   const allCandidates = useMemo(() => data ? buildRecruitingFit(data.players, { teamId, role, focus, minimumMinutes }) : [], [data, focus, minimumMinutes, role, teamId]);
   const summaries = useMemo(() => data ? buildRoleSummaries(data.players, teamId) : [], [data, teamId]);
@@ -59,16 +73,18 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     setTeamId(nextTeamId);
     setPage(0);
     setPicked(readShortlist(nextTeamId));
+    setNotes(readNotes(nextTeamId));
     setSavedMessage("Loaded this program's private shortlist.");
   };
   const clearShortlist = () => {
     setPicked([]);
     setSavedMessage("Private shortlist cleared for this program.");
-    try { window.localStorage.removeItem(shortlistKey(teamId)); } catch { /* optional storage */ }
+    try { window.localStorage.removeItem(shortlistKey(teamId)); window.localStorage.removeItem(notesKey(teamId)); } catch { /* optional storage */ }
   };
   const share = async () => { try { await navigator.clipboard.writeText(window.location.href); setCopied("Fit board link copied."); } catch { setCopied("Copy the filtered URL from your address bar."); } };
-  const csv = () => downloadCsv(`basketball-recruiting-fit-${teamId}.csv`, toCsv(["Rank", "Player", "Source ID", "Current source-listed program", "Current team ID", "Role", "Status", "Class", "Height", "Weight", "Prior programs", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Skill percentile", "Workload percentile", "Fit score", "Source URL"], result.map((row, index) => [index + 1, row.player.name, row.player.id, row.player.team, row.player.team_id, displayRole(row.role), row.player.status, row.player.class_year, row.player.height, row.player.weight, row.player.previous_teams.join("; "), row.player.prior_production?.minutes, row.player.prior_production?.mpg, row.player.prior_production?.ppg, row.player.prior_production?.rpg, row.player.prior_production?.apg, row.player.prior_production?.ts == null ? null : row.player.prior_production.ts * 100, row.player.prior_production?.efg == null ? null : row.player.prior_production.efg * 100, row.skillPercentile, row.workloadPercentile, row.score, row.player.source_url])));
+  const csv = () => downloadCsv(`basketball-recruiting-fit-${teamId}.csv`, toCsv(["Rank", "Player", "Source ID", "Current source-listed program", "Current team ID", "Role", "Status", "Class", "Height", "Weight", "Prior programs", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Skill percentile", "Workload percentile", "Fit score", "Source URL", "Private note"], result.map((row, index) => [index + 1, row.player.name, row.player.id, row.player.team, row.player.team_id, displayRole(row.role), row.player.status, row.player.class_year, row.player.height, row.player.weight, row.player.previous_teams.join("; "), row.player.prior_production?.minutes, row.player.prior_production?.mpg, row.player.prior_production?.ppg, row.player.prior_production?.rpg, row.player.prior_production?.apg, row.player.prior_production?.ts == null ? null : row.player.prior_production.ts * 100, row.player.prior_production?.efg == null ? null : row.player.prior_production.efg * 100, row.skillPercentile, row.workloadPercentile, row.score, row.player.source_url, notes[row.player.id] || ""])));
   const togglePick = (id: string) => setPicked((current) => current.includes(id) ? current.filter((value) => value !== id) : current.length >= 5 ? current : [...current, id]);
+  const updateNote = (id: string, value: string) => setNotes((current) => ({ ...current, [id]: value.slice(0, 500) }));
   return (
     <>
       <section className="board-priorities fit-priorities" aria-label="Recruiting fit controls">
@@ -97,7 +113,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
             {!result.length && <p className="empty">No candidates match this role, workload and search.</p>}
             <div className="pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil(result.length / 25))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 25 >= result.length} onClick={() => setPage(page + 1)}>Next →</button></div></div>
           </section>
-          <section className="board-shortlist" id="fit-shortlist"><div><div className="eyebrow">04 / Review the evidence</div><h2>Shortlist with the caveats attached.</h2><p>Open each source identity, inspect the prior game log and verify the dated recruiting record before treating a candidate as actionable. The score only organizes observed production; it does not predict a new team’s fit.</p><Link className="button" href="/basketball/recruiting/">Open recruiting evidence ↗</Link></div><div>{selected.length ? selected.map((row) => <div className="board-selection" key={row!.player.id}><span><strong>{row!.player.name}</strong><small>{row!.player.team} · {displayRole(positionRole(row!.player.position))} · {fmt(row!.score, 1)} fit</small></span><button className="hero-link" type="button" onClick={() => togglePick(row!.player.id)}>Remove</button></div>) : <p className="note">Add up to five candidates from the board to keep a working list while you open the evidence.</p>}</div></section>
+          <section className="board-shortlist" id="fit-shortlist"><div><div className="eyebrow">04 / Review the evidence</div><h2>Shortlist with the caveats attached.</h2><p>Open each source identity, inspect the prior game log and verify the dated recruiting record before treating a candidate as actionable. The score only organizes observed production; it does not predict a new team’s fit.</p><Link className="button" href="/basketball/recruiting/">Open recruiting evidence ↗</Link></div><div>{selected.length ? selected.map((row) => <div className="board-selection" key={row!.player.id}><span><strong>{row!.player.name}</strong><small>{row!.player.team} · {displayRole(positionRole(row!.player.position))} · {fmt(row!.score, 1)} fit</small><textarea className="board-note" aria-label={`Private note for ${row!.player.name}`} maxLength={500} value={notes[row!.player.id] || ""} onChange={(event) => updateNote(row!.player.id, event.target.value)} placeholder="Private note for the next review…" /></span><button className="hero-link" type="button" onClick={() => togglePick(row!.player.id)}>Remove</button></div>) : <p className="note">Add up to five candidates from the board to keep a working list while you open the evidence.</p>}</div></section>
           {selected.length > 0 && <section className="section" aria-label="Shortlist comparison">
             <div className="section-heading"><div><div className="eyebrow">Shortlist comparison / prior source production</div><h2>Put the candidates side by side.</h2></div><span className="note">Observed prior season · exact source IDs</span></div>
             <p className="note">These columns compare the same retained prior-season fields used by the fit board. Missing values remain unavailable; none predicts a new-school role or establishes eligibility.</p>

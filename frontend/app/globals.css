@@ -3851,6 +3851,21 @@ summary {
   margin-top: 6px;
   opacity: 0.75;
 }
+.board-note {
+  display: block;
+  width: min(100%, 360px);
+  min-height: 54px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff45;
+  background: #ffffff0d;
+  color: inherit;
+  font: 12px/1.5 "IBM Plex Mono", monospace;
+  resize: vertical;
+}
+.board-note::placeholder {
+  color: #ffffff9c;
+}
 .board-selection button,
 .board-shortlist button.hero-link {
   color: inherit;
