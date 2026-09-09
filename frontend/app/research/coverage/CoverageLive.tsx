@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { date } from "../../_lib/format";
 
 type CoverageResponse = {
@@ -27,6 +28,18 @@ type CoverageResponse = {
     score_mismatch_games: number;
     valid_estimate_games: number;
   } | null;
+};
+
+type CareerArchiveResponse = {
+  seasons?: Array<{
+    season: number;
+    identified_rows: number | null;
+    player_team_entries: number | null;
+    appearance_games: number | null;
+    completed_schedule_games: number | null;
+    latest_receipt: string | null;
+  }>;
+  latest_receipt?: string | null;
 };
 
 type Freshness = {
@@ -64,8 +77,10 @@ const labels: Record<string, string> = {
 export default function CoverageLive() {
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [football, setFootball] = useState<CoverageResponse | null>(null);
+  const [career, setCareer] = useState<CareerArchiveResponse | null>(null);
   const [error, setError] = useState("");
   const [footballError, setFootballError] = useState("");
+  const [careerError, setCareerError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     const load = (url: string, onValue: (value: CoverageResponse) => void, onError: (value: string) => void) => fetch(url, { signal: controller.signal })
@@ -79,6 +94,15 @@ export default function CoverageLive() {
       });
     void load("/api/basketball/research/coverage", setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
+    void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live career archive check is unavailable.");
+        return response.json() as Promise<CareerArchiveResponse>;
+      })
+      .then((value) => { if (!controller.signal.aborted) setCareer(value); })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError") setCareerError(reason instanceof Error ? reason.message : "The live career archive check is unavailable.");
+      });
     return () => controller.abort();
   }, []);
 
@@ -108,7 +132,18 @@ export default function CoverageLive() {
               <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th></tr></thead>
               <tbody>{data.source_receipts.map((receipt) => <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td></tr>)}</tbody>
             </table>
-          </div><div className="paper-panel" style={{ marginTop: 20 }}>
+          </div>{career && <div className="paper-panel" style={{ marginTop: 20 }}>
+            <div className="eyebrow">Historical player archive / D1</div>
+            <h3>{career.seasons?.length?.toLocaleString() ?? "—"} source seasons connected.</h3>
+            <div className="raw-stat-grid">
+              <div><dt>{career.seasons?.reduce((sum, row) => sum + (row.identified_rows || 0), 0).toLocaleString() ?? "—"}</dt><dd>Identified player box rows</dd></div>
+              <div><dt>{career.seasons?.reduce((sum, row) => sum + (row.player_team_entries || 0), 0).toLocaleString() ?? "—"}</dt><dd>Player / program records</dd></div>
+              <div><dt>{career.seasons?.[0]?.season ?? "—"}</dt><dd>Newest season ending year</dd></div>
+              <div><dt>{career.latest_receipt ? date(career.latest_receipt) : "—"}</dt><dd>Latest source receipt</dd></div>
+            </div>
+            <p className="note">This bounded read confirms the active D1 archive pointer without returning player rows. Open the player statistics desk to search the verified bundled release and follow exact source IDs into game logs.</p>
+            <Link href="/basketball/players/">Open player statistics →</Link>
+          </div>}{careerError && <p className="note">Historical player archive: {careerError} The bundled coverage inventory remains available.</p>}<div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Source clock</div>
             <h3>{basketballFreshness?.label}</h3>
             <p className="note">{basketballFreshness?.detail} This describes the newest retained source receipt, not statistical completeness or game availability.</p>
