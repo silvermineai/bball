@@ -46,7 +46,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Player source profiles | `/basketball/player/?id=…` | ESPN-derived identity, position, size, experience and status context across 24 seasons |
 | Player profile browser | `/basketball/player-profiles/` | Search the complete legal source-profile archive by season, position, status or player ID; share filtered profile links and jump to dated evidence |
 | NCAA player box archive | `/basketball/ncaa-player-box/` | Browse 2026 NCAA-derived game-level rows plus historical 2010–25 player-season summaries with shooting splits and playmaking context in the separate NCAA ID namespace |
-| NCAA player cards | `/basketball/ncaa-player/` | Open one source-native NCAA ID across season production, shot profile, roster/high-school context, RAPM and recent game evidence |
+| NCAA player cards | `/basketball/ncaa-player/` | Open one source-native NCAA ID across season production, live multi-metric ranking placement, shot profile, roster/high-school context, RAPM and recent game evidence |
 | NCAA player rankings | `/basketball/ncaa-rankings/` | Rank current NCAA-derived player/team rows by scoring, rebounding, playmaking, defense or shooting efficiency with configurable game, minute, position and class filters |
 | NCAA historical leaderboard | `/basketball/ncaa-careers/` | Compare NCAA player-season rows across a selectable historical window with explicit workload filters and source identity |
 | NCAA roster intel | `/basketball/ncaa-rosters/` | Search NCAA roster records by class, position, size, hometown and high school for recruiting context |
