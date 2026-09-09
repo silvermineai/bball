@@ -21,31 +21,37 @@ const querySchema = z.object({
 
 export const ncaaPlayerRankings = new Hono<{ Bindings: Bindings }>();
 
+// Season aggregates retain only source-observed numeric fields. A missing
+// field must stay unavailable; coercing it to zero would create a false
+// ranking value for sparse NCAA rows.
+const sourceSum = (path: string) => `CASE WHEN COUNT(json_extract(s.stats_json,'$.${path}')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.${path}') AS REAL)) ELSE NULL END`;
+const sourceSumAny = (paths: string[]) => `CASE WHEN ${paths.map((path) => `COUNT(json_extract(s.stats_json,'$.${path}'))`).join(" + ")} > 0 THEN SUM(${paths.map((path) => `COALESCE(CAST(json_extract(s.stats_json,'$.${path}') AS REAL),0)`).join(" + ")}) ELSE NULL END`;
+
 const aggregate = (where: string) => `
   SELECT s.season, s.player_id, s.team_id,
     MAX(s.player_name) AS player_name, MAX(s.team_name) AS team_name,
     (SELECT MAX(json_extract(r.profile_json,'$.position')) FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id) AS position,
     (SELECT MAX(json_extract(r.profile_json,'$.class')) FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id) AS class_year,
     SUM(s.games) AS games,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.mins') AS REAL),0)) AS minutes,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.pts') AS REAL),0)) AS points,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(s.stats_json,'$.drb') AS REAL),0)) AS rebounds,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.orb') AS REAL),0)) AS offensive_rebounds,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.drb') AS REAL),0)) AS defensive_rebounds,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.ast') AS REAL),0)) AS assists,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tov') AS REAL),0)) AS turnovers,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL),0)) AS possessions,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.stl') AS REAL),0)) AS steals,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.blk') AS REAL),0)) AS blocks,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.fga') AS REAL),0)) AS fga,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.fgm') AS REAL),0)) AS fgm,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tpa') AS REAL),0)) AS tpa,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.tpm') AS REAL),0)) AS tpm,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.fta') AS REAL),0)) AS fta,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.rima') AS REAL),0)) AS rim_attempts,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.pts_trans') AS REAL),0)) AS transition_points,
-    SUM(COALESCE(CAST(json_extract(s.stats_json,'$.pts_unast') AS REAL),0)) AS unassisted_points,
-    SUM(SUM(COALESCE(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL),0))) OVER (PARTITION BY s.season, s.team_id) AS team_possessions,
+    ${sourceSum("mins")} AS minutes,
+    ${sourceSum("pts")} AS points,
+    ${sourceSumAny(["orb", "drb"])} AS rebounds,
+    ${sourceSum("orb")} AS offensive_rebounds,
+    ${sourceSum("drb")} AS defensive_rebounds,
+    ${sourceSum("ast")} AS assists,
+    ${sourceSum("tov")} AS turnovers,
+    ${sourceSum("o_poss")} AS possessions,
+    ${sourceSum("stl")} AS steals,
+    ${sourceSum("blk")} AS blocks,
+    ${sourceSum("fga")} AS fga,
+    ${sourceSum("fgm")} AS fgm,
+    ${sourceSum("tpa")} AS tpa,
+    ${sourceSum("tpm")} AS tpm,
+    ${sourceSum("fta")} AS fta,
+    ${sourceSum("rima")} AS rim_attempts,
+    ${sourceSum("pts_trans")} AS transition_points,
+    ${sourceSum("pts_unast")} AS unassisted_points,
+    SUM(SUM(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL))) OVER (PARTITION BY s.season, s.team_id) AS team_possessions,
     (SELECT CAST(json_extract(i.data_json,'$.rapm_net') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS rapm_net,
     (SELECT CAST(json_extract(i.data_json,'$.orapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS orapm,
     (SELECT CAST(json_extract(i.data_json,'$.drapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS drapm,

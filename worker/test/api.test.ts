@@ -939,6 +939,25 @@ describe("bball api", () => {
     expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
   });
 
+  it("keeps missing NCAA season fields unavailable instead of ranking them as zero", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 0 }),
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=ppg",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const aggregateSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("COUNT(json_extract(s.stats_json,'$.pts'))"));
+    expect(aggregateSql).toContain("CASE WHEN COUNT(json_extract(s.stats_json,'$.pts')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.pts') AS REAL)) ELSE NULL END AS points");
+    expect(aggregateSql).toContain("CASE WHEN COUNT(json_extract(s.stats_json,'$.mins')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.mins') AS REAL)) ELSE NULL END AS minutes");
+  });
+
   it("rejects unsafe NCAA roster filters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-rosters?season=2009",
