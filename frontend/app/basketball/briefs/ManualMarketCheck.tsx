@@ -153,7 +153,7 @@ export default function ManualMarketCheck({
     const quote: SavedQuote = {
       savedAt: new Date().toISOString(),
       source: source.trim(),
-      modelId: liveModel?.model_id || null,
+      modelId: liveModel?.model_id || (modelId && modelId !== "latest" ? modelId : null),
       modelCapturedAt: liveModel?.created_at || null,
       modelMargin: activeMargin,
       modelTotal: activeTotal,
