@@ -18,6 +18,8 @@ const titles: Record<string, string> = {
     "Recruit the role before you recruit the name.",
   "basketball-ranking-playbook":
     "A ranking is a question, not a verdict.",
+  "basketball-possession-style":
+    "Count the trip before you count the score.",
 };
 export function generateStaticParams() {
   return [
@@ -179,6 +181,8 @@ export default async function Page({
         <BasketballRecruitingFit />
       ) : slug === "basketball-ranking-playbook" ? (
         <BasketballRankingPlaybook />
+      ) : slug === "basketball-possession-style" ? (
+        <BasketballPossessionStyle />
       ) : (
         <>
           <p className="deck">
@@ -626,6 +630,56 @@ function BasketballRankingPlaybook() {
         <Link href="/basketball/model/">model notebook</Link> keeps these
         descriptive rankings separate from the 2026–27 matchup forecast, so a
         leaderboard never silently becomes a prediction input.
+      </p>
+    </>
+  );
+}
+
+function BasketballPossessionStyle() {
+  const b = getBasketball();
+  const layer = b.coverage.datasets?.find((dataset) => dataset.key === "ncaa_possessions");
+  return (
+    <>
+      <p className="deck">
+        A team’s pace and efficiency describe the result of its possessions. A
+        possession-style profile adds a little more context: how many trips the
+        source recorded, how often those trips were tagged transition or
+        assisted, and how much of the sample was marked garbage time.
+      </p>
+      <p>
+        The <Link href="/basketball/possession-style/">possession-style archive</Link>{" "}
+        contains {layer?.rows.toLocaleString() || "2,836"} team-season profiles
+        across the 2019–26 NCAA source editions. The underlying releases contain
+        millions of possession rows; Silvermine aggregates them by team and
+        season while retaining the source receipt and team identity.
+      </p>
+      <h2>Read the five useful columns</h2>
+      <p>
+        Points per possession is recorded points divided by recorded trips.
+        Possessions per game describes the source pace of the sample. Transition
+        share and assisted share are the publisher’s binary possession flags;
+        garbage-time share tells you how much of the sample carries that tag.
+        These are context measures, so compare them with the same season and
+        keep the total possession count visible.
+      </p>
+      <h2>Do not turn team context into player credit</h2>
+      <p>
+        A possession row belongs to a team in this archive. It does not say
+        which player created, assisted or defended the trip, and lineup
+        membership is not used to invent that attribution. Use the separate{" "}
+        <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
+        and <Link href="/basketball/lineups/">lineup lab</Link> when the question
+        is about personnel.
+      </p>
+      <h2>Use style to choose the next question</h2>
+      <p>
+        In a matchup, a large pace contrast can frame a transition-defense
+        question, while a large assisted-share gap can point toward ball
+        pressure and help rotations. Those are film prompts, not causal claims
+        or new forecast features. The <Link href="/basketball/compare/">matchup
+        workbench</Link> places the profile beside the published model and
+        Four Factors so the numbers stay connected to a concrete preparation
+        question.
       </p>
     </>
   );

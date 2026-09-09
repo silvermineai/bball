@@ -58,6 +58,11 @@ const guides = [
     "A ranking is a question, not a verdict.",
     "How to move from NCAA player rankings and impact screens to a reviewable matchup or recruiting decision.",
   ],
+  [
+    "basketball-possession-style",
+    "Count the trip before you count the score.",
+    "How to read source-recorded possessions, transition share and assisted share as team context without assigning player credit.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();
