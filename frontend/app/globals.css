@@ -1070,6 +1070,25 @@ th,
   font-size: 34px;
   margin: 20px 0 14px;
 }
+.pressroom-editorial-lens {
+  border-left: 2px solid var(--orange);
+  margin: 17px 0;
+  padding: 9px 0 9px 14px;
+  background: color-mix(in srgb, var(--paper) 88%, var(--orange) 12%);
+}
+.pressroom-editorial-lens .eyebrow {
+  margin-bottom: 4px;
+}
+.pressroom-editorial-lens strong {
+  display: block;
+  font-size: 15px;
+}
+.pressroom-editorial-lens p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 5px 0 0;
+}
 .article-card h3 {
   font-size: 22px;
   line-height: 1.2;

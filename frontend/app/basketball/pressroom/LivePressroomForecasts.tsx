@@ -8,6 +8,7 @@ import {
   loadLiveBasketballForecasts,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
+import { basketballEditorialLens } from "../../_lib/basketball-editorial";
 
 const sourceGameUrl = (id: string) =>
   `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
@@ -22,11 +23,19 @@ function signal(game: BBGame) {
 
 function GameCard({ game }: { game: BBGame }) {
   const prediction = game.prediction!;
+  const lens = basketballEditorialLens(game);
   return (
     <article className="article-card">
       <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}</div>
       <h2>{game.away_name} <span className="brief-versus">at</span> {game.home_name}</h2>
       <p>{signal(game)}</p>
+      {lens && (
+        <div className="pressroom-editorial-lens">
+          <div className="eyebrow">Editorial prompt</div>
+          <strong>{lens.title}</strong>
+          <p>{lens.body}</p>
+        </div>
+      )}
       <dl>
         <div><dt>Projected score</dt><dd>{game.away_name} {fmt(prediction.away_score, 1)} · {game.home_name} {fmt(prediction.home_score, 1)}</dd></div>
         <div><dt>Home win probability</dt><dd>{fmt(prediction.home_win_probability * 100, 1)}%</dd></div>

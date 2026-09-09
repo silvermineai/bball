@@ -5,6 +5,7 @@ import { espnGameUrl, getBasketball } from "../../_lib/basketball-data";
 import type { BBGame } from "../../_lib/basketball-types";
 import { date, fmt, signed } from "../../_lib/format";
 import LivePressroomForecasts from "./LivePressroomForecasts";
+import { basketballEditorialLens } from "../../_lib/basketball-editorial";
 
 export const metadata = {
   title: "Basketball press room",
@@ -48,6 +49,7 @@ function signal(game: BBGame) {
 
 function GameCard({ game }: { game: BBGame }) {
   const p = game.prediction!;
+  const lens = basketballEditorialLens(game);
   return (
     <article className="article-card">
       <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}</div>
@@ -55,6 +57,13 @@ function GameCard({ game }: { game: BBGame }) {
         {game.away_name} <span className="brief-versus">at</span> {game.home_name}
       </h2>
       <p>{signal(game)}</p>
+      {lens && (
+        <div className="pressroom-editorial-lens">
+          <div className="eyebrow">Editorial prompt</div>
+          <strong>{lens.title}</strong>
+          <p>{lens.body}</p>
+        </div>
+      )}
       <dl>
         <div><dt>Projected score</dt><dd>{game.away_name} {fmt(p.away_score, 1)} · {game.home_name} {fmt(p.home_score, 1)}</dd></div>
         <div><dt>Home win probability</dt><dd>{fmt(p.home_win_probability * 100, 1)}%</dd></div>
