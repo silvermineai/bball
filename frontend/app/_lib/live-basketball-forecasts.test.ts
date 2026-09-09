@@ -45,6 +45,20 @@ describe("live basketball forecast merge", () => {
     vi.unstubAllGlobals();
   });
 
+  it("bounds a live lookup to the requested program when a query is supplied", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ total: 0, page_size: 100, rows: [] }),
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, query: "  Duke  " })).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&q=Duke",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes live scorecard comparisons by game ID", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,

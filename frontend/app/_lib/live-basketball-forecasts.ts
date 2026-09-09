@@ -30,14 +30,17 @@ type LiveScorecardResponse = {
 
 export async function loadLiveBasketballForecasts(
   signal?: AbortSignal,
-  options: { maxPages?: number; model?: string } = {},
+  options: { maxPages?: number; model?: string; query?: string } = {},
 ) {
   const modelQuery =
     options.model && options.model !== "latest"
       ? `&model=${encodeURIComponent(options.model)}`
       : "";
+  const searchQuery = options.query?.trim()
+    ? `&q=${encodeURIComponent(options.query.trim())}`
+    : "";
   const firstResponse = await fetch(
-    `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0${modelQuery}`,
+    `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0${modelQuery}${searchQuery}`,
     { signal },
   );
   if (!firstResponse.ok) throw new Error("Live matchup forecasts unavailable.");
@@ -49,7 +52,7 @@ export async function loadLiveBasketballForecasts(
   const additional = await Promise.all(
     Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
       fetch(
-        `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}${modelQuery}`,
+        `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}${modelQuery}${searchQuery}`,
         { signal },
       ).then((response) => {
         if (!response.ok) throw new Error("Live matchup forecasts unavailable.");

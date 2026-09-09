@@ -4,9 +4,9 @@ import { getScoutIndex, getScoutProfile } from "../../../_lib/scouting-data";
 import { date, fmt, signed } from "../../../_lib/format";
 import { getBasketball, getRecruiting, getRosters } from "../../../_lib/basketball-data";
 import { buildRosterLabRows } from "../../../_lib/roster-readiness";
-import BasketballCard from "../../../_components/BasketballCard";
 import Dossier from "./Dossier";
 import ProgramRecruiting from "./ProgramRecruiting";
+import LiveProgramSchedule from "./LiveProgramSchedule";
 export function generateStaticParams() {
   return getScoutIndex().teams.map((t) => ({ id: t.id }));
 }
@@ -129,17 +129,7 @@ export default async function Page({
             Full published slate →
           </Link>
         </div>
-        {p.upcoming.length ? (
-          <div className="match-grid">
-            {p.upcoming.slice(0, 3).map((g) => (
-              <BasketballCard key={g.id} game={g} />
-            ))}
-          </div>
-        ) : (
-          <p className="empty">
-            No upcoming games for this program in the partial schedule.
-          </p>
-        )}
+        <LiveProgramSchedule initialGames={p.upcoming} teamId={id} teamName={p.name} />
       </section>
       <section className="section paper-panel">
         <h2>Read the evidence correctly.</h2>
