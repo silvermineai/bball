@@ -25,8 +25,10 @@ export type RoleSummary = {
   priorMinutes: number;
   returningMinutes: number;
   incomingMinutes: number;
+  unclassifiedMinutes: number;
   returningShare: number | null;
   incomingShare: number | null;
+  unclassifiedShare: number | null;
   topPlayers: BBRoster[];
 };
 
@@ -110,14 +112,17 @@ export function buildRoleSummaries(players: BBRoster[], teamId: string): RoleSum
     const priorMinutes = rows.reduce((sum, row) => sum + (row.prior_production?.minutes || 0), 0);
     const returningMinutes = rows.reduce((sum, row) => sum + (row.status === "same_program" ? row.prior_production?.minutes || 0 : 0), 0);
     const incomingMinutes = rows.reduce((sum, row) => sum + (row.status === "different_program" ? row.prior_production?.minutes || 0 : 0), 0);
+    const unclassifiedMinutes = Math.max(0, priorMinutes - returningMinutes - incomingMinutes);
     return {
       role,
       listed: rows.length,
       priorMinutes,
       returningMinutes,
       incomingMinutes,
+      unclassifiedMinutes,
       returningShare: priorMinutes > 0 ? returningMinutes / priorMinutes : null,
       incomingShare: priorMinutes > 0 ? incomingMinutes / priorMinutes : null,
+      unclassifiedShare: priorMinutes > 0 ? unclassifiedMinutes / priorMinutes : null,
       topPlayers: [...rows].sort((a, b) => (b.prior_production?.minutes || 0) - (a.prior_production?.minutes || 0)).slice(0, 3),
     };
   });

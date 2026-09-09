@@ -30,6 +30,13 @@ describe("recruiting fit", () => {
       player({ team_id: "target", position: "C", status: "same_program", prior_production: { games: 20, minutes: 600, mpg: 30, ppg: 10, rpg: 8, apg: 2, teams: ["T"] } }),
       player({ team_id: "target", position: "C", status: "different_program", prior_production: { games: 20, minutes: 300, mpg: 15, ppg: 6, rpg: 4, apg: 1, teams: ["X"] } }),
     ], "target");
-    expect(result.find((row) => row.role === "big")).toMatchObject({ listed: 2, priorMinutes: 900, returningMinutes: 600, incomingMinutes: 300, returningShare: 2 / 3, incomingShare: 1 / 3 });
+    expect(result.find((row) => row.role === "big")).toMatchObject({ listed: 2, priorMinutes: 900, returningMinutes: 600, incomingMinutes: 300, unclassifiedMinutes: 0, returningShare: 2 / 3, incomingShare: 1 / 3, unclassifiedShare: 0 });
+  });
+
+  it("keeps ambiguous workload visible instead of assigning it to movement", () => {
+    const result = buildRoleSummaries([
+      player({ team_id: "target", position: "G", status: "ambiguous", prior_production: { games: 20, minutes: 240, mpg: 12, ppg: 6, rpg: 2, apg: 1, teams: ["T"] } }),
+    ], "target");
+    expect(result.find((row) => row.role === "guard")).toMatchObject({ priorMinutes: 240, returningMinutes: 0, incomingMinutes: 0, unclassifiedMinutes: 240, unclassifiedShare: 1 });
   });
 });
