@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { date } from "../../_lib/format";
+import { auditSourceClocks, type SourceReceipt } from "../../_lib/coverage-health";
 
 type CoverageResponse = {
   coverage: Array<{ dataset: string; rows: number }>;
-  source_receipts: Array<{ dataset: string; source_count: number; latest_source_at: string | null }>;
+  source_receipts: SourceReceipt[];
   location_validation?: {
     total: number;
     neutral: number;
@@ -141,6 +142,8 @@ export default function CoverageLive() {
   const footballLabel = (dataset: string) => dataset === "games" ? "Games" : `${dataset.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())} rows`;
   const basketballFreshness = data ? freshness(data.source_receipts) : null;
   const footballFreshness = football ? freshness(football.source_receipts) : null;
+  const basketballClockAudit = data ? auditSourceClocks(data.source_receipts) : null;
+  const footballClockAudit = football ? auditSourceClocks(football.source_receipts) : null;
   const basketballModel = basketballForecast?.models?.[0];
   const footballModel = footballForecast?.models?.[0];
   return (
@@ -178,10 +181,14 @@ export default function CoverageLive() {
             {rows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{labels[row.dataset]}</span></div>)}
           </div><div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
-              <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th></tr></thead>
-              <tbody>{data.source_receipts.map((receipt) => <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td></tr>)}</tbody>
+              <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th><th>Status</th></tr></thead>
+              <tbody>{data.source_receipts.map((receipt) => {
+                const ageHours = receipt.latest_source_at ? Math.max(0, (Date.now() - Date.parse(receipt.latest_source_at)) / 3_600_000) : null;
+                const status = ageHours == null || !Number.isFinite(ageHours) ? "Missing clock" : ageHours > 168 ? "Stale" : "Within 7 days";
+                return <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
+              })}</tbody>
             </table>
-          </div>{career && <div className="paper-panel" style={{ marginTop: 20 }}>
+          </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{career && <div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Historical player archive / D1</div>
             <h3>{career.seasons?.length?.toLocaleString() ?? "—"} source seasons connected.</h3>
             <div className="raw-stat-grid">
@@ -241,7 +248,7 @@ export default function CoverageLive() {
             <h3>{footballFreshness?.label}</h3>
             <p className="note">{footballFreshness?.detail} This describes the newest retained source receipt, not statistical completeness or game availability.</p>
             <span className="status-pill">{footballFreshness?.tone === "fresh" ? "Within 48 hours" : footballFreshness?.tone === "recent" ? "Within 7 days" : footballFreshness?.tone === "stale" ? "Older than 7 days" : "Clock unavailable"}</span>
-          </div></>}
+          </div>{footballClockAudit && (footballClockAudit.stale.length || footballClockAudit.missing.length) ? <p className="note" role="status">Football dataset clocks needing review: {[...(footballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(footballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}</>}
           <p className="note">Counts are remote table rows, not deduplicated people. Source receipts identify the publisher edition; unresolved rows and name-attributed event records remain visible for review.</p>
         </>
       )}
