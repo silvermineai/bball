@@ -186,6 +186,8 @@ jobs:
         # Deployment success only proves that assets uploaded. Exercise the
         # public D1-backed route as well so a schema/query regression cannot
         # leave the coverage desk returning an HTTP 500 after a green deploy.
+        env:
+          REFRESH_SPORT: ${{ inputs.sport || 'both' }}
         run: |
           curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
@@ -257,6 +259,63 @@ jobs:
               raise SystemExit('NCAA leaderboard metadata is missing a division')
           print('Production NCAA leaderboard metadata smoke test passed')
           PY
+
+          case "$REFRESH_SPORT" in
+            football|both)
+              curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+                -H 'Cache-Control: no-cache' \
+                'https://bball.silvermine.dev/api/football/coverage?workflow_smoke=1' \
+                -o /tmp/football-coverage.json
+              curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+                -H 'Cache-Control: no-cache' \
+                'https://bball.silvermine.dev/api/football/source-stats?meta=1&workflow_smoke=1' \
+                -o /tmp/football-source-meta.json
+              curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+                -H 'Cache-Control: no-cache' \
+                'https://bball.silvermine.dev/api/football/events?dataset=defense&season=2025&sort=sacks&positive=1&workflow_smoke=1' \
+                -o /tmp/football-events.json
+              curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+                -H 'Cache-Control: no-cache' \
+                'https://bball.silvermine.dev/api/football/research/forecasts?season=2026&status=upcoming&limit=1&workflow_smoke=1' \
+                -o /tmp/football-forecasts.json
+              python - <<'PY'
+          import json
+          from pathlib import Path
+
+          coverage = json.loads(Path('/tmp/football-coverage.json').read_text())
+          entries = {row.get('dataset'): row.get('rows') for row in coverage.get('coverage', [])}
+          if entries.get('games', 0) <= 0 or entries.get('box', 0) <= 0:
+              raise SystemExit('football coverage has no game or box rows')
+          if not isinstance(coverage.get('source_receipts'), list) or not coverage['source_receipts']:
+              raise SystemExit('football coverage has no source receipts')
+
+          source_meta = json.loads(Path('/tmp/football-source-meta.json').read_text())
+          if 2026 not in source_meta.get('seasons', []):
+              raise SystemExit('football source metadata is missing the current season')
+          if not isinstance(source_meta.get('datasets'), list) or not source_meta['datasets']:
+              raise SystemExit('football source metadata has no datasets')
+
+          events = json.loads(Path('/tmp/football-events.json').read_text())
+          if events.get('dataset') != 'defense' or events.get('season') != 2025:
+              raise SystemExit('football events smoke has an unexpected edition')
+          if not events.get('edition') or not isinstance(events.get('rows'), list):
+              raise SystemExit('football events smoke has an invalid bounded page')
+          if events.get('total', 0) <= 0:
+              raise SystemExit('football events smoke has no positive sacks')
+
+          forecasts = json.loads(Path('/tmp/football-forecasts.json').read_text())
+          if forecasts.get('season') != 2026 or forecasts.get('status') != 'upcoming':
+              raise SystemExit('football forecast response has an unexpected season or status')
+          if forecasts.get('total', 0) <= 0 or not isinstance(forecasts.get('rows'), list):
+              raise SystemExit('football forecast response has no upcoming rows')
+          for row in forecasts['rows']:
+              for field in ('game_id', 'model_id', 'starts_at', 'home_id', 'away_id', 'prediction'):
+                  if row.get(field) in (None, ''):
+                      raise SystemExit(f'football forecast row is missing {field}')
+          print('Production football coverage, source, event and forecast smoke tests passed')
+          PY
+              ;;
+          esac
 
       - name: Record publication summary
         run: |
