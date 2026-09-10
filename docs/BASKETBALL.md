@@ -160,7 +160,7 @@ The basketball landing page also reports the live scorecard’s qualifying quote
 ## Remaining full-goal work
 
 - Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.
-- Expand historical player-game seasons and add more possession and location validation.
+- Expand the public game-level player archive beyond the three recent seasons and add more possession and location validation.
 - Extend the roster challenger across additional dated transitions before considering any roster feature for the primary forecast. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Enrich major-game editorial analysis beyond generated statistical previews; the immutable reading archive now retains each generated basketball and football brief plus its supporting release files.
 - Monitor scheduled refresh freshness against expected source coverage and investigate any failed publication run.
