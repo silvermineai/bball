@@ -10,20 +10,35 @@ type ScorecardResponse = {
   market_observations?: number;
 };
 
+type MarketMetadata = {
+  sport?: string;
+  total?: number;
+  pregame?: number;
+  provider_capabilities?: Array<{ provider?: string }>;
+};
+
 export default function LiveBasketballMarketStatus() {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
+  const [archive, setArchive] = useState<MarketMetadata | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("live market scorecard unavailable");
-        return response.json() as Promise<ScorecardResponse>;
+    Promise.all([
+      fetch("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal }),
+      fetch("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal }),
+    ])
+      .then(async ([scorecardResponse, archiveResponse]) => {
+        if (!scorecardResponse.ok || !archiveResponse.ok) throw new Error("live market data unavailable");
+        return Promise.all([
+          scorecardResponse.json() as Promise<ScorecardResponse>,
+          archiveResponse.json() as Promise<MarketMetadata>,
+        ]);
       })
-      .then((payload) => {
+      .then(([scorecardPayload, archivePayload]) => {
         if (!controller.signal.aborted) {
-          setScorecard(payload);
+          setScorecard(scorecardPayload);
+          setArchive(archivePayload);
           setStatus("live");
         }
       })
@@ -39,7 +54,7 @@ export default function LiveBasketballMarketStatus() {
     <p className="note" role="status">
       {status === "live" && scorecard
         ? <>
-            Live market bridge: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. Quotes require an authorized provider clock, exact participants and a pre-tip capture. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
+            Live market bridge: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable connector{archive?.provider_capabilities?.length === 1 ? "" : "s"}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. Quotes require an authorized provider clock, exact participants and a pre-tip capture. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
           </>
         : status === "fallback"
           ? <>Live market scorecard unavailable; the retained market archive remains available. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link></>
