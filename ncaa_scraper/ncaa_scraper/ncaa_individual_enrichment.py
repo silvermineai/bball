@@ -26,8 +26,9 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def box_assist_totals(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[float, int]]:
-    totals: dict[str, float] = defaultdict(float)
+def box_player_aggregates(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[dict[str, float], int]]:
+    """Aggregate exact-ID box totals and distinct source contests per player."""
+    totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     contests: dict[str, set[str]] = defaultdict(set)
     for player_id, contest_id, payload in conn.execute(
         "SELECT player_id,contest_id,stats_json FROM bb_ncaa_player_box WHERE season=?",
@@ -37,18 +38,36 @@ def box_assist_totals(conn: sqlite3.Connection, season: int = 2026) -> dict[str,
             continue
         try:
             stats = json.loads(payload)
-            assists = stats.get("ast")
-            value = float(assists) if assists is not None else None
-        except (TypeError, ValueError, json.JSONDecodeError):
-            value = None
-        if value is None:
+        except (TypeError, json.JSONDecodeError):
             continue
-        totals[str(player_id)] += value
-        contests[str(player_id)].add(str(contest_id))
+        if not isinstance(stats, dict):
+            continue
+        pid = str(player_id)
+        found = False
+        for key, value in stats.items():
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if numeric != numeric or numeric in (float("inf"), float("-inf")):
+                continue
+            totals[pid][key] += numeric
+            found = True
+        if found:
+            contests[pid].add(str(contest_id))
     return {
-        player_id: (total, len(contests[player_id]))
+        player_id: (dict(total), len(contests[player_id]))
         for player_id, total in totals.items()
         if contests[player_id]
+    }
+
+
+def box_assist_totals(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[float, int]]:
+    """Return exact-ID assist totals and distinct contest counts."""
+    return {
+        player_id: (total.get("ast", 0.0), contests)
+        for player_id, (total, contests) in box_player_aggregates(conn, season).items()
+        if "ast" in total
     }
 
 
@@ -61,56 +80,93 @@ def box_apg(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[flo
     }
 
 
+DERIVED_FIELDS = (
+    "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+    "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+    "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+)
+
+
+def derived_values(total: dict[str, float], contests: int) -> dict[str, float]:
+    """Map box totals to the national release's rate and total field names."""
+    games = float(contests)
+    values: dict[str, float] = {}
+    direct = {
+        "pts": "pts", "ast": "ast", "stl": "stl", "blk": "blk", "tov": "tov",
+        "fgm": "fgm", "fga": "fga", "three_fgm": "tpm", "three_fga": "tpa",
+        "ftm": "ftm", "fta": "fta",
+    }
+    for field, source in direct.items():
+        if source in total:
+            values[field] = total[source]
+    if "orb" in total or "drb" in total:
+        values["reb"] = total.get("orb", 0.0) + total.get("drb", 0.0)
+    if games:
+        for field, source in (
+            ("ppg", "pts"), ("rpg", "reb"), ("apg", "ast"), ("spg", "stl"),
+            ("bpg", "blk"), ("threes_pg", "three_fgm"),
+        ):
+            if source in values:
+                values[field] = values[source] / games
+        if "mins" in total:
+            values["mpg"] = total["mins"] / games
+    if values.get("fga") and "fgm" in values:
+        values["fg_pct"] = values["fgm"] / values["fga"] * 100
+    if values.get("three_fga") and "three_fgm" in values:
+        values["three_pct"] = values["three_fgm"] / values["three_fga"] * 100
+    if values.get("fta") and "ftm" in values:
+        values["ft_pct"] = values["ftm"] / values["fta"] * 100
+    if values.get("tov") and "ast" in values:
+        values["ast_to"] = values["ast"] / values["tov"]
+    return values
+
+
 def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, season: int = 2026) -> dict:
     if release.get("schema_version") not in (1, 2) or release.get("season") != season:
         raise ValueError("Unsupported NCAA individual release")
-    lookup = box_assist_totals(conn, season)
+    lookup = box_player_aggregates(conn, season)
     result = copy.deepcopy(release)
     previous_supplements = release.get("supplements") if isinstance(release.get("supplements"), dict) else {}
     previous_apg = previous_supplements.get("apg") if isinstance(previous_supplements.get("apg"), dict) else {}
     previous_ast = previous_supplements.get("ast") if isinstance(previous_supplements.get("ast"), dict) else {}
-    supplemented_apg = 0
-    supplemented_ast = 0
-    division_counts: dict[str, int] = defaultdict(int)
+    previous_box = previous_supplements.get("box_derived") if isinstance(previous_supplements.get("box_derived"), dict) else {}
+    previous_box_values = previous_box.get("values") if isinstance(previous_box.get("values"), dict) else {}
+    supplemented: dict[str, int] = defaultdict(int)
+    division_ids: set[str] = set()
     for player in result.get("players", []):
         player_id = str(player.get("player_id", ""))
         value = lookup.get(player_id)
         if value is None:
             continue
-        total_assists, contests = value
-        if player.get("apg") is None:
-            player["apg"] = round(total_assists / contests, 6)
-            supplemented_apg += 1
-        if player.get("ast") is None:
-            player["ast"] = round(total_assists)
-            supplemented_ast += 1
-        if player.get("apg") is not None:
-            division_counts[str(player.get("division"))] += 1
+        total, contests = value
+        derived = derived_values(total, contests)
+        division_ids.add(str(player.get("division")))
+        for field in DERIVED_FIELDS:
+            if player.get(field) is not None or field not in derived:
+                continue
+            numeric = derived[field]
+            player[field] = round(numeric) if field in {"pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"} else round(numeric, 6)
+            supplemented[field] += 1
     coverage = result.setdefault("coverage", {})
     divisions = coverage.setdefault("divisions", {})
-    for division, count in division_counts.items():
+    for division in division_ids:
         if division in divisions:
-            divisions[division]["apg"] = sum(
-                player.get("apg") is not None
-                for player in result["players"]
-                if str(player.get("division")) == division
-            )
-            divisions[division]["ast"] = sum(
-                player.get("ast") is not None
-                for player in result["players"]
-                if str(player.get("division")) == division
-            )
-    derived_apg_values = sum(
-        player.get("apg") is not None and str(player.get("player_id", "")) in lookup
-        for player in result.get("players", [])
-    )
-    derived_ast_values = sum(
-        player.get("ast") is not None and str(player.get("player_id", "")) in lookup
-        for player in result.get("players", [])
-    )
+            for field in DERIVED_FIELDS:
+                divisions[division][field] = sum(
+                    player.get(field) is not None
+                    for player in result["players"]
+                    if str(player.get("division")) == division
+                )
+    box_values = {
+        field: supplemented[field] or previous_box_values.get(field, 0) or sum(
+            player.get(field) is not None and str(player.get("player_id", "")) in lookup
+            for player in result.get("players", [])
+        )
+        for field in DERIVED_FIELDS
+    }
     result["supplements"] = {
         "apg": {
-            "values": supplemented_apg or previous_apg.get("values", 0) or derived_apg_values,
+            "values": supplemented["apg"] or previous_apg.get("values", 0) or box_values["apg"],
             "season": season,
             "dataset": "ncaa_mbb_player_box",
             "basis": "sum of source assists divided by distinct source contests",
@@ -120,13 +176,23 @@ def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, seaso
             "generated_at": utcnow(),
         },
         "ast": {
-            "values": supplemented_ast or previous_ast.get("values", 0) or derived_ast_values,
+            "values": supplemented["ast"] or previous_ast.get("values", 0) or box_values["ast"],
             "season": season,
             "dataset": "ncaa_mbb_player_box",
             "basis": "sum of source assists across distinct source contests",
             "source_sha256": receipt.get("sha256"),
             "source_url": receipt.get("url"),
             "publisher_rank": "not supplied; values are descriptive derived totals",
+            "generated_at": utcnow(),
+        },
+        "box_derived": {
+            "values": box_values,
+            "season": season,
+            "dataset": "ncaa_mbb_player_box",
+            "basis": "exact NCAA player IDs; totals summed across source contests and rates divided by distinct source contests",
+            "source_sha256": receipt.get("sha256"),
+            "source_url": receipt.get("url"),
+            "publisher_rank": "not supplied for derived values; retained publisher values and ranks are never overwritten",
             "generated_at": utcnow(),
         }
     }
@@ -142,8 +208,7 @@ def main() -> None:
         enriched = enrich_release(release, conn, receipt)
     PUBLIC.write_text(json.dumps(enriched, ensure_ascii=False, separators=(",", ":")) + "\n")
     print(json.dumps({
-        "supplemented_apg": enriched["supplements"]["apg"]["values"],
-        "supplemented_ast": enriched["supplements"]["ast"]["values"],
+        "supplemented_fields": enriched["supplements"]["box_derived"]["values"],
         "source_sha256": receipt.get("sha256"),
     }))
 

@@ -124,6 +124,13 @@ def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int
     d1_ast = divisions["1"].get("ast")
     if not isinstance(d1_ast, int) or d1_ast <= 0:
         raise ValueError("NCAA leader archive has no Division I total-assist values")
+    required_stats = (
+        "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+        "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+        "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+    )
+    if any(not isinstance(divisions["1"].get(stat), int) or divisions["1"][stat] <= 0 for stat in required_stats):
+        raise ValueError("NCAA leader archive has incomplete Division I box-derived coverage")
     return identified, entries, d1_apg, d1_ast
 
 

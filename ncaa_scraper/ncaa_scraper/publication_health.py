@@ -65,7 +65,12 @@ def _season_snapshot(release: str, payload: dict) -> dict:
 
 
 def _ncaa_individual_health(payload: dict) -> dict:
-    """Require exact-ID APG and total-assist supplements used by the live leaderboard."""
+    """Require exact-ID assist supplements and the complete D1 box-derived field set."""
+    box_fields = (
+        "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+        "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+        "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+    )
     supplements = payload.get("supplements")
     apg = supplements.get("apg") if isinstance(supplements, dict) else None
     ast = supplements.get("ast") if isinstance(supplements, dict) else None
@@ -78,6 +83,9 @@ def _ncaa_individual_health(payload: dict) -> dict:
     ast_source_hash = ast.get("source_sha256") if isinstance(ast, dict) else None
     ast_values = ast.get("values") if isinstance(ast, dict) else None
     d1_ast_values = d1.get("ast") if isinstance(d1, dict) else None
+    box = supplements.get("box_derived") if isinstance(supplements, dict) else None
+    box_values = box.get("values") if isinstance(box, dict) else None
+    box_source_hash = box.get("source_sha256") if isinstance(box, dict) else None
     if (
         not isinstance(apg, dict)
         or not isinstance(values, int)
@@ -99,14 +107,29 @@ def _ncaa_individual_health(payload: dict) -> dict:
         or not isinstance(ast.get("basis"), str)
         or not isinstance(ast_source_hash, str)
         or not re.fullmatch(r"[a-f0-9]{64}", ast_source_hash)
+        or not isinstance(box, dict)
+        or not isinstance(box_values, dict)
+        or any(
+            not isinstance(box_values.get(field), int)
+            or isinstance(box_values.get(field), bool)
+            or box_values[field] <= 0
+            or not isinstance(d1.get(field), int)
+            or isinstance(d1.get(field), bool)
+            or d1[field] <= 0
+            for field in box_fields
+        )
+        or not isinstance(box.get("basis"), str)
+        or not isinstance(box_source_hash, str)
+        or not re.fullmatch(r"[a-f0-9]{64}", box_source_hash)
     ):
-        raise ValueError("basketball/ncaa-individual.json has no valid exact-ID APG/AST supplements")
+        raise ValueError("basketball/ncaa-individual.json has incomplete exact-ID box-derived supplements")
     return {
         "release": "basketball/ncaa-individual.json#apg-supplement",
         "supplemented_values": values,
         "division_i_values": d1_values,
         "supplemented_ast_values": ast_values,
         "division_i_ast_values": d1_ast_values,
+        "box_derived_fields": len(box_fields),
         "source_sha256": source_hash,
     }
 

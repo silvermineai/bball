@@ -125,6 +125,8 @@ export default function NCAAIndividual() {
   const sourceCoverage = liveMeta?.coverage || data?.coverage;
   const apgSupplement = data?.supplements?.apg;
   const astSupplement = data?.supplements?.ast;
+  const boxDerivedSupplement = data?.supplements?.box_derived;
+  const boxDerivedCount = boxDerivedSupplement?.values?.[stat];
   const divisionCount = division === "all"
     ? Object.values(sourceCoverage?.divisions || {}).reduce((sum, d) => sum + d.players, 0)
     : sourceCoverage?.divisions[division]?.players || 0;
@@ -175,6 +177,12 @@ export default function NCAAIndividual() {
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Total assists uses an exact-ID Division I supplement.</strong>
             <p>{astSupplement.values.toLocaleString()} Division I values for {astSupplement.season - 1}–{String(astSupplement.season).slice(-2)} are derived from <em>{astSupplement.dataset}</em>: {astSupplement.basis}. {astSupplement.publisher_rank}. <a href={astSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+          </div>
+        )}
+        {stat !== "apg" && stat !== "ast" && boxDerivedSupplement && boxDerivedCount && (
+          <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
+            <strong>{ncaaStatLabels[stat]} includes an exact-ID Division I supplement.</strong>
+            <p>{boxDerivedCount.toLocaleString()} missing source values for {boxDerivedSupplement.season - 1}–{String(boxDerivedSupplement.season).slice(-2)} are filled from <em>{boxDerivedSupplement.dataset}</em>: {boxDerivedSupplement.basis}. {boxDerivedSupplement.publisher_rank}. <a href={boxDerivedSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
           </div>
         )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (

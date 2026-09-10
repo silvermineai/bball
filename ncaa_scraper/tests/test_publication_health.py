@@ -131,8 +131,13 @@ class PublicationHealthTest(unittest.TestCase):
             self.assertIn("history/index.json", str(error.exception))
 
     def test_ncaa_individual_requires_exact_id_assist_supplements(self):
+        box_fields = (
+            "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+            "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+            "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+        )
         payload = {
-            "coverage": {"divisions": {"1": {"apg": 1791, "ast": 1791}}},
+            "coverage": {"divisions": {"1": {"apg": 1791, "ast": 1791, **{field: 1791 for field in box_fields}}}},
             "supplements": {
                 "apg": {
                     "values": 1791,
@@ -144,13 +149,18 @@ class PublicationHealthTest(unittest.TestCase):
                     "basis": "sum of source assists across distinct source contests",
                     "source_sha256": "a" * 64,
                 },
+                "box_derived": {
+                    "values": {field: 1 for field in box_fields},
+                    "basis": "exact NCAA player IDs",
+                    "source_sha256": "a" * 64,
+                },
             },
         }
         report = _ncaa_individual_health(payload)
         self.assertEqual(report["division_i_values"], 1791)
         self.assertEqual(report["division_i_ast_values"], 1791)
         payload["supplements"]["apg"]["source_sha256"] = "bad"
-        with self.assertRaisesRegex(ValueError, "exact-ID APG/AST"):
+        with self.assertRaisesRegex(ValueError, "exact-ID box-derived"):
             _ncaa_individual_health(payload)
 
     def test_basketball_requires_matching_ncaa_season(self):
