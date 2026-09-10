@@ -12,7 +12,9 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from urllib.error import URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -102,23 +104,63 @@ def fetch_feed(feed_url: str = FEED_URL, *, timeout: int = 30) -> bytes:
         return response.read()
 
 
-def build_release(*, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
+def build_release(
+    *,
+    feeds: tuple[dict, ...] = FEEDS,
+    limit: int = 40,
+    previous_articles: Sequence[dict] = (),
+    fetcher: Callable[[str], bytes] | None = None,
+) -> dict:
     started = time.time()
     articles: list[dict] = []
+    feed_errors: list[dict[str, object]] = []
+    fetch = fetcher or fetch_feed
     for index, feed in enumerate(feeds):
         if index:
             time.sleep(1.0)
-        articles.extend(
-            parse_rss(
-                fetch_feed(str(feed["url"])),
-                feed_url=str(feed["url"]),
-                publisher=str(feed["publisher"]),
-                sport=str(feed["sport"]),
+        publisher = str(feed["publisher"])
+        sport = str(feed["sport"])
+        feed_url = str(feed["url"])
+        try:
+            parsed = parse_rss(
+                fetch(feed_url),
+                feed_url=feed_url,
+                publisher=publisher,
+                sport=sport,
             )
-        )
+        except (ET.ParseError, OSError, URLError, TimeoutError) as error:
+            # A transient empty or blocked feed must not erase a previously
+            # published source edition. Keep the source-specific rows and
+            # expose the failure in release metadata so the stale boundary is
+            # visible to operators and readers.
+            parsed = [
+                article
+                for article in previous_articles
+                if article.get("publisher") == publisher
+                and article.get("sport") == sport
+            ]
+            feed_errors.append(
+                {
+                    "publisher": publisher,
+                    "url": feed_url,
+                    "error": type(error).__name__,
+                    "fallback_articles": len(parsed),
+                }
+            )
+        articles.extend(parsed)
+    if feed_errors and not articles:
+        raise RuntimeError("All publisher feeds failed and no prior release is available")
+    # A source can legitimately appear in both a retained release and a
+    # successful refresh. Keep the newest copy of each stable feed identity.
+    deduped: dict[str, dict] = {}
+    for article in articles:
+        article_id = str(article.get("id") or "")
+        if article_id:
+            deduped[article_id] = article
+    articles = list(deduped.values())
     articles.sort(key=lambda article: article["published"], reverse=True)
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    return {
+    release = {
         "schema_version": 2,
         "generated_at": now,
         "feeds": list(feeds),
@@ -130,10 +172,27 @@ def build_release(*, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
             "elapsed_seconds": round(time.time() - started, 3),
         },
     }
+    if feed_errors:
+        release["attribution"]["feed_errors"] = feed_errors
+    return release
 
 
 def write_release(output: Path = DEFAULT_OUTPUT, *, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
-    release = build_release(feeds=feeds, limit=limit)
+    previous_articles: Sequence[dict] = ()
+    if output.exists():
+        try:
+            previous = json.loads(output.read_text())
+            if isinstance(previous, dict) and isinstance(previous.get("articles"), list):
+                previous_articles = [item for item in previous["articles"] if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            # A malformed prior release should not be used as a fallback;
+            # the new source payload still gets a normal parse attempt.
+            previous_articles = ()
+    release = build_release(
+        feeds=feeds,
+        limit=limit,
+        previous_articles=previous_articles,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
     return release

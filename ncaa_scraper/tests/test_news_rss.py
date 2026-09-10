@@ -1,6 +1,9 @@
+import json
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from ncaa_scraper.news_rss import parse_rss
+from ncaa_scraper.news_rss import build_release, parse_rss, write_release
 
 
 class NewsRssTests(unittest.TestCase):
@@ -35,3 +38,70 @@ class NewsRssTests(unittest.TestCase):
         </channel></rss>'''
         rows = parse_rss(payload, publisher="ESPN", sport="mens-college-basketball")
         self.assertEqual([row["headline"] for row in rows], ["Basketball portal"])
+
+    def test_failed_feed_keeps_source_specific_prior_rows(self):
+        prior = [{
+            "id": "old-ncaa",
+            "publisher": "NCAA.com",
+            "sport": "mens-college-basketball",
+            "headline": "Prior NCAA headline",
+            "description": "Prior summary",
+            "published": "2026-09-01T00:00:00Z",
+            "link": "https://www.ncaa.com/news/old",
+            "categories": [],
+            "author": "",
+        }]
+
+        def empty_feed(_: str) -> bytes:
+            return b""
+
+        release = build_release(
+            feeds=(
+                {
+                    "publisher": "NCAA.com",
+                    "sport": "mens-college-basketball",
+                    "url": "https://example.test/ncaa.xml",
+                },
+            ),
+            previous_articles=prior,
+            fetcher=empty_feed,
+        )
+        self.assertEqual([row["id"] for row in release["articles"]], ["old-ncaa"])
+        self.assertEqual(release["attribution"]["feed_errors"][0]["fallback_articles"], 1)
+
+    def test_write_release_uses_prior_file_when_feed_is_empty(self):
+        prior = {
+            "schema_version": 2,
+            "generated_at": "2026-09-01T00:00:00Z",
+            "feeds": [],
+            "articles": [{
+                "id": "old",
+                "publisher": "ESPN",
+                "sport": "mens-college-basketball",
+                "headline": "Prior headline",
+                "description": "Prior summary",
+                "published": "2026-09-01T00:00:00Z",
+                "link": "https://www.espn.com/mens-college-basketball/story/old",
+                "categories": [],
+                "author": "",
+            }],
+        }
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "news.json"
+            output.write_text(json.dumps(prior))
+            # write_release uses the production fetcher, so patch it at the
+            # module boundary and restore it immediately after the assertion.
+            import ncaa_scraper.news_rss as module
+            original = module.fetch_feed
+            module.fetch_feed = lambda _: b""
+            try:
+                release = write_release(output=output, feeds=(
+                    {
+                        "publisher": "ESPN",
+                        "sport": "mens-college-basketball",
+                        "url": "https://example.test/espn.xml",
+                    },
+                ))
+            finally:
+                module.fetch_feed = original
+        self.assertEqual(release["articles"][0]["id"], "old")
