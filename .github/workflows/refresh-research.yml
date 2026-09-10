@@ -91,10 +91,22 @@ jobs:
       - name: Refresh robots-permitted NCAA national player snapshots
         # Scheduled runs keep the source snapshot current when the publisher
         # permits crawling. Manual football-only runs stay opt-in so they do
-        # not spend time on an unrelated NCAA release.
+        # not spend time on an unrelated NCAA release. If the publisher's
+        # robots endpoint cannot be verified, fail closed and keep the cached
+        # release; an upstream policy outage must not block the other sources.
         if: ${{ (github.event_name == 'schedule' || inputs.refresh_ncaa == true) && (inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '') }}
         run: |
-          python -m ncaa_scraper.ncaa_individual --divisions 1 2 3
+          set +e
+          python -m ncaa_scraper.ncaa_individual --divisions 1 2 3 > /tmp/ncaa-refresh.log 2>&1
+          status=$?
+          cat /tmp/ncaa-refresh.log
+          if [ "$status" -ne 0 ]; then
+            if grep -Eqi "robots(\.txt| policy)|cannot verify NCAA robots|no page requested|disallows this request" /tmp/ncaa-refresh.log; then
+              echo "::warning::NCAA robots policy could not be verified; retaining the cached NCAA release and continuing the publication."
+              exit 0
+            fi
+            exit "$status"
+          fi
 
       - name: Refresh permitted ESPN basketball RSS context
         # The ESPN and NCAA.com feeds provide publisher context. The refresh
