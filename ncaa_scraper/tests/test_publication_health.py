@@ -8,6 +8,7 @@ from pathlib import Path
 from ncaa_scraper.publication_health import (
     _catalog_health,
     _evaluation_health,
+    _roster_snapshot_health,
     _unresolved_coverage_health,
     check_freshness,
 )
@@ -37,6 +38,18 @@ class PublicationHealthTest(unittest.TestCase):
                 for year in range(2018, 2027)
             ],
         }
+
+    def test_roster_snapshot_health_requires_three_consecutive_editions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for season, filename in ((2025, "rosters-2025.json"), (2026, "rosters-2026.json"), (2027, "rosters.json")):
+                write_release(directory, "basketball", filename, {"season": season, "players": [{"id": str(season)}], "team_summaries": [{"team_id": str(season)}]})
+            report = _roster_snapshot_health(root)
+            self.assertEqual(sorted(report["seasons"]), ["2025", "2026", "2027"])
+            (root / "frontend/public/data/basketball/rosters-2025.json").unlink()
+            with self.assertRaises(ValueError) as error:
+                _roster_snapshot_health(root)
+            self.assertIn("rosters-2025.json", str(error.exception))
 
     def test_selected_sport_passes_timestamp_and_shape_checks(self):
         with tempfile.TemporaryDirectory() as directory:

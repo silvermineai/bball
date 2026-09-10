@@ -186,6 +186,22 @@ def _unresolved_coverage_health(
     return {"release": relative, "generated_at": generated, "groups": len(rows), "rows": total, "rows_with_observed_stats": observed}
 
 
+def _roster_snapshot_health(root: Path) -> dict:
+    """Validate the consecutive source roster editions used by recruiting views."""
+    snapshots = {2025: "rosters-2025.json", 2026: "rosters-2026.json", 2027: "rosters.json"}
+    counts = {}
+    for season, filename in snapshots.items():
+        relative = f"frontend/public/data/basketball/{filename}"
+        payload = _read(root, relative)
+        if payload.get("season") != season:
+            raise ValueError(f"{relative} has season {payload.get('season')!r}; expected {season}")
+        players, teams = payload.get("players"), payload.get("team_summaries")
+        if not isinstance(players, list) or not isinstance(teams, list) or not players or not teams:
+            raise ValueError(f"{relative} has no usable player or team roster rows")
+        counts[str(season)] = {"players": len(players), "teams": len(teams)}
+    return {"release": "basketball/roster-snapshots", "seasons": counts}
+
+
 def _evaluation_health(root: Path) -> dict:
     """Verify the public basketball evaluation manifest and transition bundles."""
     directory = root / "frontend/public/data/basketball/evaluation"
@@ -344,6 +360,7 @@ def check_freshness(
                 ):
                     catalog = _read(root, str(Path("frontend/public/data") / relative))
                     releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
+                releases.append(_roster_snapshot_health(root))
                 releases.append(_evaluation_health(root))
         except ValueError as exc:
             errors.append(str(exc))
