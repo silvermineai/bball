@@ -59,7 +59,14 @@ export default function MovementWatch() {
         ...player,
         // The live endpoint owns the current observation. Join only the
         // historical profile by exact athlete and team IDs.
-        prior_production: published?.players.find((candidate) => candidate.id === player.id && candidate.team_id === player.team_id)?.prior_production ?? null,
+        ...(() => {
+          const profile = published?.players.find((candidate) => candidate.id === player.id && candidate.team_id === player.team_id);
+          return {
+            prior_production: profile?.prior_production ?? null,
+            position: player.position ?? profile?.position ?? null,
+            source_url: player.source_url ?? profile?.source_url ?? null,
+          };
+        })(),
       }))
       .sort((a, b) => (b.previous_minutes ?? -1) - (a.previous_minutes ?? -1))
       .slice(0, 10),
