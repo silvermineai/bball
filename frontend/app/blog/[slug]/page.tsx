@@ -754,6 +754,18 @@ function BasketballPlayerRates() {
         estimate. Pair it with minutes, games and points per 40 rather than
         treating a high share as proof of decision-making quality.
       </p>
+      <h2>Split the rebound and contact story</h2>
+      <p>
+        The historical player archive also reports offensive rebounds per game,
+        defensive rebounds per game and personal fouls per game. ORB/G helps
+        describe second-chance creation, while DRB/G describes defensive glass
+        work; both are recorded per-game rates and should be read with minutes
+        and team context. PF/G is a contact signal, not a discipline grade.
+        Missing source fields remain unavailable rather than becoming zeroes.
+        Use the <Link href="/basketball/players/">player archive</Link> and{" "}
+        <Link href="/basketball/roster-board/">roster board</Link> to sort these
+        rates and carry the source sample into a recruiting review.
+      </p>
       <h2>Keep impact in its own lane</h2>
       <p>
         ORAPM and DRAPM come from a separate NCAA lineup-impact release. The
