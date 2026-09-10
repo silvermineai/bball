@@ -711,7 +711,7 @@ app.get(
 
 const ncaaLeaderQuery = z.object({
   division: z.enum(["1", "2", "3", "all"]).default("1"),
-  stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl"]).default("ppg"),
+  stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm"]).default("ppg"),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(0).max(100).default(0),
 });

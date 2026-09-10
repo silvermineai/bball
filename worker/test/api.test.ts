@@ -764,6 +764,36 @@ describe("bball api", () => {
     });
   });
 
+  it("accepts NCAA national total-stat leaderboards", async () => {
+    const prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "42",
+            division: 1,
+            name: "Example Player",
+            team_name: "Example U",
+            stat_value: 901,
+            publisher_rank: null,
+            total_count: 1,
+            payload_json: JSON.stringify({ player_id: 42, pts: 901 }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=pts&division=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      stat: "pts",
+      rows: [{ pts: 901, publisher_rank: null }],
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(payload_json, '$.pts')"));
+  });
+
   it("rejects invalid NCAA player card IDs and seasons before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-card/not-an-id",

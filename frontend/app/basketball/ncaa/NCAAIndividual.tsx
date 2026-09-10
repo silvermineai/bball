@@ -20,7 +20,7 @@ import {
 
 const stats = Object.keys(ncaaStatLabels) as NCAAStatKey[];
 const percentStats = new Set<NCAAStatKey>(["fg_pct", "three_pct", "ft_pct"]);
-const liveStats = new Set<NCAAStatKey>(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl"]);
+const liveStats = new Set<NCAAStatKey>(stats);
 
 type LiveLeaderResponse = {
   total: number;
