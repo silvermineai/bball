@@ -7,7 +7,8 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "three_pct" | "ft_rate" | "ast_rate" | "points_poss" | "orb40" | "drb40" | "reb40" | "poss_share" | "rim_rate" | "transition_share" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "balanced_index" | "impact_index";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; steals: number; blocks: number; value: number; component_count?: number; ppg_value?: number | null; rpg_value?: number | null; apg_value?: number | null; spg_value?: number | null; bpg_value?: number | null; ts_value?: number | null; ts_denominator?: number | null; efg_value?: number | null; efg_denominator?: number | null; per40_value?: number | null; rank: number; rapm_net: number | null; orapm: number | null; drapm: number | null; off_poss: number | null; def_poss: number | null };
 type Result = { season: number; metric: Metric; direction?: "asc" | "desc"; min_games: number; min_minutes: number; min_volume: number; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[]; sources?: Array<{ dataset: string; url: string | null; fetched_at: string | null; sha256: string | null }> };
+type SourceReceipt = { dataset: string; url: string | null; fetched_at: string | null; sha256: string | null };
+type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[]; sources?: SourceReceipt[] };
 const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes", ast_to: "Assist-to-turnover ratio", stocks40: "Stocks per 40 minutes", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", three_pct: "Three-point accuracy", ft_rate: "Free-throw attempt rate", ast_rate: "Assists per recorded possession", points_poss: "Points per recorded possession", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40 minutes", poss_share: "Team possession share", rim_rate: "Rim attempt rate", transition_share: "Transition scoring share", unassisted_share: "Unassisted scoring share", rapm_net: "Net RAPM", orapm: "Offensive RAPM", drapm: "Defensive RAPM", balanced_index: "Balanced production index", impact_index: "Impact + production index" };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
@@ -93,6 +94,26 @@ export default function NcaaRankings() {
       ),
     );
   };
+  const downloadManifest = () => {
+    if (!meta) return;
+    const manifest = {
+      product: "Silvermine NCAA player rankings",
+      season: Number(season),
+      season_label: label(Number(season)),
+      metric,
+      metric_label: labels[metric],
+      qualification: { min_games: Number(minGames), min_minutes: Number(minMinutes), min_volume: Number(minVolume), position: position || null, class_year: classYear || null, query: query.trim() || null },
+      sources: meta.sources || [],
+      notes: ["Rows are descriptive source statistics.", "Exact NCAA player IDs are retained; no name-only join to ESPN identities is used.", "A source digest identifies the retained release and does not imply live roster status."],
+    };
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `ncaa-player-rankings-${season}-${metric}-manifest.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
   const downloadAll = async () => {
     if (!result || exporting) return;
     const totalPages = Math.ceil(result.total / result.page_size);
@@ -160,7 +181,7 @@ export default function NcaaRankings() {
       <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{position && !meta?.positions.includes(position) && <option value={position}>{position} · not in sample</option>}{(meta?.positions || []).map((value) => <option key={value}>{value}</option>)}</select></label>
       <label className="control"><span>CLASS</span><select value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{classYear && !meta?.classes.includes(classYear) && <option value={classYear}>{classYear} · not in sample</option>}{(meta?.classes || []).map((value) => <option key={value}>{value}</option>)}</select></label>
     </div>
-    {meta?.sources?.length ? <p className="note" style={{ marginTop: 16 }}>Source receipts for {label(Number(season))}: {meta.sources.map((source) => <span key={source.dataset}> <strong>{source.dataset.replace(/^ncaa_/, "NCAA ")}</strong> · {sourceDate(source.fetched_at)}{source.url ? <> · <a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a></> : " · release URL unavailable"}</span>)}. These timestamps describe the retained release, not live roster status.</p> : null}
+    {meta?.sources?.length ? <details className="note" style={{ marginTop: 16 }}><summary>Source receipts for {label(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Fetched (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{meta.sources.map((source) => <tr key={source.dataset}><th>{source.dataset.replace(/^ncaa_/, "NCAA ")}</th><td>{sourceDate(source.fetched_at)}</td><td><code>{source.sha256 || "digest unavailable"}</code></td><td>{source.url ? <a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "URL unavailable"}</td></tr>)}</tbody></table></div><div className="button-row" style={{ marginTop: 12 }}><button className="button secondary" type="button" onClick={downloadManifest}>Download source manifest ↓</button></div><p style={{ marginTop: 12 }}>These receipts identify the retained releases behind this board. They describe the source archive, not live roster status.</p></details> : null}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} ({result.direction === "asc" ? "lowest first" : "highest first"}) · minimum {result.min_games} games and {result.min_minutes} recorded minutes{result.min_volume ? ` · ${result.min_volume} denominator units on rate boards` : ""}. Percentile is calculated against this full qualified cohort, so it remains meaningful when you move between pages.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
