@@ -1784,8 +1784,8 @@ def export_sql(conn, path):
     return write_sql_batches(statements(), path)
 
 
-def export_ncaa_player_box_sql(conn, path, seasons=(2022, 2023, 2024, 2025, 2026)):
-    """Export five recent NCAA game-row seasons; older seasons use summaries."""
+def export_ncaa_player_box_sql(conn, path, seasons=(2021, 2022, 2023, 2024, 2025, 2026)):
+    """Export six recent NCAA game-row seasons; older seasons use summaries."""
     seasons = tuple(sorted({int(season) for season in seasons}))
     if not seasons:
         raise ValueError("At least one NCAA player-box season is required")

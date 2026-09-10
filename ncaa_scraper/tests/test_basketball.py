@@ -294,6 +294,7 @@ class BasketballIngestTests(unittest.TestCase):
             (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()
         )
         rows = [
+            (2021, "g-2", "t-2", "p-2", "2021-01-01", "Home", "Away", "Player", "{}"),
             (2022, "g-1", "t-1", "p-1", "2022-01-01", "Home", "Away", "Player", "{}"),
             (2023, "g0", "t0", "p0", "2023-01-01", "Home", "Away", "Player", "{}"),
             (2025, "g1", "t1", "p1", "2025-01-01", "Home", "Away", "Player", "{}"),
@@ -313,11 +314,13 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2024", text)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2023", text)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2022", text)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2021", text)
         self.assertIn("'2025','g1'", text)
         self.assertIn("'2026','g2'", text)
         self.assertIn("'2024','g3'", text)
         self.assertIn("'2023','g0'", text)
         self.assertIn("'2022','g-1'", text)
+        self.assertIn("'2021','g-2'", text)
 
     def test_dataset_catalog_reports_rows_and_receipt_freshness(self):
         self.conn.execute(
