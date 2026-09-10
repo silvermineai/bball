@@ -34,6 +34,10 @@ function GameCard({ game }: { game: BBGame }) {
           <div className="eyebrow">Editorial prompt</div>
           <strong>{lens.title}</strong>
           <p>{lens.body}</p>
+          <div className="eyebrow pressroom-question-label">Questions to report</div>
+          <ol>
+            {lens.questions.map((question) => <li key={question}>{question}</li>)}
+          </ol>
         </div>
       )}
       <dl>

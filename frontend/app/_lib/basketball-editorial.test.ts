@@ -29,7 +29,10 @@ const game = (margin: number, low: number, high: number, edges?: BBGame["matchup
 
 describe("basketball editorial lens", () => {
   it("opens close games with a one-possession prompt", () => {
-    expect(basketballEditorialLens(game(2.4, -12, 16))?.title).toBe("A one-possession question");
+    const lens = basketballEditorialLens(game(2.4, -12, 16));
+    expect(lens?.title).toBe("A one-possession question");
+    expect(lens?.questions).toHaveLength(3);
+    expect(lens?.questions[0]).toContain("final four minutes");
   });
 
   it("prioritizes the strongest adjusted factor when the range is narrower", () => {
@@ -40,6 +43,7 @@ describe("basketball editorial lens", () => {
     }));
     expect(lens?.title).toBe("Home owns the shot-making edge");
     expect(lens?.body).toContain("3.1 percentage points");
+    expect(lens?.questions[0]).toContain("shot-making");
   });
 
   it("does not create an angle without a forecast", () => {

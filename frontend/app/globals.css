@@ -1133,6 +1133,21 @@ th,
   line-height: 1.55;
   margin: 5px 0 0;
 }
+.pressroom-question-label {
+  margin-top: 15px;
+  padding-top: 11px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.pressroom-editorial-lens ol {
+  margin: 7px 0 0 18px;
+  padding: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.pressroom-editorial-lens li {
+  padding: 2px 0 2px 3px;
+}
 .article-card h3 {
   font-size: 22px;
   line-height: 1.2;

@@ -74,7 +74,10 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
               <p className="note">
                 {p.margin_low.toFixed(1)} to {p.margin_high.toFixed(1)} home-margin range · {p.pace.toFixed(1)} possessions per 40 minutes.
               </p>
-              {lens && <p className="journal-editorial-lens"><strong>{lens.title}.</strong> {lens.body}</p>}
+              {lens && <>
+                <p className="journal-editorial-lens"><strong>{lens.title}.</strong> {lens.body}</p>
+                <p className="note"><strong>Reporting question:</strong> {lens.questions[0]}</p>
+              </>}
               {markets[g.id]?.length ? <p className="note">
                 {markets[g.id].slice(0, 2).map((quote) => `${quote.bookmaker} ${quote.market}: ${quote.model_difference > 0 ? "+" : ""}${quote.model_difference.toFixed(1)} model difference`).join(" · ")}
               </p> : null}

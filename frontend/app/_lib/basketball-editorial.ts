@@ -10,6 +10,7 @@ const factorLabels: Record<string, string> = {
 export type BasketballEditorialLens = {
   title: string;
   body: string;
+  questions: string[];
 };
 
 /**
@@ -30,12 +31,22 @@ export function basketballEditorialLens(game: BBGame): BasketballEditorialLens |
     return {
       title: "A one-possession question",
       body: `The model has ${game.home_name} within ${Math.abs(prediction.home_margin).toFixed(1)} points of ${game.away_name}; the nominal range spans ${prediction.margin_low.toFixed(1)} to ${prediction.margin_high.toFixed(1)}. Start the preview with the late-game possessions the baseline cannot separate.`,
+      questions: [
+        "Which team can create a clean look in the final four minutes?",
+        "Which handler faces the most pressure when the pace slows?",
+        "What dated availability or roster evidence could move this outside one possession?",
+      ],
     };
   }
   if (width >= 24) {
     return {
       title: "Variance belongs in the story",
       body: `The nominal home-margin range covers ${width.toFixed(1)} points, so the forecast is a starting point for preparation rather than a script. Identify which lineup and shot-quality questions could move this game toward either edge.`,
+      questions: [
+        "Which lineup combination gives the underdog its clearest path toward the top of the range?",
+        "Can the projected favorite reproduce its best Four Factor possession against this opponent?",
+        "Which current roster or availability source should be checked before publication?",
+      ],
     };
   }
   if (factor && edge != null && Math.abs(edge) >= 0.02) {
@@ -43,10 +54,20 @@ export function basketballEditorialLens(game: BBGame): BasketballEditorialLens |
     return {
       title: `${side} owns the ${factor} edge`,
       body: `The latest adjusted Four Factor comparison favors ${side} by ${Math.abs(edge * 100).toFixed(1)} percentage points in ${factor}. Use that gap to choose the first film question, then check whether the recorded personnel can reproduce it.`,
+      questions: [
+        `How does ${side} create the ${factor} edge against this opponent?`,
+        "Which recorded personnel and lineup evidence can reproduce that advantage?",
+        "What would make the opposing defense win that possession battle instead?",
+      ],
     };
   }
   return {
     title: "Read the baseline in context",
     body: `${game.home_name} is projected at ${prediction.home_score.toFixed(1)} and ${game.away_name} at ${prediction.away_score.toFixed(1)}, with a nominal ${width.toFixed(1)}-point margin range. Pair the score with the source factors before drawing a matchup conclusion.`,
+    questions: [
+      "Which Four Factor contrast gives the first defensible story angle?",
+      "Which historical contributors need a current availability check?",
+      "Which source game, roster row or school statement should anchor the piece?",
+    ],
   };
 }
