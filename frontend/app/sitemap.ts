@@ -70,6 +70,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/methodology/",
     "/football/evaluation/",
     "/football/features/",
+    "/football/learn/",
     "/blog/",
     "/conferences/",
     "/film/",

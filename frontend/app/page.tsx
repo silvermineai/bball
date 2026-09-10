@@ -140,6 +140,9 @@ export default function Home() {
             <Link className="hero-link" href="/football/players/">
               Find a player →
             </Link>
+            <Link className="hero-link" href="/football/learn/">
+              Learn the metrics →
+            </Link>
           </div>
         </div>
         <div className="field">
