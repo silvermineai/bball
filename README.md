@@ -6,7 +6,7 @@ College sports statistics, scouting and recruiting research from Silvermine.
 
 The publication covers football and men’s college basketball with a Next.js frontend, Python bulk-data pipelines, independent forecast models and Cloudflare D1 storage. Native basketball pages now include 2026–27 forecasts, efficiency ratings, player statistics, NCAA impact rankings and roster observations.
 
-Cloudflare uses two stores: `bball-silvermine` remains the native football/scouting database, while `bball-research-v2` holds basketball research datasets, both sports’ append-only forecast ledger, market evidence and immutable brief-archive metadata. This keeps scheduled research refreshes independent of the legacy store’s size ceiling.
+Cloudflare uses three stores: `bball-silvermine` remains the native football/scouting database, `bball-research-v2` holds basketball research datasets, both sports’ append-only forecast ledger, market evidence and immutable brief-archive metadata, and `bball-ncaa-box-v1` holds the high-volume NCAA player-game archive. The Worker’s `NCAA_BOX_DB` binding keeps those 1.77 million game rows out of the main research database while preserving the same public API. This keeps scheduled research refreshes independent of the legacy stores’ size ceilings.
 
 ## Football
 
