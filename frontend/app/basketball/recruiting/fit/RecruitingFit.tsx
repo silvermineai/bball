@@ -5,7 +5,7 @@ import { useBasketballRelease } from "../../../_components/useBasketballRelease"
 import { downloadCsv, toCsv } from "../../../_lib/csv";
 import { fmt } from "../../../_lib/format";
 import type { BBRosters } from "../../../_lib/basketball-types";
-import { buildRecruitingFit, buildRoleSummaries, focusDescriptions, focusLabels, roleLabels, positionRole, type FitFocus, type FitRole, type FitTeam } from "../../../_lib/recruiting-fit";
+import { buildRecruitingFit, buildRoleSummaries, focusDescriptions, focusLabels, prioritizeRoleSummaries, roleLabels, positionRole, type FitFocus, type FitRole, type FitTeam } from "../../../_lib/recruiting-fit";
 
 const focusValueLabels: Record<FitFocus, string> = { creation: "APG", shooting: "TS%", rebounding: "RPG", defense: "SPG", workload: "Minutes" };
 const displayRole = (role: FitRole | "unknown") => role === "unknown" ? "Unknown role" : roleLabels[role];
@@ -96,6 +96,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
   const result = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes, query }) : [], [rosterData, focus, minimumMinutes, query, role, teamId]);
   const allCandidates = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes }) : [], [rosterData, focus, minimumMinutes, role, teamId]);
   const summaries = useMemo(() => rosterData ? buildRoleSummaries(rosterData.players, teamId) : [], [rosterData, teamId]);
+  const reviewQueue = useMemo(() => prioritizeRoleSummaries(summaries), [summaries]);
   const target = teams.find((team) => team.id === teamId);
   const selected = picked.map((id) => result.find((row) => row.player.id === id) || allCandidates.find((row) => row.player.id === id)).filter(Boolean);
   const reset = (fn: () => void) => { fn(); setPage(0); setPicked([]); };
@@ -135,6 +136,19 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
           <section className="section" aria-label="Selected program role room">
             <div className="section-heading"><div><div className="eyebrow">02 / Read the selected roster</div><h2>{target?.name || "Program"} role room.</h2></div><span className="note">Source-listed 2026–27 rows · prior season {rosterData.previous_season}</span></div>
             <p className="note">Prior minutes describe the matched source sample. Returning and incoming columns describe source-ID observations; unclassified minutes remain visible when the source cannot support either movement label. These rows do not infer departures, transfer transactions, eligibility or future roles.</p>
+            <div className="recruiting-review-queue" aria-label="Role review queue">
+              <div>
+                <div className="eyebrow">Recruiting triage / workload left to verify</div>
+                <h3>Start where the source leaves the most prior minutes unexplained.</h3>
+                <p>Order uses unclassified prior minutes, then total prior minutes. It identifies where to open source records first; it is not a departure estimate, roster grade or eligibility claim.</p>
+              </div>
+              <ol>
+                {reviewQueue.map((summary) => <li key={`queue-${summary.role}`}>
+                  <div><strong>{roleLabels[summary.role]}</strong><span>{Math.round(summary.unclassifiedMinutes).toLocaleString()} unclassified of {Math.round(summary.priorMinutes).toLocaleString()} prior minutes · {summary.listed} listed players</span></div>
+                  <button className="hero-link" type="button" onClick={() => { setRole(summary.role); setPage(0); }}>Open candidates →</button>
+                </li>)}
+              </ol>
+            </div>
             <div className="fit-role-grid">{summaries.map((summary) => <article className={`paper-panel ${role === summary.role ? "fit-role-active" : ""}`} key={summary.role}><div className="eyebrow">{roleLabels[summary.role]}</div><strong className="fit-role-number">{summary.listed}</strong><span>listed players</span><dl><div><dt>Prior minutes</dt><dd>{Math.round(summary.priorMinutes).toLocaleString()}</dd></div><div><dt>Returning</dt><dd>{Math.round(summary.returningMinutes).toLocaleString()} <small>{roleShare(summary.returningShare)} of role minutes</small></dd></div><div><dt>Incoming</dt><dd>{Math.round(summary.incomingMinutes).toLocaleString()} <small>{roleShare(summary.incomingShare)} of role minutes</small></dd></div><div><dt>Unclassified</dt><dd>{Math.round(summary.unclassifiedMinutes).toLocaleString()} <small>{roleShare(summary.unclassifiedShare)} of role minutes</small></dd></div></dl><p className="note">{summary.unclassifiedShare != null && summary.unclassifiedShare > 0 ? "Some role workload has no clear movement classification; verify the source record before using the split." : summary.returningShare == null ? "No matched prior workload in this role." : summary.returningShare < 0.5 ? "Thin returning workload; review the role before treating this board as a depth chart." : "Observed role workload has a majority returning share."}</p><p className="note">{summary.topPlayers.length ? summary.topPlayers.map((player) => `${player.name} · ${Math.round(player.prior_production?.minutes || 0).toLocaleString()} min`).join(" · ") : "No matched prior minutes in this role."}</p></article>)}</div>
           </section>
           <section className="section" aria-label="Recruiting candidate results">

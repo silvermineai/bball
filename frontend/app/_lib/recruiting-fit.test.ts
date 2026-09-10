@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecruitingFit, buildRoleSummaries, positionRole } from "./recruiting-fit";
+import { buildRecruitingFit, buildRoleSummaries, positionRole, prioritizeRoleSummaries } from "./recruiting-fit";
 import type { BBRoster } from "./basketball-types";
 
 const player = (patch: Partial<BBRoster>): BBRoster => ({
@@ -48,5 +48,13 @@ describe("recruiting fit", () => {
       player({ team_id: "target", position: "G", status: "ambiguous", prior_production: { games: 20, minutes: 240, mpg: 12, ppg: 6, rpg: 2, apg: 1, teams: ["T"] } }),
     ], "target");
     expect(result.find((row) => row.role === "guard")).toMatchObject({ priorMinutes: 240, returningMinutes: 0, incomingMinutes: 0, unclassifiedMinutes: 240, unclassifiedShare: 1 });
+  });
+
+  it("prioritizes the role with the most unclassified workload", () => {
+    const summaries = buildRoleSummaries([
+      player({ team_id: "target", position: "G", status: "ambiguous", prior_production: { games: 20, minutes: 300, mpg: 15, ppg: 6, rpg: 2, apg: 1, teams: ["T"] } }),
+      player({ team_id: "target", position: "C", status: "ambiguous", prior_production: { games: 20, minutes: 700, mpg: 35, ppg: 12, rpg: 8, apg: 2, teams: ["T"] } }),
+    ], "target");
+    expect(prioritizeRoleSummaries(summaries).map((summary) => summary.role)).toEqual(["big", "guard", "wing"]);
   });
 });

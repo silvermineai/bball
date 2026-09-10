@@ -132,6 +132,19 @@ export function buildRoleSummaries(players: BBRoster[], teamId: string): RoleSum
   });
 }
 
+/**
+ * Put the role with the most source-listed workload that has no clear
+ * movement classification first. This is a review queue for staff, never a
+ * departure estimate or a recruiting grade.
+ */
+export function prioritizeRoleSummaries(summaries: RoleSummary[]): RoleSummary[] {
+  return [...summaries].sort(
+    (a, b) => b.unclassifiedMinutes - a.unclassifiedMinutes
+      || b.priorMinutes - a.priorMinutes
+      || roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role),
+  );
+}
+
 export function buildRecruitingFit(
   players: BBRoster[],
   options: { teamId: string; role: FitRole; focus: FitFocus; minimumMinutes: number; query?: string },
