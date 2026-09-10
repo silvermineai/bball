@@ -60,6 +60,9 @@ export type StatKey =
 export type CareerSummary = {
   games: number;
   source_records: number;
+  starts?: number;
+  starter_reported_records?: number;
+  starter_rate?: number | null;
   totals: Record<StatKey, number | null>;
   samples: Record<StatKey, number>;
   incomplete_box_games: number;
