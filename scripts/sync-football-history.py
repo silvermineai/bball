@@ -10,6 +10,8 @@ import tarfile
 import time
 from pathlib import Path
 
+from sql_batches import is_retryable_d1_import_error
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.football import DB_PATH
@@ -97,15 +99,7 @@ def run(args):
             return subprocess.check_output(command, cwd=ROOT, text=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as error:
             output = error.output or ""
-            transient = any(
-                marker in output
-                for marker in (
-                    "Upstream service unavailable",
-                    "code: 7009",
-                    "Currently processing a long-running import",
-                    "Cancelled due to no poll() received",
-                )
-            )
+            transient = is_retryable_d1_import_error(output)
             if not transient or attempt == 4:
                 print(output, file=sys.stderr, end="")
                 raise

@@ -2,10 +2,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.sql_batches import split_sql_file
+from scripts.sql_batches import is_retryable_d1_import_error, split_sql_file
 
 
 class SqlBatchTests(unittest.TestCase):
+    def test_d1_reset_is_safe_to_retry(self):
+        self.assertTrue(
+            is_retryable_d1_import_error(
+                "ERROR: D1 DB reset because its code was updated."
+            )
+        )
+        self.assertTrue(
+            is_retryable_d1_import_error("Currently processing a long-running import")
+        )
+        self.assertFalse(is_retryable_d1_import_error("no such table: football_games"))
+
     def test_deletes_are_isolated_and_inserts_are_bounded(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

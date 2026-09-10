@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+from sql_batches import is_retryable_d1_import_error
+
 ROOT = Path(__file__).resolve().parents[1]
 if not (ROOT / ".local/football-events.sql").is_file():
     raise SystemExit("Build the football event notebook before syncing it.")
@@ -36,7 +38,7 @@ for file in ["migrations/0014_football_events.sql", "../.local/football-events.s
             errors="replace"
         ).splitlines()
         tail = "\n".join(lines[-80:])
-        retryable = "Upstream service unavailable" in tail or "code: 7009" in tail
+        retryable = is_retryable_d1_import_error(tail)
         if not retryable or attempt == 3:
             print(
                 f"Football event SQL sync failed for {file}; last log lines:",

@@ -10,6 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+from sql_batches import is_retryable_d1_import_error
+
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 NCAA_BOX_D1_DATABASE = os.getenv("NCAA_BOX_D1_DATABASE", "bball-ncaa-box-v1")
 
@@ -105,7 +107,7 @@ def run_remote_migration(args, cwd=ROOT, database_name=None):
         if result.returncode == 0:
             return
         output = (result.stdout or "") + (result.stderr or "")
-        retryable = "Upstream service unavailable" in output or "code: 7009" in output
+        retryable = is_retryable_d1_import_error(output)
         if not retryable or attempt == 3:
             raise subprocess.CalledProcessError(result.returncode, args)
         print(
@@ -156,12 +158,7 @@ def run_logged(args, log_path, cwd=ROOT):
                     file=sys.stderr,
                 )
             return
-        retryable = (
-            "Upstream service unavailable" in output
-            or "code: 7009" in output
-            or "Currently processing a long-running import" in output
-            or "Cancelled due to no poll() received" in output
-        )
+        retryable = is_retryable_d1_import_error(output)
         if retryable and attempt < max_attempts:
             delay = retry_delays[attempt - 1]
             print(

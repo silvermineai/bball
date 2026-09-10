@@ -3,6 +3,25 @@
 from pathlib import Path
 
 
+# Wrangler reports this reset after Cloudflare rolls a failed remote import
+# back to its starting bookmark. The rollback is explicitly safe to retry, so
+# keep the marker in one place for every publisher that writes D1 in batches.
+RETRYABLE_D1_IMPORT_MARKERS = (
+    "upstream service unavailable",
+    "code: 7009",
+    "currently processing a long-running import",
+    "cancelled due to no poll() received",
+    "d1 db reset because its code was updated",
+    "db reset because its code was updated",
+)
+
+
+def is_retryable_d1_import_error(output: str) -> bool:
+    """Return whether Wrangler's output describes a safe remote retry."""
+    lowered = output.lower()
+    return any(marker in lowered for marker in RETRYABLE_D1_IMPORT_MARKERS)
+
+
 def split_sql_file(source: str | Path, chunk_dir: str | Path, max_bytes: int = 900_000) -> list[Path]:
     """Split an export into bounded DELETE and INSERT statement files.
 

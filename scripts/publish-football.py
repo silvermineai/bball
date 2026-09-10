@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from sql_batches import split_sql_file
+from sql_batches import is_retryable_d1_import_error, split_sql_file
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
@@ -35,7 +35,7 @@ def run_remote_migration(args, cwd=ROOT):
         if result.returncode == 0:
             return
         output = (result.stdout or "") + (result.stderr or "")
-        retryable = "Upstream service unavailable" in output or "code: 7009" in output
+        retryable = is_retryable_d1_import_error(output)
         if not retryable or attempt == 3:
             raise subprocess.CalledProcessError(result.returncode, args)
         print(
@@ -86,12 +86,7 @@ def run_logged(args, log_path, cwd=ROOT):
                     file=sys.stderr,
                 )
             return
-        retryable = (
-            "Upstream service unavailable" in output
-            or "code: 7009" in output
-            or "Currently processing a long-running import" in output
-            or "Cancelled due to no poll() received" in output
-        )
+        retryable = is_retryable_d1_import_error(output)
         if retryable and attempt < max_attempts:
             delay = retry_delays[attempt - 1]
             print(
