@@ -218,6 +218,11 @@ export type BBRosters = {
   prior_players_not_observed: number;
   unusable_rows?: number;
   status_counts: Record<string, number>;
+  source?: {
+    url: string | null;
+    fetched_at: string | null;
+    sha256: string | null;
+  } | null;
   team_summaries?: BBRosterSummary[];
   players: BBRoster[];
 };

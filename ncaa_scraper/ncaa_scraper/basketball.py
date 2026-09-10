@@ -856,6 +856,23 @@ def roster_changes(conn, target=2027, prior_players=None):
                 "represented_prior_minutes_share": round(represented / prior_minutes, 4) if prior_minutes else None,
             }
         )
+    source = None
+    try:
+        source_row = conn.execute(
+            "SELECT receipt_json FROM bb_sources WHERE dataset='rosters' AND season=?",
+            (target,),
+        ).fetchone()
+        if source_row and source_row[0]:
+            receipt = json.loads(source_row[0])
+            if isinstance(receipt, dict):
+                source = {
+                    "url": receipt.get("url"),
+                    "fetched_at": receipt.get("fetched_at"),
+                    "sha256": receipt.get("sha256"),
+                }
+    except (sqlite3.OperationalError, TypeError, json.JSONDecodeError):
+        # Small ingest fixtures may not include the source-receipt table.
+        source = None
     return {
         "season": target,
         "previous_season": target - 1,
@@ -872,6 +889,7 @@ def roster_changes(conn, target=2027, prior_players=None):
         "status_counts": dict(Counter(p["status"] for p in observed)),
         "team_summaries": sorted(team_summaries, key=lambda p: p["team"]),
         "players": sorted(observed, key=lambda p: p["name"]),
+        "source": source,
     }
 
 

@@ -1,6 +1,6 @@
 # School announcement evidence
 
-The native `/basketball/recruiting/` board combines a linked publisher wire for national recruiting context with selected school announcements and explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings, prior-season program comparisons and recorded workload for matching prior player identities.
+The native `/basketball/recruiting/` board combines a linked publisher wire for national recruiting context with selected school announcements and explicitly reviewed links to historical college production. Its separate roster-observation view retains the unconfirmed source listings, prior-season program comparisons and recorded workload for matching prior player identities. The roster view exposes the active source release URL, retrieval clock and SHA-256, and carries those receipt fields into its observation and watch-list CSV exports.
 
 ## Coverage and claims
 

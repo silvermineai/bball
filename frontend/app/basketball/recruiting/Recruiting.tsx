@@ -146,6 +146,7 @@ export default function Recruiting() {
         })),
       }
     : data;
+  const sourceReceipt = rosterData?.source;
   const options = rosterFilterOptions(rosterData?.players || []);
   const rows = sortRosterObservations(
     filterRosterObservations(rosterData?.players || [], {
@@ -322,6 +323,22 @@ export default function Recruiting() {
             ? `${liveRosterError} Showing the bundled roster release.`
             : "Checking the live roster observation edition…"}
       </p>
+      {sourceReceipt && (sourceReceipt.url || sourceReceipt.sha256 || sourceReceipt.fetched_at) && (
+        <details className="note" style={{ marginBottom: 20 }}>
+          <summary>Source receipt for {season === "2027" ? "2026–27" : `${Number(season) - 1}–${season.slice(-2)}`} roster observations</summary>
+          <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="data-table">
+              <thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead>
+              <tbody><tr>
+                <td>{sourceReceipt.fetched_at ? new Date(sourceReceipt.fetched_at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" }) : "—"}</td>
+                <td><code>{sourceReceipt.sha256 || "—"}</code></td>
+                <td>{sourceReceipt.url ? <a href={sourceReceipt.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td>
+              </tr></tbody>
+            </table>
+          </div>
+          <p style={{ marginTop: 12 }}>This receipt identifies the source listing behind the observation view. It does not establish a commitment, transfer, eligibility or current availability decision.</p>
+        </details>
+      )}
       <p className="note" style={{ marginBottom: 20 }}>
         Production sorts use the exact prior source ID and recorded game
         averages. True shooting and effective field goal percentage stay
@@ -417,7 +434,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL"],
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -432,6 +449,9 @@ export default function Recruiting() {
                             player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
                             player.prior_production?.box_bpm,
                             player.source_url,
+                            sourceReceipt?.url,
+                            sourceReceipt?.fetched_at,
+                            sourceReceipt?.sha256,
                           ]),
                         ),
                       )
@@ -603,6 +623,9 @@ export default function Recruiting() {
                       "Height",
                       "Weight",
                       "Source URL",
+                      "Roster release URL",
+                      "Roster retrieved (UTC)",
+                      "Roster SHA-256",
                     ],
                     rows.map((p) => [
                       p.name,
@@ -638,6 +661,9 @@ export default function Recruiting() {
                       p.height,
                       p.weight,
                       p.source_url,
+                      sourceReceipt?.url,
+                      sourceReceipt?.fetched_at,
+                      sourceReceipt?.sha256,
                     ]),
                   ),
                 )}

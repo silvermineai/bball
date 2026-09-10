@@ -446,6 +446,31 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(summary["unrepresented_prior_minutes"], 0.0)
         self.assertEqual(summary["returning_minutes_share"], 1.0)
 
+    def test_roster_changes_expose_the_active_source_receipt(self):
+        self.conn.execute(
+            "INSERT INTO bb_sources VALUES (?,?,?)",
+            (
+                "rosters",
+                2027,
+                json.dumps(
+                    {
+                        "url": "https://example.test/rosters-2027.parquet",
+                        "fetched_at": "2026-09-09T00:00:00Z",
+                        "sha256": "abc123",
+                    }
+                ),
+            ),
+        )
+        board = roster_changes(self.conn)
+        self.assertEqual(
+            board["source"],
+            {
+                "url": "https://example.test/rosters-2027.parquet",
+                "fetched_at": "2026-09-09T00:00:00Z",
+                "sha256": "abc123",
+            },
+        )
+
     def test_roster_changes_exclude_team_placeholder_rows(self):
         self.conn.executemany(
             "INSERT INTO bb_rosters VALUES (?,?,?,?)",
