@@ -19,6 +19,7 @@ import type { BBDatasetCoverage } from "../_lib/basketball-types";
 import LiveBasketballForecastStatus from "../_components/LiveBasketballForecastStatus";
 import LiveBasketballRecruitingStatus from "../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballMarketStatus from "../_components/LiveBasketballMarketStatus";
+import LiveBasketballNewsStatus from "../_components/LiveBasketballNewsStatus";
 
 function getBasketballLeaders(season: number) {
   const file = path.join(
@@ -467,6 +468,7 @@ export default function Page() {
           publisher-supplied headline, summary, date and URL; the wire is not a
           transaction or availability ledger.
         </p>
+        <LiveBasketballNewsStatus />
         <div className="article-grid">
           {news.map((article) => <article className="article-card" key={article.id}>
             <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"}</div>
