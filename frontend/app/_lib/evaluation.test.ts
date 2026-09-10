@@ -73,8 +73,9 @@ describe("same-game model evaluation", () => {
     ).toBe(true);
   });
   it("publishes separate independent season transitions", () => {
-    expect(summary.season_results).toHaveLength(2);
+    expect(summary.season_results).toHaveLength(3);
     expect(summary.season_results?.map((result) => result.season)).toEqual([
+      2024,
       2025,
       2026,
     ]);

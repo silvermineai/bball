@@ -6,6 +6,7 @@ from ncaa_scraper.basketball_evaluation import (
     metrics,
     paired_difference,
     rolling_predictions,
+    source_release_games,
     training_before,
     week_start,
 )
@@ -54,6 +55,46 @@ def fixture():
 
 
 class EvaluationTest(unittest.TestCase):
+    def test_source_release_replay_keeps_only_paired_valid_games(self):
+        schedule = [
+            {
+                "game_id": "900",
+                "date": "2022-11-01T20:00:00Z",
+                "home_id": "1",
+                "away_id": "2",
+                "home_short_display_name": "Alpha",
+                "away_short_display_name": "Beta",
+                "home_score": "75",
+                "away_score": "70",
+                "status_type_completed": "true",
+                "neutral_site": "false",
+                "status_period": "2",
+                "time_valid": "true",
+                "venue_full_name": "Arena",
+            },
+        ]
+        box = {
+            "game_id": "900",
+            "season": "2022",
+            "team_id": "1",
+            "field_goals_attempted": "60",
+            "free_throws_attempted": "15",
+            "offensive_rebounds": "8",
+            "turnovers": "10",
+            "field_goals_made": "28",
+            "three_point_field_goals_attempted": "20",
+            "three_point_field_goals_made": "7",
+        }
+        games, boxes, valid = source_release_games(
+            schedule,
+            [box, {**box, "team_id": "2", "field_goals_made": "25"}],
+            2022,
+        )
+        self.assertEqual(len(games), 1)
+        self.assertEqual(len(boxes), 2)
+        self.assertEqual(len(valid), 1)
+        self.assertEqual(valid[0]["home_id"], "1")
+
     def test_utc_week_and_strict_buffer(self):
         self.assertEqual(
             week_start("2024-11-03T18:00:00-08:00"),

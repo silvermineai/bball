@@ -17,7 +17,16 @@ from pathlib import Path
 
 import numpy as np
 
-from .basketball import DB, OUT, load_games
+from .basketball import (
+    DB,
+    OUT,
+    canonical_date,
+    game_features,
+    identity,
+    load_games,
+    number,
+    numeric_box,
+)
 from .basketball_model import (
     apply_calibration,
     calibrate,
@@ -26,10 +35,11 @@ from .basketball_model import (
     forecast,
     raw_predict,
 )
+from .basketball_sources import client
 from .football_sources import ROOT, utcnow
 
 SETTINGS = {
-    "version": "basketball-weekly-experiment-v1",
+    "version": "basketball-weekly-experiment-v2",
     "calibration_season": 2025,
     "evaluation_season": 2026,
     "refit": "Monday 00:00 UTC",
@@ -81,7 +91,7 @@ def training_before(games, season, cutoff):
     ]
 
 
-def rolling_predictions(games, season):
+def rolling_predictions(games, season, *, earliest_training_season=None):
     target = sorted(
         [g for g in games if g["season"] == season and g["completed"]],
         key=lambda g: (timestamp(g["starts_at"]), g["id"]),
@@ -90,7 +100,13 @@ def rolling_predictions(games, season):
         raise ValueError("No evaluation season games")
     first_cutoff = week_start(target[0]["starts_at"]) - timedelta(hours=24)
     prior = [
-        g for g in training_before(games, season, first_cutoff) if g["season"] < season
+        g
+        for g in training_before(games, season, first_cutoff)
+        if g["season"] < season
+        and (
+            earliest_training_season is None
+            or g["season"] >= earliest_training_season
+        )
     ]
     base = fit(prior)
     field = base["teams"]
@@ -102,7 +118,14 @@ def rolling_predictions(games, season):
         cutoff = week - timedelta(hours=SETTINGS["start_buffer_hours"])
         training = training_before(games, season, cutoff)
         training = [
-            g for g in training if g["home_id"] in field and g["away_id"] in field
+            g
+            for g in training
+            if g["home_id"] in field
+            and g["away_id"] in field
+            and (
+                earliest_training_season is None
+                or g["season"] >= earliest_training_season
+            )
         ]
         model = fit(training, teams=field)
         record = {
@@ -230,6 +253,58 @@ def game_record(game, preseason, weekly, fit_id, cutoff):
     }
 
 
+def source_release_games(schedule_rows, team_rows, season):
+    """Normalize a cached historical schedule/team-box pair for replay only."""
+    games = []
+    for row in schedule_rows:
+        if row.get("status_type_completed") != "true":
+            continue
+        try:
+            game = {
+                "id": identity(row["game_id"]),
+                "season": season,
+                "starts_at": canonical_date(row["date"]),
+                "home_id": identity(row["home_id"]),
+                "away_id": identity(row["away_id"]),
+                "home_name": row.get("home_short_display_name") or row.get("home_display_name") or row["home_id"],
+                "away_name": row.get("away_short_display_name") or row.get("away_display_name") or row["away_id"],
+                "home_score": number(row.get("home_score")),
+                "away_score": number(row.get("away_score")),
+                "completed": 1,
+                "neutral": int(row.get("neutral_site") == "true"),
+                "periods": int(number(row.get("status_period")) or 0),
+                "time_tbd": int(row.get("time_valid") != "true"),
+                "venue": row.get("venue_full_name"),
+            }
+        except (KeyError, TypeError, ValueError):
+            continue
+        if game["home_score"] is not None and game["away_score"] is not None:
+            games.append(game)
+    boxes = {
+        (identity(row["game_id"]), identity(row["team_id"])): numeric_box(row)
+        for row in team_rows
+        if row.get("game_id") and row.get("team_id")
+    }
+    valid = [game_features(game, boxes) for game in games]
+    return games, boxes, [game for game in valid if game is not None]
+
+
+def load_replay_history(seasons=(2022,)):
+    """Load older cached source editions without expanding the production D1 warehouse."""
+    source_client = client()
+    games, valid, sources = [], [], []
+    for season in seasons:
+        schedule_rows, schedule_receipt = source_client.load("schedule", season)
+        team_rows, team_receipt = source_client.load("team_box", season)
+        season_games, _, season_valid = source_release_games(
+            schedule_rows, team_rows, season
+        )
+        games.extend(season_games)
+        valid.extend(season_valid)
+        sources.extend([schedule_receipt, team_receipt])
+    return games, valid, sources
+
+
 def verify_sources(conn, overview):
     sources = [
         s
@@ -241,7 +316,7 @@ def verify_sources(conn, overview):
         for dataset in ("schedule", "team_box")
         for year in (2023, 2024, 2025, 2026)
     }:
-        raise ValueError("Expected all six schedule/team-box receipts")
+        raise ValueError("Expected all production schedule/team-box receipts")
     for source in sources:
         current = conn.execute(
             "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
@@ -255,7 +330,11 @@ def verify_sources(conn, overview):
 def build(conn, overview, output=DIRECTORY):
     sources = verify_sources(conn, overview)
     schedules, _, valid = load_games(conn)
-    valid = [g for g in valid if g["season"] in (2023, 2024, 2025, 2026)]
+    replay_schedules, replay_valid, replay_sources = load_replay_history()
+    schedules.extend(replay_schedules)
+    valid.extend(replay_valid)
+    sources.extend(replay_sources)
+    valid = [g for g in valid if g["season"] in (2022, 2023, 2024, 2025, 2026)]
     if len({g["id"] for g in valid}) != len(valid):
         raise ValueError("Repeated game identity")
     implementation = {
@@ -283,10 +362,14 @@ def build(conn, overview, output=DIRECTORY):
             print("Verified evaluation artifacts are current", flush=True)
             return json.loads((output / "summary.json").read_text())
 
-    initial, calibration_pairs, calibration_fits = rolling_predictions(valid, 2025)
+    initial, calibration_pairs, calibration_fits = rolling_predictions(
+        valid, 2025, earliest_training_season=2023
+    )
     calibration = calibrate_predictions([(g, p) for g, p, _, _ in calibration_pairs])
     prior_calibration = calibrate([g for g in valid if g["season"] == 2025], initial)
-    baseline, test_pairs, test_fits = rolling_predictions(valid, 2026)
+    baseline, test_pairs, test_fits = rolling_predictions(
+        valid, 2026, earliest_training_season=2023
+    )
     baseline["calibration"] = prior_calibration
     rows = [
         game_record(
@@ -297,18 +380,19 @@ def build(conn, overview, output=DIRECTORY):
     if any(row["preseason"] is None for row in rows):
         raise ValueError("The two methods must use exactly the same game field")
 
-    # Add a second, independently calibrated transition to the published
-    # summary.  This uses 2024 as the calibration season and 2025 as the test
-    # season; no 2025 result is used to fit that transition.  Keeping this
-    # alongside the existing 2026 holdout makes season-to-season stability
-    # visible without blending the two experiments into one score.
+    # Add independently calibrated transitions to the published summary. Each
+    # transition uses only its immediately prior season for calibration, and
+    # each holdout remains separate so season-to-season stability is visible
+    # without blending the experiments into one score.
     transition_initial, transition_calibration_pairs, _ = rolling_predictions(
-        valid, 2024
+        valid, 2024, earliest_training_season=2023
     )
     transition_calibration = calibrate_predictions(
         [(g, p) for g, p, _, _ in transition_calibration_pairs]
     )
-    transition_baseline, transition_test_pairs, _ = rolling_predictions(valid, 2025)
+    transition_baseline, transition_test_pairs, _ = rolling_predictions(
+        valid, 2025, earliest_training_season=2023
+    )
     transition_baseline["calibration"] = calibrate(
         [g for g in valid if g["season"] == 2024], transition_initial
     )
@@ -324,10 +408,45 @@ def build(conn, overview, output=DIRECTORY):
     ]
     if any(row["preseason"] is None for row in transition_rows):
         raise ValueError("The transition methods must use exactly the same game field")
+    early_initial, early_calibration_pairs, _ = rolling_predictions(
+        valid, 2023, earliest_training_season=2022
+    )
+    early_calibration = calibrate_predictions(
+        [(g, p) for g, p, _, _ in early_calibration_pairs]
+    )
+    early_baseline, early_test_pairs, _ = rolling_predictions(
+        valid, 2024, earliest_training_season=2023
+    )
+    early_baseline["calibration"] = calibrate(
+        [g for g in valid if g["season"] == 2023], early_initial
+    )
+    early_rows = [
+        game_record(
+            g,
+            forecast(early_baseline, g),
+            apply_calibration(p, early_calibration),
+            fit_id,
+            cutoff,
+        )
+        for g, p, fit_id, cutoff in early_test_pairs
+    ]
+    if any(row["preseason"] is None for row in early_rows):
+        raise ValueError("The early transition methods must use exactly the same game field")
     summary_metrics = {
         method: metrics(rows, method) for method in ("preseason", "weekly")
     }
     season_results = [
+        {
+            "season": 2024,
+            "calibration_season": 2023,
+            "stage": "independent_test",
+            "metrics": {
+                method: metrics(early_rows, method)
+                for method in ("preseason", "weekly")
+            },
+            "compared_games": len(early_rows),
+            "weekly_fits": len({row["weekly_fit_id"] for row in early_rows}),
+        },
         {
             "season": 2025,
             "calibration_season": 2024,
@@ -417,7 +536,8 @@ def build(conn, overview, output=DIRECTORY):
         "limitations": [
             "Retrospective replay using current source releases; historical revisions and availability timestamps are not reconstructed.",
             "Weekly fits include only completed records with starts before Monday 00:00 UTC minus 24 hours; exact historical final-publication times are unavailable.",
-            "2024–25 rolling predictions calibrate the challenger; those calibration results are not independent test performance.",
+            "The 2023 calibration transition uses the cached 2022 schedule/team-box releases only for replay; it is retained outside the production D1 warehouse and is not a current forecast input.",
+            "2023–25 rolling predictions calibrate the challenger; those calibration results are not independent test performance.",
             "2025–26 games enter later weekly fits only after the cutoff buffer. No game enters its own prediction or any earlier week's fit.",
             "The preseason team's field is frozen before each season. New programs outside it are excluded from both methods.",
             "No roster, availability, injury, recruiting or bookmaker inputs. This experiment does not replace live preseason forecasts or enter the prospective ledger.",

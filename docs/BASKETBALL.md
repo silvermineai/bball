@@ -70,7 +70,7 @@ Public roster profiles retain basketball-relevant fields. Age and birth date are
 
 ## Independent efficiency model
 
-The [weekly model experiment](BASKETBALL_EVALUATION.md) adds chronological 2024–25 and 2025–26 replays, with two independent season transitions compared against the preseason baseline. It publishes every prediction, weekly coefficient set and training cutoff, with interactive diagnostics and a verified R2 evidence archive. The evaluation desk now surfaces review-first queues for the largest weekly misses and the strongest weekly improvements, with final scores, interval status and direct source-game links. It remains separate from live forecasts and the prospective ledger.
+The [weekly model experiment](BASKETBALL_EVALUATION.md) adds chronological 2023–24, 2024–25 and 2025–26 replays, with three independent season transitions compared against the preseason baseline. It publishes every prediction, weekly coefficient set and training cutoff, with interactive diagnostics and a verified R2 evidence archive. The evaluation desk now surfaces review-first queues for the largest weekly misses and the strongest weekly improvements, with final scores, interval status and direct source-game links. It remains separate from live forecasts and the prospective ledger.
 
 `basketball_model.py` trains a ridge model on offensive efficiency for both sides of each eligible game. Estimated possessions are the average of each side's `FGA + 0.475 × FTA − ORB + TO`. Points per 100 estimated possessions are the response. Separate team offense, opponent defense and home-floor features are used. A second ridge model fits tempo from both team identities.
 
@@ -80,10 +80,10 @@ For the 2026–27 forecast:
 
 1. Fit initial efficiency and tempo coefficients on the 2023–24 release, retaining 2023–24 through 2025–26 in the production training archive.
 2. Use 2024–25 predictions to calibrate a two-parameter logistic margin-to-win-probability mapping. The 80th percentile of absolute errors defines a symmetric nominal 80% interval.
-3. Fit evaluation coefficients on 2023–24 and 2024–25, keeping calibration fixed. Evaluate 2025–26 without feeding that season's results into the evaluation model. A separate replay calibrates on 2023–24 and independently evaluates 2024–25.
+3. Fit each evaluation transition chronologically, calibrating on 2022–23 for the 2023–24 replay, 2023–24 for 2024–25, and 2024–25 for 2025–26. Each following season is evaluated without feeding its results into that transition's model.
 4. Fit production coefficients on all four completed seasons (2022–23 through 2025–26). Apply the fixed calibration and publish future game forecasts with immutable model IDs and timestamps.
 
-The 2025–26 test covers 5,734 games and excludes 564 paired-box games involving teams outside the trained field. Metrics: 67.21% winner accuracy, 10.39-point margin MAE, 13.26-point margin RMSE, 15.55-point total MAE, 0.2045 Brier score, 0.5911 log loss and 79.02% empirical coverage for nominal 80% ranges. The constant-home-margin baseline MAE is 11.96 points. The separate 2024–25 holdout covers 5,701 games; its weekly challenger margin MAE is 9.67 points versus 10.19 for the preseason fit, with 70.36% winner accuracy. These are retrospective results, not a market-edge claim.
+The 2025–26 test covers 5,734 games and excludes 564 paired-box games involving teams outside the trained field. Metrics: 67.21% winner accuracy, 10.39-point margin MAE, 13.26-point margin RMSE, 15.55-point total MAE, 0.2045 Brier score, 0.5911 log loss and 79.02% empirical coverage for nominal 80% ranges. The constant-home-margin baseline MAE is 11.96 points. The separate 2024–25 holdout covers 5,701 games; its weekly challenger margin MAE is 9.67 points versus 10.19 for the preseason fit, with 70.36% winner accuracy. The evaluation desk now adds a third dated 2023–24 transition: it replays the cached 2022 schedule/team-box release only as the prior-season training layer, while leaving the production D1 warehouse and 2026–27 forecast unchanged. These are retrospective results, not a market-edge claim.
 
 Possession pace is normalized to 40 minutes using the final period count, including overtime. Forecasts use regulation pace; evaluation compares against final scores, including overtime. No injury, transfer, roster or recruiting features are used in the primary model. Games involving a program outside the trained field receive a separate cold-start estimate built from latest-season team priors shrunk toward the league mean; its interval is calibrated on held-out games and the estimate is not registered in the prospective ledger. Source corrections may have been published after the historical events.
 
@@ -156,7 +156,7 @@ The basketball landing page also reports the live scorecard’s qualifying quote
 ## Remaining full-goal work
 
 - Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.
-- Expand historical player-game seasons, add more possession and location validation, and extend the weekly experiment to additional prospective seasons.
-- Extend the roster challenger and weekly experiment across additional dated transitions before considering any roster feature for the primary forecast. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
+- Expand historical player-game seasons and add more possession and location validation.
+- Extend the roster challenger across additional dated transitions before considering any roster feature for the primary forecast. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
 - Preserve completed matchup briefs and enrich major-game editorial analysis beyond generated statistical previews.
 - Monitor scheduled refresh freshness against expected source coverage and investigate any failed publication run.

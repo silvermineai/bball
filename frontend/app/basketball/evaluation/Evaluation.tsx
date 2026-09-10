@@ -213,8 +213,8 @@ export default function Evaluation({
           </div>
           <p>
             Each row calibrates on the prior season, freezes that mapping, and
-            scores the following season. The 2025 and 2026 tests stay separate
-            so a strong year cannot hide a weak transition.
+            scores the following season. The 2024, 2025 and 2026 tests stay
+            separate so a strong year cannot hide a weak transition.
           </p>
           <div className="table-scroll">
             <table className="data-table evaluation-metrics">
@@ -247,6 +247,11 @@ export default function Evaluation({
           <p className="note">
             Margin MAE is points. Weekly fits are Monday snapshots; they are
             evidence of temporal replay, not a guarantee of future edge.
+          </p>
+          <p className="note">
+            The 2023–24 row replays cached 2022 schedule and team-box releases
+            as its prior-season training layer; it does not change production
+            D1 data or current forecasts.
           </p>
         </section>
       ) : null}
