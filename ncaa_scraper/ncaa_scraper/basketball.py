@@ -120,6 +120,21 @@ def numeric_box(row, player=False):
 
 
 def ingest(conn, dataset, year, rows, receipt):
+    # Schedule rows are upserted by source game ID. Count repeated IDs before
+    # that primary-key write so a malformed publisher file cannot disappear
+    # silently from the persisted table. The count is carried in the receipt
+    # and remains separate from the normalized row count.
+    if dataset == "schedule":
+        source_ids = [identity(row["game_id"]) for row in rows]
+        duplicate_source_ids = len(source_ids) - len(set(source_ids))
+        if duplicate_source_ids:
+            receipt = {
+                **receipt,
+                "integrity": {
+                    **(receipt.get("integrity") or {}),
+                    "duplicate_source_contest_ids": duplicate_source_ids,
+                },
+            }
     with conn:
         conn.execute(
             "INSERT OR REPLACE INTO bb_sources VALUES (?,?,?)",

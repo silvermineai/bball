@@ -320,6 +320,34 @@ class BasketballIngestTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             canonical_date("2026-11-01T19:00:00")
 
+    def test_schedule_receipt_preserves_duplicate_source_ids_before_upsert(self):
+        rows = [
+            {
+                "game_id": "same-game",
+                "home_id": "1",
+                "away_id": "2",
+                "date": "2026-01-01T19:00:00Z",
+                "status_type_completed": "false",
+            },
+            {
+                "game_id": "same-game",
+                "home_id": "1",
+                "away_id": "2",
+                "date": "2026-01-01T19:00:00Z",
+                "status_type_completed": "false",
+            },
+        ]
+        ingest(self.conn, "schedule", 2027, rows, {"url": "https://example.test"})
+        self.assertEqual(
+            self.conn.execute("SELECT count(*) FROM bb_games").fetchone()[0], 1
+        )
+        receipt = json.loads(
+            self.conn.execute(
+                "SELECT receipt_json FROM bb_sources WHERE dataset='schedule' AND season=2027"
+            ).fetchone()[0]
+        )
+        self.assertEqual(receipt["integrity"]["duplicate_source_contest_ids"], 1)
+
     def test_roster_absence_is_not_a_departure_and_names_do_not_join(self):
         self.conn.execute(
             "INSERT INTO bb_participation VALUES (?,?,?,?,?,?)",

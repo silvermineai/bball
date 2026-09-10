@@ -229,7 +229,7 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
               <div><dt>{data.location_validation.negative_score?.toLocaleString() ?? "—"}</dt><dd>Completed rows with negative score</dd></div>
               <div><dt>{data.location_validation.unfinished_with_score?.toLocaleString() ?? "—"}</dt><dd>Unfinished rows carrying scores</dd></div>
-              <div><dt>{data.location_validation.duplicate_contest_ids?.toLocaleString() ?? "—"}</dt><dd>Duplicate source contest IDs</dd></div>
+              <div><dt>{data.location_validation.duplicate_contest_ids?.toLocaleString() ?? "—"}</dt><dd>Duplicate source contest IDs captured at ingest</dd></div>
               <div><dt>{data.location_validation.neutral_missing_venue?.toLocaleString() ?? "—"}</dt><dd>Neutral rows missing venue</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
