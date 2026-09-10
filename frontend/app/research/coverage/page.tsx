@@ -222,7 +222,7 @@ export default function Page() {
       seasons: ncaaPlayerBox.seasons.map((season) => season.season),
       latest: ncaaPlayerBox.generated_at,
       url: ncaaPlayerBox.seasons.at(-1)?.source_url ?? null,
-      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves the four recent game releases plus historical season summaries. The source-release link opens the latest exact Parquet edition.",
+      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves the five recent game releases plus historical season summaries. The source-release link opens the latest exact Parquet edition.",
     },
     {
       key: "pbp",
