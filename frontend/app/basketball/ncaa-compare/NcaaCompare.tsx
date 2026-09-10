@@ -75,11 +75,11 @@ export default function NcaaCompare() {
     const query = search.trim();
     if (query.length < 2) { setSearchRows([]); return; }
     const controller = new AbortController();
-    fetch(`/api/basketball/research/ncaa-player-rankings?season=${season}&metric=ppg&minGames=1&minMinutes=0&q=${encodeURIComponent(query)}&page=0`, { signal: controller.signal })
+    const timer = window.setTimeout(() => fetch(`/api/basketball/research/ncaa-player-rankings?season=${season}&metric=ppg&minGames=1&minMinutes=0&q=${encodeURIComponent(query)}&page=0`, { signal: controller.signal })
       .then((response) => response.ok ? response.json() as Promise<{ rows: SearchRow[] }> : Promise.reject(new Error("The NCAA player search could not be loaded.")))
-      .then((payload) => { if (!controller.signal.aborted) setSearchRows(payload.rows.slice(0, 8)); })
-      .catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The NCAA player search could not be loaded."); });
-    return () => controller.abort();
+      .then((payload) => { if (!controller.signal.aborted) { const unique = payload.rows.filter((row, index, all) => all.findIndex((candidate) => candidate.player_id === row.player_id) === index); setSearchRows(unique.slice(0, 8)); } })
+      .catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The NCAA player search could not be loaded."); }));
+    return () => { window.clearTimeout(timer); controller.abort(); };
   }, [search, season]);
   useEffect(() => {
     if (!ids.length) { setCards([]); setImpact([]); return; }
