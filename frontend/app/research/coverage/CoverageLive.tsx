@@ -19,11 +19,15 @@ type CoverageResponse = {
     completed_missing_score: number;
     negative_score?: number;
     unfinished_with_score?: number;
+    duplicate_contest_ids?: number;
+    neutral_missing_venue?: number;
   } | null;
   possession_validation?: {
     total: number;
     paired_box_games: number;
     missing_box_games: number;
+    missing_team_box_rows?: number;
+    duplicate_team_box_keys?: number;
     negative_field_games: number;
     impossible_shooting_games?: number;
     nonpositive_possession_games: number;
@@ -218,6 +222,8 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.completed_missing_score.toLocaleString()}</dt><dd>Completed rows missing a score</dd></div>
               <div><dt>{data.location_validation.negative_score?.toLocaleString() ?? "—"}</dt><dd>Completed rows with negative score</dd></div>
               <div><dt>{data.location_validation.unfinished_with_score?.toLocaleString() ?? "—"}</dt><dd>Unfinished rows carrying scores</dd></div>
+              <div><dt>{data.location_validation.duplicate_contest_ids?.toLocaleString() ?? "—"}</dt><dd>Duplicate source contest IDs</dd></div>
+              <div><dt>{data.location_validation.neutral_missing_venue?.toLocaleString() ?? "—"}</dt><dd>Neutral rows missing venue</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
           </div>}{data.possession_validation && <div className="paper-panel" style={{ marginTop: 20 }}>
@@ -228,6 +234,8 @@ export default function CoverageLive() {
               <div><dt>{data.possession_validation.paired_box_games.toLocaleString()}</dt><dd>Games with all four team fields</dd></div>
               <div><dt>{data.possession_validation.valid_estimate_games.toLocaleString()}</dt><dd>Valid possession estimates</dd></div>
               <div><dt>{data.possession_validation.missing_box_games.toLocaleString()}</dt><dd>Missing required team box fields</dd></div>
+              <div><dt>{data.possession_validation.missing_team_box_rows?.toLocaleString() ?? "—"}</dt><dd>Games missing a team box row</dd></div>
+              <div><dt>{data.possession_validation.duplicate_team_box_keys?.toLocaleString() ?? "—"}</dt><dd>Duplicate team-box keys</dd></div>
               <div><dt>{data.possession_validation.negative_field_games.toLocaleString()}</dt><dd>Negative box-score fields</dd></div>
               <div><dt>{data.possession_validation.impossible_shooting_games?.toLocaleString() ?? "—"}</dt><dd>Impossible shooting totals</dd></div>
               <div><dt>{data.possession_validation.nonpositive_possession_games.toLocaleString()}</dt><dd>Nonpositive estimates</dd></div>

@@ -271,8 +271,8 @@ describe("bball api", () => {
       .fn()
       .mockResolvedValue([
         ...Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })),
-        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0 }] },
-        { results: [{ total: 6, paired_box_games: 5, missing_box_games: 1, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 1, score_mismatch_games: 0, valid_estimate_games: 4 }] },
+        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }] },
+        { results: [{ total: 6, paired_box_games: 5, missing_box_games: 1, missing_team_box_rows: 1, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 1, score_mismatch_games: 0, valid_estimate_games: 4 }] },
       ]);
     const response = await app.request(
       "/api/basketball/research/coverage",
@@ -303,9 +303,11 @@ describe("bball api", () => {
       total: 7,
       neutral: 2,
       missing_venue: 1,
+      neutral_missing_venue: 0,
       unconfirmed_start: 3,
       missing_participant: 0,
       same_participant: 0,
+      duplicate_contest_ids: 0,
       invalid_periods: 0,
       completed_missing_score: 0,
       negative_score: 0,
@@ -315,6 +317,8 @@ describe("bball api", () => {
       total: 6,
       paired_box_games: 5,
       missing_box_games: 1,
+      missing_team_box_rows: 1,
+      duplicate_team_box_keys: 0,
       negative_field_games: 0,
       nonpositive_possession_games: 0,
       invalid_period_games: 0,

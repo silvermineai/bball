@@ -478,8 +478,12 @@ app.get("/api/basketball/research/coverage", async (c) => {
     missing_participant?: number;
     negative_score?: number;
     unfinished_with_score?: number;
+    duplicate_contest_ids?: number;
+    neutral_missing_venue?: number;
     paired_box_games?: number;
     missing_box_games?: number;
+    missing_team_box_rows?: number;
+    duplicate_team_box_keys?: number;
     missing_required_fields_games?: number;
     negative_field_games?: number;
     impossible_shooting_games?: number;
@@ -501,13 +505,17 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN periods IS NULL OR periods<1 THEN 1 ELSE 0 END) AS invalid_periods,
       sum(CASE WHEN completed=1 AND (home_score IS NULL OR away_score IS NULL) THEN 1 ELSE 0 END) AS completed_missing_score,
       sum(CASE WHEN completed=1 AND (home_score < 0 OR away_score < 0) THEN 1 ELSE 0 END) AS negative_score,
-      sum(CASE WHEN completed=0 AND (home_score IS NOT NULL OR away_score IS NOT NULL) THEN 1 ELSE 0 END) AS unfinished_with_score
+      sum(CASE WHEN completed=0 AND (home_score IS NOT NULL OR away_score IS NOT NULL) THEN 1 ELSE 0 END) AS unfinished_with_score,
+      sum(CASE WHEN neutral=1 AND (venue IS NULL OR venue='') THEN 1 ELSE 0 END) AS neutral_missing_venue,
+      (SELECT count(*) FROM (SELECT contest_id FROM bb_games WHERE contest_id IS NOT NULL GROUP BY contest_id HAVING count(*)>1)) AS duplicate_contest_ids
       FROM bb_games`),
     // Mirror the model's possession guards against the persisted team box rows.
     // This is intentionally a read-only diagnostic: it never changes which rows
     // are published or attributes a player identity.
     db.prepare(`WITH raw AS (
       SELECT g.id,g.periods,g.home_score,g.away_score,
+        h.game_id AS h_box_game_id,
+        a.game_id AS a_box_game_id,
         json_extract(h.stats_json,'$.field_goals_attempted') AS h_fga,
         json_extract(h.stats_json,'$.free_throws_attempted') AS h_fta,
         json_extract(h.stats_json,'$.offensive_rebounds') AS h_orb,
@@ -544,6 +552,8 @@ app.get("/api/basketball/research/coverage", async (c) => {
     SELECT count(*) AS total,
       sum(CASE WHEN h_fga IS NULL OR h_fta IS NULL OR h_orb IS NULL OR h_tov IS NULL
                     OR a_fga IS NULL OR a_fta IS NULL OR a_orb IS NULL OR a_tov IS NULL THEN 1 ELSE 0 END) AS missing_box_games,
+      sum(CASE WHEN h_box_game_id IS NULL OR a_box_game_id IS NULL THEN 1 ELSE 0 END) AS missing_team_box_rows,
+      (SELECT count(*) FROM (SELECT game_id,team_id FROM bb_team_box GROUP BY game_id,team_id HAVING count(*)>1)) AS duplicate_team_box_keys,
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL
                     AND (h_fga < 0 OR h_fta < 0 OR h_orb < 0 OR h_tov < 0 OR a_fga < 0 OR a_fta < 0 OR a_orb < 0 OR a_tov < 0) THEN 1 ELSE 0 END) AS negative_field_games,
