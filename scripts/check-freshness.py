@@ -5,11 +5,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from ncaa_scraper.publication_health import check_freshness
-
 ROOT = Path(__file__).resolve().parents[1]
+# Keep this operator-facing gate runnable from a clean checkout as well as from
+# the CI environment.  The scraper package is intentionally a source tree
+# rather than a globally installed dependency, so importing it before adding
+# the repository path makes the documented `python scripts/check-freshness.py`
+# command fail locally.
+sys.path.insert(0, str(ROOT / "ncaa_scraper"))
+
+from ncaa_scraper.publication_health import check_freshness
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--sport", choices=["basketball", "football", "both"], default="both")
