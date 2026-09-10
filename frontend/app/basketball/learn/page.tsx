@@ -221,6 +221,39 @@ const recruitingPaths = [
   ["Build a recruiting brief", "/blog/basketball-recruiting-evidence/", "Move from an exact source row to dated school evidence, prior production and a question for film."],
 ];
 
+const recruitingGlossary = [
+  [
+    "Roster observation",
+    "A player/program row supplied by the source roster snapshot for a particular season.",
+    "It is evidence that the source listed the row. It does not establish eligibility, enrollment, a scholarship or a guaranteed roster spot.",
+  ],
+  [
+    "Same program",
+    "The exact source player ID appears for the same program in the preceding source season.",
+    "It describes observed continuity in the archive. It does not prove a return decision or future availability.",
+  ],
+  [
+    "Different program",
+    "The exact source player ID was recorded at another program in the preceding source season.",
+    "It flags a research handoff. It does not establish a transfer date, reason, destination announcement or eligibility.",
+  ],
+  [
+    "New to dataset",
+    "No matching prior source player ID was found in the preceding archive edition.",
+    "It does not mean freshman, newcomer, transfer or first-year college player; the source may simply be incomplete.",
+  ],
+  [
+    "Prior workload",
+    "Recorded games and minutes from a source player/team season, with rates shown only when denominators are present.",
+    "It is context for role and film review. It is not a projection of future minutes or a promise of production.",
+  ],
+  [
+    "Source identity",
+    "The publisher’s stable player, team and season keys used to connect rows inside one source namespace.",
+    "A key in one release is not automatically the same person as a key in another release; unverified name joins remain separate.",
+  ],
+];
+
 export default function Page() {
   return (
     <>
@@ -420,6 +453,31 @@ export default function Page() {
           player cards. A missing layer stays unavailable; it is never replaced
           with a guess from a name match or a roster absence.
         </p>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recruiting vocabulary</div>
+            <h2>Know what the roster signal says.</h2>
+          </div>
+          <Link href="/basketball/recruiting/">Open the source board →</Link>
+        </div>
+        <p>
+          The board uses precise labels so a coach can move from an observation
+          to the next source check without turning an absence or a name match
+          into a transaction claim.
+        </p>
+        <div className="article-grid">
+          {recruitingGlossary.map(([term, definition, boundary]) => (
+            <article className="article-card" key={term}>
+              <div className="eyebrow">Source term</div>
+              <h2>{term}</h2>
+              <p><strong>Meaning.</strong> {definition}</p>
+              <p><strong>Boundary.</strong> {boundary}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="section">
