@@ -40,6 +40,23 @@ def get_json(base_url: str, path: str, attempts: int = 3) -> dict:
     raise RuntimeError(f"could not read {path}: {last_error}")
 
 
+def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours: float) -> list[float]:
+    receipts = payload.get("source_receipts")
+    if not isinstance(receipts, list) or not receipts:
+        raise ValueError(f"{label} coverage has no source receipts")
+    ages = []
+    for receipt in receipts:
+        name = receipt.get("dataset")
+        captured = receipt.get("latest_source_at")
+        if not isinstance(name, str) or not isinstance(captured, str):
+            raise ValueError(f"{label} source receipt is malformed")
+        age = (checked_at - timestamp(captured)).total_seconds() / 3600
+        if age < -24 or age > max_age_hours:
+            raise ValueError(f"{label} source {name} is {max(age, 0):.1f} hours old")
+        ages.append(age)
+    return ages
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -52,24 +69,12 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         raise ValueError(f"basketball coverage is missing {sorted(required - set(basketball))}")
     if not isinstance(basketball["coverage"], list) or not basketball["coverage"]:
         raise ValueError("basketball coverage has no dataset rows")
-    if not isinstance(basketball["source_receipts"], list) or not basketball["source_receipts"]:
-        raise ValueError("basketball coverage has no source receipts")
-    ages = []
-    for receipt in basketball["source_receipts"]:
-        name = receipt.get("dataset")
-        captured = receipt.get("latest_source_at")
-        if not isinstance(name, str) or not isinstance(captured, str):
-            raise ValueError("basketball source receipt is malformed")
-        age = (checked_at - timestamp(captured)).total_seconds() / 3600
-        if age < -24 or age > max_age_hours:
-            raise ValueError(f"basketball source {name} is {max(age, 0):.1f} hours old")
-        ages.append(age)
+    ages = receipt_ages(basketball, "basketball", checked_at, max_age_hours)
 
     football = get_json(base_url, "/api/football/coverage")
     if not isinstance(football.get("coverage"), list) or not football["coverage"]:
         raise ValueError("football coverage has no dataset rows")
-    if not isinstance(football.get("source_receipts"), list) or not football["source_receipts"]:
-        raise ValueError("football coverage has no source receipts")
+    football_ages = receipt_ages(football, "football", checked_at, max_age_hours)
 
     forecasts = get_json(base_url, "/api/basketball/research/forecasts?meta=1")
     models = forecasts.get("models")
@@ -94,6 +99,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "basketball_datasets": len(basketball["coverage"]),
         "basketball_source_max_age_hours": round(max(ages), 2),
         "football_datasets": len(football["coverage"]),
+        "football_source_max_age_hours": round(max(football_ages), 2),
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
         "forecast_age_hours": round(max(model_age, 0), 2),
