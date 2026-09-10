@@ -11,7 +11,7 @@ export const metadata = {
 export default function Page() {
   const release = JSON.parse(fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8")) as {
     generated_at?: string;
-    feeds?: Array<{ publisher: string; url: string }>;
+    feeds?: Array<{ publisher: string; url: string; division?: string }>;
     attribution?: { terms?: string; feed_errors?: FeedError[] };
     articles?: PublisherArticle[];
   };

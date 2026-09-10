@@ -1,4 +1,4 @@
-"""Fetch permitted ESPN RSS headlines for the editorial recruiting wire.
+"""Fetch permitted publisher RSS headlines for the editorial recruiting wire.
 
 The feed is an attribution-friendly headline source. We retain the title,
 summary and URL exactly as supplied and never request the linked article page.
@@ -27,7 +27,20 @@ FEEDS = (
     {
         "publisher": "NCAA.com",
         "sport": "mens-college-basketball",
+        "division": "D-I",
         "url": "https://www.ncaa.com/news/basketball-men/d1/rss.xml",
+    },
+    {
+        "publisher": "NCAA.com",
+        "sport": "mens-college-basketball",
+        "division": "D-II",
+        "url": "https://www.ncaa.com/news/basketball-men/d2/rss.xml",
+    },
+    {
+        "publisher": "NCAA.com",
+        "sport": "mens-college-basketball",
+        "division": "D-III",
+        "url": "https://www.ncaa.com/news/basketball-men/d3/rss.xml",
     },
 )
 FEED_URL = FEEDS[0]["url"]
@@ -75,6 +88,7 @@ def parse_rss(
     feed_url: str = FEED_URL,
     publisher: str = "ESPN",
     sport: str = "mens-college-basketball",
+    division: str | None = None,
 ) -> list[dict]:
     """Parse one RSS feed without changing supplied content fields."""
     root = ET.fromstring(payload)
@@ -113,6 +127,7 @@ def parse_rss(
                 "categories": categories,
                 "publisher": publisher,
                 "sport": sport,
+                **({"division": division} if division else {}),
                 "author": creator,
             }
         )
@@ -128,7 +143,7 @@ def fetch_feed(feed_url: str = FEED_URL, *, timeout: int = 30) -> bytes:
 def build_release(
     *,
     feeds: tuple[dict, ...] = FEEDS,
-    limit: int = 40,
+    limit: int = 80,
     previous_articles: Sequence[dict] = (),
     fetcher: Callable[[str], bytes] | None = None,
 ) -> dict:
@@ -141,6 +156,7 @@ def build_release(
             time.sleep(1.0)
         publisher = str(feed["publisher"])
         sport = str(feed["sport"])
+        division = str(feed["division"]) if feed.get("division") else None
         feed_url = str(feed["url"])
         try:
             parsed = parse_rss(
@@ -148,6 +164,7 @@ def build_release(
                 feed_url=feed_url,
                 publisher=publisher,
                 sport=sport,
+                division=division,
             )
         except (ET.ParseError, OSError, URLError, TimeoutError) as error:
             # A transient empty or blocked feed must not erase a previously
@@ -159,6 +176,7 @@ def build_release(
                 for article in previous_articles
                 if article.get("publisher") == publisher
                 and article.get("sport") == sport
+                and (not division or article.get("division") == division)
             ]
             feed_errors.append(
                 {
@@ -187,7 +205,7 @@ def build_release(
         "feeds": list(feeds),
         "articles": articles[:limit],
         "attribution": {
-            "publisher": "ESPN",
+            "publisher": "ESPN and NCAA.com",
             "method": "Published RSS feed; headline, summary and URL are retained as supplied. Linked article pages are not fetched.",
             "terms": "https://www.espn.com/espn/news/story?page=rssinfo",
             "elapsed_seconds": round(time.time() - started, 3),
@@ -198,7 +216,7 @@ def build_release(
     return release
 
 
-def write_release(output: Path = DEFAULT_OUTPUT, *, feeds: tuple[dict, ...] = FEEDS, limit: int = 40) -> dict:
+def write_release(output: Path = DEFAULT_OUTPUT, *, feeds: tuple[dict, ...] = FEEDS, limit: int = 80) -> dict:
     previous_articles: Sequence[dict] = ()
     if output.exists():
         try:

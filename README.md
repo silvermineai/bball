@@ -64,7 +64,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Authorized recruiting feeds | `/basketball/recruiting/` | Coverage-only status for licensed CSV imports and the optional server-side CollegeBasketballData portal/player/team connector; provider payloads stay private in D1 |
 | Roster impact lab | `/basketball/roster-lab/` | Compare returning workload, position continuity, class-year workload, incoming prior minutes, source-reported roster shape, efficiency rating and 2026–27 schedule coverage across source-listed programs |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
-| Publisher news | `/basketball/news/` | Search retained ESPN and NCAA.com basketball headlines with publisher, date, source links and CSV export |
+| Publisher news | `/basketball/news/` | Search retained ESPN and NCAA.com Division I–III basketball headlines with publisher, division, date, source links and CSV export |
 | Model notebook | `/basketball/model/` | Disjoint fitting, calibration and test windows, metrics and source receipts |
 | Scouting archive | `/basketball/scout/` | Native program dossier index and legacy-compatible dossier links |
 
@@ -105,7 +105,7 @@ ncaa_scraper/ncaa_scraper/
   basketball_within_impact.py  NCAA within-team RAPM archive
   basketball_ncaa_team_box.py  NCAA season team-box profiles and recomputed rates
   analytics.py            Existing basketball analytics artifacts
-  news_rss.py             Permitted ESPN RSS context feed parser
+  news_rss.py             Permitted ESPN/NCAA RSS context feed parser
   fetcher.py              NCAA cache reader with enforced robots checks
   market_csv.py           Fail-closed importer for licensed provider exports
 
@@ -161,4 +161,4 @@ Football and native basketball data come from the [SportsDataverse release store
 
 Direct ESPN automated fetching is disabled because source terms restrict extraction and model training. NCAA requests must pass robots checks; the current source policy disallows crawling. Cached basketball data remains available. Source restrictions are never bypassed with stealth browsers or proxy rotation.
 
-The recruiting wire uses published ESPN and NCAA.com men’s-basketball RSS feeds for publisher context. Only each supplied headline, summary and article URL are retained, with publisher attribution; linked article pages are not fetched or rewritten.
+The recruiting wire uses published ESPN and NCAA.com men’s-basketball RSS feeds for publisher context. NCAA Division I, II and III feeds are retained with their feed scope. Only each supplied headline, summary and article URL are retained, with publisher attribution; linked article pages are not fetched or rewritten.

@@ -13,6 +13,7 @@ export type PublisherArticle = {
   categories: string[];
   publisher: string;
   sport?: string;
+  division?: "D-I" | "D-II" | "D-III";
 };
 
 export type FeedError = {
@@ -22,15 +23,18 @@ export type FeedError = {
   fallback_articles: number;
 };
 
+type DivisionFilter = "all" | "D-I" | "D-II" | "D-III";
+
 const PAGE_SIZE = 12;
 
 function parseInitial() {
-  if (typeof window === "undefined") return { query: "", publisher: "all", page: 0 };
+  if (typeof window === "undefined") return { query: "", publisher: "all", division: "all" as DivisionFilter, page: 0 };
   const params = new URLSearchParams(window.location.search);
   const page = Number(params.get("page"));
   return {
     query: params.get("q") || "",
     publisher: params.get("publisher") || "all",
+    division: (params.get("division") as DivisionFilter) || "all",
     page: Number.isInteger(page) && page >= 0 ? page : 0,
   };
 }
@@ -44,13 +48,14 @@ export default function NewsArchive({
 }: {
   generatedAt?: string;
   articles: PublisherArticle[];
-  feeds: Array<{ publisher: string; url: string }>;
+  feeds: Array<{ publisher: string; url: string; division?: string }>;
   termsUrl?: string;
   feedErrors?: FeedError[];
 }) {
   const initial = parseInitial();
   const [query, setQuery] = useState(initial.query);
   const [publisher, setPublisher] = useState(initial.publisher);
+  const [division, setDivision] = useState<DivisionFilter>(initial.division);
   const [page, setPage] = useState(initial.page);
   const [copied, setCopied] = useState("");
   const [liveArticles, setLiveArticles] = useState(articles);
@@ -80,10 +85,15 @@ export default function NewsArchive({
     () => [...new Set(liveArticles.map((article) => article.publisher).filter(Boolean))].sort(),
     [liveArticles],
   );
+  const divisions = useMemo(
+    () => ["D-I", "D-II", "D-III"].filter((value) => liveArticles.some((article) => article.division === value)) as Array<Exclude<DivisionFilter, "all">>,
+    [liveArticles],
+  );
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return liveArticles.filter((article) => {
       if (publisher !== "all" && article.publisher !== publisher) return false;
+      if (division !== "all" && article.division !== division) return false;
       if (!needle) return true;
       return `${article.headline} ${article.description} ${article.categories.join(" ")}`.toLowerCase().includes(needle);
     });
@@ -97,10 +107,11 @@ export default function NewsArchive({
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (publisher !== "all") params.set("publisher", publisher);
+    if (division !== "all") params.set("division", division);
     if (page) params.set("page", String(page));
     const value = params.toString();
     window.history.replaceState(window.history.state, "", value ? `${window.location.pathname}?${value}` : window.location.pathname);
-  }, [page, publisher, query]);
+  }, [division, page, publisher, query]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -112,8 +123,8 @@ export default function NewsArchive({
   const exportRows = () => downloadCsv(
     "basketball-publisher-news.csv",
     toCsv(
-      ["Published", "Publisher", "Headline", "Description", "Categories", "Source URL"],
-      filtered.map((article) => [article.published, article.publisher, article.headline, article.description, article.categories.join(" | "), article.link]),
+      ["Published", "Publisher", "Division", "Headline", "Description", "Categories", "Source URL"],
+      filtered.map((article) => [article.published, article.publisher, article.division || "—", article.headline, article.description, article.categories.join(" | "), article.link]),
     ),
   );
   return (
@@ -137,6 +148,7 @@ export default function NewsArchive({
       <div className="toolbar">
         <label className="control"><span>SEARCH THE ARCHIVE</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
         <label className="control"><span>PUBLISHER</span><select value={publisher} onChange={(event) => { setPublisher(event.target.value); setPage(0); }}><option value="all">All publishers</option>{publishers.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
+        <label className="control"><span>NCAA DIVISION</span><select value={division} onChange={(event) => { setDivision(event.target.value as DivisionFilter); setPage(0); }}><option value="all">All divisions</option>{divisions.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
         <button className="button secondary" type="button" onClick={exportRows}>Download CSV ↓</button>
       </div>
@@ -144,7 +156,7 @@ export default function NewsArchive({
       <div className="article-grid">
         {visible.map((article) => (
           <article className="article-card" key={article.id}>
-            <div className="eyebrow">{date(article.published)} · {article.publisher} RSS</div>
+            <div className="eyebrow">{date(article.published)} · {article.publisher}{article.division ? ` · ${article.division}` : ""} RSS</div>
             <h2>{article.headline}</h2>
             <p>{article.description}</p>
             <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
@@ -154,7 +166,7 @@ export default function NewsArchive({
       {!visible.length && <p className="empty">No retained headlines match this search.</p>}
       <div className="pagination"><span>{filtered.length.toLocaleString()} matching stories · page {page + 1} of {pages}</span><div><button className="button secondary" type="button" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" type="button" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       <p className="note" style={{ marginTop: 20 }}>Silvermine stores the supplied headline, summary, publication time and source URL from permitted publisher RSS feeds. Linked article pages are not fetched or rewritten. This archive is reporting context, not a transaction ledger, eligibility database, injury feed or forecast input. {termsUrl ? <a href={termsUrl} target="_blank" rel="noreferrer">Read publisher RSS terms ↗</a> : null}</p>
-      <div className="button-row" style={{ marginTop: 12 }}>{feeds.map((feed) => <a className="button secondary" href={feed.url} target="_blank" rel="noreferrer" key={feed.url}>Open {feed.publisher} feed ↗</a>)}</div>
+      <div className="button-row" style={{ marginTop: 12 }}>{feeds.map((feed) => <a className="button secondary" href={feed.url} target="_blank" rel="noreferrer" key={feed.url}>Open {feed.publisher}{feed.division ? ` ${feed.division}` : ""} feed ↗</a>)}</div>
     </section>
   );
 }

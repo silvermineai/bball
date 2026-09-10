@@ -18,7 +18,10 @@ D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public/data/news.json"
-MIGRATION = ROOT / "worker/migrations/0024_news_archive.sql"
+MIGRATIONS = (
+    ROOT / "worker/migrations/0024_news_archive.sql",
+    ROOT / "worker/migrations/0029_news_division.sql",
+)
 SQL = ROOT / ".local/news.sql"
 
 
@@ -36,6 +39,7 @@ def main() -> None:
     if not isinstance(articles, list) or not isinstance(feeds, list) or not generated_at:
         raise SystemExit("news.json is missing release metadata")
     normalized: list[dict[str, object]] = []
+    allowed_divisions = {"D-I", "D-II", "D-III"}
     for article in articles:
         if not isinstance(article, dict):
             raise SystemExit("news.json contains a malformed article")
@@ -47,11 +51,15 @@ def main() -> None:
         categories = article.get("categories")
         if not isinstance(categories, list) or any(not isinstance(v, str) for v in categories):
             raise SystemExit("news.json contains malformed article categories")
+        division = article.get("division")
+        if division is not None and str(division) not in allowed_divisions:
+            raise SystemExit("news.json contains an unsupported NCAA division")
         normalized.append(
             {
                 "id": str(article["id"]),
                 "publisher": str(article["publisher"]),
                 "sport": str(article["sport"]),
+                "division": str(division) if division is not None else None,
                 "headline": str(article["headline"]),
                 "description": str(article.get("description") or ""),
                 "published": str(article["published"]),
@@ -72,23 +80,25 @@ def main() -> None:
         categories_json = json.dumps(article["categories"], ensure_ascii=False, separators=(",", ":"))
         statements.append(
             "INSERT INTO bb_news_articles "
-            "(id,publisher,sport,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at) VALUES "
+            "(id,publisher,sport,division,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at) VALUES "
             f"({sql_string(article['id'])},{sql_string(article['publisher'])},{sql_string(article['sport'])},"
+            f"{sql_string(article['division'])},"
             f"{sql_string(article['headline'])},{sql_string(article['description'])},{sql_string(article['published'])},"
             f"{sql_string(article['link'])},{sql_string(categories_json)},{sql_string(article['author'])},"
             f"{sql_string(generated_at)},{sql_string(generated_at)}) "
-            "ON CONFLICT(id) DO UPDATE SET publisher=excluded.publisher,sport=excluded.sport,"
+            "ON CONFLICT(id) DO UPDATE SET publisher=excluded.publisher,sport=excluded.sport,division=excluded.division,"
             "headline=excluded.headline,description=excluded.description,published=excluded.published,"
             "link=excluded.link,categories_json=excluded.categories_json,author=excluded.author,"
             "last_seen_at=excluded.last_seen_at;"
         )
     statements.append("COMMIT;")
     SQL.write_text("\n".join(statements) + "\n")
-    subprocess.run(
-        [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--file", str(MIGRATION)],
-        cwd=ROOT,
-        check=True,
-    )
+    for migration in MIGRATIONS:
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--file", str(migration)],
+            cwd=ROOT,
+            check=True,
+        )
     # D1's import endpoint can spend a long time on an otherwise tiny file
     # when the database is busy. Execute idempotent chunks through the query
     # endpoint instead; a rerun safely updates only the same source IDs.

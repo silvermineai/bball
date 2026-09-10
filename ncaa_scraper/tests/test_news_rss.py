@@ -40,6 +40,15 @@ class NewsRssTests(unittest.TestCase):
         rows = parse_rss(payload, publisher="ESPN", sport="mens-college-basketball")
         self.assertEqual([row["headline"] for row in rows], ["Basketball portal"])
 
+    def test_parser_retains_explicit_ncaa_division_scope(self):
+        payload = b'''<?xml version="1.0"?><rss><channel><item>
+          <title>Division II update</title><description>Hoops.</description>
+          <link>https://www.ncaa.com/news/basketball-men/d2/2026/09/08/update</link>
+          <pubDate>Tue, 8 Sep 2026 16:01:09 EST</pubDate><guid>d2-1</guid>
+        </item></channel></rss>'''
+        rows = parse_rss(payload, publisher="NCAA.com", division="D-II")
+        self.assertEqual(rows[0]["division"], "D-II")
+
     def test_parser_rejects_cross_site_and_non_https_source_links(self):
         payload = b'''<?xml version="1.0"?><rss><channel>
           <item><title>Tracker</title><link>https://example.test/story</link>

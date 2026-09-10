@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 
 const querySchema = z.object({
   sport: z.string().trim().regex(/^[a-z0-9-]{2,80}$/).default("mens-college-basketball"),
+  division: z.enum(["D-I", "D-II", "D-III"]).optional(),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(40),
@@ -18,14 +19,19 @@ function escapeLike(value: string) {
 export const news = new Hono<{ Bindings: Env }>();
 
 news.get("/", zValidator("query", querySchema), async (c) => {
-  const { sport, q, page, limit, meta } = c.req.valid("query");
+  const { sport, division, q, page, limit, meta } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
-  const where = search
-    ? "sport=? AND (headline LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR categories_json LIKE ? ESCAPE '\\')"
-    : "sport=?";
-  const binds: Array<string | number> = search
-    ? [sport, search, search, search]
-    : [sport];
+  const clauses = ["sport=?"];
+  const binds: Array<string | number> = [sport];
+  if (division) {
+    clauses.push("division=?");
+    binds.push(division);
+  }
+  if (search) {
+    clauses.push("(headline LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR categories_json LIKE ? ESCAPE '\\')");
+    binds.push(search, search, search);
+  }
+  const where = clauses.join(" AND ");
 
   if (meta === "1") {
     const [summary, releases] = await researchDb(c.env).batch([
@@ -41,6 +47,7 @@ news.get("/", zValidator("query", querySchema), async (c) => {
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       sport,
+      division: division || "",
       q: q || "",
       summary: summary.results[0],
       releases: releases.results.map((row) => {
@@ -60,7 +67,7 @@ news.get("/", zValidator("query", querySchema), async (c) => {
   const [count, rows] = await researchDb(c.env).batch([
     researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_news_articles WHERE ${where}`).bind(...binds),
     researchDb(c.env).prepare(
-      `SELECT id,publisher,sport,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at
+      `SELECT id,publisher,sport,division,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at
          FROM bb_news_articles WHERE ${where}
         ORDER BY published DESC,id DESC LIMIT ? OFFSET ?`,
     ).bind(...binds, limit, page * limit),
@@ -78,5 +85,5 @@ news.get("/", zValidator("query", querySchema), async (c) => {
     return { ...rest, categories };
   });
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ sport, q: q || "", page, page_size: limit, total: Number((count.results[0] as { total?: number }).total || 0), rows: parsedRows });
+  return c.json({ sport, division: division || "", q: q || "", page, page_size: limit, total: Number((count.results[0] as { total?: number }).total || 0), rows: parsedRows });
 });

@@ -608,7 +608,7 @@ describe("bball api", () => {
       }] },
     ]);
     const response = await app.request(
-      "/api/basketball/research/news?q=portal&limit=10",
+      "/api/basketball/research/news?q=portal&division=D-II&limit=10",
       {},
       { DB: { prepare, batch } },
     );
@@ -618,6 +618,7 @@ describe("bball api", () => {
     expect(body.rows[0].categories).toEqual(["NCAA Men's Basketball"]);
     expect(body.rows[0]).not.toHaveProperty("categories_json");
     expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("division=?"))).toBe(true);
     expect(batch).toHaveBeenCalledOnce();
   });
 
@@ -627,6 +628,7 @@ describe("bball api", () => {
       "/api/basketball/research/news?sport=mens_college_basketball",
       "/api/basketball/research/news?limit=101",
       "/api/basketball/research/news?page=-1",
+      "/api/basketball/research/news?division=Division%20I",
     ]) {
       expect((await app.request(path, {}, { DB: { prepare } })).status).toBe(400);
     }
