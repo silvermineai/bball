@@ -239,7 +239,7 @@ export default function Page() {
               <div className="eyebrow">02 / Player production</div>
               <h2>Start with the player file.</h2>
             </div>
-            <Link href="/basketball/players/">Full player archive →</Link>
+            <div className="button-row"><Link href="/basketball/players/">Full player archive →</Link><Link href="/basketball/ncaa-rankings/">NCAA player rankings →</Link><Link href="/basketball/ncaa-compare/">Compare NCAA players →</Link></div>
           </div>
           <p className="note" style={{ marginBottom: 20 }}>
             Qualified {seasonLabel(leaders.season)} source records, ranked
@@ -362,6 +362,11 @@ export default function Page() {
           <p>
             <Link href="/basketball/recruiting/">
               Open the recruiting file →
+            </Link>
+          </p>
+          <p>
+            <Link href="/basketball/ncaa-rosters/">
+              Browse NCAA roster and high-school context →
             </Link>
           </p>
         </aside>
