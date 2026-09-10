@@ -292,6 +292,7 @@ export default function Recruiting() {
             <option value="prior_apg">Prior assists per game</option>
             <option value="prior_spg">Prior steals per game</option>
             <option value="prior_bpg">Prior blocks per game</option>
+            <option value="prior_starter_rate">Reported prior starter rate</option>
             <option value="prior_ts">Prior true shooting</option>
             <option value="prior_efg">Prior effective FG%</option>
             <option value="prior_three_pct">Prior three-point accuracy</option>
@@ -764,6 +765,9 @@ export default function Recruiting() {
                           </small>
                           <small>
                             {p.prior_production.ts == null ? "—" : `${(p.prior_production.ts * 100).toFixed(1)}%`} TS · {p.prior_production.efg == null ? "—" : `${(p.prior_production.efg * 100).toFixed(1)}%`} eFG · {p.prior_production.apg == null ? "—" : p.prior_production.apg.toFixed(1)} AST/G
+                          </small>
+                          <small>
+                            {p.prior_production.starts == null ? "—" : p.prior_production.starts.toLocaleString()} starts / {p.prior_production.starter_reported_records == null ? "—" : p.prior_production.starter_reported_records.toLocaleString()} reported · {statPercent(p.prior_production.starter_rate)} starter rate
                           </small>
                           <small>
                             {p.prior_production.box_bpm == null ? "—" : p.prior_production.box_bpm.toFixed(1)} Box BPM · publisher-attributed

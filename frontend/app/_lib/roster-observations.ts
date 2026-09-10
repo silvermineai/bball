@@ -11,6 +11,7 @@ export type RosterSortKey =
   | "prior_apg"
   | "prior_spg"
   | "prior_bpg"
+  | "prior_starter_rate"
   | "prior_ts"
   | "prior_efg"
   | "prior_three_pct"
@@ -33,6 +34,7 @@ type PriorProductionSort =
   | "prior_apg"
   | "prior_spg"
   | "prior_bpg"
+  | "prior_starter_rate"
   | "prior_ts"
   | "prior_efg"
   | "prior_three_pct"
@@ -46,6 +48,7 @@ type PriorRateMetric =
   | "apg"
   | "spg"
   | "bpg"
+  | "starter_rate"
   | "ts"
   | "efg"
   | "three_pct"
@@ -95,6 +98,7 @@ const rosterSorts = new Set<RosterSortKey>([
   "prior_apg",
   "prior_spg",
   "prior_bpg",
+  "prior_starter_rate",
   "prior_ts",
   "prior_efg",
   "prior_three_pct",
@@ -228,6 +232,7 @@ export function sortRosterObservations(
         prior_apg: "apg",
         prior_spg: "spg",
         prior_bpg: "bpg",
+        prior_starter_rate: "starter_rate",
         prior_ts: "ts",
         prior_efg: "efg",
         prior_three_pct: "three_pct",

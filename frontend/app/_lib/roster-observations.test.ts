@@ -126,6 +126,15 @@ describe("roster observation sorting", () => {
     expect(sortRosterObservations(rows, "prior_tov_rate").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 
+  it("sorts source-reported starter rates with missing values last", () => {
+    const rows = [
+      { ...row("a", "Alpha", "same_program", "A", [], 300), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300).prior_production!, starter_rate: 0.35 } },
+      { ...row("b", "Beta", "different_program", "B", [], 400), prior_production: { ...row("b", "Beta", "different_program", "B", [], 400).prior_production!, starter_rate: 0.8 } },
+      row("c", "Gamma", "new_to_dataset", "C", []),
+    ];
+    expect(sortRosterObservations(rows, "prior_starter_rate").map((r) => r.name)).toEqual(["Beta", "Alpha", "Gamma"]);
+  });
+
   it("calculates a cohort-relative prior production index without imputing missing rates", () => {
     const rows = [
       { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55), prior_production: { ...row("a", "Alpha", "same_program", "A", [], 300, 0.55).prior_production!, rpg: 3, apg: 2, spg: 1, bpg: 0, efg: 0.5 } },
