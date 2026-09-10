@@ -14,6 +14,7 @@ from ncaa_scraper.research_ledger import (
     export_sql,
     observe_state,
     register,
+    preserve_unpublished_sports,
     source_connection,
     timestamp,
 )
@@ -335,6 +336,39 @@ class LedgerTests(unittest.TestCase):
                         1,
                     )
             self.assertFalse((root / ".local/football.sqlite3").exists())
+
+    def test_single_sport_refresh_preserves_other_static_ledger_rows(self):
+        prior = {
+            "games": [
+                {"sport": "basketball", "game_id": "bb-1", "starts_at": "2026-11-01"},
+                {"sport": "football", "game_id": "fb-old", "starts_at": "2026-09-01"},
+            ],
+            "versions": [
+                {"sport": "basketball", "game_id": "bb-1", "id": "bb-version"},
+            ],
+            "sports": {"basketball": {"games": 1}},
+            "provider_receipts": [{"provider": "old"}],
+            "market_observations": 4,
+            "unmatched_events": 2,
+        }
+        current = {
+            "games": [
+                {"sport": "football", "game_id": "fb-new", "starts_at": "2026-09-02"},
+            ],
+            "versions": [],
+            "sports": {"football": {"games": 1}},
+            "provider_receipts": [],
+            "market_observations": 0,
+            "unmatched_events": 0,
+        }
+        result = preserve_unpublished_sports(current, prior, {"football"})
+        self.assertEqual(
+            [(row["sport"], row["game_id"]) for row in result["games"]],
+            [("football", "fb-new"), ("basketball", "bb-1")],
+        )
+        self.assertEqual(result["versions"][0]["id"], "bb-version")
+        self.assertEqual(result["sports"]["basketball"], {"games": 1})
+        self.assertEqual(result["market_observations"], 4)
 
 
 if __name__ == "__main__":

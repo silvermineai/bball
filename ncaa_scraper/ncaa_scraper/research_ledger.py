@@ -187,6 +187,7 @@ def observe_state(conn, sport, game_id, state, now):
 
 
 def ingest_published(conn, now):
+    refreshed = set()
     for sport in SPORTS:
         overview_path = ROOT / f"frontend/public/data/{sport}/overview.json"
         if not overview_path.exists():
@@ -195,6 +196,7 @@ def ingest_published(conn, now):
         with source_connection(sport) as source:
             if source is None:
                 continue
+            refreshed.add(sport)
             for game in overview["upcoming"]:
                 if game.get("prediction"):
                     register(
@@ -237,6 +239,44 @@ def ingest_published(conn, now):
                     )
                 observe_state(conn, sport, row[0], state, now)
     conn.commit()
+    return refreshed
+
+
+def preserve_unpublished_sports(report, prior, refreshed):
+    """Keep checked-in ledger rows when a single-sport run lacks the other source DB.
+
+    CI and the scheduled publisher can refresh football without materializing the
+    multi-gigabyte basketball SQLite source. In that case rebuilding the ledger
+    from the empty side would erase the other sport's immutable registrations
+    from the static report even though its forecast artifact was not changed.
+    Preserve that sport's rows and summary until its own publication refreshes.
+    """
+    missing = set(SPORTS).difference(refreshed)
+    if not missing or not isinstance(prior, dict):
+        return report
+    for key in ("games", "versions"):
+        current = [row for row in report.get(key, []) if row.get("sport") not in missing]
+        previous = [row for row in prior.get(key, []) if row.get("sport") in missing]
+        report[key] = current + previous
+        report[key].sort(
+            key=lambda row: (
+                row.get("starts_at", ""),
+                row.get("sport", ""),
+                row.get("game_id", ""),
+                row.get("registered_at", ""),
+                row.get("id", ""),
+            )
+        )
+    summaries = report.setdefault("sports", {})
+    for sport in missing:
+        if sport in prior.get("sports", {}):
+            summaries[sport] = prior["sports"][sport]
+    # These totals are cross-sport and cannot be recomputed from a partial
+    # source connection. The prior report is the complete authoritative view.
+    for key in ("provider_receipts", "market_observations", "unmatched_events"):
+        if key in prior:
+            report[key] = prior[key]
+    return report
 
 
 def eligibility(row, state):
@@ -644,8 +684,13 @@ def main():
     args = parser.parse_args()
     now = utcnow()
     conn = connect()
-    ingest_published(conn, now)
+    refreshed = ingest_published(conn, now)
     report = build_report(conn, now)
+    prior_path = OUT / "ledger.json"
+    if prior_path.exists():
+        report = preserve_unpublished_sports(
+            report, json.loads(prior_path.read_text()), refreshed
+        )
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "ledger.json").write_text(encoded(report))
     if args.sql:
