@@ -15,6 +15,7 @@ class NewsRssTests(unittest.TestCase):
           <pubDate>Tue, 8 Sep 2026 16:01:09 EST</pubDate>
           <guid>US-EN-1</guid><category>Recruiting</category>
         </item></channel></rss>'''
+        payload = payload.replace(b"https://www.espn.com/story/1", b"https://www.ncaa.com/news/1")
         rows = parse_rss(payload, feed_url="https://example.test/feed", publisher="NCAA.com")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["headline"], "Portal &amp; prep update")
@@ -38,6 +39,15 @@ class NewsRssTests(unittest.TestCase):
         </channel></rss>'''
         rows = parse_rss(payload, publisher="ESPN", sport="mens-college-basketball")
         self.assertEqual([row["headline"] for row in rows], ["Basketball portal"])
+
+    def test_parser_rejects_cross_site_and_non_https_source_links(self):
+        payload = b'''<?xml version="1.0"?><rss><channel>
+          <item><title>Tracker</title><link>https://example.test/story</link>
+            <pubDate>Tue, 8 Sep 2026 16:01:09 EST</pubDate><guid>tracker</guid></item>
+          <item><title>Insecure</title><link>http://www.espn.com/mens-college-basketball/story/1</link>
+            <pubDate>Tue, 8 Sep 2026 16:02:09 EST</pubDate><guid>insecure</guid></item>
+        </channel></rss>'''
+        self.assertEqual(parse_rss(payload, publisher="ESPN", sport="mens-college-basketball"), [])
 
     def test_failed_feed_keeps_source_specific_prior_rows(self):
         prior = [{

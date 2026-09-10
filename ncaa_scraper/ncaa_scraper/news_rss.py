@@ -33,6 +33,27 @@ FEEDS = (
 FEED_URL = FEEDS[0]["url"]
 USER_AGENT = "SilvermineResearch/1.0 (service@silvermineai.com)"
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[2] / "frontend/public/data/news.json"
+PUBLISHER_HOSTS = {
+    "ESPN": {"espn.com", "www.espn.com"},
+    "NCAA.com": {"ncaa.com", "www.ncaa.com"},
+}
+
+
+def permitted_source_url(value: str, publisher: str) -> bool:
+    """Accept only HTTPS links on the publisher's own host.
+
+    RSS is a source of publisher context, so redirects, tracking hosts and
+    cross-site links are withheld before they enter the retained release.
+    Unknown publisher labels are allowed for test/custom feeds but still must
+    use HTTPS and a hostname.
+    """
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+    host = (parsed.hostname or "").lower().rstrip(".")
+    allowed = PUBLISHER_HOSTS.get(publisher)
+    return parsed.scheme.lower() == "https" and not parsed.username and not parsed.password and bool(host) and (allowed is None or host in allowed)
 
 
 def _text(item: ET.Element, name: str) -> str:
@@ -64,7 +85,7 @@ def parse_rss(
         link = _text(item, "link")
         guid = _text(item, "guid") or link
         published_raw = _text(item, "pubDate")
-        if not title or not link or not published_raw:
+        if not title or not link or not published_raw or not permitted_source_url(link, publisher):
             continue
         # ESPN's broad NCB feed occasionally carries football or general
         # college-sports items. Keep the published sport label truthful by
