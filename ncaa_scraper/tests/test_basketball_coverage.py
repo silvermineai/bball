@@ -24,11 +24,13 @@ class BasketballCoverageTests(unittest.TestCase):
                 ("ncaa_shots", 2026, 0, "Missing NCAA shooter or team ID", json.dumps({"made": True})),
                 ("player_box", 2026, 1, "Missing athlete ID", json.dumps({"points": ""})),
                 ("player_box", 2026, 2, "Missing athlete ID", json.dumps({"points": "12"})),
+                ("ncaa_player_box", 2026, 3, "Missing NCAA player ID", json.dumps({"pf": 4})),
             ],
         )
         self.assertEqual(
             coverage.build(conn),
             [
+                {"dataset": "ncaa_player_box", "reason": "Missing NCAA player ID", "rows": 1, "rows_with_observed_stats": 1},
                 {"dataset": "ncaa_shots", "reason": "Missing NCAA shooter or team ID", "rows": 1, "rows_with_observed_stats": 1},
                 {"dataset": "player_box", "reason": "Missing athlete ID", "rows": 2, "rows_with_observed_stats": 1},
             ],

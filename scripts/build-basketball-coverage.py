@@ -22,7 +22,7 @@ OBSERVATION_FIELDS = {
     ),
     "ncaa_player_box": (
         "mins", "pts", "fgm", "fga", "tpm", "tpa", "ftm", "fta",
-        "orb", "drb", "ast", "stl", "blk", "tov",
+        "orb", "drb", "ast", "stl", "blk", "tov", "pf",
     ),
     "ncaa_shots": ("made", "point_value", "shot_x", "shot_y", "dist_ft"),
     "publisher_player_value": ("min", "box_bpm", "box_obpm", "box_dbpm"),
