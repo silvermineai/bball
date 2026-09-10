@@ -15,6 +15,13 @@ export type PublisherArticle = {
   sport?: string;
 };
 
+export type FeedError = {
+  publisher: string;
+  url: string;
+  error: string;
+  fallback_articles: number;
+};
+
 const PAGE_SIZE = 12;
 
 function parseInitial() {
@@ -33,11 +40,13 @@ export default function NewsArchive({
   articles,
   feeds,
   termsUrl,
+  feedErrors = [],
 }: {
   generatedAt?: string;
   articles: PublisherArticle[];
   feeds: Array<{ publisher: string; url: string }>;
   termsUrl?: string;
+  feedErrors?: FeedError[];
 }) {
   const initial = parseInitial();
   const [query, setQuery] = useState(initial.query);
@@ -115,7 +124,16 @@ export default function NewsArchive({
         <div><strong>{filtered.length.toLocaleString()}</strong><span>Matches in view</span></div>
         <div><strong>{generatedAt ? date(generatedAt) : "—"}</strong><span>Release clock</span></div>
       </div>
-      <p className="note">{archiveStatus === "live" ? "Cloudflare D1 archive connected; showing the latest retained release." : archiveStatus === "fallback" ? "Cloudflare D1 archive unavailable; showing the bundled release." : "Checking the Cloudflare D1 archive…"}</p>
+      <p className="note">
+        {archiveStatus === "live"
+          ? "Cloudflare D1 archive connected; showing the latest retained release."
+          : archiveStatus === "fallback"
+            ? "Cloudflare D1 archive unavailable; showing the bundled release."
+            : "Checking the Cloudflare D1 archive…"}
+        {feedErrors.length > 0 && (
+          <> {feedErrors.map((error) => `${error.publisher} feed unavailable; retained ${error.fallback_articles.toLocaleString()} prior headline${error.fallback_articles === 1 ? "" : "s"}`).join(" · ")}.</>
+        )}
+      </p>
       <div className="toolbar">
         <label className="control"><span>SEARCH THE ARCHIVE</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
         <label className="control"><span>PUBLISHER</span><select value={publisher} onChange={(event) => { setPublisher(event.target.value); setPage(0); }}><option value="all">All publishers</option>{publishers.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
