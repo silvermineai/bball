@@ -1187,6 +1187,70 @@ th,
   font-size: 12px;
   font-weight: 600;
 }
+.learning-path-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 42px;
+}
+.learning-path {
+  border: 1px solid var(--ink);
+  border-top: 4px solid var(--orange);
+  background: #e9eddf;
+  padding: 22px 24px 18px;
+}
+.learning-path:nth-child(2n) {
+  border-top-color: var(--ink);
+}
+.learning-path-topline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.learning-path-number {
+  color: var(--orange);
+  font: 600 18px "IBM Plex Mono", monospace;
+}
+.learning-path h3 {
+  font-size: clamp(25px, 3vw, 36px);
+  margin: 16px 0 9px;
+}
+.learning-path p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 44px;
+}
+.learning-path ol {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.learning-path li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  padding: 10px 0;
+  font-size: 12px;
+}
+.learning-path li > span {
+  color: var(--muted);
+  font: 10px "IBM Plex Mono", monospace;
+}
+.learning-path li a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-underline-offset: 4px;
+}
+.learning-directory-heading {
+  margin-top: 4px;
+}
+.learning-directory-heading h3 {
+  font-size: 28px;
+}
 .article {
   max-width: 760px;
   margin: 24px auto 60px;
@@ -1471,6 +1535,7 @@ summary {
   }
   .match-grid,
   .article-grid,
+  .learning-path-grid,
   .two-col,
   .leader-grid {
     grid-template-columns: 1fr;

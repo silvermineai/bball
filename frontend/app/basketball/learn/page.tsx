@@ -254,6 +254,53 @@ const recruitingGlossary = [
   ],
 ];
 
+const learningTracks = [
+  {
+    number: "01",
+    eyebrow: "Game planner",
+    title: "Read the next matchup",
+    description: "Move from the schedule to a practical game question, then test the four factors behind the forecast.",
+    steps: [
+      ["Frame the game", "/basketball/matchups/"],
+      ["Test four factors", "/basketball/learn/#four-factors"],
+      ["Open the brief", "/basketball/briefs/"],
+    ],
+  },
+  {
+    number: "02",
+    eyebrow: "Player researcher",
+    title: "Build a player file",
+    description: "Start with a complete source row, qualify the workload, and open the exact player evidence behind a ranking.",
+    steps: [
+      ["Find the player", "/basketball/players/"],
+      ["Choose a ranking lens", "/basketball/ncaa-rankings/"],
+      ["Read the player card", "/basketball/ncaa-player/"],
+    ],
+  },
+  {
+    number: "03",
+    eyebrow: "Recruiting analyst",
+    title: "Turn a roster row into a question",
+    description: "Separate what a school published from what the stats record, then make the next fit check explicit.",
+    steps: [
+      ["Read dated evidence", "/basketball/recruiting/"],
+      ["Check prior workload", "/basketball/roster-board/"],
+      ["Build the role shortlist", "/basketball/recruiting/fit/"],
+    ],
+  },
+  {
+    number: "04",
+    eyebrow: "Methods reader",
+    title: "Audit the claim",
+    description: "Understand how the estimate was tested, what it can see, and whether the underlying source clock is current.",
+    steps: [
+      ["Read the model", "/basketball/model/"],
+      ["Inspect holdouts", "/basketball/evaluation/"],
+      ["Check source coverage", "/research/coverage/"],
+    ],
+  },
+];
+
 export default function Page() {
   return (
     <>
@@ -282,8 +329,34 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">01 / Choose a starting point</div>
-            <h2>One desk, many ways in.</h2>
+            <div className="eyebrow">01 / Pick your route</div>
+            <h2>Four ways to learn the desk.</h2>
+          </div>
+        </div>
+        <div className="learning-path-grid">
+          {learningTracks.map((track) => (
+            <article className="learning-path" key={track.number}>
+              <div className="learning-path-topline">
+                <span className="learning-path-number">{track.number}</span>
+                <span className="eyebrow">{track.eyebrow}</span>
+              </div>
+              <h3>{track.title}</h3>
+              <p>{track.description}</p>
+              <ol>
+                {track.steps.map(([label, href], index) => (
+                  <li key={href}>
+                    <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                    <Link href={href}>{label} <span aria-hidden="true">↗</span></Link>
+                  </li>
+                ))}
+              </ol>
+            </article>
+          ))}
+        </div>
+        <div className="section-heading learning-directory-heading">
+          <div>
+            <div className="eyebrow">Desk directory</div>
+            <h3>Open a specific room.</h3>
           </div>
         </div>
         <div className="article-grid">
@@ -334,7 +407,7 @@ export default function Page() {
         </p>
       </section>
 
-      <section className="section" aria-label="Interactive Four Factors lesson">
+      <section className="section" id="four-factors" aria-label="Interactive Four Factors lesson">
         <FourFactorsCalculator />
       </section>
 
