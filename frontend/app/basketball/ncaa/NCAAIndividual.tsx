@@ -25,7 +25,7 @@ const liveStats = new Set<NCAAStatKey>(stats);
 type LiveLeaderResponse = {
   total: number;
   rows: Array<{ payload: NCAAIndividualPlayer }>;
-  provenance?: { kind?: string; dataset?: string; publisher_rank?: boolean };
+  provenance?: { kind?: string; dataset?: string; source_url?: string; note?: string; publisher_rank?: boolean };
 };
 type LiveLeaderMeta = {
   season: number;
@@ -127,6 +127,7 @@ export default function NCAAIndividual() {
   const astSupplement = data?.supplements?.ast;
   const boxDerivedSupplement = data?.supplements?.box_derived;
   const boxDerivedCount = boxDerivedSupplement?.values?.[stat];
+  const liveDerived = live?.provenance?.kind === "exact_id_derived" || live?.provenance?.kind === "publisher_snapshot_with_exact_id_fill";
   const divisionCount = division === "all"
     ? Object.values(sourceCoverage?.divisions || {}).reduce((sum, d) => sum + d.players, 0)
     : sourceCoverage?.divisions[division]?.players || 0;
@@ -183,6 +184,12 @@ export default function NCAAIndividual() {
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>{ncaaStatLabels[stat]} includes an exact-ID Division I supplement.</strong>
             <p>{boxDerivedCount.toLocaleString()} missing source values for {boxDerivedSupplement.season - 1}–{String(boxDerivedSupplement.season).slice(-2)} are filled from <em>{boxDerivedSupplement.dataset}</em>: {boxDerivedSupplement.basis}. {boxDerivedSupplement.publisher_rank}. <a href={boxDerivedSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+          </div>
+        )}
+        {live && liveDerived && live.provenance?.source_url && (
+          <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
+            <strong>{ncaaStatLabels[stat]} live source provenance.</strong>
+            <p>{live.provenance.note || "This live measure includes values derived from the exact-ID NCAA player-box release."} <a href={live.provenance.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
           </div>
         )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
