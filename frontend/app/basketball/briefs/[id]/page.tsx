@@ -133,7 +133,62 @@ export default async function Page({
   ];
   const record = evidence.ledger,
     quotes = record && !record.exclusion ? record.comparisons : [],
-    publisherArticles = relatedPublisherArticles(g);
+    publisherArticles = relatedPublisherArticles(g),
+    rosterPrograms = evidence.programs.filter((program) => program.roster),
+    marginWidth = p.margin_high - p.margin_low,
+    readiness = [
+      {
+        key: "forecast",
+        label: "Forecast signal",
+        value: p.estimate_type === "cold_start" ? "Cold start" : "Model baseline",
+        detail:
+          p.estimate_type === "cold_start"
+            ? "One or both teams lack a full historical profile; treat the prior as a wider starting point."
+            : `Home win estimate ${fmt(p.home_win_probability * 100)}% · ${fmt(marginWidth, 1)}-point nominal range.`,
+        href: "/basketball/model/",
+        link: "Model notebook",
+        tone: p.estimate_type === "cold_start" ? "caution" : "ink",
+      },
+      {
+        key: "schedule",
+        label: "Schedule status",
+        value: g.time_tbd ? "Start time unconfirmed" : g.neutral ? "Neutral floor" : "Home floor",
+        detail: g.time_tbd
+          ? "The source schedule has not confirmed a tip time; recheck before distributing a plan."
+          : g.venue || "Venue designation is available from the schedule source.",
+        href: espnGameUrl(g.id),
+        link: "Source schedule",
+        tone: g.time_tbd ? "caution" : "ink",
+      },
+      {
+        key: "roster",
+        label: "Roster evidence",
+        value: rosterPrograms.length === 2 ? "Both teams observed" : `${rosterPrograms.length}/2 teams observed`,
+        detail:
+          rosterPrograms.length === 2
+            ? rosterPrograms
+                .map((program) => {
+                  const share = program.roster?.representedMinutesShare;
+                  return `${program.profile.name} ${share == null ? "—" : `${fmt(share * 100, 0)}%`} prior minutes represented`;
+                })
+                .join(" · ")
+            : "Use the roster and dated announcement sections to identify what remains unverified.",
+        href: "#roster-evidence",
+        link: "Roster evidence",
+        tone: rosterPrograms.length === 2 ? "ink" : "caution",
+      },
+      {
+        key: "market",
+        label: "Market evidence",
+        value: quotes.length ? `${quotes.length} timestamped comparison${quotes.length === 1 ? "" : "s"}` : "No licensed quote",
+        detail: quotes.length
+          ? "The comparison is matched to this model edition and game snapshot."
+          : "No qualifying bookmaker observation is published; an edge cannot be reported.",
+        href: "#market-trail",
+        link: quotes.length ? "Market trail" : "Record a manual check",
+        tone: quotes.length ? "ink" : "muted",
+      },
+    ];
   return (
     <article className="matchup-brief">
       <header className="page-title">
@@ -222,6 +277,30 @@ export default async function Page({
         </p>
       </div>
       <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} />
+      <section className="brief-readiness" aria-label="Pre-tip readiness">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Pre-tip readiness / Four checks</div>
+            <h2>Know what is settled before you scout.</h2>
+          </div>
+          <span className="note">Updated with this brief edition</span>
+        </div>
+        <div className="brief-readiness-grid">
+          {readiness.map((item) => (
+            <div className={`brief-readiness-card ${item.tone}`} key={item.key}>
+              <div className="eyebrow">{item.label}</div>
+              <strong>{item.value}</strong>
+              <p>{item.detail}</p>
+              <Link href={item.href}>{item.link} →</Link>
+            </div>
+          ))}
+        </div>
+        <p className="note brief-readiness-note">
+          These checks describe source coverage and model state. They do not
+          convert a roster listing into eligibility, a schedule into availability,
+          or a market quote into a recommendation.
+        </p>
+      </section>
       <ManualMarketCheck
         storageKey={`brief:${g.id}`}
         gameId={g.id}
@@ -232,7 +311,7 @@ export default async function Page({
         modelTotal={p.total}
         modelHomeWinProbability={p.home_win_probability}
       />
-      <section className="section">
+      <section className="section" id="roster-evidence">
         <div className="section-heading">
           <div>
             <div className="eyebrow">
@@ -803,7 +882,7 @@ export default async function Page({
           </div>
         </section>
       ) : null}
-      <section className="section brief-market">
+      <section className="section brief-market" id="market-trail">
         <div className="section-heading">
           <div>
             <div className="eyebrow">08 / Compare only matching records</div>
