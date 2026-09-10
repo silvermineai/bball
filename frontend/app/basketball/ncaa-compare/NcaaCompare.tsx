@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { effectiveFieldGoal, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 
 type Stats = Record<string, number | null>;
 type SeasonRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; games: number; stats: Stats };
@@ -13,10 +13,6 @@ type Impact = { season: number; player_id: string; orapm: number | null; drapm: 
 type SearchRow = { player_id: string; player_name: string | null; team_id: string; team_name: string | null; games: number; points: number | null };
 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
-const numberValue = (stats: Stats | undefined, key: string) => {
-  const value = stats?.[key];
-  return value == null || !Number.isFinite(Number(value)) ? null : Number(value);
-};
 const format = (value: number | null, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percent = (value: number | null) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 
@@ -25,10 +21,7 @@ function PlayerColumn({ card, season, impact }: { card: Card; season: number; im
   const roster = card.rosters.find((row) => row.season === season);
   const totals = useMemo(() => {
     if (!rows.length) return null;
-    const sum = (key: string) => {
-      const values = rows.map((row) => numberValue(row.stats, key)).filter((value): value is number => value != null);
-      return values.length ? values.reduce((total, value) => total + value, 0) : null;
-    };
+    const sum = (key: string) => completeStatsSum(rows, key);
     const games = rows.reduce((total, row) => total + (Number(row.games) || 0), 0);
     const points = sum("pts");
     const rebounds = safeSum(sum("orb"), sum("drb"));

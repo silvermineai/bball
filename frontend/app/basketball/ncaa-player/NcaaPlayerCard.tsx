@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { buildNcaaRecentForm } from "../../_lib/ncaa-player-form";
-import { effectiveFieldGoal, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import {
   buildNcaaPlayerTrajectory,
@@ -73,6 +73,11 @@ export default function NcaaPlayerCard() {
   useEffect(() => { if (!id) return; const url = new URL(window.location.href); url.searchParams.set("season", String(season)); window.history.replaceState(null, "", url); }, [id, season]);
   const selected = useMemo(() => card?.seasons.filter((row) => row.season === season), [card, season]);
   const selectedRow = selected?.[0];
+  const selectedStats = useMemo<Stats | undefined>(() => {
+    if (!selected?.length) return undefined;
+    const keys = Array.from(new Set(selected.flatMap((row) => Object.keys(row.stats))));
+    return Object.fromEntries(keys.map((key) => [key, completeStatsSum(selected, key)]));
+  }, [selected]);
   const roster = card?.rosters.find((row) => row.season === season);
   const shooting = card?.shooting.find((row) => row.season === season);
   const shotZones = shooting?.stats.zones || {};
@@ -83,9 +88,9 @@ export default function NcaaPlayerCard() {
   );
   const name = selectedRow?.player_name || roster?.player_name || card?.seasons[0]?.player_name || `NCAA player ${id}`;
   const team = selectedRow?.team_name || roster?.team_name || card?.seasons[0]?.team_name || "Source team unavailable";
-  const points = stat(selectedRow, "pts"), games = selectedRow?.games || 0, minutes = stat(selectedRow, "mins"), fga = stat(selectedRow, "fga"), fgm = stat(selectedRow, "fgm"), fta = stat(selectedRow, "fta"), ftm = stat(selectedRow, "ftm"), ast = stat(selectedRow, "ast"), turnovers = stat(selectedRow, "tov"), fouls = stat(selectedRow, "pf"), orb = stat(selectedRow, "orb"), drb = stat(selectedRow, "drb");
+  const points = value(selectedStats, "pts"), games = selected?.reduce((total, row) => total + (Number.isFinite(row.games) ? row.games : 0), 0) || 0, minutes = value(selectedStats, "mins"), fga = value(selectedStats, "fga"), fgm = value(selectedStats, "fgm"), fta = value(selectedStats, "fta"), ftm = value(selectedStats, "ftm"), ast = value(selectedStats, "ast"), turnovers = value(selectedStats, "tov"), fouls = value(selectedStats, "pf"), orb = value(selectedStats, "orb"), drb = value(selectedStats, "drb");
   const ts = trueShooting({ pts: points, fga, fta });
-  const efg = effectiveFieldGoal(fgm, stat(selectedRow, "tpm"), fga);
+  const efg = effectiveFieldGoal(fgm, value(selectedStats, "tpm"), fga);
   const fetchFullGameLog = async () => {
     if (!id || loadingGames || allGames) return allGames;
     setLoadingGames(true);

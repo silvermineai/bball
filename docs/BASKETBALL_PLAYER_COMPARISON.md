@@ -14,7 +14,7 @@ The current archive has 164,617 player/program records across ending-year season
 
 - Counting statistics divide complete recorded totals by playing appearances or scale by `40 / recorded minutes`. They include points, rebounds, assists, steals, blocks, turnovers, offensive and defensive rebounds, and fouls. Per 40 is a playing-time normalization, not pace or opponent adjustment, and does not predict a full-game workload.
 - Shooting uses pooled season totals. The table exposes field-goal, three-point and free-throw makes and attempts, along with field-level game coverage. It shows eFG, estimated TS with the archive's college coefficient 0.475, FG%, two-point percentage, 3P%, FT%, three-point attempt share, free-throw attempt rate and assist/turnover ratio. Formulas are visible in the table.
-- Totals require that the field be recorded in every included appearance. Missing fields invalidate affected totals and rates without removing unrelated complete statistics. Nonpositive denominators yield unavailable rates. DNPs and other non-appearances remain in source evidence but do not enter playing averages.
+- Totals require that the field be recorded in every included appearance and every included team stint for a pooled season. Missing fields invalidate affected totals and rates without removing unrelated complete statistics; the client never treats an unreported stint as zero. Nonpositive denominators yield unavailable rates. DNPs and other non-appearances remain in source evidence but do not enter playing averages.
 - No synthetic overall grade, roster projection, forecast feature or betting recommendation is generated.
 
 ## Percentile chart

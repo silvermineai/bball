@@ -10,6 +10,21 @@ export function safeSum(left: number | null | undefined, right: number | null | 
   return left != null && right != null ? left + right : null;
 }
 
+/**
+ * Pool one source stat across team rows only when every stint contains a
+ * finite value. A partial season total would turn an unknown stint into a
+ * false zero and make a rate look more complete than its source evidence.
+ */
+export function completeStatsSum(
+  rows: ReadonlyArray<{ stats: NumericStats }>,
+  key: string,
+) {
+  if (!rows.length) return null;
+  const values = rows.map((row) => row.stats[key]);
+  if (!values.every((value): value is number => typeof value === "number" && Number.isFinite(value))) return null;
+  return values.reduce((total, value) => total + value, 0);
+}
+
 /** Compute eFG% only when makes, threes and attempts are all source-reported. */
 export function effectiveFieldGoal(
   fieldGoalsMade: number | null | undefined,
