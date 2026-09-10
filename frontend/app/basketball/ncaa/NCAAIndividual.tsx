@@ -20,6 +20,13 @@ import {
 
 const stats = Object.keys(ncaaStatLabels) as NCAAStatKey[];
 const percentStats = new Set<NCAAStatKey>(["fg_pct", "three_pct", "ft_pct"]);
+const liveStats = new Set<NCAAStatKey>(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl"]);
+
+type LiveLeaderResponse = {
+  total: number;
+  rows: Array<{ payload: NCAAIndividualPlayer }>;
+  provenance?: { kind?: string; dataset?: string; publisher_rank?: boolean };
+};
 
 export default function NCAAIndividual() {
   const params = useSearchParams();
@@ -30,6 +37,8 @@ export default function NCAAIndividual() {
   const [query, setQuery] = useState(initial.query);
   const [page, setPage] = useState(0);
   const [copied, setCopied] = useState("");
+  const [live, setLive] = useState<{ rows: NCAAIndividualPlayer[]; total: number; provenance?: LiveLeaderResponse["provenance"] } | null>(null);
+  const [liveError, setLiveError] = useState("");
   useEffect(() => {
     const next = ncaaFilterSearch({ division, stat, query });
     if (next !== window.location.search) {
@@ -42,14 +51,43 @@ export default function NCAAIndividual() {
     setPage(0);
     setCopied("");
   }, [division, stat, query]);
-  const rows = sortNCAAPlayers(
+  const staticRows = sortNCAAPlayers(
     (data?.players || []).filter((p) =>
       (division === "all" || p.division === +division) &&
       `${p.name} ${p.team_name || ""} ${p.conference || ""}`.toLowerCase().includes(query.toLowerCase()),
     ),
     stat,
   );
-  const pageRows = rows.slice(page * 40, page * 40 + 40);
+  useEffect(() => {
+    if (!liveStats.has(stat)) {
+      setLive(null);
+      setLiveError("");
+      return;
+    }
+    const controller = new AbortController();
+    const params = new URLSearchParams({ division, stat, page: String(page) });
+    if (query.trim()) params.set("q", query.trim());
+    setLive(null);
+    setLiveError("");
+    fetch(`/api/basketball/research/ncaa-leaders?${params}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Live NCAA leaderboard unavailable; showing the checked-in release.");
+        return response.json() as Promise<LiveLeaderResponse>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLive({ rows: value.rows.map((row) => row.payload), total: value.total, provenance: value.provenance });
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLive(null);
+          setLiveError(reason instanceof Error ? reason.message : "Live NCAA leaderboard unavailable; showing the checked-in release.");
+        }
+      });
+    return () => controller.abort();
+  }, [division, page, query, stat]);
+  const rows = live?.rows || staticRows;
+  const totalRows = live?.total ?? staticRows.length;
+  const pageRows = live ? rows : rows.slice(page * 40, page * 40 + 40);
   const shown = (p: NCAAIndividualPlayer) => {
     const value = p[stat];
     return value == null ? "—" : fmt(value, percentStats.has(stat) ? 1 : stat === "ast_to" ? 2 : 1);
@@ -86,7 +124,7 @@ export default function NCAAIndividual() {
           <div><strong>{data.season - 1}–{String(data.season).slice(-2)}</strong><span>Final statistics season</span></div>
           <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
         </div>
-        <p className="note" style={{ marginBottom: 20 }}>These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError || "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
         {stat === "apg" && data.supplements?.apg && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Assists per game uses an exact-ID Division I supplement.</strong>
@@ -109,11 +147,11 @@ export default function NCAAIndividual() {
             </table>
           </div>
         </details>
-        <div className="section-heading" style={{ marginBottom: 20 }}><p>{rows.length.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} published values · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
+        <div className="section-heading" style={{ marginBottom: 20 }}><p>{totalRows.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} values on this page · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
         <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Publisher rank is shown only when that NCAA page supplied a rank for the selected measure.</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Publisher rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Source row evidence</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${data.season}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Publisher headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}
-        <div className="pagination"><span>{rows.length.toLocaleString()} records · page {page + 1} of {Math.max(1, Math.ceil(rows.length / 40))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 40 >= rows.length} onClick={() => setPage(page + 1)}>Next →</button></div></div>
+        <div className="pagination"><span>{totalRows.toLocaleString()} records · page {page + 1} of {Math.max(1, Math.ceil(totalRows / 40))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 40 >= totalRows} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       </>}
     </>
   );
