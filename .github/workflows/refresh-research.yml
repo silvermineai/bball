@@ -169,6 +169,33 @@ jobs:
             python scripts/cloudflare.py deploy
           fi
 
+      - name: Smoke test production publication
+        # Deployment success only proves that assets uploaded. Exercise the
+        # public D1-backed route as well so a schema/query regression cannot
+        # leave the coverage desk returning an HTTP 500 after a green deploy.
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Cache-Control: no-cache' \
+            'https://bball.silvermine.dev/api/basketball/research/coverage?workflow_smoke=1' \
+            -o /tmp/basketball-coverage.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('/tmp/basketball-coverage.json').read_text())
+          required = {'coverage', 'source_receipts', 'location_validation', 'possession_validation'}
+          missing = sorted(required.difference(payload))
+          if missing:
+              raise SystemExit(f'coverage response is missing required fields: {missing}')
+          if not isinstance(payload['coverage'], list) or not payload['coverage']:
+              raise SystemExit('coverage response has no dataset rows')
+          for key in ('location_validation', 'possession_validation'):
+              if not isinstance(payload[key], dict):
+                  raise SystemExit(f'coverage response has no {key} object')
+          print('Production coverage smoke test passed')
+          PY
+
       - name: Record publication summary
         run: |
           {
