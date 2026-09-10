@@ -26,3 +26,18 @@ export function comparisonGapDirection(comparison: Comparison): "home" | "away" 
   if (comparison.market === "totals") return comparison.model_difference > 0 ? "over" : "under";
   return comparison.model_difference > 0 ? "home" : "away";
 }
+
+/** Compact, CSV-safe summary used when a matchup has more than one quote. */
+export function comparisonQuoteSummary(comparison: Comparison): string {
+  const line = comparison.market === "h2h"
+    ? comparison.market_home_probability == null
+      ? "moneyline"
+      : `${(comparison.market_home_probability * 100).toFixed(1)}% home`
+    : comparison.line == null
+      ? "line unavailable"
+      : comparison.market === "totals"
+        ? `O/U ${comparison.line.toFixed(1)}`
+        : `home ${comparison.line > 0 ? "+" : ""}${comparison.line.toFixed(1)}`;
+  const gap = comparisonGapLabel(comparison);
+  return `${comparison.bookmaker} ${comparison.market} ${line}${gap ? ` · model ${gap}` : ""} · captured ${comparison.captured_at}`;
+}

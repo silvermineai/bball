@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapLabel } from "./market-display";
+import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -30,5 +30,10 @@ describe("market comparison display", () => {
     const missing = comparison("spreads", Number.NaN);
     expect(comparisonGapLabel(missing)).toBeNull();
     expect(comparisonGapDirection(missing)).toBe("neutral");
+  });
+
+  it("keeps a compact quote summary useful in exports", () => {
+    const quote = { ...comparison("h2h", 0.043), market_home_probability: 0.512, line: null };
+    expect(comparisonQuoteSummary(quote)).toBe("test book h2h 51.2% home · model +4.3 probability pts · captured 2026-09-10T12:00:00Z");
   });
 });

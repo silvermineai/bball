@@ -21,6 +21,7 @@ import {
   loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
+import { comparisonQuoteSummary } from "../../_lib/market-display";
 
 export default function Matchups({
   games,
@@ -330,6 +331,8 @@ export default function Matchups({
                   "Projected pace",
                   "Broadcast",
                   "Estimate type",
+                  "Qualifying market quote count",
+                  "Market quote snapshots",
                 ],
                 rows.map((g) => [
                   g.starts_at,
@@ -348,6 +351,8 @@ export default function Matchups({
                   (g.prediction || g.fallback_prediction)?.pace,
                   g.broadcast,
                   g.prediction ? "primary" : g.fallback_prediction ? "cold-start" : null,
+                  (liveMarketComparisons?.[g.id] ?? marketComparisons[g.id] ?? []).length,
+                  (liveMarketComparisons?.[g.id] ?? marketComparisons[g.id] ?? []).map(comparisonQuoteSummary).join(" | "),
                 ]),
               ),
             )
