@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sqlite3
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -213,34 +215,139 @@ FEATURES = (
     "represented_bpm",
 )
 
+# NCAA roster releases reach back to 2010 but do not carry the publisher's
+# Box BPM identity. Their historical replay therefore uses workload fields
+# only and stays separate from the ESPN/Box BPM production challenger.
+WORKLOAD_FEATURES = (
+    "prior_net",
+    "returning_minutes_share",
+    "represented_minutes_share",
+    "incoming_minutes_share",
+    "listed_players",
+)
 
-def _matrix(rows: list[dict]) -> tuple[np.ndarray, np.ndarray, list[dict]]:
+
+def _team_key(value: str | None) -> str:
+    text = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]", "", text.casefold())
+
+
+def _espn_team_ids(conn: sqlite3.Connection, season: int) -> dict[str, str]:
+    """Map unique normalized ESPN schedule names to season IDs."""
+    candidates: dict[str, set[str]] = defaultdict(set)
+    for row in conn.execute(
+        "SELECT home_name AS name,home_id AS team_id FROM bb_games WHERE season=? "
+        "UNION SELECT away_name,away_id FROM bb_games WHERE season=?",
+        (season, season),
+    ):
+        key = _team_key(row["name"])
+        if key:
+            candidates[key].add(str(row["team_id"]))
+    return {key: next(iter(ids)) for key, ids in candidates.items() if len(ids) == 1}
+
+
+def ncaa_roster_features(
+    conn: sqlite3.Connection,
+    season: int,
+    prior_season: int,
+    nets: dict[int, dict[str, float]],
+) -> list[dict]:
+    """Build historical workload transitions from the NCAA roster release."""
+    target_ids = _espn_team_ids(conn, season)
+    prior_ids = _espn_team_ids(conn, prior_season)
+    prior: dict[str, list[dict]] = defaultdict(list)
+    for row in conn.execute(
+        "SELECT player_id,team_name,stats_json FROM bb_ncaa_player_season WHERE season=?",
+        (prior_season,),
+    ):
+        try:
+            stats = json.loads(row["stats_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        minutes = stats.get("mins") if isinstance(stats, dict) else None
+        if isinstance(minutes, (int, float)) and math.isfinite(float(minutes)) and minutes >= 0:
+            prior[str(row["player_id"])].append(
+                {"team": _team_key(row["team_name"]), "minutes": float(minutes)}
+            )
+    current: dict[str, list[dict]] = defaultdict(list)
+    for row in conn.execute(
+        "SELECT team_id,player_id,team_name,player_name FROM bb_ncaa_rosters WHERE season=?",
+        (season,),
+    ):
+        team_name = str(row["team_name"] or "")
+        current[_team_key(team_name)].append(
+            {"id": str(row["player_id"]), "name": row["player_name"], "team_name": team_name}
+        )
+    rows = []
+    for team_key, players in current.items():
+        team_id = target_ids.get(team_key)
+        prior_team_id = prior_ids.get(team_key)
+        target_net = nets.get(season, {}).get(team_id) if team_id else None
+        prior_net = nets.get(prior_season, {}).get(prior_team_id) if prior_team_id else None
+        if target_net is None or prior_net is None:
+            continue
+        ids = {player["id"] for player in players}
+        prior_minutes = sum(
+            record["minutes"]
+            for records in prior.values()
+            for record in records
+            if record["team"] == team_key
+        )
+        returning_minutes = sum(
+            record["minutes"]
+            for aid in ids
+            for record in prior.get(aid, [])
+            if record["team"] == team_key
+        )
+        represented_minutes = sum(
+            record["minutes"] for aid in ids for record in prior.get(aid, [])
+        )
+        rows.append(
+            {
+                "season": season,
+                "team_id": team_id,
+                "team": players[0]["team_name"],
+                "listed_players": len(players),
+                "returning_minutes": round(returning_minutes, 2),
+                "represented_prior_minutes": round(represented_minutes, 2),
+                "prior_minutes": round(prior_minutes, 2),
+                "returning_minutes_share": returning_minutes / prior_minutes if prior_minutes else None,
+                "represented_minutes_share": represented_minutes / prior_minutes if prior_minutes else None,
+                "incoming_minutes_share": (represented_minutes - returning_minutes) / prior_minutes if prior_minutes else None,
+                "prior_net": prior_net,
+                "target_net": target_net,
+            }
+        )
+    return sorted(rows, key=lambda row: row["team"])
+
+
+def _matrix(rows: list[dict], feature_set: tuple[str, ...] = FEATURES) -> tuple[np.ndarray, np.ndarray, list[dict]]:
     usable = [
         row
         for row in rows
         if row.get("prior_net") is not None
         and row.get("target_net") is not None
-        and all(row.get(key) is not None for key in FEATURES[1:])
+        and all(row.get(key) is not None for key in feature_set[1:])
     ]
     if not usable:
-        return np.empty((0, len(FEATURES) + 1)), np.empty(0), []
-    x = np.asarray([[1.0] + [float(row[key]) for key in FEATURES] for row in usable])
+        return np.empty((0, len(feature_set) + 1)), np.empty(0), []
+    x = np.asarray([[1.0] + [float(row[key]) for key in feature_set] for row in usable])
     y = np.asarray([float(row["target_net"]) for row in usable])
     return x, y, usable
 
 
-def fit(rows: list[dict]) -> dict:
-    x, y, usable = _matrix(rows)
+def fit(rows: list[dict], feature_set: tuple[str, ...] = FEATURES) -> dict:
+    x, y, usable = _matrix(rows, feature_set)
     if len(usable) < 20:
         raise ValueError("At least 20 roster transition rows are required")
     penalty = np.eye(x.shape[1]) * 8.0
     penalty[0, 0] = 0
     coef = np.linalg.solve(x.T @ x + penalty, x.T @ y)
-    return {"coefficients": coef.tolist(), "features": list(FEATURES), "rows": len(usable)}
+    return {"coefficients": coef.tolist(), "features": list(feature_set), "rows": len(usable)}
 
 
 def predict(model: dict, row: dict) -> float | None:
-    if any(row.get(key) is None for key in FEATURES):
+    if any(row.get(key) is None for key in model["features"]):
         return None
     values = [1.0] + [float(row[key]) for key in model["features"]]
     return float(np.asarray(values) @ np.asarray(model["coefficients"]))
@@ -272,6 +379,28 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
     chronological = fit(transitions[2025])
     evaluation = metrics(chronological, transitions[2026])
     production = fit(historical)
+    # The NCAA source has independent roster editions back to 2010. Replaying
+    # its 2024–26 transitions adds dated evidence without mixing its IDs or
+    # fields into the ESPN/Box BPM production scenario.
+    ncaa_transitions = {
+        season: ncaa_roster_features(conn, season, season - 1, nets)
+        for season in (2024, 2025, 2026)
+    }
+    ncaa_transition_evaluations = []
+    for test_season in (2025, 2026):
+        training_seasons = [season for season in (2024, 2025) if season < test_season]
+        training_rows = [row for season in training_seasons for row in ncaa_transitions[season]]
+        holdout_rows = ncaa_transitions[test_season]
+        historical_model = fit(training_rows, WORKLOAD_FEATURES)
+        ncaa_transition_evaluations.append(
+            {
+                "test_season": test_season,
+                "training_seasons": training_seasons,
+                "training_rows": historical_model["rows"],
+                "model": historical_model,
+                "rows": metrics(historical_model, holdout_rows),
+            }
+        )
     current_rows = []
     for row in transitions[2027]:
         current = {**row, "predicted_net": predict(production, row)}
@@ -313,6 +442,17 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
         "feature_definition": "Prior descriptive team net efficiency plus exact-athlete-ID source-listed returning, represented and incoming prior-minute shares, listed-player count and minutes-weighted attributed publisher Box BPM retained by source player ID.",
         "model": production,
         "evaluation": {"held_out_transition": 2026, **evaluation},
+        "historical_evaluation": {
+            "source": "NCAA roster and player-season releases",
+            "features": list(WORKLOAD_FEATURES),
+            "transition_rows": {str(season): len(rows) for season, rows in ncaa_transitions.items()},
+            "transition_evaluations": ncaa_transition_evaluations,
+            "limitations": [
+                "NCAA and ESPN team IDs are different namespaces; only unique season name mappings enter this replay.",
+                "The NCAA roster release has no publisher Box BPM, so this is a workload-only historical challenger and its scores are not comparable to the production feature set.",
+                "Roster listings are source snapshots and do not establish eligibility, availability, injury status or depth-chart role.",
+            ],
+        },
         "coverage": {
             "transition_rows": {str(season): len(rows) for season, rows in transitions.items()},
             "current_predicted_teams": sum(row["predicted_net"] is not None for row in current_rows),

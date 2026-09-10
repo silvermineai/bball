@@ -296,6 +296,24 @@ export type BBRosterModel = {
     baseline_mae: number | null;
     improvement_vs_prior_net: number | null;
   };
+  historical_evaluation?: {
+    source: string;
+    features: string[];
+    transition_rows: Record<string, number>;
+    transition_evaluations: Array<{
+      test_season: number;
+      training_seasons: number[];
+      training_rows: number;
+      rows: {
+        teams: number;
+        mae: number | null;
+        rmse: number | null;
+        baseline_mae: number | null;
+        improvement_vs_prior_net: number | null;
+      };
+    }>;
+    limitations: string[];
+  };
   coverage: {
     transition_rows: Record<string, number>;
     current_predicted_teams: number;

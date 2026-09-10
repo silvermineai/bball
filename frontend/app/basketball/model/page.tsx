@@ -10,6 +10,7 @@ export default function Page() {
     e = d.model.evaluation,
     c = d.model.calibration,
     rosterModel = getRosterModel(),
+    historicalRoster = rosterModel.historical_evaluation,
     roster = getRosters(),
     recruiting = getRecruiting(),
     rosterSummary = roster.team_summaries ?? [],
@@ -155,6 +156,35 @@ export default function Page() {
           </p>
           {rosterModel.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
         </div>
+        {historicalRoster && (
+          <div className="paper-panel" style={{ marginTop: 22 }}>
+            <div className="eyebrow">Historical source replay</div>
+            <h3>Does workload continuity travel across more seasons?</h3>
+            <p className="note">
+              {historicalRoster.source} provide a separate workload-only
+              challenger. It uses unique season name mappings to the ESPN
+              schedule and never enters the production Box BPM scenario.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead><tr><th>Test season</th><th>Fit on</th><th className="numeric">Teams</th><th className="numeric">MAE</th><th className="numeric">Prior-net MAE</th><th className="numeric">Lift</th></tr></thead>
+                <tbody>
+                  {historicalRoster.transition_evaluations.map((transition) => (
+                    <tr key={transition.test_season}>
+                      <td>{transition.test_season}</td>
+                      <td>{transition.training_seasons.join(", ")}</td>
+                      <td className="numeric">{transition.rows.teams.toLocaleString()}</td>
+                      <td className="numeric">{fmt(transition.rows.mae, 2)}</td>
+                      <td className="numeric">{fmt(transition.rows.baseline_mae, 2)}</td>
+                      <td className="numeric">{fmt(transition.rows.improvement_vs_prior_net, 2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {historicalRoster.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+          </div>
+        )}
         <div className="paper-panel" style={{ marginTop: 22 }}>
           <div className="section-heading" style={{ marginBottom: 12 }}>
             <div>

@@ -1,7 +1,7 @@
 import unittest
 
 from ncaa_scraper.basketball import _prior_production
-from ncaa_scraper.basketball_roster_model import FEATURES, fit, metrics, predict
+from ncaa_scraper.basketball_roster_model import FEATURES, WORKLOAD_FEATURES, fit, metrics, predict
 
 
 def row(i: int, target: float | None = None) -> dict:
@@ -51,6 +51,14 @@ class RosterModelTests(unittest.TestCase):
         incomplete = row(1)
         incomplete["returning_minutes_share"] = None
         self.assertIsNone(predict(model, incomplete))
+
+    def test_workload_replay_keeps_box_bpm_out_of_the_feature_set(self):
+        model = fit([row(i) for i in range(25)], WORKLOAD_FEATURES)
+        self.assertEqual(model["features"], list(WORKLOAD_FEATURES))
+        workload_row = row(1)
+        workload_row["prior_bpm"] = None
+        workload_row["represented_bpm"] = None
+        self.assertIsNotNone(predict(model, workload_row))
 
 
 if __name__ == "__main__":
