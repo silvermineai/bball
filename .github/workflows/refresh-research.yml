@@ -309,7 +309,7 @@ jobs:
           if forecasts.get('total', 0) <= 0 or not isinstance(forecasts.get('rows'), list):
               raise SystemExit('football forecast response has no upcoming rows')
           for row in forecasts['rows']:
-              for field in ('game_id', 'model_id', 'starts_at', 'home_id', 'away_id', 'prediction'):
+              for field in ('game_id', 'model_id', 'kickoff', 'home_id', 'away_id', 'home_margin', 'total', 'home_win_probability'):
                   if row.get(field) in (None, ''):
                       raise SystemExit(f'football forecast row is missing {field}')
           print('Production football coverage, source, event and forecast smoke tests passed')
