@@ -170,6 +170,58 @@ export default function Home() {
       <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
         <LiveFootballForecastStatus />
       </section>
+      <section className="section coach-path football-research-path" aria-labelledby="football-research-path-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Coach&apos;s research path</div>
+            <h2 id="football-research-path-title">Follow the question through the evidence.</h2>
+          </div>
+          <Link href="/football/learn/">Learn the football archive →</Link>
+        </div>
+        <p className="note" style={{ marginBottom: 20 }}>
+          Every stop points to a source-backed view. Use the forecast to choose
+          the question, production to find the unit, and raw records to check
+          what the source actually supplied.
+        </p>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">01 / Prepare</div>
+            <h3>What will decide the next game?</h3>
+            <p>
+              Compare the published margin, total, interval and efficiency
+              scenario for each upcoming FBS matchup.
+            </p>
+            <Link href="/football/matchups/">Open the matchup desk →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">02 / Evaluate</div>
+            <h3>Who is driving the production?</h3>
+            <p>
+              Rank passing, rushing and receiving separately by EPA, efficiency
+              or volume while keeping the exact athlete and team IDs attached.
+            </p>
+            <Link href="/football/players/">Open player rankings →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">03 / Find pressure</div>
+            <h3>Where do the hidden events live?</h3>
+            <p>
+              Search sacks, takeaways, returns and specialists in the
+              name-attributed event notebook before returning to game context.
+            </p>
+            <Link href="/football/events/">Open the event notebook →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">04 / Verify</div>
+            <h3>Can the number be reproduced?</h3>
+            <p>
+              Inspect every retained source field, season, game join and receipt
+              when a summary board does not answer the staff&apos;s next question.
+            </p>
+            <Link href="/football/source-stats/">Search raw source rows →</Link>
+          </article>
+        </div>
+      </section>
       <section className="section source-receipts">
         <div className="section-heading">
           <div>
