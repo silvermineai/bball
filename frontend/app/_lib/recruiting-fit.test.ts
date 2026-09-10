@@ -25,6 +25,16 @@ describe("recruiting fit", () => {
     expect(result[0].score).toBeGreaterThan(result[1].score);
   });
 
+  it("reports how much of the selected skill evidence is available", () => {
+    const result = buildRecruitingFit([
+      player({ id: "target", team_id: "target" }),
+      player({ id: "complete", team_id: "2", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 14, rpg: 4, apg: 5, efg: 0.55, ts: 0.6, ft_pct: 0.82, teams: ["A"] } }),
+      player({ id: "partial", team_id: "3", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 14, rpg: 4, apg: 5, efg: 0.55, ts: 0.6, teams: ["B"] } }),
+    ], { teamId: "target", role: "any", focus: "shooting", minimumMinutes: 400 });
+    expect(result.find((row) => row.player.id === "complete")).toMatchObject({ skillComponents: 3, skillComponentTotal: 3 });
+    expect(result.find((row) => row.player.id === "partial")).toMatchObject({ skillComponents: 2, skillComponentTotal: 3 });
+  });
+
   it("summarizes returning and incoming workload by role", () => {
     const result = buildRoleSummaries([
       player({ team_id: "target", position: "C", status: "same_program", prior_production: { games: 20, minutes: 600, mpg: 30, ppg: 10, rpg: 8, apg: 2, teams: ["T"] } }),
