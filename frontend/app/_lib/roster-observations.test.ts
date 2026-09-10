@@ -165,11 +165,13 @@ describe("shareable roster observation filters", () => {
       minGames: 0,
       minMinutes: 0,
     });
+    expect(parseRosterFilters("?rosterSeason=2025").season).toBe("2025");
   });
 
   it("omits defaults while preserving the exact recruiting slice", () => {
     expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_tov_rate", page: 3, picks: ["123", "456"], minGames: 10, minMinutes: 400 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterMinGames=10&rosterMinMinutes=400&rosterPick=123&rosterPick=456");
     expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0 })).toBe("");
+    expect(rosterFilterSearch({ season: "2025", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0 })).toBe("?rosterSeason=2025");
   });
 
   it("limits shortlist IDs to twelve numeric source identities", () => {

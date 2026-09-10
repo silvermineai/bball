@@ -1639,6 +1639,7 @@ def build(conn, target=2027):
         "publisher-value-leaders": publisher_value_leaders(conn, target - 1),
         "rosters": roster_changes(conn, target, season_players),
         "rosters-2026": roster_changes(conn, 2026, player_index(conn, 2025)),
+        "rosters-2025": roster_changes(conn, 2025, player_index(conn, 2024)),
         "impact": {
             "season": target - 1,
             "players": impact,

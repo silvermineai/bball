@@ -55,7 +55,7 @@ type PriorRateMetric =
   | "box_bpm";
 
 export type RosterFilters = {
-  season: "2027" | "2026";
+  season: "2027" | "2026" | "2025";
   q: string;
   position: string;
   classYear: string;
@@ -146,7 +146,7 @@ export function parseRosterFilters(search: string): RosterFilters {
   const minGames = Number(params.get("rosterMinGames") || 0);
   const minMinutes = Number(params.get("rosterMinMinutes") || 0);
   return {
-    season: season === "2026" ? "2026" : "2027",
+    season: season === "2026" || season === "2025" ? season : "2027",
     q: params.get("rosterQ") || "",
     position: params.get("rosterPosition") || "",
     classYear: params.get("rosterClass") || "",

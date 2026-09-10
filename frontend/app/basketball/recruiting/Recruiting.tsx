@@ -95,7 +95,7 @@ export default function Recruiting() {
     const url = new URL(window.location.href);
     const params = new URLSearchParams(
       rosterFilterSearch({
-        season: season === "2026" ? "2026" : "2027",
+        season: season === "2026" || season === "2025" ? season : "2027",
         q,
         position,
         classYear,
@@ -112,7 +112,7 @@ export default function Recruiting() {
     window.history.replaceState(window.history.state, "", url);
   }, [classYear, hydrated, minGames, minMinutes, page, picks, position, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
-    season === "2027" ? "rosters" : "rosters-2026",
+    season === "2027" ? "rosters" : season === "2026" ? "rosters-2026" : "rosters-2025",
   );
   const options = rosterFilterOptions(data?.players || []);
   const rows = sortRosterObservations(
@@ -171,6 +171,7 @@ export default function Recruiting() {
           >
             <option value="2027">2026–27 · Unconfirmed source listings</option>
             <option value="2026">2025–26 · Recorded game appearances</option>
+            <option value="2025">2024–25 · Recorded game appearances</option>
           </select>
         </label>
         <label className="control">
