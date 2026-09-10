@@ -35,6 +35,7 @@ import { footballForecasts } from "./football-forecasts";
 import { possessionStyle } from "./possession-style";
 import { researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
+import { basketballRosters } from "./basketball-rosters";
 
 type Bindings = Env;
 
@@ -135,6 +136,7 @@ const ingestBatchBody = z.object({
 app.get("/api/health", (c) => c.json({ ok: true, service: "bball-api" }));
 app.route("/api/basketball/research/shooting", shooting);
 app.route("/api/basketball/research/recruiting", recruiting);
+app.route("/api/basketball/research/rosters", basketballRosters);
 app.route("/api/basketball/research/recruiting-intake", recruitingIntake);
 app.route("/api/basketball/research/careers", careers);
 app.route("/api/basketball/research/publisher-stats", publisherStats);

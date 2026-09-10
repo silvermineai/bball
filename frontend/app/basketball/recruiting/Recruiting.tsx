@@ -114,9 +114,41 @@ export default function Recruiting() {
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : season === "2026" ? "rosters-2026" : "rosters-2025",
   );
-  const options = rosterFilterOptions(data?.players || []);
+  const [liveRoster, setLiveRoster] = useState<BBRosters | null>(null);
+  const [liveRosterError, setLiveRosterError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    setLiveRoster(null);
+    setLiveRosterError("");
+    fetch(`/api/basketball/research/rosters?season=${season}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live roster observation edition is unavailable.");
+        return response.json() as Promise<BBRosters>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLiveRoster(value);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveRosterError(reason instanceof Error ? reason.message : "The live roster observation edition is unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [season]);
+  const rosterData = liveRoster
+    ? {
+        ...liveRoster,
+        // Prior production is a derived historical view; preserve the richer
+        // bundled profile while replacing only the current source listing.
+        players: liveRoster.players.map((player) => ({
+          ...player,
+          prior_production: data?.players.find((candidate) => candidate.id === player.id && candidate.team_id === player.team_id)?.prior_production ?? null,
+        })),
+      }
+    : data;
+  const options = rosterFilterOptions(rosterData?.players || []);
   const rows = sortRosterObservations(
-    filterRosterObservations(data?.players || [], {
+    filterRosterObservations(rosterData?.players || [], {
       q,
       position,
       classYear,
@@ -127,7 +159,7 @@ export default function Recruiting() {
     sort,
   );
   const productionIndex = priorProductionIndex(rows);
-  const teamRows = [...(data?.team_summaries || [])]
+  const teamRows = [...(rosterData?.team_summaries || [])]
     .filter((team) => team.team.toLowerCase().includes(teamQuery.toLowerCase()))
     .sort((a, b) => {
       if (teamSort === "name") return a.team.localeCompare(b.team);
@@ -135,7 +167,7 @@ export default function Recruiting() {
       if (teamSort === "unrepresented") return (b.unrepresented_prior_minutes ?? 0) - (a.unrepresented_prior_minutes ?? 0) || a.team.localeCompare(b.team);
       return (b.returning_minutes_share ?? -1) - (a.returning_minutes_share ?? -1) || a.team.localeCompare(b.team);
     });
-  const pickedRows = (data?.players || []).filter((player) => picks.includes(player.id));
+  const pickedRows = (rosterData?.players || []).filter((player) => picks.includes(player.id));
   const togglePick = (id: string) => {
     setPicks((current) =>
       current.includes(id)
@@ -283,6 +315,13 @@ export default function Recruiting() {
           </select>
         </label>
       </div>
+      <p className="note" role="status" style={{ marginBottom: 8 }}>
+        {liveRoster
+          ? "Live Cloudflare D1 roster edition connected; current source listings and workload continuity are refreshed from the research warehouse."
+          : liveRosterError
+            ? `${liveRosterError} Showing the bundled roster release.`
+            : "Checking the live roster observation edition…"}
+      </p>
       <p className="note" style={{ marginBottom: 20 }}>
         Production sorts use the exact prior source ID and recorded game
         averages. True shooting and effective field goal percentage stay
@@ -296,7 +335,7 @@ export default function Recruiting() {
         <p role="alert" className="status-error">
           {error}
         </p>
-      ) : !data ? (
+      ) : !rosterData ? (
         <p className="empty" role="status">
           Loading roster observations…
         </p>
@@ -307,22 +346,22 @@ export default function Recruiting() {
             style={{ borderTop: "1px solid var(--ink)", marginBottom: 25 }}
           >
             <div>
-              <strong>{data.teams_observed}</strong>
+              <strong>{rosterData.teams_observed}</strong>
               <span>Programs in this source view</span>
             </div>
             <div>
-              <strong>{data.players_observed.toLocaleString()}</strong>
+              <strong>{rosterData.players_observed.toLocaleString()}</strong>
               <span>Distinct observed player IDs</span>
             </div>
             <div>
               <strong>
-                {data.status_counts.different_program?.toLocaleString() || 0}
+                {rosterData.status_counts.different_program?.toLocaleString() || 0}
               </strong>
               <span>Different program records</span>
             </div>
             <div>
               <strong>
-                {data.status_counts.new_to_dataset?.toLocaleString() || 0}
+                {rosterData.status_counts.new_to_dataset?.toLocaleString() || 0}
               </strong>
               <span>No prior appearance found</span>
             </div>
@@ -436,16 +475,16 @@ export default function Recruiting() {
               </div>
             )}
           </section>
-          {data.unusable_rows != null && data.unusable_rows > 0 && (
+          {rosterData.unusable_rows != null && rosterData.unusable_rows > 0 && (
             <p className="career-coverage-warning">
-              {data.unusable_rows.toLocaleString()} source roster rows were
+              {rosterData.unusable_rows.toLocaleString()} source roster rows were
               excluded as team-attributed placeholders; raw records remain in
               the research warehouse.
             </p>
           )}
-          {!!data.team_summaries?.length && (
+          {!!rosterData.team_summaries?.length && (
             <details className="career-coverage-details" style={{ marginBottom: 24 }}>
-              <summary>{season === "2027" ? "Team workload continuity" : "Recorded workload movement"} ({data.team_summaries.length} programs)</summary>
+              <summary>{season === "2027" ? "Team workload continuity" : "Recorded workload movement"} ({rosterData.team_summaries.length} programs)</summary>
               <p className="note">
                 Prior minutes are summed from the preceding source season. The
                 {season === "2027"
@@ -496,7 +535,7 @@ export default function Recruiting() {
                 </button>
               </div>
               <p className="note" role="status">
-                {teamRows.length.toLocaleString()} of {data.team_summaries.length.toLocaleString()} observed programs shown. {season === "2027" ? "The denominator is the source roster listing, not confirmed Division I membership." : "The denominator is the recorded appearance sample, which includes programs outside the primary forecast field."}
+                {teamRows.length.toLocaleString()} of {rosterData.team_summaries.length.toLocaleString()} observed programs shown. {season === "2027" ? "The denominator is the source roster listing, not confirmed Division I membership." : "The denominator is the recorded appearance sample, which includes programs outside the primary forecast field."}
               </p>
               <div className="table-scroll">
                 <table className="data-table">
