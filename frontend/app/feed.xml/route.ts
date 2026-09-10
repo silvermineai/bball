@@ -1,5 +1,7 @@
 import { getBasketball } from "../_lib/basketball-data";
 import { getOverview } from "../_lib/data";
+import fs from "node:fs";
+import path from "node:path";
 
 export const dynamic = "force-static";
 
@@ -19,6 +21,30 @@ const guideItems = [
   ["basketball-player-game-logs", "Read the game log before you rank the player.", "How to use NCAA player-game rows, denominators and source identity in a recruiting review."],
   ["basketball-roster-transitions", "Roster continuity is a clue, not a depth chart.", "How to evaluate returning workload across dated NCAA roster transitions without overclaiming eligibility or forecast value."],
 ] as const;
+
+type PublisherNews = {
+  headline: string;
+  description: string;
+  published: string;
+  link: string;
+  publisher?: string;
+  division?: "D-I" | "D-II" | "D-III";
+  sport?: string;
+};
+
+function currentPublisherWire(): PublisherNews[] {
+  try {
+    const release = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
+    ) as { articles?: PublisherNews[] };
+    return (release.articles || [])
+      .filter((article) => article.sport === "mens-college-basketball" && article.link && article.published)
+      .sort((a, b) => b.published.localeCompare(a.published))
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
 
 function escapeXml(value: string) {
   return value.replace(/[<>&'\"]/g, (character) => ({
@@ -40,6 +66,12 @@ export function GET() {
   const generated = [football.generated_at, basketball.generated_at].sort().at(-1) || football.generated_at;
   const entries = [
     ...guideItems.map(([slug, title, description]) => item(title, `${base}/blog/${slug}/`, description, generated)),
+    ...currentPublisherWire().map((article) => item(
+      `${article.division ? `${article.division} · ` : ""}${article.headline}`,
+      article.link,
+      `${article.description || "Publisher wire headline."} Source: ${article.publisher || "ESPN/NCAA.com"}.`,
+      article.published,
+    )),
     ...football.upcoming
       .filter((game) => game.prediction)
       .slice(0, 20)
