@@ -170,8 +170,8 @@ export default function Recruiting() {
             }}
           >
             <option value="2027">2026–27 · Unconfirmed source listings</option>
-            <option value="2026">2025–26 · Recorded game appearances</option>
-            <option value="2025">2024–25 · Recorded game appearances</option>
+            <option value="2026">2025–26 · Source roster snapshot</option>
+            <option value="2025">2024–25 · Source roster snapshot</option>
           </select>
         </label>
         <label className="control">
@@ -330,7 +330,7 @@ export default function Recruiting() {
           <p className="note" style={{ marginBottom: 22 }}>
             {season === "2027"
               ? "Listings can carry over from earlier seasons; no school-confirmed current transfer status is supplied. Missing players may reflect incomplete rosters, not departures."
-              : "Both sides of this comparison require recorded playing time. A different program record describes historical participation, not why or when a transfer happened."}{" "}
+              : "This source roster snapshot is compared with the preceding season's recorded participation. A different program record describes historical participation, not why or when a transfer happened."}{" "}
             New to the dataset does not mean freshman. Prior production is
             recorded workload from the preceding source season, not a
             projected role at the listed program.
