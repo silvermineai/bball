@@ -191,6 +191,10 @@ jobs:
             -H 'Cache-Control: no-cache' \
             'https://bball.silvermine.dev/api/basketball/research/coverage?workflow_smoke=1' \
             -o /tmp/basketball-coverage.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Cache-Control: no-cache' \
+            'https://bball.silvermine.dev/api/basketball/research/news?limit=1&workflow_smoke=1' \
+            -o /tmp/basketball-news.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -206,6 +210,19 @@ jobs:
               if not isinstance(payload[key], dict):
                   raise SystemExit(f'coverage response has no {key} object')
           print('Production coverage smoke test passed')
+
+          news = json.loads(Path('/tmp/basketball-news.json').read_text())
+          if news.get('sport') != 'mens-college-basketball':
+              raise SystemExit('news response has an unexpected sport')
+          if not isinstance(news.get('total'), int) or news['total'] < 0:
+              raise SystemExit('news response has no numeric total')
+          if not isinstance(news.get('rows'), list) or len(news['rows']) > 1:
+              raise SystemExit('news response has an invalid bounded row page')
+          for row in news['rows']:
+              for field in ('id', 'publisher', 'headline', 'published', 'link'):
+                  if not row.get(field):
+                      raise SystemExit(f'news row is missing {field}')
+          print('Production news smoke test passed')
           PY
 
       - name: Record publication summary
