@@ -166,7 +166,7 @@ export default function NcaaPlayerBox() {
     <div className="page-title">
       <div className="eyebrow">NCAA source archive / player box scores</div>
       <h1>See the whole<br /><em>stat line.</em></h1>
-      <p>Game-level NCAA-derived player production with shooting zones, transition splits and playmaking context. Source IDs stay separate from ESPN identities until an audited crosswalk exists.</p>
+      <p>Recent game-level NCAA-derived player production with shooting zones, transition splits and playmaking context, plus historical season summaries. Source IDs stay separate from ESPN identities until an audited crosswalk exists.</p>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Rows in selected season</span></div>

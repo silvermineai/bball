@@ -11,6 +11,7 @@ from ncaa_scraper.basketball import (
     adjusted_factor_ratings,
     canonical_date,
     dataset_catalog,
+    export_ncaa_player_box_sql,
     ingest,
     matchup_factor_edges,
     ncaa_player_box_field_coverage,
@@ -287,6 +288,29 @@ class BasketballIngestTests(unittest.TestCase):
         )
         self.assertEqual(stats["future_rate"], 1.25)
         self.assertNotIn("future_missing", stats)
+
+    def test_ncaa_player_box_export_keeps_recent_game_seasons(self):
+        self.conn.executescript(
+            (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()
+        )
+        rows = [
+            (2025, "g1", "t1", "p1", "2025-01-01", "Home", "Away", "Player", "{}"),
+            (2026, "g2", "t2", "p2", "2026-01-01", "Home", "Away", "Player", "{}"),
+            (2024, "g3", "t3", "p3", "2024-01-01", "Home", "Away", "Player", "{}"),
+        ]
+        self.conn.executemany(
+            "INSERT INTO bb_ncaa_player_box VALUES (?,?,?,?,?,?,?,?,?)", rows
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            batches = export_ncaa_player_box_sql(
+                self.conn, Path(directory) / "ncaa-player-box-2026.sql"
+            )
+            text = "".join(path.read_text() for path in batches)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2025", text)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2026", text)
+        self.assertIn("'2025','g1'", text)
+        self.assertIn("'2026','g2'", text)
+        self.assertNotIn("'2024','g3'", text)
 
     def test_dataset_catalog_reports_rows_and_receipt_freshness(self):
         self.conn.execute(

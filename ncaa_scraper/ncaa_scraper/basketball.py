@@ -1784,25 +1784,30 @@ def export_sql(conn, path):
     return write_sql_batches(statements(), path)
 
 
-def export_ncaa_player_box_sql(conn, path, season=2026):
-    """Export only the current NCAA game rows; historical seasons use summaries."""
+def export_ncaa_player_box_sql(conn, path, seasons=(2025, 2026)):
+    """Export recent NCAA game rows; older historical seasons use summaries."""
+    seasons = tuple(sorted({int(season) for season in seasons}))
+    if not seasons:
+        raise ValueError("At least one NCAA player-box season is required")
+
     def statements():
-        yield f"DELETE FROM bb_ncaa_player_box WHERE season={int(season)};\n"
-        for row in conn.execute(
-            "SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE season=?",
-            (season,),
-        ):
-            values = []
-            for value in row:
-                if value is None:
-                    values.append("NULL")
-                else:
-                    values.append("'" + str(value).replace("'", "''") + "'")
-            yield (
-                "INSERT OR REPLACE INTO bb_ncaa_player_box VALUES ("
-                + ",".join(values)
-                + ");\n"
-            )
+        for season in seasons:
+            yield f"DELETE FROM bb_ncaa_player_box WHERE season={season};\n"
+            for row in conn.execute(
+                "SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE season=?",
+                (season,),
+            ):
+                values = []
+                for value in row:
+                    if value is None:
+                        values.append("NULL")
+                    else:
+                        values.append("'" + str(value).replace("'", "''") + "'")
+                yield (
+                    "INSERT OR REPLACE INTO bb_ncaa_player_box VALUES ("
+                    + ",".join(values)
+                    + ");\n"
+                )
 
     return write_sql_batches(statements(), path)
 
