@@ -1784,7 +1784,7 @@ def export_sql(conn, path):
     return write_sql_batches(statements(), path)
 
 
-def export_ncaa_player_box_sql(conn, path, seasons=(2025, 2026)):
+def export_ncaa_player_box_sql(conn, path, seasons=(2024, 2025, 2026)):
     """Export recent NCAA game rows; older historical seasons use summaries."""
     seasons = tuple(sorted({int(season) for season in seasons}))
     if not seasons:

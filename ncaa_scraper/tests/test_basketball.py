@@ -308,9 +308,10 @@ class BasketballIngestTests(unittest.TestCase):
             text = "".join(path.read_text() for path in batches)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2025", text)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2026", text)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2024", text)
         self.assertIn("'2025','g1'", text)
         self.assertIn("'2026','g2'", text)
-        self.assertNotIn("'2024','g3'", text)
+        self.assertIn("'2024','g3'", text)
 
     def test_dataset_catalog_reports_rows_and_receipt_freshness(self):
         self.conn.execute(
