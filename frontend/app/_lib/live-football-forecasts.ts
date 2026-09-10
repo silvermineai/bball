@@ -1,4 +1,5 @@
 import type { Forecast, Game } from "./data";
+import type { Comparison } from "./research-types";
 
 export type LiveFootballForecastRow = {
   game_id: string;
@@ -16,6 +17,10 @@ type LiveFootballForecastPage = {
   total: number;
   page_size: number;
   rows: LiveFootballForecastRow[];
+};
+
+type LiveFootballScorecardResponse = {
+  games?: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
 export async function loadLiveFootballForecasts(signal?: AbortSignal) {
@@ -38,6 +43,19 @@ export async function loadLiveFootballForecasts(signal?: AbortSignal) {
     ),
   );
   return [first, ...additional].flatMap((page) => page.rows);
+}
+
+/** Load only exact, ledger-qualified market comparisons for football games. */
+export async function loadLiveFootballMarketComparisons(signal?: AbortSignal) {
+  const response = await fetch(
+    "/api/research/scorecard?sport=football&limit=5000",
+    { signal },
+  );
+  if (!response.ok) throw new Error("Live football market comparisons unavailable.");
+  const payload = await response.json() as LiveFootballScorecardResponse;
+  return Object.fromEntries(
+    (payload.games || []).map((game) => [game.game_id, game.comparisons || []]),
+  ) as Record<string, Comparison[]>;
 }
 
 export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballForecastRow[]) {

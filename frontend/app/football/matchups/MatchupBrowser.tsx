@@ -8,8 +8,11 @@ import { date, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   loadLiveFootballForecasts,
+  loadLiveFootballMarketComparisons,
   mergeLiveFootballForecasts,
 } from "../../_lib/live-football-forecasts";
+import type { Comparison } from "../../_lib/research-types";
+import { comparisonQuoteSummary } from "../../_lib/market-display";
 import {
   matchesFootballMatchupSignal,
   parseFootballMatchupSignal,
@@ -47,7 +50,9 @@ export default function MatchupBrowser({
     [prepHydrated, setPrepHydrated] = useState(false),
     [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
-    [liveError, setLiveError] = useState("");
+    [liveError, setLiveError] = useState(""),
+    [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, Comparison[]> | null>(null),
+    [liveMarketError, setLiveMarketError] = useState("");
   const activeGames = liveGames || games;
   const filteredRows = activeGames.filter(
     (g) =>
@@ -142,6 +147,22 @@ export default function MatchupBrowser({
       });
     return () => controller.abort();
   }, [games]);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadLiveFootballMarketComparisons(controller.signal)
+      .then((comparisons) => {
+        if (!controller.signal.aborted) {
+          setLiveMarketComparisons(comparisons);
+          setLiveMarketError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveMarketError(reason instanceof Error ? reason.message : "Live football market comparisons unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
   return (
     <>
       <div className="toolbar">
@@ -243,6 +264,8 @@ export default function MatchupBrowser({
             ? `${liveError} Showing the published snapshot.`
             : "Checking the live D1 forecast edition…"}
       </p>
+      {liveMarketComparisons && <p className="note" role="status">Live football market ledger checked; {Object.values(liveMarketComparisons).filter((quotes) => quotes.length).length.toLocaleString()} games have one or more qualifying comparisons.</p>}
+      {liveMarketError && <p className="note" role="status">{liveMarketError} The archived market coverage panel remains available.</p>}
       <section className="paper-panel football-market-status" aria-labelledby="football-market-status-title">
         <div>
           <div className="eyebrow">MARKET EVIDENCE</div>
@@ -265,8 +288,8 @@ export default function MatchupBrowser({
           onClick={() => downloadCsv(
             "football-matchups.csv",
             toCsv(
-              ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Archived total", "Model spread gap", "Model total gap", "Market source", "Market observed at"],
-              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.total, g.market?.margin_difference, g.market?.total == null || g.prediction?.total == null ? null : g.prediction.total - g.market.total, g.market?.source, g.market?.observed_at]),
+              ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Archived total", "Model spread gap", "Model total gap", "Market source", "Market observed at", "Qualifying market quote count", "Market quote snapshots"],
+              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.total, g.market?.margin_difference, g.market?.total == null || g.prediction?.total == null ? null : g.prediction.total - g.market.total, g.market?.source, g.market?.observed_at, (liveMarketComparisons?.[g.id] || g.market_comparisons || []).length, (liveMarketComparisons?.[g.id] || g.market_comparisons || []).map(comparisonQuoteSummary).join(" | ")]),
             ),
           )}
         >
@@ -293,7 +316,7 @@ export default function MatchupBrowser({
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
-            <MatchCard game={g} efficiencyScenario={scenarioByGame.get(g.id)} />
+            <MatchCard game={(liveMarketComparisons?.[g.id] || g.market_comparisons)?.length ? { ...g, market_comparisons: liveMarketComparisons?.[g.id] || g.market_comparisons } : g} efficiencyScenario={scenarioByGame.get(g.id)} />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
               {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
             </button>

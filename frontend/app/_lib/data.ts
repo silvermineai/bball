@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Comparison } from "./research-types";
 export type Forecast = {
   home_margin: number;
   total: number;
@@ -33,6 +34,8 @@ export type Game = {
     source: string;
     margin_difference: number | null;
   } | null;
+  /** Exact-source comparisons from the prospective research ledger, when available. */
+  market_comparisons?: Comparison[];
 };
 export type FootballEfficiencyScenario = {
   game_id: string;

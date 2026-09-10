@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -23,6 +23,17 @@ const game = (prediction: Game["prediction"]): Game => ({
 });
 
 describe("live football forecast merge", () => {
+  it("indexes exact ledger market comparisons by game", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      games: [{ game_id: "game-1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+    }), { status: 200 })) as typeof fetch;
+    await expect(loadLiveFootballMarketComparisons()).resolves.toMatchObject({
+      "game-1": [{ provider: "licensed", market: "spreads", line: -3.5 }],
+    });
+    globalThis.fetch = originalFetch;
+  });
+
   it("updates only the model values and retains the static card evidence", () => {
     const original = {
       home_margin: 3,

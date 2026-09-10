@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game } from "../_lib/data";
 import { fmt, kick } from "../_lib/format";
+import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 export default function MatchCard({ game: g, efficiencyScenario }: { game: Game; efficiencyScenario?: FootballEfficiencyScenario }) {
   const p = g.prediction;
   return (
@@ -58,6 +59,29 @@ export default function MatchCard({ game: g, efficiencyScenario }: { game: Game;
           Advanced lagged rates do not change the primary probability, range or ledger.
         </div>
       )}
+      {g.market_comparisons?.length ? (
+        <div className="market-quotes">
+          <div className="match-detail">
+            <strong>Verified pregame lines</strong>
+            <span className="muted">licensed ledger</span>
+          </div>
+          {g.market_comparisons.slice(0, 3).map((quote) => (
+            <div className="market-quote" key={`${quote.provider}-${quote.bookmaker}-${quote.market}`}>
+              <span>
+                {quote.bookmaker} · {quote.market}
+                <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
+                {comparisonGapLabel(quote) && <small className={`market-gap-${comparisonGapDirection(quote)}`}>Model gap · {comparisonGapLabel(quote)}</small>}
+              </span>
+              <strong>
+                {quote.market === "h2h"
+                  ? quote.market_home_probability == null ? "—" : `${fmt(quote.market_home_probability * 100, 1)}% home`
+                  : quote.line == null ? "—" : quote.market === "totals" ? `O/U ${fmt(quote.line, 1)}` : `Home ${quote.line > 0 ? "+" : ""}${fmt(quote.line, 1)}`}
+              </strong>
+            </div>
+          ))}
+          <small className="factor-source">Pregame quotes are shown only when the ledger matched the exact game and captured them before kickoff. They are observations, not recommendations.</small>
+        </div>
+      ) : null}
       <div className="market-note">
         {g.market ? (
           <>
