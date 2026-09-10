@@ -77,6 +77,12 @@ class CareerTests(unittest.TestCase):
         self.assertEqual(result["ppg"], 10)
         self.assertEqual(result["dnp_records"], 1)
 
+    def test_starter_rate_uses_only_source_reported_flags(self):
+        result = summarize([self.log({"starter": True}), self.log({"starter": False}), self.log()])
+        self.assertEqual(result["starts"], 1)
+        self.assertEqual(result["starter_reported_records"], 2)
+        self.assertEqual(result["starter_rate"], 0.5)
+
     def test_impossible_shooting_is_unavailable(self):
         log = self.log({"field_goals_made": 20})
         self.assertIn("fgm_exceeds_fga", log["issues"])

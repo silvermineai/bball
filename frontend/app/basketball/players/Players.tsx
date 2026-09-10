@@ -328,6 +328,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Position",
                         "Games",
                         "Source records",
+                        "Starts",
+                        "Starter reports",
+                        "Starter rate",
                         "DNP records",
                         "Excluded records",
                         "Minutes per game",
@@ -353,6 +356,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.position,
                         p.games,
                         p.source_records,
+                        p.starts,
+                        p.starter_reported_records,
+                        p.starter_rate == null ? null : p.starter_rate * 100,
                         p.dnp_records,
                         p.excluded_records,
                         p.mpg,
@@ -430,7 +436,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         {p.name}
                       </Link>
                       <small>{p.team}</small>
-                      <small>{p.source_records ?? p.games} source rows · {p.dnp_records ?? 0} DNP · {p.excluded_records ?? 0} excluded</small>
+                      <small>{p.source_records ?? p.games} source rows · {p.starts ?? "—"} starts / {p.starter_reported_records ?? "—"} reported · {p.dnp_records ?? 0} DNP · {p.excluded_records ?? 0} excluded</small>
                       <small>
                         <Link href={comparisonHref(p)}>
                           Compare this season →

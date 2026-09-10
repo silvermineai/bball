@@ -256,6 +256,14 @@ def summarize(logs):
     return {
         "games": games,
         "source_records": len(logs),
+        "starts": sum(r["starter"] is True for r in logs),
+        "starter_reported_records": sum(r["starter"] is not None for r in logs),
+        "starter_rate": (
+            sum(r["starter"] is True for r in logs)
+            / sum(r["starter"] is not None for r in logs)
+            if any(r["starter"] is not None for r in logs)
+            else None
+        ),
         "totals": totals,
         "samples": samples,
         "incomplete_box_games": sum(
@@ -357,6 +365,9 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
                                 for k in [
                                     "games",
                                     "source_records",
+                                    "starts",
+                                    "starter_reported_records",
+                                    "starter_rate",
                                     "dnp_records",
                                     "excluded_records",
                                     "mpg",

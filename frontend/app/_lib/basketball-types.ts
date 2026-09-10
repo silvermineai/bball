@@ -153,6 +153,9 @@ export type BBPlayer = {
   season: number;
   games: number;
   source_records?: number;
+  starts?: number;
+  starter_reported_records?: number;
+  starter_rate?: number | null;
   dnp_records?: number;
   excluded_records?: number;
   minutes: number;
