@@ -10,6 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+from sql_batches import split_sql_file
+
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
@@ -106,6 +108,39 @@ def run_logged(args, log_path, cwd=ROOT):
         )
         print(output, file=sys.stderr)
         raise subprocess.CalledProcessError(result.returncode, args)
+
+
+def import_sql_file_in_chunks(path, log_prefix, database_name="bball-silvermine"):
+    """Import football rows in bounded statement-aligned files.
+
+    The football release is large enough that one remote D1 import can hit an
+    upstream reset after tens of thousands of statements. Deletes are kept in
+    their own transactions and inserts stay below Wrangler's practical upload
+    size, so a retry does not replay one enormous transaction.
+    """
+    source = Path(path)
+    if not source.exists():
+        raise SystemExit(f"Missing SQL export: {source}")
+    chunk_dir = ROOT / ".local" / "football-import-chunks"
+    chunks = split_sql_file(source, chunk_dir)
+    if not chunks:
+        raise SystemExit(f"SQL export is empty: {source}")
+    print(f"Splitting {source.name} into {len(chunks)} bounded D1 imports", flush=True)
+    for index, chunk in enumerate(chunks):
+        run_logged(
+            [
+                PY,
+                "scripts/cloudflare.py",
+                "d1",
+                "execute",
+                database_name,
+                "--remote",
+                "--file",
+                os.path.relpath(chunk, ROOT / "worker"),
+            ],
+            ROOT / ".local" / f"{log_prefix}-{index:04d}.log",
+        )
+        print(f"Imported {chunk.name} ({index + 1}/{len(chunks)})", flush=True)
 
 
 run(
@@ -266,19 +301,7 @@ run_remote_migration(
     ]
 )
 # Wrangler import output can be large; retain it on disk for audit.
-run_logged(
-    [
-        PY,
-        "scripts/cloudflare.py",
-        "d1",
-        "execute",
-        "bball-silvermine",
-        "--remote",
-        "--file",
-        "../.local/football.sql",
-    ],
-    ROOT / ".local/d1-publish.log",
-)
+import_sql_file_in_chunks(ROOT / ".local/football.sql", "d1-publish")
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-football-player-history.py"])
 run([PY, "scripts/sync-football-events.py"])
