@@ -1222,6 +1222,31 @@ describe("bball api", () => {
     expect(prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("RANK() OVER"))).toContain("fouls / games");
   });
 
+  it("ranks offensive and defensive rebounds per game from separate source totals", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 1 }),
+        all: vi.fn().mockResolvedValue({ results: [{ player_name: "Glass Specialist", offensive_rebounds: 80, defensive_rebounds: 120, games: 20, value: 4, rank: 1 }] }),
+      })),
+      sql,
+    }));
+    for (const [metric, expression, alias] of [
+      ["orpg", "offensive_rebounds / games", "AS offensive_rebounds"],
+      ["drpg", "defensive_rebounds / games", "AS defensive_rebounds"],
+    ] as const) {
+      const response = await app.request(
+        `/api/basketball/research/ncaa-player-rankings?season=2026&metric=${metric}&minGames=5&minMinutes=200`,
+        {},
+        { DB: { prepare } },
+      );
+      expect(response.status).toBe(200);
+      expect((await response.json()) as { metric: string }).toMatchObject({ metric });
+      const rankingSql = prepare.mock.calls.map(([sql]) => String(sql)).filter((sql) => sql.includes("RANK() OVER"));
+      expect(rankingSql.some((sql) => sql.includes(expression))).toBe(true);
+      expect(prepare.mock.calls.map(([sql]) => String(sql)).some((sql) => sql.includes(alias))).toBe(true);
+    }
+  });
+
   it("ranks NCAA finishing accuracy with the matching attempt denominator", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
