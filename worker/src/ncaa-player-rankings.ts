@@ -59,7 +59,9 @@ const aggregate = (where: string) => `
     ${sourceSum("midm")} AS mid_makes,
     ${sourceSum("pts_trans")} AS transition_points,
     ${sourceSum("pts_unast")} AS unassisted_points,
-    SUM(SUM(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL))) OVER (PARTITION BY s.season, s.team_id) AS team_possessions,
+    CASE WHEN SUM(CASE WHEN json_extract(s.stats_json,'$.o_poss') IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY s.season, s.team_id) = COUNT(*) OVER (PARTITION BY s.season, s.team_id)
+      THEN SUM(SUM(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL))) OVER (PARTITION BY s.season, s.team_id)
+      ELSE NULL END AS team_possessions,
     (SELECT CAST(json_extract(i.data_json,'$.rapm_net') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS rapm_net,
     (SELECT CAST(json_extract(i.data_json,'$.orapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS orapm,
     (SELECT CAST(json_extract(i.data_json,'$.drapm') AS REAL) FROM bb_impact i WHERE i.season=s.season AND i.ncaa_player_id=s.player_id LIMIT 1) AS drapm,

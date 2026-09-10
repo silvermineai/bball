@@ -1309,6 +1309,7 @@ describe("bball api", () => {
     const aggregateSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("COUNT(json_extract(s.stats_json,'$.pts'))"));
     expect(aggregateSql).toContain("CASE WHEN COUNT(json_extract(s.stats_json,'$.pts')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.pts') AS REAL)) ELSE NULL END AS points");
     expect(aggregateSql).toContain("CASE WHEN COUNT(json_extract(s.stats_json,'$.mins')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.mins') AS REAL)) ELSE NULL END AS minutes");
+    expect(aggregateSql).toContain("SUM(CASE WHEN json_extract(s.stats_json,'$.o_poss') IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY s.season, s.team_id) = COUNT(*) OVER (PARTITION BY s.season, s.team_id)");
     expect(aggregateSql).toContain("json_extract(r.profile_json,'$.height')");
     expect(aggregateSql).toContain("json_extract(r.profile_json,'$.hometown')");
     expect(aggregateSql).toContain("json_extract(r.profile_json,'$.high_school')");
