@@ -5,7 +5,7 @@ import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Metric = "points" | "ppg" | "rpg" | "apg" | "minutes" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "stocks40" | "ast_to" | "tov_rate" | "three_rate" | "orb40" | "drb40" | "reb40";
-type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; games: number; minutes: number; points: number; rebounds: number; assists: number; value: number; rank: number };
+type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; games: number; minutes: number | null; points: number | null; rebounds: number | null; offensive_rebounds?: number | null; defensive_rebounds?: number | null; assists: number | null; steals?: number | null; blocks?: number | null; turnovers?: number | null; fouls?: number | null; possessions?: number | null; fga?: number | null; fgm?: number | null; tpa?: number | null; tpm?: number | null; fta?: number | null; ftm?: number | null; value: number; rank: number };
 type Result = { from_season: number; to_season: number; metric: Metric; min_games: number; min_minutes: number; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; metrics: Metric[] };
 const labels: Record<Metric, string> = { points: "Total points", ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", minutes: "Total minutes", ts: "True shooting %", efg: "Effective FG %", three_pct: "Three-point accuracy", ft_pct: "Free-throw accuracy", per40: "Points per 40 minutes", stocks40: "Stocks per 40 minutes", ast_to: "Assist-to-turnover ratio", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40" };
@@ -92,8 +92,8 @@ export default function NcaaCareers() {
       setCopied("Copy the leaderboard URL from your address bar.");
     }
   };
-  const exportHeaders = ["From season", "Through season", "Metric", "Rank", "Season", "Player", "NCAA player ID", "NCAA player source URL", "Program", "NCAA team ID", "NCAA team source URL", "Games", "Minutes", "Points", "Rebounds", "Assists", "Value"];
-  const exportRow = (row: Row, active: Result) => [active.from_season, active.to_season, labels[active.metric], row.rank, row.season, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, row.games, row.minutes, row.points, row.rebounds, row.assists, row.value];
+  const exportHeaders = ["From season", "Through season", "Metric", "Rank", "Season", "Player", "NCAA player ID", "NCAA player source URL", "Program", "NCAA team ID", "NCAA team source URL", "Games", "Minutes", "Points", "Rebounds", "Offensive rebounds", "Defensive rebounds", "Assists", "Steals", "Blocks", "Turnovers", "Fouls", "Offensive possessions", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "Value"];
+  const exportRow = (row: Row, active: Result) => [active.from_season, active.to_season, labels[active.metric], row.rank, row.season, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, row.games, row.minutes, row.points, row.rebounds, row.offensive_rebounds, row.defensive_rebounds, row.assists, row.steals, row.blocks, row.turnovers, row.fouls, row.possessions, row.fgm, row.fga, row.tpm, row.tpa, row.ftm, row.fta, row.value];
   const download = () => {
     if (!result) return;
     downloadCsv(

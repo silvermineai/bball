@@ -1355,6 +1355,28 @@ describe("bball api", () => {
     });
   });
 
+  it("keeps missing NCAA career source totals unavailable", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 0 }),
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-careers?fromSeason=2025&toSeason=2026&metric=ppg",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const aggregateSql = prepare.mock.calls
+      .map(([sql]) => String(sql))
+      .find((sql) => sql.includes("FROM bb_ncaa_player_season"));
+    expect(aggregateSql).toContain("CASE WHEN json_extract(stats_json,'$.pts') IS NOT NULL THEN CAST(json_extract(stats_json,'$.pts') AS REAL) ELSE NULL END AS points");
+    expect(aggregateSql).toContain("CASE WHEN json_extract(stats_json,'$.orb') IS NOT NULL AND json_extract(stats_json,'$.drb') IS NOT NULL");
+    expect(aggregateSql).not.toContain("COALESCE(CAST(json_extract(stats_json");
+  });
+
   it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-high-schools?season=2009",

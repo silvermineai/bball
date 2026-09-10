@@ -57,6 +57,11 @@ const metricExpression = (metric: Metric) => ({
   reb40: "CASE WHEN minutes > 0 THEN 40.0 * rebounds / minutes ELSE NULL END",
 }[metric]);
 
+// The season table stores source totals as a JSON object. Preserve a missing
+// field as NULL so a sparse source row cannot become a false zero on a rate
+// board or in an export.
+const sourceNumber = (path: string) => `CASE WHEN json_extract(stats_json,'$.${path}') IS NOT NULL THEN CAST(json_extract(stats_json,'$.${path}') AS REAL) ELSE NULL END`;
+
 ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const { fromSeason, toSeason, metric, minGames, minMinutes, q, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
@@ -75,22 +80,23 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const aggregate = `
     SELECT season, player_id, team_id, player_name, team_name, games,
-      COALESCE(CAST(json_extract(stats_json,'$.mins') AS REAL),0) AS minutes,
-      COALESCE(CAST(json_extract(stats_json,'$.pts') AS REAL),0) AS points,
-      COALESCE(CAST(json_extract(stats_json,'$.orb') AS REAL),0) + COALESCE(CAST(json_extract(stats_json,'$.drb') AS REAL),0) AS rebounds,
-      COALESCE(CAST(json_extract(stats_json,'$.orb') AS REAL),0) AS offensive_rebounds,
-      COALESCE(CAST(json_extract(stats_json,'$.drb') AS REAL),0) AS defensive_rebounds,
-      COALESCE(CAST(json_extract(stats_json,'$.ast') AS REAL),0) AS assists,
-      COALESCE(CAST(json_extract(stats_json,'$.tov') AS REAL),0) AS turnovers,
-      COALESCE(CAST(json_extract(stats_json,'$.o_poss') AS REAL),0) AS possessions,
-      COALESCE(CAST(json_extract(stats_json,'$.stl') AS REAL),0) AS steals,
-      COALESCE(CAST(json_extract(stats_json,'$.blk') AS REAL),0) AS blocks,
-      COALESCE(CAST(json_extract(stats_json,'$.fga') AS REAL),0) AS fga,
-      COALESCE(CAST(json_extract(stats_json,'$.fgm') AS REAL),0) AS fgm,
-      COALESCE(CAST(json_extract(stats_json,'$.tpa') AS REAL),0) AS tpa,
-      COALESCE(CAST(json_extract(stats_json,'$.tpm') AS REAL),0) AS tpm,
-      COALESCE(CAST(json_extract(stats_json,'$.fta') AS REAL),0) AS fta,
-      COALESCE(CAST(json_extract(stats_json,'$.ftm') AS REAL),0) AS ftm
+      ${sourceNumber("mins")} AS minutes,
+      ${sourceNumber("pts")} AS points,
+      CASE WHEN json_extract(stats_json,'$.orb') IS NOT NULL AND json_extract(stats_json,'$.drb') IS NOT NULL THEN CAST(json_extract(stats_json,'$.orb') AS REAL) + CAST(json_extract(stats_json,'$.drb') AS REAL) ELSE NULL END AS rebounds,
+      ${sourceNumber("orb")} AS offensive_rebounds,
+      ${sourceNumber("drb")} AS defensive_rebounds,
+      ${sourceNumber("ast")} AS assists,
+      ${sourceNumber("tov")} AS turnovers,
+      ${sourceNumber("o_poss")} AS possessions,
+      ${sourceNumber("stl")} AS steals,
+      ${sourceNumber("blk")} AS blocks,
+      ${sourceNumber("pf")} AS fouls,
+      ${sourceNumber("fga")} AS fga,
+      ${sourceNumber("fgm")} AS fgm,
+      ${sourceNumber("tpa")} AS tpa,
+      ${sourceNumber("tpm")} AS tpm,
+      ${sourceNumber("fta")} AS fta,
+      ${sourceNumber("ftm")} AS ftm
     FROM bb_ncaa_player_season WHERE ${where}`;
   const value = metricExpression(metric);
   const qualification = `games >= ? AND minutes >= ? AND (${value}) IS NOT NULL`;
