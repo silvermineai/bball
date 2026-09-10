@@ -29,6 +29,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting?season=2027": {
                 "season": 2027,
+                "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
             },
         }
@@ -37,6 +38,7 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["recruiting_intake_rows"], 0)
         self.assertEqual(report["recruiting_reviewed_players"], 96)
+        self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
 
@@ -72,6 +74,37 @@ class LivePublicationCheckTest(unittest.TestCase):
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
             with self.assertRaisesRegex(ValueError, "football source games"):
+                check_live("https://example.test", now=now)
+
+    def test_rejects_stale_reviewed_recruiting_release(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        responses = {
+            "/api/health": {"ok": True},
+            "/api/basketball/research/coverage?audit=1": {
+                "coverage": [{"dataset": "games"}],
+                "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "location_validation": {},
+                "possession_validation": {},
+            },
+            "/api/football/coverage": {
+                "coverage": [{"dataset": "games"}],
+                "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/forecasts?meta=1": {
+                "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/football/research/forecasts?meta=1": {
+                "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting?season=2027": {
+                "season": 2027,
+                "reviewed_at": "2026-08-01T18:00:00Z",
+                "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+            },
+        }
+        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+            with self.assertRaisesRegex(ValueError, "reviewed recruiting release"):
                 check_live("https://example.test", now=now)
 
 

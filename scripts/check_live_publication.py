@@ -112,12 +112,20 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if (
         recruiting_release.get("season") != 2027
         or not isinstance(release_coverage, dict)
+        or not isinstance(recruiting_release.get("reviewed_at"), str)
         or any(
             not isinstance(release_coverage.get(key), int)
             for key in ("programs", "players", "events", "sources")
         )
     ):
         raise ValueError("reviewed recruiting release is malformed")
+    recruiting_reviewed_age = (
+        checked_at - timestamp(recruiting_release["reviewed_at"])
+    ).total_seconds() / 3600
+    if recruiting_reviewed_age < -24 or recruiting_reviewed_age > max_age_hours:
+        raise ValueError(
+            f"reviewed recruiting release is {max(recruiting_reviewed_age, 0):.1f} hours old"
+        )
     return {
         "base_url": base_url.rstrip("/"),
         "checked_at": checked_at.isoformat().replace("+00:00", "Z"),
@@ -140,6 +148,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_players": release_coverage["players"],
         "recruiting_reviewed_events": release_coverage["events"],
         "recruiting_reviewed_sources": release_coverage["sources"],
+        "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
     }
 
 
