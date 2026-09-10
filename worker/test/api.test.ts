@@ -827,6 +827,30 @@ describe("bball api", () => {
     });
   });
 
+  it("reads NCAA player-game coverage from the dedicated archive binding", async () => {
+    const prepare = vi.fn().mockReturnValue({
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    });
+    const gamePrepare = vi.fn().mockReturnValue({
+      first: vi.fn().mockResolvedValue({ rows: 1771275 }),
+    });
+    const batch = vi.fn().mockResolvedValue([
+      ...Array.from({ length: 17 }, () => ({ results: [{ rows: 7 }] })),
+      { results: [{ total: 7, neutral: 0, missing_venue: 0, unconfirmed_start: 0, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }] },
+      { results: [{ total: 0, paired_box_games: 0, missing_box_games: 0, missing_team_box_rows: 0, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 0, score_mismatch_games: 0, valid_estimate_games: 0 }] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/coverage",
+      {},
+      { DB: { prepare, batch }, NCAA_BOX_DB: { prepare: gamePrepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { coverage: Array<{ dataset: string; rows: number }> };
+    expect(body.coverage.find((entry) => entry.dataset === "ncaa_player_box")).toEqual({ dataset: "ncaa_player_box", rows: 1771275 });
+    expect(gamePrepare).toHaveBeenCalledWith("SELECT count(*) AS rows FROM bb_ncaa_player_box");
+    expect(batch).toHaveBeenCalledOnce();
+  });
+
   it("rejects unknown publisher stat fields before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/publisher-stats?stat=not-a-source-field",

@@ -33,7 +33,7 @@ import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
 import { footballForecasts } from "./football-forecasts";
 import { possessionStyle } from "./possession-style";
-import { researchDb } from "./research-db";
+import { ncaaBoxDb, researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
 import { basketballRosters } from "./basketball-rosters";
 
@@ -447,6 +447,8 @@ app.get(
 );
 app.get("/api/basketball/research/coverage", async (c) => {
   const db = researchDb(c.env);
+  const gameDb = ncaaBoxDb(c.env);
+  const dedicatedGameDb = Boolean((c.env as Env & { NCAA_BOX_DB?: D1Database }).NCAA_BOX_DB);
   // D1 limits compound SELECT terms; count each dataset in one batch.
   const tables = {
     games: "bb_games",
@@ -494,9 +496,12 @@ app.get("/api/basketball/research/coverage", async (c) => {
     score_mismatch_games?: number;
     valid_estimate_games?: number;
   };
+  const tableNames = Object.keys(tables).filter(
+    (dataset) => !dedicatedGameDb || dataset !== "ncaa_player_box",
+  );
   const counts = await db.batch<CoverageCount>([
-    ...Object.values(tables).map((table) =>
-      db.prepare(`SELECT count(*) AS rows FROM ${table}`),
+    ...tableNames.map((dataset) =>
+      db.prepare(`SELECT count(*) AS rows FROM ${tables[dataset as keyof typeof tables]}`),
     ),
     db.prepare(`SELECT count(*) AS total,
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
@@ -594,6 +599,13 @@ app.get("/api/basketball/research/coverage", async (c) => {
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
       FROM scored`),
   ]);
+  const gameCount = dedicatedGameDb
+    ? await gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>()
+    : null;
+  const countByDataset = new Map(
+    tableNames.map((dataset, index) => [dataset, counts[index].results[0].rows]),
+  );
+  if (dedicatedGameDb) countByDataset.set("ncaa_player_box", gameCount?.rows ?? 0);
   const receipts = await db.prepare(
     `SELECT dataset, count(*) AS source_count,
             MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
@@ -603,17 +615,17 @@ app.get("/api/basketball/research/coverage", async (c) => {
   ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>();
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
-    coverage: Object.keys(tables).map((dataset, index) => ({
+    coverage: Object.keys(tables).map((dataset) => ({
       dataset,
-      rows: counts[index].results[0].rows,
+      rows: countByDataset.get(dataset) ?? 0,
     })),
     source_receipts: receipts.results,
     location_validation: (() => {
-      const row = counts[Object.keys(tables).length]?.results[0];
+      const row = counts[tableNames.length]?.results[0];
       return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
     })(),
     possession_validation: (() => {
-      const row = counts[Object.keys(tables).length + 1]?.results[0];
+      const row = counts[tableNames.length + 1]?.results[0];
       return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
     })(),
   });
