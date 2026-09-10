@@ -13,6 +13,9 @@ const guideItems = [
   ["basketball-recruiting-workload", "An announcement is a starting point, not a depth chart.", "How to connect school statements, roster observations and prior workload."],
   ["basketball-player-rates", "A rate is only as useful as its denominator.", "How to read player efficiency and impact rankings responsibly."],
   ["basketball-recruiting-fit", "Recruit the role before you recruit the name.", "How to build a defensible recruiting shortlist from source-listed roles and prior workload."],
+  ["basketball-ranking-playbook", "A ranking is a question, not a verdict.", "How to move from a player ranking to a reviewable scouting question."],
+  ["basketball-possession-style", "Count the trip before you count the score.", "How to read source-recorded team possession style without assigning individual credit."],
+  ["basketball-recruiting-evidence", "Build the recruiting brief from the evidence outward.", "How to connect source rows, dated statements, prior production and the next staff question."],
 ] as const;
 
 function escapeXml(value: string) {
@@ -45,12 +48,12 @@ export function GET() {
         game.kickoff,
       )),
     ...basketball.upcoming
-      .filter((game) => game.prediction)
+      .filter((game) => game.prediction || game.fallback_prediction)
       .slice(0, 20)
       .map((game) => item(
-        `${game.away_name} at ${game.home_name}: basketball brief`,
-        `${base}/basketball/briefs/${game.id}/`,
-        `Projected score, pace, Four Factors and roster evidence for ${game.away_name} at ${game.home_name}.`,
+        `${game.away_name} at ${game.home_name}: basketball notebook`,
+        `${base}/blog/basketball-game-${game.id}/`,
+        `Projected score, pace, Four Factors and reporting questions for ${game.away_name} at ${game.home_name}.`,
         game.starts_at,
       )),
   ];
