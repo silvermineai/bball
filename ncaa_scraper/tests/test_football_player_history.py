@@ -12,8 +12,10 @@ from ncaa_scraper.football_player_history import (
     KINDS,
     YEARS,
     athlete_board,
+    ensure_historical_dependencies,
     import_history,
     validate_source,
+    write_dependency_sql,
     write_sql,
 )
 from ncaa_scraper.football_sources import DATASETS, RELEASES, ROOT
@@ -235,6 +237,61 @@ class PlayerHistoryTests(unittest.TestCase):
                 write_sql(conn, root / "bad.sql", "box", 2025)
             with self.assertRaises(ValueError):
                 write_sql(conn, root / "bad.sql", "schedule", 2022)
+            conn.close()
+
+    def test_dependency_bootstrap_loads_missing_schedule_and_team_releases(self):
+        class Client:
+            def load(self, dataset, year, refresh=False):
+                receipt = {
+                    "dataset": dataset,
+                    "season": year,
+                    "fetched_at": "2026-09-10T00:00:00Z",
+                    "sha256": f"{dataset}-{year}",
+                }
+                if dataset == "schedule":
+                    rows = [{
+                        "game_id": str(year),
+                        "season": str(year),
+                        "start_date": f"{year}-09-01T12:00:00Z",
+                        "home_id": "11",
+                        "away_id": "12",
+                        "home_team": "Alpha",
+                        "away_team": "Beta",
+                        "home_division": "fbs",
+                        "away_division": "fbs",
+                        "completed": "true",
+                        "neutral_site": "false",
+                        "home_points": "21",
+                        "away_points": "7",
+                    }]
+                else:
+                    rows = [{"team_id": "11", "division": "fbs", "short_display_name": "Alpha"}]
+                return rows, receipt
+
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.executescript((ROOT / "worker/migrations/0008_football.sql").read_text())
+        ensure_historical_dependencies(conn, Client(), years=(2020,))
+        self.assertEqual(conn.execute("SELECT count(*) FROM football_games WHERE season=2020").fetchone()[0], 1)
+        self.assertEqual(conn.execute("SELECT count(*) FROM football_stats WHERE dataset='teams' AND season=2020").fetchone()[0], 1)
+        self.assertEqual(json.loads(conn.execute("SELECT receipt_json FROM football_sources WHERE dataset='schedule' AND season=2020").fetchone()[0])["season"], 2020)
+        conn.close()
+
+    def test_dependency_sql_replays_schedule_and_team_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            conn, _ = self.fixture(root)
+            schedule_sql = root / "schedule.sql"
+            teams_sql = root / "teams.sql"
+            write_dependency_sql(conn, schedule_sql, "schedule", YEARS[0])
+            write_dependency_sql(conn, teams_sql, "teams", YEARS[0])
+            target = sqlite3.connect(":memory:")
+            target.executescript((ROOT / "worker/migrations/0008_football.sql").read_text())
+            target.executescript(schedule_sql.read_text())
+            target.executescript(teams_sql.read_text())
+            self.assertEqual(target.execute("SELECT count(*) FROM football_games WHERE season=?", (YEARS[0],)).fetchone()[0], 1)
+            self.assertEqual(target.execute("SELECT count(*) FROM football_stats WHERE dataset='teams' AND season=?", (YEARS[0],)).fetchone()[0], 1)
+            target.close()
             conn.close()
 
 

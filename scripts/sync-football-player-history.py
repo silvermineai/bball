@@ -19,6 +19,7 @@ from ncaa_scraper.football_player_history import (
     LOCAL,
     OUT,
     YEARS,
+    write_dependency_sql,
     sha,
     write_sql,
 )
@@ -105,13 +106,33 @@ for receipt in manifest["dependencies"]:
     actual = query(
         f"SELECT receipt_json FROM football_sources WHERE dataset='{receipt['dataset']}' AND season={int(receipt['season'])}"
     )
-    if (
-        len(actual) != 1
-        or json.loads(actual[0]["receipt_json"])["sha256"] != receipt["sha256"]
-    ):
-        raise SystemExit(
-            "Remote schedule/directory source differs; sync dependencies first"
+    matches = (
+        len(actual) == 1
+        and json.loads(actual[0]["receipt_json"])["sha256"] == receipt["sha256"]
+    )
+    if not matches:
+        dependency_sql = LOCAL / f"dependency-{receipt['dataset']}-{int(receipt['season'])}.sql"
+        write_dependency_sql(
+            conn, dependency_sql, receipt["dataset"], int(receipt["season"])
         )
+        run(
+            [
+                "d1",
+                "execute",
+                "bball-silvermine",
+                "--remote",
+                "--file",
+                str(dependency_sql),
+            ]
+        )
+        actual = query(
+            f"SELECT receipt_json FROM football_sources WHERE dataset='{receipt['dataset']}' AND season={int(receipt['season'])}"
+        )
+        if (
+            len(actual) != 1
+            or json.loads(actual[0]["receipt_json"])["sha256"] != receipt["sha256"]
+        ):
+            raise SystemExit("Remote schedule/directory source differs after sync")
 archive = LOCAL / "sources.tar"
 with tarfile.open(archive, "w") as tar:
     for path, name in files:

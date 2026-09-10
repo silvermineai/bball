@@ -150,6 +150,60 @@ def write_sql(conn, path, dataset, year):
         )
 
 
+def write_dependency_sql(conn, path, dataset, year):
+    """Write a bounded replay file for the history validation dependencies."""
+    if dataset not in ("schedule", "teams") or year not in YEARS:
+        raise ValueError("Outside historical dependency scope")
+    statements = []
+    if dataset == "schedule":
+        statements.append(f"DELETE FROM football_games WHERE season={year};")
+        rows = conn.execute(
+            "SELECT * FROM football_games WHERE season=? ORDER BY kickoff,id", (year,)
+        )
+    else:
+        statements.append(
+            f"DELETE FROM football_stats WHERE dataset='teams' AND season={year};"
+        )
+        rows = conn.execute(
+            "SELECT * FROM football_stats WHERE dataset='teams' AND season=? ORDER BY record_key",
+            (year,),
+        )
+    for row in rows:
+        statements.append(
+            "INSERT INTO "
+            + ("football_games" if dataset == "schedule" else "football_stats")
+            + " VALUES ("
+            + ",".join(map(sql_value, row))
+            + ");"
+        )
+    source = conn.execute(
+        "SELECT * FROM football_sources WHERE dataset=? AND season=?",
+        (dataset, year),
+    ).fetchone()
+    if source is None:
+        raise ValueError("Missing historical dependency receipt")
+    statements.append(
+        "INSERT OR REPLACE INTO football_sources VALUES ("
+        + ",".join(map(sql_value, source))
+        + ");"
+    )
+    path.write_text("\n".join(statements) + "\n")
+
+
+def ensure_historical_dependencies(conn, client, refresh=False, years=YEARS):
+    """Ensure every historical player season can be joined to teams and games."""
+    for year in years:
+        for dataset in ("teams", "schedule"):
+            rows, receipt = client.load(dataset, year, refresh=refresh)
+            stored = conn.execute(
+                "SELECT receipt_json FROM football_sources WHERE dataset=? AND season=?",
+                (dataset, year),
+            ).fetchone()
+            if stored and json.loads(stored[0]) == receipt:
+                continue
+            store_rows(conn, dataset, year, rows, receipt)
+
+
 def athlete_board(conn, year):
     board = player_board(conn, year)
     old_count = len(board["players"])
@@ -332,13 +386,18 @@ def main():
     with (LOCAL / "import.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         client = ReleaseClient()
-        downloads = [
-            (ds, y, *client.load(ds, y, refresh=args.refresh))
-            for y in YEARS
-            for ds in KINDS
-        ]
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
+            # The normal forecast refresh intentionally retains only its
+            # five-season model window. Historical player validation reaches
+            # back to 2018, so load the permitted team and schedule releases
+            # before checking player rows instead of assuming they are present.
+            ensure_historical_dependencies(conn, client, refresh=args.refresh)
+            downloads = [
+                (ds, y, *client.load(ds, y, refresh=args.refresh))
+                for y in YEARS
+                for ds in KINDS
+            ]
             result = import_history(conn, downloads)
         print(
             encoded(

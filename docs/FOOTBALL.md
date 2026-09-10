@@ -133,6 +133,8 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 
 The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2018–2026: 413,712 raw player box rows and 75,020 athlete/program/season records. The nine-season catalog excludes 1,653 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
 
+The daily football publisher bootstraps the 2018–2024 schedule and team-directory releases from the same conditional, rate-limited source cache before rebuilding this archive. Those dependency receipts are synchronized to D1 when a remote edition is missing, so a clean GitHub Actions runner can validate and publish historical player rows without depending on a prior forecast-only checkout.
+
 ## Matchup notebooks
 
 The [football matchup notebooks](FOOTBALL_BRIEFS.md) add two-sided unit comparisons, prior-season EPA leaders and private film notes to all 744 forecast briefs. Readers can select prior/current team seasons and FBS/all-opponent samples, inspect denominators and source receipts, and open the exact prospective game record. All forecast, statistics and ledger artifacts remain unchanged by this presentation release.
