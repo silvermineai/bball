@@ -1,4 +1,5 @@
 import type { BBGame } from "./basketball-types";
+import type { Comparison } from "./research-types";
 
 const factorLabels: Record<string, string> = {
   efg: "shot-making",
@@ -6,6 +7,33 @@ const factorLabels: Record<string, string> = {
   orb: "offensive rebounding",
   ftr: "free-throw pressure",
 };
+
+function marketMagnitude(comparison: Comparison) {
+  return Math.abs(comparison.model_difference) *
+    (comparison.market === "h2h" ? 100 : 1);
+}
+
+function marketLens(game: BBGame): BasketballEditorialLens | null {
+  const comparison = [...(game.market_comparisons || [])]
+    .filter((row) => Number.isFinite(row.model_difference))
+    .sort((a, b) => marketMagnitude(b) - marketMagnitude(a) || a.captured_at.localeCompare(b.captured_at))[0];
+  if (!comparison || marketMagnitude(comparison) < (comparison.market === "h2h" ? 2 : 2.5)) return null;
+  const magnitude = marketMagnitude(comparison).toFixed(1);
+  const direction = comparison.model_difference > 0 ? "above" : "below";
+  const marketName = comparison.market === "h2h" ? "home win probability" : comparison.market === "totals" ? "game total" : "home spread";
+  const quote = comparison.market === "h2h"
+    ? comparison.market_home_probability == null ? "the quoted moneyline" : `${(comparison.market_home_probability * 100).toFixed(1)}% no-vig home probability`
+    : comparison.line == null ? "the quoted line" : `${comparison.line > 0 ? "+" : ""}${comparison.line.toFixed(1)}`;
+  return {
+    title: "A number the market can test",
+    body: `The stored ${comparison.bookmaker} ${comparison.market} observation was captured ${comparison.captured_at.slice(0, 10)}. The model sits ${magnitude} ${comparison.market === "h2h" ? "probability points" : "points"} ${direction} ${quote} for the ${marketName}. Treat that gap as a reporting question, not a recommendation; confirm the quote clock and the source context before drawing a conclusion.`,
+    questions: [
+      `What roster, venue or matchup evidence could explain the ${magnitude}-point model gap in ${marketName}?`,
+      "Was the quote captured before the scheduled start and against the same participants as the model record?",
+      `After the result is final, did the ${comparison.market} comparison support the model, the market or neither?`,
+    ],
+  };
+}
 
 export type BasketballEditorialLens = {
   title: string;
@@ -21,6 +49,8 @@ export type BasketballEditorialLens = {
 export function basketballEditorialLens(game: BBGame): BasketballEditorialLens | null {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
+  const market = marketLens(game);
+  if (market) return market;
   const width = prediction.margin_high - prediction.margin_low;
   const strongest = Object.entries(game.matchup_factors?.edges || {})
     .filter(([, value]) => typeof value === "number" && Number.isFinite(value))

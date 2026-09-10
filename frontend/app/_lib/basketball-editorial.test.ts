@@ -50,4 +50,24 @@ describe("basketball editorial lens", () => {
     const unforecasted = { ...game(0, -10, 10), prediction: null, fallback_prediction: null };
     expect(basketballEditorialLens(unforecasted)).toBeNull();
   });
+
+  it("turns a large verified market gap into reporting questions", () => {
+    const withMarket = {
+      ...game(6, -8, 20),
+      market_comparisons: [{
+        provider: "licensed",
+        bookmaker: "Example Book",
+        market: "spreads" as const,
+        captured_at: "2026-10-01T12:00:00Z",
+        updated_at: "2026-10-01T11:55:00Z",
+        line: -1.5,
+        model_difference: 7.5,
+        market_home_probability: null,
+      }],
+    };
+    const lens = basketballEditorialLens(withMarket);
+    expect(lens?.title).toBe("A number the market can test");
+    expect(lens?.body).toContain("7.5 points above");
+    expect(lens?.questions[1]).toContain("scheduled start");
+  });
 });
