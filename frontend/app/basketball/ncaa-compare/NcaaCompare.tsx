@@ -38,7 +38,9 @@ function PlayerColumn({ card, season, impact }: { card: Card; season: number; im
     const fgm = sum("fgm");
     const tpm = sum("tpm");
     const fta = sum("fta");
-    return { games, points, rebounds, assists, minutes, fga, fgm, tpm, fta, ts: trueShooting({ pts: points, fga, fta }), efg: effectiveFieldGoal(fgm, tpm, fga) };
+    const turnovers = sum("tov");
+    const fouls = sum("pf");
+    return { games, points, rebounds, assists, turnovers, fouls, minutes, fga, fgm, tpm, fta, ts: trueShooting({ pts: points, fga, fta }), efg: effectiveFieldGoal(fgm, tpm, fga) };
   }, [rows]);
   const name = rows[0]?.player_name || roster?.player_name || `NCAA player ${card.player_id}`;
   return <article className="paper-panel">
@@ -47,7 +49,7 @@ function PlayerColumn({ card, season, impact }: { card: Card; season: number; im
     <p className="note">{rows.map((row) => row.team_name || row.team_id).join(" · ") || "No selected-season team row"}</p>
     <div className="hero-actions"><Link className="hero-link" href={`/basketball/ncaa-player/?id=${encodeURIComponent(card.player_id)}&season=${season}`}>Open full player card →</Link><a className="hero-link" href={`https://stats.ncaa.org/players/${encodeURIComponent(card.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></div>
     {!totals ? <p className="empty">No source row for {label(season)}.</p> : <>
-      <div className="strip"><div><strong>{totals.games || "—"}</strong><span>Games</span></div><div><strong>{format(totals.points == null || !totals.games ? null : totals.points / totals.games)}</strong><span>Points / game</span></div><div><strong>{format(totals.rebounds == null || !totals.games ? null : totals.rebounds / totals.games)}</strong><span>Rebounds / game</span></div><div><strong>{format(totals.assists == null || !totals.games ? null : totals.assists / totals.games)}</strong><span>Assists / game</span></div></div>
+      <div className="strip"><div><strong>{totals.games || "—"}</strong><span>Games</span></div><div><strong>{format(totals.points == null || !totals.games ? null : totals.points / totals.games)}</strong><span>Points / game</span></div><div><strong>{format(totals.rebounds == null || !totals.games ? null : totals.rebounds / totals.games)}</strong><span>Rebounds / game</span></div><div><strong>{format(totals.assists == null || !totals.games ? null : totals.assists / totals.games)}</strong><span>Assists / game</span></div><div><strong>{format(totals.turnovers == null || !totals.games ? null : totals.turnovers / totals.games)}</strong><span>Turnovers / game</span></div><div><strong>{format(totals.fouls == null || !totals.games ? null : totals.fouls / totals.games)}</strong><span>Fouls / game</span></div></div>
       <dl className="raw-stat-grid"><div><dt>True shooting</dt><dd>{percent(totals.ts)}</dd></div><div><dt>Effective FG</dt><dd>{percent(totals.efg)}</dd></div><div><dt>Minutes / game</dt><dd>{format(totals.minutes == null || !totals.games ? null : totals.minutes / totals.games)}</dd></div><div><dt>Class / position</dt><dd>{roster?.profile.class || "—"} · {roster?.profile.position || "—"}</dd></div><div><dt>Net RAPM</dt><dd>{format(impact?.rapm_net ?? null, 2)}</dd></div><div><dt>RAPM status</dt><dd>{impact?.qualified ? "Qualified sample" : "Unavailable / unqualified"}</dd></div></dl>
       <p className="note">Totals pool the source&apos;s team rows for the selected season. Rates use only recorded attempts and remain unavailable when their denominator is missing.</p>
     </>}

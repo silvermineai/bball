@@ -10,7 +10,7 @@ import {
 const valueLabel = (row: SnapshotRow) => {
   if (row.value == null) return "—";
   if (row.metric === "ts") return `${row.value.toFixed(1)}%`;
-  if (row.metric === "ppg") return row.value.toFixed(1);
+  if (row.metric === "ppg" || row.metric === "fpg") return row.value.toFixed(1);
   return row.value.toFixed(2);
 };
 
