@@ -3,6 +3,7 @@ import Link from "next/link";
 import path from "node:path";
 import EfficiencyDesk from "./EfficiencyDesk";
 import type { EfficiencyIndex } from "../../_lib/football-efficiency";
+import { getFootballEfficiencyModel } from "../../_lib/data";
 export const metadata = {
   title: "Football team efficiency and matchup comparisons",
   description:
@@ -16,6 +17,7 @@ export default function Page() {
       "utf8",
     ),
   ) as EfficiencyIndex;
+  const model = getFootballEfficiencyModel();
   return (
     <>
       <div className="page-title">
@@ -38,7 +40,7 @@ export default function Page() {
           Test whether these statistics improve forecasts →
         </Link>
       </p>
-      <EfficiencyDesk data={data} />
+      <EfficiencyDesk data={data} model={model} />
     </>
   );
 }

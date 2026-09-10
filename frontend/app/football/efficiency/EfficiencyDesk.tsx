@@ -11,6 +11,7 @@ import {
   type Rate,
   type EfficiencyMetric,
 } from "../../_lib/football-efficiency";
+import type { FootballEfficiencyModel } from "../../_lib/data";
 const day = (s: string) =>
   new Date(s).toLocaleDateString("en-US", {
     month: "short",
@@ -28,7 +29,13 @@ function Cell({ rate, metric }: { rate: Rate; metric: EfficiencyMetric }) {
     </td>
   );
 }
-export default function EfficiencyDesk({ data }: { data: EfficiencyIndex }) {
+function score(value: number | null | undefined, digits = 2) {
+  return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
+}
+function signedScore(value: number | null | undefined) {
+  return value == null || !Number.isFinite(value) ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+export default function EfficiencyDesk({ data, model }: { data: EfficiencyIndex; model: FootballEfficiencyModel }) {
   const initial =
     data.seasons.find((s) => s.season === 2025) || data.seasons[0];
   const [season, setSeason] = useState(initial.season),
@@ -191,6 +198,45 @@ export default function EfficiencyDesk({ data }: { data: EfficiencyIndex }) {
         These rates do not modify the forecast model. “Allowed” uses the
         opponent’s offensive row from the same game.
       </p>
+      <section className="paper-panel efficiency-challenger" aria-labelledby="efficiency-challenger-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Research check / dated holdouts</div>
+            <h2 id="efficiency-challenger-title">Does advanced efficiency travel?</h2>
+          </div>
+          <span className="muted">{model.version}</span>
+        </div>
+        <p>
+          This challenger uses lagged EPA and yards-per-play rates to correct the score-only margin. Each row below is scored on a season the model did not train on; positive lift means lower mean absolute error than the primary margin.
+        </p>
+        <div className="efficiency-challenger-summary">
+          <div><strong>{model.coverage.training_rows.toLocaleString()}</strong><span>training game rows</span></div>
+          <div><strong>{model.coverage.holdout_rows.toLocaleString()}</strong><span>latest holdout rows</span></div>
+          <div><strong>{signedScore(model.evaluation.improvement_vs_primary)}</strong><span>latest MAE lift</span></div>
+          <div><strong>{model.transition_evaluations?.length ?? 0}</strong><span>dated transitions</span></div>
+        </div>
+        {model.transition_evaluations?.length ? (
+          <div className="table-scroll">
+            <table className="data-table efficiency-stability">
+              <caption>Every transition uses only seasons before its test season.</caption>
+              <thead><tr><th>Test season</th><th>Training seasons</th><th className="numeric">Games</th><th className="numeric">Primary MAE</th><th className="numeric">Challenger MAE</th><th className="numeric">Lift</th></tr></thead>
+              <tbody>
+                {model.transition_evaluations.map((row) => (
+                  <tr key={row.test_season}>
+                    <th scope="row">{row.test_season}</th>
+                    <td>{row.training_seasons.join(", ") || "—"}</td>
+                    <td className="numeric">{row.rows.toLocaleString()}</td>
+                    <td className="numeric">{score(row.baseline_mae)}</td>
+                    <td className="numeric">{score(row.challenger_mae)}</td>
+                    <td className={`numeric ${row.improvement_vs_primary != null && row.improvement_vs_primary > 0 ? "positive" : "negative"}`}>{signedScore(row.improvement_vs_primary)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="empty">No dated transition has enough prior data for a holdout score.</p>}
+        <p className="note">The challenger remains exploratory. It does not change the published football probability, interval, market ledger, or matchup recommendation.</p>
+      </section>
       <section aria-labelledby="efficiency-compare-title">
         <div className="section-heading">
           <h2 id="efficiency-compare-title">The matchup profile</h2>

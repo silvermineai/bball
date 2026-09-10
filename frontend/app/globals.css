@@ -3644,6 +3644,15 @@ summary {
 .efficiency-method {
   margin-top: 55px;
 }
+.efficiency-challenger { display: grid; gap: 14px; margin: 24px 0; }
+.efficiency-challenger-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.efficiency-challenger-summary > div { display: grid; gap: 3px; padding: 12px; border: 1px solid var(--line); background: var(--paper); }
+.efficiency-challenger-summary strong { font: 600 1.15rem/1.1 var(--mono); }
+.efficiency-challenger-summary span { color: var(--muted); font-size: .75rem; }
+.efficiency-stability caption { text-align: left; padding: 0 0 8px; color: var(--muted); font-size: .8rem; }
+.efficiency-stability .positive { color: var(--green); }
+.efficiency-stability .negative { color: var(--orange); }
+@media (max-width: 720px) { .efficiency-challenger-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .efficiency-ranking {
   min-width: 740px;
 }
