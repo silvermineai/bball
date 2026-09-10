@@ -219,6 +219,7 @@ export type BBRosters = {
   unusable_rows?: number;
   status_counts: Record<string, number>;
   source?: {
+    dataset: string;
     url: string | null;
     fetched_at: string | null;
     sha256: string | null;

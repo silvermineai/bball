@@ -35,6 +35,7 @@ export const basketballRosters = new Hono<{ Bindings: Env }>();
 basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
   const { season } = c.req.valid("query");
   const previousSeason = season - 1;
+  const sourceDataset = season === 2026 ? "player_box" : "rosters";
   const db = researchDb(c.env);
 
   const [currentRoster, previousRoster, previousParticipation, currentParticipation, teams, source] = await Promise.all([
@@ -43,7 +44,7 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     db.prepare("SELECT team_id,athlete_id,name,games,minutes FROM bb_participation WHERE season=? ORDER BY team_id,athlete_id").bind(previousSeason).all<ParticipationRow>(),
     db.prepare("SELECT team_id,athlete_id,name,games,minutes FROM bb_participation WHERE season=? ORDER BY team_id,athlete_id").bind(season).all<ParticipationRow>(),
     db.prepare("SELECT team_id,team_name FROM bb_team_season WHERE season IN (?,?) AND team_name IS NOT NULL").bind(previousSeason, season).all<{ team_id: string; team_name: string }>(),
-    db.prepare("SELECT receipt_json FROM bb_sources WHERE dataset='rosters' AND season=?").bind(season).first<{ receipt_json: string }>(),
+    db.prepare("SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?").bind(sourceDataset, season).first<{ receipt_json: string }>(),
   ]);
 
   // The 2025–26 view is a recorded participation view, matching the local
@@ -175,6 +176,6 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     status_counts: statusCounts,
     team_summaries: teamSummaries,
     players,
-    source: receipt ? { url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
+    source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });
 });

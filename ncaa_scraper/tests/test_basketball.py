@@ -465,6 +465,7 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(
             board["source"],
             {
+                "dataset": "rosters",
                 "url": "https://example.test/rosters-2027.parquet",
                 "fetched_at": "2026-09-09T00:00:00Z",
                 "sha256": "abc123",

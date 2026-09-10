@@ -857,15 +857,20 @@ def roster_changes(conn, target=2027, prior_players=None):
             }
         )
     source = None
+    # The 2025–26 comparison uses recorded participation as its current
+    # side, so its receipt is the player-box release. Future views use the
+    # source roster listing directly.
+    source_dataset = "player_box" if target == 2026 else "rosters"
     try:
         source_row = conn.execute(
-            "SELECT receipt_json FROM bb_sources WHERE dataset='rosters' AND season=?",
-            (target,),
+            "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
+            (source_dataset, target),
         ).fetchone()
         if source_row and source_row[0]:
             receipt = json.loads(source_row[0])
             if isinstance(receipt, dict):
                 source = {
+                    "dataset": source_dataset,
                     "url": receipt.get("url"),
                     "fetched_at": receipt.get("fetched_at"),
                     "sha256": receipt.get("sha256"),

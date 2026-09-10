@@ -328,8 +328,9 @@ export default function Recruiting() {
           <summary>Source receipt for {season === "2027" ? "2026–27" : `${Number(season) - 1}–${season.slice(-2)}`} roster observations</summary>
           <div className="table-scroll" style={{ marginTop: 12 }}>
             <table className="data-table">
-              <thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead>
+              <thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead>
               <tbody><tr>
+                <td>{sourceReceipt.dataset.replaceAll("_", " ")}</td>
                 <td>{sourceReceipt.fetched_at ? new Date(sourceReceipt.fetched_at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" }) : "—"}</td>
                 <td><code>{sourceReceipt.sha256 || "—"}</code></td>
                 <td>{sourceReceipt.url ? <a href={sourceReceipt.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td>
@@ -434,7 +435,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -449,6 +450,7 @@ export default function Recruiting() {
                             player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
                             player.prior_production?.box_bpm,
                             player.source_url,
+                            sourceReceipt?.dataset,
                             sourceReceipt?.url,
                             sourceReceipt?.fetched_at,
                             sourceReceipt?.sha256,
@@ -623,6 +625,7 @@ export default function Recruiting() {
                       "Height",
                       "Weight",
                       "Source URL",
+                      "Roster source dataset",
                       "Roster release URL",
                       "Roster retrieved (UTC)",
                       "Roster SHA-256",
@@ -661,6 +664,7 @@ export default function Recruiting() {
                       p.height,
                       p.weight,
                       p.source_url,
+                      sourceReceipt?.dataset,
                       sourceReceipt?.url,
                       sourceReceipt?.fetched_at,
                       sourceReceipt?.sha256,

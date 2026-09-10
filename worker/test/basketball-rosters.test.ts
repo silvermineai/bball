@@ -32,4 +32,22 @@ describe("live basketball roster observations", () => {
     expect((await basketballRosters.request("/?season=2024", {}, { RESEARCH_DB: { prepare } })).status).toBe(400);
     expect(prepare).not.toHaveBeenCalled();
   });
+
+  it("uses the player-box receipt for the recorded 2025–26 view", async () => {
+    const queries: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      queries.push(sql);
+      return {
+        bind: (..._args: unknown[]) => ({
+          all: async () => ({ results: [] }),
+          first: async () => ({ receipt_json: JSON.stringify({ url: "https://release.test/player-box.parquet", fetched_at: "2026-09-10T00:00:00Z", sha256: "box-sha" }) }),
+        }),
+      };
+    });
+    const response = await basketballRosters.request("/?season=2026", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { source: Record<string, unknown> };
+    expect(body.source).toMatchObject({ dataset: "player_box", sha256: "box-sha" });
+    expect(queries.some((sql) => sql.includes("FROM bb_sources WHERE dataset=?"))).toBe(true);
+  });
 });
