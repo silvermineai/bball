@@ -154,4 +154,22 @@ describe("basketball matchup triage", () => {
     expect(matchesMatchupSignal(undefined, "all")).toBe(true);
     expect(matchesMatchupSignal(undefined, "strong")).toBe(false);
   });
+
+  it("triages cold-start estimates like other published forecasts", () => {
+    const coldStart = {
+      ...game("cold", "2026-10-01T00:00:00Z", 2, 0.78),
+      prediction: null,
+      fallback_prediction: {
+        ...game("cold-fallback", "2026-10-01T00:00:00Z", 2, 0.78, 42).prediction!,
+        estimate_type: "cold_start" as const,
+      },
+    };
+    expect(matchesMatchupSignal(coldStart.fallback_prediction, "strong")).toBe(true);
+    expect(
+      sortMatchups(
+        [coldStart, game("primary", "2026-10-02T00:00:00Z", 1, 0.61)],
+        "confidence",
+      ).map((row) => row.id),
+    ).toEqual(["cold", "primary"]);
+  });
 });

@@ -204,7 +204,7 @@ export default function BasketballCard({
           Check the forecast record →
         </Link>
       </p>
-      {g.prediction && (
+      {p && (
         <Link className="note" href={`/basketball/briefs/${g.id}/`}>
           Read the matchup brief →
         </Link>

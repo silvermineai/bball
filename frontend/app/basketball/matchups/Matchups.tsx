@@ -154,7 +154,7 @@ export default function Matchups({
       );
     }
   }, [q, month, coverage, signal, sort, page, prepIds]);
-  const eligibleGames = scope === "forecasted" ? activeGames.filter((g) => g.prediction != null) : activeGames;
+  const eligibleGames = scope === "forecasted" ? activeGames.filter((g) => g.prediction != null || g.fallback_prediction != null) : activeGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
     eligibleGames.filter((g) => {
@@ -163,11 +163,11 @@ export default function Matchups({
           .toLowerCase()
           .includes(q.toLowerCase()) &&
         (month === "all" || g.starts_at.startsWith(month)) &&
-        matchesMatchupSignal(g.prediction, signal) &&
+        matchesMatchupSignal(g.prediction || g.fallback_prediction, signal) &&
         (effectiveCoverage === "all" ||
           (effectiveCoverage === "forecasted"
-            ? g.prediction != null
-            : g.prediction == null))
+            ? g.prediction != null || g.fallback_prediction != null
+            : g.prediction == null && g.fallback_prediction == null))
       );
     }),
     sort,
@@ -225,7 +225,7 @@ export default function Matchups({
         {scope === "forecasted" ? (
           <div className="control" aria-label="Forecast scope">
             <span>FORECAST</span>
-            <strong className="note">Primary forecasts only</strong>
+            <strong className="note">Published estimates, including cold-start baselines</strong>
           </div>
         ) : (
           <label className="control">
@@ -239,7 +239,7 @@ export default function Matchups({
             >
               <option value="all">All games</option>
               <option value="forecasted">With model forecast</option>
-              <option value="unforecasted">Without primary forecast</option>
+              <option value="unforecasted">Without published estimate</option>
             </select>
           </label>
         )}
@@ -299,7 +299,7 @@ export default function Matchups({
       </p>
       <p className="note" role="status">
         {liveGames
-          ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
+          ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction || game.fallback_prediction).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
           : liveGamesError
             ? `${liveGamesError} Showing the published static slate.`
             : "Checking live matchup rows…"}
@@ -383,7 +383,7 @@ export default function Matchups({
                   <small>{game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
                 </div>
                 <div className="button-row">
-                  {game.prediction && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}
+                  {(game.prediction || game.fallback_prediction) && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}
                   <button className="button secondary" type="button" onClick={() => togglePrep(game.id)}>Remove</button>
                 </div>
               </div>

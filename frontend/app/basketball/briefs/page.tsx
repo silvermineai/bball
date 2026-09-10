@@ -24,10 +24,11 @@ export default function Page() {
         <div className="eyebrow">The briefing room / 2026–27</div>
         <h1>Read the game<br /><em>before tip.</em></h1>
         <p>
-          Every published primary forecast has a linked matchup brief with the
-          score estimate, four-factor explanation, roster workload context and
-          source trail. Use this desk to find a game, then open the full
-          notebook before writing or preparing a plan.
+          Every published estimate has a linked matchup brief with the score
+          estimate, four-factor explanation, roster workload context and source
+          trail. Primary forecasts and wider-interval cold-start estimates are
+          labeled in the slate. Use this desk to find a game, then open the
+          full notebook before writing or preparing a plan.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/basketball/pressroom/">Open story angles ↗</Link>
@@ -38,7 +39,7 @@ export default function Page() {
           The desk is a source-linked research aid. Forecasts use historical
           team efficiency and venue; they do not know injuries, eligibility,
           confirmed rotations or bookmaker prices. A missing brief means the
-          game has no primary forecast in this edition.
+          game has no published estimate in this edition.
         </p>
       </div>
       <Suspense fallback={<p>Loading game briefs…</p>}>

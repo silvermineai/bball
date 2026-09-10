@@ -19,14 +19,63 @@ import {
 } from "../../../_lib/matchup-brief";
 import { eventLabels, publicationDate } from "../../../_lib/recruiting";
 import { reasons } from "../../../_lib/research-types";
-import type { Metric } from "../../../_lib/scouting-types";
+import type { Metric, ScoutProfile } from "../../../_lib/scouting-types";
 import BriefNotebook from "../BriefNotebook";
 import ManualMarketCheck from "../ManualMarketCheck";
 import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
 
+const emptySplit = () => ({
+  games: 0,
+  scored_games: 0,
+  paired_games: 0,
+  wins: 0,
+  losses: 0,
+  ties: 0,
+  pace: null,
+  close_games: 0,
+  close_wins: 0,
+  sos: null,
+  sos_games: 0,
+  metrics: Object.fromEntries(
+    ["efg", "tov", "orb", "ftr"].flatMap((key) => [
+      [`off_${key}`, { value: null, games: 0, description: "No historical profile is available for this program in the published edition." }],
+      [`def_${key}`, { value: null, games: 0, description: "No historical profile is available for this program in the published edition." }],
+    ]),
+  ) as Record<string, Metric>,
+});
+
+function loadBriefProfile(id: string, name: string, overview: ReturnType<typeof getBasketball>): ScoutProfile {
+  try {
+    return getScoutProfile(id);
+  } catch {
+    // Cold-start forecasts can include programs without a full historical dossier.
+    const split = emptySplit();
+    return {
+      id,
+      name,
+      season: overview.season - 1,
+      rating: {} as ScoutProfile["rating"],
+      splits: { season: split, last10: split, last5: split, home: split, road: split, neutral: split, top50: split },
+      games: [],
+      players: [],
+      upcoming: [],
+      forecast_season: overview.season,
+      generated_at: overview.generated_at,
+      source_edition: overview.generated_at,
+      model_id: overview.model.id,
+      metrics: Object.fromEntries(
+        ["efg", "tov", "orb", "ftr"].flatMap((key) => [
+          [`off_${key}`, { label: key, format: "percent", higher_better: null, description: "No historical profile is available for this program in the published edition." }],
+          [`def_${key}`, { label: key, format: "percent", higher_better: null, description: "No historical profile is available for this program in the published edition." }],
+        ]),
+      ),
+    };
+  }
+}
+
 export function generateStaticParams() {
   return getBasketball()
-    .upcoming.filter((g) => g.prediction)
+    .upcoming.filter((g) => g.prediction || g.fallback_prediction)
     .map((g) => ({ id: g.id }));
 }
 export async function generateMetadata({
@@ -114,10 +163,10 @@ export default async function Page({
   const { id } = await params,
     d = getBasketball(),
     g = d.upcoming.find((g) => g.id === id),
-    p = g?.prediction;
+    p = g?.prediction || g?.fallback_prediction;
   if (!g || !p) notFound();
-  const home = getScoutProfile(g.home_id),
-    away = getScoutProfile(g.away_id),
+  const home = loadBriefProfile(g.home_id, g.home_name, d),
+    away = loadBriefProfile(g.away_id, g.away_name, d),
     recruiting = getRecruiting(),
     rosters = getRosters(),
     ledger = getLedger();
@@ -239,7 +288,7 @@ export default async function Page({
           <small>Projected away score</small>
         </div>
         <div className="brief-score-center">
-          <span>Preseason baseline</span>
+          <span>{p.estimate_type === "cold_start" ? "Cold-start estimate" : "Preseason baseline"}</span>
           <strong>
             {p.home_margin === 0
               ? "Even projected score"

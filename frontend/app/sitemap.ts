@@ -56,7 +56,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/film/",
     "/basketball/season/",
     ...getBasketball()
-      .upcoming.filter((g) => g.prediction)
+      .upcoming.filter((g) => g.prediction || g.fallback_prediction)
       .map((g) => `/basketball/briefs/${g.id}/`),
     "/football/matchups/",
     "/football/players/",

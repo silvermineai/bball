@@ -117,8 +117,8 @@ export function sortMatchups(games: BBGame[], sort: MatchupSort): BBGame[] {
   return games
     .map((game, index) => ({ game, index }))
     .sort((a, b) => {
-      const ap = a.game.prediction;
-      const bp = b.game.prediction;
+      const ap = a.game.prediction || a.game.fallback_prediction;
+      const bp = b.game.prediction || b.game.fallback_prediction;
       if (sort !== "date" && (ap != null) !== (bp != null)) {
         return ap != null ? -1 : 1;
       }
