@@ -16,6 +16,10 @@ from ncaa_scraper.football_efficiency import OUT, build, encoded
 
 R2_ONLY_YEARS = {2020, 2021}
 
+
+class D1StorageLimit(Exception):
+    """Cloudflare rejected a write because the legacy database is full."""
+
 with sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) as conn:
     conn.row_factory = sqlite3.Row
     files = build(conn)
@@ -28,7 +32,7 @@ for name, value in files.items():
 
 
 def remote(sql):
-    result = subprocess.check_output(
+    result = subprocess.run(
         [
             sys.executable,
             str(ROOT / "scripts/cloudflare.py"),
@@ -42,8 +46,16 @@ def remote(sql):
         ],
         cwd=ROOT,
         text=True,
+        capture_output=True,
     )
-    return json.loads(result)[0]["results"]
+    if result.returncode:
+        message = result.stdout + result.stderr
+        if "Exceeded maximum DB size" in message or "code: 7500" in message:
+            raise D1StorageLimit from None
+        raise subprocess.CalledProcessError(
+            result.returncode, result.args, output=result.stdout, stderr=result.stderr
+        )
+    return json.loads(result.stdout)[0]["results"]
 
 
 for source in files["efficiency.json"]["sources"]:
@@ -72,18 +84,16 @@ stage, statements, activate, cleanup = manifest_statements(
 try:
     for statement in statements:
         remote(statement)
-except subprocess.CalledProcessError as exc:
+except D1StorageLimit:
     # The legacy D1 can be exactly at Cloudflare's 10 GiB limit even when all
     # source rows are verified. Keep the verified static/R2 release publishable
     # and make the storage limitation explicit instead of treating it as a bad
     # source receipt.
-    if exc.returncode == 1:
-        print(
-            "D1 artifact registration skipped: legacy football database is at "
-            "Cloudflare's 10 GiB limit; static and R2 manifests remain verified."
-        )
-        raise SystemExit(0)
-    raise
+    print(
+        "D1 artifact registration skipped: legacy football database is at "
+        "Cloudflare's 10 GiB limit; static and R2 manifests remain verified."
+    )
+    raise SystemExit(0)
 if (
     json.loads(
         remote(
