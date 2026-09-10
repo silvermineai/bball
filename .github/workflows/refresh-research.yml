@@ -195,6 +195,10 @@ jobs:
             -H 'Cache-Control: no-cache' \
             'https://bball.silvermine.dev/api/basketball/research/news?limit=1&workflow_smoke=1' \
             -o /tmp/basketball-news.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Cache-Control: no-cache' \
+            'https://bball.silvermine.dev/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&workflow_smoke=1' \
+            -o /tmp/basketball-forecasts.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -223,6 +227,19 @@ jobs:
                   if not row.get(field):
                       raise SystemExit(f'news row is missing {field}')
           print('Production news smoke test passed')
+
+          forecasts = json.loads(Path('/tmp/basketball-forecasts.json').read_text())
+          if forecasts.get('season') != 2027 or forecasts.get('status') != 'upcoming':
+              raise SystemExit('forecast response has an unexpected season or status')
+          if not isinstance(forecasts.get('total'), int) or forecasts['total'] <= 0:
+              raise SystemExit('forecast response has no upcoming rows')
+          if not isinstance(forecasts.get('rows'), list) or len(forecasts['rows']) > 1:
+              raise SystemExit('forecast response has an invalid bounded row page')
+          for row in forecasts['rows']:
+              for field in ('game_id', 'model_id', 'starts_at', 'home_id', 'away_id', 'prediction'):
+                  if row.get(field) in (None, ''):
+                      raise SystemExit(f'forecast row is missing {field}')
+          print('Production forecast smoke test passed')
           PY
 
       - name: Record publication summary
