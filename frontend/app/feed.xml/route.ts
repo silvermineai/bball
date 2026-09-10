@@ -17,6 +17,7 @@ const guideItems = [
   ["basketball-possession-style", "Count the trip before you count the score.", "How to read source-recorded team possession style without assigning individual credit."],
   ["basketball-recruiting-evidence", "Build the recruiting brief from the evidence outward.", "How to connect source rows, dated statements, prior production and the next staff question."],
   ["basketball-player-game-logs", "Read the game log before you rank the player.", "How to use NCAA player-game rows, denominators and source identity in a recruiting review."],
+  ["basketball-roster-transitions", "Roster continuity is a clue, not a depth chart.", "How to evaluate returning workload across dated NCAA roster transitions without overclaiming eligibility or forecast value."],
 ] as const;
 
 function escapeXml(value: string) {

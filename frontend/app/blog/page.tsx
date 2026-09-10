@@ -73,6 +73,11 @@ const guides = [
     "Read the game log before you rank the player.",
     "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
   ],
+  [
+    "basketball-roster-transitions",
+    "Roster continuity is a clue, not a depth chart.",
+    "How to evaluate returning workload across dated NCAA roster transitions without turning a source listing into an eligibility or forecast claim.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

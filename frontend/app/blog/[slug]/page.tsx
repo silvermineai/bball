@@ -2,7 +2,7 @@ import Link from "next/link";
 import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
-import { getBasketball, getRosters } from "../../_lib/basketball-data";
+import { getBasketball, getRosters, getRosterModel } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 import BasketballNotebook from "../BasketballNotebook";
 const titles: Record<string, string> = {
@@ -25,6 +25,8 @@ const titles: Record<string, string> = {
     "Build the recruiting brief from the evidence outward.",
   "basketball-player-game-logs":
     "Read the game log before you rank the player.",
+  "basketball-roster-transitions":
+    "Roster continuity is a clue, not a depth chart.",
 };
 export function generateStaticParams() {
   return [
@@ -204,6 +206,8 @@ export default async function Page({
         <BasketballRecruitingEvidence />
       ) : slug === "basketball-player-game-logs" ? (
         <BasketballPlayerGameLogs />
+      ) : slug === "basketball-roster-transitions" ? (
+        <BasketballRosterTransitions />
       ) : (
         <>
           <p className="deck">
@@ -337,6 +341,82 @@ function BasketballPlayerGameLogs() {
         efficiency and pace. Player logs and recruiting evidence help a coach
         decide what to investigate; they are not silently inserted into that
         primary forecast.
+      </p>
+    </>
+  );
+}
+
+function BasketballRosterTransitions() {
+  const b = getBasketball();
+  const model = getRosterModel();
+  const historical = model.historical_evaluation;
+  return (
+    <>
+      <p className="deck">
+        A roster release can show who was listed. It cannot tell a coach who is
+        eligible, healthy or ready for the same role. Continuity becomes useful
+        when its date, source identity and denominator stay visible.
+      </p>
+      <p>
+        The <Link href="/basketball/roster-lab/">roster lab</Link> compares
+        exact source-athlete IDs across consecutive releases. Returning minutes
+        are separated from represented prior minutes, which also includes an
+        exact ID seen at a different program. Unrepresented minutes remain a
+        review queue; they are never labeled as departures.
+      </p>
+      <h2>Start with the transition clock</h2>
+      <p>
+        A transition row is a relationship between two source editions, not a
+        live transaction. The current production challenger fits prior net
+        efficiency, listed workload and attributed publisher Box BPM, then
+        produces a margin scenario for the 2026–27 slate. It does not alter the
+        primary probability, uncertainty or ledger registration.
+      </p>
+      {historical ? (
+        <>
+          <h2>Read the historical replay honestly</h2>
+          <p>
+            A separate NCAA-source replay adds dated workload evidence. It uses
+            the {historical.transition_rows["2024"]?.toLocaleString() ?? "—"}, {historical.transition_rows["2025"]?.toLocaleString() ?? "—"} and {historical.transition_rows["2026"]?.toLocaleString() ?? "—"} mapped transition rows and keeps Box BPM out because that source release does not carry the publisher identity. The model is evaluated on the following season after fitting only earlier transitions.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Test season</th><th>Training seasons</th><th className="numeric">Teams</th><th className="numeric">Workload MAE</th><th className="numeric">Prior-net MAE</th></tr></thead>
+              <tbody>
+                {historical.transition_evaluations.map((transition) => (
+                  <tr key={transition.test_season}>
+                    <td>{transition.test_season}</td>
+                    <td>{transition.training_seasons.join(", ")}</td>
+                    <td className="numeric">{transition.rows.teams.toLocaleString()}</td>
+                    <td className="numeric">{fmt(transition.rows.mae, 2)}</td>
+                    <td className="numeric">{fmt(transition.rows.baseline_mae, 2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>
+            These retrospective results are evidence about this workload
+            replay, not a promise of future accuracy or a betting edge. The
+            source mapping excludes ambiguous team names, and a source listing
+            still does not establish eligibility, availability, injury status
+            or depth-chart role.
+          </p>
+        </>
+      ) : null}
+      <h2>Turn a row into a staff question</h2>
+      <p>
+        If represented minutes are low, ask which role needs replacing and what
+        evidence supports that conclusion. If represented minutes are high, ask
+        whether the returning player’s prior shot profile and defensive work
+        fit the new opponent. Open the <Link href="/basketball/ncaa-player-box/">game log</Link>,
+        <Link href="/basketball/ncaa-rosters/"> NCAA roster record</Link> and
+        <Link href="/basketball/recruiting/"> dated announcement</Link> together.
+        When the sources disagree, preserve the disagreement for film and
+        eligibility review.
+      </p>
+      <p>
+        The primary forecast currently covers {b.coverage.forecast_games.toLocaleString()} 2026–27 games from team efficiency and pace. Roster evidence tells a coach where to investigate; it does not silently become a model input.
       </p>
     </>
   );

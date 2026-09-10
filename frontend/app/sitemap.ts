@@ -86,6 +86,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/basketball-ranking-playbook/",
     "/blog/basketball-possession-style/",
     "/blog/basketball-player-game-logs/",
+    "/blog/basketball-roster-transitions/",
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
     ...basketball
       .upcoming.filter((g) => g.prediction || g.fallback_prediction)
