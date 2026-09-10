@@ -1051,6 +1051,29 @@ describe("bball api", () => {
     expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
   });
 
+  it("ranks NCAA personal fouls per game from retained source fields", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 1 }),
+        all: vi.fn().mockResolvedValue({ results: [{ player_name: "Example Defender", fouls: 42, games: 20, value: 2.1, rank: 1 }] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=fpg&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { metric: string; rows: Array<{ fouls: number; value: number }> };
+    expect(body.metric).toBe("fpg");
+    expect(body.rows[0]).toMatchObject({ fouls: 42, value: 2.1 });
+    const aggregateSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("AS fouls"));
+    expect(aggregateSql).toContain("json_extract(s.stats_json,'$.pf')");
+    expect(aggregateSql).toContain("AS fouls");
+    expect(prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("RANK() OVER"))).toContain("fouls / games");
+  });
+
   it("keeps missing NCAA season fields unavailable instead of ranking them as zero", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
