@@ -43,6 +43,26 @@ function getBasketballLeaders(season: number) {
   };
 }
 
+function getBasketballNews() {
+  const file = path.join(process.cwd(), "public/data/news.json");
+  if (!fs.existsSync(file)) return [];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    articles?: Array<{
+      id: string;
+      headline: string;
+      description: string;
+      published: string;
+      link: string;
+      publisher?: string;
+      sport?: string;
+    }>;
+  };
+  return (data.articles || [])
+    .filter((article) => article.sport === "mens-college-basketball")
+    .sort((a, b) => b.published.localeCompare(a.published))
+    .slice(0, 4);
+}
+
 const leaderMetricLabels: Record<BasketballLeaderMetric, string> = {
   ppg: "Points per game",
   rpg: "Rebounds per game",
@@ -75,7 +95,8 @@ export default function Page() {
     recruiting = getRecruiting(),
     rosterModel = getRosterModel(),
     e = d.model.evaluation,
-    leaders = getBasketballLeaders(d.season);
+    leaders = getBasketballLeaders(d.season),
+    news = getBasketballNews();
   return (
     <>
       <div className="dateline eyebrow">
@@ -432,10 +453,33 @@ export default function Page() {
           </article>
         </div>
       </section>
+      {news.length > 0 && <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">07 / Publisher wire</div>
+            <h2>Keep the current context close.</h2>
+          </div>
+          <Link href="/basketball/news/">Open the full news archive →</Link>
+        </div>
+        <p className="note" style={{ marginBottom: 20 }}>
+          A source-linked feed of ESPN and NCAA.com headlines for recruiting,
+          eligibility and basketball context. Silvermine retains only the
+          publisher-supplied headline, summary, date and URL; the wire is not a
+          transaction or availability ledger.
+        </p>
+        <div className="article-grid">
+          {news.map((article) => <article className="article-card" key={article.id}>
+            <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"}</div>
+            <h3>{article.headline}</h3>
+            <p>{article.description}</p>
+            <a href={article.link} target="_blank" rel="noreferrer">Read the source article ↗</a>
+          </article>)}
+        </div>
+      </section>}
       <section className="section paper-panel">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">07 / Market evidence</div>
+            <div className="eyebrow">08 / Market evidence</div>
             <h2>Keep the forecast beside the line.</h2>
           </div>
           <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
