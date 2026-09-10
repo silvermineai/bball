@@ -69,6 +69,7 @@ describe("live basketball roster observations", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; player_filter: Record<string, unknown> };
     expect(body.players).toHaveLength(1);
+    expect(body.players[0]).toEqual(expect.objectContaining({ previous_games: null, previous_minutes: null }));
     expect(body.players_observed).toBe(2);
     expect(body.player_filter).toEqual({ status: "new_to_dataset", limit: 1 });
   });

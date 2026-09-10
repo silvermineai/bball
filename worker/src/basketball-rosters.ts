@@ -110,8 +110,10 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
       return typeof candidate === "string" && candidate ? candidate : teamNames.get(id) || id;
     }).sort();
     const sourceUrl = profile.link_web;
-    const previousGames = old.reduce((sum, row) => sum + Number(row.games || 0), 0);
-    const previousMinutes = old.reduce((sum, row) => sum + Number(row.minutes || 0), 0);
+    const priorGamesValues = old.map((row) => Number(row.games)).filter((value) => Number.isFinite(value) && value >= 0);
+    const priorMinutesValues = old.map((row) => Number(row.minutes)).filter((value) => Number.isFinite(value) && value >= 0);
+    const previousGames = priorGamesValues.length ? priorGamesValues.reduce((sum, value) => sum + value, 0) : null;
+    const previousMinutes = priorMinutesValues.length ? priorMinutesValues.reduce((sum, value) => sum + value, 0) : null;
     return [{
       id: athlete_id,
       name,
@@ -119,8 +121,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
       team: typeof profile.team_display_name === "string" && profile.team_display_name ? profile.team_display_name : teamNames.get(team_id) || team_id,
       previous_teams: previousTeams,
       status,
-      previous_games: Number.isFinite(previousGames) ? previousGames : null,
-      previous_minutes: Number.isFinite(previousMinutes) ? Math.round(previousMinutes * 10) / 10 : null,
+      previous_games: previousGames == null ? null : previousGames,
+      previous_minutes: previousMinutes == null ? null : Math.round(previousMinutes * 10) / 10,
       position: typeof profile.position_abbreviation === "string" ? profile.position_abbreviation : null,
       class_year: typeof profile.experience_display_value === "string" ? profile.experience_display_value : null,
       height: typeof profile.height === "string" ? profile.height : null,
