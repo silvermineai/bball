@@ -166,9 +166,10 @@ The shared market archive keeps its sport, season, search and page controls in t
 
 The basketball landing page also reports the live scorecard’s qualifying quote count and forecast denominator. It links directly to the market archive and states the provider-clock, participant-match and pre-tip requirements, so an empty quote count is visible as missing licensed coverage rather than an implied line.
 
+The daily refresh now has an independent live publication monitor in [`.github/workflows/monitor-publication.yml`](../.github/workflows/monitor-publication.yml). It checks the deployed Worker, both sport coverage payloads, every basketball source clock, the current 2026–27 model catalog and recruiting-intake metadata without mutating D1 or republishing provider data. A source or model clock older than 240 hours fails the monitor so a stale publication is visible even when the source refresh job itself completed.
+
 ## Remaining full-goal work
 
 - Configure an authorized recruiting provider key (the CBBD portal/player/team connector and CSV intake are ready) and ingest verified current recruiting/transfer/eligibility data. CBBD portal rows expose season and eligibility but no event date, so they remain separate from the dated announcement board until a dated source is supplied.
 - Keep the roster challenger research-only while collecting more timestamped transitions. The [shared ledger](RESEARCH_LEDGER.md) implements prospective settlement and market comparisons; live feed validation and real future outcomes remain pending.
-- Enrich major-game editorial analysis beyond generated statistical previews; the immutable reading archive now retains each generated basketball and football brief plus its supporting release files.
-- Monitor scheduled refresh freshness against expected source coverage and investigate any failed publication run.
+- Continue extending major-game editorial analysis as new verified sources arrive. The briefs now choose a market-gap, close-game, variance or Four Factor reporting lens from retained evidence; the immutable reading archive keeps each generated basketball and football brief plus its supporting release files.
