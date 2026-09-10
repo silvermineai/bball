@@ -68,7 +68,7 @@ def _ncaa_individual_health(payload: dict) -> dict:
     """Require exact-ID assist supplements and the complete D1 box-derived field set."""
     box_fields = (
         "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
-        "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+        "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk",
         "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
     )
     supplements = payload.get("supplements")

@@ -35,7 +35,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "coverage": {
                     "players": 3842,
                     "divisions": {
-                        "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
+                        "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
                         "2": {"players": 1020, "apg": 0},
                         "3": {"players": 1031, "apg": 0},
                     },
@@ -118,7 +118,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/ncaa-leaders?meta=1": {
                 "season": 2026,
                 "coverage": {"players": 3842, "divisions": {
-                    "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
+                    "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},
@@ -202,7 +202,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/ncaa-leaders?meta=1": {
                 "season": 2026,
                 "coverage": {"players": 3842, "divisions": {
-                    "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
+                    "1": {"players": 1791, "apg": 1791, "ast": 1791, **{key: 1791 for key in ("ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta")}},
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},

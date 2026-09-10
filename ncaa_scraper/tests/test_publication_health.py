@@ -133,7 +133,7 @@ class PublicationHealthTest(unittest.TestCase):
     def test_ncaa_individual_requires_exact_id_assist_supplements(self):
         box_fields = (
             "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
-            "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+            "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk",
             "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
         )
         payload = {

@@ -787,7 +787,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   const rows = await db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"]);
+  const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"]);
   const provenance = stat === "apg" || stat === "ast"
     ? {
       kind: "exact_id_derived",

@@ -3,7 +3,7 @@ import sqlite3
 import unittest
 
 from ncaa_scraper.ncaa_individual import SCHEMA
-from ncaa_scraper.ncaa_individual_enrichment import box_apg, box_assist_totals, enrich_release
+from ncaa_scraper.ncaa_individual_enrichment import box_apg, box_assist_totals, box_double_doubles, enrich_release
 
 
 class NCAAIndividualEnrichmentTests(unittest.TestCase):
@@ -24,6 +24,10 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
             "INSERT INTO bb_ncaa_player_box VALUES (?,?,?,?)",
             (2026, "g1", "202", json.dumps({"ast": 99})),
         )
+        self.conn.execute(
+            "INSERT INTO bb_ncaa_player_box VALUES (?,?,?,?)",
+            (2026, "g3", "404", json.dumps({"pts": 21, "orb": 5, "drb": 5, "ast": 10, "stl": 1, "blk": 0})),
+        )
         self.conn.commit()
 
     def tearDown(self):
@@ -32,6 +36,9 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
     def test_counts_distinct_contests(self):
         self.assertEqual(box_apg(self.conn)["101"], (7.5, 2))
         self.assertEqual(box_assist_totals(self.conn)["101"], (15.0, 2))
+
+    def test_counts_double_double_categories_per_contest(self):
+        self.assertEqual(box_double_doubles(self.conn)["404"], 1)
 
     def test_enrichment_uses_exact_ids_and_preserves_existing_values(self):
         release = {

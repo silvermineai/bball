@@ -80,9 +80,47 @@ def box_apg(conn: sqlite3.Connection, season: int = 2026) -> dict[str, tuple[flo
     }
 
 
+def box_double_doubles(conn: sqlite3.Connection, season: int = 2026) -> dict[str, int]:
+    """Count source contests with at least two 10+ statistical categories."""
+    contests: dict[str, dict[str, dict[str, float]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+    for player_id, contest_id, payload in conn.execute(
+        "SELECT player_id,contest_id,stats_json FROM bb_ncaa_player_box WHERE season=?",
+        (season,),
+    ):
+        if not player_id or not contest_id:
+            continue
+        try:
+            stats = json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(stats, dict):
+            continue
+        pid, game = str(player_id), str(contest_id)
+        for key in ("pts", "orb", "drb", "ast", "stl", "blk"):
+            try:
+                value = float(stats[key])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if value == value and value not in (float("inf"), float("-inf")):
+                contests[pid][game][key] += value
+    result: dict[str, int] = defaultdict(int)
+    for player_id, games in contests.items():
+        for stats in games.values():
+            categories = (
+                stats.get("pts", 0.0),
+                stats.get("orb", 0.0) + stats.get("drb", 0.0),
+                stats.get("ast", 0.0),
+                stats.get("stl", 0.0),
+                stats.get("blk", 0.0),
+            )
+            if sum(value >= 10 for value in categories) >= 2:
+                result[player_id] += 1
+    return dict(result)
+
+
 DERIVED_FIELDS = (
     "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
-    "threes_pg", "mpg", "ast_to", "pts", "reb", "ast", "stl", "blk",
+    "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk",
     "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
 )
 
@@ -125,6 +163,7 @@ def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, seaso
     if release.get("schema_version") not in (1, 2) or release.get("season") != season:
         raise ValueError("Unsupported NCAA individual release")
     lookup = box_player_aggregates(conn, season)
+    double_doubles = box_double_doubles(conn, season)
     result = copy.deepcopy(release)
     previous_supplements = release.get("supplements") if isinstance(release.get("supplements"), dict) else {}
     previous_apg = previous_supplements.get("apg") if isinstance(previous_supplements.get("apg"), dict) else {}
@@ -140,6 +179,8 @@ def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, seaso
             continue
         total, contests = value
         derived = derived_values(total, contests)
+        if player_id in double_doubles:
+            derived["dbl_dbl"] = float(double_doubles[player_id])
         division_ids.add(str(player.get("division")))
         for field in DERIVED_FIELDS:
             if player.get(field) is not None or field not in derived:
