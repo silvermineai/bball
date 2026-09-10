@@ -114,7 +114,7 @@ npm --prefix frontend run build
 
 The publisher requires requests, numpy and python-dotenv. Cloudflare credentials are read from the process environment or `CF_API_TOKEN_ACCOUNT` / `CF_ACCOUNT_ID` in `~/.env`. They are passed to Wrangler through its environment only. No secrets enter the frontend.
 
-SQL imports replace current schedule/stat snapshots by dataset and season, while keeping historical prediction and market observations. There are no destructive changes to basketball tables. The local football database is under ignored `.local/`; the existing basketball SQLite database is separate.
+SQL imports replace current schedule/stat snapshots by dataset and season, while keeping historical prediction and market observations. The publisher splits the football export into statement-aligned, bounded remote D1 imports so a transient Cloudflare reset can restart from the scoped deletes without replaying one giant transaction. There are no destructive changes to basketball tables. The local football database is under ignored `.local/`; the existing basketball SQLite database is separate.
 
 The repository also defines a serialized daily GitHub Actions refresh in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml). It uses the same publisher, requires `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT` repository secrets, and exposes manual sport selection. A successful deployment invokes the immutable brief archive capture. The local `~/.env` workflow remains available for development and audited manual runs.
 
