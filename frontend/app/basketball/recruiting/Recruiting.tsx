@@ -36,10 +36,13 @@ function PriorProductionDetails({ production }: { production: PriorProduction })
         <div><dt>Minutes / game</dt><dd>{statValue(production.mpg)}</dd></div>
         <div><dt>Points / game</dt><dd>{statValue(production.ppg)}</dd></div>
         <div><dt>Rebounds / game</dt><dd>{statValue(production.rpg)}</dd></div>
+        <div><dt>Offensive rebounds / game</dt><dd>{statValue(production.orpg)}</dd></div>
+        <div><dt>Defensive rebounds / game</dt><dd>{statValue(production.drpg)}</dd></div>
         <div><dt>Assists / game</dt><dd>{statValue(production.apg)}</dd></div>
         <div><dt>Steals / game</dt><dd>{statValue(production.spg)}</dd></div>
         <div><dt>Blocks / game</dt><dd>{statValue(production.bpg)}</dd></div>
         <div><dt>Turnovers / game</dt><dd>{statValue(production.topg)}</dd></div>
+        <div><dt>Fouls / game</dt><dd>{statValue(production.fpg)}</dd></div>
         <div><dt>True shooting</dt><dd>{statPercent(production.ts)}</dd></div>
         <div><dt>Effective FG</dt><dd>{statPercent(production.efg)}</dd></div>
         <div><dt>3-point rate</dt><dd>{statPercent(production.three_rate)}</dd></div>
@@ -454,7 +457,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior ORB/G", "Prior DRB/G", "Prior APG", "Prior PF/G", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -467,7 +470,10 @@ export default function Recruiting() {
                             player.prior_production?.mpg,
                             player.prior_production?.ppg,
                             player.prior_production?.rpg,
+                            player.prior_production?.orpg,
+                            player.prior_production?.drpg,
                             player.prior_production?.apg,
+                            player.prior_production?.fpg,
                             player.prior_production?.ts == null ? null : player.prior_production.ts * 100,
                             player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
                             player.prior_production?.box_bpm,
@@ -493,7 +499,10 @@ export default function Recruiting() {
                       <th className="numeric">MPG</th>
                       <th className="numeric">PPG</th>
                       <th className="numeric">RPG</th>
+                      <th className="numeric">ORB/G</th>
+                      <th className="numeric">DRB/G</th>
                       <th className="numeric">APG</th>
+                      <th className="numeric">PF/G</th>
                       <th className="numeric">TS%</th>
                       <th className="numeric">eFG%</th>
                       <th className="numeric">Box BPM</th>
@@ -508,7 +517,10 @@ export default function Recruiting() {
                         <td className="numeric">{player.prior_production?.mpg == null ? "—" : player.prior_production.mpg.toFixed(1)}</td>
                         <td className="numeric">{player.prior_production?.ppg == null ? "—" : player.prior_production.ppg.toFixed(1)}</td>
                         <td className="numeric">{player.prior_production?.rpg == null ? "—" : player.prior_production.rpg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.orpg == null ? "—" : player.prior_production.orpg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.drpg == null ? "—" : player.prior_production.drpg.toFixed(1)}</td>
                         <td className="numeric">{player.prior_production?.apg == null ? "—" : player.prior_production.apg.toFixed(1)}</td>
+                        <td className="numeric">{player.prior_production?.fpg == null ? "—" : player.prior_production.fpg.toFixed(1)}</td>
                         <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
                         <td className="numeric">{player.prior_production?.efg == null ? "—" : `${(player.prior_production.efg * 100).toFixed(1)}%`}</td>
                         <td className="numeric">{player.prior_production?.box_bpm == null ? "—" : player.prior_production.box_bpm.toFixed(1)}</td>
@@ -634,7 +646,10 @@ export default function Recruiting() {
                       "Prior minutes per game",
                       "Prior points per game",
                       "Prior rebounds per game",
+                      "Prior offensive rebounds per game",
+                      "Prior defensive rebounds per game",
                       "Prior assists per game",
+                      "Prior fouls per game",
                       "Prior steals per game",
                       "Prior blocks per game",
                       "Prior turnovers per game",
@@ -672,7 +687,10 @@ export default function Recruiting() {
                       p.prior_production?.mpg,
                       p.prior_production?.ppg,
                       p.prior_production?.rpg,
+                      p.prior_production?.orpg,
+                      p.prior_production?.drpg,
                       p.prior_production?.apg,
+                      p.prior_production?.fpg,
                       p.prior_production?.spg,
                       p.prior_production?.bpg,
                       p.prior_production?.topg,
@@ -779,7 +797,7 @@ export default function Recruiting() {
                             {p.prior_production.ppg == null ? "—" : p.prior_production.ppg.toFixed(1)} PPG · {p.prior_production.mpg == null ? "—" : p.prior_production.mpg.toFixed(1)} MPG
                           </small>
                           <small>
-                            {p.prior_production.ts == null ? "—" : `${(p.prior_production.ts * 100).toFixed(1)}%`} TS · {p.prior_production.efg == null ? "—" : `${(p.prior_production.efg * 100).toFixed(1)}%`} eFG · {p.prior_production.apg == null ? "—" : p.prior_production.apg.toFixed(1)} AST/G
+                            {p.prior_production.ts == null ? "—" : `${(p.prior_production.ts * 100).toFixed(1)}%`} TS · {p.prior_production.efg == null ? "—" : `${(p.prior_production.efg * 100).toFixed(1)}%`} eFG · {p.prior_production.apg == null ? "—" : p.prior_production.apg.toFixed(1)} AST/G · {p.prior_production.orpg == null ? "—" : p.prior_production.orpg.toFixed(1)} ORB/G · {p.prior_production.drpg == null ? "—" : p.prior_production.drpg.toFixed(1)} DRB/G
                           </small>
                           <small>
                             {p.prior_production.starts == null ? "—" : p.prior_production.starts.toLocaleString()} starts / {p.prior_production.starter_reported_records == null ? "—" : p.prior_production.starter_reported_records.toLocaleString()} reported · {statPercent(p.prior_production.starter_rate)} starter rate

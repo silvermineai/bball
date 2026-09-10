@@ -114,7 +114,7 @@ export default function MovementWatch() {
         <div className="table-scroll" style={{ marginTop: 16 }}>
           <table className="data-table">
             <thead>
-              <tr><th>Player</th><th>Listed program</th><th>Previous program</th><th>Pos.</th><th className="numeric">Prior minutes</th><th className="numeric">Prior games</th><th className="numeric">PPG</th><th className="numeric">TS%</th><th className="numeric">Box BPM</th><th /></tr>
+              <tr><th>Player</th><th>Listed program</th><th>Previous program</th><th>Pos.</th><th className="numeric">Prior minutes</th><th className="numeric">Prior games</th><th className="numeric">PPG</th><th className="numeric">ORB/G</th><th className="numeric">DRB/G</th><th className="numeric">PF/G</th><th className="numeric">TS%</th><th className="numeric">Box BPM</th><th /></tr>
             </thead>
             <tbody>
               {players.map((player) => (
@@ -126,6 +126,9 @@ export default function MovementWatch() {
                   <td className="numeric">{player.previous_minutes == null ? "—" : player.previous_minutes.toLocaleString()}</td>
                   <td className="numeric">{player.previous_games == null ? "—" : player.previous_games.toLocaleString()}</td>
                   <td className="numeric">{player.prior_production?.ppg == null ? "—" : player.prior_production.ppg.toFixed(1)}</td>
+                  <td className="numeric">{player.prior_production?.orpg == null ? "—" : player.prior_production.orpg.toFixed(1)}</td>
+                  <td className="numeric">{player.prior_production?.drpg == null ? "—" : player.prior_production.drpg.toFixed(1)}</td>
+                  <td className="numeric">{player.prior_production?.fpg == null ? "—" : player.prior_production.fpg.toFixed(1)}</td>
                   <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
                   <td className="numeric">{player.prior_production?.box_bpm == null ? "—" : player.prior_production.box_bpm.toFixed(1)}</td>
                   <td>{player.source_url ? <a href={player.source_url} target="_blank" rel="noreferrer" aria-label={`Open ${player.name} source`}>Source ↗</a> : null}</td>
