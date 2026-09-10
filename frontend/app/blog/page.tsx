@@ -68,6 +68,11 @@ const guides = [
     "Build the recruiting brief from the evidence outward.",
     "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
   ],
+  [
+    "basketball-player-game-logs",
+    "Read the game log before you rank the player.",
+    "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

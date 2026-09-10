@@ -23,6 +23,8 @@ const titles: Record<string, string> = {
     "Count the trip before you count the score.",
   "basketball-recruiting-evidence":
     "Build the recruiting brief from the evidence outward.",
+  "basketball-player-game-logs":
+    "Read the game log before you rank the player.",
 };
 export function generateStaticParams() {
   return [
@@ -200,6 +202,8 @@ export default async function Page({
         <BasketballPossessionStyle />
       ) : slug === "basketball-recruiting-evidence" ? (
         <BasketballRecruitingEvidence />
+      ) : slug === "basketball-player-game-logs" ? (
+        <BasketballPlayerGameLogs />
       ) : (
         <>
           <p className="deck">
@@ -262,6 +266,79 @@ export default async function Page({
         .
       </p>
     </article>
+  );
+}
+
+function BasketballPlayerGameLogs() {
+  const b = getBasketball();
+  return (
+    <>
+      <p className="deck">
+        A season average is a summary. A game log shows the workload, opponent
+        context and missingness that make the summary worth trusting.
+      </p>
+      <p>
+        The <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
+        keeps ten consecutive game-level releases from 2016–17 through
+        2025–26, with source player, team and contest IDs beside every row.
+        The archive also retains older player-season summaries. It is a source
+        record, not an identity bridge to ESPN, and a row does not establish a
+        current roster spot or eligibility.
+      </p>
+      <h2>Start with minutes and games</h2>
+      <p>
+        Points per game can rise because a player received more possessions,
+        played longer rotations or faced a particular schedule. Read minutes,
+        games and starts when the source reports them, then open the individual
+        dates. A strong rate across four appearances is a different scouting
+        lead from the same rate across thirty games. The rankings board lets
+        you set minimum games, minutes and denominator-specific volume before
+        sorting.
+      </p>
+      <h2>Use the denominator that created the rate</h2>
+      <p>
+        True shooting uses field-goal and free-throw attempts. Effective
+        field-goal percentage gives a made three its extra value. Turnover rate
+        uses recorded offensive possessions, while three-point and free-throw
+        accuracy use their own attempt totals. A missing denominator remains
+        unavailable; it is never silently converted to zero. Open the retained
+        source fields on a row when a rate needs explanation.
+      </p>
+      <p>
+        The source also records possession, transition and assisted/unassisted
+        splits. Those fields describe what the publisher captured for that
+        player-game row. They are useful context for workload and role, but
+        they do not isolate scheme, matchup quality or player credit without
+        lineup and film evidence.
+      </p>
+      <h2>Check the archive audit</h2>
+      <p>
+        Each game-level season reports missing IDs or matchup labels, date
+        problems, impossible made/attempt totals, negative possessions,
+        out-of-range minutes and zero-minute rows that carry production. The
+        NCAA release does not include venue or home/away fields, so location
+        questions belong to the schedule and team-box archives. This separation
+        keeps a player row from pretending to contain context it never carried.
+      </p>
+      <h2>Connect production to recruiting carefully</h2>
+      <p>
+        A game log can verify prior workload for a source ID. It cannot prove
+        that an announcement is a transfer, that a roster listing means
+        availability or that the same player will receive the same role. Pair
+        the log with the dated{" "}
+        <Link href="/basketball/recruiting/">recruiting evidence board</Link>,{" "}
+        the <Link href="/basketball/ncaa-rosters/">NCAA roster archive</Link>
+        and the program&apos;s film questions. If those layers disagree, keep
+        the disagreement visible for staff review.
+      </p>
+      <p>
+        The current Silvermine model forecasts{" "}
+        {b.coverage.forecast_games.toLocaleString()} 2026–27 games from team
+        efficiency and pace. Player logs and recruiting evidence help a coach
+        decide what to investigate; they are not silently inserted into that
+        primary forecast.
+      </p>
+    </>
   );
 }
 

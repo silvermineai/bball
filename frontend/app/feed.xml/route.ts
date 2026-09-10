@@ -16,6 +16,7 @@ const guideItems = [
   ["basketball-ranking-playbook", "A ranking is a question, not a verdict.", "How to move from a player ranking to a reviewable scouting question."],
   ["basketball-possession-style", "Count the trip before you count the score.", "How to read source-recorded team possession style without assigning individual credit."],
   ["basketball-recruiting-evidence", "Build the recruiting brief from the evidence outward.", "How to connect source rows, dated statements, prior production and the next staff question."],
+  ["basketball-player-game-logs", "Read the game log before you rank the player.", "How to use NCAA player-game rows, denominators and source identity in a recruiting review."],
 ] as const;
 
 function escapeXml(value: string) {
