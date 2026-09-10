@@ -26,6 +26,21 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/football/research/forecasts?meta=1": {
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
             },
+            "/api/basketball/research/careers/meta": {
+                "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
+                "latest_receipt": "2026-09-10T18:00:00Z",
+            },
+            "/api/basketball/research/ncaa-leaders?meta=1": {
+                "season": 2026,
+                "coverage": {
+                    "players": 3842,
+                    "divisions": {
+                        "1": {"players": 1791, "apg": 1791},
+                        "2": {"players": 1020, "apg": 0},
+                        "3": {"players": 1031, "apg": 0},
+                    },
+                },
+            },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting?season=2027": {
                 "season": 2027,
@@ -61,6 +76,9 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
+        self.assertEqual(report["basketball_player_identified_rows"], 196865)
+        self.assertEqual(report["basketball_player_team_entries"], 9990)
+        self.assertEqual(report["ncaa_d1_apg_values"], 1791)
         self.assertEqual(report["basketball_market_observations"], 0)
         self.assertEqual(report["basketball_market_pregame"], 0)
         self.assertEqual(report["football_market_observations"], 12)
@@ -85,6 +103,18 @@ class LivePublicationCheckTest(unittest.TestCase):
             },
             "/api/football/research/forecasts?meta=1": {
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/careers/meta": {
+                "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
+                "latest_receipt": "2026-09-10T18:00:00Z",
+            },
+            "/api/basketball/research/ncaa-leaders?meta=1": {
+                "season": 2026,
+                "coverage": {"players": 3842, "divisions": {
+                    "1": {"players": 1791, "apg": 1791},
+                    "2": {"players": 1020, "apg": 0},
+                    "3": {"players": 1031, "apg": 0},
+                }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting?season=2027": {
@@ -153,6 +183,18 @@ class LivePublicationCheckTest(unittest.TestCase):
             },
             "/api/football/research/forecasts?meta=1": {
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/careers/meta": {
+                "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
+                "latest_receipt": "2026-09-10T18:00:00Z",
+            },
+            "/api/basketball/research/ncaa-leaders?meta=1": {
+                "season": 2026,
+                "coverage": {"players": 3842, "divisions": {
+                    "1": {"players": 1791, "apg": 1791},
+                    "2": {"players": 1020, "apg": 0},
+                    "3": {"players": 1031, "apg": 0},
+                }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting?season=2027": {

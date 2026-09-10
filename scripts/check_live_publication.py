@@ -86,6 +86,44 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
     return total, pregame, len(capabilities)
 
 
+def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int]:
+    """Validate the player archive and ensure the derived APG field is live."""
+    seasons = careers.get("seasons")
+    if not isinstance(seasons, list) or not seasons:
+        raise ValueError("basketball player archive has no seasons")
+    latest = seasons[0]
+    if not isinstance(latest, dict) or latest.get("season") != 2026:
+        raise ValueError("basketball player archive has no 2025–26 season")
+    identified = latest.get("identified_rows")
+    entries = latest.get("player_team_entries")
+    latest_receipt = careers.get("latest_receipt")
+    if (
+        not isinstance(identified, int)
+        or identified <= 0
+        or not isinstance(entries, int)
+        or entries <= 0
+        or not isinstance(latest_receipt, str)
+    ):
+        raise ValueError("basketball player archive metadata is malformed")
+
+    if leaders.get("season") != 2026:
+        raise ValueError("NCAA leader archive has the wrong season")
+    coverage = leaders.get("coverage")
+    divisions = coverage.get("divisions") if isinstance(coverage, dict) else None
+    if not isinstance(coverage, dict) or not isinstance(coverage.get("players"), int) or coverage["players"] <= 0:
+        raise ValueError("NCAA leader archive coverage is malformed")
+    if not isinstance(divisions, dict):
+        raise ValueError("NCAA leader archive has no division coverage")
+    for division in ("1", "2", "3"):
+        bucket = divisions.get(division)
+        if not isinstance(bucket, dict) or not isinstance(bucket.get("players"), int) or bucket["players"] <= 0:
+            raise ValueError(f"NCAA leader archive division {division} is malformed")
+    d1_apg = divisions["1"].get("apg")
+    if not isinstance(d1_apg, int) or d1_apg <= 0:
+        raise ValueError("NCAA leader archive has no Division I assists-per-game values")
+    return identified, entries, d1_apg
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -133,6 +171,10 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
 
+    careers = get_json(base_url, "/api/basketball/research/careers/meta")
+    leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
+    player_identified, player_entries, ncaa_d1_apg = player_catalog_metadata(careers, leaders)
+
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
         raise ValueError("recruiting intake coverage is malformed")
@@ -176,6 +218,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_forecast_model": football_latest.get("model_id"),
         "football_forecast_rows": football_latest["forecasts"],
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
+        "basketball_player_identified_rows": player_identified,
+        "basketball_player_team_entries": player_entries,
+        "ncaa_d1_apg_values": ncaa_d1_apg,
         # Keep provider intake and reviewed school evidence separate. The
         # former can be zero when no licensed export is configured while the
         # latter remains the public recruiting release.
