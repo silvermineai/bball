@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-export function useBasketballRelease<T>(name: string) {
+export function useBasketballRelease<T>(name: string, options: { enabled?: boolean } = {}) {
   const [data, setData] = useState<T | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
+    if (options.enabled === false) return;
     const c = new AbortController();
     setData(null);
     setError("");
@@ -18,6 +19,6 @@ export function useBasketballRelease<T>(name: string) {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => c.abort();
-  }, [name]);
+  }, [name, options.enabled]);
   return { data, error };
 }

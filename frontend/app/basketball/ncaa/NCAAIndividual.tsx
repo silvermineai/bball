@@ -27,18 +27,43 @@ type LiveLeaderResponse = {
   rows: Array<{ payload: NCAAIndividualPlayer }>;
   provenance?: { kind?: string; dataset?: string; publisher_rank?: boolean };
 };
+type LiveLeaderMeta = {
+  season: number;
+  coverage: {
+    players: number;
+    divisions: Record<string, { players: number; [key: string]: number }>;
+  };
+  provenance?: LiveLeaderResponse["provenance"];
+};
 
 export default function NCAAIndividual() {
   const params = useSearchParams();
   const initial = parseNCAAFilters(params.toString());
-  const { data, error } = useBasketballRelease<NCAAIndividualRelease>("ncaa-individual");
+  const [fallbackRequested, setFallbackRequested] = useState(false);
+  const { data, error } = useBasketballRelease<NCAAIndividualRelease>("ncaa-individual", { enabled: fallbackRequested });
   const [division, setDivision] = useState<NCAADivisionFilter>(initial.division);
   const [stat, setStat] = useState<NCAAStatKey>(initial.stat);
   const [query, setQuery] = useState(initial.query);
   const [page, setPage] = useState(0);
   const [copied, setCopied] = useState("");
   const [live, setLive] = useState<{ rows: NCAAIndividualPlayer[]; total: number; provenance?: LiveLeaderResponse["provenance"] } | null>(null);
+  const [liveMeta, setLiveMeta] = useState<LiveLeaderMeta | null>(null);
   const [liveError, setLiveError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/ncaa-leaders?meta=1", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Live NCAA leaderboard coverage unavailable.");
+        return response.json() as Promise<LiveLeaderMeta>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) setLiveMeta(value);
+      })
+      .catch(() => {
+        // The data request below owns the user-visible fallback message.
+      });
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     const next = ncaaFilterSearch({ division, stat, query });
     if (next !== window.location.search) {
@@ -79,6 +104,7 @@ export default function NCAAIndividual() {
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setFallbackRequested(true);
           setLive(null);
           setLiveError(reason instanceof Error ? reason.message : "Live NCAA leaderboard unavailable; showing the checked-in release.");
         }
@@ -96,10 +122,23 @@ export default function NCAAIndividual() {
     ["View order", "Publisher rank", "Player", "NCAA ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat], "Retained source rows JSON"],
     rows.map((p, i) => [i + 1, publisherRank(p, stat), p.name, p.player_id, p.team_name, p.division, p.conference, p.class_year, p.position, p.games, p[stat], p.source_stats ? JSON.stringify(p.source_stats) : null]),
   ));
+  const sourceCoverage = liveMeta?.coverage || data?.coverage;
+  const apgSupplement = data?.supplements?.apg;
   const divisionCount = division === "all"
-    ? Object.values(data?.coverage.divisions || {}).reduce((sum, d) => sum + d.players, 0)
-    : data?.coverage.divisions[division]?.players || 0;
-  const coverage = data ? ncaaValueCoverage(data.players) : [];
+    ? Object.values(sourceCoverage?.divisions || {}).reduce((sum, d) => sum + d.players, 0)
+    : sourceCoverage?.divisions[division]?.players || 0;
+  const coverage = data
+    ? ncaaValueCoverage(data.players)
+    : liveMeta
+      ? stats.map((stat) => ({
+        stat,
+        divisions: {
+          1: liveMeta.coverage.divisions["1"]?.[stat] || 0,
+          2: liveMeta.coverage.divisions["2"]?.[stat] || 0,
+          3: liveMeta.coverage.divisions["3"]?.[stat] || 0,
+        },
+      }))
+      : [];
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -117,18 +156,18 @@ export default function NCAAIndividual() {
         <button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button>
       </div>
       {copied && <p role="status">{copied}</p>}
-      {error ? <p role="alert" className="status-error">{error}</p> : !data ? <p role="status" className="empty">Loading NCAA national records…</p> : <>
+      {error ? <p role="alert" className="status-error">{error}</p> : !data && !live ? <p role="status" className="empty">Loading NCAA national records…</p> : <>
         <div className="strip" style={{ borderTop: "1px solid var(--ink)", marginBottom: 25 }}>
-          <div><strong>{data.coverage.players.toLocaleString()}</strong><span>Published player records</span></div>
+          <div><strong>{(sourceCoverage?.players || 0).toLocaleString()}</strong><span>Published player records</span></div>
           <div><strong>{divisionCount.toLocaleString()}</strong><span>{division === "all" ? "All division records" : `Division ${division} records`}</span></div>
-          <div><strong>{data.season - 1}–{String(data.season).slice(-2)}</strong><span>Final statistics season</span></div>
-          <div><strong>{data.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</strong><span>Source snapshot</span></div>
+          <div><strong>{(liveMeta?.season || data?.season || 2026) - 1}–{String(liveMeta?.season || data?.season || 2026).slice(-2)}</strong><span>Final statistics season</span></div>
+          <div><strong>{data?.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "D1"}</strong><span>Source snapshot</span></div>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError || "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
-        {stat === "apg" && data.supplements?.apg && (
+        {stat === "apg" && apgSupplement && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Assists per game uses an exact-ID Division I supplement.</strong>
-            <p>{data.supplements.apg.values.toLocaleString()} Division I values for {data.supplements.apg.season - 1}–{String(data.supplements.apg.season).slice(-2)} are derived from <em>{data.supplements.apg.dataset}</em>: {data.supplements.apg.basis}. {data.supplements.apg.publisher_rank}. <a href={data.supplements.apg.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+            <p>{apgSupplement.values.toLocaleString()} Division I values for {apgSupplement.season - 1}–{String(apgSupplement.season).slice(-2)} are derived from <em>{apgSupplement.dataset}</em>: {apgSupplement.basis}. {apgSupplement.publisher_rank}. <a href={apgSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
           </div>
         )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
@@ -149,7 +188,7 @@ export default function NCAAIndividual() {
         </details>
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{totalRows.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} values on this page · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
         <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Publisher rank is shown only when that NCAA page supplied a rank for the selected measure.</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Publisher rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Source row evidence</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${data.season}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Publisher headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Publisher rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Source row evidence</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${liveMeta?.season || data?.season || 2026}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Publisher headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}
         <div className="pagination"><span>{totalRows.toLocaleString()} records · page {page + 1} of {Math.max(1, Math.ceil(totalRows / 40))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 40 >= totalRows} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       </>}

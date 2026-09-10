@@ -794,6 +794,50 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(payload_json, '$.pts')"));
   });
 
+  it("serves compact NCAA leaderboard coverage metadata from D1", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [
+            {
+              division: 1,
+              ppg: 18.2,
+              rpg: null,
+              apg: null,
+              mpg: 31.5,
+              payload_json: JSON.stringify({ pts: 546, fg_pct: 54.1 }),
+            },
+            {
+              division: 2,
+              ppg: null,
+              rpg: 8.1,
+              apg: null,
+              mpg: null,
+              payload_json: JSON.stringify({ pts: 301 }),
+            },
+          ],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?meta=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      coverage: { players: number; divisions: Record<string, Record<string, number>> };
+    };
+    expect(body.coverage).toMatchObject({
+      players: 2,
+      divisions: {
+        "1": { players: 1, ppg: 1, mpg: 1, pts: 1, fg_pct: 1 },
+        "2": { players: 1, rpg: 1, pts: 1 },
+      },
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("SELECT division,ppg,rpg,apg,mpg,payload_json"));
+  });
+
   it("rejects invalid NCAA player card IDs and seasons before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-card/not-an-id",

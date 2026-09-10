@@ -714,10 +714,61 @@ const ncaaLeaderQuery = z.object({
   stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm"]).default("ppg"),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(0).max(100).default(0),
+  meta: z.enum(["0", "1"]).default("0"),
 });
 app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
   const db = researchDb(c.env);
-  const { division, stat, q, page } = c.req.valid("query");
+  const { division, stat, q, page, meta } = c.req.valid("query");
+  if (meta === "1") {
+    // Keep the national page's coverage matrix in the compact D1 warehouse so
+    // the browser can use the live release without downloading the large
+    // checked-in fallback. Payload fields are counted only when the source
+    // actually supplied a numeric value; missing fields stay unavailable.
+    const records = await db.prepare(
+      "SELECT division,ppg,rpg,apg,mpg,payload_json FROM ncaa_individual_players WHERE season=?",
+    ).bind(2026).all<{
+      division: number;
+      ppg: number | null;
+      rpg: number | null;
+      apg: number | null;
+      mpg: number | null;
+      payload_json: string;
+    }>();
+    const coverageStats = ["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm"] as const;
+    const divisions: Record<string, { players: number; [key: string]: number }> = {
+      "1": { players: 0 },
+      "2": { players: 0 },
+      "3": { players: 0 },
+    };
+    for (const key of coverageStats) {
+      divisions["1"][key] = 0;
+      divisions["2"][key] = 0;
+      divisions["3"][key] = 0;
+    }
+    for (const row of records.results) {
+      const bucket = divisions[String(row.division)];
+      if (!bucket) continue;
+      bucket.players += 1;
+      let payload: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(row.payload_json) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) payload = parsed as Record<string, unknown>;
+      } catch {
+        // A malformed payload contributes to the player count but not to any
+        // measure, preserving the source-gap distinction in the matrix.
+      }
+      for (const key of coverageStats) {
+        const value = key === "ppg" ? row.ppg : key === "rpg" ? row.rpg : key === "apg" ? row.apg : key === "mpg" ? row.mpg : payload[key];
+        if (typeof value === "number" && Number.isFinite(value)) bucket[key] += 1;
+      }
+    }
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json({
+      season: 2026,
+      coverage: { players: records.results.length, divisions },
+      provenance: { kind: "publisher_snapshot", dataset: "ncaa_final_national_rankings", publisher_rank: true },
+    });
+  }
   const where = division === "all" ? "season=?" : "season=? AND division=?";
   const binds: Array<string | number> = division === "all" ? [2026] : [2026, Number(division)];
   const search = q?.trim();
