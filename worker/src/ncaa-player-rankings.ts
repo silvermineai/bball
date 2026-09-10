@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -49,7 +49,11 @@ const aggregate = (where: string) => `
     ${sourceSum("tpa")} AS tpa,
     ${sourceSum("tpm")} AS tpm,
     ${sourceSum("fta")} AS fta,
+    ${sourceSum("ftm")} AS ftm,
     ${sourceSum("rima")} AS rim_attempts,
+    ${sourceSum("rimm")} AS rim_makes,
+    ${sourceSum("mida")} AS mid_attempts,
+    ${sourceSum("midm")} AS mid_makes,
     ${sourceSum("pts_trans")} AS transition_points,
     ${sourceSum("pts_unast")} AS unassisted_points,
     SUM(SUM(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL))) OVER (PARTITION BY s.season, s.team_id) AS team_possessions,
@@ -78,6 +82,9 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   tov_rate: "CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END",
   three_rate: "CASE WHEN fga > 0 THEN 100.0 * tpa / fga ELSE NULL END",
   three_pct: "CASE WHEN tpa > 0 THEN 100.0 * tpm / tpa ELSE NULL END",
+  ft_pct: "CASE WHEN fta > 0 THEN 100.0 * ftm / fta ELSE NULL END",
+  rim_pct: "CASE WHEN rim_attempts > 0 THEN 100.0 * rim_makes / rim_attempts ELSE NULL END",
+  mid_pct: "CASE WHEN mid_attempts > 0 THEN 100.0 * mid_makes / mid_attempts ELSE NULL END",
   ft_rate: "CASE WHEN fga > 0 THEN 100.0 * fta / fga ELSE NULL END",
   ast_rate: "CASE WHEN possessions > 0 THEN 100.0 * assists / possessions ELSE NULL END",
   points_poss: "CASE WHEN possessions > 0 THEN points / possessions ELSE NULL END",
@@ -102,6 +109,9 @@ const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss
 const volumeColumn = (metric: Metric) => {
   if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
   if (metric === "three_pct") return "tpa";
+  if (metric === "ft_pct") return "fta";
+  if (metric === "rim_pct") return "rim_attempts";
+  if (metric === "mid_pct") return "mid_attempts";
   if (metric === "ast_to") return "turnovers";
   if (metric === "tov_rate" || metric === "ast_rate" || metric === "points_poss" || metric === "poss_share") return "possessions";
   if (metric === "transition_share" || metric === "unassisted_share") return "points";

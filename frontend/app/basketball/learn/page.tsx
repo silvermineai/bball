@@ -65,6 +65,11 @@ const metrics = [
     use: "Read it with possessions and turnover rate because raw per-game totals rise with workload. It is descriptive context, not a forecast input.",
   },
   {
+    name: "Free-throw, rim and midrange accuracy",
+    value: "Recorded makes divided by attempts for free throws, rim attempts or midrange attempts.",
+    use: "Use the matching attempt denominator to study finishing and foul-shot conversion. Missing attempt fields keep a rate unavailable.",
+  },
+  {
     name: "Offensive-rebound rate",
     value: "Offensive rebounds divided by offensive rebounds plus the opponent’s defensive rebounds.",
     use: "It estimates how often a team extends its own possessions. Match it against the opponent’s defensive rebounding.",
@@ -157,6 +162,7 @@ const metricTopics: Record<string, LearningTopic> = {
   "Fouls per game": "player",
   "Minutes per game": "player",
   "Turnovers per game": "player",
+  "Free-throw, rim and midrange accuracy": "player",
   "Offensive-rebound rate": "team",
   "True shooting (TS%)": "player",
   RAPM: "impact",
@@ -187,6 +193,7 @@ const metricLinks: Record<string, string> = {
   "Fouls per game": "/basketball/ncaa-rankings/?metric=fpg",
   "Minutes per game": "/basketball/ncaa-rankings/?metric=mpg",
   "Turnovers per game": "/basketball/ncaa-rankings/?metric=topg",
+  "Free-throw, rim and midrange accuracy": "/basketball/ncaa-rankings/?metric=ft_pct",
   "Offensive-rebound rate": "/basketball/ratings/",
   "True shooting (TS%)": "/basketball/players/",
   RAPM: "/basketball/impact/",
