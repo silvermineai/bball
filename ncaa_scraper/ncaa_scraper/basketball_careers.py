@@ -18,7 +18,7 @@ from .football_sources import ROOT, utcnow
 
 DB = ROOT / ".local/basketball-careers.sqlite3"
 OUT = ROOT / "frontend/public/data/basketball/history"
-VERSION = 1
+VERSION = 2
 FIELDS = {
     "min": "minutes",
     "pts": "points",
@@ -222,6 +222,9 @@ def summarize(logs):
             ("to", "tov"),
         ]
     }
+    rates["orpg"] = rate(["orb"], lambda: totals["orb"] / games)
+    rates["drpg"] = rate(["drb"], lambda: totals["drb"] / games)
+    rates["fpg"] = rate(["pf"], lambda: totals["pf"] / games)
     rates.update(
         {
             "efg": rate(
@@ -373,9 +376,12 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
                                     "mpg",
                                     "ppg",
                                     "rpg",
+                                    "orpg",
+                                    "drpg",
                                     "apg",
                                     "spg",
                                     "bpg",
+                                    "fpg",
                                     "topg",
                                     "efg",
                                     "ts",

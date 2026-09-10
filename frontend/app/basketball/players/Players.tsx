@@ -104,11 +104,14 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const sortKey = sort as
     | "ppg"
     | "rpg"
+    | "orpg"
+    | "drpg"
     | "apg"
     | "ts"
     | "mpg"
     | "spg"
     | "bpg"
+    | "fpg"
     | "efg"
     | "three_pct"
     | "ft_rate"
@@ -116,7 +119,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "tov_rate";
   const ranked = sort === "profile"
     ? profileRows
-    : rankProduction(basePlayers, (p) => sortKey === "tov_rate" && p[sortKey] != null ? -p[sortKey] : p[sortKey]).map((p) => ({
+    : rankProduction(basePlayers, (p) => {
+      const value = p[sortKey] ?? null;
+      return sortKey === "tov_rate" && value != null ? -value : value;
+    }).map((p) => ({
       ...p,
       ...profileByKey.get(`${p.id}-${p.team_id}`),
     }));
@@ -196,11 +202,14 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <option value="ppg">Points per game</option>
             <option value="profile">All-around profile index</option>
             <option value="rpg">Rebounds per game</option>
+            <option value="orpg">Offensive rebounds per game</option>
+            <option value="drpg">Defensive rebounds per game</option>
             <option value="apg">Assists per game</option>
             <option value="ts">True shooting</option>
             <option value="mpg">Minutes per game</option>
             <option value="spg">Steals per game</option>
             <option value="bpg">Blocks per game</option>
+            <option value="fpg">Fouls per game</option>
             <option value="efg">Effective FG%</option>
             <option value="three_pct">Three-point FG%</option>
             <option value="ft_rate">Free-throw attempt rate</option>
@@ -346,9 +355,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Minutes per game",
                         "Points per game",
                         "Rebounds per game",
+                        "Offensive rebounds per game",
+                        "Defensive rebounds per game",
                         "Assists per game",
                         "Steals per game",
                         "Blocks per game",
+                        "Fouls per game",
                         "Effective FG%",
                         "True shooting %",
                         "Three-point FG%",
@@ -377,9 +389,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.mpg,
                         p.ppg,
                         p.rpg,
+                        p.orpg,
+                        p.drpg,
                         p.apg,
                         p.spg,
                         p.bpg,
+                        p.fpg,
                         p.efg == null ? null : p.efg * 100,
                         p.ts == null ? null : p.ts * 100,
                         p.three_pct == null ? null : p.three_pct * 100,
@@ -416,9 +431,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     "MIN/G",
                     "PTS/G",
                     "REB/G",
+                    "ORB/G",
+                    "DRB/G",
                     "AST/G",
                     "STL/G",
                     "BLK/G",
+                    "PF/G",
                     "eFG%",
                     "TS%",
                     "3P%",
@@ -471,9 +489,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       p.mpg,
                       p.ppg,
                       p.rpg,
+                      p.orpg,
+                      p.drpg,
                       p.apg,
                       p.spg,
                       p.bpg,
+                      p.fpg,
                       ...[
                         p.efg,
                         p.ts,
