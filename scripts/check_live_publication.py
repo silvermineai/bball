@@ -90,6 +90,20 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if model_age < -24 or model_age > max_age_hours:
         raise ValueError(f"latest basketball model is {max(model_age, 0):.1f} hours old")
 
+    football_forecasts = get_json(base_url, "/api/football/research/forecasts?meta=1")
+    football_models = football_forecasts.get("models")
+    if not isinstance(football_models, list) or not football_models:
+        raise ValueError("football forecast catalog has no model editions")
+    football_latest = football_models[0]
+    if not isinstance(football_latest.get("forecasts"), int) or football_latest["forecasts"] <= 0:
+        raise ValueError("football forecast catalog has no usable forecasts")
+    football_last_created = football_latest.get("last_created_at")
+    if not isinstance(football_last_created, str):
+        raise ValueError("football forecast catalog has no model clock")
+    football_model_age = (checked_at - timestamp(football_last_created)).total_seconds() / 3600
+    if football_model_age < -24 or football_model_age > max_age_hours:
+        raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
+
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
         raise ValueError("recruiting intake coverage is malformed")
@@ -103,6 +117,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
         "forecast_age_hours": round(max(model_age, 0), 2),
+        "football_forecast_model": football_latest.get("model_id"),
+        "football_forecast_rows": football_latest["forecasts"],
+        "football_forecast_age_hours": round(max(football_model_age, 0), 2),
         "recruiting_rows": recruiting["total"],
     }
 

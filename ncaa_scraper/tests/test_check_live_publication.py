@@ -23,6 +23,9 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/forecasts?meta=1": {
                 "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
             },
+            "/api/football/research/forecasts?meta=1": {
+                "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
@@ -30,6 +33,7 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["recruiting_rows"], 0)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
+        self.assertEqual(report["football_forecast_rows"], 100)
 
     def test_rejects_stale_basketball_source(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
