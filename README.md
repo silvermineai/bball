@@ -20,6 +20,7 @@ Cloudflare uses two stores: `bball-silvermine` remains the native football/scout
 | Power ratings | `/football/ratings/` | Independent opponent-adjusted ridge team ratings |
 | Defense and specialist leaders | `/football/events/` | Browse game evidence or group sacks, turnovers, kicking, punting and returns by source name/team |
 | Model notebook | `/football/methodology/` | Holdout results, source receipts, missing coverage and limitations |
+| Learning guide | `/football/learn/` | Plain-language explanations of EPA, success rate, team efficiency, forecasts and source coverage |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
 The current football archive contains **18,759 schedule records** across 2022–26, **264,061 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **789 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
