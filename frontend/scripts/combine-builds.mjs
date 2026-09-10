@@ -14,12 +14,14 @@ await cp("dist/basketball/assets", "dist/client/basketball/assets", {
 // the deploy wrapper. Basketball briefs remain in Workers Assets so the
 // current page can ship with the latest coaching links and evidence; missing
 // or retired briefs still fall back to their archived R2 revision in the
-// Worker.
+// Worker. The research ledger is served by the live scorecard API; excluding
+// its oversized static fallback keeps the Workers Assets manifest under the
+// 25 MiB per-file limit.
 await writeFile(
   "dist/client/.assetsignore",
   // Wrangler walks files with paths such as `blog/game-123/index.html`.
   // Match the directory prefix without a trailing slash so archive snapshots
   // stay available to the post-deploy R2 capture without counting toward the
   // Workers static-asset manifest.
-  "/blog/game-*\n",
+  "/blog/game-*\n/data/research/ledger.json\n",
 );
