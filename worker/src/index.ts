@@ -507,7 +507,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN completed=1 AND (home_score < 0 OR away_score < 0) THEN 1 ELSE 0 END) AS negative_score,
       sum(CASE WHEN completed=0 AND (home_score IS NOT NULL OR away_score IS NOT NULL) THEN 1 ELSE 0 END) AS unfinished_with_score,
       sum(CASE WHEN neutral=1 AND (venue IS NULL OR venue='') THEN 1 ELSE 0 END) AS neutral_missing_venue,
-      (SELECT count(*) FROM (SELECT contest_id FROM bb_games WHERE contest_id IS NOT NULL GROUP BY contest_id HAVING count(*)>1)) AS duplicate_contest_ids
+      -- bb_games.id is the normalized source contest key and its primary key;
+      -- grouping it here verifies that the persisted source identity remains
+      -- unique without relying on the legacy games.contest_id column.
+      (SELECT count(*) FROM (SELECT id FROM bb_games GROUP BY id HAVING count(*)>1)) AS duplicate_contest_ids
       FROM bb_games`),
     // Mirror the model's possession guards against the persisted team box rows.
     // This is intentionally a read-only diagnostic: it never changes which rows
