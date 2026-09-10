@@ -35,7 +35,7 @@ function item(title: string, url: string, description: string, published: string
 export function GET() {
   const football = getOverview();
   const basketball = getBasketball();
-  const generated = football.generated_at;
+  const generated = [football.generated_at, basketball.generated_at].sort().at(-1) || football.generated_at;
   const entries = [
     ...guideItems.map(([slug, title, description]) => item(title, `${base}/blog/${slug}/`, description, generated)),
     ...football.upcoming

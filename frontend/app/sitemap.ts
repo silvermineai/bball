@@ -5,6 +5,7 @@ import { getOverview } from "./_lib/data";
 export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
   const d = getOverview(),
+    basketball = getBasketball(),
     base = "https://bball.silvermine.dev";
   return [
     "",
@@ -57,7 +58,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/gameplan/",
     "/basketball/film/",
     "/basketball/season/",
-    ...getBasketball()
+    ...basketball
       .upcoming.filter((g) => g.prediction || g.fallback_prediction)
       .map((g) => `/basketball/briefs/${g.id}/`),
     "/football/matchups/",
@@ -85,7 +86,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/basketball-ranking-playbook/",
     "/blog/basketball-possession-style/",
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
-    ...getBasketball()
+    ...basketball
       .upcoming.filter((g) => g.prediction || g.fallback_prediction)
       .map((g) => `/blog/basketball-game-${g.id}/`),
   ].map((path) => ({
@@ -93,7 +94,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified:
       path.endsWith("/evaluation/") || path === "/football/features/"
         ? undefined
-        : d.generated_at,
+        : path.startsWith("/basketball/") || path.startsWith("/blog/basketball-")
+          ? basketball.generated_at
+          : d.generated_at,
     changeFrequency: path.startsWith("/blog/") ? "weekly" : "daily",
   }));
 }
