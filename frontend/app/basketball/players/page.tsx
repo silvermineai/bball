@@ -17,7 +17,7 @@ export default function Page() {
           Search players across 24 source seasons, from 2002–03 to 2025–26.
           Compare per-game production, shooting efficiency and workload, then
           open the complete game log. Team labels describe the stat season, not
-          current recruiting availability.
+          current recruiting availability. <Link href="/blog/basketball-player-game-logs/">Read the game-log field guide →</Link>
         </p>
       </div>
       <section className="section">
