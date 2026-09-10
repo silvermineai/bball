@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
 import { getBasketball, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
+import BasketballNotebook from "../BasketballNotebook";
 const titles: Record<string, string> = {
   "reading-the-forecast": "What a preseason model knows. And what it misses.",
   "understanding-player-epa": "Production is a question of context.",
@@ -29,6 +30,9 @@ export function generateStaticParams() {
     ...getOverview()
       .upcoming.filter((g) => g.prediction)
       .map((g) => ({ slug: `game-${g.id}` })),
+    ...getBasketball()
+      .upcoming.filter((g) => g.prediction || g.fallback_prediction)
+      .map((g) => ({ slug: `basketball-game-${g.id}` })),
   ];
 }
 export async function generateMetadata({
@@ -38,15 +42,21 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const g = getOverview().upcoming.find((g) => `game-${g.id}` === slug);
+  const basketballGame = getBasketball().upcoming.find((game) => `basketball-game-${game.id}` === slug);
   const title =
     titles[slug] ||
+    (basketballGame
+      ? `${basketballGame.away_name} at ${basketballGame.home_name}: 2026–27 basketball notebook`
+      : undefined) ||
     (g
       ? `${g.away_name} at ${g.home_name}: 2026 matchup notebook`
       : "Matchup brief");
   return {
     title,
-    description: g
-      ? `Projected score, unit efficiency, historical player production and scouting questions for ${g.away_name} at ${g.home_name}, ${date(g.kickoff)}.`
+    description: basketballGame
+      ? `Projected score, Four Factors and reporting questions for ${basketballGame.away_name} at ${basketballGame.home_name}, ${date(basketballGame.starts_at)}.`
+      : g
+        ? `Projected score, unit efficiency, historical player production and scouting questions for ${g.away_name} at ${g.home_name}, ${date(g.kickoff)}.`
       : title,
     alternates: { canonical: `/blog/${slug}/` },
   };
@@ -59,8 +69,11 @@ export default async function Page({
   const { slug } = await params,
     d = getOverview(),
     g = d.upcoming.find((g) => `game-${g.id}` === slug),
+    basketball = getBasketball(),
+    basketballGame = basketball.upcoming.find((game) => `basketball-game-${game.id}` === slug),
     p = g?.prediction;
-  if (!titles[slug] && (!g || !p)) notFound();
+  if (!titles[slug] && (!g || !p) && !basketballGame) notFound();
+  if (basketballGame) return <BasketballNotebook game={basketballGame} generatedAt={basketball.generated_at} />;
   if (g && p) return <FootballBrief game={g} overview={d} />;
   return (
     <article className="article">

@@ -81,8 +81,11 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
               {markets[g.id]?.length ? <p className="note">
                 {markets[g.id].slice(0, 2).map((quote) => `${quote.bookmaker} ${quote.market}: ${quote.model_difference > 0 ? "+" : ""}${quote.model_difference.toFixed(1)} model difference`).join(" · ")}
               </p> : null}
-              <Link href={`/basketball/briefs/${g.id}/`}>
-                Read the preview →
+              <Link href={`/blog/basketball-game-${g.id}/`}>
+                Read the notebook →
+              </Link>
+              <Link className="note" href={`/basketball/briefs/${g.id}/`}>
+                Open the evidence brief →
               </Link>
             </article>;
           })}
