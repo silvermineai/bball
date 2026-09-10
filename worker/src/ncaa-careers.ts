@@ -36,6 +36,7 @@ const querySchema = z.object({
   metric: z.enum(metrics).default("points"),
   minGames: z.coerce.number().int().min(1).max(500).default(20),
   minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
+  minDenominator: z.coerce.number().int().min(0).max(10000).default(0),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
@@ -69,13 +70,25 @@ const metricExpression = (metric: Metric) => ({
   reb40: "CASE WHEN minutes > 0 THEN 40.0 * rebounds / minutes ELSE NULL END",
 }[metric]);
 
+// Keep thin percentage and ratio samples out of the board without applying a
+// made-up universal threshold to unrelated counting metrics.
+const metricDenominators: Partial<Record<Metric, string>> = {
+  ts: "fga",
+  efg: "fga",
+  three_pct: "tpa",
+  ft_pct: "fta",
+  ast_to: "turnovers",
+  tov_rate: "possessions",
+};
+const metricDenominator = (metric: Metric): string | null => metricDenominators[metric] || null;
+
 // The season table stores source totals as a JSON object. Preserve a missing
 // field as NULL so a sparse source row cannot become a false zero on a rate
 // board or in an export.
 const sourceNumber = (path: string) => `CASE WHEN json_extract(stats_json,'$.${path}') IS NOT NULL THEN CAST(json_extract(stats_json,'$.${path}') AS REAL) ELSE NULL END`;
 
 ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
-  const { fromSeason, toSeason, metric, minGames, minMinutes, q, page, meta } = c.req.valid("query");
+  const { fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, q, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
   if (meta === "1") {
     const seasons = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
@@ -111,12 +124,16 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
       ${sourceNumber("ftm")} AS ftm
     FROM bb_ncaa_player_season WHERE ${where}`;
   const value = metricExpression(metric);
-  const qualification = `games >= ? AND minutes >= ? AND (${value}) IS NOT NULL`;
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, minGames, minMinutes).first<{ total: number }>();
+  const denominator = metricDenominator(metric);
+  const effectiveMinDenominator = denominator ? minDenominator : 0;
+  const denominatorClause = denominator && effectiveMinDenominator > 0 ? ` AND ${denominator} >= ?` : "";
+  const qualification = `games >= ? AND minutes >= ? AND (${value}) IS NOT NULL${denominatorClause}`;
+  const qualificationBinds = denominatorClause ? [minGames, minMinutes, effectiveMinDenominator] : [minGames, minMinutes];
+  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, ...qualificationBinds).first<{ total: number }>();
   const rows = await researchDb(c.env).prepare(`WITH historical AS (${aggregate}), ranked AS (
       SELECT historical.*, ${value} AS value FROM historical WHERE ${qualification}
     ) SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
-    ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, minGames, minMinutes, page * 50).all();
+    ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, ...qualificationBinds, page * 50).all();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  return c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, min_denominator: effectiveMinDenominator, denominator_field: denominator, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
 });

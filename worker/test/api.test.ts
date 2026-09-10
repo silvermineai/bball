@@ -1322,6 +1322,7 @@ describe("bball api", () => {
       "/api/basketball/research/ncaa-careers?fromSeason=2009",
       "/api/basketball/research/ncaa-careers?metric=made_up",
       "/api/basketball/research/ncaa-careers?minMinutes=-1",
+      "/api/basketball/research/ncaa-careers?minDenominator=-1",
       "/api/basketball/research/ncaa-careers?page=-1",
       "/api/basketball/research/ncaa-careers?fromSeason=2026&toSeason=2010",
     ]) {
@@ -1378,6 +1379,24 @@ describe("bball api", () => {
     expect(aggregateSql).toContain("CASE WHEN json_extract(stats_json,'$.pts') IS NOT NULL THEN CAST(json_extract(stats_json,'$.pts') AS REAL) ELSE NULL END AS points");
     expect(aggregateSql).toContain("CASE WHEN json_extract(stats_json,'$.orb') IS NOT NULL AND json_extract(stats_json,'$.drb') IS NOT NULL");
     expect(aggregateSql).not.toContain("COALESCE(CAST(json_extract(stats_json");
+  });
+
+  it("applies a metric-aware denominator floor to NCAA career rates", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 0 }),
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-careers?metric=three_pct&minDenominator=100",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const careerSql = prepare.mock.calls.map(([sql]) => String(sql)).filter((sql) => sql.includes("FROM bb_ncaa_player_season")).join("\n");
+    expect(careerSql).toContain("tpa >= ?");
   });
 
   it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {
