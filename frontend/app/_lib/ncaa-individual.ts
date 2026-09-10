@@ -24,11 +24,15 @@ export type NCAAIndividualPlayer = {
   pts: number | null;
   reb: number | null;
   ast: number | null;
+  stl?: number | null;
+  blk?: number | null;
+  tov?: number | null;
   fgm: number | null;
   fga: number | null;
   three_fgm: number | null;
   three_fga: number | null;
   ftm: number | null;
+  fta?: number | null;
   ppg_rank: number | null;
   rpg_rank: number | null;
   apg_rank: number | null;
@@ -109,11 +113,15 @@ export type NCAAStatKey =
   | "pts"
   | "reb"
   | "ast"
+  | "stl"
+  | "blk"
+  | "tov"
   | "fgm"
   | "fga"
   | "three_fgm"
   | "three_fga"
-  | "ftm";
+  | "ftm"
+  | "fta";
 
 export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   ppg: "Points per game",
@@ -131,11 +139,15 @@ export const ncaaStatLabels: Record<NCAAStatKey, string> = {
   pts: "Total points",
   reb: "Total rebounds",
   ast: "Total assists",
+  stl: "Total steals",
+  blk: "Total blocks",
+  tov: "Total turnovers",
   fgm: "Field goals made",
   fga: "Field goals attempted",
   three_fgm: "Three-pointers made",
   three_fga: "Three-pointers attempted",
   ftm: "Free throws made",
+  fta: "Free throws attempted",
 };
 
 export type NCAADivisionFilter = "1" | "2" | "3" | "all";

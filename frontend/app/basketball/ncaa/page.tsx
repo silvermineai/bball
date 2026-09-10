@@ -13,7 +13,7 @@ export default function Page() {
           Browse the NCAA’s published men’s basketball individual leaderboards
           across Divisions I, II and III. Search a player, compare programs and
           switch from rates to published totals for scoring, rebounding,
-          shooting, minutes and defensive events while keeping the source
+          shooting, minutes, defensive events and attempt totals while keeping the source
           identity intact. When the NCAA ranking snapshot omits assists per
           game, the board fills that field from the exact-ID NCAA player-box
           release and labels it as a derived supplement.

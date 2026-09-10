@@ -34,11 +34,15 @@ const player = (name: string, ppg: number | null, division: 1 | 2 | 3 = 1): NCAA
   pts: null,
   reb: null,
   ast: null,
+  stl: null,
+  blk: null,
+  tov: null,
   fgm: null,
   fga: null,
   three_fgm: null,
   three_fga: null,
   ftm: null,
+  fta: null,
   ppg_rank: null,
   rpg_rank: null,
   apg_rank: null,
@@ -77,6 +81,15 @@ describe("NCAA individual leader sorting", () => {
       "High",
       "Low",
     ]);
+  });
+
+  it("supports the complete retained defensive and attempt totals", () => {
+    const rows = [
+      { ...player("Low", 10), stl: 4, blk: 2, tov: 90, fta: 40 },
+      { ...player("High", 10), stl: 12, blk: 8, tov: 30, fta: 80 },
+    ];
+    expect(sortNCAAPlayers(rows, "stl").map((p) => p.name)).toEqual(["High", "Low"]);
+    expect(sortNCAAPlayers(rows, "fta").map((p) => p.name)).toEqual(["High", "Low"]);
   });
 
   it("round-trips shareable division, stat and name filters", () => {
