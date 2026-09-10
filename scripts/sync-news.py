@@ -11,6 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ncaa_scraper"))
+from ncaa_scraper.news_rss import permitted_source_url  # noqa: E402
+
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +42,8 @@ def main() -> None:
         required = ("id", "publisher", "sport", "headline", "published", "link")
         if any(not str(article.get(key) or "").strip() for key in required):
             raise SystemExit("news.json contains an article without required source fields")
+        if not permitted_source_url(str(article["link"]), str(article["publisher"])):
+            raise SystemExit("news.json contains a source link outside the declared publisher")
         categories = article.get("categories")
         if not isinstance(categories, list) or any(not isinstance(v, str) for v in categories):
             raise SystemExit("news.json contains malformed article categories")
