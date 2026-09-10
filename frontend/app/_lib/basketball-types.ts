@@ -191,6 +191,9 @@ export type BBRoster = {
     games: number;
     minutes: number;
     mpg: number | null;
+    starts?: number;
+    starter_reported_records?: number;
+    starter_rate?: number | null;
     ppg: number | null;
     rpg: number | null;
     apg: number | null;

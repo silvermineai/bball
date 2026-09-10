@@ -634,6 +634,19 @@ def _prior_production(rows):
         return None
     games = sum(int(row.get("games") or 0) for row in rows)
     minutes = sum(float(row.get("minutes") or 0) for row in rows)
+    starter_fields_present = any(
+        "starts" in row or "starter_reported_records" in row for row in rows
+    )
+    starts = (
+        sum(int(row.get("starts") or 0) for row in rows)
+        if starter_fields_present
+        else None
+    )
+    starter_reported_records = (
+        sum(int(row.get("starter_reported_records") or 0) for row in rows)
+        if starter_fields_present
+        else None
+    )
     if games <= 0 and minutes <= 0:
         return None
 
@@ -682,6 +695,13 @@ def _prior_production(rows):
         "games": games,
         "minutes": round(minutes, 1),
         "mpg": round(minutes / games, 1) if games else None,
+        "starts": starts,
+        "starter_reported_records": starter_reported_records,
+        "starter_rate": (
+            round(starts / starter_reported_records, 3)
+            if starter_reported_records and starts is not None
+            else None
+        ),
         "qualified": all(
             rate_values[key] is not None
             for key in ("ppg", "rpg", "apg", "efg", "ts")
@@ -912,9 +932,21 @@ def player_index(conn, year=2026):
         observed_games.add(r["game_id"])
         t = totals.setdefault(
             key,
-            {"games": 0, **{k: 0.0 for k in STAT_FIELDS}, "incomplete_box_games": 0},
+            {
+                "games": 0,
+                "starts": 0,
+                "starter_reported_records": 0,
+                **{k: 0.0 for k in STAT_FIELDS},
+                "incomplete_box_games": 0,
+            },
         )
         t["games"] += 1
+        starter = b.get("starter")
+        if starter is True or starter in (1, "1", "true", "True"):
+            t["starts"] += 1
+            t["starter_reported_records"] += 1
+        elif starter is False or starter in (0, "0", "false", "False"):
+            t["starter_reported_records"] += 1
         for k in STAT_FIELDS:
             if b[k] is not None:
                 t[k] += b[k]
@@ -943,6 +975,13 @@ def player_index(conn, year=2026):
                 "games": games,
                 "minutes": round(t["minutes"], 1),
                 "mpg": round(t["minutes"] / games, 1),
+                "starts": t["starts"],
+                "starter_reported_records": t["starter_reported_records"],
+                "starter_rate": (
+                    round(t["starts"] / t["starter_reported_records"], 3)
+                    if t["starter_reported_records"]
+                    else None
+                ),
                 "ppg": round(t["points"] / games, 1),
                 "rpg": round(t["rebounds"] / games, 1),
                 "apg": round(t["assists"] / games, 1),

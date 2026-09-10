@@ -30,6 +30,9 @@ function PriorProductionDetails({ production }: { production: PriorProduction })
       <dl className="roster-stat-grid">
         <div><dt>Games</dt><dd>{production.games.toLocaleString()}</dd></div>
         <div><dt>Minutes</dt><dd>{production.minutes.toLocaleString()}</dd></div>
+        <div><dt>Starts</dt><dd>{production.starts == null ? "—" : production.starts.toLocaleString()}</dd></div>
+        <div><dt>Starter reported</dt><dd>{production.starter_reported_records == null ? "—" : production.starter_reported_records.toLocaleString()}</dd></div>
+        <div><dt>Reported starter rate</dt><dd>{statPercent(production.starter_rate)}</dd></div>
         <div><dt>Minutes / game</dt><dd>{statValue(production.mpg)}</dd></div>
         <div><dt>Points / game</dt><dd>{statValue(production.ppg)}</dd></div>
         <div><dt>Rebounds / game</dt><dd>{statValue(production.rpg)}</dd></div>
@@ -435,13 +438,16 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
+                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior APG", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
                             player.team,
                             labels[player.status],
                             player.prior_production?.minutes,
+                            player.prior_production?.starts,
+                            player.prior_production?.starter_reported_records,
+                            player.prior_production?.starter_rate == null ? null : player.prior_production.starter_rate * 100,
                             player.prior_production?.mpg,
                             player.prior_production?.ppg,
                             player.prior_production?.rpg,
@@ -606,6 +612,9 @@ export default function Recruiting() {
                       "Source-listed class",
                       "Prior recorded games",
                       "Prior recorded minutes",
+                      "Prior starts",
+                      "Starter reported",
+                      "Reported starter rate",
                       "Prior minutes per game",
                       "Prior points per game",
                       "Prior rebounds per game",
@@ -641,6 +650,9 @@ export default function Recruiting() {
                       p.class_year,
                       p.prior_production?.games,
                       p.prior_production?.minutes,
+                      p.prior_production?.starts,
+                      p.prior_production?.starter_reported_records,
+                      p.prior_production?.starter_rate == null ? null : p.prior_production.starter_rate * 100,
                       p.prior_production?.mpg,
                       p.prior_production?.ppg,
                       p.prior_production?.rpg,

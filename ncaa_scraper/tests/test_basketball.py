@@ -15,6 +15,7 @@ from ncaa_scraper.basketball import (
     matchup_factor_edges,
     ncaa_player_box_field_coverage,
     player_index,
+    _prior_production,
     publisher_leaders,
     publisher_value_leaders,
     roster_changes,
@@ -418,6 +419,17 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(production["efg"], 0.58)
         self.assertEqual(production["ts"], 0.61)
         self.assertEqual(production["qualified"], True)
+
+    def test_prior_production_preserves_reported_starter_sample(self):
+        production = _prior_production(
+            [
+                {"games": 10, "minutes": 200, "starts": 6, "starter_reported_records": 10, "ppg": 12},
+                {"games": 5, "minutes": 100, "starts": 2, "starter_reported_records": 5, "ppg": 12},
+            ]
+        )
+        self.assertEqual(production["starts"], 8)
+        self.assertEqual(production["starter_reported_records"], 15)
+        self.assertEqual(production["starter_rate"], 0.533)
 
     def test_roster_changes_publish_team_workload_summary(self):
         self.conn.execute(
