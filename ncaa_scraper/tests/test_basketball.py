@@ -289,11 +289,13 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(stats["future_rate"], 1.25)
         self.assertNotIn("future_missing", stats)
 
-    def test_ncaa_player_box_export_keeps_recent_game_seasons(self):
+    def test_ncaa_player_box_export_keeps_all_game_seasons(self):
         self.conn.executescript(
             (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()
         )
         rows = [
+            (2010, "g-13", "t-13", "p-13", "2010-01-01", "Home", "Away", "Player", "{}"),
+            (2016, "g-7", "t-7", "p-7", "2016-01-01", "Home", "Away", "Player", "{}"),
             (2017, "g-6", "t-6", "p-6", "2017-01-01", "Home", "Away", "Player", "{}"),
             (2018, "g-5", "t-5", "p-5", "2018-01-01", "Home", "Away", "Player", "{}"),
             (2019, "g-4", "t-4", "p-4", "2019-01-01", "Home", "Away", "Player", "{}"),
@@ -323,6 +325,10 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2019", text)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2018", text)
         self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2017", text)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2016", text)
+        self.assertIn("DELETE FROM bb_ncaa_player_box WHERE season=2010", text)
+        self.assertIn("'2016','g-7'", text)
+        self.assertIn("'2010','g-13'", text)
         self.assertIn("'2025','g1'", text)
         self.assertIn("'2026','g2'", text)
         self.assertIn("'2024','g3'", text)

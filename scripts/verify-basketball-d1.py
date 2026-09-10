@@ -39,9 +39,6 @@ def dataset_rows(overview: dict) -> dict[str, int]:
                 (ROOT / "frontend/public/data/basketball/impact.json").read_text()
             )["players"]
         ),
-        # D1 keeps the ten most recent game-level NCAA releases for fast
-        # player-card queries. Older NCAA game releases are archived in R2,
-        # while their derived season summaries remain queryable in D1.
         "bb_ncaa_rosters": datasets["ncaa_team_rosters"],
         "bb_ncaa_player_shooting": datasets["ncaa_shots"],
         "bb_unresolved": int(coverage["unresolved_rows"]),
@@ -51,7 +48,7 @@ def dataset_rows(overview: dict) -> dict[str, int]:
         raise SystemExit(f"Missing local basketball warehouse: {local_path}")
     with sqlite3.connect(local_path) as database:
         expected["bb_ncaa_player_box"] = int(database.execute(
-            "SELECT COUNT(*) FROM bb_ncaa_player_box WHERE season IN (2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026)"
+            "SELECT COUNT(*) FROM bb_ncaa_player_box"
         ).fetchone()[0])
         expected["bb_ncaa_player_season"] = int(
             database.execute("SELECT COUNT(*) FROM bb_ncaa_player_season").fetchone()[0]
@@ -110,7 +107,7 @@ def main() -> None:
     print(
         f"Basketball D1 coverage verified: {len(expected)} tables, "
         f"{sum(actual.values()):,} rows across the published edition "
-        "(recent NCAA game rows plus historical season summaries)."
+        "(all retained NCAA game rows plus historical season summaries)."
     )
 
 
