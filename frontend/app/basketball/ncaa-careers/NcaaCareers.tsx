@@ -4,14 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
-type Metric = "points" | "ppg" | "rpg" | "apg" | "minutes" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "stocks40" | "ast_to" | "tov_rate" | "three_rate" | "orb40" | "drb40" | "reb40";
+type Metric = "points" | "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "minutes" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "stocks40" | "ast_to" | "tov_rate" | "three_rate" | "orb40" | "drb40" | "reb40";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; games: number; minutes: number | null; points: number | null; rebounds: number | null; offensive_rebounds?: number | null; defensive_rebounds?: number | null; assists: number | null; steals?: number | null; blocks?: number | null; turnovers?: number | null; fouls?: number | null; possessions?: number | null; fga?: number | null; fgm?: number | null; tpa?: number | null; tpm?: number | null; fta?: number | null; ftm?: number | null; value: number; rank: number };
 type Result = { from_season: number; to_season: number; metric: Metric; min_games: number; min_minutes: number; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; metrics: Metric[] };
-const labels: Record<Metric, string> = { points: "Total points", ppg: "Points per game", rpg: "Rebounds per game", apg: "Assists per game", minutes: "Total minutes", ts: "True shooting %", efg: "Effective FG %", three_pct: "Three-point accuracy", ft_pct: "Free-throw accuracy", per40: "Points per 40 minutes", stocks40: "Stocks per 40 minutes", ast_to: "Assist-to-turnover ratio", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40" };
+const labels: Record<Metric, string> = { points: "Total points", ppg: "Points per game", rpg: "Rebounds per game", orpg: "Offensive rebounds per game", drpg: "Defensive rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", fpg: "Fouls per game", topg: "Turnovers per game", minutes: "Total minutes", ts: "True shooting %", efg: "Effective FG %", three_pct: "Three-point accuracy", ft_pct: "Free-throw accuracy", per40: "Points per 40 minutes", stocks40: "Stocks per 40 minutes", ast_to: "Assist-to-turnover ratio", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40" };
 const percentMetrics = new Set<Metric>(["ts", "efg", "three_pct", "ft_pct", "tov_rate", "three_rate"]);
 const metricDigits = (metric: Metric) => metric === "points" || metric === "minutes" ? 0 : percentMetrics.has(metric) ? 1 : 2;
 const metricNote: Partial<Record<Metric, string>> = {
+  orpg: "Offensive rebounds per game divides recorded offensive rebounds by games played.",
+  drpg: "Defensive rebounds per game divides recorded defensive rebounds by games played.",
+  spg: "Steals per game divides recorded steals by games played.",
+  bpg: "Blocks per game divides recorded blocks by games played.",
+  fpg: "Fouls per game divides recorded personal fouls by games played.",
+  topg: "Turnovers per game divides recorded turnovers by games played.",
   ts: "True shooting uses points ÷ [2 × (FGA + 0.475 × FTA)].",
   efg: "Effective field-goal percentage gives made threes their extra point: (FGM + 0.5 × 3PM) ÷ FGA.",
   three_pct: "Three-point accuracy is 3PM ÷ 3PA; the board withholds zero-attempt seasons.",

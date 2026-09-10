@@ -1343,6 +1343,9 @@ describe("bball api", () => {
       seasons: [2026],
       metrics: expect.arrayContaining([
         "efg",
+        "orpg",
+        "fpg",
+        "topg",
         "three_pct",
         "ft_pct",
         "per40",
