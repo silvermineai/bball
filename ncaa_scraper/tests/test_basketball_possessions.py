@@ -28,7 +28,30 @@ class BasketballPossessionStyleTests(unittest.TestCase):
         self.assertEqual(alpha["transition_share"], 0.5)
         self.assertEqual(alpha["assisted_share"], 0.5)
 
+    def test_reports_malformed_points_and_flags(self):
+        rows = [{
+            "season": 2026,
+            "contest_id": "g1",
+            "poss_team_espn_team_id": "10",
+            "poss_team_ncaa_team_id": "n10",
+            "home": "Alpha",
+            "away": "Beta",
+            "poss_team": "Alpha",
+            "pts": 2.5,
+            "is_transition": 2,
+            "is_assisted": None,
+            "is_garbage_time": 0,
+        }]
+        columns = sorted({key for row in rows for key in row})
+        table = pa.table({key: [row.get(key) for row in rows] for key in columns})
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "possessions.parquet"
+            pq.write_table(table, path)
+            result = build_season(path, {"sha256": "b" * 64, "url": "https://example.test/release"}, 2026)
+        self.assertEqual(result["coverage"]["invalid_points"], 1)
+        self.assertEqual(result["coverage"]["invalid_flag_rows"], 2)
+        self.assertEqual(result["teams"][0]["points"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
-

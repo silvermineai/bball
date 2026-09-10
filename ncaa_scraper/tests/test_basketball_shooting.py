@@ -109,6 +109,12 @@ class ShotTests(unittest.TestCase):
         ]:
             self.assertFalse(matches([miss, made], box))
 
+    def test_reconciliation_rejects_fractional_count_fields(self):
+        miss, _ = normalize(event(), self.game)
+        made, _ = normalize(event(scoring_play=True), self.game)
+        box = {"field_goals_attempted": 2.5, "field_goals_made": 1, "three_point_field_goals_attempted": 1, "three_point_field_goals_made": 1}
+        self.assertFalse(matches([miss, made], box))
+
 
 class CacheTests(unittest.TestCase):
     def test_cached_large_release_requires_matching_receipt(self):

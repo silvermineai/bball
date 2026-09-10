@@ -147,6 +147,10 @@ def matches(shots, box):
     ):
         return False
     fga, fgm, tpa, tpm = values
+    # These are event counts. Fractional source values are malformed even if
+    # their rounded values could happen to match the normalized attempts.
+    if any(float(value) != math.floor(float(value)) for value in values):
+        return False
     # A source row can be internally impossible even when its four values
     # happen to match the event count. Keep that sample out of reconciliation.
     if fgm > fga or tpa > fga or tpm > tpa:

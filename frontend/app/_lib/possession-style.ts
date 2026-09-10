@@ -17,7 +17,13 @@ export type PossessionStyleEdition = {
   edition: string;
   generated_at: string;
   source: { url?: string; fetched_at?: string; sha256?: string };
-  coverage: { source_rows: number; teams: number; games: number };
+  coverage: {
+    source_rows: number;
+    teams: number;
+    games: number;
+    invalid_points?: number;
+    invalid_flag_rows?: number;
+  };
   teams: Omit<PossessionStyleRow, "season">[];
 };
 
@@ -58,4 +64,3 @@ export function filterAndSortStyle(
       return (direction === "asc" ? delta : -delta) || a.team_name.localeCompare(b.team_name);
     });
 }
-

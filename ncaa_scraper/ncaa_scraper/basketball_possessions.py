@@ -36,6 +36,8 @@ def _text(value: object) -> str | None:
 def _int(value: object) -> int | None:
     if value is None or isinstance(value, bool):
         return None
+    if isinstance(value, float) and not value.is_integer():
+        return None
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -72,6 +74,8 @@ def build_season(path: Path, receipt: dict, season: int) -> dict:
         "is_assisted", "is_garbage_time", "season",
     ]
     source_rows = 0
+    invalid_points = 0
+    invalid_flag_rows = 0
     for batch in pq.ParquetFile(path).iter_batches(batch_size=16384, columns=columns):
         for row in batch.to_pylist():
             if _int(row.get("season")) != season:
@@ -111,10 +115,16 @@ def build_season(path: Path, receipt: dict, season: int) -> dict:
             if contest:
                 entry["games"].add(contest)
             entry["possessions"] += 1
-            entry["points"] += max(0, _int(row.get("pts")) or 0)
-            entry["transition_possessions"] += int(_int(row.get("is_transition")) == 1)
-            entry["assisted_possessions"] += int(_int(row.get("is_assisted")) == 1)
-            entry["garbage_possessions"] += int(_int(row.get("is_garbage_time")) == 1)
+            points = _int(row.get("pts"))
+            if points is None or points < 0:
+                invalid_points += 1
+                points = 0
+            entry["points"] += points
+            flags = (_int(row.get("is_transition")), _int(row.get("is_assisted")), _int(row.get("is_garbage_time")))
+            invalid_flag_rows += sum(value not in (0, 1) for value in flags)
+            entry["transition_possessions"] += int(flags[0] == 1)
+            entry["assisted_possessions"] += int(flags[1] == 1)
+            entry["garbage_possessions"] += int(flags[2] == 1)
             source_rows += 1
 
     output = []
@@ -147,7 +157,13 @@ def build_season(path: Path, receipt: dict, season: int) -> dict:
         "edition": edition,
         "generated_at": utcnow(),
         "source": receipt,
-        "coverage": {"source_rows": source_rows, "teams": len(output), "games": sum(row["games"] for row in output)},
+        "coverage": {
+            "source_rows": source_rows,
+            "teams": len(output),
+            "games": sum(row["games"] for row in output),
+            "invalid_points": invalid_points,
+            "invalid_flag_rows": invalid_flag_rows,
+        },
         "teams": output,
     }
 

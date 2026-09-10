@@ -156,10 +156,18 @@ export default function Page() {
       season: number;
       generated_at: string;
       source: { url?: string };
-      coverage: { source_rows: number; teams: number };
+      coverage: { source_rows: number; teams: number; invalid_points?: number; invalid_flag_rows?: number };
     }[];
   };
   const shotLocations = shooting.coverage.locations ?? {};
+  const invalidPossessionPoints = possessionStyle.seasons.reduce(
+    (sum, season) => sum + (season.coverage.invalid_points ?? 0),
+    0,
+  );
+  const invalidPossessionFlags = possessionStyle.seasons.reduce(
+    (sum, season) => sum + (season.coverage.invalid_flag_rows ?? 0),
+    0,
+  );
   const locatedShots = shotLocations.located ?? 0;
   const rejectedLocationShots = (shotLocations.inconsistent ?? 0) + (shotLocations.placeholder ?? 0) + (shotLocations.missing ?? 0);
   const locationTotal = locatedShots + rejectedLocationShots;
@@ -268,7 +276,7 @@ export default function Page() {
       seasons: possessionStyle.seasons.map((season) => season.season),
       latest: possessionStyle.generated_at,
       url: possessionStyle.seasons.at(-1)?.source.url ?? null,
-      note: `Source-attributed team-season aggregates over ${possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0).toLocaleString()} possession rows; descriptive rates stay separate from player credit and forecast features.`,
+      note: `Source-attributed team-season aggregates over ${possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0).toLocaleString()} possession rows; ${invalidPossessionFlags.toLocaleString()} malformed flag values and ${invalidPossessionPoints.toLocaleString()} malformed point values are disclosed in the release audit. Descriptive rates stay separate from player credit and forecast features.`,
     },
   ];
   const footballLedger = ledger.sports.football;

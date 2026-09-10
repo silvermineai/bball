@@ -77,6 +77,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
       <div><strong>{edition?.coverage.teams.toLocaleString() ?? "—"}</strong><span>Teams with possession rows</span></div>
       <div><strong>{edition?.coverage.games.toLocaleString() ?? "—"}</strong><span>Team-game observations</span></div>
       <div><strong>{seasons.length}</strong><span>Available seasons</span></div>
+      <div><strong>{edition ? `${(edition.coverage.invalid_flag_rows ?? 0) + (edition.coverage.invalid_points ?? 0)}` : "—"}</strong><span>Malformed source values disclosed</span></div>
     </div>
     <p className="note" role="status">{status === "live" ? "Cloudflare D1 possession-style archive connected; rows are aggregated from the retained source release." : status === "fallback" ? "Cloudflare D1 archive unavailable; showing the verified bundled release." : "Checking the Cloudflare D1 archive…"}</p>
     <div className="toolbar">
@@ -88,7 +89,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
     {source && <p className="note"><strong>Source receipt:</strong> fetched {source.fetched_at ? date(source.fetched_at) : "—"} · SHA-256 {source.sha256?.slice(0, 16) || "—"}… · {source.url ? <a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "source URL unavailable"}</p>}
     <section className="section paper-panel possession-style-method">
       <div className="section-heading"><div><div className="eyebrow">How to read this</div><h2>Context before conclusions.</h2></div><p>These are source-native descriptive aggregates, not player credit or forecast inputs.</p></div>
-      <p>Points per possession is recorded points divided by recorded possessions. Transition, assisted and garbage-time shares use the publisher&apos;s binary possession flags. A missing flag stays unavailable; a zero is an observed zero. Because each trip belongs to a team, the table does not assign possession credit to any of the five players on the floor.</p>
+      <p>Points per possession is recorded points divided by recorded possessions. Transition, assisted and garbage-time shares use the publisher&apos;s binary possession flags. A missing flag stays unavailable; a zero is an observed zero. Malformed source point and flag values are counted in the edition audit above and never interpreted as positive events. Because each trip belongs to a team, the table does not assign possession credit to any of the five players on the floor.</p>
     </section>
     {error ? <p className="status-error" role="alert">{error}</p> : <>
       <div className="section-heading" style={{ marginTop: 24 }}><p>{total.toLocaleString()} matching team-season rows · page {page + 1} of {pages}</p><button className="button secondary" type="button" onClick={() => downloadCsv(`basketball-possession-style-${season}.csv`, toCsv(["Season", "Program", "Source team ID", "Games", "Possessions", "Points", "Points per possession", "Possessions per game", "Transition share %", "Assisted share %", "Garbage-time share %"], exportRows))}>Download CSV ↓</button></div>
