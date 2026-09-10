@@ -247,6 +247,7 @@ const recruitingPaths = [
   ["Trace high-school pipelines", "/basketball/ncaa-high-schools/", "Aggregate source roster rows by high-school label, then open the underlying players before drawing a recruiting conclusion."],
   ["Open a player card", "/basketball/ncaa-player/", "Connect source-native production, shot profile, roster context, impact and recent game evidence."],
   ["Build a recruiting brief", "/blog/basketball-recruiting-evidence/", "Move from an exact source row to dated school evidence, prior production and a question for film."],
+  ["Verify availability", "/blog/basketball-availability-evidence/", "Read injury, redshirt and tournament-availability signals with the right source, date and evidence boundary."],
 ];
 
 const recruitingGlossary = [
