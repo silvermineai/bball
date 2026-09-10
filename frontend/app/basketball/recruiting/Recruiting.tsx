@@ -642,6 +642,11 @@ export default function Recruiting() {
                           </a>
                         </small>
                       )}
+                      <small>
+                        <Link href={`/basketball/ncaa-rankings/?season=2026&q=${encodeURIComponent(p.name)}`}>
+                          Search NCAA source board →
+                        </Link>
+                      </small>
                       <button
                         className="button secondary recruiting-pick"
                         type="button"
