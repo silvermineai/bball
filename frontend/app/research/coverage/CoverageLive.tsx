@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { date } from "../../_lib/format";
-import { auditSourceClocks, type SourceReceipt } from "../../_lib/coverage-health";
+import {
+  auditSourceClocks,
+  summarizePossessionReadiness,
+  type SourceReceipt,
+} from "../../_lib/coverage-health";
 
 type CoverageResponse = {
   coverage: Array<{ dataset: string; rows: number }>;
@@ -148,6 +152,9 @@ export default function CoverageLive() {
   const footballFreshness = football ? freshness(football.source_receipts) : null;
   const basketballClockAudit = data ? auditSourceClocks(data.source_receipts) : null;
   const footballClockAudit = football ? auditSourceClocks(football.source_receipts) : null;
+  const basketballReadiness = data?.possession_validation
+    ? summarizePossessionReadiness(data.possession_validation)
+    : null;
   const basketballModel = basketballForecast?.models?.[0];
   const footballModel = footballForecast?.models?.[0];
   return (
@@ -226,6 +233,24 @@ export default function CoverageLive() {
               <div><dt>{data.location_validation.neutral_missing_venue?.toLocaleString() ?? "—"}</dt><dd>Neutral rows missing venue</dd></div>
             </div>
             <p className="note">Neutral-site flags, venue labels, participant IDs, period counts and final scores stay separate from player identity joins. Forecast and efficiency calculations continue to exclude records that fail their own paired-data checks.</p>
+          </div>}{basketballReadiness && <div className="coverage-readiness" role="status">
+            <div>
+              <div className="eyebrow">Model readiness</div>
+              <strong>{basketballReadiness.usableShare == null ? "—" : `${(basketballReadiness.usableShare * 100).toFixed(1)}%`}</strong>
+              <span>of completed games have valid possession estimates</span>
+            </div>
+            <div>
+              <strong>{basketballReadiness.usable.toLocaleString()}</strong>
+              <span>usable games</span>
+            </div>
+            <div>
+              <strong>{basketballReadiness.withheld.toLocaleString()}</strong>
+              <span>withheld from efficiency features</span>
+            </div>
+            <div>
+              <strong>{basketballReadiness.reviewFlags.toLocaleString()}</strong>
+              <span>diagnostic flags across checks</span>
+            </div>
           </div>}{data.possession_validation && <div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Possession estimate integrity</div>
             <h3>See how much of the completed schedule is model-ready.</h3>
