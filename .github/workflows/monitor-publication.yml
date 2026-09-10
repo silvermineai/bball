@@ -1,0 +1,24 @@
+name: Monitor live publication
+
+on:
+  schedule:
+    # Run after the daily refresh has had time to complete and publish.
+    - cron: "30 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check deployed publication
+        run: python scripts/check_live_publication.py --max-age-hours 240
