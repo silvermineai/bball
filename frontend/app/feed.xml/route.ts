@@ -44,8 +44,8 @@ export function GET() {
       .map((game) => item(
         `${game.away_name} at ${game.home_name}: forecast notebook`,
         `${base}/blog/game-${game.id}/`,
-        `Projected score, unit efficiency and scouting questions for ${game.away_name} at ${game.home_name}.`,
-        game.kickoff,
+        `Projected score, unit efficiency and scouting questions for ${game.away_name} at ${game.home_name}. Scheduled kickoff: ${game.kickoff}.`,
+        football.generated_at,
       )),
     ...basketball.upcoming
       .filter((game) => game.prediction || game.fallback_prediction)
@@ -53,8 +53,8 @@ export function GET() {
       .map((game) => item(
         `${game.away_name} at ${game.home_name}: basketball notebook`,
         `${base}/blog/basketball-game-${game.id}/`,
-        `Projected score, pace, Four Factors and reporting questions for ${game.away_name} at ${game.home_name}.`,
-        game.starts_at,
+        `Projected score, pace, Four Factors and reporting questions for ${game.away_name} at ${game.home_name}. Scheduled tip: ${game.starts_at}.`,
+        basketball.generated_at,
       )),
   ];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
