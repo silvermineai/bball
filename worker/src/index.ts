@@ -36,6 +36,7 @@ import { possessionStyle } from "./possession-style";
 import { ncaaBoxDb, researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
 import { basketballRosters } from "./basketball-rosters";
+import { footballDb } from "./football-db";
 
 type Bindings = Env;
 
@@ -182,7 +183,8 @@ const footballPlayerQuery = z.object({
 app.get("/api/football/players/:id/career", async (c) => {
   const id = c.req.param("id");
   if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
-  const result = await c.env.DB.prepare(`SELECT season,dataset,category,team_id,stats_json
+  const db = footballDb(c.env);
+  const result = await db.prepare(`SELECT season,dataset,category,team_id,stats_json
     FROM football_stats
     WHERE athlete_id=? AND dataset IN ('passing','rushing','receiving','box')
     ORDER BY season DESC,dataset,category,record_key`).bind(id).all<{
@@ -252,13 +254,14 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
   const id = c.req.param("id");
   if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
   const { season, page } = c.req.valid("query");
+  const db = footballDb(c.env);
   const [count, result, summaryResult] = await Promise.all([
-    c.env.DB.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
-    c.env.DB.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
+    db.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
+    db.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
       WHERE s.athlete_id=? AND s.season=? ORDER BY g.kickoff DESC,s.dataset,s.record_key LIMIT 50 OFFSET ?`)
       .bind(id, season, page * 50).all<{ dataset: string; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
-    c.env.DB.prepare(`SELECT dataset,category,team_id,stats_json
+    db.prepare(`SELECT dataset,category,team_id,stats_json
       FROM football_stats
       WHERE athlete_id=? AND season=? AND dataset IN ('passing','rushing','receiving','box')
       ORDER BY dataset,category,record_key`)
@@ -313,9 +316,10 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
 });
 
 app.get("/api/football/coverage", async (c) => {
-  const result = await c.env.DB.prepare(`SELECT 'games' AS dataset,count(*) AS rows FROM football_games
+  const db = footballDb(c.env);
+  const result = await db.prepare(`SELECT 'games' AS dataset,count(*) AS rows FROM football_games
     UNION ALL SELECT dataset,count(*) FROM football_stats GROUP BY dataset`).all();
-  const receipts = await c.env.DB.prepare(
+  const receipts = await db.prepare(
     `SELECT dataset, count(*) AS source_count,
             MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
        FROM football_sources
@@ -1010,7 +1014,7 @@ app.get("/api/search", zValidator("query", z.object({
   const [teams, players, footballPlayers, ncaaPlayers] = await Promise.all([
     sportCode ? all(c.env.DB, teamsSql, like, sportCode) : all(c.env.DB, teamsSql, like),
     sportCode ? all(c.env.DB, playersSql, sportCode, like, sportCode) : all(c.env.DB, playersSql, like),
-    sport === "all" || sport === "s_fbl" ? all(c.env.DB, footballPlayersSql, like) : Promise.resolve([]),
+    sport === "all" || sport === "s_fbl" ? all(footballDb(c.env), footballPlayersSql, like) : Promise.resolve([]),
     (sport === "all" || sport === "s_mbb") && research
       ? all(research, ncaaPlayersSql, like)
       : Promise.resolve([]),

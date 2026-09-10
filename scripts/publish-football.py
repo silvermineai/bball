@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
 BATCH_PUBLICATION = os.getenv("BATCH_PUBLICATION") == "1"
+FOOTBALL_D1_DATABASE = os.getenv("FOOTBALL_D1_DATABASE", "bball-football-v1")
 
 
 def run(args, cwd=ROOT):
@@ -105,7 +106,7 @@ def run_logged(args, log_path, cwd=ROOT):
         raise subprocess.CalledProcessError(result.returncode, args)
 
 
-def import_sql_file_in_chunks(path, log_prefix, database_name="bball-silvermine"):
+def import_sql_file_in_chunks(path, log_prefix, database_name=FOOTBALL_D1_DATABASE):
     """Import football rows in bounded statement-aligned files.
 
     The football release is large enough that one remote D1 import can hit an
@@ -289,10 +290,10 @@ run_remote_migration(
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        FOOTBALL_D1_DATABASE,
         "--remote",
         "--file",
-        "migrations/0008_football.sql",
+        "migrations-football/0001_football.sql",
     ]
 )
 # Wrangler import output can be large; retain it on disk for audit.

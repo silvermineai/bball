@@ -13,6 +13,7 @@ from pathlib import Path
 from sql_batches import is_retryable_d1_import_error
 
 ROOT = Path(__file__).resolve().parents[1]
+FOOTBALL_D1_DATABASE = os.getenv("FOOTBALL_D1_DATABASE", "bball-football-v1")
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.football import DB_PATH
 from ncaa_scraper.football_history import DATASET_NAMES, LOCAL, YEARS, write_source_sql
@@ -112,7 +113,7 @@ def query(sql):
             [
                 "d1",
                 "execute",
-                "bball-silvermine",
+                FOOTBALL_D1_DATABASE,
                 "--remote",
                 "--json",
                 "--command",
@@ -185,7 +186,7 @@ for source in manifest["sources"]:
             [
                 "d1",
                 "execute",
-                "bball-silvermine",
+                FOOTBALL_D1_DATABASE,
                 "--remote",
                 "--file",
                 str(LOCAL / source["sql"]),
@@ -203,7 +204,7 @@ for source in manifest["sources"]:
                 [
                     "d1",
                     "execute",
-                    "bball-silvermine",
+                    FOOTBALL_D1_DATABASE,
                     "--remote",
                     "--file",
                     str(LOCAL / source["sql"]),

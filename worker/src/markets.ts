@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { footballDb } from "./football-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -39,7 +40,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   const football = sport === "football";
   // The established football archive uses football_markets in the legacy
   // store; basketball quotes use the append-only audit ledger in research D1.
-  const db = football ? c.env.DB : researchDb(c.env);
+  const db = football ? footballDb(c.env) : researchDb(c.env);
   if (meta === "1") {
     const seasonsSql = football
       ? "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"

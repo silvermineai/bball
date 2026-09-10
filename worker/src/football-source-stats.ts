@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { footballDb } from "./football-db";
 
 const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting"] as const;
 type Dataset = (typeof DATASETS)[number];
@@ -19,10 +20,11 @@ export const footballSourceStats = new Hono<{ Bindings: Env }>();
 
 footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   const q = c.req.valid("query");
+  const db = footballDb(c.env);
   if (q.meta === "1") {
     const [seasons, datasets] = await Promise.all([
-      c.env.DB.prepare("SELECT DISTINCT season FROM football_stats ORDER BY season DESC").all<{ season: number }>(),
-      c.env.DB.prepare("SELECT dataset,count(*) AS rows FROM football_stats GROUP BY dataset ORDER BY dataset").all<{ dataset: Dataset; rows: number }>(),
+      db.prepare("SELECT DISTINCT season FROM football_stats ORDER BY season DESC").all<{ season: number }>(),
+      db.prepare("SELECT dataset,count(*) AS rows FROM football_stats GROUP BY dataset ORDER BY dataset").all<{ dataset: Dataset; rows: number }>(),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -62,10 +64,10 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = conditions.join(" AND ");
   const [count, rows, receipts] = await Promise.all([
-    c.env.DB.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`)
+    db.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`)
       .bind(...binds)
       .first<{ total: number }>(),
-    c.env.DB.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,
+    db.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,
       g.kickoff,g.home_name,g.away_name,g.home_score,g.away_score
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
       WHERE ${where}
@@ -87,7 +89,7 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       home_score: number | null;
       away_score: number | null;
       }>(),
-    c.env.DB.prepare(`SELECT dataset,season,receipt_json FROM football_sources WHERE season=?${q.dataset === "all" ? "" : " AND dataset=?"} ORDER BY dataset`)
+    db.prepare(`SELECT dataset,season,receipt_json FROM football_sources WHERE season=?${q.dataset === "all" ? "" : " AND dataset=?"} ORDER BY dataset`)
       .bind(...(q.dataset === "all" ? [q.season] : [q.season, q.dataset]))
       .all<{ dataset: Dataset; season: number; receipt_json: string }>(),
   ]);

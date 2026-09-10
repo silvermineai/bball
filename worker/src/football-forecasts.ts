@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { footballDb } from "./football-db";
 
 type Bindings = Env;
 
@@ -30,14 +31,15 @@ function asNumber(value: unknown) {
 
 footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const { season, status, q, model, page, limit, meta } = c.req.valid("query");
-  const latestModel = await c.env.DB.prepare(
+  const db = footballDb(c.env);
+  const latestModel = await db.prepare(
     "SELECT id,created_at,cutoff,artifact_json FROM football_models ORDER BY created_at DESC,id DESC LIMIT 1",
   ).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
 
   if (meta === "1") {
-    const [seasons, models] = await c.env.DB.batch([
-      c.env.DB.prepare("SELECT DISTINCT season FROM football_games ORDER BY season DESC"),
-      c.env.DB.prepare(
+    const [seasons, models] = await db.batch([
+      db.prepare("SELECT DISTINCT season FROM football_games ORDER BY season DESC"),
+      db.prepare(
         "SELECT p.model_id,count(*) AS forecasts,MIN(p.created_at) AS first_created_at,MAX(p.created_at) AS last_created_at FROM football_predictions p GROUP BY p.model_id ORDER BY last_created_at DESC,model_id",
       ),
     ]);
@@ -85,10 +87,10 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(model);
   }
   const where = clauses.join(" AND ");
-  const count = await c.env.DB.prepare(
+  const count = await db.prepare(
     `SELECT count(*) AS total FROM football_predictions p JOIN football_games g ON g.id=p.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>();
-  const rows = await c.env.DB.prepare(
+  const rows = await db.prepare(
     `SELECT p.game_id,p.model_id,p.created_at,p.home_margin,p.total,p.home_win_probability,
             g.season,g.kickoff,g.home_id,g.away_id,g.home_name,g.away_name,
             g.home_conference,g.away_conference,g.home_division,g.away_division,

@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -9,6 +10,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+FOOTBALL_D1_DATABASE = os.getenv("FOOTBALL_D1_DATABASE", "bball-football-v1")
 conn = sqlite3.connect(
     f"file:{ROOT / '.local/football-events.sqlite3'}?mode=ro", uri=True
 )
@@ -23,7 +25,7 @@ def query(sql):
             str(ROOT / "scripts/cloudflare.py"),
             "d1",
             "execute",
-            "bball-silvermine",
+            FOOTBALL_D1_DATABASE,
             "--remote",
             "--json",
             "--command",

@@ -347,13 +347,15 @@ describe("bball api", () => {
         }),
       };
     });
-    const response = await app.request("/api/football/coverage", {}, { DB: { prepare } });
+    const legacyPrepare = vi.fn();
+    const response = await app.request("/api/football/coverage", {}, { DB: { prepare: legacyPrepare }, FOOTBALL_DB: { prepare } });
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       coverage: [{ dataset: "games", rows: 12 }, { dataset: "box", rows: 34 }],
       source_receipts: [{ dataset: "box", source_count: 2, latest_source_at: "2026-09-08T00:00:00Z" }],
     });
     expect(prepare.mock.calls.some(([query]) => String(query).includes("football_sources"))).toBe(true);
+    expect(legacyPrepare).not.toHaveBeenCalled();
   });
 
   it("serves bounded unresolved source observations without attributing identities", async () => {

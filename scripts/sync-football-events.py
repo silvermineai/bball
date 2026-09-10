@@ -3,11 +3,13 @@
 import subprocess
 import sys
 import time
+import os
 from pathlib import Path
 
 from sql_batches import is_retryable_d1_import_error
 
 ROOT = Path(__file__).resolve().parents[1]
+FOOTBALL_D1_DATABASE = os.getenv("FOOTBALL_D1_DATABASE", "bball-football-v1")
 if not (ROOT / ".local/football-events.sql").is_file():
     raise SystemExit("Build the football event notebook before syncing it.")
 for file in ["migrations/0014_football_events.sql", "../.local/football-events.sql"]:
@@ -16,7 +18,7 @@ for file in ["migrations/0014_football_events.sql", "../.local/football-events.s
         "scripts/cloudflare.py",
         "d1",
         "execute",
-        "bball-silvermine",
+        FOOTBALL_D1_DATABASE,
         "--remote",
         "--file",
         file,

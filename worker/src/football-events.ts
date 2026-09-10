@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { footballDb } from "./football-db";
 import { z } from "zod";
 
 const metrics = {
@@ -64,7 +65,8 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       { error: "Choose a metric when browsing player leaders" },
       400,
     );
-  const edition = await c.env.DB.prepare(
+  const db = footballDb(c.env);
+  const edition = await db.prepare(
     `SELECT e.* FROM football_event_editions e ${q.edition ? "" : "JOIN football_event_active a ON a.edition=e.edition AND a.dataset=e.dataset AND a.season=e.season"}
      WHERE e.dataset=? AND e.season=? ${q.edition ? "AND e.edition=?" : ""}`,
   )
@@ -113,10 +115,10 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       GROUP BY player_name,team_id,division`;
     const leaderFilter = q.positive === "1" ? "value>0" : "value IS NOT NULL";
     const [count, rows] = await Promise.all([
-      c.env.DB.prepare(`SELECT count(*) AS total FROM (${grouped}) leaders WHERE ${leaderFilter}`)
+      db.prepare(`SELECT count(*) AS total FROM (${grouped}) leaders WHERE ${leaderFilter}`)
         .bind(...values)
         .first<{ total: number }>(),
-      c.env.DB.prepare(
+      db.prepare(
         `SELECT * FROM (${grouped}) leaders
          WHERE ${leaderFilter}
          ORDER BY value IS NULL,value ${q.direction.toUpperCase()},player_name ASC,team_id ASC
@@ -142,12 +144,12 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
     });
   }
   const [count, rows] = await Promise.all([
-    c.env.DB.prepare(
+    db.prepare(
       `SELECT count(*) AS total FROM football_events WHERE ${where}`,
     )
       .bind(...values)
       .first<{ total: number }>(),
-    c.env.DB.prepare(
+    db.prepare(
       `SELECT payload_json FROM football_events WHERE ${where}
       ORDER BY ${sort} IS NULL,${sort} ${q.direction.toUpperCase()},record_key ASC LIMIT 40 OFFSET ?`,
     )

@@ -3,6 +3,7 @@
 import concurrent.futures
 import fcntl
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+FOOTBALL_D1_DATABASE = os.getenv("FOOTBALL_D1_DATABASE", "bball-football-v1")
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.football import DB_PATH
 from ncaa_scraper.football_artifacts import manifest_statements, quote
@@ -92,7 +94,7 @@ def query(sql):
             [
                 "d1",
                 "execute",
-                "bball-silvermine",
+                FOOTBALL_D1_DATABASE,
                 "--remote",
                 "--json",
                 "--command",
@@ -119,7 +121,7 @@ for receipt in manifest["dependencies"]:
             [
                 "d1",
                 "execute",
-                "bball-silvermine",
+                FOOTBALL_D1_DATABASE,
                 "--remote",
                 "--file",
                 str(dependency_sql),
@@ -202,7 +204,7 @@ for source in manifest["sources"]:
             [
                 "d1",
                 "execute",
-                "bball-silvermine",
+                FOOTBALL_D1_DATABASE,
                 "--remote",
                 "--file",
                 str(LOCAL / source["sql"]),

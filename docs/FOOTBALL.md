@@ -1,6 +1,6 @@
 # Football data and forecasting
 
-The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. The plain-language [football learning guide](/football/learn/) maps the raw source archive to EPA, team efficiency, forecast and matchup questions. Native basketball forecasts and research pages now start at `/basketball/`; preserved TanStack scouting tools remain on their archive routes. See [basketball documentation](BASKETBALL.md).
+The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. Football research uses the dedicated `bball-football-v1` database; the legacy `bball-silvermine` store keeps shared authentication, scouting and compatibility tables. This split keeps the high-volume football archive below D1's per-database size limit while preserving the same public API routes. The plain-language [football learning guide](/football/learn/) maps the raw source archive to EPA, team efficiency, forecast and matchup questions. Native basketball forecasts and research pages now start at `/basketball/`; preserved TanStack scouting tools remain on their archive routes. See [basketball documentation](BASKETBALL.md).
 
 ## Published data edition
 
@@ -112,9 +112,9 @@ npm --prefix frontend run build
 .venv/bin/python scripts/publish-football.py
 ```
 
-The publisher requires requests, numpy and python-dotenv. Cloudflare credentials are read from the process environment or `CF_API_TOKEN_ACCOUNT` / `CF_ACCOUNT_ID` in `~/.env`. They are passed to Wrangler through its environment only. No secrets enter the frontend.
+The publisher requires requests, numpy and python-dotenv. Cloudflare credentials are read from the process environment or `CF_API_TOKEN_ACCOUNT` / `CF_ACCOUNT_ID` in `~/.env`. They are passed to Wrangler through its environment only. No secrets enter the frontend. Football imports target `bball-football-v1` by default; set `FOOTBALL_D1_DATABASE` for an audited alternate database.
 
-SQL imports replace current schedule/stat snapshots by dataset and season, while keeping historical prediction and market observations. The publisher splits the football export into statement-aligned, bounded remote D1 imports so a transient Cloudflare reset can restart from the scoped deletes without replaying one giant transaction. There are no destructive changes to basketball tables. The local football database is under ignored `.local/`; the existing basketball SQLite database is separate.
+SQL imports replace current schedule/stat snapshots by dataset and season, while keeping historical prediction and market observations. The publisher splits the football export into statement-aligned, bounded remote D1 imports so a transient Cloudflare reset can restart from the scoped deletes without replaying one giant transaction. There are no destructive changes to basketball tables. The local football database is under ignored `.local/`; the existing basketball SQLite database is separate. The Worker selects the dedicated football binding for football routes and falls back to the legacy binding only for local compatibility.
 
 The repository also defines a serialized daily GitHub Actions refresh in [`.github/workflows/refresh-research.yml`](../.github/workflows/refresh-research.yml). It uses the same publisher, requires `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT` repository secrets, and exposes manual sport selection. A successful deployment invokes the immutable brief archive capture. The local `~/.env` workflow remains available for development and audited manual runs.
 

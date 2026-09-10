@@ -1,9 +1,10 @@
 import { Hono } from "hono";
+import { footballDb } from "./football-db";
 
 export const footballPlayerHistory = new Hono<{ Bindings: Env }>();
 
 footballPlayerHistory.get("/source", async (c) => {
-  const row = await c.env.DB.prepare(
+  const row = await footballDb(c.env).prepare(
     "SELECT payload_json FROM football_artifacts WHERE name='football-player-history'",
   ).first<{ payload_json: string }>();
   if (!row?.payload_json) return c.text("Football player archive is unavailable", 503);
