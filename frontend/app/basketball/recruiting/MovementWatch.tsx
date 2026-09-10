@@ -23,7 +23,7 @@ type MovementResponse = {
   players_observed: number;
   status_counts: Record<string, number>;
   players: MovementPlayer[];
-  source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null } | null;
+  source?: { dataset?: string | null; url?: string | null; fetched_at?: string | null; sha256?: string | null } | null;
 };
 
 export default function MovementWatch() {
@@ -103,6 +103,13 @@ export default function MovementWatch() {
           ? `${count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full source view.`
           : error || "Checking the live roster observation edition…"}
       </p>
+      {data?.source && (
+        <p className="note" style={{ marginTop: 8 }}>
+          Live {data.source.dataset || "roster"} release
+          {data.source.fetched_at ? ` · retrieved ${new Date(data.source.fetched_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC` : " · retrieval clock unavailable"}
+          {data.source.sha256 ? ` · SHA-256 ${data.source.sha256.slice(0, 16)}…` : " · digest unavailable"}
+        </p>
+      )}
       {players.length > 0 ? (
         <div className="table-scroll" style={{ marginTop: 16 }}>
           <table className="data-table">
