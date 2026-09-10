@@ -3,6 +3,7 @@
 import fcntl
 import hashlib
 import json
+import os
 import sqlite3
 import subprocess
 import sys
