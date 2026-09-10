@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -185,6 +186,62 @@ def _unresolved_coverage_health(
     return {"release": relative, "generated_at": generated, "groups": len(rows), "rows": total, "rows_with_observed_stats": observed}
 
 
+def _evaluation_health(root: Path) -> dict:
+    """Verify the public basketball evaluation manifest and transition bundles."""
+    directory = root / "frontend/public/data/basketball/evaluation"
+    summary = _read(root, "frontend/public/data/basketball/evaluation/summary.json")
+    manifest = _read(root, "frontend/public/data/basketball/evaluation/manifest.json")
+    experiment_id = summary.get("id")
+    if not isinstance(experiment_id, str) or not experiment_id:
+        raise ValueError("basketball evaluation summary has no experiment id")
+    if manifest.get("signature") != experiment_id:
+        raise ValueError("basketball evaluation manifest does not match summary")
+    files = manifest.get("files")
+    if not isinstance(files, dict) or not files:
+        raise ValueError("basketball evaluation manifest has no files")
+    for name, expected in files.items():
+        if not isinstance(name, str) or not isinstance(expected, str):
+            raise ValueError("basketball evaluation manifest has malformed file entry")
+        path = directory / name
+        if not path.exists():
+            raise ValueError(f"basketball evaluation manifest references missing file: {name}")
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            raise ValueError(f"basketball evaluation file hash mismatch: {name}")
+
+    results = summary.get("season_results")
+    if not isinstance(results, list) or [row.get("season") for row in results if isinstance(row, dict)] != [2024, 2025, 2026]:
+        raise ValueError("basketball evaluation must publish 2024, 2025 and 2026 transitions")
+    index = _read(root, "frontend/public/data/basketball/evaluation/transitions.json")
+    if index.get("experiment_id") != experiment_id:
+        raise ValueError("basketball transition index does not match summary")
+    entries = index.get("transitions")
+    if not isinstance(entries, list) or [entry.get("season") for entry in entries if isinstance(entry, dict)] != [2024, 2025, 2026]:
+        raise ValueError("basketball transition index has incomplete seasons")
+    for result, entry in zip(results, entries):
+        if not isinstance(result, dict) or not isinstance(entry, dict):
+            raise ValueError("basketball evaluation has malformed transition metadata")
+        path_name = entry.get("path")
+        if not isinstance(path_name, str) or not path_name.startswith("transition-"):
+            raise ValueError("basketball transition index has an invalid evidence path")
+        payload = _read(root, f"frontend/public/data/basketball/evaluation/{path_name}")
+        transition = payload.get("transition")
+        if payload.get("experiment_id") != experiment_id or not isinstance(transition, dict):
+            raise ValueError(f"basketball transition evidence is not tied to the active experiment: {path_name}")
+        games = transition.get("games")
+        weekly_fits = transition.get("weekly_fits")
+        if not isinstance(games, list) or not isinstance(weekly_fits, list):
+            raise ValueError(f"basketball transition evidence is missing rows or fits: {path_name}")
+        if len(games) != result.get("compared_games") or len(weekly_fits) != result.get("weekly_fits"):
+            raise ValueError(f"basketball transition evidence counts do not match summary: {path_name}")
+    return {
+        "release": "basketball/evaluation/summary.json",
+        "experiment_id": experiment_id,
+        "transitions": len(entries),
+        "files": len(files),
+    }
+
+
 def check_freshness(
     root: Path,
     sport: str,
@@ -287,6 +344,7 @@ def check_freshness(
                 ):
                     catalog = _read(root, str(Path("frontend/public/data") / relative))
                     releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
+                releases.append(_evaluation_health(root))
         except ValueError as exc:
             errors.append(str(exc))
     report = {

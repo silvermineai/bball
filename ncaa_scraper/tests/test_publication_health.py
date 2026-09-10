@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -6,6 +7,7 @@ from pathlib import Path
 
 from ncaa_scraper.publication_health import (
     _catalog_health,
+    _evaluation_health,
     _unresolved_coverage_health,
     check_freshness,
 )
@@ -48,6 +50,47 @@ class PublicationHealthTest(unittest.TestCase):
             )
             self.assertTrue(report["ok"])
             self.assertEqual(report["releases"][0]["release"], "football/overview.json")
+
+    def test_evaluation_manifest_covers_each_transition_bundle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            evaluation = root / "frontend/public/data/basketball/evaluation"
+            evaluation.mkdir(parents=True)
+            summary = {
+                "id": "experiment-test",
+                "season_results": [
+                    {"season": season, "compared_games": 1, "weekly_fits": 1}
+                    for season in (2024, 2025, 2026)
+                ],
+            }
+            (evaluation / "summary.json").write_text(json.dumps(summary))
+            index = {
+                "experiment_id": summary["id"],
+                "transitions": [
+                    {
+                        "season": season,
+                        "path": f"transition-{season}.json",
+                    }
+                    for season in (2024, 2025, 2026)
+                ],
+            }
+            (evaluation / "transitions.json").write_text(json.dumps(index))
+            for season in (2024, 2025, 2026):
+                payload = {
+                    "experiment_id": summary["id"],
+                    "transition": {"games": [{}], "weekly_fits": [{}]},
+                }
+                (evaluation / f"transition-{season}.json").write_text(json.dumps(payload))
+            files = {}
+            for path in evaluation.iterdir():
+                if path.name != "manifest.json":
+                    files[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+            (evaluation / "manifest.json").write_text(
+                json.dumps({"signature": summary["id"], "files": files})
+            )
+            report = _evaluation_health(root)
+            self.assertEqual(report["transitions"], 3)
+            self.assertEqual(report["files"], 5)
 
     def test_basketball_requires_supplemental_catalogs(self):
         with tempfile.TemporaryDirectory() as directory:
