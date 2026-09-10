@@ -176,6 +176,59 @@ export default function Page() {
       <LiveBasketballForecastStatus />
       <LiveBasketballRecruitingStatus />
       <LiveBasketballMarketStatus />
+      <section className="section coach-path" aria-labelledby="coach-path-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Coach&apos;s research path</div>
+            <h2 id="coach-path-title">Move from a question to the next piece of evidence.</h2>
+          </div>
+          <Link href="/basketball/learn/">How the measures work →</Link>
+        </div>
+        <p className="note" style={{ marginBottom: 20 }}>
+          Start with the decision in front of you. Each stop keeps source
+          identity, workload and uncertainty attached as you move through the
+          book.
+        </p>
+        <div className="article-grid">
+          <article className="article-card">
+            <div className="eyebrow">01 / Prepare</div>
+            <h3>What will decide the next game?</h3>
+            <p>
+              Build a matchup plan from the published forecast, Four Factors
+              and the roster context we have actually observed.
+            </p>
+            <Link href="/basketball/gameplan/">Open the game-plan desk →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">02 / Evaluate</div>
+            <h3>Which player deserves a closer look?</h3>
+            <p>
+              Filter NCAA production and impact by a minimum sample, then
+              shortlist up to three exact source IDs for side-by-side review.
+            </p>
+            <Link href="/basketball/ncaa-rankings/">Open NCAA rankings →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">03 / Verify</div>
+            <h3>What changed on the roster?</h3>
+            <p>
+              Pair dated school announcements with prior college production and
+              NCAA roster records. A signing is a lead to verify, not a claim of
+              current availability.
+            </p>
+            <Link href="/basketball/recruiting/">Open recruiting evidence →</Link>
+          </article>
+          <article className="article-card">
+            <div className="eyebrow">04 / Trace</div>
+            <h3>How fresh is the number?</h3>
+            <p>
+              Check the source receipt, row count and identity note for every
+              archive layer before carrying a stat into a staff conversation.
+            </p>
+            <Link href="/research/coverage/">Open the coverage desk →</Link>
+          </article>
+        </div>
+      </section>
       <section className="section source-receipts">
         <div className="section-heading">
           <div>

@@ -1111,6 +1111,35 @@ th,
   grid-template-columns: repeat(3, 1fr);
   gap: 28px;
 }
+.coach-path {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 93%, var(--orange) 7%);
+}
+.coach-path .article-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.coach-path .article-card {
+  border-top-color: var(--orange);
+  padding: 20px 0 4px;
+}
+.coach-path .article-card h3 {
+  min-height: 53px;
+}
+@media (max-width: 1000px) {
+  .coach-path .article-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 650px) {
+  .coach-path .article-grid {
+    grid-template-columns: 1fr;
+  }
+  .coach-path .article-card h3 {
+    min-height: auto;
+  }
+}
 .article-card {
   border-top: 3px solid var(--ink);
   padding: 24px 0;
