@@ -73,7 +73,6 @@ def main() -> None:
     ).hexdigest()
     SQL.parent.mkdir(parents=True, exist_ok=True)
     statements = [
-        "BEGIN;",
         f"INSERT OR IGNORE INTO bb_news_releases (edition,generated_at,article_count,feeds_json) VALUES ({sql_string(edition)},{sql_string(generated_at)},{len(normalized)},{sql_string(json.dumps(feeds, ensure_ascii=False, separators=(',', ':'))) });",
     ]
     for article in normalized:
@@ -91,7 +90,6 @@ def main() -> None:
             "link=excluded.link,categories_json=excluded.categories_json,author=excluded.author,"
             "last_seen_at=excluded.last_seen_at;"
         )
-    statements.append("COMMIT;")
     SQL.write_text("\n".join(statements) + "\n")
     for migration in MIGRATIONS:
         subprocess.run(
@@ -102,8 +100,10 @@ def main() -> None:
     # D1's import endpoint can spend a long time on an otherwise tiny file
     # when the database is busy. Execute idempotent chunks through the query
     # endpoint instead; a rerun safely updates only the same source IDs.
-    lines = statements
-    commands = [lines[1]] + ["\n".join(lines[start : start + 5]) for start in range(2, len(lines) - 1, 5)]
+    # Do not wrap these commands in SQL BEGIN/COMMIT statements. D1's query
+    # endpoint handles each idempotent statement safely, while explicit SQL
+    # transactions are rejected by the API and can leave a refresh half done.
+    commands = ["\n".join(statements[start : start + 5]) for start in range(0, len(statements), 5)]
     for command in commands:
         subprocess.run(
             [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--command", command],
