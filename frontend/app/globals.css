@@ -633,6 +633,14 @@ th,
   font-size: 9px;
   margin-top: 2px;
 }
+.market-quote .market-gap-home,
+.market-quote .market-gap-over {
+  color: var(--green);
+}
+.market-quote .market-gap-away,
+.market-quote .market-gap-under {
+  color: var(--orange);
+}
 .football-leader-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

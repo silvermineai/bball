@@ -1,0 +1,28 @@
+import type { Comparison } from "./research-types";
+
+/**
+ * Turn the scorecard's signed model difference into a reader-facing label.
+ * The scorecard stores one common signed value, but its unit depends on the
+ * market: points for spreads/totals and probability points for moneylines.
+ */
+export function comparisonGapLabel(comparison: Comparison): string | null {
+  if (!Number.isFinite(comparison.model_difference)) return null;
+  const rawValue = comparison.market === "h2h"
+    ? comparison.model_difference * 100
+    : comparison.model_difference;
+  const sign = rawValue > 0 ? "+" : "";
+  const value = `${sign}${rawValue.toFixed(1)}`;
+  if (comparison.market === "h2h") return `${value} probability pts`;
+  if (comparison.market === "totals") return `${value} pts model total`;
+  return `${value} pts model home margin`;
+}
+
+/**
+ * Describe which side the model is above or below the observed quote. This is
+ * intentionally descriptive language; it does not call a wager or edge.
+ */
+export function comparisonGapDirection(comparison: Comparison): "home" | "away" | "over" | "under" | "neutral" {
+  if (!Number.isFinite(comparison.model_difference) || comparison.model_difference === 0) return "neutral";
+  if (comparison.market === "totals") return comparison.model_difference > 0 ? "over" : "under";
+  return comparison.model_difference > 0 ? "home" : "away";
+}

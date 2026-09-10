@@ -8,6 +8,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
+import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 
 const sourceGameUrl = (id: string) =>
   `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
@@ -169,6 +170,7 @@ export default function BasketballCard({
                   <span>
                     {quote.bookmaker} · {quote.market}
                     <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
+                    {comparisonGapLabel(quote) && <small className={`market-gap-${comparisonGapDirection(quote)}`}>Model gap · {comparisonGapLabel(quote)}</small>}
                   </span>
                   <strong>
                     {quote.market === "h2h"
