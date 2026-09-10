@@ -79,7 +79,7 @@ def build(season=2023):
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
     )
     model = overview["model"]
-    if model.get("id", "").startswith("basketball-efficiency-v1-") is False:
+    if not model.get("id", "").startswith("basketball-efficiency-v2-"):
         raise ValueError("Unexpected basketball model ID")
     conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
     statements = []
@@ -94,6 +94,7 @@ def build(season=2023):
         "cutoff",
         "training_games",
             "training_seasons",
+            "settings",
             "calibration",
             "evaluation",
         )

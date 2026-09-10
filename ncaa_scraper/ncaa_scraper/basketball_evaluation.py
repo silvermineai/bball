@@ -45,9 +45,9 @@ SETTINGS = {
     "refit": "Monday 00:00 UTC",
     "start_buffer_hours": 24,
     "field": "Frozen from previous-season fit; ten games in its latest season",
-    "efficiency_penalty": 12,
-    "tempo_penalty": 8,
-    "season_weight": 0.6,
+    "efficiency_penalty": 4.0,
+    "tempo_penalty": 8.0,
+    "season_weight": 0.5,
     "bootstrap_replicates": 5000,
     "bootstrap_seed": 2701,
 }

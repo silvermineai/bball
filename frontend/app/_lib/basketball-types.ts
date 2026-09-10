@@ -96,6 +96,11 @@ export type BBOverview = {
     tempo: number[];
     id: string;
     version: string;
+    settings?: {
+      efficiency_penalty: number;
+      tempo_penalty: number;
+      season_weight: number;
+    };
     cutoff: string;
     training_games: number;
     training_seasons: number[];

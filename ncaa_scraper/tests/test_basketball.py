@@ -23,6 +23,7 @@ from ncaa_scraper.basketball import (
     write_sql_batches,
 )
 from ncaa_scraper.basketball_model import (
+    MODEL_SETTINGS,
     fallback_forecast,
     fit,
     forecast,
@@ -159,6 +160,15 @@ class BasketballModelTests(unittest.TestCase):
         self.assertTrue(0 <= p["home_win_probability"] <= 1)
         self.assertLess(p["margin_low"], p["home_margin"])
         self.assertIsNone(forecast(model, {**sample(1, 2027), "home_id": "unseen"}))
+
+    def test_model_settings_are_embedded_in_fitted_artifact(self):
+        model = fit([sample(i, 2026) for i in range(180)])
+        self.assertEqual(model["settings"], MODEL_SETTINGS)
+        self.assertEqual(set(model["settings"]), {
+            "efficiency_penalty",
+            "tempo_penalty",
+            "season_weight",
+        })
 
     def test_cold_start_estimate_is_explicit_and_wider(self):
         games = [sample(i, y) for y in [2024, 2025, 2026] for i in range(180)]

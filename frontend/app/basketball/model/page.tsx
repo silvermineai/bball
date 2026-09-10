@@ -9,6 +9,11 @@ export default function Page() {
   const d = getBasketball(),
     e = d.model.evaluation,
     c = d.model.calibration,
+    settings = d.model.settings ?? {
+      efficiency_penalty: 12,
+      tempo_penalty: 8,
+      season_weight: 0.6,
+    },
     rosterModel = getRosterModel(),
     historicalRoster = rosterModel.historical_evaluation,
     roster = getRosters(),
@@ -62,8 +67,8 @@ export default function Page() {
           <p>
             A ridge regression learns separate team offensive and defensive
             effects and a home-floor term. A second regression estimates pace
-            from both teams. Penalties are fixed at 12 for efficiency and 8 for
-            pace, with older seasons weighted by 0.6 per year. Programs need ten
+            from both teams. Penalties are fixed at {fmt(settings.efficiency_penalty)} for efficiency and {fmt(settings.tempo_penalty)} for
+            pace, with older seasons weighted by {fmt(settings.season_weight)} per year. Programs need ten
             observed games in the latest fitting season to enter the rated
             field.
           </p>

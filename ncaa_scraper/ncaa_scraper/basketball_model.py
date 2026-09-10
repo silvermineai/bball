@@ -9,8 +9,16 @@ from collections import Counter
 
 import numpy as np
 
-VERSION = "basketball-efficiency-v1"
+VERSION = "basketball-efficiency-v2"
 FT_POSSESSION_WEIGHT = 0.475
+# Keep the production hyperparameters in one auditable record. These values
+# were selected from chronological holdouts, rather than from the 2026–27
+# forecast slate itself.
+MODEL_SETTINGS = {
+    "efficiency_penalty": 4.0,
+    "tempo_penalty": 8.0,
+    "season_weight": 0.5,
+}
 
 
 def ratio(numerator, denominator):
@@ -145,7 +153,7 @@ def fit(games, *, teams=None):
         pace_x[i, 0] = 1
         pace_x[i, h + 1] = pace_x[i, a + 1] = 1
         pace_y.append(g["pace"])
-        weights.append(0.6 ** (latest - g["season"]))
+        weights.append(MODEL_SETTINGS["season_weight"] ** (latest - g["season"]))
 
     def solve(features, target, w, penalty):
         regularizer = np.eye(features.shape[1]) * penalty
@@ -168,8 +176,19 @@ def fit(games, *, teams=None):
         }
     return {
         "teams": teams,
-        "efficiency": solve(x, y, np.repeat(weights, 2), 12),
-        "tempo": solve(pace_x, pace_y, np.asarray(weights), 8),
+        "efficiency": solve(
+            x,
+            y,
+            np.repeat(weights, 2),
+            MODEL_SETTINGS["efficiency_penalty"],
+        ),
+        "tempo": solve(
+            pace_x,
+            pace_y,
+            np.asarray(weights),
+            MODEL_SETTINGS["tempo_penalty"],
+        ),
+        "settings": dict(MODEL_SETTINGS),
         "training_games": len(games),
         "training_seasons": sorted({g["season"] for g in games}),
         "last_training_start": max(g["starts_at"] for g in games),
