@@ -57,6 +57,35 @@ def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours:
     return ages
 
 
+def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
+    """Validate market archive metadata without requiring any quotes."""
+    if payload.get("sport") != sport:
+        raise ValueError(f"{sport} market archive returned the wrong sport")
+    total = payload.get("total")
+    pregame = payload.get("pregame")
+    capabilities = payload.get("provider_capabilities")
+    if (
+        not isinstance(total, int)
+        or not isinstance(pregame, int)
+        or total < 0
+        or pregame < 0
+        or pregame > total
+        or not isinstance(capabilities, list)
+        or not capabilities
+    ):
+        raise ValueError(f"{sport} market archive metadata is malformed")
+    for capability in capabilities:
+        if (
+            not isinstance(capability, dict)
+            or not isinstance(capability.get("provider"), str)
+            or not isinstance(capability.get("markets"), list)
+            or not capability["markets"]
+            or not isinstance(capability.get("provider_update_clock"), bool)
+        ):
+            raise ValueError(f"{sport} market provider capability is malformed")
+    return total, pregame, len(capabilities)
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -126,6 +155,14 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         raise ValueError(
             f"reviewed recruiting release is {max(recruiting_reviewed_age, 0):.1f} hours old"
         )
+    basketball_markets = get_json(base_url, "/api/research/markets?meta=1&sport=basketball")
+    basketball_market_total, basketball_market_pregame, basketball_market_capabilities = market_metadata(
+        basketball_markets, "basketball"
+    )
+    football_markets = get_json(base_url, "/api/research/markets?meta=1&sport=football")
+    football_market_total, football_market_pregame, football_market_capabilities = market_metadata(
+        football_markets, "football"
+    )
     return {
         "base_url": base_url.rstrip("/"),
         "checked_at": checked_at.isoformat().replace("+00:00", "Z"),
@@ -149,6 +186,12 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_events": release_coverage["events"],
         "recruiting_reviewed_sources": release_coverage["sources"],
         "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
+        "basketball_market_observations": basketball_market_total,
+        "basketball_market_pregame": basketball_market_pregame,
+        "basketball_market_capabilities": basketball_market_capabilities,
+        "football_market_observations": football_market_total,
+        "football_market_pregame": football_market_pregame,
+        "football_market_capabilities": football_market_capabilities,
     }
 
 

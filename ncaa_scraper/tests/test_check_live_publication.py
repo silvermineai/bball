@@ -32,6 +32,26 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
             },
+            "/api/research/markets?meta=1&sport=basketball": {
+                "sport": "basketball",
+                "total": 0,
+                "pregame": 0,
+                "provider_capabilities": [{
+                    "provider": "The Odds API",
+                    "markets": ["h2h", "spreads", "totals"],
+                    "provider_update_clock": True,
+                }],
+            },
+            "/api/research/markets?meta=1&sport=football": {
+                "sport": "football",
+                "total": 12,
+                "pregame": 12,
+                "provider_capabilities": [{
+                    "provider": "The Odds API",
+                    "markets": ["h2h", "spreads", "totals"],
+                    "provider_update_clock": True,
+                }],
+            },
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
             report = check_live("https://example.test", now=now)
@@ -41,6 +61,44 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
+        self.assertEqual(report["basketball_market_observations"], 0)
+        self.assertEqual(report["basketball_market_pregame"], 0)
+        self.assertEqual(report["football_market_observations"], 12)
+        self.assertEqual(report["football_market_pregame"], 12)
+
+    def test_rejects_malformed_market_metadata(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        responses = {
+            "/api/health": {"ok": True},
+            "/api/basketball/research/coverage?audit=1": {
+                "coverage": [{"dataset": "games"}],
+                "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "location_validation": {},
+                "possession_validation": {},
+            },
+            "/api/football/coverage": {
+                "coverage": [{"dataset": "games"}],
+                "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/forecasts?meta=1": {
+                "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/football/research/forecasts?meta=1": {
+                "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting?season=2027": {
+                "season": 2027,
+                "reviewed_at": "2026-09-10T18:00:00Z",
+                "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+            },
+            "/api/research/markets?meta=1&sport=basketball": {
+                "sport": "basketball", "total": 1, "pregame": 2, "provider_capabilities": [],
+            },
+        }
+        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+            with self.assertRaisesRegex(ValueError, "basketball market archive metadata"):
+                check_live("https://example.test", now=now)
 
     def test_rejects_stale_basketball_source(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
