@@ -50,6 +50,11 @@ const metrics = [
     use: "Lower is better. Always check the denominator and sample size before calling a player or team careless.",
   },
   {
+    name: "Fouls per game",
+    value: "Recorded personal fouls divided by games played in the NCAA player-box release.",
+    use: "Use it as a contact and availability signal alongside minutes, role and game log context. It is descriptive, not a discipline grade or forecast input.",
+  },
+  {
     name: "Offensive-rebound rate",
     value: "Offensive rebounds divided by offensive rebounds plus the opponent’s defensive rebounds.",
     use: "It estimates how often a team extends its own possessions. Match it against the opponent’s defensive rebounding.",
@@ -139,6 +144,7 @@ const metricTopics: Record<string, LearningTopic> = {
   "Tempo": "team",
   "Effective field-goal percentage (eFG%)": "player",
   "Turnover rate": "player",
+  "Fouls per game": "player",
   "Offensive-rebound rate": "team",
   "True shooting (TS%)": "player",
   RAPM: "impact",
@@ -166,6 +172,7 @@ const metricLinks: Record<string, string> = {
   Tempo: "/basketball/compare/",
   "Effective field-goal percentage (eFG%)": "/basketball/players/",
   "Turnover rate": "/basketball/ncaa-rankings/",
+  "Fouls per game": "/basketball/ncaa-rankings/?metric=fpg",
   "Offensive-rebound rate": "/basketball/ratings/",
   "True shooting (TS%)": "/basketball/players/",
   RAPM: "/basketball/impact/",
