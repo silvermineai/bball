@@ -356,6 +356,9 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
                                 k: summary[k]
                                 for k in [
                                     "games",
+                                    "source_records",
+                                    "dnp_records",
+                                    "excluded_records",
                                     "mpg",
                                     "ppg",
                                     "rpg",

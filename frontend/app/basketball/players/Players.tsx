@@ -327,6 +327,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Program",
                         "Position",
                         "Games",
+                        "Source records",
+                        "DNP records",
+                        "Excluded records",
                         "Minutes per game",
                         "Points per game",
                         "Rebounds per game",
@@ -349,6 +352,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.team,
                         p.position,
                         p.games,
+                        p.source_records,
+                        p.dnp_records,
+                        p.excluded_records,
                         p.mpg,
                         p.ppg,
                         p.rpg,
@@ -424,6 +430,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         {p.name}
                       </Link>
                       <small>{p.team}</small>
+                      <small>{p.source_records ?? p.games} source rows · {p.dnp_records ?? 0} DNP · {p.excluded_records ?? 0} excluded</small>
                       <small>
                         <Link href={comparisonHref(p)}>
                           Compare this season →

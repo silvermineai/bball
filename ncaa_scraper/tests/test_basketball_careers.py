@@ -111,6 +111,9 @@ class CareerTests(unittest.TestCase):
         self.assertEqual(result["coverage"]["field_coverage"]["pts"]["source_observed"], 1)
         self.assertEqual(result["coverage"]["field_coverage"]["pts"]["appearance_observed"], 1)
         self.assertEqual(result["players"][0]["games"], 1)
+        self.assertEqual(result["players"][0]["source_records"], 1)
+        self.assertEqual(result["players"][0]["dnp_records"], 0)
+        self.assertEqual(result["players"][0]["excluded_records"], 0)
         with self.assertRaisesRegex(ValueError, "Conflicting player"):
             ingest_season(
                 db, 2026, [ROW, {**ROW, "points": 11}], [GAME], [{"sha256": "c"}]
