@@ -25,7 +25,7 @@ export const ncaaPlayerRankings = new Hono<{ Bindings: Bindings }>();
 // field must stay unavailable; coercing it to zero would create a false
 // ranking value for sparse NCAA rows.
 const sourceSum = (path: string) => `CASE WHEN COUNT(json_extract(s.stats_json,'$.${path}')) > 0 THEN SUM(CAST(json_extract(s.stats_json,'$.${path}') AS REAL)) ELSE NULL END`;
-const sourceSumAny = (paths: string[]) => `CASE WHEN ${paths.map((path) => `COUNT(json_extract(s.stats_json,'$.${path}'))`).join(" + ")} > 0 THEN SUM(${paths.map((path) => `COALESCE(CAST(json_extract(s.stats_json,'$.${path}') AS REAL),0)`).join(" + ")}) ELSE NULL END`;
+const sourceSumAll = (paths: string[]) => `CASE WHEN ${paths.map((path) => `COUNT(json_extract(s.stats_json,'$.${path}')) = COUNT(*)`).join(" AND ")} THEN SUM(${paths.map((path) => `CAST(json_extract(s.stats_json,'$.${path}') AS REAL)`).join(" + ")}) ELSE NULL END`;
 
 const aggregate = (where: string) => `
   SELECT s.season, s.player_id, s.team_id,
@@ -38,7 +38,7 @@ const aggregate = (where: string) => `
     SUM(s.games) AS games,
     ${sourceSum("mins")} AS minutes,
     ${sourceSum("pts")} AS points,
-    ${sourceSumAny(["orb", "drb"])} AS rebounds,
+    ${sourceSumAll(["orb", "drb"])} AS rebounds,
     ${sourceSum("orb")} AS offensive_rebounds,
     ${sourceSum("drb")} AS defensive_rebounds,
     ${sourceSum("ast")} AS assists,

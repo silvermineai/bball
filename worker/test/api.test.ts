@@ -1247,6 +1247,25 @@ describe("bball api", () => {
     }
   });
 
+  it("requires both rebound components before deriving total rebounds", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 0 }),
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=rpg",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const aggregateSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("AS rebounds"));
+    expect(aggregateSql).toContain("COUNT(json_extract(s.stats_json,'$.orb')) = COUNT(*) AND COUNT(json_extract(s.stats_json,'$.drb')) = COUNT(*)");
+    expect(aggregateSql).not.toContain("COALESCE(CAST(json_extract(s.stats_json,'$.orb')");
+  });
+
   it("ranks NCAA finishing accuracy with the matching attempt denominator", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
