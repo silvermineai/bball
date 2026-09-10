@@ -68,8 +68,9 @@ export type RosterFilters = {
   picks: string[];
   minGames: number;
   minMinutes: number;
+  minStarterRate: number;
 };
-export type RosterObservationQuery = Pick<RosterFilters, "q" | "position" | "classYear" | "status" | "minGames" | "minMinutes">;
+export type RosterObservationQuery = Pick<RosterFilters, "q" | "position" | "classYear" | "status" | "minGames" | "minMinutes" | "minStarterRate">;
 
 const statusOrder: Record<string, number> = {
   different_program: 0,
@@ -87,6 +88,7 @@ const rosterStatuses = new Set<RosterStatus>([
 ]);
 const rosterGameThresholds = new Set([0, 5, 10, 20, 30]);
 const rosterMinuteThresholds = new Set([0, 200, 400, 600, 800]);
+const rosterStarterRateThresholds = new Set([0, 0.25, 0.5, 0.75]);
 const rosterSorts = new Set<RosterSortKey>([
   "status",
   "name",
@@ -149,6 +151,7 @@ export function parseRosterFilters(search: string): RosterFilters {
   const page = Number(params.get("rosterPage") || 0);
   const minGames = Number(params.get("rosterMinGames") || 0);
   const minMinutes = Number(params.get("rosterMinMinutes") || 0);
+  const minStarterRate = Number(params.get("rosterMinStarterRate") || 0);
   return {
     season: season === "2026" || season === "2025" ? season : "2027",
     q: params.get("rosterQ") || "",
@@ -160,6 +163,7 @@ export function parseRosterFilters(search: string): RosterFilters {
     picks: [...new Set(params.getAll("rosterPick").filter((v) => /^[1-9]\d{0,14}$/.test(v)))].slice(0, 12),
     minGames: Number.isInteger(minGames) && rosterGameThresholds.has(minGames) ? minGames : 0,
     minMinutes: Number.isInteger(minMinutes) && rosterMinuteThresholds.has(minMinutes) ? minMinutes : 0,
+    minStarterRate: Number.isFinite(minStarterRate) && rosterStarterRateThresholds.has(minStarterRate) ? minStarterRate : 0,
   };
 }
 
@@ -175,6 +179,7 @@ export function rosterFilterSearch(filters: RosterFilters) {
   if (filters.page) params.set("rosterPage", String(filters.page));
   if (filters.minGames) params.set("rosterMinGames", String(filters.minGames));
   if (filters.minMinutes) params.set("rosterMinMinutes", String(filters.minMinutes));
+  if (filters.minStarterRate) params.set("rosterMinStarterRate", String(filters.minStarterRate));
   filters.picks.slice(0, 12).forEach((id) => params.append("rosterPick", id));
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -197,6 +202,7 @@ export function filterRosterObservations(rows: BBRoster[], filters: RosterObserv
     (!filters.classYear || row.class_year === filters.classYear) &&
     (!filters.minGames || (row.prior_production?.games ?? 0) >= filters.minGames) &&
     (!filters.minMinutes || (row.prior_production?.minutes ?? 0) >= filters.minMinutes) &&
+    (!filters.minStarterRate || (row.prior_production?.starter_rate != null && row.prior_production.starter_rate >= filters.minStarterRate)) &&
     (filters.status === "all" || row.status === filters.status),
   );
 }

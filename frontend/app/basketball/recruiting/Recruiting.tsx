@@ -75,6 +75,7 @@ export default function Recruiting() {
     [teamSort, setTeamSort] = useState<"returning" | "prior" | "unrepresented" | "name">("returning"),
     [minGames, setMinGames] = useState(0),
     [minMinutes, setMinMinutes] = useState(0),
+    [minStarterRate, setMinStarterRate] = useState(0),
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [picks, setPicks] = useState<string[]>([]),
@@ -89,6 +90,7 @@ export default function Recruiting() {
     setSort(filters.sort);
     setMinGames(filters.minGames);
     setMinMinutes(filters.minMinutes);
+    setMinStarterRate(filters.minStarterRate);
     setPage(filters.page);
     setPicks(filters.picks);
     setHydrated(true);
@@ -106,6 +108,7 @@ export default function Recruiting() {
         sort,
         minGames,
         minMinutes,
+        minStarterRate,
         page,
         picks,
       }),
@@ -113,7 +116,7 @@ export default function Recruiting() {
     params.set("view", "observations");
     url.search = params.toString();
     window.history.replaceState(window.history.state, "", url);
-  }, [classYear, hydrated, minGames, minMinutes, page, picks, position, q, season, sort, status]);
+  }, [classYear, hydrated, minGames, minMinutes, minStarterRate, page, picks, position, q, season, sort, status]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : season === "2026" ? "rosters-2026" : "rosters-2025",
   );
@@ -158,6 +161,7 @@ export default function Recruiting() {
       classYear,
       minGames,
       minMinutes,
+      minStarterRate,
       status: status as RosterStatus,
     }),
     sort,
@@ -319,6 +323,15 @@ export default function Recruiting() {
             {[200, 400, 600, 800].map((value) => <option key={value} value={value}>{value.toLocaleString()}+ minutes</option>)}
           </select>
         </label>
+        <label className="control">
+          <span>MINIMUM REPORTED START RATE</span>
+          <select value={minStarterRate} onChange={(e) => { setMinStarterRate(Number(e.target.value)); setPage(0); }}>
+            <option value={0}>Any reported rate</option>
+            <option value={0.25}>25%+ when reported</option>
+            <option value={0.5}>50%+ when reported</option>
+            <option value={0.75}>75%+ when reported</option>
+          </select>
+        </label>
       </div>
       <p className="note" role="status" style={{ marginBottom: 8 }}>
         {liveRoster
@@ -351,7 +364,8 @@ export default function Recruiting() {
         imputed. Box BPM is a separate source-attributed publisher value and
         remains blank when that exact athlete/team release row is unavailable.
         Workload thresholds apply to the preceding source season and exclude
-        rows without enough recorded games or minutes.
+        rows without enough recorded games or minutes. A starter-rate threshold
+        also excludes rows where the source did not report a start flag.
       </p>
       {error ? (
         <p role="alert" className="status-error">
