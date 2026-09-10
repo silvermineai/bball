@@ -128,6 +128,7 @@ export default function NcaaRankings() {
       <div className="eyebrow">NCAA source archive / player rankings</div>
       <h1>Find the next<br /><em>difference maker.</em></h1>
       <p>Rank NCAA-derived production and exact-ID impact with a coach&apos;s minimum sample. Every board shows the source identity, workload and the metric used to order the list.</p>
+      <div className="hero-actions"><Link className="hero-link" href="/basketball/ncaa-compare/">Compare up to three NCAA players →</Link></div>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player/team rows</span></div>
