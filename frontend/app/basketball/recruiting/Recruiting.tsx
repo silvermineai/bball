@@ -511,7 +511,7 @@ export default function Recruiting() {
                   <tbody>
                     {pickedRows.map((player) => (
                       <tr key={`compare-${player.id}-${player.team_id}`}>
-                        <td><Link href={`/basketball/player/?id=${player.id}`}>{player.name}</Link><small>{player.id}</small></td>
+                        <td><Link href={`/basketball/player/?id=${player.id}&season=${Number(season) - 1}`}>{player.name}</Link><small>{player.id}</small></td>
                         <td>{player.team}<small>{labels[player.status]}</small></td>
                         <td className="numeric">{player.prior_production?.minutes?.toLocaleString() || "—"}</td>
                         <td className="numeric">{player.prior_production?.mpg == null ? "—" : player.prior_production.mpg.toFixed(1)}</td>
@@ -744,7 +744,7 @@ export default function Recruiting() {
                 {rows.slice(page * 40, page * 40 + 40).map((p) => (
                   <tr key={`${p.id}-${p.team_id}`}>
                     <td>
-                      <Link href={`/basketball/player/?id=${p.id}`}>
+                      <Link href={`/basketball/player/?id=${p.id}&season=${Number(season) - 1}`}>
                         {p.name}
                       </Link>
                       <small>
@@ -758,7 +758,7 @@ export default function Recruiting() {
                         </small>
                       )}
                       <small>
-                        <Link href={`/basketball/ncaa-rankings/?season=2026&q=${encodeURIComponent(p.name)}`}>
+                        <Link href={`/basketball/ncaa-rankings/?season=${Number(season) - 1}&q=${encodeURIComponent(p.name)}`}>
                           Search NCAA source board →
                         </Link>
                       </small>

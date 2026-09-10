@@ -783,7 +783,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 </p>
                 {exactRoster(p.name, p.team_id) && (
                   <p className="recruiting-eligibility">
-                    <Link href={`/basketball/player/?id=${encodeURIComponent(exactRoster(p.name, p.team_id)!.id)}`}>
+                    <Link href={`/basketball/player/?id=${encodeURIComponent(exactRoster(p.name, p.team_id)!.id)}&season=${sourceSeason}`}>
                       Open the matched source player file →
                     </Link>
                     {exactRoster(p.name, p.team_id)!.source_url && <a href={exactRoster(p.name, p.team_id)!.source_url!} target="_blank" rel="noreferrer"> · publisher roster source ↗</a>}
@@ -856,7 +856,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         averages do not establish a full-season role.
                       </small>
                     )}
-                    <Link href={`/basketball/player/?id=${p.stats.id}`}>
+                    <Link href={`/basketball/player/?id=${p.stats.id}&season=${sourceSeason}`}>
                       Historical player file →
                     </Link>
                     <Link href={comparisonHref(p.stats)}>
