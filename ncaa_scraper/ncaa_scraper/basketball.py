@@ -675,9 +675,12 @@ def _prior_production(rows):
         for key in (
             "ppg",
             "rpg",
+            "orpg",
+            "drpg",
             "apg",
             "spg",
             "bpg",
+            "fpg",
             "topg",
             "efg",
             "ts",

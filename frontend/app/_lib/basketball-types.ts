@@ -205,9 +205,12 @@ export type BBRoster = {
     starter_rate?: number | null;
     ppg: number | null;
     rpg: number | null;
+    orpg?: number | null;
+    drpg?: number | null;
     apg: number | null;
     spg?: number | null;
     bpg?: number | null;
+    fpg?: number | null;
     topg?: number | null;
     efg?: number | null;
     ts?: number | null;

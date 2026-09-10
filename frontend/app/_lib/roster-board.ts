@@ -8,7 +8,10 @@ export type RosterBoardSort =
   | "efg"
   | "box_bpm"
   | "apg"
-  | "rpg";
+  | "rpg"
+  | "orpg"
+  | "drpg"
+  | "fpg";
 
 export type RosterBoardStatus =
   | "all"
@@ -62,6 +65,9 @@ export function parseRosterBoardFilters(search: string): RosterBoardFilters {
     "box_bpm",
     "apg",
     "rpg",
+    "orpg",
+    "drpg",
+    "fpg",
   ];
   return {
     query: params.get("q") || "",
