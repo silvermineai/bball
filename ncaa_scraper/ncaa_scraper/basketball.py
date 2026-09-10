@@ -1826,24 +1826,30 @@ def main():
         # The ESPN-derived schedule, team-box and player-box releases begin in
         # 2023 in the local release cache. Keep the full completed 2023–26
         # window in the primary warehouse so the 2026–27 model has three
-        # complete prior seasons rather than silently dropping 2023–24.
-        for year in [2023, 2024, 2025, 2026, 2027]:
-            datasets = (
-                ["schedule", "team_box", "player_box"]
-                if year < 2026
-                else (
-                    [
-                        "schedule",
-                        "team_box",
-                        "rosters",
-                        "player_box",
-                        "player_season",
-                        "ncaa_rapm",
-                    ]
-                    if year == 2026
-                    else ["schedule", "rosters"]
+        # complete prior seasons rather than silently dropping 2023–24. The
+        # NCAA lineup release starts earlier, so include its 2019–22 editions
+        # in the same refresh without asking the ESPN catalogs for unavailable
+        # pre-2023 files.
+        for year in [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]:
+            if year < 2023:
+                datasets = []
+            else:
+                datasets = (
+                    ["schedule", "team_box", "player_box"]
+                    if year < 2026
+                    else (
+                        [
+                            "schedule",
+                            "team_box",
+                            "rosters",
+                            "player_box",
+                            "player_season",
+                            "ncaa_rapm",
+                        ]
+                        if year == 2026
+                        else ["schedule", "rosters"]
+                    )
                 )
-            )
             # The publisher's player-season release begins in 2025. Keep the
             # 2024 box-score archive intact while importing every available
             # attributed season into the source-stat browser.
