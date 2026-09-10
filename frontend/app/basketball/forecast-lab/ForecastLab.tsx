@@ -28,6 +28,14 @@ type Row = {
   prediction: NonNullable<BBGame["prediction"]>;
   scenario: BBRosterScenario | null;
   comparisons: Comparison[];
+  modelDelta: ModelDelta | null;
+};
+
+type ModelDelta = {
+  margin: number;
+  total: number;
+  winProbability: number;
+  latestModelId?: string;
 };
 
 type LiveModel = {
@@ -62,17 +70,23 @@ function signed(value: number | null | undefined, suffix = " pts") {
   return value == null || !Number.isFinite(value) ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}`;
 }
 
-function modelRow(game: BBGame, scenario: BBRosterScenario | undefined, comparisons: Comparison[] | undefined): Row | null {
+function modelRow(
+  game: BBGame,
+  scenario: BBRosterScenario | undefined,
+  comparisons: Comparison[] | undefined,
+  modelDelta: ModelDelta | null,
+): Row | null {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
-  return { game, prediction, scenario: scenario || null, comparisons: comparisons || [] };
+  return { game, prediction, scenario: scenario || null, comparisons: comparisons || [], modelDelta };
 }
 
 function sortRows(rows: Row[], sort: Sort) {
   return [...rows].sort((a, b) => {
     if (sort === "date") return a.game.starts_at.localeCompare(b.game.starts_at);
     if (sort === "disagreement") {
-      return Math.abs(b.scenario?.margin_delta || 0) - Math.abs(a.scenario?.margin_delta || 0)
+      return Math.max(Math.abs(b.scenario?.margin_delta || 0), Math.abs(b.modelDelta?.margin || 0))
+        - Math.max(Math.abs(a.scenario?.margin_delta || 0), Math.abs(a.modelDelta?.margin || 0))
         || a.game.starts_at.localeCompare(b.game.starts_at);
     }
     if (sort === "confidence") {
@@ -108,6 +122,8 @@ export default function ForecastLab({
   const [liveMarkets, setLiveMarkets] = useState<Record<string, Comparison[]> | null>(null);
   const [liveMarketsError, setLiveMarketsError] = useState("");
   const [liveGamesError, setLiveGamesError] = useState("");
+  const [latestGames, setLatestGames] = useState<BBGame[] | null>(null);
+  const [latestGamesError, setLatestGamesError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
   const activeGames = liveGames || overview.upcoming;
 
@@ -148,6 +164,29 @@ export default function ForecastLab({
   }, [modelSelection, overview.upcoming]);
 
   useEffect(() => {
+    if (modelSelection === "latest") {
+      setLatestGames(null);
+      setLatestGamesError("");
+      return;
+    }
+    const controller = new AbortController();
+    setLatestGames(null);
+    loadLiveBasketballForecasts(controller.signal, { model: "latest" })
+      .then((rows) => {
+        if (!controller.signal.aborted) {
+          setLatestGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
+          setLatestGamesError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLatestGamesError(reason instanceof Error ? reason.message : "Latest model forecasts unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [modelSelection, overview.upcoming]);
+
+  useEffect(() => {
     const controller = new AbortController();
     loadLiveBasketballMarketComparisons(controller.signal)
       .then((value) => {
@@ -171,26 +210,48 @@ export default function ForecastLab({
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
+    const latestById = new Map(
+      (modelSelection === "latest" ? activeGames : latestGames || []).map((game) => [game.id, game]),
+    );
     const candidates = activeGames
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
       .map((game) => modelRow(
         game,
         modelSelection === "latest" ? scenarioByGame.get(game.id) : undefined,
         modelSelection === "latest" ? (liveMarkets || markets)[game.id] : undefined,
+        modelSelection === "latest"
+          ? null
+          : (() => {
+              const latest = latestById.get(game.id)?.prediction;
+              const selected = game.prediction;
+              return latest && selected
+                ? {
+                    margin: selected.home_margin - latest.home_margin,
+                    total: selected.total - latest.total,
+                    winProbability: selected.home_win_probability - latest.home_win_probability,
+                    latestModelId: liveCatalog?.models[0]?.model_id,
+                  }
+                : null;
+            })(),
       ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
         if (view === "scenario") return !!row.scenario;
         if (view === "cold-start") return !row.game.prediction && !!row.game.fallback_prediction;
         if (view === "market") return row.comparisons.length > 0;
+        if (view === "model-delta") return !!row.modelDelta;
         return true;
       }),
       sort,
     );
-  }, [activeGames, liveMarkets, markets, modelSelection, query, scenarioByGame, sort, view]);
+  }, [activeGames, latestGames, liveCatalog, liveMarkets, markets, modelSelection, query, scenarioByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
-  const disagreement = rows.filter((row) => row.scenario).reduce((best, row) => Math.max(best, Math.abs(row.scenario!.margin_delta)), 0);
+  const disagreement = rows.reduce(
+    (best, row) => Math.max(best, Math.abs(row.scenario?.margin_delta || 0), Math.abs(row.modelDelta?.margin || 0)),
+    0,
+  );
+  const modelDeltaCount = rows.filter((row) => row.modelDelta).length;
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const activeMarkets = liveMarkets || markets;
   const verifiedMarketGames = modelSelection === "latest"
@@ -216,7 +277,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Brief"],
+      ["Scheduled start", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         row.game.away_name,
@@ -235,6 +296,10 @@ export default function ForecastLab({
         marketQuote(row.comparisons, "totals")?.model_difference,
         marketQuote(row.comparisons, "h2h")?.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100,
         marketQuote(row.comparisons, "h2h")?.model_difference == null ? null : marketQuote(row.comparisons, "h2h")!.model_difference * 100,
+        row.modelDelta?.margin,
+        row.modelDelta?.total,
+        row.modelDelta?.winProbability == null ? null : row.modelDelta.winProbability * 100,
+        row.modelDelta?.latestModelId,
         row.game.prediction ? `https://bball.silvermine.dev/basketball/briefs/${row.game.id}/` : null,
       ]),
     ),
@@ -253,19 +318,20 @@ export default function ForecastLab({
       <div className="toolbar">
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
         <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{model.version || model.model_id} · {model.forecasts.toLocaleString()} rows</option>)}</select></label>
-        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option></select></label>
+        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
       </div>
       <div className="button-row" style={{ marginTop: 12 }}>
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
-        <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest scenario shift</span></div>
+        <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
+        <div><strong>{modelDeltaCount.toLocaleString()}</strong><span>Edition deltas in view</span></div>
       </div>
       <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
         <div className="paper-panel">
@@ -302,6 +368,7 @@ export default function ForecastLab({
           : liveGamesError
             ? `${liveGamesError} Showing the published static edition.`
             : "Checking live matchup rows…"}
+        {latestGamesError && modelSelection !== "latest" ? ` ${latestGamesError} Edition deltas are unavailable.` : ""}
       </p>
       {marketRow && (
         <section className="section market-workbench">
@@ -338,7 +405,7 @@ export default function ForecastLab({
       </div>
       <div className="table-scroll">
       <table className="data-table">
-          <thead><tr><th>Game</th><th>Primary model</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th></tr></thead>
+          <thead><tr><th>Game</th><th>Primary model</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th><th>Edition delta</th></tr></thead>
           <tbody>{rows.map((row) => {
             const p = row.prediction;
             const confidence = Math.max(p.home_win_probability, 1 - p.home_win_probability);
@@ -348,6 +415,7 @@ export default function ForecastLab({
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary</small><small>prior net + exact-ID continuity</small></> : <span>—</span>}</td>
               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side confidence</small><small>{numeric(p.pace, 1)} possessions</small></td>
               <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small>{marketQuote(row.comparisons, "spreads") && <small>Spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>Total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>No-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}</> : <span className="muted">No verified market quote</span>}</td>
+              <td className="numeric">{row.modelDelta ? <><strong>{signed(row.modelDelta.margin)}</strong><small>margin vs latest</small><small>{signed(row.modelDelta.total)} total · {signed(row.modelDelta.winProbability * 100, " pp")} home probability</small></> : <span className="muted">—</span>}</td>
             </tr>;
           })}</tbody>
         </table>

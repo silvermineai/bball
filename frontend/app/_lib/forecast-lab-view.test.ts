@@ -17,4 +17,10 @@ describe("forecast lab filters", () => {
     expect(filters.model).toBe("model-2027-a");
     expect(forecastLabFilterSearch(filters)).toBe("?model=model-2027-a");
   });
+  it("round-trips the model edition delta view", () => {
+    const filters = parseForecastLabFilters("?view=model-delta&model=model-2027-a");
+    expect(filters.view).toBe("model-delta");
+    expect(forecastLabFilterSearch(filters)).toBe("?view=model-delta&model=model-2027-a");
+  });
+
 });

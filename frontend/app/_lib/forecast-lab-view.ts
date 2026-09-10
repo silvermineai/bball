@@ -1,7 +1,7 @@
-export type ForecastLabView = "all" | "scenario" | "cold-start" | "market";
+export type ForecastLabView = "all" | "scenario" | "cold-start" | "market" | "model-delta";
 export type ForecastLabSort = "date" | "disagreement" | "confidence" | "uncertainty";
 
-const views = new Set<ForecastLabView>(["all", "scenario", "cold-start", "market"]);
+const views = new Set<ForecastLabView>(["all", "scenario", "cold-start", "market", "model-delta"]);
 const sorts = new Set<ForecastLabSort>(["date", "disagreement", "confidence", "uncertainty"]);
 
 export const parseForecastLabFilters = (search: string) => {
