@@ -158,6 +158,36 @@ export type RecruitingTeam = {
   srsRank: number | null;
 } & RosterInfo;
 
+export type RosterMovementPlayer = {
+  id: string;
+  name: string;
+  team_id: string;
+  team: string;
+  previous_teams: string[];
+  status: "same_program" | "different_program" | "new_to_dataset" | "ambiguous";
+  previous_games: number | null;
+  previous_minutes: number | null;
+  position: string | null;
+  class_year: string | null;
+  height: string | null;
+  weight: string | null;
+  source_url: string | null;
+};
+
+export type RosterMovement = {
+  season: number;
+  previous_season: number;
+  basis: string;
+  teams_observed: number;
+  players_observed: number;
+  prior_players_not_observed: number;
+  unusable_rows: number;
+  status_counts: Record<string, number>;
+  players: RosterMovementPlayer[];
+  player_filter: { status: string; limit: number };
+  source: { dataset: string; url: string | null; fetched_at: string | null; sha256: string | null } | null;
+};
+
 export type Meta = {
   season: string;
   generated: string;
@@ -211,6 +241,8 @@ export const insights = {
   scout: (teamId: number | string) => fetchJson<ScoutReport>(`/data/scout/${teamId}.json`),
   news: () => fetchJson<{ articles: NewsArticle[] }>("/data/news.json"),
   recruiting: () => fetchJson<{ season: string; teams: RecruitingTeam[] }>("/data/recruiting.json"),
+  rosterMovement: (season: number, status: RosterMovementPlayer["status"] | "all" = "different_program", limit = 120) =>
+    fetchJson<RosterMovement>(`/api/basketball/research/rosters?season=${season}&status=${status}&limit=${limit}`),
   film: () => fetchJson<{ videos: FilmVideo[] }>("/data/film.json"),
   conferences: () => fetchJson<{ season: string; conferences: Conference[] }>("/data/conferences.json"),
 };

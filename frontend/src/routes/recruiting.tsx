@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { GraduationCap, Plus, Trash2, UserRoundSearch } from "lucide-react";
+import { ExternalLink, GraduationCap, Plus, Trash2, UserRoundSearch } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTitle, TeamMark, TeamPicker } from "@/components/Annual";
 import { insights } from "@/lib/insights";
@@ -36,6 +36,13 @@ function RecruitingPage() {
   const { data: recruitingData } = useQuery({ queryKey: ["insights", "recruiting"], queryFn: insights.recruiting, staleTime: Infinity });
   const { data: teamsData } = useQuery({ queryKey: ["insights", "teams"], queryFn: insights.teams, staleTime: Infinity });
   const { data: newsData } = useQuery({ queryKey: ["insights", "news"], queryFn: insights.news, staleTime: Infinity });
+  const [movementSeason, setMovementSeason] = useState(2026);
+  const [movementStatus, setMovementStatus] = useState<"different_program" | "new_to_dataset" | "all">("different_program");
+  const { data: movementData, isLoading: movementLoading } = useQuery({
+    queryKey: ["insights", "roster-movement", movementSeason, movementStatus],
+    queryFn: () => insights.rosterMovement(movementSeason, movementStatus, 120),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const [myTeam, setMyTeam] = useState<TeamIndexEntry | null>(null);
   const [sort, setSort] = useState<"departing" | "rank">("departing");
@@ -67,6 +74,10 @@ function RecruitingPage() {
 
   const recruitingNews = (newsData?.articles ?? []).filter((a) =>
     /recruit|transfer|portal|commit|sign|class of|prospect/i.test(`${a.headline} ${a.description}`),
+  );
+  const movementPlayers = useMemo(
+    () => [...(movementData?.players ?? [])].sort((a, b) => (b.previous_minutes ?? -1) - (a.previous_minutes ?? -1)),
+    [movementData],
   );
 
   return (
@@ -236,8 +247,86 @@ function RecruitingPage() {
         <p className="mt-2 text-[11px] text-graphite">Top 80 shown. Departures = seniors + graduates on the final roster; eligibility waivers not modeled.</p>
       </section>
 
-      {/* recruiting wire */}
+      {/* player movement */}
       <section className="rise rise-4">
+        <SectionTitle
+          kicker="Player movement"
+          title="Portal watch, with evidence"
+          right={
+            <div className="flex flex-wrap gap-2">
+              <select
+                aria-label="Movement season"
+                className="rounded-md border-line bg-white text-sm"
+                value={movementSeason}
+                onChange={(e) => setMovementSeason(Number(e.target.value))}
+              >
+                <option value={2026}>2025–26 observed</option>
+                <option value={2027}>2026–27 listed</option>
+              </select>
+              <select
+                aria-label="Movement status"
+                className="rounded-md border-line bg-white text-sm"
+                value={movementStatus}
+                onChange={(e) => setMovementStatus(e.target.value as typeof movementStatus)}
+              >
+                <option value="different_program">Changed program</option>
+                <option value="new_to_dataset">New to dataset</option>
+                <option value="all">All observations</option>
+              </select>
+            </div>
+          }
+        />
+        <div className="mt-3 rounded-lg border border-line bg-white shadow-panel">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper px-4 py-3 text-[12px] text-graphite">
+            <span>
+              {movementLoading ? "Loading roster observations…" : `${movementPlayers.length} player observations shown`}
+              {movementData ? ` · ${movementData.players_observed.toLocaleString()} total in the source view` : ""}
+            </span>
+            {movementData?.source?.url ? (
+              <a className="inline-flex items-center gap-1 font-stat text-[10px] uppercase tracking-wider text-court hover:text-ink" href={movementData.source.url} target="_blank" rel="noreferrer">
+                Source release <ExternalLink size={12} />
+              </a>
+            ) : null}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[12.5px]">
+              <thead>
+                <tr className="font-stat text-[10px] uppercase tracking-wider text-graphite">
+                  <th className="px-4 py-2 text-left">Player</th>
+                  <th className="px-4 py-2 text-left">New program</th>
+                  <th className="px-4 py-2 text-left">Previous program</th>
+                  <th className="px-4 py-2 text-center">Pos.</th>
+                  <th className="px-4 py-2 text-right">Prior minutes</th>
+                  <th className="px-4 py-2 text-right">Prior games</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {movementPlayers.slice(0, 50).map((player) => (
+                  <tr key={`${player.id}-${player.team_id}`} className="rule-thin">
+                    <td className="px-4 py-2 font-medium">{player.name}</td>
+                    <td className="px-4 py-2">{player.team}</td>
+                    <td className="px-4 py-2 text-graphite">{player.previous_teams.length ? player.previous_teams.join(", ") : "Not recorded"}</td>
+                    <td className="px-4 py-2 text-center font-stat">{player.position ?? "—"}</td>
+                    <td className="px-4 py-2 text-right font-stat">{player.previous_minutes == null ? "—" : player.previous_minutes.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right font-stat">{player.previous_games == null ? "—" : player.previous_games.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">
+                      {player.source_url ? <a href={player.source_url} target="_blank" rel="noreferrer" aria-label={`Open ${player.name} source`} className="inline-flex text-court hover:text-ink"><ExternalLink size={14} /></a> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!movementLoading && movementPlayers.length === 0 ? <p className="px-4 py-8 text-sm text-graphite">No player rows match this filter in the current release.</p> : null}
+        </div>
+        <p className="mt-2 text-[11px] text-graphite">
+          2025–26 rows compare recorded participation across seasons. 2026–27 rows are source roster listings and do not establish a transfer, commitment, or eligibility decision. Minutes and games are prior-season observations.
+        </p>
+      </section>
+
+      {/* recruiting wire */}
+      <section className="rise rise-5">
         <SectionTitle kicker="The Wire" title="Recruiting & portal news" />
         <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {recruitingNews.slice(0, 9).map((a) => (

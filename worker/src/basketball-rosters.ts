@@ -5,6 +5,8 @@ import { researchDb } from "./research-db";
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
+  status: z.enum(["all", "same_program", "different_program", "new_to_dataset", "ambiguous"]).default("all"),
+  limit: z.coerce.number().int().min(1).max(1000).default(1000),
 });
 
 type RosterRow = { team_id: string; athlete_id: string; profile_json: string };
@@ -33,7 +35,7 @@ const readProfile = (value: string): Record<string, unknown> => {
 export const basketballRosters = new Hono<{ Bindings: Env }>();
 
 basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
-  const { season } = c.req.valid("query");
+  const { season, status, limit } = c.req.valid("query");
   const previousSeason = season - 1;
   const sourceDataset = season === 2026 ? "player_box" : "rosters";
   const db = researchDb(c.env);
@@ -108,6 +110,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
       return typeof candidate === "string" && candidate ? candidate : teamNames.get(id) || id;
     }).sort();
     const sourceUrl = profile.link_web;
+    const previousGames = old.reduce((sum, row) => sum + Number(row.games || 0), 0);
+    const previousMinutes = old.reduce((sum, row) => sum + Number(row.minutes || 0), 0);
     return [{
       id: athlete_id,
       name,
@@ -115,6 +119,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
       team: typeof profile.team_display_name === "string" && profile.team_display_name ? profile.team_display_name : teamNames.get(team_id) || team_id,
       previous_teams: previousTeams,
       status,
+      previous_games: Number.isFinite(previousGames) ? previousGames : null,
+      previous_minutes: Number.isFinite(previousMinutes) ? Math.round(previousMinutes * 10) / 10 : null,
       position: typeof profile.position_abbreviation === "string" ? profile.position_abbreviation : null,
       class_year: typeof profile.experience_display_value === "string" ? profile.experience_display_value : null,
       height: typeof profile.height === "string" ? profile.height : null,
@@ -162,6 +168,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     };
   }).sort((a, b) => a.team.localeCompare(b.team));
 
+  const filteredPlayers = (status === "all" ? players : players.filter((player) => player.status === status)).slice(0, limit);
+
   let receipt: Record<string, unknown> | null = null;
   try { receipt = source?.receipt_json ? JSON.parse(source.receipt_json) as Record<string, unknown> : null; } catch { receipt = null; }
   c.header("Cache-Control", "public, max-age=300");
@@ -175,7 +183,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     unusable_rows: unusableRows,
     status_counts: statusCounts,
     team_summaries: teamSummaries,
-    players,
+    players: filteredPlayers,
+    player_filter: { status, limit },
     source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });
 });
