@@ -63,6 +63,17 @@ export default function Page() {
     new Set(footballEvents.editions.map((edition) => edition.season)),
   ).sort((a, b) => a - b);
   const rosters = getRosters();
+  const rosterSnapshots = [2025, 2026, 2027].map((season) => {
+    const filename = season === 2027 ? "rosters.json" : `rosters-${season}.json`;
+    const snapshot = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), "public/data/basketball", filename), "utf8"),
+    ) as {
+      season: number;
+      teams_observed: number;
+      players_observed: number;
+    };
+    return snapshot;
+  });
   const rosterSourceProfiles = rosters.players.filter((player) => player.source_url).length;
   const rosterBpmRows = rosters.players.filter(
     (player) => player.prior_production?.box_bpm != null,
@@ -186,6 +197,15 @@ export default function Page() {
       latest: history.generated_at,
       url: history.sources[0]?.[0]?.url ?? null,
       note: "SportsDataverse box rows; source IDs and incomplete fields stay explicit.",
+    },
+    {
+      key: "roster-snapshots",
+      label: "Dated roster snapshots",
+      rows: rosterSnapshots.reduce((sum, snapshot) => sum + snapshot.players_observed, 0),
+      seasons: rosterSnapshots.map((snapshot) => snapshot.season),
+      latest: basketball.coverage.datasets?.find((dataset) => dataset.key === "rosters")?.latest_source_at || basketball.generated_at,
+      url: basketball.coverage.datasets?.find((dataset) => dataset.key === "rosters")?.source_url ?? null,
+      note: "Three source-listed editions (2024–25, 2025–26 and 2026–27) used for dated workload continuity; listings do not establish eligibility or departure.",
     },
     {
       key: "ncaa-player-box",
@@ -618,6 +638,16 @@ export default function Page() {
               <span>Observed 2026–27 roster listings</span>
               <strong>{count(rosters.players_observed)}</strong>
             </div>
+            {rosterSnapshots.map((snapshot) => (
+              <div key={snapshot.season}>
+                <span>
+                  {snapshot.season - 1}–{String(snapshot.season).slice(-2)} source roster snapshot
+                </span>
+                <strong>
+                  {count(snapshot.players_observed)} · {count(snapshot.teams_observed)} programs
+                </strong>
+              </div>
+            ))}
             <div>
               <span>Programs in roster source view</span>
               <strong>{count(rosters.teams_observed)}</strong>
