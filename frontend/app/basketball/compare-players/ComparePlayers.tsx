@@ -412,6 +412,9 @@ export default function ComparePlayers({
                     {r.summary.incomplete_box_games > 0 &&
                       ` · ${r.summary.incomplete_box_games} incomplete box games`}
                   </p>
+                  <p className="pc-sample">
+                    {r.availability.starts} recorded starts · {r.availability.dnp_games} reported DNP · {r.availability.starter_rate == null ? "start rate unavailable" : `${fmt(r.availability.starter_rate * 100, 1)}% start rate`}
+                  </p>
                   <Link
                     className="hero-link"
                     href={`/basketball/player/?id=${s.id}&season=${s.season}`}
@@ -688,6 +691,9 @@ export default function ComparePlayers({
                     {r.summary.source_records} program source rows ·{" "}
                     {r.summary.dnp_records} reported DNP ·{" "}
                     {r.summary.excluded_records} excluded from playing averages.
+                  </p>
+                  <p>
+                    {r.availability.starts} recorded starts across {r.availability.played_games} playing appearances; the source reports {r.availability.dnp_games} DNP rows. This is participation evidence, not an injury, transfer or eligibility determination.
                   </p>
                   <dl className="raw-stat-grid">
                     {Object.entries(r.summary.samples).map(([field, n]) => (

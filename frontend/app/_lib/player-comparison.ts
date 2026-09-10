@@ -1,12 +1,14 @@
 import type { BBPlayer } from "./basketball-types";
 import type {
   CareerCatalog,
+  CareerAvailability,
   CareerCoverage,
   CareerData,
   CareerSource,
   CareerSummary,
   StatKey,
 } from "./careers";
+import { careerAvailability } from "./careers";
 
 export type Selection = { season: number; id: string; team_id: string };
 export type SeasonPlayers = {
@@ -23,6 +25,7 @@ export type Comparison = {
   coverage: CareerCoverage;
   sources: CareerSource[];
   peers: BBPlayer[];
+  availability: CareerAvailability;
 };
 export type Basis = "per40" | "perGame";
 export const selectionKey = (s: Selection) =>
@@ -133,6 +136,7 @@ export function joinComparison(
     coverage: index.coverage,
     sources: data.sources,
     peers: index.players,
+    availability: careerAvailability(data.rows),
   };
 }
 export const counting = [
@@ -283,6 +287,10 @@ export function comparisonCsv(records: Comparison[], basis: Basis) {
       "minutes",
       "incomplete_box_games",
       "qualified",
+      "played_games",
+      "starts",
+      "starter_rate",
+      "dnp_games",
       "metric",
       "unit",
       "value",
@@ -300,6 +308,10 @@ export function comparisonCsv(records: Comparison[], basis: Basis) {
       r.summary.totals.min,
       r.summary.incomplete_box_games,
       r.summary.qualified,
+      r.availability.played_games,
+      r.availability.starts,
+      r.availability.starter_rate,
+      r.availability.dnp_games,
     ];
     counting.forEach(([field]) =>
       rows.push([
