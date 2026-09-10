@@ -86,8 +86,8 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
     return total, pregame, len(capabilities)
 
 
-def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int]:
-    """Validate the player archive and ensure the derived APG field is live."""
+def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int, int]:
+    """Validate the player archive and ensure derived assist fields are live."""
     seasons = careers.get("seasons")
     if not isinstance(seasons, list) or not seasons:
         raise ValueError("basketball player archive has no seasons")
@@ -121,7 +121,10 @@ def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int
     d1_apg = divisions["1"].get("apg")
     if not isinstance(d1_apg, int) or d1_apg <= 0:
         raise ValueError("NCAA leader archive has no Division I assists-per-game values")
-    return identified, entries, d1_apg
+    d1_ast = divisions["1"].get("ast")
+    if not isinstance(d1_ast, int) or d1_ast <= 0:
+        raise ValueError("NCAA leader archive has no Division I total-assist values")
+    return identified, entries, d1_apg, d1_ast
 
 
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
@@ -173,7 +176,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
 
     careers = get_json(base_url, "/api/basketball/research/careers/meta")
     leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
-    player_identified, player_entries, ncaa_d1_apg = player_catalog_metadata(careers, leaders)
+    player_identified, player_entries, ncaa_d1_apg, ncaa_d1_ast = player_catalog_metadata(careers, leaders)
 
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
@@ -221,6 +224,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "basketball_player_identified_rows": player_identified,
         "basketball_player_team_entries": player_entries,
         "ncaa_d1_apg_values": ncaa_d1_apg,
+        "ncaa_d1_ast_values": ncaa_d1_ast,
         # Keep provider intake and reviewed school evidence separate. The
         # former can be zero when no licensed export is configured while the
         # latter remains the public recruiting release.

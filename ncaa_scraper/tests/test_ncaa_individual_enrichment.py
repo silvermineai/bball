@@ -3,7 +3,7 @@ import sqlite3
 import unittest
 
 from ncaa_scraper.ncaa_individual import SCHEMA
-from ncaa_scraper.ncaa_individual_enrichment import box_apg, enrich_release
+from ncaa_scraper.ncaa_individual_enrichment import box_apg, box_assist_totals, enrich_release
 
 
 class NCAAIndividualEnrichmentTests(unittest.TestCase):
@@ -31,23 +31,28 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
 
     def test_counts_distinct_contests(self):
         self.assertEqual(box_apg(self.conn)["101"], (7.5, 2))
+        self.assertEqual(box_assist_totals(self.conn)["101"], (15.0, 2))
 
     def test_enrichment_uses_exact_ids_and_preserves_existing_values(self):
         release = {
             "schema_version": 1,
             "season": 2026,
-            "coverage": {"divisions": {"1": {"apg": 0}}},
+            "coverage": {"divisions": {"1": {"apg": 0, "ast": 0}}},
             "players": [
-                {"player_id": "101", "division": 1, "apg": None},
-                {"player_id": "202", "division": 1, "apg": 3.0},
-                {"player_id": "303", "division": 1, "apg": None},
+                {"player_id": "101", "division": 1, "apg": None, "ast": None},
+                {"player_id": "202", "division": 1, "apg": 3.0, "ast": None},
+                {"player_id": "303", "division": 1, "apg": None, "ast": None},
             ],
         }
         enriched = enrich_release(release, self.conn, {"sha256": "a" * 64, "url": "box"})
         self.assertEqual(enriched["players"][0]["apg"], 7.5)
+        self.assertEqual(enriched["players"][0]["ast"], 15)
         self.assertEqual(enriched["players"][1]["apg"], 3.0)
+        self.assertEqual(enriched["players"][1]["ast"], 99)
         self.assertIsNone(enriched["players"][2]["apg"])
         self.assertEqual(enriched["supplements"]["apg"]["values"], 1)
+        self.assertEqual(enriched["supplements"]["ast"]["values"], 2)
+        self.assertEqual(enriched["coverage"]["divisions"]["1"]["ast"], 2)
         self.assertEqual(enriched["supplements"]["apg"]["source_sha256"], "a" * 64)
 
 

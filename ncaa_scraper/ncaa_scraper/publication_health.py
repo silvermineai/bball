@@ -65,15 +65,19 @@ def _season_snapshot(release: str, payload: dict) -> dict:
 
 
 def _ncaa_individual_health(payload: dict) -> dict:
-    """Require the exact-ID APG supplement used by the live leaderboard."""
+    """Require exact-ID APG and total-assist supplements used by the live leaderboard."""
     supplements = payload.get("supplements")
     apg = supplements.get("apg") if isinstance(supplements, dict) else None
+    ast = supplements.get("ast") if isinstance(supplements, dict) else None
     coverage = payload.get("coverage")
     divisions = coverage.get("divisions") if isinstance(coverage, dict) else None
     d1 = divisions.get("1") if isinstance(divisions, dict) else None
     source_hash = apg.get("source_sha256") if isinstance(apg, dict) else None
     values = apg.get("values") if isinstance(apg, dict) else None
     d1_values = d1.get("apg") if isinstance(d1, dict) else None
+    ast_source_hash = ast.get("source_sha256") if isinstance(ast, dict) else None
+    ast_values = ast.get("values") if isinstance(ast, dict) else None
+    d1_ast_values = d1.get("ast") if isinstance(d1, dict) else None
     if (
         not isinstance(apg, dict)
         or not isinstance(values, int)
@@ -85,12 +89,24 @@ def _ncaa_individual_health(payload: dict) -> dict:
         or not isinstance(apg.get("basis"), str)
         or not isinstance(source_hash, str)
         or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+        or not isinstance(ast, dict)
+        or not isinstance(ast_values, int)
+        or isinstance(ast_values, bool)
+        or ast_values <= 0
+        or not isinstance(d1_ast_values, int)
+        or isinstance(d1_ast_values, bool)
+        or d1_ast_values <= 0
+        or not isinstance(ast.get("basis"), str)
+        or not isinstance(ast_source_hash, str)
+        or not re.fullmatch(r"[a-f0-9]{64}", ast_source_hash)
     ):
-        raise ValueError("basketball/ncaa-individual.json has no valid exact-ID APG supplement")
+        raise ValueError("basketball/ncaa-individual.json has no valid exact-ID APG/AST supplements")
     return {
         "release": "basketball/ncaa-individual.json#apg-supplement",
         "supplemented_values": values,
         "division_i_values": d1_values,
+        "supplemented_ast_values": ast_values,
+        "division_i_ast_values": d1_ast_values,
         "source_sha256": source_hash,
     }
 

@@ -124,6 +124,7 @@ export default function NCAAIndividual() {
   ));
   const sourceCoverage = liveMeta?.coverage || data?.coverage;
   const apgSupplement = data?.supplements?.apg;
+  const astSupplement = data?.supplements?.ast;
   const divisionCount = division === "all"
     ? Object.values(sourceCoverage?.divisions || {}).reduce((sum, d) => sum + d.players, 0)
     : sourceCoverage?.divisions[division]?.players || 0;
@@ -163,11 +164,17 @@ export default function NCAAIndividual() {
           <div><strong>{(liveMeta?.season || data?.season || 2026) - 1}–{String(liveMeta?.season || data?.season || 2026).slice(-2)}</strong><span>Final statistics season</span></div>
           <div><strong>{data?.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "D1"}</strong><span>Source snapshot</span></div>
         </div>
-        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError || "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game may be a derived supplement from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for that field. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError || "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game and total assists may be derived supplements from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for those fields. They are source leaderboards, not a complete census or a recruiting ranking.</p>
         {stat === "apg" && apgSupplement && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Assists per game uses an exact-ID Division I supplement.</strong>
             <p>{apgSupplement.values.toLocaleString()} Division I values for {apgSupplement.season - 1}–{String(apgSupplement.season).slice(-2)} are derived from <em>{apgSupplement.dataset}</em>: {apgSupplement.basis}. {apgSupplement.publisher_rank}. <a href={apgSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+          </div>
+        )}
+        {stat === "ast" && astSupplement && (
+          <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
+            <strong>Total assists uses an exact-ID Division I supplement.</strong>
+            <p>{astSupplement.values.toLocaleString()} Division I values for {astSupplement.season - 1}–{String(astSupplement.season).slice(-2)} are derived from <em>{astSupplement.dataset}</em>: {astSupplement.basis}. {astSupplement.publisher_rank}. <a href={astSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
           </div>
         )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (

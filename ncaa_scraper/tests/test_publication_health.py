@@ -130,21 +130,27 @@ class PublicationHealthTest(unittest.TestCase):
                 )
             self.assertIn("history/index.json", str(error.exception))
 
-    def test_ncaa_individual_requires_exact_id_apg_supplement(self):
+    def test_ncaa_individual_requires_exact_id_assist_supplements(self):
         payload = {
-            "coverage": {"divisions": {"1": {"apg": 1791}}},
+            "coverage": {"divisions": {"1": {"apg": 1791, "ast": 1791}}},
             "supplements": {
                 "apg": {
                     "values": 1791,
                     "basis": "sum of source assists divided by distinct source contests",
                     "source_sha256": "a" * 64,
                 },
+                "ast": {
+                    "values": 1791,
+                    "basis": "sum of source assists across distinct source contests",
+                    "source_sha256": "a" * 64,
+                },
             },
         }
         report = _ncaa_individual_health(payload)
         self.assertEqual(report["division_i_values"], 1791)
+        self.assertEqual(report["division_i_ast_values"], 1791)
         payload["supplements"]["apg"]["source_sha256"] = "bad"
-        with self.assertRaisesRegex(ValueError, "exact-ID APG"):
+        with self.assertRaisesRegex(ValueError, "exact-ID APG/AST"):
             _ncaa_individual_health(payload)
 
     def test_basketball_requires_matching_ncaa_season(self):

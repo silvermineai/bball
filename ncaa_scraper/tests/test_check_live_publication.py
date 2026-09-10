@@ -35,7 +35,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "coverage": {
                     "players": 3842,
                     "divisions": {
-                        "1": {"players": 1791, "apg": 1791},
+                        "1": {"players": 1791, "apg": 1791, "ast": 1791},
                         "2": {"players": 1020, "apg": 0},
                         "3": {"players": 1031, "apg": 0},
                     },
@@ -79,6 +79,7 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["basketball_player_identified_rows"], 196865)
         self.assertEqual(report["basketball_player_team_entries"], 9990)
         self.assertEqual(report["ncaa_d1_apg_values"], 1791)
+        self.assertEqual(report["ncaa_d1_ast_values"], 1791)
         self.assertEqual(report["basketball_market_observations"], 0)
         self.assertEqual(report["basketball_market_pregame"], 0)
         self.assertEqual(report["football_market_observations"], 12)
@@ -111,7 +112,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/ncaa-leaders?meta=1": {
                 "season": 2026,
                 "coverage": {"players": 3842, "divisions": {
-                    "1": {"players": 1791, "apg": 1791},
+                    "1": {"players": 1791, "apg": 1791, "ast": 1791},
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},
@@ -191,7 +192,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/ncaa-leaders?meta=1": {
                 "season": 2026,
                 "coverage": {"players": 3842, "divisions": {
-                    "1": {"players": 1791, "apg": 1791},
+                    "1": {"players": 1791, "apg": 1791, "ast": 1791},
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},

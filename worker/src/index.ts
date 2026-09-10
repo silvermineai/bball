@@ -783,18 +783,20 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   // The compact D1 table keeps the complete national source row in
   // payload_json. Read publisher rank from that receipt rather than adding
   // one column per measure (the production database is at its size ceiling).
-  const publisherRankColumn = stat === "apg" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
+  const publisherRankColumn = stat === "apg" || stat === "ast" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   const rows = await db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  const provenance = stat === "apg"
+  const provenance = stat === "apg" || stat === "ast"
     ? {
       kind: "exact_id_derived",
       dataset: "ncaa_mbb_player_box",
       source_url: "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/ncaa_mbb_player_box/ncaa_mbb_player_box_2026.parquet",
       derived_divisions: ["1"],
       publisher_rank: false,
-      note: "Division I values are summed from exact NCAA player IDs and divided by distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows.",
+      note: stat === "apg"
+        ? "Division I values are summed from exact NCAA player IDs and divided by distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows."
+        : "Division I values are summed from exact NCAA player IDs across distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows.",
     }
     : {
       kind: "publisher_snapshot",
