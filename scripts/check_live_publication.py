@@ -207,6 +207,21 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         raise ValueError(
             f"reviewed recruiting release is {max(recruiting_reviewed_age, 0):.1f} hours old"
         )
+    news = get_json(base_url, "/api/basketball/research/news?meta=1")
+    news_summary = news.get("summary")
+    news_releases = news.get("releases")
+    if (
+        not isinstance(news_summary, dict)
+        or not isinstance(news_summary.get("total"), int)
+        or news_summary["total"] <= 0
+        or not isinstance(news_summary.get("latest_seen_at"), str)
+        or not isinstance(news_releases, list)
+        or not news_releases
+    ):
+        raise ValueError("basketball news archive metadata is malformed")
+    news_age = (checked_at - timestamp(news_summary["latest_seen_at"])).total_seconds() / 3600
+    if news_age < -24 or news_age > max_age_hours:
+        raise ValueError(f"basketball news archive is {max(news_age, 0):.1f} hours old")
     basketball_markets = get_json(base_url, "/api/research/markets?meta=1&sport=basketball")
     basketball_market_total, basketball_market_pregame, basketball_market_capabilities = market_metadata(
         basketball_markets, "basketball"
@@ -242,6 +257,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_events": release_coverage["events"],
         "recruiting_reviewed_sources": release_coverage["sources"],
         "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
+        "news_archive_total": news_summary["total"],
+        "news_latest_published": news_summary.get("latest_published"),
+        "news_latest_seen_age_hours": round(max(news_age, 0), 2),
         "basketball_market_observations": basketball_market_total,
         "basketball_market_pregame": basketball_market_pregame,
         "basketball_market_capabilities": basketball_market_capabilities,

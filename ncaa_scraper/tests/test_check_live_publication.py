@@ -47,6 +47,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
             },
+            "/api/basketball/research/news?meta=1": {
+                "summary": {"total": 83, "latest_published": "2026-09-10T19:00:00Z", "latest_seen_at": "2026-09-10T19:00:00Z"},
+                "releases": [{"article_count": 76}],
+            },
             "/api/research/markets?meta=1&sport=basketball": {
                 "sport": "basketball",
                 "total": 0,
@@ -80,6 +84,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["basketball_player_team_entries"], 9990)
         self.assertEqual(report["ncaa_d1_apg_values"], 1791)
         self.assertEqual(report["ncaa_d1_ast_values"], 1791)
+        self.assertEqual(report["news_archive_total"], 83)
+        self.assertEqual(report["news_latest_seen_age_hours"], 1.0)
         self.assertEqual(report["basketball_market_observations"], 0)
         self.assertEqual(report["basketball_market_pregame"], 0)
         self.assertEqual(report["football_market_observations"], 12)
@@ -122,6 +128,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+            },
+            "/api/basketball/research/news?meta=1": {
+                "summary": {"total": 83, "latest_published": "2026-09-10T19:00:00Z", "latest_seen_at": "2026-09-10T19:00:00Z"},
+                "releases": [{"article_count": 76}],
             },
             "/api/research/markets?meta=1&sport=basketball": {
                 "sport": "basketball", "total": 1, "pregame": 2, "provider_capabilities": [],
