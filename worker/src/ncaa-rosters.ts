@@ -15,8 +15,88 @@ const querySchema = z.object({
 const sourceSchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026),
 });
+const transitionSchema = z.object({
+  fromSeason: z.coerce.number().int().min(2010).max(2026),
+  toSeason: z.coerce.number().int().min(2010).max(2026),
+  q: z.string().trim().max(120).optional(),
+  page: z.coerce.number().int().min(0).max(100).default(0),
+}).refine((value) => value.fromSeason < value.toSeason, {
+  message: "fromSeason must be earlier than toSeason",
+  path: ["fromSeason"],
+});
 
 export const ncaaRosters = new Hono<{ Bindings: Bindings }>();
+
+/**
+ * Compare adjacent NCAA source releases at the program level. The overlap
+ * count is deliberately described as source-ID overlap: it is useful for
+ * roster planning, but it is not a person-level transfer or eligibility
+ * determination.
+ */
+ncaaRosters.get("/transitions", zValidator("query", transitionSchema), async (c) => {
+  const { fromSeason, toSeason, q, page } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const clauses: string[] = [];
+  const filterBinds: string[] = [];
+  if (q) {
+    clauses.push("(team_name LIKE ? OR team_id LIKE ?)");
+    const search = `%${q}%`;
+    filterBinds.push(search, search);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const cte = `
+    WITH previous_roster AS (
+      SELECT team_id, MAX(team_name) AS team_name, COUNT(*) AS previous_players
+      FROM bb_ncaa_rosters WHERE season=? GROUP BY team_id
+    ), current_roster AS (
+      SELECT team_id, MAX(team_name) AS team_name, COUNT(*) AS current_players
+      FROM bb_ncaa_rosters WHERE season=? GROUP BY team_id
+    ), teams AS (
+      SELECT team_id FROM previous_roster UNION SELECT team_id FROM current_roster
+    ), overlap AS (
+      SELECT c.team_id, COUNT(*) AS overlap_players
+      FROM bb_ncaa_rosters c
+      JOIN bb_ncaa_rosters p ON p.season=? AND p.team_id=c.team_id AND p.player_id=c.player_id
+      WHERE c.season=? GROUP BY c.team_id
+    ), joined AS (
+      SELECT t.team_id,
+             COALESCE(c.team_name, p.team_name, t.team_id) AS team_name,
+             COALESCE(p.previous_players, 0) AS previous_players,
+             COALESCE(c.current_players, 0) AS current_players,
+             COALESCE(o.overlap_players, 0) AS overlap_players
+      FROM teams t
+      LEFT JOIN previous_roster p ON p.team_id=t.team_id
+      LEFT JOIN current_roster c ON c.team_id=t.team_id
+      LEFT JOIN overlap o ON o.team_id=t.team_id
+    )`;
+  const count = await db.prepare(`${cte} SELECT COUNT(*) AS total FROM joined ${where}`).bind(fromSeason, toSeason, fromSeason, toSeason, ...filterBinds).first<{ total: number }>();
+  const rows = await db.prepare(`${cte}
+    SELECT team_id, team_name, previous_players, current_players, overlap_players,
+           current_players - overlap_players AS new_players,
+           previous_players - overlap_players AS departed_players,
+           CASE WHEN current_players > 0 THEN CAST(overlap_players AS REAL) / current_players ELSE NULL END AS continuity_rate
+    FROM joined ${where}
+    ORDER BY current_players DESC, overlap_players DESC, team_name ASC, team_id ASC
+    LIMIT 40 OFFSET ?`).bind(fromSeason, toSeason, fromSeason, toSeason, ...filterBinds, page * 40).all();
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({
+    from_season: fromSeason,
+    to_season: toSeason,
+    page,
+    page_size: 40,
+    total: Number(count?.total || 0),
+    rows: rows.results.map((row) => ({
+      team_id: String((row as { team_id: unknown }).team_id),
+      team_name: String((row as { team_name: unknown }).team_name),
+      previous_players: Number((row as { previous_players: unknown }).previous_players || 0),
+      current_players: Number((row as { current_players: unknown }).current_players || 0),
+      overlap_players: Number((row as { overlap_players: unknown }).overlap_players || 0),
+      new_players: Number((row as { new_players: unknown }).new_players || 0),
+      departed_players: Number((row as { departed_players: unknown }).departed_players || 0),
+      continuity_rate: (row as { continuity_rate: number | null }).continuity_rate == null ? null : Number((row as { continuity_rate: unknown }).continuity_rate),
+    })),
+  });
+});
 
 /** Stream the exact NCAA roster release whose receipt is active in D1. */
 ncaaRosters.get("/source", zValidator("query", sourceSchema), async (c) => {

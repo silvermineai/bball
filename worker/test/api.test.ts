@@ -1014,6 +1014,52 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("returns program-level NCAA roster continuity without implying person matches", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT COUNT(*) AS total FROM joined")) {
+        return { bind: vi.fn(() => ({ first: vi.fn().mockResolvedValue({ total: 2 }) })) };
+      }
+      return {
+        bind: vi.fn(() => ({
+          all: vi.fn().mockResolvedValue({
+            results: [{
+              team_id: "12",
+              team_name: "Example State",
+              previous_players: 10,
+              current_players: 11,
+              overlap_players: 7,
+              new_players: 4,
+              departed_players: 3,
+              continuity_rate: 7 / 11,
+            }],
+          }),
+        })),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/ncaa-rosters/transitions?fromSeason=2025&toSeason=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      from_season: 2025,
+      to_season: 2026,
+      total: 2,
+      rows: [{ team_id: "12", overlap_players: 7, continuity_rate: 7 / 11 }],
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("JOIN bb_ncaa_rosters p"));
+  });
+
+  it("rejects reverse NCAA roster transition windows", async () => {
+    const response = await app.request(
+      "/api/basketball/research/ncaa-rosters/transitions?fromSeason=2026&toSeason=2025",
+      {},
+      {},
+    );
+    expect(response.status).toBe(400);
+  });
+
   it("rejects invalid NCAA player ranking parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/ncaa-player-rankings?metric=made_up",
