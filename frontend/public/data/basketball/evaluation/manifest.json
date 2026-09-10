@@ -1,9 +1,13 @@
 {
-  "signature": "0f26b920c61d8b102bd9799b22fb8de534093985e31069ce34e8d345c93890a3",
+  "signature": "ad9e7b5bea771c0b5944d6c633bc106b1758322975d353e2855c1a0b3f28f4f9",
   "files": {
-    "summary.json": "35addfdd0f1bae1693b311ec32aafcdfcb00c50703170ae2bef5604b1420d37c",
-    "games.json": "8ac993435303e938a7d8a5e5f6794528950221fa5b8b85ef5f43e675884de8d0",
-    "calibration-games.json": "3252f1ac9a6dfcca82d9cd106259ac752dbd2ee3a33b1c6d4fc5d2e86735ce0d",
-    "fits.json": "b32a1dc0cff74facb21f9bab54b2b0183448d82650cc59f4333328bccac6e679"
+    "summary.json": "f4d64ace71975d4ad8386def363dd07204ba3ab4d313ce20cd93ba56bac665dc",
+    "games.json": "4bd70958128971c4f247829bb35030c86328b0bef51fc4a281467485e1ff6238",
+    "calibration-games.json": "0c005b1c043d4581278abf3cf2738bba2f0820d5f1139cb954123ab6c0a1c7ee",
+    "fits.json": "7861a750193d8faccfe07dd276bda83d8a1597fa86fccc8e21b6ffa1876013cb",
+    "transitions.json": "ad6619d4a1fb561b9d360c4f18db6fe234a9a6a86da482f7be6fa73ab4814610",
+    "transition-2024.json": "502fbd4f97ac60bee818155ca6714499994f07f840fc3a45162852f63db5ae3e",
+    "transition-2025.json": "9aa883e0ee2fea97d224422a989256a513d03199cab829d3e9e6372022e6cd32",
+    "transition-2026.json": "735ad1e7332b8c540d4a98a5def07ddd348f28d3f72b986fdc5478b0b9c3b9c2"
   }
 }

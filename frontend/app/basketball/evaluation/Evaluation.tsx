@@ -253,6 +253,19 @@ export default function Evaluation({
             as its prior-season training layer; it does not change production
             D1 data or current forecasts.
           </p>
+          <p className="note">
+            Transition index: {" "}
+            <a className="text-link" href="/data/basketball/evaluation/transitions.json" download="basketball-evaluation-transitions.json">all transitions ↗</a>
+            {" · "}
+            {[2024, 2025, 2026].map((season, index) => (
+              <span key={season}>
+                {index ? " · " : ""}
+                <a className="text-link" href={`/data/basketball/evaluation/transition-${season}.json`} download={`basketball-evaluation-${season}.json`}>
+                  {season - 1}–{String(season).slice(-2)} evidence ↗
+                </a>
+              </span>
+            ))}
+          </p>
         </section>
       ) : null}
       {games && rows.length > 0 && (

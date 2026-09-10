@@ -52,7 +52,16 @@ SETTINGS = {
     "bootstrap_seed": 2701,
 }
 DIRECTORY = OUT / "evaluation"
-FILES = ("summary.json", "games.json", "calibration-games.json", "fits.json")
+FILES = (
+    "summary.json",
+    "games.json",
+    "calibration-games.json",
+    "fits.json",
+    "transitions.json",
+    "transition-2024.json",
+    "transition-2025.json",
+    "transition-2026.json",
+)
 
 
 def digest(value):
@@ -384,13 +393,21 @@ def build(conn, overview, output=DIRECTORY):
     # transition uses only its immediately prior season for calibration, and
     # each holdout remains separate so season-to-season stability is visible
     # without blending the experiments into one score.
-    transition_initial, transition_calibration_pairs, _ = rolling_predictions(
+    (
+        transition_initial,
+        transition_calibration_pairs,
+        transition_calibration_fits,
+    ) = rolling_predictions(
         valid, 2024, earliest_training_season=2023
     )
     transition_calibration = calibrate_predictions(
         [(g, p) for g, p, _, _ in transition_calibration_pairs]
     )
-    transition_baseline, transition_test_pairs, _ = rolling_predictions(
+    (
+        transition_baseline,
+        transition_test_pairs,
+        transition_test_fits,
+    ) = rolling_predictions(
         valid, 2025, earliest_training_season=2023
     )
     transition_baseline["calibration"] = calibrate(
@@ -408,13 +425,13 @@ def build(conn, overview, output=DIRECTORY):
     ]
     if any(row["preseason"] is None for row in transition_rows):
         raise ValueError("The transition methods must use exactly the same game field")
-    early_initial, early_calibration_pairs, _ = rolling_predictions(
+    early_initial, early_calibration_pairs, early_calibration_fits = rolling_predictions(
         valid, 2023, earliest_training_season=2022
     )
     early_calibration = calibrate_predictions(
         [(g, p) for g, p, _, _ in early_calibration_pairs]
     )
-    early_baseline, early_test_pairs, _ = rolling_predictions(
+    early_baseline, early_test_pairs, early_test_fits = rolling_predictions(
         valid, 2024, earliest_training_season=2023
     )
     early_baseline["calibration"] = calibrate(
@@ -465,6 +482,35 @@ def build(conn, overview, output=DIRECTORY):
             "metrics": summary_metrics,
             "compared_games": len(rows),
             "weekly_fits": len({row["weekly_fit_id"] for row in rows}),
+        },
+    ]
+    transitions = [
+        {
+            "season": 2024,
+            "calibration_season": 2023,
+            "calibration": early_calibration,
+            "preseason_model": early_baseline,
+            "calibration_fits": early_calibration_fits,
+            "games": early_rows,
+            "weekly_fits": early_test_fits,
+        },
+        {
+            "season": 2025,
+            "calibration_season": 2024,
+            "calibration": transition_calibration,
+            "preseason_model": transition_baseline,
+            "calibration_fits": transition_calibration_fits,
+            "games": transition_rows,
+            "weekly_fits": transition_test_fits,
+        },
+        {
+            "season": 2026,
+            "calibration_season": 2025,
+            "calibration": calibration,
+            "preseason_model": baseline,
+            "calibration_fits": calibration_fits,
+            "games": rows,
+            "weekly_fits": test_fits,
         },
     ]
     # Pin this experiment to the existing published evaluation, not a quietly
@@ -545,6 +591,19 @@ def build(conn, overview, output=DIRECTORY):
             "Fixed penalties, yearly weights and update cadence; no parameter search was performed. This is a new exploratory comparison on a season already used for the published baseline evaluation.",
         ],
     }
+    transition_index = {
+        "experiment_id": signature,
+        "transitions": [
+            {
+                "season": transition["season"],
+                "calibration_season": transition["calibration_season"],
+                "compared_games": len(transition["games"]),
+                "weekly_fits": len(transition["weekly_fits"]),
+                "path": f"transition-{transition['season']}.json",
+            }
+            for transition in transitions
+        ],
+    }
     artifacts = {
         "summary.json": summary,
         "games.json": {"experiment_id": signature, "games": rows},
@@ -558,7 +617,17 @@ def build(conn, overview, output=DIRECTORY):
             "calibration_initial_model": initial,
             "fits": calibration_fits + test_fits,
         },
+        "transitions.json": transition_index,
     }
+    artifacts.update(
+        {
+            f"transition-{transition['season']}.json": {
+                "experiment_id": signature,
+                "transition": transition,
+            }
+            for transition in transitions
+        }
+    )
     output.mkdir(parents=True, exist_ok=True)
     for name, value in artifacts.items():
         temporary = output / (name + ".tmp")

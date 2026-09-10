@@ -19,6 +19,26 @@ const data = JSON.parse(
     "utf8",
   ),
 );
+const transitionIndex = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../public/data/basketball/evaluation/transitions.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+const transitionEvidence = [2024, 2025, 2026].map((season) =>
+  JSON.parse(
+    readFileSync(
+      new URL(
+        `../../public/data/basketball/evaluation/transition-${season}.json`,
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ).transition,
+);
 const summary: EvaluationSummary = JSON.parse(
   readFileSync(
     new URL(
@@ -88,6 +108,28 @@ describe("same-game model evaluation", () => {
           result.metrics.weekly.margin_mae !== null,
       ),
     ).toBe(true);
+  });
+  it("publishes replay rows and fit evidence for every transition", () => {
+    expect(transitionIndex.experiment_id).toBe(summary.id);
+    expect(transitionIndex.transitions.map((t: { season: number }) => t.season)).toEqual([
+      2024,
+      2025,
+      2026,
+    ]);
+    for (const result of summary.season_results || []) {
+      const transition = transitionEvidence.find((t: { season: number }) => t.season === result.season)!;
+      expect(transition.games).toHaveLength(result.compared_games);
+      expect(transition.weekly_fits).toHaveLength(result.weekly_fits);
+      expect(transition.preseason_model.teams.length).toBeGreaterThan(0);
+      expect(transition.calibration.logistic_coefficients).toHaveLength(2);
+      expect(
+        transition.games.every((game: { weekly_fit_id: string }) =>
+          transition.weekly_fits.some(
+            (fit: { id: string }) => fit.id === game.weekly_fit_id,
+          ),
+        ),
+      ).toBe(true);
+    }
   });
   it("exports the selected evidence and protects spreadsheet text cells", () => {
     const csv = evaluationCsv([{ ...games[0], home_name: '=bad,"name"' }]);
