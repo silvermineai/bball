@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { validateRecruitingIntakeCsv, type RecruitingIntakePreflight } from "../../_lib/recruiting-intake";
 
 type IntakeCoverage = {
   total: number;
@@ -27,6 +28,8 @@ const clock = (value: string | null) =>
 export default function AuthorizedIntake() {
   const [coverage, setCoverage] = useState<IntakeCoverage | null>(null);
   const [error, setError] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [preflight, setPreflight] = useState<RecruitingIntakePreflight | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/recruiting-intake?season=2027", { signal: controller.signal })
@@ -85,6 +88,26 @@ export default function AuthorizedIntake() {
           </div>
         )}
         <p className="note">{coverage?.policy || "Rows are never used to infer eligibility or current availability. A missing import is unavailable evidence, not a zero."}</p>
+        <div className="recruiting-intake-preflight">
+          <div>
+            <div className="eyebrow">Operator preflight / stays in this browser</div>
+            <h3>Check an authorized CSV before import.</h3>
+            <p>Select the provider export to validate its shape, chronology, HTTPS source links and row IDs locally. The file is never uploaded here; a clean preflight still needs the server importer and license URL described above.</p>
+          </div>
+          <label className="button secondary recruiting-intake-file">
+            {fileName ? `Check ${fileName}` : "Choose authorized CSV"}
+            <input type="file" accept=".csv,text/csv" onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              setFileName(file.name);
+              file.text().then((text) => setPreflight(validateRecruitingIntakeCsv(text))).catch(() => setPreflight({ headers: [], rows: 0, seasons: [], statusCounts: {}, errors: ["The selected file could not be read in this browser."], warnings: [] }));
+            }} />
+          </label>
+          {preflight && <div className={`recruiting-intake-preflight-result ${preflight.errors.length ? "has-errors" : "is-ready"}`} role="status">
+            {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((item) => <li key={item}>{item}</li>)}</ul></> : <><strong>Ready for the server importer</strong><p>{preflight.rows.toLocaleString()} rows · seasons {preflight.seasons.join(", ") || "—"} · {Object.entries(preflight.statusCounts).map(([status, count]) => `${count} ${status.replace("reported_", "")}`).join(" · ")}</p></>}
+            {preflight.warnings.length > 0 && <p className="note">{preflight.warnings.length} row warning{preflight.warnings.length === 1 ? "" : "s"}: blank record IDs will be derived by the importer.</p>}
+          </div>}
+        </div>
       </div>
     </section>
   );
