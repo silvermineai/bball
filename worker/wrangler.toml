@@ -29,6 +29,12 @@ database_name = "bball-research-v2"
 database_id = "b0cafa63-05f2-4585-af87-c00ea8ddd600"
 migrations_dir = "migrations"
 
+[[d1_databases]]
+binding = "NCAA_BOX_DB"
+database_name = "bball-ncaa-box-v1"
+database_id = "25512c83-bb59-414a-bcaa-001179f846be"
+migrations_dir = "migrations"
+
 [[r2_buckets]]
 binding = "RESEARCH_ARCHIVE"
 bucket_name = "bball-research"

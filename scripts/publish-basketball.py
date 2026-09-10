@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
+NCAA_BOX_D1_DATABASE = os.getenv("NCAA_BOX_D1_DATABASE", "bball-ncaa-box-v1")
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
@@ -59,8 +60,11 @@ def run(args, cwd=ROOT):
     subprocess.run(args, cwd=cwd, env=ENV, check=True)
 
 
-def run_remote_migration(args, cwd=ROOT):
+def run_remote_migration(args, cwd=ROOT, database_name=None):
     """Retry only remote migration calls when Cloudflare reports an upstream outage."""
+    if database_name:
+        execute_index = args.index("execute")
+        args = [*args[: execute_index + 1], database_name, *args[execute_index + 2 :]]
     try:
         file_index = args.index("--file")
         migration_path = cwd / str(args[file_index + 1])
@@ -209,7 +213,7 @@ def verified_sql_batches(first_path, start_env):
     return result
 
 
-def import_sql_batches(first_path, log_prefix, start_env):
+def import_sql_batches(first_path, log_prefix, start_env, database_name=D1_DB_NAME):
     batches = verified_sql_batches(first_path, start_env)
     total = len(batches) + int(os.getenv(start_env, "0"))
     for index, target in batches:
@@ -269,7 +273,7 @@ def import_sql_batches(first_path, log_prefix, start_env):
                     "scripts/cloudflare.py",
                     "d1",
                     "execute",
-                    D1_DB_NAME,
+                    database_name,
                     "--remote",
                     "--file",
                     os.path.relpath(chunk, ROOT / "worker"),
@@ -632,6 +636,18 @@ run_remote_migration(
         "migrations/0026_cbbd_recruiting.sql",
     ]
 )
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        NCAA_BOX_D1_DATABASE,
+        "--remote",
+        "--file",
+        "migrations/0028_basketball_ncaa_game_archive.sql",
+    ]
+)
 import_sql_batches(
     ROOT / ".local/basketball.sql",
     "basketball-publish-d1",
@@ -641,6 +657,7 @@ import_sql_batches(
     ROOT / ".local/ncaa-player-box-2026.sql",
     "ncaa-player-box-publish-d1",
     "NCAA_PLAYER_BOX_SQL_BATCH_START",
+    NCAA_BOX_D1_DATABASE,
 )
 run([PY, "scripts/sync-basketball-core.py", "--remote"])
 run([PY, "scripts/sync-ledger.py"])

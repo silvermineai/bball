@@ -1,4 +1,4 @@
-import { researchDb } from "./research-db";
+import { ncaaBoxDb, researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -102,19 +102,50 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, page, meta } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const gameDb = ncaaBoxDb(c.env);
   if (meta === "1") {
-    const [seasons, count, source, validation] = await researchDb(c.env).batch([
-      researchDb(c.env).prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
-      researchDb(c.env).prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
-      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
-      researchDb(c.env).prepare(validationSql).bind(season),
+    // Preserve the compact single-database path for local fixtures and older
+    // deployments. The dedicated binding uses the split path below.
+    const dedicatedGameDb = (c.env as Env & { NCAA_BOX_DB?: D1Database }).NCAA_BOX_DB;
+    if (!dedicatedGameDb) {
+      const [legacySeasons, count, source, validation] = await db.batch([
+        db.prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
+        db.prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
+        db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
+        db.prepare(validationSql).bind(season),
+      ]);
+      const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+      const validationRow = validation?.results[0] as Record<string, unknown> | undefined;
+      c.header("Cache-Control", "public, max-age=300");
+      return c.json({
+        seasons: legacySeasons.results.map((row) => Number((row as { season: number }).season)),
+        total: Number((count.results[0] as { total: number }).total || 0),
+        source: {
+          fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
+          sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
+        },
+        validation: parseValidation(validationRow),
+      });
+    }
+    const [gameSeasons, seasonSeasons, gameCount, seasonCount, source, validation] = await Promise.all([
+      gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all(),
+      db.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all(),
+      gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>(),
+      db.prepare("SELECT count(*) AS total FROM bb_ncaa_player_season WHERE season=?").bind(season).first<{ total: number }>(),
+      db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season).first(),
+      gameDb.prepare(validationSql).bind(season).first(),
     ]);
-    const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
-    const validationRow = validation?.results[0] as Record<string, unknown> | undefined;
+    const sourceRow = source as { fetched_at?: unknown; sha256?: unknown } | undefined;
+    const validationRow = validation as Record<string, unknown> | undefined;
+    const seasons = [...new Set([
+      ...gameSeasons.results.map((row) => Number((row as { season: number }).season)),
+      ...seasonSeasons.results.map((row) => Number((row as { season: number }).season)),
+    ])].sort((a, b) => b - a);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
-      seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
-      total: Number((count.results[0] as { total: number }).total || 0),
+      seasons,
+      total: Number((gameCount?.total || seasonCount?.total || 0)),
       source: {
         fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
         sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
@@ -122,7 +153,7 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       validation: parseValidation(validationRow),
     });
   }
-  const rawCount = await researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
+  const rawCount = await gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
   const archiveMode = Number(rawCount?.total || 0) > 0 ? "games" : "season";
   const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
   const clauses = ["season=?"];
@@ -135,8 +166,9 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(...(archiveMode === "games" ? [search, search, search, search, search] : [search, search, search, search]));
   }
   const where = clauses.join(" AND ");
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const rows = await researchDb(c.env).prepare(
+  const queryDb = archiveMode === "games" ? gameDb : db;
+  const count = await queryDb.prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>();
+  const rows = await queryDb.prepare(
     archiveMode === "games"
       ? `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
          FROM bb_ncaa_player_box WHERE ${where}

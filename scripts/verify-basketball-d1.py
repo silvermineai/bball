@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
+NCAA_BOX_D1_DATABASE = os.getenv("NCAA_BOX_D1_DATABASE", "bball-ncaa-box-v1")
 
 
 def dataset_rows(overview: dict) -> dict[str, int]:
@@ -56,7 +57,7 @@ def dataset_rows(overview: dict) -> dict[str, int]:
     return expected
 
 
-def remote_counts(tables: list[str]) -> dict[str, int]:
+def remote_counts(tables: list[str], database_name: str) -> dict[str, int]:
     # Table names come only from the constant map above. Scalar subqueries keep
     # this to one D1 request, avoiding a race between individual count calls.
     command = "SELECT " + ", ".join(
@@ -68,7 +69,7 @@ def remote_counts(tables: list[str]) -> dict[str, int]:
             "scripts/cloudflare.py",
             "d1",
             "execute",
-            D1_DB_NAME,
+            database_name,
             "--remote",
             "--command",
             command,
@@ -96,7 +97,10 @@ def main() -> None:
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
     )
     expected = dataset_rows(overview)
-    actual = remote_counts(list(expected))
+    game_expected = {"bb_ncaa_player_box": expected.pop("bb_ncaa_player_box")}
+    actual = remote_counts(list(expected), D1_DB_NAME)
+    actual.update(remote_counts(list(game_expected), NCAA_BOX_D1_DATABASE))
+    expected.update(game_expected)
     mismatches = [
         f"{table}: expected {expected[table]:,}, found {actual[table]:,}"
         for table in expected

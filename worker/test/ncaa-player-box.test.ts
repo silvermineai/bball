@@ -45,4 +45,41 @@ describe("NCAA player source archive", () => {
     expect(response.status).toBe(304);
     expect(bindings.RESEARCH_ARCHIVE.get).not.toHaveBeenCalled();
   });
+
+  it("reads game metadata from the dedicated archive database", async () => {
+    const researchPrepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: async () => sql.includes("receipt_json")
+          ? { fetched_at: "2026-09-08T02:12:45Z", sha256: digest }
+          : { total: 3 },
+        all: async () => ({ results: [{ season: 2026 }] }),
+      })),
+      all: async () => ({ results: [{ season: 2026 }] }),
+    }));
+    const gamePrepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: async () => sql.includes("total_rows")
+          ? { total_rows: 7, missing_ids: 0 }
+          : { total: 7 },
+      })),
+      all: async () => ({ results: [{ season: 2026 }] }),
+    }));
+    const response = await ncaaPlayerBox.request(
+      "/?meta=1&season=2026",
+      {},
+      {
+        DB: { prepare: researchPrepare },
+        NCAA_BOX_DB: { prepare: gamePrepare },
+      } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      total: 7,
+      source: { sha256: digest },
+      validation: { total_rows: 7 },
+    });
+    expect(gamePrepare).toHaveBeenCalled();
+    expect(researchPrepare).toHaveBeenCalled();
+  });
 });
