@@ -80,6 +80,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     window.history.replaceState(window.history.state, "", url);
   }, [hydrated, page, q, qualified, season, sort]);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
+  const sourceReceipts = catalog.sources
+    .flat()
+    .filter((source) => source.season === Number(season));
+  const sourceReleaseUrls = sourceReceipts.map((source) => source.url).join(" | ");
+  const sourceRetrieved = sourceReceipts.map((source) => source.fetched_at).join(" | ");
+  const sourceDigests = sourceReceipts.map((source) => source.sha256).join(" | ");
   const { data, error } = useBasketballRelease<{
     season: number;
     players: BBPlayer[];
@@ -146,6 +152,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             ? "Cloudflare D1 career archive unavailable; showing the verified bundled release."
             : "Checking the Cloudflare D1 career archive…"}
       </p>
+      {sourceReceipts.length > 0 && <details className="note" style={{ marginTop: 16 }}><summary>Source receipts for {seasonLabel(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{sourceReceipts.map((source) => <tr key={`${source.dataset}-${source.season}`}><th>{source.dataset.replaceAll("_", " ")}</th><td>{new Date(source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td><td><code>{source.sha256}</code></td><td><a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div><p style={{ marginTop: 12 }}>The receipt identifies the retained source release behind these season rows. It does not establish a live roster, eligibility or availability update.</p></details>}
       <div className="toolbar">
         <label className="control">
           <span>STAT SEASON</span>
@@ -333,6 +340,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Starter rate",
                         "DNP records",
                         "Excluded records",
+                        "Source release URLs",
+                        "Source retrieved clocks",
+                        "Source SHA-256 digests",
                         "Minutes per game",
                         "Points per game",
                         "Rebounds per game",
@@ -361,6 +371,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.starter_rate == null ? null : p.starter_rate * 100,
                         p.dnp_records,
                         p.excluded_records,
+                        sourceReleaseUrls,
+                        sourceRetrieved,
+                        sourceDigests,
                         p.mpg,
                         p.ppg,
                         p.rpg,
