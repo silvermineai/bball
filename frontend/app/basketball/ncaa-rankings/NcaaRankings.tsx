@@ -56,6 +56,8 @@ export default function NcaaRankings() {
   }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page]);
 
   useEffect(() => {
+    setMeta(null);
+    setError("");
     fetch(`/api/basketball/research/ncaa-player-rankings?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA ranking catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
