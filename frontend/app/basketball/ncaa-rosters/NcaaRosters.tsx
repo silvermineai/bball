@@ -9,7 +9,7 @@ type Zone = { attempts: number; makes: number; points: number };
 type Shooting = { attempts: number; makes: number; distance_sum: number; distance_count: number; zones: Record<string, Zone> };
 type Row = { season: number; team_id: string; player_id: string; team_name: string | null; player_name: string | null; profile: Record<string, string>; recorded_games: number | null; recorded_minutes: number | null; recorded_points: number | null; recorded_rebounds: number | null; recorded_assists: number | null; shooting: Shooting | null };
 type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; classes: string[]; positions: string[]; total: number; source?: { fetched_at: string | null; sha256: string | null } };
+type Meta = { seasons: number[]; classes: string[]; positions: string[]; total: number; source?: { url: string | null; fetched_at: string | null; sha256: string | null } };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const pct = (zone: Zone | undefined) => zone && zone.attempts ? `${(100 * zone.makes / zone.attempts).toFixed(1)}%` : "—";
@@ -68,11 +68,11 @@ export default function NcaaRosters() {
       setCopied("Copy the roster URL from your address bar.");
     }
   };
-  const exportHeaders = ["Season", "Player", "NCAA player ID", "NCAA player source URL", "Program", "NCAA team ID", "NCAA team source URL", "Class", "Position", "Height", "Hometown", "High school", "Roster GP", "Roster GS", "Recorded games", "Recorded minutes", "Recorded points", "Recorded rebounds", "Recorded assists", "Shot attempts", "Average distance", "Raw profile JSON", "Raw shooting JSON"];
+  const exportHeaders = ["Season", "Player", "NCAA player ID", "NCAA player source URL", "Program", "NCAA team ID", "NCAA team source URL", "Class", "Position", "Height", "Hometown", "High school", "Roster GP", "Roster GS", "Recorded games", "Recorded minutes", "Recorded points", "Recorded rebounds", "Recorded assists", "Shot attempts", "Average distance", "Raw profile JSON", "Raw shooting JSON", "Roster source URL", "Roster retrieved (UTC)", "Roster SHA-256"];
   const exportRow = (row: Row, activeSeason: number) => {
     const p = row.profile;
     const s = row.shooting;
-    return [activeSeason, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, p.class, p.position, p.height, p.hometown, p.high_school, p.gp, p.gs, row.recorded_games, row.recorded_minutes, row.recorded_points, row.recorded_rebounds, row.recorded_assists, s?.attempts, s?.distance_count ? s.distance_sum / s.distance_count : null, JSON.stringify(p), s ? JSON.stringify(s) : null];
+    return [activeSeason, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, p.class, p.position, p.height, p.hometown, p.high_school, p.gp, p.gs, row.recorded_games, row.recorded_minutes, row.recorded_points, row.recorded_rebounds, row.recorded_assists, s?.attempts, s?.distance_count ? s.distance_sum / s.distance_count : null, JSON.stringify(p), s ? JSON.stringify(s) : null, meta?.source?.url, meta?.source?.fetched_at, meta?.source?.sha256];
   };
   const download = () => {
     if (!result) return;
@@ -126,7 +126,7 @@ export default function NcaaRosters() {
       <label className="control"><span>CLASS</span><select value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{(meta?.classes || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{(meta?.positions || []).map((v) => <option key={v}>{v}</option>)}</select></label>
     </div>
-    {meta?.source ? <p className="note" style={{ marginTop: 16 }}>NCAA roster receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained source edition, not a live roster, eligibility or transfer update.</p> : null}
+    {meta?.source ? <details className="note" style={{ marginTop: 16 }}><summary>NCAA roster receipt for {label(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody><tr><td>{sourceDate(meta.source.fetched_at)}</td><td><code>{meta.source.sha256 || "—"}</code></td><td>{meta.source.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td></tr></tbody></table></div><p style={{ marginTop: 12 }}>This clock describes the retained source edition, not a live roster, eligibility or transfer update. CSV exports carry the same receipt fields.</p></details> : null}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA roster rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching roster rows · page {page + 1} of {pages} · class, school and hometown fields are retained exactly as supplied by the source. Shooting columns appear when a same-season NCAA shot profile exists.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy roster link</button></div></div>
       {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}

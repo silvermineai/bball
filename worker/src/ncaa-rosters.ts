@@ -54,7 +54,7 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
       researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
       researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_rosters WHERE season=?").bind(season),
-      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
+      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_team_rosters' AND season=?").bind(season),
     ]);
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
@@ -63,8 +63,9 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
       positions: positions.results.map((row) => String((row as { value: string }).value)),
       total: Number((count.results[0] as { total: number }).total || 0),
       source: (() => {
-        const row = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+        const row = source.results[0] as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
         return {
+          url: typeof row?.url === "string" ? row.url : null,
           fetched_at: typeof row?.fetched_at === "string" ? row.fetched_at : null,
           sha256: typeof row?.sha256 === "string" ? row.sha256 : null,
         };
