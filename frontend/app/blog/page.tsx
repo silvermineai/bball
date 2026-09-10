@@ -78,6 +78,11 @@ const guides = [
     "Roster continuity is a clue, not a depth chart.",
     "How to evaluate returning workload across dated NCAA roster transitions without turning a source listing into an eligibility or forecast claim.",
   ],
+  [
+    "basketball-upcoming-games",
+    "Turn the 2026–27 slate into a prep plan.",
+    "A practical workflow for moving from a forecast range to Four Factors, roster evidence, film questions and a documented market check.",
+  ],
 ];
 export default function Page() {
   const d = getOverview();

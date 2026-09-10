@@ -27,6 +27,8 @@ const titles: Record<string, string> = {
     "Read the game log before you rank the player.",
   "basketball-roster-transitions":
     "Roster continuity is a clue, not a depth chart.",
+  "basketball-upcoming-games":
+    "Turn the 2026–27 slate into a prep plan.",
 };
 export function generateStaticParams() {
   return [
@@ -208,6 +210,8 @@ export default async function Page({
         <BasketballPlayerGameLogs />
       ) : slug === "basketball-roster-transitions" ? (
         <BasketballRosterTransitions />
+      ) : slug === "basketball-upcoming-games" ? (
+        <BasketballUpcomingGames />
       ) : (
         <>
           <p className="deck">
@@ -270,6 +274,100 @@ export default async function Page({
         .
       </p>
     </article>
+  );
+}
+
+function BasketballUpcomingGames() {
+  const b = getBasketball();
+  const games = b.upcoming
+    .filter((game) => game.prediction)
+    .slice()
+    .sort((a, z) =>
+      Math.abs(a.prediction!.home_margin) - Math.abs(z.prediction!.home_margin) ||
+      a.starts_at.localeCompare(z.starts_at),
+    )
+    .slice(0, 5);
+  const primary = b.coverage.forecast_games;
+  const coldStart = b.coverage.baseline_estimate_games || 0;
+  return (
+    <>
+      <p className="deck">
+        A forecast is a reading order. The staff work starts when you turn that
+        estimate into a matchup question that can be checked against the
+        schedule, personnel and film.
+      </p>
+      <p>
+        The current release covers {b.coverage.upcoming_games.toLocaleString()} upcoming
+        games: {primary.toLocaleString()} primary efficiency forecasts and{" "}
+        {coldStart.toLocaleString()} separately labeled cold-start estimates. Open the{" "}
+        <Link href="/basketball/matchups/">matchup desk</Link> to see the
+        projected score, pace, win probability and calibrated margin range.
+      </p>
+      <h2>Start with the range</h2>
+      <p>
+        Read the interval before deciding how much confidence to place in the
+        point estimate. A close projected margin with a wide range is a cue to
+        identify swing possessions and lineup questions. A large margin with a
+        narrower range still needs opponent and venue context. The{" "}
+        <Link href="/basketball/model/">model notebook</Link> shows the
+        temporal holdouts, calibration and source boundary behind those values.
+      </p>
+      <h2>Use Four Factors to choose film</h2>
+      <p>
+        Move from the score to effective field goal percentage, turnover rate,
+        offensive rebounding and free-throw rate. A factor edge is a prompt to
+        inspect how a team creates it: shot quality, pressure, second chances
+        or rim pressure. The{" "}
+        <Link href="/basketball/compare/">matchup workbench</Link> keeps the
+        two teams, venue scenario and historical context together while you
+        write the next film question.
+      </p>
+      <h2>Let roster evidence change the question</h2>
+      <p>
+        The <Link href="/basketball/roster-lab/">roster lab</Link> and{" "}
+        <Link href="/basketball/recruiting/fit/">role-fit board</Link> show
+        source-listed workload, prior production and the evidence gaps around
+        a program. Use those rows to ask who must absorb minutes or defend a
+        different role. A roster listing does not establish eligibility,
+        availability or a future rotation, so keep the primary forecast and
+        the roster scenario labeled separately.
+      </p>
+      <h2>Document the market clock</h2>
+      <p>
+        If a licensed pregame quote is available, compare its timestamp,
+        bookmaker and matched participants in the{" "}
+        <Link href="/research/markets/">market archive</Link>. If it is not,
+        record a browser-only line note and leave the evidence unavailable. A
+        later quote cannot be relabeled as a closing line, and a model gap is
+        not a betting result without a settled game and a complete denominator.
+      </p>
+      <h2>Five games to open first</h2>
+      <p>
+        These are the closest primary margins in the current edition. They are
+        a transparent review order, not a new confidence model.
+      </p>
+      <div className="article-grid">
+        {games.map((game) => {
+          const prediction = game.prediction!;
+          return (
+            <article className="article-card" key={game.id}>
+              <div className="eyebrow">{date(game.starts_at)} · {game.venue || "Venue pending"}</div>
+              <h3>{game.away_name} at {game.home_name}</h3>
+              <p>
+                Home margin {prediction.home_margin >= 0 ? "+" : ""}{prediction.home_margin.toFixed(1)} · range {prediction.margin_low.toFixed(1)} to {prediction.margin_high.toFixed(1)} · home win {Math.round(prediction.home_win_probability * 100)}%.
+              </p>
+              <Link href={"/basketball/briefs/" + game.id + "/"}>Open the evidence brief →</Link>
+            </article>
+          );
+        })}
+      </div>
+      <p>
+        Finish the one-pager with the source edition, the biggest factor edge,
+        one personnel assumption, one film clip to verify and the result that
+        would change the plan. That makes the preview useful even when the
+        final score disagrees with the estimate.
+      </p>
+    </>
   );
 }
 
