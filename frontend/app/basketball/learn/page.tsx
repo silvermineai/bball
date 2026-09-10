@@ -365,6 +365,66 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
+            <div className="eyebrow">Recruiting evidence ladder</div>
+            <h2>Use each source for the question it can answer.</h2>
+          </div>
+          <Link href="/blog/basketball-recruiting-evidence/">
+            Read the full evidence guide →
+          </Link>
+        </div>
+        <p>
+          Good recruiting research is cumulative. Start with an exact identity,
+          add dated reporting, measure recorded work, and leave eligibility and
+          future role to the sources that can actually establish them.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Evidence layer</th>
+                <th>It can establish</th>
+                <th>It cannot establish by itself</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Exact source row</th>
+                <td>Which publisher ID, season and program label the archive recorded.</td>
+                <td>A unique cross-source person, a current roster spot or a transfer reason.</td>
+              </tr>
+              <tr>
+                <th scope="row">Dated school statement</th>
+                <td>What a program publicly announced and when it published the statement.</td>
+                <td>NCAA eligibility, playing-time guarantees or an unreported transaction.</td>
+              </tr>
+              <tr>
+                <th scope="row">Prior production</th>
+                <td>Recorded games, minutes, rates and source-native value at the prior program.</td>
+                <td>Future health, role, availability or production at a new program.</td>
+              </tr>
+              <tr>
+                <th scope="row">NCAA rule or availability source</th>
+                <td>The governing context or an official availability record when the source publishes one.</td>
+                <td>A conclusion inferred from a roster listing or a news headline alone.</td>
+              </tr>
+              <tr>
+                <th scope="row">Fit and film question</th>
+                <td>A transparent shortlist and the next basketball question to investigate.</td>
+                <td>A recruiting grade, a forecast input or proof that the role will work.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="note">
+          Silvermine keeps these layers separate in the recruiting board and
+          player cards. A missing layer stays unavailable; it is never replaced
+          with a guess from a name match or a roster absence.
+        </p>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
             <div className="eyebrow">06 / Build a recruiting brief</div>
             <h2>Move from a name to a defensible question.</h2>
           </div>
