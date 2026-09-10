@@ -145,7 +145,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
               <ol>
                 {reviewQueue.map((summary) => <li key={`queue-${summary.role}`}>
                   <div><strong>{roleLabels[summary.role]}</strong><span>{Math.round(summary.unclassifiedMinutes).toLocaleString()} unclassified of {Math.round(summary.priorMinutes).toLocaleString()} prior minutes · {summary.listed} listed players</span></div>
-                  <button className="hero-link" type="button" onClick={() => { setRole(summary.role); setPage(0); }}>Open candidates →</button>
+                  <button className="hero-link" type="button" onClick={() => reset(() => setRole(summary.role))}>Open candidates →</button>
                 </li>)}
               </ol>
             </div>
