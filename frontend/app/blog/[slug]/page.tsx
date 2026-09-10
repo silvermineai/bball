@@ -23,6 +23,8 @@ const titles: Record<string, string> = {
     "Count the trip before you count the score.",
   "basketball-recruiting-evidence":
     "Build the recruiting brief from the evidence outward.",
+  "basketball-availability-evidence":
+    "Availability is a source question.",
   "basketball-player-game-logs":
     "Read the game log before you rank the player.",
   "basketball-roster-transitions":
@@ -206,6 +208,8 @@ export default async function Page({
         <BasketballPossessionStyle />
       ) : slug === "basketball-recruiting-evidence" ? (
         <BasketballRecruitingEvidence />
+      ) : slug === "basketball-availability-evidence" ? (
+        <BasketballAvailabilityEvidence />
       ) : slug === "basketball-player-game-logs" ? (
         <BasketballPlayerGameLogs />
       ) : slug === "basketball-roster-transitions" ? (
@@ -1029,6 +1033,78 @@ function BasketballRecruitingEvidence() {
         measured, what remains unknown and what the staff should check next.
         That structure is more durable than a single ranking or an unverified
         portal label.
+      </p>
+    </>
+  );
+}
+
+function BasketballAvailabilityEvidence() {
+  const b = getBasketball();
+  return (
+    <>
+      <p className="deck">
+        Availability is not one field. It is a timeline of source statements,
+        roster observations and official decisions, each with a different
+        level of authority.
+      </p>
+      <p>
+        The <Link href="/basketball/recruiting/">recruiting file</Link> keeps
+        publisher headlines and reviewed school announcements beside their
+        publication dates. The wire can surface injury, surgery, redshirt and
+        return-to-play language, but a headline remains a lead until the
+        underlying source answers who, when and for which competition.
+      </p>
+      <h2>Use the strongest source for the question</h2>
+      <p>
+        A school statement is the right place to verify what the program
+        announced. An NCAA availability page or archive is the authority for
+        the tournament reporting context it covers. A roster release shows who
+        appeared in that source edition. A prior box-score row shows recorded
+        participation in a past game. None of those records should be silently
+        promoted into a universal health, eligibility or next-game status.
+      </p>
+      <p>
+        Silvermine links to the NCAA&apos;s{" "}
+        <a href="https://www.ncaa.com/di-mens-basketball-player-availability" target="_blank" rel="noreferrer">men&apos;s player-availability portal ↗</a>
+        {" "}and its{" "}
+        <a href="https://www.ncaa.com/di-mens-basketball-player-archive" target="_blank" rel="noreferrer">published archive ↗</a>
+        {" "}for source verification. It does not mirror a protected
+        application or infer a ruling from an absent roster row.
+      </p>
+      <h2>Keep the clock attached</h2>
+      <p>
+        Availability changes quickly. Read the source publication date, the
+        archive retrieval clock and the scheduled tip together. A source that
+        was current yesterday may not settle today&apos;s lineup, and a later
+        statement should update the timeline rather than erase the earlier
+        report. If a source date is missing, write that limitation into the
+        brief instead of inventing one from the page retrieval time.
+      </p>
+      <h2>Do not leak availability into the baseline</h2>
+      <p>
+        The current 2026–27 primary forecast covers{" "}
+        {b.coverage.forecast_games.toLocaleString()} games from historical team
+        efficiency and pace. Recruiting, injury and roster evidence sit beside
+        that estimate so a coach can decide what to verify; they do not rewrite
+        the registered probability or margin. The{" "}
+        <Link href="/basketball/model/">model notebook</Link> and{" "}
+        <Link href="/basketball/forecast-lab/">forecast lab</Link> show the
+        production estimate and the separately labeled roster scenario.
+      </p>
+      <h2>Finish with a review checklist</h2>
+      <p>
+        Open the wire and filter for availability language. Read the linked
+        publisher record. Match the player to an exact source ID where one is
+        available, then check the current roster observation and the official
+        NCAA page when the question concerns tournament reporting. Finish the
+        game brief with the unresolved question—available for this tip,
+        eligible for this competition or simply listed in an older release—so
+        the next staff member knows what still needs confirmation.
+      </p>
+      <p>
+        This workflow keeps useful signals in view without overstating them.
+        It also makes the missingness visible, which is the difference between
+        a source-backed recruiting note and a confident guess.
       </p>
     </>
   );

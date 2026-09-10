@@ -69,6 +69,11 @@ const guides = [
     "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
   ],
   [
+    "basketball-availability-evidence",
+    "Availability is a source question.",
+    "How to read injury, redshirt and tournament-availability signals without turning a headline or roster row into a ruling.",
+  ],
+  [
     "basketball-player-game-logs",
     "Read the game log before you rank the player.",
     "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
