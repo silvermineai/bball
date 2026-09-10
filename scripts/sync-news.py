@@ -18,10 +18,10 @@ D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public/data/news.json"
-MIGRATIONS = (
-    ROOT / "worker/migrations/0024_news_archive.sql",
-    ROOT / "worker/migrations/0029_news_division.sql",
-)
+# 0029 is a one-time upgrade for databases that already had 0024. The base
+# migration now declares the nullable column, and recurring syncs only replay
+# the idempotent table/index creation so the scheduled job stays repeatable.
+MIGRATIONS = (ROOT / "worker/migrations/0024_news_archive.sql",)
 SQL = ROOT / ".local/news.sql"
 
 

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS bb_news_articles (
   id TEXT PRIMARY KEY,
   publisher TEXT NOT NULL,
   sport TEXT NOT NULL,
+  division TEXT,
   headline TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   published TEXT NOT NULL,
