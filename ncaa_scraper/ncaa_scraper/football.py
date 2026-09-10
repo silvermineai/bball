@@ -355,7 +355,11 @@ def build(conn, season=2026):
             ).hexdigest(),
         }
     )
-    efficiency_model = build_efficiency_model(conn, games, model, upcoming, season)
+    # The production forecast intentionally fits only the five-season `games`
+    # slice above. The research challenger needs older retained schedules to
+    # construct genuinely lagged feature states for its dated holdouts.
+    all_games = [dict(r) for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")]
+    efficiency_model = build_efficiency_model(conn, all_games, model, upcoming, season)
     artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)

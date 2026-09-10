@@ -233,7 +233,9 @@ def _transition_evaluations(transitions, target_season):
 def build(conn, games, primary_model, upcoming, target_season=2026):
     advanced = _advanced_rows(conn)
     transitions = {}
-    for season in range(target_season - 3, target_season):
+    # Retain one additional transition so the first reported holdout (2023 in
+    # the current archive) is trained only on an earlier dated transition.
+    for season in range(target_season - 4, target_season):
         rows, state = _rows(games, advanced, season)
         transitions[season] = rows
     training = [row for season, rows in transitions.items() if season < target_season - 1 for row in rows]

@@ -45,7 +45,7 @@ The football matchup desk now reads the latest registered forecast edition from 
 
 The primary football landing page uses the same live D1 read for its lead matchup card. It derives the displayed score estimate from the persisted total and home margin, labels the card as a live model estimate, and keeps the bundled forecast as its fallback when the read is unavailable. A separate capture-status line identifies the active model edition and row count so the homepage's first impression has an explicit data clock.
 
-The matchup desk also publishes a **research-only football efficiency challenger**. It uses lagged, three-season team EPA-per-play and yards-per-play rates from the retained advanced team-game records, shrinks sparse teams toward the league prior, and applies a residual correction to the published score-only margin. The challenger is shown beside eligible upcoming games as a margin scenario; it does not change the primary probability, interval, forecast registration or market ledger. The artifact reports independent 2024 and 2025 transitions: each correction is fitted only on earlier transition rows, and each table includes the score-only baseline beside challenger MAE/RMSE. The 2024 transition worsens MAE by 0.37 points while 2025 improves it by 0.03 points, so the evidence is mixed and remains a research comparison rather than a betting signal.
+The matchup desk also publishes a **research-only football efficiency challenger**. It uses lagged, three-season team EPA-per-play and yards-per-play rates from the retained advanced team-game records, shrinks sparse teams toward the league prior, and applies a residual correction to the published score-only margin. The challenger is shown beside eligible upcoming games as a margin scenario; it does not change the primary probability, interval, forecast registration or market ledger. The artifact now reports independent 2023, 2024 and 2025 transitions: each correction is fitted only on earlier transition rows, and each table includes the score-only baseline beside challenger MAE/RMSE. Lift is +0.17 points in 2023, −0.09 in 2024 and −0.07 in 2025, so the evidence is mixed and remains a research comparison rather than a betting signal.
 
 ## Calibration release verification
 
@@ -59,7 +59,7 @@ The [weekly evaluation](FOOTBALL_EVALUATION.md) now compares two independent dat
 
 ## Team efficiency
 
-The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 7,370 retained advanced team-game records across 2022–2026 with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. The historical expansion archives six additional source releases in R2 and verifies their complete D1 rows. Rates remain descriptive and do not modify forecasts.
+The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 10,340 retained advanced team-game records across 2020–2026 with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. The historical expansion archives ten additional source releases in R2 and verifies their complete D1 rows. Rates remain descriptive and do not modify forecasts.
 
 ## Player rankings
 

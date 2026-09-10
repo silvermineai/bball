@@ -13,7 +13,7 @@ from .football import DB_PATH, store_rows
 from .football_efficiency import METRICS, build, encoded, export, season_release
 from .football_sources import CACHE, DATASETS, RELEASES, ROOT, ReleaseClient
 
-YEARS = (2022, 2023, 2024)
+YEARS = (2020, 2021, 2022, 2023, 2024)
 DATASET_NAMES = ("teams", "team_advanced")
 LOCAL = ROOT / ".local/football-history"
 
@@ -83,7 +83,7 @@ def import_history(conn, downloads, out, local):
         expected
     ):
         raise ValueError(
-            "Historical release requires exactly six dataset/season inputs"
+            f"Historical release requires exactly {len(expected)} dataset/season inputs"
         )
     games = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM football_games")}
     schedules = []
@@ -128,7 +128,7 @@ def import_history(conn, downloads, out, local):
                 "sql_sha256": hashlib.sha256((local / name).read_bytes()).hexdigest(),
             }
         )
-    # Atomic local activation of only the six reviewed source snapshots.
+    # Atomic local activation of only the reviewed historical source snapshots.
     with conn:
         for dataset, year, _, receipt in downloads:
             conn.execute(

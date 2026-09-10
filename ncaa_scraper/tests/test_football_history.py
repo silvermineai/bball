@@ -107,7 +107,7 @@ class HistoricalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError, "identity"):
                 import_history(conn, data, Path(d) / "out", Path(d) / "local")
-            with self.assertRaisesRegex(ValueError, "six"):
+            with self.assertRaisesRegex(ValueError, "10"):
                 import_history(
                     conn, self.inputs()[:-1], Path(d) / "out", Path(d) / "local"
                 )
@@ -186,7 +186,11 @@ class HistoricalTests(unittest.TestCase):
         conn = self.database()
         games = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM football_games")}
         games["2022"]["home_division"] = ""
-        rows = self.inputs()[1][2]
+        rows = next(
+            entry[2]
+            for entry in self.inputs()
+            if entry[0] == "team_advanced" and entry[1] == 2022
+        )
         profiles = season_release(
             rows, games, {"a": {"division": "fbs"}, "b": {"division": "fcs"}}, 2022
         )

@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +15,11 @@ sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.football import DB_PATH
 from ncaa_scraper.football_history import DATASET_NAMES, LOCAL, YEARS, write_source_sql
 from ncaa_scraper.football_sources import CACHE, DATASETS
+
+# The legacy football D1 is at its 10 GiB storage ceiling. Keep the earliest
+# historical efficiency snapshots in the verified R2 archive and avoid a
+# misleading retry loop when their raw rows cannot fit in D1.
+R2_ONLY_YEARS = {2020, 2021}
 
 LOCAL.mkdir(parents=True, exist_ok=True)
 lock = (LOCAL / "import.lock").open("w")
@@ -47,7 +53,7 @@ for name, expected in manifest["efficiency"]["files"].items():
             "Efficiency artifact changed; rebuild historical release first"
         )
 scopes = [(r["dataset"], r["season"]) for r in manifest["sources"]]
-if len(scopes) != 6 or set(scopes) != {(ds, y) for ds in DATASET_NAMES for y in YEARS}:
+if len(scopes) != len(DATASET_NAMES) * len(YEARS) or set(scopes) != {(ds, y) for ds in DATASET_NAMES for y in YEARS}:
     raise SystemExit("Unexpected historical import scope")
 conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
 conn.row_factory = sqlite3.Row
@@ -83,11 +89,27 @@ for name in manifest["implementation_sha256"]:
 
 
 def run(args):
-    return subprocess.check_output(
-        [sys.executable, str(ROOT / "scripts/cloudflare.py"), *args],
-        cwd=ROOT,
-        text=True,
-    )
+    command = [sys.executable, str(ROOT / "scripts/cloudflare.py"), *args]
+    for attempt, delay in enumerate((0, 5, 15, 30), 1):
+        if delay:
+            time.sleep(delay)
+        try:
+            return subprocess.check_output(command, cwd=ROOT, text=True, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as error:
+            output = error.output or ""
+            transient = any(
+                marker in output
+                for marker in (
+                    "Upstream service unavailable",
+                    "code: 7009",
+                    "Currently processing a long-running import",
+                    "Cancelled due to no poll() received",
+                )
+            )
+            if not transient or attempt == 4:
+                print(output, file=sys.stderr, end="")
+                raise
+            print(f"Transient Cloudflare import failure; retrying attempt {attempt + 1}/4", file=sys.stderr, flush=True)
 
 
 def query(sql):
@@ -157,6 +179,13 @@ for source in manifest["sources"]:
     sql = f"SELECT {','.join(columns)} FROM football_stats WHERE dataset='{ds}' AND season={year} ORDER BY record_key"
     expected = [tuple(r) for r in conn.execute(sql)]
     existing = query(sql)
+    if year in R2_ONLY_YEARS:
+        print(
+            f"Retained R2-only D1 overflow snapshot {ds}/{year}: "
+            f"{len(expected)} verified local rows",
+            flush=True,
+        )
+        continue
     if [tuple(r[k] for k in columns) for r in existing] != expected:
         run(
             [

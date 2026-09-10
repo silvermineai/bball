@@ -35,13 +35,15 @@ class FootballEfficiencyModelTests(unittest.TestCase):
         self.assertTrue(metrics["baseline_mae"] >= 0)
 
     def test_transition_evaluations_only_use_prior_seasons(self):
-        transitions = {2023: self.rows(), 2024: self.rows(), 2025: self.rows()}
+        transitions = {2022: self.rows(), 2023: self.rows(), 2024: self.rows(), 2025: self.rows()}
         evaluations = _transition_evaluations(transitions, 2026)
-        self.assertEqual([e["test_season"] for e in evaluations], [2024, 2025])
-        self.assertEqual(evaluations[0]["training_seasons"], [2023])
-        self.assertEqual(evaluations[1]["training_seasons"], [2023, 2024])
+        self.assertEqual([e["test_season"] for e in evaluations], [2023, 2024, 2025])
+        self.assertEqual(evaluations[0]["training_seasons"], [2022])
+        self.assertEqual(evaluations[1]["training_seasons"], [2022, 2023])
+        self.assertEqual(evaluations[2]["training_seasons"], [2022, 2023, 2024])
         self.assertEqual(evaluations[0]["training_rows"], 120)
         self.assertEqual(evaluations[1]["training_rows"], 240)
+        self.assertEqual(evaluations[2]["training_rows"], 360)
 
 
 if __name__ == "__main__":

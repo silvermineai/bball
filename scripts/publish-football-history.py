@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--refresh",
     action="store_true",
-    help="Conditionally recheck six historical source releases",
+    help="Conditionally recheck ten historical source releases",
 )
 args = parser.parse_args()
 

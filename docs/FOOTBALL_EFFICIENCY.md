@@ -1,14 +1,16 @@
 # Football efficiency desk
 
-`/football/efficiency/` compares team production across 12 measures, with the opposing offense from the same game serving as the defense's allowed production. The September 2026 release now covers five source seasons and 7,370 team-game records, all with paired opponent rows:
+`/football/efficiency/` compares team production across 12 measures, with the opposing offense from the same game serving as the defense's allowed production. The September 2026 release now covers seven source seasons and 10,340 team-game records, all with paired opponent rows:
 
 | Season | Team-game records | Games | Represented teams | Schedule-labeled FBS teams |
 |---|---:|---:|---:|---:|
+| 2020 | 1,130 | 565 | 145 | 128 |
+| 2021 | 1,684 | 842 | 217 | 130 |
 | 2022 | 1,722 | 861 | 230 | 131 |
 | 2023 | 1,806 | 903 | 227 | 133 |
 | 2024 | 1,892 | 946 | 235 | 134 |
 | 2025 | 1,912 | 956 | 236 | 136 |
-| 2026 (partial) | 38 | 19 | 38 | 31 |
+| 2026 (partial) | 194 | 97 | 182 | 135 |
 
 Representation does not establish complete game coverage or a roster census. Six 2022 all-star squads have no schedule division and remain in the full archive as unknown.
 
@@ -16,7 +18,7 @@ The desk defaults to 2025 and FBS opponents. Users can change season, opponent s
 
 ## Sources and definitions
 
-The builder reads existing `.local/football.sqlite3` through a read-only connection. It makes no network requests. The underlying releases are attributed to [SportsDataverse](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets CC BY 4.0. The original rows and source receipts are already retained in Cloudflare D1's `football_stats` and `football_sources` tables. No direct ESPN or NCAA fetching is added.
+The builder reads existing `.local/football.sqlite3` through a read-only connection. It makes no network requests. The underlying releases are attributed to [SportsDataverse](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets CC BY 4.0. The 2022–2026 original rows and source receipts are retained in Cloudflare D1's `football_stats` and `football_sources` tables. The 2020–2021 overflow snapshots are retained in the verified Cloudflare R2 history bundle because the legacy football D1 is at its 10 GiB storage ceiling; their derived rates and source receipts remain in the public static release. No direct ESPN or NCAA fetching is added.
 
 The release's observed grain is one team per game, despite the loader's introductory season-level description. Both source `game_id` and `pos_team_id` must match a scheduled participant and season. Duplicate team-game identities stop publication. Opponents are joined by game and team IDs; names never establish the join. Every original source field survives in downloadable profile evidence, including unfamiliar fields and original week numbers.
 
@@ -61,24 +63,24 @@ Verification includes independent reconciliation of all 1,950 raw rows, paired o
 
 ## Historical source expansion
 
-The 2022–2024 expansion adds 5,420 advanced team-game rows and 2,522 team-directory rows from six publisher releases. The publisher's [raw README](https://raw.githubusercontent.com/sportsdataverse/sportsdataverse-data/main/README.md) still displays its CC BY 4.0 dataset badge when checked on September 5, 2026. Its separate MIT software license is not substituted for the stated dataset attribution.
+The 2020–2024 expansion adds 8,234 advanced team-game rows and 4,092 team-directory rows from ten publisher releases. The publisher's [raw README](https://raw.githubusercontent.com/sportsdataverse/sportsdataverse-data/main/README.md) still displays its CC BY 4.0 dataset badge when checked on September 5, 2026. Its separate MIT software license is not substituted for the stated dataset attribution.
 
-`football_history.py` downloads through the existing identified, paced, conditional release client, then verifies cached bytes against each source receipt and validates dataset, season, directory identity, metric schema and every advanced game/team join. All six sources must validate before mutation. A staging database builds the complete efficiency release before an atomic local update activates only the six historical snapshots. The existing schedule editions are retained. Full regular football refreshes now also retrieve historical team directories and advanced rows alongside their schedules.
+`football_history.py` downloads through the existing identified, paced, conditional release client, then verifies cached bytes against each source receipt and validates dataset, season, directory identity, metric schema and every advanced game/team join. All ten sources must validate before mutation. A staging database builds the complete efficiency release before an atomic local update activates only the historical snapshots. The existing schedule editions are retained. Full regular football refreshes now also retrieve historical team directories and advanced rows alongside their schedules.
 
 Historical team directories label six 2022 all-star squads as FBS despite missing schedule divisions. The builder therefore derives each team's division from the nonempty labels on that season's schedule. One unique label is used; missing or conflicting labels yield unknown. This matches the source used for opponent division filtering. It does not infer conference membership or independently establish division status. The raw directory records remain available in D1 and R2. The 2025 and 2026 team profiles remain byte-for-byte unchanged.
 
-`sync-football-history.py` verifies implementation hashes, public artifacts, cached releases and regenerated SQL before uploading a deterministic R2 bundle at `bball-research/football/history/<sha256>.tar`. The archive includes original CSVs, source receipts, schedule receipts, scoped SQL and Python implementations. An R2 download must match the upload's SHA-256. D1 synchronization then replaces only the specified historical dataset/year snapshots, preserving existing schedules, player datasets, market observations, model versions and forecast registrations. Every returned D1 row and source receipt is compared with the local snapshot. A rerun checks existing contents before deciding whether an import is necessary.
+`sync-football-history.py` verifies implementation hashes, public artifacts, cached releases and regenerated SQL before uploading a deterministic R2 bundle at `bball-research/football/history/<sha256>.tar`. The archive includes original CSVs, source receipts, schedule receipts, scoped SQL and Python implementations. An R2 download must match the upload's SHA-256. D1 synchronization replaces the snapshots that fit the legacy database, while the 2020–2021 overflow rows remain R2-only; existing schedules, player datasets, market observations, model versions and forecast registrations are preserved. Every D1-backed row and source receipt is compared with the local snapshot. A rerun checks existing contents before deciding whether an import is necessary.
 
-The ignored `.local/football-history/manifest.json` binds the six SQL files, their source receipts and counts, implementation hashes and efficiency artifact hashes. `sync-football-efficiency.py` subsequently verifies remote source receipts and records the expanded public manifest. The [standalone publisher](../scripts/publish-football-history.py) runs tests, builds the frontend, archives/synchronizes sources, registers the artifact manifest and deploys. It does not train a forecast model or create prospective observations.
+The ignored `.local/football-history/manifest.json` binds the ten SQL files, their source receipts and counts, implementation hashes and efficiency artifact hashes. `sync-football-efficiency.py` subsequently verifies D1-backed source receipts, permits the two documented R2-only overflow seasons and records the expanded public manifest. The [standalone publisher](../scripts/publish-football-history.py) runs tests, builds the frontend, archives/synchronizes sources, registers the artifact manifest and deploys. It does not train a forecast model or create prospective observations.
 
 ```sh
-# Cached source rebuild; add --refresh to conditionally recheck the six files.
+# Cached source rebuild; add --refresh to conditionally recheck the ten files.
 PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.football_history
 .venv/bin/python scripts/publish-football-history.py
 ```
 
 Historical collection timestamps remain the actual 2026 retrieval times. These releases can support retrospective feature research, but they do not prove what statistics were available before historical games. No advanced-feature model is promoted by this import.
 
-Expansion verification reconciles all 7,370 rows and their opponent joins, checks 46,368 pooled season rates independently, and confirms preservation of every preexisting database snapshot outside the six intended scopes plus 1,061 prior public artifacts. Four new importer tests cover bad-identity rejection before mutation, SQL replay, repeat-import stability, scope guards, source hash/season checks and the all-star division case.
+Expansion verification reconciles all 10,340 rows and their opponent joins, checks pooled season rates independently, and confirms preservation of every preexisting database snapshot outside the ten intended scopes plus the prior public artifacts. Four new importer tests cover bad-identity rejection before mutation, SQL replay, repeat-import stability, scope guards, source hash/season checks and the all-star division case.
 
 The historical release passed 29 football Python tests, 39 frontend tests, the combined production build and the Cloudflare deployment dry run. Browser checks reconcile 288 comparison cells across the three added seasons and exercise source logs, conference changes, URL restoration, all-star filtering and mobile layout.
