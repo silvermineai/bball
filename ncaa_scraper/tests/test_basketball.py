@@ -404,6 +404,7 @@ class BasketballIngestTests(unittest.TestCase):
                         "efg": 0.58,
                         "ts": 0.61,
                         "three_pct": 0.36,
+                        "ft_pct": 0.78,
                         "ft_rate": 0.22,
                         "three_rate": 0.41,
                         "tov_rate": 0.14,
@@ -418,6 +419,7 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(production["ppg"], 14.0)
         self.assertEqual(production["efg"], 0.58)
         self.assertEqual(production["ts"], 0.61)
+        self.assertEqual(production["ft_pct"], 0.78)
         self.assertEqual(production["qualified"], True)
 
     def test_prior_production_preserves_reported_starter_sample(self):

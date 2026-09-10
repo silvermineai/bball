@@ -60,17 +60,17 @@ export const focusLabels: Record<FitFocus, string> = {
 
 export const focusDescriptions: Record<FitFocus, string> = {
   creation: "Assist and scoring percentiles, with recorded workload as context.",
-  shooting: "True-shooting and effective-FG percentiles, with volume as context.",
+  shooting: "True-shooting, effective-FG and free-throw accuracy percentiles, with volume as context.",
   rebounding: "Rebound rate and workload percentiles from the prior season.",
   defense: "Steal and block event percentiles, with workload as context.",
   workload: "Prior total minutes and minutes-per-game percentiles.",
 };
 
-type ProductionKey = "apg" | "ppg" | "ts" | "efg" | "rpg" | "spg" | "bpg" | "minutes" | "mpg";
+type ProductionKey = "apg" | "ppg" | "ts" | "efg" | "ft_pct" | "rpg" | "spg" | "bpg" | "minutes" | "mpg";
 
 const focusMetrics: Record<FitFocus, Array<[ProductionKey, number]>> = {
   creation: [["apg", 0.6], ["ppg", 0.4]],
-  shooting: [["ts", 0.6], ["efg", 0.4]],
+  shooting: [["ts", 0.45], ["efg", 0.35], ["ft_pct", 0.2]],
   rebounding: [["rpg", 0.75], ["mpg", 0.25]],
   defense: [["spg", 0.6], ["bpg", 0.4]],
   workload: [["minutes", 0.6], ["mpg", 0.4]],

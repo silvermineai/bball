@@ -44,6 +44,7 @@ function PriorProductionDetails({ production }: { production: PriorProduction })
         <div><dt>Effective FG</dt><dd>{statPercent(production.efg)}</dd></div>
         <div><dt>3-point rate</dt><dd>{statPercent(production.three_rate)}</dd></div>
         <div><dt>3-point accuracy</dt><dd>{statPercent(production.three_pct)}</dd></div>
+        <div><dt>Free-throw accuracy</dt><dd>{statPercent(production.ft_pct)}</dd></div>
         <div><dt>Free-throw rate</dt><dd>{statPercent(production.ft_rate)}</dd></div>
         <div><dt>Turnover rate</dt><dd>{statPercent(production.tov_rate)}</dd></div>
         <div><dt>Box BPM</dt><dd>{statValue(production.box_bpm)}</dd></div>

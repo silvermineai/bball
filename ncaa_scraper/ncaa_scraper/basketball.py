@@ -682,6 +682,7 @@ def _prior_production(rows):
             "efg",
             "ts",
             "three_pct",
+            "ft_pct",
             "ft_rate",
             "three_rate",
             "tov_rate",
@@ -714,7 +715,7 @@ def _prior_production(rows):
                 value,
                 3
                 if key
-                in {"efg", "ts", "three_pct", "ft_rate", "three_rate", "tov_rate"}
+                in {"efg", "ts", "three_pct", "ft_pct", "ft_rate", "three_rate", "tov_rate"}
                 else 1,
             )
             if value is not None
@@ -996,6 +997,10 @@ def player_index(conn, year=2026):
                     t["three_point_field_goals_made"],
                     t["three_point_field_goals_attempted"],
                 ),
+                "ft_pct": ratio(
+                    t["free_throws_made"],
+                    t["free_throws_attempted"],
+                ),
                 "ft_rate": ratio(t["free_throws_attempted"], fga),
                 "three_rate": ratio(t["three_point_field_goals_attempted"], fga),
                 "tov_rate": ratio(
@@ -1020,6 +1025,7 @@ def player_index(conn, year=2026):
                 "efg",
                 "ts",
                 "three_pct",
+                "ft_pct",
                 "ft_rate",
                 "three_rate",
                 "tov_rate",
