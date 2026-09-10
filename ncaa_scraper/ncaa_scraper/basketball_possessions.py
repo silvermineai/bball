@@ -27,6 +27,26 @@ MIGRATION = ROOT / "worker/migrations/0027_basketball_possession_style.sql"
 VERSION = 1
 
 
+def ensure_local_schema(conn: sqlite3.Connection) -> None:
+    """Create the local tables this standalone refresh needs.
+
+    The possession refresh runs before the main basketball publisher on a
+    clean CI checkout. Keeping its receipt table local to this module makes
+    that first run independent of the main publisher's later schema setup.
+    """
+    conn.executescript(MIGRATION.read_text())
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS bb_sources (
+            dataset TEXT,
+            season INTEGER,
+            receipt_json TEXT NOT NULL,
+            PRIMARY KEY(dataset, season)
+        )
+        """
+    )
+
+
 def _text(value: object) -> str | None:
     if value is None:
         return None
@@ -216,7 +236,7 @@ def main() -> None:
         parser.error("Use published season-ending years 2010–2026")
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
-    conn.executescript(MIGRATION.read_text())
+    ensure_local_schema(conn)
     source_client = client()
     editions = []
     for season in sorted(set(args.seasons)):

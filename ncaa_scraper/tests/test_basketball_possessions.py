@@ -1,14 +1,28 @@
 import tempfile
 import unittest
+import sqlite3
 from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from ncaa_scraper.basketball_possessions import build_season
+from ncaa_scraper.basketball_possessions import build_season, ensure_local_schema
 
 
 class BasketballPossessionStyleTests(unittest.TestCase):
+    def test_clean_local_database_gets_receipt_schema(self):
+        conn = sqlite3.connect(":memory:")
+        ensure_local_schema(conn)
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        self.assertIn("bb_sources", tables)
+        self.assertIn("bb_possession_style", tables)
+        conn.close()
+
     def test_aggregates_team_flags_without_player_credit(self):
         rows = [
             {"season": 2026, "contest_id": "g1", "poss_team_espn_team_id": "10", "poss_team_ncaa_team_id": "n10", "home": "Alpha", "away": "Beta", "poss_team": "Alpha", "pts": 2, "is_transition": 1, "is_assisted": 0, "is_garbage_time": 0},
