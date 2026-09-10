@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import type { BBRosters } from "../../_lib/basketball-types";
+import { useBasketballRelease } from "../../_components/useBasketballRelease";
 
 type MovementStatus = "different_program" | "new_to_dataset";
 type MovementPlayer = {
@@ -14,6 +16,7 @@ type MovementPlayer = {
   previous_minutes: number | null;
   position: string | null;
   source_url: string | null;
+  prior_production?: BBRosters["players"][number]["prior_production"];
 };
 type MovementResponse = {
   season: number;
@@ -28,6 +31,7 @@ export default function MovementWatch() {
   const [status, setStatus] = useState<MovementStatus>("different_program");
   const [data, setData] = useState<MovementResponse | null>(null);
   const [error, setError] = useState("");
+  const { data: published } = useBasketballRelease<BBRosters>(season === 2026 ? "rosters-2026" : "rosters");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,8 +54,16 @@ export default function MovementWatch() {
   }, [season, status]);
 
   const players = useMemo(
-    () => [...(data?.players ?? [])].sort((a, b) => (b.previous_minutes ?? -1) - (a.previous_minutes ?? -1)).slice(0, 10),
-    [data],
+    () => [...(data?.players ?? [])]
+      .map((player) => ({
+        ...player,
+        // The live endpoint owns the current observation. Join only the
+        // historical profile by exact athlete and team IDs.
+        prior_production: published?.players.find((candidate) => candidate.id === player.id && candidate.team_id === player.team_id)?.prior_production ?? null,
+      }))
+      .sort((a, b) => (b.previous_minutes ?? -1) - (a.previous_minutes ?? -1))
+      .slice(0, 10),
+    [data, published],
   );
   const count = data?.status_counts[status] ?? 0;
 
@@ -88,17 +100,20 @@ export default function MovementWatch() {
         <div className="table-scroll" style={{ marginTop: 16 }}>
           <table className="data-table">
             <thead>
-              <tr><th>Player</th><th>Listed program</th><th>Previous program</th><th>Pos.</th><th className="numeric">Prior minutes</th><th className="numeric">Prior games</th><th /></tr>
+              <tr><th>Player</th><th>Listed program</th><th>Previous program</th><th>Pos.</th><th className="numeric">Prior minutes</th><th className="numeric">Prior games</th><th className="numeric">PPG</th><th className="numeric">TS%</th><th className="numeric">Box BPM</th><th /></tr>
             </thead>
             <tbody>
               {players.map((player) => (
                 <tr key={`${player.id}-${player.team_id}`}>
-                  <td><strong>{player.name}</strong></td>
+                  <td><strong><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${data?.season ? data.season - 1 : 2025}`}>{player.name}</Link></strong><small>Source ID {player.id}</small></td>
                   <td>{player.team}</td>
                   <td>{player.previous_teams.length ? player.previous_teams.join(", ") : "Not recorded"}</td>
                   <td>{player.position || "—"}</td>
                   <td className="numeric">{player.previous_minutes == null ? "—" : player.previous_minutes.toLocaleString()}</td>
                   <td className="numeric">{player.previous_games == null ? "—" : player.previous_games.toLocaleString()}</td>
+                  <td className="numeric">{player.prior_production?.ppg == null ? "—" : player.prior_production.ppg.toFixed(1)}</td>
+                  <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
+                  <td className="numeric">{player.prior_production?.box_bpm == null ? "—" : player.prior_production.box_bpm.toFixed(1)}</td>
                   <td>{player.source_url ? <a href={player.source_url} target="_blank" rel="noreferrer" aria-label={`Open ${player.name} source`}>Source ↗</a> : null}</td>
                 </tr>
               ))}
