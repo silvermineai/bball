@@ -17,7 +17,7 @@ export default function Page() {
         </p>
       </div>
       <Suspense fallback={<p>Loading matchups…</p>}>
-        <MatchupBrowser games={d.upcoming} generated={d.generated_at} efficiencyScenarios={efficiencyModel.scenarios} />
+        <MatchupBrowser games={d.upcoming} generated={d.generated_at} efficiencyScenarios={efficiencyModel.scenarios} marketCoverage={d.coverage} />
       </Suspense>
     </>
   );

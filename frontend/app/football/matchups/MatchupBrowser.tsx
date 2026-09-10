@@ -22,10 +22,15 @@ export default function MatchupBrowser({
   games,
   generated,
   efficiencyScenarios = [],
+  marketCoverage,
 }: {
   games: Game[];
   generated: string;
   efficiencyScenarios?: FootballEfficiencyScenario[];
+  marketCoverage?: {
+    market_observations: number;
+    pregame_market_observations: number;
+  };
 }) {
   const params = useSearchParams();
   const requestedPicks = params.get("picks") || "";
@@ -238,6 +243,20 @@ export default function MatchupBrowser({
             ? `${liveError} Showing the published snapshot.`
             : "Checking the live D1 forecast edition…"}
       </p>
+      <section className="paper-panel football-market-status" aria-labelledby="football-market-status-title">
+        <div>
+          <div className="eyebrow">MARKET EVIDENCE</div>
+          <h2 id="football-market-status-title">Lines stay attached to their timestamps.</h2>
+        </div>
+        <p>
+          {marketCoverage
+            ? `${marketCoverage.market_observations.toLocaleString()} retained football market observations are available in the historical archive; ${marketCoverage.pregame_market_observations.toLocaleString()} currently qualify as pregame records.`
+            : "The historical football market archive is available from the research desk."} {marketCoverage?.pregame_market_observations
+            ? "Cards show the matching archived checkpoint when one is present."
+            : "No verified pregame quote is attached to these cards, so the desk does not imply a live betting edge."}
+        </p>
+        <Link href="/research/markets/?sport=football">Open the football market archive →</Link>
+      </section>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>{rows.length} games in the filtered slate</p>
         <button
@@ -246,8 +265,8 @@ export default function MatchupBrowser({
           onClick={() => downloadCsv(
             "football-matchups.csv",
             toCsv(
-              ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Model difference"],
-              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.margin_difference]),
+              ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Archived total", "Model spread gap", "Model total gap", "Market source", "Market observed at"],
+              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.total, g.market?.margin_difference, g.market?.total == null || g.prediction?.total == null ? null : g.prediction.total - g.market.total, g.market?.source, g.market?.observed_at]),
             ),
           )}
         >

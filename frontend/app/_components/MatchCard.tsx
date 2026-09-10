@@ -61,16 +61,21 @@ export default function MatchCard({ game: g, efficiencyScenario }: { game: Game;
       <div className="market-note">
         {g.market ? (
           <>
-            Archived home line {fmt(g.market.home_spread)} · model difference{" "}
+            <strong>Archived market checkpoint</strong><br />
+            Home spread {fmt(g.market.home_spread)} · model margin {p ? fmt(p.home_margin) : "—"} · model gap{" "}
             {fmt(g.market.margin_difference)} pts
             <br />
+            {g.market.total != null && p ? `Total ${fmt(g.market.total)} · model ${fmt(p.total)} · gap ${fmt(p.total - g.market.total)} pts` : "Total unavailable in this archive row."}
+            <br />
             Observed {kick(g.market.observed_at)}. Bookmaker timestamp
-            unavailable.
+            unavailable; archival reference only.
           </>
         ) : (
           <>
-            Market comparison pending · no verified pregame line in this
-            dataset.
+            <strong>Market checkpoint</strong><br />
+            No verified pregame line is attached to this game. The archive is
+            linked from the research desk; this card never guesses a current
+            price.
           </>
         )}
       </div>

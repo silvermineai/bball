@@ -4708,12 +4708,41 @@ summary {
 .football-market p {
   margin: 0 0 15px;
 }
+.football-market-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: end;
+  margin: 0 0 24px;
+}
+.football-market-status h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+.football-market-status p {
+  grid-column: 1 / -1;
+  margin: 0;
+  max-width: 780px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.football-market-status a {
+  white-space: nowrap;
+  font-size: 12px;
+}
 @media (max-width: 950px) {
   .football-unit-grid {
     grid-template-columns: 1fr;
   }
 }
 @media (max-width: 600px) {
+  .football-market-status {
+    display: block;
+  }
+  .football-market-status a {
+    display: inline-block;
+    margin-top: 12px;
+  }
   .football-unit {
     padding: 16px 10px;
   }
