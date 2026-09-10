@@ -11,7 +11,20 @@ type Row = {
   player_name: string | null; stats: Record<string, number | null>;
 };
 type Result = { season: number; archive_mode: "games" | "season"; page: number; page_size: number; total: number; rows: Row[] };
-type Meta = { seasons: number[]; total: number; source?: { fetched_at?: string | null; sha256?: string | null } };
+type ArchiveValidation = {
+  total_rows: number;
+  missing_ids: number;
+  missing_names: number;
+  missing_game_dates: number;
+  malformed_game_dates: number;
+  same_team_opponent: number;
+  malformed_stats_json: number;
+  invalid_possessions: number;
+  impossible_shooting: number;
+  invalid_minutes: number;
+  zero_minutes_with_stats: number;
+};
+type Meta = { seasons: number[]; total: number; source?: { fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
 type FieldCoverage = {
   fields: string[];
   seasons: Array<{
@@ -191,6 +204,28 @@ export default function NcaaPlayerBox() {
         const value = selectedCoverage.fields[field];
         return <tr key={field}><td><code>{field}</code></td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{value ? (value.share * 100).toFixed(1) + "%" : "0.0%"}</td></tr>;
       })}</tbody></table></div>
+    </section>}
+    {result?.archive_mode === "games" && meta?.validation && <section className="paper-panel" style={{ marginBottom: 24 }}>
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">Game-row integrity / {label(Number(season))}</div>
+          <h2>Know which source rows are safe to use.</h2>
+        </div>
+        <span className="note">{meta.validation.total_rows.toLocaleString()} rows checked</span>
+      </div>
+      <div className="raw-stat-grid">
+        <div><dt>{meta.validation.missing_ids.toLocaleString()}</dt><dd>Missing source IDs</dd></div>
+        <div><dt>{meta.validation.missing_names.toLocaleString()}</dt><dd>Missing player/team context</dd></div>
+        <div><dt>{meta.validation.missing_game_dates.toLocaleString()}</dt><dd>Missing game dates</dd></div>
+        <div><dt>{meta.validation.malformed_game_dates.toLocaleString()}</dt><dd>Malformed game dates</dd></div>
+        <div><dt>{meta.validation.same_team_opponent.toLocaleString()}</dt><dd>Same team/opponent labels</dd></div>
+        <div><dt>{meta.validation.invalid_possessions.toLocaleString()}</dt><dd>Negative possession values</dd></div>
+        <div><dt>{meta.validation.impossible_shooting.toLocaleString()}</dt><dd>Impossible made/attempt totals</dd></div>
+        <div><dt>{meta.validation.invalid_minutes.toLocaleString()}</dt><dd>Out-of-range minutes</dd></div>
+        <div><dt>{meta.validation.zero_minutes_with_stats.toLocaleString()}</dt><dd>Zero-minute rows with stats</dd></div>
+        <div><dt>{meta.validation.malformed_stats_json.toLocaleString()}</dt><dd>Malformed stat payloads</dd></div>
+      </div>
+      <p className="note">The source release carries team/opponent labels and dates, but no venue or home/away field. Location-dependent analysis therefore stays on the schedule archive; these checks flag unusable matchup context and impossible player totals before a row is used for ranking or coaching review.</p>
     </section>}
     {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>

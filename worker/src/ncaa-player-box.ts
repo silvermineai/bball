@@ -4,6 +4,50 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
+type ArchiveValidation = {
+  total_rows: number;
+  missing_ids: number;
+  missing_names: number;
+  missing_game_dates: number;
+  malformed_game_dates: number;
+  same_team_opponent: number;
+  malformed_stats_json: number;
+  invalid_possessions: number;
+  impossible_shooting: number;
+  invalid_minutes: number;
+  zero_minutes_with_stats: number;
+};
+
+const validationSql = `SELECT count(*) AS total_rows,
+  sum(CASE WHEN trim(contest_id)='' OR trim(team_id)='' OR trim(player_id)='' THEN 1 ELSE 0 END) AS missing_ids,
+  sum(CASE WHEN team_name IS NULL OR trim(team_name)='' OR opponent_name IS NULL OR trim(opponent_name)='' OR player_name IS NULL OR trim(player_name)='' THEN 1 ELSE 0 END) AS missing_names,
+  sum(CASE WHEN game_date IS NULL OR trim(game_date)='' THEN 1 ELSE 0 END) AS missing_game_dates,
+  sum(CASE WHEN game_date IS NOT NULL AND trim(game_date)<>'' AND (game_date NOT GLOB '[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]' OR date(substr(game_date,7,4)||'-'||substr(game_date,1,2)||'-'||substr(game_date,4,2)) IS NULL) THEN 1 ELSE 0 END) AS malformed_game_dates,
+  sum(CASE WHEN lower(trim(team_name))=lower(trim(opponent_name)) AND trim(team_name)<>'' THEN 1 ELSE 0 END) AS same_team_opponent,
+  sum(CASE WHEN json_valid(stats_json)=0 THEN 1 ELSE 0 END) AS malformed_stats_json,
+  sum(CASE WHEN json_valid(stats_json)=1 AND json_extract(stats_json,'$.o_poss') IS NOT NULL AND json_extract(stats_json,'$.o_poss')<0 THEN 1 ELSE 0 END) AS invalid_possessions,
+  sum(CASE WHEN json_valid(stats_json)=1 AND (json_extract(stats_json,'$.fgm')>json_extract(stats_json,'$.fga') OR json_extract(stats_json,'$.tpm')>json_extract(stats_json,'$.tpa') OR json_extract(stats_json,'$.ftm')>json_extract(stats_json,'$.fta') OR json_extract(stats_json,'$.rimm')>json_extract(stats_json,'$.rima') OR json_extract(stats_json,'$.midm')>json_extract(stats_json,'$.mida') OR json_extract(stats_json,'$.pbackm')>json_extract(stats_json,'$.pbacka')) THEN 1 ELSE 0 END) AS impossible_shooting,
+  sum(CASE WHEN json_valid(stats_json)=1 AND json_extract(stats_json,'$.mins') IS NOT NULL AND (json_extract(stats_json,'$.mins')<0 OR json_extract(stats_json,'$.mins')>60) THEN 1 ELSE 0 END) AS invalid_minutes,
+  sum(CASE WHEN json_valid(stats_json)=1 AND json_extract(stats_json,'$.mins')=0 AND (json_extract(stats_json,'$.pts')>0 OR json_extract(stats_json,'$.fga')>0 OR json_extract(stats_json,'$.fta')>0 OR json_extract(stats_json,'$.orb')>0 OR json_extract(stats_json,'$.drb')>0 OR json_extract(stats_json,'$.ast')>0 OR json_extract(stats_json,'$.o_poss')>0) THEN 1 ELSE 0 END) AS zero_minutes_with_stats
+  FROM bb_ncaa_player_box WHERE season=?`;
+
+function parseValidation(row: Record<string, unknown> | undefined): ArchiveValidation | null {
+  if (!row) return null;
+  const value = (key: keyof ArchiveValidation) => Number(row[key] || 0);
+  return {
+    total_rows: value("total_rows"),
+    missing_ids: value("missing_ids"),
+    missing_names: value("missing_names"),
+    missing_game_dates: value("missing_game_dates"),
+    malformed_game_dates: value("malformed_game_dates"),
+    same_team_opponent: value("same_team_opponent"),
+    malformed_stats_json: value("malformed_stats_json"),
+    invalid_possessions: value("invalid_possessions"),
+    impossible_shooting: value("impossible_shooting"),
+    invalid_minutes: value("invalid_minutes"),
+    zero_minutes_with_stats: value("zero_minutes_with_stats"),
+  };
+}
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -59,12 +103,14 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, page, meta } = c.req.valid("query");
   if (meta === "1") {
-    const [seasons, count, source] = await researchDb(c.env).batch([
+    const [seasons, count, source, validation] = await researchDb(c.env).batch([
       researchDb(c.env).prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
       researchDb(c.env).prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
       researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
+      researchDb(c.env).prepare(validationSql).bind(season),
     ]);
     const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+    const validationRow = validation?.results[0] as Record<string, unknown> | undefined;
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
@@ -73,6 +119,7 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
         sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
       },
+      validation: parseValidation(validationRow),
     });
   }
   const rawCount = await researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
