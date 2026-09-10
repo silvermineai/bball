@@ -27,11 +27,16 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting?season=2027": {
+                "season": 2027,
+                "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+            },
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
             report = check_live("https://example.test", now=now)
         self.assertEqual(report["forecast_model"], "model-1")
-        self.assertEqual(report["recruiting_rows"], 0)
+        self.assertEqual(report["recruiting_intake_rows"], 0)
+        self.assertEqual(report["recruiting_reviewed_players"], 96)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
 

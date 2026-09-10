@@ -166,7 +166,7 @@ The shared market archive keeps its sport, season, search and page controls in t
 
 The basketball landing page also reports the live scorecard’s qualifying quote count and forecast denominator. It links directly to the market archive and states the provider-clock, participant-match and pre-tip requirements, so an empty quote count is visible as missing licensed coverage rather than an implied line.
 
-The daily refresh now has an independent live publication monitor in [`.github/workflows/monitor-publication.yml`](../.github/workflows/monitor-publication.yml). It checks the deployed Worker, both sport coverage payloads, every source clock, both forecast catalogs (including the 2026–27 basketball model) and recruiting-intake metadata without mutating D1 or republishing provider data. A source or model clock older than 240 hours fails the monitor so a stale publication is visible even when the source refresh job itself completed.
+The daily refresh now has an independent live publication monitor in [`.github/workflows/monitor-publication.yml`](../.github/workflows/monitor-publication.yml). It checks the deployed Worker, both sport coverage payloads, every source clock, both forecast catalogs (including the 2026–27 basketball model), the reviewed recruiting release and recruiting-intake metadata without mutating D1 or republishing provider data. It reports reviewed school evidence separately from licensed provider-intake rows, so a zero provider intake does not hide a live curated release. A source or model clock older than 240 hours fails the monitor so a stale publication is visible even when the source refresh job itself completed.
 
 ## Remaining full-goal work
 

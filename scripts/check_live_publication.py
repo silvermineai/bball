@@ -107,6 +107,17 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
         raise ValueError("recruiting intake coverage is malformed")
+    recruiting_release = get_json(base_url, "/api/basketball/research/recruiting?season=2027")
+    release_coverage = recruiting_release.get("coverage")
+    if (
+        recruiting_release.get("season") != 2027
+        or not isinstance(release_coverage, dict)
+        or any(
+            not isinstance(release_coverage.get(key), int)
+            for key in ("programs", "players", "events", "sources")
+        )
+    ):
+        raise ValueError("reviewed recruiting release is malformed")
     return {
         "base_url": base_url.rstrip("/"),
         "checked_at": checked_at.isoformat().replace("+00:00", "Z"),
@@ -120,7 +131,15 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_forecast_model": football_latest.get("model_id"),
         "football_forecast_rows": football_latest["forecasts"],
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
+        # Keep provider intake and reviewed school evidence separate. The
+        # former can be zero when no licensed export is configured while the
+        # latter remains the public recruiting release.
         "recruiting_rows": recruiting["total"],
+        "recruiting_intake_rows": recruiting["total"],
+        "recruiting_reviewed_programs": release_coverage["programs"],
+        "recruiting_reviewed_players": release_coverage["players"],
+        "recruiting_reviewed_events": release_coverage["events"],
+        "recruiting_reviewed_sources": release_coverage["sources"],
     }
 
 
