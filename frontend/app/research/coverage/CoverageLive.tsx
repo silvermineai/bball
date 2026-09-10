@@ -8,6 +8,7 @@ import {
   summarizePossessionReadiness,
   type SourceReceipt,
 } from "../../_lib/coverage-health";
+import { ncaaStatLabels, type NCAAStatKey } from "../../_lib/ncaa-individual";
 
 type CoverageResponse = {
   coverage: Array<{ dataset: string; rows: number }>;
@@ -75,6 +76,14 @@ type RecruitingMeta = {
   };
 };
 
+type NCAALeaderMeta = {
+  season: number;
+  coverage: {
+    players: number;
+    divisions: Record<"1" | "2" | "3", { players: number } & Partial<Record<NCAAStatKey, number>>>;
+  };
+};
+
 type Freshness = {
   label: string;
   detail: string;
@@ -114,6 +123,8 @@ export default function CoverageLive() {
   const [basketballForecast, setBasketballForecast] = useState<ForecastMeta | null>(null);
   const [footballForecast, setFootballForecast] = useState<ForecastMeta | null>(null);
   const [recruiting, setRecruiting] = useState<RecruitingMeta | null>(null);
+  const [ncaaLeaders, setNcaaLeaders] = useState<NCAALeaderMeta | null>(null);
+  const [ncaaLeadersError, setNcaaLeadersError] = useState("");
   const [error, setError] = useState("");
   const [footballError, setFootballError] = useState("");
   const [careerError, setCareerError] = useState("");
@@ -133,6 +144,7 @@ export default function CoverageLive() {
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);
     void load<RecruitingMeta>("/api/basketball/research/recruiting?season=2027", setRecruiting, () => undefined);
+    void load<NCAALeaderMeta>("/api/basketball/research/ncaa-leaders?meta=1", setNcaaLeaders, setNcaaLeadersError);
     void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live career archive check is unavailable.");
@@ -199,7 +211,22 @@ export default function CoverageLive() {
                 return <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
               })}</tbody>
             </table>
-          </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{career && <div className="paper-panel" style={{ marginTop: 20 }}>
+          </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
+            <summary><strong>NCAA national leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
+            <p className="note" style={{ marginTop: 12 }}>Live D1 counts of finite values in the retained final national-ranking snapshot. The player total is the row count; a lower measure count means that the publisher did not supply that field for every row. Missing source values remain unavailable.</p>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+              <table className="data-table">
+                <thead><tr><th>Measure</th><th className="numeric">Division I</th><th className="numeric">Division II</th><th className="numeric">Division III</th></tr></thead>
+                <tbody>{(Object.keys(ncaaStatLabels) as NCAAStatKey[]).map((stat) => <tr key={stat}>
+                  <th scope="row">{ncaaStatLabels[stat]}</th>
+                  <td className="numeric">{(ncaaLeaders.coverage.divisions["1"][stat] ?? 0).toLocaleString()}</td>
+                  <td className="numeric">{(ncaaLeaders.coverage.divisions["2"][stat] ?? 0).toLocaleString()}</td>
+                  <td className="numeric">{(ncaaLeaders.coverage.divisions["3"][stat] ?? 0).toLocaleString()}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+            <p className="note" style={{ marginTop: 12 }}><Link href="/basketball/ncaa/">Open the national leaderboards →</Link> · {ncaaLeaders.coverage.players.toLocaleString()} total source rows checked.</p>
+          </details>}{ncaaLeadersError && <p className="note">NCAA national leader coverage: {ncaaLeadersError} The bundled coverage inventory remains available.</p>}{career && <div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Historical player archive / D1</div>
             <h3>{career.seasons?.length?.toLocaleString() ?? "—"} source seasons connected.</h3>
             <div className="raw-stat-grid">
