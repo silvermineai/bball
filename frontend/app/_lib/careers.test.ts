@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   careerPoints,
+  careerAvailability,
   identityReview,
   rankProduction,
   type CareerProfile,
@@ -17,6 +18,26 @@ const profile = (
     teams: [{ team: "Program", games: 20 }],
   }) as CareerProfile;
 describe("historical player comparisons", () => {
+  it("summarizes source-reported participation without inferring why a player missed a game", () => {
+    const rows = [
+      { appearance: true, dnp: false, starter: true, date: "2026-01-03", schedule_matched: true },
+      { appearance: true, dnp: false, starter: false, date: "2026-01-05", schedule_matched: true },
+      { appearance: false, dnp: true, starter: null, date: "2026-01-07", schedule_matched: true },
+      { appearance: false, dnp: null, starter: null, date: null, schedule_matched: false },
+    ] as never[];
+    expect(careerAvailability(rows)).toEqual({
+      source_rows: 4,
+      played_games: 2,
+      dnp_games: 1,
+      excluded_games: 2,
+      starts: 1,
+      starter_reported_games: 2,
+      starter_rate: 0.5,
+      unmatched_schedule: 1,
+      first_appearance: "2026-01-03",
+      last_appearance: "2026-01-05",
+    });
+  });
   it("keeps missing rates unavailable and orders actual source seasons", () => {
     expect(
       careerPoints(

@@ -108,6 +108,18 @@ export type CareerLog = {
   stats: Record<StatKey, number | null>;
   issues: string[];
 };
+export type CareerAvailability = {
+  source_rows: number;
+  played_games: number;
+  dnp_games: number;
+  excluded_games: number;
+  starts: number;
+  starter_reported_games: number;
+  starter_rate: number | null;
+  unmatched_schedule: number;
+  first_appearance: string | null;
+  last_appearance: string | null;
+};
 export type CareerData = {
   id: string;
   season: number;
@@ -118,6 +130,29 @@ export type CareerData = {
   coverage: CareerCoverage;
   core?: Array<{ season: number; profile: Record<string, string> }>;
 };
+
+/** Summarize only source-reported game participation; never infer injuries. */
+export function careerAvailability(rows: CareerLog[]): CareerAvailability {
+  const appearances = rows.filter((row) => row.appearance);
+  const starterReportedGames = appearances.filter((row) => row.starter !== null).length;
+  const dates = appearances
+    .map((row) => row.date)
+    .filter((value): value is string => !!value)
+    .sort();
+  const starts = appearances.filter((row) => row.starter === true).length;
+  return {
+    source_rows: rows.length,
+    played_games: appearances.length,
+    dnp_games: rows.filter((row) => row.dnp === true).length,
+    excluded_games: rows.filter((row) => !row.appearance).length,
+    starts,
+    starter_reported_games: starterReportedGames,
+    starter_rate: starterReportedGames ? starts / starterReportedGames : null,
+    unmatched_schedule: rows.filter((row) => !row.schedule_matched).length,
+    first_appearance: dates[0] || null,
+    last_appearance: dates.at(-1) || null,
+  };
+}
 export const seasonLabel = (year: number) =>
   `${year - 1}–${String(year).slice(-2)}`;
 export const historyMetricLabels = {

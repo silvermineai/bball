@@ -5,6 +5,7 @@ import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import {
   careerPoints,
+  careerAvailability,
   identityReview,
   historyMetricLabels,
   seasonLabel,
@@ -95,6 +96,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
           ? r.dnp === true
           : !r.appearance),
   );
+  const availability = data ? careerAvailability(data.rows) : null;
   const changeSeason = (value: string) => {
     setSeason(value);
     const url = new URL(window.location.href);
@@ -223,6 +225,25 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               completed schedule entries in this season’s source coverage.
             </p>
           </div>
+          {availability && (
+            <section className="section paper-panel" aria-label="Source-reported availability profile">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow">Role sample / source-reported participation</div>
+                  <h2>Separate playing time from availability claims.</h2>
+                </div>
+              </div>
+              <div className="strip">
+                <div><strong>{availability.played_games.toLocaleString()}</strong><span>Games with recorded playing time</span></div>
+                <div><strong>{availability.starts.toLocaleString()}</strong><span>Recorded starts</span></div>
+                <div><strong>{availability.starter_rate == null ? "—" : `${(availability.starter_rate * 100).toFixed(1)}%`}</strong><span>Start rate when reported</span></div>
+                <div><strong>{availability.dnp_games.toLocaleString()}</strong><span>Reported DNP rows</span></div>
+              </div>
+              <p className="note">
+                The archive reports {availability.source_rows.toLocaleString()} source rows, including {availability.excluded_games.toLocaleString()} rows without a qualifying appearance and {availability.unmatched_schedule.toLocaleString()} rows without a matched schedule entry. The first and last recorded appearances are {availability.first_appearance ? date(availability.first_appearance) : "unavailable"} and {availability.last_appearance ? date(availability.last_appearance) : "unavailable"}. These fields describe the imported source sample; they do not establish injury, suspension, transfer or current availability.
+              </p>
+            </section>
+          )}
           {data.core && data.core.length > 0 && (
             <section className="section paper-panel">
               <div className="section-heading">
