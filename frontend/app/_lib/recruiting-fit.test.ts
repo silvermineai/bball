@@ -42,7 +42,11 @@ describe("recruiting fit", () => {
       player({ id: "offensive", team_id: "3", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 10, rpg: 8, orpg: 5, drpg: 3, apg: 2, teams: ["B"] } }),
       player({ id: "legacy", team_id: "4", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 10, rpg: 8, apg: 2, teams: ["C"] } }),
     ], { teamId: "target", role: "any", focus: "rebounding", minimumMinutes: 400 });
-    expect(result.find((row) => row.player.id === "two-way")).toMatchObject({ skillComponents: 3, skillComponentTotal: 3, primaryValue: 3 });
+    expect(result.find((row) => row.player.id === "two-way")).toMatchObject({ skillComponents: 3, skillComponentTotal: 3, primaryValue: 3, skillBreakdown: [
+      { key: "orpg", value: 3, percentile: 0, weight: 0.4 },
+      { key: "drpg", value: 5, percentile: 100, weight: 0.4 },
+      { key: "mpg", value: 28, percentile: 0, weight: 0.2 },
+    ] });
     expect(result.find((row) => row.player.id === "legacy")).toMatchObject({ skillComponents: 1, skillComponentTotal: 3, primaryValue: null });
     expect(result.map((row) => row.player.id)).toContain("offensive");
   });

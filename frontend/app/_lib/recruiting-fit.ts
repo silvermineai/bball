@@ -17,6 +17,7 @@ export type FitRow = {
   skillPercentile: number | null;
   skillComponents: number;
   skillComponentTotal: number;
+  skillBreakdown: Array<{ key: ProductionKey; weight: number; value: number | null; percentile: number | null }>;
   workloadPercentile: number | null;
   primaryValue: number | null;
 };
@@ -68,7 +69,11 @@ export const focusDescriptions: Record<FitFocus, string> = {
   workload: "Prior total minutes and minutes-per-game percentiles.",
 };
 
-type ProductionKey = "apg" | "ppg" | "ts" | "efg" | "ft_pct" | "rpg" | "orpg" | "drpg" | "spg" | "bpg" | "minutes" | "mpg";
+export type ProductionKey = "apg" | "ppg" | "ts" | "efg" | "ft_pct" | "rpg" | "orpg" | "drpg" | "spg" | "bpg" | "minutes" | "mpg";
+
+export const fitMetricLabels: Record<ProductionKey, string> = {
+  apg: "APG", ppg: "PPG", ts: "TS%", efg: "eFG%", ft_pct: "FT%", rpg: "RPG", orpg: "ORB/G", drpg: "DRB/G", spg: "SPG", bpg: "BPG", minutes: "Prior minutes", mpg: "MPG",
+};
 
 const focusMetrics: Record<FitFocus, Array<[ProductionKey, number]>> = {
   creation: [["apg", 0.6], ["ppg", 0.4]],
@@ -92,12 +97,12 @@ function percentile(values: number[], target: number | null): number | null {
   return below / (values.length - 1);
 }
 
-function skillPercentile(player: BBRoster, pool: BBRoster[], focus: FitFocus): { score: number | null; primary: number | null; components: number; total: number } {
+function skillPercentile(player: BBRoster, pool: BBRoster[], focus: FitFocus): { score: number | null; primary: number | null; components: number; total: number; breakdown: Array<{ key: ProductionKey; weight: number; value: number | null; percentile: number | null }> } {
   const metrics = focusMetrics[focus];
   let weighted = 0;
   let weight = 0;
   let components = 0;
-  for (const [key, metricWeight] of metrics) {
+  const breakdown = metrics.map(([key, metricWeight]) => {
     const values = pool.map((row) => value(row, key)).filter((v): v is number => v != null);
     const current = value(player, key);
     const rank = percentile(values, current);
@@ -106,8 +111,9 @@ function skillPercentile(player: BBRoster, pool: BBRoster[], focus: FitFocus): {
       weight += metricWeight;
       components += 1;
     }
-  }
-  return { score: weight ? weighted / weight : null, primary: value(player, metrics[0][0]), components, total: metrics.length };
+    return { key, weight: metricWeight, value: current, percentile: rank == null ? null : Math.round(rank * 1000) / 10 };
+  });
+  return { score: weight ? weighted / weight : null, primary: value(player, metrics[0][0]), components, total: metrics.length, breakdown };
 }
 
 export function buildRoleSummaries(players: BBRoster[], teamId: string): RoleSummary[] {
@@ -170,6 +176,7 @@ export function buildRecruitingFit(
       skillPercentile: skill.score == null ? null : Math.round(skill.score * 1000) / 10,
       skillComponents: skill.components,
       skillComponentTotal: skill.total,
+      skillBreakdown: skill.breakdown,
       workloadPercentile: workloadPercentile == null ? null : Math.round(workloadPercentile * 1000) / 10,
       primaryValue: skill.primary,
     } satisfies FitRow;
