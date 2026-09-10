@@ -199,6 +199,10 @@ jobs:
             -H 'Cache-Control: no-cache' \
             'https://bball.silvermine.dev/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&workflow_smoke=1' \
             -o /tmp/basketball-forecasts.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Cache-Control: no-cache' \
+            'https://bball.silvermine.dev/api/basketball/research/ncaa-leaders?meta=1&workflow_smoke=1' \
+            -o /tmp/ncaa-leaders-meta.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -240,6 +244,17 @@ jobs:
                   if row.get(field) in (None, ''):
                       raise SystemExit(f'forecast row is missing {field}')
           print('Production forecast smoke test passed')
+
+          ncaa = json.loads(Path('/tmp/ncaa-leaders-meta.json').read_text())
+          coverage = ncaa.get('coverage')
+          if ncaa.get('season') != 2026 or not isinstance(coverage, dict):
+              raise SystemExit('NCAA leaderboard metadata has an unexpected shape')
+          if not isinstance(coverage.get('players'), int) or coverage['players'] <= 0:
+              raise SystemExit('NCAA leaderboard metadata has no player coverage')
+          divisions = coverage.get('divisions')
+          if not isinstance(divisions, dict) or any(str(key) not in divisions for key in (1, 2, 3)):
+              raise SystemExit('NCAA leaderboard metadata is missing a division')
+          print('Production NCAA leaderboard metadata smoke test passed')
           PY
 
       - name: Record publication summary
