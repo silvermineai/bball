@@ -715,7 +715,7 @@ app.get(
 
 const ncaaLeaderQuery = z.object({
   division: z.enum(["1", "2", "3", "all"]).default("1"),
-  stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"]).default("ppg"),
+  stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]).default("ppg"),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(0).max(100).default(0),
   meta: z.enum(["0", "1"]).default("0"),
@@ -738,7 +738,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       mpg: number | null;
       payload_json: string;
     }>();
-    const coverageStats = ["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"] as const;
+    const coverageStats = ["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"] as const;
     const divisions: Record<string, { players: number; [key: string]: number }> = {
       "1": { players: 0 },
       "2": { players: 0 },
@@ -787,7 +787,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   const rows = await db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
   c.header("Cache-Control", "public, max-age=300");
-  const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"]);
+  const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
   const provenance = stat === "apg" || stat === "ast"
     ? {
       kind: "exact_id_derived",

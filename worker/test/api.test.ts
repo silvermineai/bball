@@ -763,7 +763,7 @@ describe("bball api", () => {
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      provenance: { kind: "publisher_snapshot", publisher_rank: true },
+      provenance: { kind: "publisher_snapshot_with_exact_id_fill", publisher_rank: true },
       rows: [{ publisher_rank: 7, rpg: 12.5 }],
     });
   });

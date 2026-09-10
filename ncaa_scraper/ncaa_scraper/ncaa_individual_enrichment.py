@@ -121,7 +121,8 @@ def box_double_doubles(conn: sqlite3.Connection, season: int = 2026) -> dict[str
 DERIVED_FIELDS = (
     "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
     "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk",
-    "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+    "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb",
+    "pf", "o_poss", "tpm", "tpa", "mins",
 )
 
 
@@ -132,7 +133,8 @@ def derived_values(total: dict[str, float], contests: int) -> dict[str, float]:
     direct = {
         "pts": "pts", "ast": "ast", "stl": "stl", "blk": "blk", "tov": "tov",
         "fgm": "fgm", "fga": "fga", "three_fgm": "tpm", "three_fga": "tpa",
-        "ftm": "ftm", "fta": "fta",
+        "ftm": "ftm", "fta": "fta", "orb": "orb", "drb": "drb", "pf": "pf",
+        "o_poss": "o_poss", "tpm": "tpm", "tpa": "tpa", "mins": "mins",
     }
     for field, source in direct.items():
         if source in total:
@@ -186,7 +188,7 @@ def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, seaso
             if player.get(field) is not None or field not in derived:
                 continue
             numeric = derived[field]
-            player[field] = round(numeric) if field in {"pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta"} else round(numeric, 6)
+            player[field] = round(numeric) if field in {"pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa"} else round(numeric, 6)
             supplemented[field] += 1
     coverage = result.setdefault("coverage", {})
     divisions = coverage.setdefault("divisions", {})

@@ -134,7 +134,8 @@ class PublicationHealthTest(unittest.TestCase):
         box_fields = (
             "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
             "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk",
-            "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+            "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb",
+            "pf", "o_poss", "tpm", "tpa", "mins",
         )
         payload = {
             "coverage": {"divisions": {"1": {"apg": 1791, "ast": 1791, **{field: 1791 for field in box_fields}}}},

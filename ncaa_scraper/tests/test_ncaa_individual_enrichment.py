@@ -26,7 +26,7 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
         )
         self.conn.execute(
             "INSERT INTO bb_ncaa_player_box VALUES (?,?,?,?)",
-            (2026, "g3", "404", json.dumps({"pts": 21, "orb": 5, "drb": 5, "ast": 10, "stl": 1, "blk": 0})),
+            (2026, "g3", "404", json.dumps({"pts": 21, "orb": 5, "drb": 5, "ast": 10, "stl": 1, "blk": 0, "pf": 2, "o_poss": 18, "tpm": 1, "tpa": 3, "mins": 31.5})),
         )
         self.conn.commit()
 
@@ -39,6 +39,17 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
 
     def test_counts_double_double_categories_per_contest(self):
         self.assertEqual(box_double_doubles(self.conn)["404"], 1)
+
+    def test_enrichment_preserves_complete_box_totals(self):
+        release = {
+            "schema_version": 1,
+            "season": 2026,
+            "coverage": {"divisions": {"1": {}}},
+            "players": [{"player_id": "404", "division": 1}],
+        }
+        player = enrich_release(release, self.conn, {"sha256": "a" * 64, "url": "box"})["players"][0]
+        self.assertEqual({key: player[key] for key in ("orb", "drb", "pf", "o_poss", "tpm", "tpa")}, {"orb": 5, "drb": 5, "pf": 2, "o_poss": 18, "tpm": 1, "tpa": 3})
+        self.assertEqual(player["mins"], 31.5)
 
     def test_enrichment_uses_exact_ids_and_preserves_existing_values(self):
         release = {
