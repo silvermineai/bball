@@ -6,7 +6,7 @@ export const metadata = {
   title: "Basketball team and player rankings",
   description:
     "Compare team ratings and source-attributed player rankings across production, workload, impact and publisher models.",
-  alternates: { canonical: "/basketball/ratings/" },
+  alternates: { canonical: "/basketball/rankings/" },
 };
 
 export default function Page() {
