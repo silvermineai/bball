@@ -170,6 +170,7 @@ def build(document, box_release, rated_programs):
                     "efg",
                     "ts",
                     "three_pct",
+                    "ft_pct",
                     "ft_rate",
                     "three_rate",
                     "tov_rate",

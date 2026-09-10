@@ -693,6 +693,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         "eFG%",
                         "TS%",
                         "3P%",
+                        "FT%",
                         "Free throw rate",
                         "3PA rate",
                         "Turnover rate",
@@ -719,6 +720,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         p.stats?.three_pct == null
                           ? null
                           : p.stats.three_pct * 100,
+                        p.stats?.ft_pct == null
+                          ? null
+                          : p.stats.ft_pct * 100,
                         p.stats?.ft_rate == null
                           ? null
                           : p.stats.ft_rate * 100,
@@ -828,6 +832,10 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                       <div>
                         <strong>{percent(p.stats.three_pct)}</strong>
                         <span>3P%</span>
+                      </div>
+                      <div>
+                        <strong>{percent(p.stats.ft_pct)}</strong>
+                        <span>FT%</span>
                       </div>
                       <div>
                         <strong>{percent(p.stats.ft_rate)}</strong>

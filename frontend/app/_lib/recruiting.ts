@@ -33,6 +33,7 @@ export type RecruitingPerson = {
     efg: number | null;
     ts: number | null;
     three_pct: number | null;
+    ft_pct: number | null;
     ft_rate: number | null;
     three_rate: number | null;
     tov_rate: number | null;

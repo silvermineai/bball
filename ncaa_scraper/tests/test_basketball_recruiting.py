@@ -54,6 +54,7 @@ class RecruitingTests(unittest.TestCase):
         self.assertEqual(hampton["team_id"], "279")
         self.assertIn("ts", hampton)
         self.assertIn("three_pct", hampton)
+        self.assertIn("ft_pct", hampton)
 
     def test_nickname_does_not_bypass_reviewed_full_name_rule(self):
         doc = copy.deepcopy(self.doc)

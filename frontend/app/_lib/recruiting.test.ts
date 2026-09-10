@@ -32,6 +32,7 @@ const stat = (mpg: number, ppg: number) => ({
   efg: null,
   ts: null,
   three_pct: null,
+  ft_pct: null,
   ft_rate: null,
   three_rate: null,
   tov_rate: null,
