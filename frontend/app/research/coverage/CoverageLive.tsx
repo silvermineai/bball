@@ -76,6 +76,20 @@ type RecruitingMeta = {
   };
 };
 
+type NewsMeta = {
+  summary?: {
+    total?: number;
+    latest_published?: string | null;
+    latest_seen_at?: string | null;
+  };
+  releases?: Array<{
+    edition?: string;
+    generated_at?: string;
+    article_count?: number;
+    feeds?: Array<{ name?: string; division?: string; url?: string }>;
+  }>;
+};
+
 type NCAALeaderMeta = {
   season: number;
   coverage: {
@@ -123,6 +137,7 @@ export default function CoverageLive() {
   const [basketballForecast, setBasketballForecast] = useState<ForecastMeta | null>(null);
   const [footballForecast, setFootballForecast] = useState<ForecastMeta | null>(null);
   const [recruiting, setRecruiting] = useState<RecruitingMeta | null>(null);
+  const [news, setNews] = useState<NewsMeta | null>(null);
   const [ncaaLeaders, setNcaaLeaders] = useState<NCAALeaderMeta | null>(null);
   const [ncaaLeadersError, setNcaaLeadersError] = useState("");
   const [error, setError] = useState("");
@@ -144,6 +159,7 @@ export default function CoverageLive() {
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);
     void load<RecruitingMeta>("/api/basketball/research/recruiting?season=2027", setRecruiting, () => undefined);
+    void load<NewsMeta>("/api/basketball/research/news?meta=1&limit=1", setNews, () => undefined);
     void load<NCAALeaderMeta>("/api/basketball/research/ncaa-leaders?meta=1", setNcaaLeaders, setNcaaLeadersError);
     void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
@@ -181,7 +197,7 @@ export default function CoverageLive() {
       <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
       {error && <p className="status-error" role="alert">Basketball: {error}</p>}
       {footballError && <p className="status-error" role="alert">Football: {footballError}</p>}
-      {(basketballModel || footballModel || recruiting?.coverage) && <div className="strip" style={{ marginTop: 20 }}>
+      {(basketballModel || footballModel || recruiting?.coverage || news?.summary) && <div className="strip" style={{ marginTop: 20 }}>
         <div>
           <strong>{basketballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
           <span>Basketball forecasts · {basketballModel?.target_season ?? 2027}</span>
@@ -197,6 +213,11 @@ export default function CoverageLive() {
           <span>Reviewed recruiting players</span>
           <small>{recruiting?.coverage?.programs?.toLocaleString() ?? "—"} programs · {recruiting?.coverage?.events?.toLocaleString() ?? "—"} dated statements</small>
         </div>
+        <div>
+          <strong>{news?.summary?.total?.toLocaleString() ?? "—"}</strong>
+          <span>Publisher-wire headlines</span>
+          <small>{news?.summary?.latest_published ? `latest ${date(news.summary.latest_published)}` : "publication clock unavailable"}</small>
+        </div>
       </div>}
       {!data && !football ? <p className="empty" role="status">Loading remote coverage…</p> : (
         <>
@@ -211,7 +232,18 @@ export default function CoverageLive() {
                 return <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
               })}</tbody>
             </table>
-          </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
+          </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{news?.summary && <div className="paper-panel" style={{ marginTop: 20 }}>
+            <div className="eyebrow">Publisher wire / RSS receipt</div>
+            <h3>{news.summary.total?.toLocaleString() ?? "—"} retained basketball headlines.</h3>
+            <p className="note">The wire keeps each supplied headline, summary and source URL. It does not fetch or rewrite linked article pages, and it never turns a headline into a recruiting transaction, eligibility ruling or availability claim.</p>
+            <div className="raw-stat-grid">
+              <div><dt>{news.summary.latest_published ? date(news.summary.latest_published) : "—"}</dt><dd>Latest source publication</dd></div>
+              <div><dt>{news.summary.latest_seen_at ? date(news.summary.latest_seen_at) : "—"}</dt><dd>Latest D1 capture</dd></div>
+              <div><dt>{news.releases?.[0]?.article_count?.toLocaleString() ?? "—"}</dt><dd>Latest release rows</dd></div>
+              <div><dt>{news.releases?.[0]?.feeds?.length?.toLocaleString() ?? "—"}</dt><dd>Permitted feeds</dd></div>
+            </div>
+            {news.releases?.[0]?.feeds?.length ? <details className="note" style={{ marginTop: 14 }}><summary>Open feed scope</summary><ul>{news.releases[0].feeds.map((feed) => <li key={`${feed.url || feed.name}-${feed.division || "all"}`}>{feed.name || feed.url || "Publisher feed"}{feed.division ? ` · ${feed.division}` : " · division-neutral"}</li>)}</ul></details> : null}
+          </div>}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
             <summary><strong>NCAA national leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
             <p className="note" style={{ marginTop: 12 }}>Live D1 counts of finite values in the retained final national-ranking snapshot. The player total is the row count; a lower measure count means that the publisher did not supply that field for every row. Missing source values remain unavailable.</p>
             <div className="table-scroll" style={{ marginTop: 12 }}>

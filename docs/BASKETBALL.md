@@ -66,6 +66,8 @@ All new imports use the SportsDataverse GitHub release store. The publisher labe
 
 The recruiting wire uses the published ESPN and NCAA.com men’s-basketball RSS feeds for current editorial context. NCAA Division I, II and III feeds retain their feed scope, while the broad ESPN feed remains division-neutral. The refresh stores each feed-supplied headline, summary and URL without fetching or rewriting linked article pages, stamps its retrieval time, and labels the publisher. It does not turn a headline into a transaction, eligibility or availability claim. The scheduled research workflow refreshes these feeds before basketball publication.
 
+The live coverage desk also reads `GET /api/basketball/research/news?meta=1` and shows the retained headline count, latest source publication, D1 capture clock and permitted feed scope beside the statistical receipts. This is a publisher-wire freshness check; it does not imply complete national recruiting coverage or a player-level transaction feed.
+
 Parquet downloads substantially reduce network transfer. The shared release client maintains polite request spacing, conditional caching and bounded retries. Every published release used for this edition is listed in the model notebook.
 
 The NCAA player-box ingester keeps every numeric source field on valid identified rows, including fields added by a later publisher release; its explicit metadata keys remain separate. Unknown non-numeric labels stay in the retained unresolved payload rather than being guessed into a stat.
