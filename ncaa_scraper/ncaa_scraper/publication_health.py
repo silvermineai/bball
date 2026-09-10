@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -61,6 +62,37 @@ def _season_snapshot(release: str, payload: dict) -> dict:
     except ValueError as exc:
         raise ValueError(f"{release} has an invalid generated_at timestamp") from exc
     return {"release": release, "generated_at": generated, "season_snapshot": True}
+
+
+def _ncaa_individual_health(payload: dict) -> dict:
+    """Require the exact-ID APG supplement used by the live leaderboard."""
+    supplements = payload.get("supplements")
+    apg = supplements.get("apg") if isinstance(supplements, dict) else None
+    coverage = payload.get("coverage")
+    divisions = coverage.get("divisions") if isinstance(coverage, dict) else None
+    d1 = divisions.get("1") if isinstance(divisions, dict) else None
+    source_hash = apg.get("source_sha256") if isinstance(apg, dict) else None
+    values = apg.get("values") if isinstance(apg, dict) else None
+    d1_values = d1.get("apg") if isinstance(d1, dict) else None
+    if (
+        not isinstance(apg, dict)
+        or not isinstance(values, int)
+        or isinstance(values, bool)
+        or values <= 0
+        or not isinstance(d1_values, int)
+        or isinstance(d1_values, bool)
+        or d1_values <= 0
+        or not isinstance(apg.get("basis"), str)
+        or not isinstance(source_hash, str)
+        or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+    ):
+        raise ValueError("basketball/ncaa-individual.json has no valid exact-ID APG supplement")
+    return {
+        "release": "basketball/ncaa-individual.json#apg-supplement",
+        "supplemented_values": values,
+        "division_i_values": d1_values,
+        "source_sha256": source_hash,
+    }
 
 
 def _catalog_health(
@@ -362,6 +394,7 @@ def check_freshness(
                     releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
                 releases.append(_roster_snapshot_health(root))
                 releases.append(_evaluation_health(root))
+                releases.append(_ncaa_individual_health(ncaa))
         except ValueError as exc:
             errors.append(str(exc))
     report = {

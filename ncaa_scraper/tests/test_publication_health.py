@@ -8,6 +8,7 @@ from pathlib import Path
 from ncaa_scraper.publication_health import (
     _catalog_health,
     _evaluation_health,
+    _ncaa_individual_health,
     _roster_snapshot_health,
     _unresolved_coverage_health,
     check_freshness,
@@ -128,6 +129,23 @@ class PublicationHealthTest(unittest.TestCase):
                     max_age_hours=48,
                 )
             self.assertIn("history/index.json", str(error.exception))
+
+    def test_ncaa_individual_requires_exact_id_apg_supplement(self):
+        payload = {
+            "coverage": {"divisions": {"1": {"apg": 1791}}},
+            "supplements": {
+                "apg": {
+                    "values": 1791,
+                    "basis": "sum of source assists divided by distinct source contests",
+                    "source_sha256": "a" * 64,
+                },
+            },
+        }
+        report = _ncaa_individual_health(payload)
+        self.assertEqual(report["division_i_values"], 1791)
+        payload["supplements"]["apg"]["source_sha256"] = "bad"
+        with self.assertRaisesRegex(ValueError, "exact-ID APG"):
+            _ncaa_individual_health(payload)
 
     def test_basketball_requires_matching_ncaa_season(self):
         with tempfile.TemporaryDirectory() as directory:
