@@ -10,6 +10,7 @@ type SeasonRow = { season: number; team_id: string; team_name: string | null; pl
 type RosterRow = { season: number; team_name: string | null; player_name: string | null; profile: Record<string, string | number | null> };
 type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; identity_note: string };
 type Impact = { season: number; player_id: string; orapm: number | null; drapm: number | null; rapm_net: number | null; qualified: boolean; rank: number | null };
+type SearchRow = { player_id: string; player_name: string | null; team_id: string; team_name: string | null; games: number; points: number | null };
 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const numberValue = (stats: Stats | undefined, key: string) => {
@@ -57,6 +58,8 @@ export default function NcaaCompare() {
   const params = useSearchParams();
   const [season, setSeason] = useState(Number(params.get("season")) || 2026);
   const [input, setInput] = useState(params.get("ids") || "");
+  const [search, setSearch] = useState("");
+  const [searchRows, setSearchRows] = useState<SearchRow[]>([]);
   const [ids, setIds] = useState(() => (params.get("ids") || "").split(",").map((id) => id.trim()).filter((id) => /^\d{1,15}$/.test(id)).slice(0, 3));
   const [cards, setCards] = useState<Card[]>([]);
   const [impact, setImpact] = useState<Impact[]>([]);
@@ -68,6 +71,16 @@ export default function NcaaCompare() {
     next.searchParams.set("season", String(season));
     window.history.replaceState(null, "", next);
   }, [ids, season]);
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) { setSearchRows([]); return; }
+    const controller = new AbortController();
+    fetch(`/api/basketball/research/ncaa-player-rankings?season=${season}&metric=ppg&minGames=1&minMinutes=0&q=${encodeURIComponent(query)}&page=0`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ rows: SearchRow[] }> : Promise.reject(new Error("The NCAA player search could not be loaded.")))
+      .then((payload) => { if (!controller.signal.aborted) setSearchRows(payload.rows.slice(0, 8)); })
+      .catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The NCAA player search could not be loaded."); });
+    return () => controller.abort();
+  }, [search, season]);
   useEffect(() => {
     if (!ids.length) { setCards([]); setImpact([]); return; }
     const controller = new AbortController();
@@ -85,7 +98,7 @@ export default function NcaaCompare() {
   };
   return <>
     <div className="page-title"><div className="eyebrow">NCAA source archive / player comparison</div><h1>Put the<br /><em>profiles together.</em></h1><p>Compare up to three NCAA source IDs across the same season. This keeps the identity namespace exact while giving a coach a quick production, shooting, roster and impact read.</p></div>
-    <section className="paper-panel" style={{ marginBottom: 24 }}><div className="toolbar"><label className="control"><span>STAT SEASON</span><select value={season} onChange={(event) => setSeason(Number(event.target.value))}>{Array.from({ length: 17 }, (_, index) => 2026 - index).map((year) => <option value={year} key={year}>{label(year)}</option>)}</select></label><label className="control" style={{ flex: 1 }}><span>NCAA PLAYER SOURCE IDS</span><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }} placeholder="Example: 123456, 234567" maxLength={60} /></label><button className="button" type="button" onClick={submit}>Compare players</button></div><p className="note">Find IDs from the <Link href="/basketball/ncaa-rankings/">NCAA player rankings</Link>, player box archive or an NCAA source link. Names are intentionally not used as joins.</p></section>
+    <section className="paper-panel" style={{ marginBottom: 24 }}><div className="toolbar"><label className="control"><span>STAT SEASON</span><select value={season} onChange={(event) => setSeason(Number(event.target.value))}>{Array.from({ length: 17 }, (_, index) => 2026 - index).map((year) => <option value={year} key={year}>{label(year)}</option>)}</select></label><label className="control" style={{ flex: 1 }}><span>NCAA PLAYER SOURCE IDS</span><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }} placeholder="Example: 123456, 234567" maxLength={60} /></label><button className="button" type="button" onClick={submit}>Compare players</button></div><div className="toolbar" style={{ marginTop: 12 }}><label className="control" style={{ flex: 1 }}><span>FIND BY PLAYER OR PROGRAM</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search a name or school, then add a result" maxLength={120} /></label></div>{searchRows.length > 0 && <div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th className="numeric">GP</th><th className="numeric">PTS / game</th><th /></tr></thead><tbody>{searchRows.map((row) => <tr key={`${row.player_id}-${row.team_id}`}><td><strong>{row.player_name || row.player_id}</strong><small>NCAA player {row.player_id}</small></td><td>{row.team_name || row.team_id}</td><td className="numeric">{row.games || "—"}</td><td className="numeric">{row.points == null || !row.games ? "—" : (row.points / row.games).toFixed(1)}</td><td className="numeric"><button className="button secondary" type="button" disabled={ids.includes(row.player_id) || ids.length >= 3} onClick={() => { const next = [...ids, row.player_id].slice(0, 3); setIds(next); setInput(next.join(", ")); }}> {ids.includes(row.player_id) ? "Added" : ids.length >= 3 ? "Full" : "Add"} </button></td></tr>)}</tbody></table></div>}<p className="note">Find IDs from the <Link href="/basketball/ncaa-rankings/">NCAA player rankings</Link>, player box archive or an NCAA source link. Search results are only a discovery aid; comparison requests still load and join records by exact NCAA source ID.</p></section>
     {error && <p className="status-error" role="alert">{error}</p>}
     {loading && <p className="empty" role="status">Loading source-native player cards…</p>}
     {!loading && !cards.length && <section className="paper-panel"><h2>Start with source IDs.</h2><p>Enter one to three numeric NCAA player IDs to compare their selected-season evidence side by side. A single ID is useful when you want a compact season summary before opening the full card.</p></section>}
