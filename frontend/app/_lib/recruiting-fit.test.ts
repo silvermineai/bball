@@ -35,6 +35,18 @@ describe("recruiting fit", () => {
     expect(result.find((row) => row.player.id === "partial")).toMatchObject({ skillComponents: 2, skillComponentTotal: 3 });
   });
 
+  it("scores rebounding from offensive and defensive components", () => {
+    const result = buildRecruitingFit([
+      player({ id: "target", team_id: "target" }),
+      player({ id: "two-way", team_id: "2", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 10, rpg: 8, orpg: 3, drpg: 5, apg: 2, teams: ["A"] } }),
+      player({ id: "offensive", team_id: "3", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 10, rpg: 8, orpg: 5, drpg: 3, apg: 2, teams: ["B"] } }),
+      player({ id: "legacy", team_id: "4", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 10, rpg: 8, apg: 2, teams: ["C"] } }),
+    ], { teamId: "target", role: "any", focus: "rebounding", minimumMinutes: 400 });
+    expect(result.find((row) => row.player.id === "two-way")).toMatchObject({ skillComponents: 3, skillComponentTotal: 3, primaryValue: 3 });
+    expect(result.find((row) => row.player.id === "legacy")).toMatchObject({ skillComponents: 1, skillComponentTotal: 3, primaryValue: null });
+    expect(result.map((row) => row.player.id)).toContain("offensive");
+  });
+
   it("summarizes returning and incoming workload by role", () => {
     const result = buildRoleSummaries([
       player({ team_id: "target", position: "C", status: "same_program", prior_production: { games: 20, minutes: 600, mpg: 30, ppg: 10, rpg: 8, apg: 2, teams: ["T"] } }),
