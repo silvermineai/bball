@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Question = {
   prompt: string;
@@ -54,14 +54,30 @@ const questions: Question[] = [
   },
 ];
 
+const BEST_SCORE_KEY = "silvermine-learning-checkpoint-best-v1";
+
 export default function LearningCheckpoint() {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(0);
   const [complete, setComplete] = useState(false);
+  const [bestScore, setBestScore] = useState<number | null>(null);
   const question = questions[current];
   const percent = useMemo(() => Math.round((answered / questions.length) * 100), [answered]);
+
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem(BEST_SCORE_KEY));
+    if (Number.isInteger(stored) && stored >= 0 && stored <= questions.length) setBestScore(stored);
+  }, []);
+  useEffect(() => {
+    if (!complete) return;
+    setBestScore((value) => {
+      const next = Math.max(value ?? 0, score);
+      window.localStorage.setItem(BEST_SCORE_KEY, String(next));
+      return next;
+    });
+  }, [complete, score]);
 
   const choose = (choice: number) => {
     if (selected !== null) return;
@@ -83,7 +99,7 @@ export default function LearningCheckpoint() {
           <h2 id="learning-checkpoint-title">Can you read the evidence?</h2>
           <p>Five quick questions reinforce the habits that keep a scouting note useful: qualify the sample, read the uncertainty and preserve each source boundary.</p>
         </div>
-        {!complete && <span className="learning-checkpoint-progress">{answered} / {questions.length} answered</span>}
+        {!complete && <span className="learning-checkpoint-progress">{answered} / {questions.length} answered{bestScore !== null ? ` · best ${bestScore}/${questions.length}` : ""}</span>}
       </div>
       {!complete ? (
         <>
