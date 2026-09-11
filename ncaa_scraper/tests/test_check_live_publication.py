@@ -50,6 +50,10 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/football/research/forecasts?meta=1": {
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
             },
+            "/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check=1": {
+                "total": 1,
+                "games": [{"model_id": "model-1"}],
+            },
             "/api/basketball/research/careers/meta": {
                 "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
                 "latest_receipt": "2026-09-10T18:00:00Z",
@@ -154,6 +158,10 @@ class LivePublicationCheckTest(unittest.TestCase):
             },
             "/api/football/research/forecasts?meta=1": {
                 "models": [{"model_id": "football-model-1", "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check=1": {
+                "total": 1,
+                "games": [{"model_id": "model-1"}],
             },
             "/api/basketball/research/careers/meta": {
                 "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
@@ -268,6 +276,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "season": 2027,
                 "reviewed_at": "2026-08-01T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+            },
+            "/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check=1": {
+                "total": 0,
+                "games": [],
             },
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):

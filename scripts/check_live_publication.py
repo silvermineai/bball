@@ -259,6 +259,17 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     model_age = (checked_at - timestamp(last_created)).total_seconds() / 3600
     if model_age < -24 or model_age > max_age_hours:
         raise ValueError(f"latest basketball model is {max(model_age, 0):.1f} hours old")
+    scorecard = get_json(
+        base_url,
+        "/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check=1",
+    )
+    scorecard_rows = scorecard.get("games")
+    if not isinstance(scorecard_rows, list):
+        raise ValueError("basketball scorecard response has no game rows")
+    if scorecard.get("total", 0) > 0:
+        visible_model = scorecard_rows[0].get("model_id") if scorecard_rows else None
+        if visible_model != latest.get("model_id"):
+            raise ValueError("basketball scorecard is showing an outdated excluded model")
 
     football_forecasts = get_json(base_url, "/api/football/research/forecasts?meta=1")
     football_models = football_forecasts.get("models")
@@ -324,6 +335,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
         "forecast_age_hours": round(max(model_age, 0), 2),
+        "scorecard_excluded_rows": scorecard.get("total", 0),
         "football_forecast_model": football_latest.get("model_id"),
         "football_forecast_rows": football_latest["forecasts"],
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
