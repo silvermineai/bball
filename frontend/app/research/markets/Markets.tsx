@@ -222,9 +222,8 @@ export default function Markets() {
             </p>
             <div className="button-row">
               <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>
-                {sport === "basketball" ? "Open basketball forecast lab →" : "Open football scorecard →"}
+                {sport === "basketball" ? "Open forecast lab + line checker →" : "Open football scorecard →"}
               </a>
-              {sport === "basketball" && <a className="hero-link" href="/basketball/briefs/">Use the manual quote checker →</a>}
               <a className="hero-link" href="#csv-import">Read the authorized import path →</a>
             </div>
           </div>
