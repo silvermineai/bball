@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 
 type NewsMeta = {
+  source?: "bundled_release" | string;
   summary?: {
     total?: number;
     latest_published?: string | null;
@@ -14,7 +15,7 @@ type NewsMeta = {
 
 export default function LiveBasketballNewsStatus() {
   const [meta, setMeta] = useState<NewsMeta | null>(null);
-  const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [status, setStatus] = useState<"checking" | "live" | "bundled" | "fallback">("checking");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,7 +27,7 @@ export default function LiveBasketballNewsStatus() {
       .then((payload) => {
         if (!controller.signal.aborted) {
           setMeta(payload);
-          setStatus("live");
+          setStatus(payload.source === "bundled_release" ? "bundled" : "live");
         }
       })
       .catch((reason: unknown) => {
@@ -39,7 +40,9 @@ export default function LiveBasketballNewsStatus() {
     <p className="note" role="status">
       {status === "live" && meta
         ? <>Live D1 publisher wire: {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest publisher date ${date(meta.summary.latest_published)}` : ""}{meta.summary?.latest_seen_at ? ` · archived ${date(meta.summary.latest_seen_at)}` : ""}. <Link href="/basketball/news/">Open the searchable news archive →</Link></>
-        : status === "fallback"
+        : status === "bundled" && meta
+          ? <>D1 publisher wire is busy; the bundled release is serving {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest publisher date ${date(meta.summary.latest_published)}` : ""}. <Link href="/basketball/news/">Open the news archive →</Link></>
+          : status === "fallback"
           ? <>Live publisher wire unavailable; the bundled headline release remains visible. <Link href="/basketball/news/">Open the news archive →</Link></>
           : "Checking the live publisher wire…"}
     </p>
