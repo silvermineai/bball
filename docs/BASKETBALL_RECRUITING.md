@@ -44,7 +44,7 @@ The announcement view also includes an all-program coverage map. Each of the 354
 
 ## Source review
 
-`data/recruiting/announcements.json` is the curated input. Each school has an explicit program ID, publisher and exact source host. Each article stores its original URL, title, publication calendar date, date evidence, review timestamp and any necessary editorial caveat. Source pages are consulted for brief independent factual reporting with attribution. There is no school-roster crawler, page mirror or automated article-body storage in this pipeline.
+`data/recruiting/announcements.json` is the curated input. Each school has an explicit program ID, publisher and exact source host. Each article stores its original URL, title, publication calendar date, date evidence, review timestamp and any necessary editorial caveat. The generated release adds a SHA-256 receipt over each reviewed source metadata record; the receipt is shown in the evidence history and CSV exports and lets a reader verify which reviewed record a downstream note references. Source pages are consulted for brief independent factual reporting with attribution. There is no school-roster crawler, page mirror or automated article-body storage in this pipeline.
 
 The reviewed SIDEARM terms do not provide permission for bulk republication of school pages: https://sidearmsports.com/sports/2022/12/7/terms-of-service. Robots permission alone is not a content license. Restricted direct ESPN and NCAA automated extraction remain disabled. Historical box statistics come from the separately attributed SportsDataverse bulk releases, labeled CC BY 4.0 by the publisher.
 
