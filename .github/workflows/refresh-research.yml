@@ -226,6 +226,10 @@ jobs:
             -H 'Cache-Control: no-cache' \
             'https://bball.silvermine.dev/api/basketball/research/ncaa-leaders?meta=1&workflow_smoke=1' \
             -o /tmp/ncaa-leaders-meta.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Cache-Control: no-cache' \
+            'https://bball.silvermine.dev/api/basketball/research/recruiting?season=2027&publication_check=1' \
+            -o /tmp/basketball-recruiting.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -241,6 +245,19 @@ jobs:
               if not isinstance(payload[key], dict):
                   raise SystemExit(f'coverage response has no {key} object')
           print('Production coverage smoke test passed')
+
+          recruiting = json.loads(Path('/tmp/basketball-recruiting.json').read_text())
+          recruiting_coverage = recruiting.get('coverage')
+          sources = recruiting.get('sources')
+          if recruiting.get('season') != 2027 or not isinstance(recruiting_coverage, dict):
+              raise SystemExit('recruiting response has an unexpected season or coverage')
+          if any(not isinstance(recruiting_coverage.get(key), int) or recruiting_coverage[key] <= 0 for key in ('programs', 'players', 'events', 'sources')):
+              raise SystemExit('recruiting response has incomplete coverage counts')
+          if not isinstance(sources, list) or len(sources) != recruiting_coverage['sources']:
+              raise SystemExit('recruiting response has incomplete source receipts')
+          if any(not isinstance(source, dict) or not isinstance(source.get('source_sha256'), str) or len(source['source_sha256']) != 64 for source in sources):
+              raise SystemExit('recruiting response has malformed source receipts')
+          print('Production recruiting evidence smoke test passed')
 
           news = json.loads(Path('/tmp/basketball-news.json').read_text())
           if news.get('sport') != 'mens-college-basketball':
