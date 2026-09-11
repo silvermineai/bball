@@ -210,6 +210,15 @@ def write_release(
         if not receipt:
             raise ValueError(f"Missing NCAA player source receipt for {season}")
         receipt_payload = json.loads(receipt[0])
+        available_seasons = [
+            int(row[0])
+            for row in conn.execute(
+                "SELECT season FROM football_stats WHERE dataset='ncaa_player_stats' "
+                "AND season IS NOT NULL AND json_extract(stats_json, '$.category') IN "
+                "('passing','rushing','receiving','defense','kicking','punt_returns') "
+                "GROUP BY season ORDER BY season"
+            )
+        ]
         release = build_leaders(
             conn,
             season,
@@ -223,6 +232,7 @@ def write_release(
         "fetched_at": receipt_payload.get("fetched_at"),
         "sha256": receipt_payload.get("sha256"),
     }
+    release["available_seasons"] = available_seasons
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
     return release

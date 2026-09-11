@@ -64,6 +64,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/football/matchups/",
     "/football/players/",
     "/football/ncaa-leaders/",
+    ...[2020, 2021, 2022, 2023, 2024, 2025].map((season) => `/football/ncaa-leaders/${season}/`),
     "/football/source-stats/",
     "/football/careers/",
     "/football/events/",

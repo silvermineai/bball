@@ -1,8 +1,10 @@
 import json
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 
-from ncaa_scraper.football_ncaa_leaders import build_leaders
+from ncaa_scraper.football_ncaa_leaders import build_leaders, write_release
 
 
 class FootballNCAALeaderTests(unittest.TestCase):
@@ -42,6 +44,29 @@ class FootballNCAALeaderTests(unittest.TestCase):
         result = build_leaders(self.conn, 2025)
         self.assertEqual(len(next(item for item in result["categories"] if item["key"] == "passing")["leaders"]), 1)
         self.assertEqual(len(next(item for item in result["categories"] if item["key"] == "receiving")["leaders"]), 1)
+
+    def test_release_exposes_only_seasons_with_supported_categories(self):
+        self.conn.execute(
+            "CREATE TABLE football_sources (dataset TEXT, season INTEGER, receipt_json TEXT)"
+        )
+        receipt = json.dumps({"url": "https://example.test/release", "fetched_at": "2026-01-01T00:00:00Z", "sha256": "abc"})
+        self.conn.execute("INSERT INTO football_sources VALUES (?,?,?)", ("ncaa_player_stats", 2025, receipt))
+        self.conn.execute("INSERT INTO football_sources VALUES (?,?,?)", ("ncaa_player_stats", 2024, receipt))
+        self.add("1", "passing", "10", "g1", {"name": "Quarterback", "position": "QB", "number": "1", "pass_yards": "100", "category": "passing"})
+        self.conn.execute(
+            "INSERT INTO football_stats VALUES (?,?,?,?,?,?,?,?)",
+            ("ncaa_player_stats", 2019, "old", None, "10", "g0", "other", json.dumps({"name": "Other", "category": "other"})),
+        )
+        self.conn.commit()
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "football.sqlite3"
+            output = Path(directory) / "leaders.json"
+            backup = sqlite3.connect(database)
+            self.conn.backup(backup)
+            backup.close()
+            release = write_release(database, output, season=2025)
+        self.assertEqual(release["available_seasons"], [2025])
+        self.assertEqual(release["source"]["sha256"], "abc")
 
 
 if __name__ == "__main__":
