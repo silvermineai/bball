@@ -31,4 +31,17 @@ describe("authorized recruiting intake coverage", () => {
     expect(body.policy).toContain("Coverage metadata only");
     expect(JSON.stringify(body)).not.toContain("player_name");
   });
+
+  it("returns an explicit unavailable coverage state when D1 is busy", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await recruitingIntake.request("/?season=2027", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(expect.objectContaining({
+      season: 2027,
+      total: 0,
+      source: "unavailable",
+      unavailable_reason: expect.stringContaining("did not respond"),
+    }));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
 });

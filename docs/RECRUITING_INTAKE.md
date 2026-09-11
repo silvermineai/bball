@@ -6,6 +6,8 @@ The optional [`cbbd_recruiting` connector](../ncaa_scraper/ncaa_scraper/cbbd_rec
 
 The public endpoint `/api/basketball/research/recruiting-intake?season=2027` exposes coverage metadata only: row count, provider names, status counts, latest capture clocks and provider capabilities. Its CBBD capability record identifies `year` as the season field and explicitly marks event dates unavailable. It never republishes the provider payload. Intake records do not alter forecasts, roster status, school-announcement history or an eligibility determination.
 
+Successful coverage responses are cached at the edge for five minutes. If the D1 read exceeds the bounded window, the endpoint returns a `source:"unavailable"` state with zero counts and no-store headers so the recruiting desk stays responsive without presenting stale or fabricated provider rows as current evidence.
+
 ## CSV contract
 
 Required columns are:
