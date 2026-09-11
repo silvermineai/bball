@@ -2,10 +2,23 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from scripts.check_live_publication import check_live
+from scripts.check_live_publication import check_live, validate_reviewed_recruiting_release
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_rejects_empty_reviewed_recruiting_release(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        with self.assertRaisesRegex(ValueError, "malformed or empty"):
+            validate_reviewed_recruiting_release(
+                {
+                    "season": 2027,
+                    "reviewed_at": "2026-09-10T18:00:00Z",
+                    "coverage": {"programs": 0, "players": 0, "events": 0, "sources": 0},
+                },
+                now,
+                240,
+            )
+
     def test_checks_both_sports_forecast_clock_and_recruiting_shape(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
         responses = {

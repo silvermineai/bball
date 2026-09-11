@@ -153,6 +153,31 @@ def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int
     return identified, entries, d1_apg, d1_ast
 
 
+def validate_reviewed_recruiting_release(
+    payload: dict,
+    checked_at: datetime,
+    max_age_hours: float,
+) -> tuple[dict, float]:
+    """Validate that the reviewed recruiting edition is present and non-empty."""
+    release_coverage = payload.get("coverage")
+    required_counts = ("programs", "players", "events", "sources")
+    if (
+        payload.get("season") != 2027
+        or not isinstance(release_coverage, dict)
+        or not isinstance(payload.get("reviewed_at"), str)
+        or any(
+            not isinstance(release_coverage.get(key), int)
+            or release_coverage[key] <= 0
+            for key in required_counts
+        )
+    ):
+        raise ValueError("reviewed recruiting release is malformed or empty")
+    age = (checked_at - timestamp(payload["reviewed_at"])).total_seconds() / 3600
+    if age < -24 or age > max_age_hours:
+        raise ValueError(f"reviewed recruiting release is {max(age, 0):.1f} hours old")
+    return release_coverage, age
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -247,24 +272,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
         raise ValueError("recruiting intake coverage is malformed")
     recruiting_release = get_json(base_url, "/api/basketball/research/recruiting?season=2027")
-    release_coverage = recruiting_release.get("coverage")
-    if (
-        recruiting_release.get("season") != 2027
-        or not isinstance(release_coverage, dict)
-        or not isinstance(recruiting_release.get("reviewed_at"), str)
-        or any(
-            not isinstance(release_coverage.get(key), int)
-            for key in ("programs", "players", "events", "sources")
-        )
-    ):
-        raise ValueError("reviewed recruiting release is malformed")
-    recruiting_reviewed_age = (
-        checked_at - timestamp(recruiting_release["reviewed_at"])
-    ).total_seconds() / 3600
-    if recruiting_reviewed_age < -24 or recruiting_reviewed_age > max_age_hours:
-        raise ValueError(
-            f"reviewed recruiting release is {max(recruiting_reviewed_age, 0):.1f} hours old"
-        )
+    release_coverage, recruiting_reviewed_age = validate_reviewed_recruiting_release(
+        recruiting_release, checked_at, max_age_hours
+    )
     news = get_json(base_url, "/api/basketball/research/news?meta=1")
     news_summary = news.get("summary")
     news_releases = news.get("releases")
