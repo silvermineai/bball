@@ -1357,6 +1357,30 @@ th,
 .learning-directory-heading {
   margin-top: 4px;
 }
+.market-import-preflight {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.market-import-file input {
+  display: none;
+}
+.market-import-preflight-result {
+  border: 1px solid var(--line);
+  margin-top: 16px;
+  padding: 14px 16px;
+}
+.market-import-preflight-result.has-errors {
+  border-color: #9d4b37;
+  background: #f3e4dd;
+}
+.market-import-preflight-result.is-ready {
+  border-color: #4f7049;
+  background: #e3ebda;
+}
+.market-import-preflight-result ul {
+  margin: 8px 0 0 18px;
+}
 .learning-directory-heading h3 {
   font-size: 28px;
 }

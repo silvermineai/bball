@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Markets from "./Markets";
 import FootballMarketBenchmark from "./FootballMarketBenchmark";
+import MarketImportPreflight from "./MarketImportPreflight";
 
 export const metadata = {
   title: "Historical market archive",
@@ -101,6 +102,7 @@ export default function Page() {
             <a className="button secondary" href="/data/research/market-import-template.csv" download>Download CSV template ↓</a>
             <a className="hero-link" href="/research/scorecard/?sport=basketball">Open basketball scorecard →</a>
           </div>
+          <MarketImportPreflight />
           <p className="note" style={{ marginTop: 12 }}>
             The archive toolbar supports both the visible page export and a bounded export of every row matching the active sport, season and search filters.
           </p>
