@@ -383,7 +383,7 @@ export default function Recruiting() {
       </p>
       {rosterData?.players_truncated && (
         <p className="career-coverage-warning" role="status">
-          The live source release is larger than the browser safety limit; showing {rosterData.players_returned?.toLocaleString() || rosterData.players.length.toLocaleString()} of {rosterData.players_observed.toLocaleString()} player rows. Use the exact parquet release above for the complete file.
+          The live source release is larger than the browser safety limit; showing {rosterData.players_returned?.toLocaleString() || rosterData.players.length.toLocaleString()} of {(rosterData.players_available ?? rosterData.players_observed).toLocaleString()} player rows in this filtered view. Use the exact parquet release above for the complete file.
         </p>
       )}
       {error ? (

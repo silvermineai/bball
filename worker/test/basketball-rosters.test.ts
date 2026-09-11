@@ -67,10 +67,11 @@ describe("live basketball roster observations", () => {
     }));
     const response = await basketballRosters.request("/?season=2027&status=new_to_dataset&limit=1", {}, { RESEARCH_DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; players_returned: number; players_truncated: boolean; player_filter: Record<string, unknown> };
+    const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; players_available: number; players_returned: number; players_truncated: boolean; player_filter: Record<string, unknown> };
     expect(body.players).toHaveLength(1);
     expect(body.players[0]).toEqual(expect.objectContaining({ previous_games: null, previous_minutes: null }));
     expect(body.players_observed).toBe(2);
+    expect(body.players_available).toBe(2);
     expect(body.player_filter).toEqual({ status: "new_to_dataset", limit: 1 });
     expect(body.players_returned).toBe(1);
     expect(body.players_truncated).toBe(true);
@@ -92,9 +93,10 @@ describe("live basketball roster observations", () => {
     }));
     const response = await basketballRosters.request("/?season=2027", {}, { RESEARCH_DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; players_returned: number; players_truncated: boolean; player_filter: Record<string, unknown> };
+    const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; players_available: number; players_returned: number; players_truncated: boolean; player_filter: Record<string, unknown> };
     expect(body.players).toHaveLength(2);
     expect(body.players_observed).toBe(2);
+    expect(body.players_available).toBe(2);
     expect(body.players_returned).toBe(2);
     expect(body.players_truncated).toBe(false);
     expect(body.player_filter).toEqual({ status: "all", limit: 10000 });

@@ -174,7 +174,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     };
   }).sort((a, b) => a.team.localeCompare(b.team));
 
-  const filteredPlayers = (status === "all" ? players : players.filter((player) => player.status === status)).slice(0, limit);
+  const availablePlayers = status === "all" ? players : players.filter((player) => player.status === status);
+  const filteredPlayers = availablePlayers.slice(0, limit);
 
   let receipt: Record<string, unknown> | null = null;
   try { receipt = source?.receipt_json ? JSON.parse(source.receipt_json) as Record<string, unknown> : null; } catch { receipt = null; }
@@ -190,8 +191,9 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     status_counts: statusCounts,
     team_summaries: teamSummaries,
     players: filteredPlayers,
+    players_available: availablePlayers.length,
     players_returned: filteredPlayers.length,
-    players_truncated: filteredPlayers.length < players.length,
+    players_truncated: filteredPlayers.length < availablePlayers.length,
     player_filter: { status, limit },
     source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });
