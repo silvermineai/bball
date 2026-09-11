@@ -17,30 +17,73 @@ const querySchema = z.object({
 
 export const playerCore = new Hono<{ Bindings: Bindings }>();
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("ESPN profile archive query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
+
+function parseProfile(value: unknown): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 playerCore.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, position, status, page, direction, meta } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the profile archive fail.
+    }
+  }
   if (meta === "1") {
-    const [seasons, positions, statuses, count, source] = await researchDb(c.env).batch([
-      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
-      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      researchDb(c.env).prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
-      researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
-      seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
-      positions: positions.results.map((row) => String((row as { value: string }).value)),
-      statuses: statuses.results.map((row) => String((row as { value: string }).value)),
-      total: Number((count.results[0] as { total: number }).total || 0),
-      source: (() => {
-        const row = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
-        return {
-          fetched_at: typeof row?.fetched_at === "string" ? row.fetched_at : null,
-          sha256: typeof row?.sha256 === "string" ? row.sha256 : null,
-        };
-      })(),
-    });
+    try {
+      const [seasons, positions, statuses, count, source] = await withTimeout(db.batch([
+        db.prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
+        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+        db.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
+        db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
+      ]), DB_TIMEOUT_MS);
+      const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
+      const response = c.json({
+        seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+        positions: positions.results.map((row) => String((row as { value: string }).value)),
+        statuses: statuses.results.map((row) => String((row as { value: string }).value)),
+        total: Number((count.results[0] as { total: number }).total || 0),
+        source: {
+          fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
+          sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
+        },
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The ESPN profile catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const clauses = ["season=?"];
   const binds: Array<string | number> = [season];
@@ -58,13 +101,14 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(status);
   }
   const where = clauses.join(" AND ");
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const order = direction === "desc" ? "DESC" : "ASC";
-  const rowWhere = where
-    .replaceAll("season=?", "bb_player_core.season=?")
-    .replaceAll("athlete_id LIKE", "bb_player_core.athlete_id LIKE");
-  const rows = await researchDb(c.env).prepare(
-    `SELECT bb_player_core.season,bb_player_core.athlete_id AS id,
+  try {
+    const count = await withTimeout(db.prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+    const order = direction === "desc" ? "DESC" : "ASC";
+    const rowWhere = where
+      .replaceAll("season=?", "bb_player_core.season=?")
+      .replaceAll("athlete_id LIKE", "bb_player_core.athlete_id LIKE");
+    const rows = await withTimeout(db.prepare(
+      `SELECT bb_player_core.season,bb_player_core.athlete_id AS id,
       json_extract(bb_player_core.profile_json,'$.display_name') AS name,
       json_extract(bb_player_core.profile_json,'$.position_name') AS position,
       json_extract(bb_player_core.profile_json,'$.display_height') AS height,
@@ -75,7 +119,7 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
       json_extract(bb_player_core.profile_json,'$.current_team_id') AS team_id,
       COALESCE(r.team_name, json_extract(bb_player_core.profile_json,'$.current_team_id')) AS team,
       bb_player_core.profile_json
-     FROM bb_player_core
+       FROM bb_player_core
      LEFT JOIN (
        SELECT season,athlete_id,
          MAX(json_extract(profile_json,'$.team_display_name')) AS team_name
@@ -83,16 +127,21 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
      ) r ON r.season=bb_player_core.season AND r.athlete_id=bb_player_core.athlete_id
      WHERE ${rowWhere}
      ORDER BY name ${order}, id ASC LIMIT 40 OFFSET ?`,
-  ).bind(season, ...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
-    season,
-    page,
-    page_size: 40,
-    total: count?.total ?? 0,
-    rows: rows.results.map(({ profile_json, ...row }) => ({
-      ...row,
-      profile: JSON.parse(String(profile_json)),
-    })),
-  });
+    ).bind(season, ...binds, page * 40).all(), DB_TIMEOUT_MS);
+    const response = c.json({
+      season,
+      page,
+      page_size: 40,
+      total: count?.total ?? 0,
+      rows: (rows.results as Array<Record<string, unknown>>).flatMap(({ profile_json, ...row }) => {
+        const profile = parseProfile(profile_json);
+        return profile ? [{ ...row, profile }] : [];
+      }),
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({ error: "The ESPN profile archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

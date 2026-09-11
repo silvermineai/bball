@@ -1150,6 +1150,31 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("returns a retryable response when the ESPN profile catalog is busy", async () => {
+    const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const response = await app.request(
+      "/api/basketball/research/player-core?meta=1&season=2026",
+      {},
+      { DB: { prepare: vi.fn(), batch } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The ESPN profile catalog is temporarily unavailable." });
+  });
+
+  it("returns a retryable response when the ESPN profile rows are busy", async () => {
+    const first = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first, all: async () => ({ results: [] }) })) }));
+    const response = await app.request(
+      "/api/basketball/research/player-core?season=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The ESPN profile archive is temporarily unavailable." });
+  });
+
   it("returns NCAA roster source receipt metadata", async () => {
     const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
     const batch = vi.fn().mockResolvedValue([

@@ -36,6 +36,7 @@ export default function Profiles() {
   const [hydrated, setHydrated] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,7 +63,7 @@ export default function Profiles() {
       .then((r) => { if (!r.ok) throw Error("The source profile catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta)
       .catch((e) => setError(e.message));
-  }, [season]);
+  }, [retryNonce, season]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page) });
@@ -75,7 +76,9 @@ export default function Profiles() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, query, position, status, page]);
+  }, [page, position, query, retryNonce, season, status]);
+
+  const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
 
   const reset = (fn: () => void) => { setPage(0); fn(); };
   const share = async () => {
@@ -147,7 +150,7 @@ export default function Profiles() {
         <label className="control"><span>STATUS</span><select value={status} onChange={(e) => reset(() => setStatus(e.target.value))}><option value="">All statuses</option>{(meta?.statuses || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       </div>
       {meta?.source ? <p className="note" style={{ marginTop: 16 }}>ESPN-derived profile receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
-      {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
+      {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry source profiles</button></div> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
         <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!result.rows.length} onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
         {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={r.id}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
