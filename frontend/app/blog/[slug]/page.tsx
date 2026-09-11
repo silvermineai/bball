@@ -385,9 +385,11 @@ function BasketballPlayerGameLogs() {
       </p>
       <p>
         The <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
-        keeps ten consecutive game-level releases from 2016–17 through
-        2025–26, with source player, team and contest IDs beside every row.
-        The archive also retains older player-season summaries. It is a source
+        keeps game-level releases from 2010–11 through 2025–26, with source
+        player, team and contest IDs beside every usable row. The 2010–11
+        edition is a sparse historical source release and is labeled as such
+        in the archive. The archive also retains older player-season summaries.
+        It is a source
         record, not an identity bridge to ESPN, and a row does not establish a
         current roster spot or eligibility.
       </p>
