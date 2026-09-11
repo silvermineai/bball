@@ -36,6 +36,13 @@ type Detail = {
     production: Production[];
     box_categories: { category: string; records: number; games: number }[];
   };
+  source_receipts?: {
+    dataset: string;
+    season: number;
+    url: string;
+    fetched_at: string;
+    sha256: string;
+  }[];
 };
 type CareerRow = {
   season: number;
@@ -58,6 +65,15 @@ type Career = {
   rows: CareerRow[];
 };
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const sourceLabels: Record<string, string> = {
+  box: "Box-score rows",
+  passing: "Passing aggregates",
+  rushing: "Rushing aggregates",
+  receiving: "Receiving aggregates",
+  schedule: "Schedule",
+  teams: "Team metadata",
+  ncaa_player_stats: "NCAA leader archive",
+};
 export default function PlayerDetail() {
   const search = useSearchParams(),
     id = search.get("id"),
@@ -177,6 +193,29 @@ export default function PlayerDetail() {
             </section>
           )}
           {career?.rows.length ? <FootballCareerPanel career={career} selectedSeason={data.season} name={data.name} /> : null}
+          <section className="section paper-panel">
+            <div className="section-heading">
+              <h2>Source receipts.</h2>
+            </div>
+            <p className="note">
+              Release clocks and SHA-256 hashes for the season datasets used in
+              this dossier. Missing source fields stay missing in the game log.
+            </p>
+            {data.source_receipts?.length ? (
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Dataset</th><th>Fetched</th><th>Receipt hash</th></tr></thead>
+                  <tbody>{data.source_receipts.map((receipt) => (
+                    <tr key={`${receipt.dataset}-${receipt.season}`}>
+                      <td><a href={receipt.url} target="_blank" rel="noreferrer">{sourceLabels[receipt.dataset] || receipt.dataset} ↗</a></td>
+                      <td>{receipt.fetched_at}</td>
+                      <td><code>{receipt.sha256}</code></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <p className="empty">No source receipts are available for this season.</p>}
+          </section>
           <p className="note">
             {data.total} records · SportsDataverse release imports ·{" "}
             {data.season}

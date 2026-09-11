@@ -274,7 +274,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
   if (!/^\d{1,15}$/.test(id)) return c.json({ error: "Invalid player ID" }, 400);
   const { season, page } = c.req.valid("query");
   const db = footballDb(c.env);
-  const [count, result, summaryResult] = await Promise.all([
+  const [count, result, summaryResult, receiptResult] = await Promise.all([
     db.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
     db.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
@@ -286,12 +286,17 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       ORDER BY dataset,category,record_key`)
       .bind(id, season)
       .all<{ dataset: string; category: string; team_id: string | null; stats_json: string }>(),
+    db.prepare(
+      "SELECT dataset,season,receipt_json FROM football_sources WHERE season=? ORDER BY dataset",
+    )
+      .bind(season)
+      .all<{ dataset: string; season: number; receipt_json: string }>(),
   ]);
   if (!count?.total) return c.json({ error: "No records found" }, 404);
-  const rows = result.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(stats_json) as Record<string, string> }));
+  const rows = result.results.map(({ stats_json, ...row }) => ({ ...row, stats: parseObject(stats_json) as Record<string, string> }));
   const summaryRows = summaryResult.results.flatMap((row) => {
     try {
-      return [{ ...row, stats: JSON.parse(row.stats_json) as Record<string, unknown> }];
+      return [{ ...row, stats: parseObject(row.stats_json) }];
     } catch {
       return [];
     }
@@ -330,8 +335,14 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
     .sort((a, b) => a.category.localeCompare(b.category));
   const first = rows[0]?.stats || (summaryRows[0]?.stats as Record<string, string> | undefined);
   const name = first?.athlete_name ?? first?.passer_player_name ?? first?.rusher_player_name ?? first?.receiver_player_name ?? id;
+  const sourceReceipts = receiptResult.results.flatMap((row) => {
+    const receipt = parseObject(row.receipt_json);
+    return typeof receipt.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
+      ? [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
+      : [];
+  });
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories } });
+  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories }, source_receipts: sourceReceipts });
 });
 
 app.get("/api/football/coverage", async (c) => {
