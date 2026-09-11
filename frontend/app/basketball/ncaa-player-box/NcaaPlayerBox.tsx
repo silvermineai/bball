@@ -83,6 +83,7 @@ function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
 export default function NcaaPlayerBox() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
   const [season, setSeason] = useState(initial?.get("season") || "2026");
+  const [archive, setArchive] = useState<"auto" | "games" | "season">(initial?.get("archive") === "season" ? "season" : initial?.get("archive") === "games" ? "games" : "auto");
   const [query, setQuery] = useState(initial?.get("q") || "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [fieldCoverage, setFieldCoverage] = useState<FieldCoverage | null>(null);
@@ -98,10 +99,11 @@ export default function NcaaPlayerBox() {
 
   useEffect(() => {
     const params = new URLSearchParams({ season });
+    if (archive !== "auto") params.set("archive", archive);
     if (query.trim()) params.set("q", query.trim());
     if (page) params.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [season, query, page]);
+  }, [archive, season, query, page]);
 
   useEffect(() => {
     fetch("/data/basketball/ncaa-player-box-fields.json")
@@ -119,7 +121,7 @@ export default function NcaaPlayerBox() {
   }, [season]);
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ season, page: String(page) });
+    const params = new URLSearchParams({ season, page: String(page), archive });
     if (query.trim()) params.set("q", query.trim());
     setResult(null);
     fetch(`/api/basketball/research/ncaa-player-box?${params}`, { signal: controller.signal })
@@ -127,7 +129,7 @@ export default function NcaaPlayerBox() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, query, page]);
+  }, [archive, season, query, page]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const selectedCoverage = fieldCoverage?.seasons.find((entry) => entry.season === Number(season));
@@ -163,7 +165,7 @@ export default function NcaaPlayerBox() {
     try {
       const rows: Row[] = [];
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
-        const params = new URLSearchParams({ season, page: String(requestedPage) });
+        const params = new URLSearchParams({ season, page: String(requestedPage), archive });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/basketball/research/ncaa-player-box?${params}`);
         if (!response.ok) throw new Error("The complete NCAA player export could not be loaded.");
@@ -193,6 +195,7 @@ export default function NcaaPlayerBox() {
     </div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
+      <label className="control"><span>ARCHIVE GRAIN</span><select value={archive} onChange={(e) => { setArchive(e.target.value as typeof archive); setPage(0); }}><option value="auto">Automatic (game rows when available)</option><option value="games">Game logs</option><option value="season">Season totals</option></select></label>
       <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} placeholder="Search a player, team or source ID" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {selectedCoverage && <section className="paper-panel" style={{ marginBottom: 24 }}>

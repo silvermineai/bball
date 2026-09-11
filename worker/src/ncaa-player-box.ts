@@ -53,6 +53,7 @@ const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(10000).default(0),
+  archive: z.enum(["auto", "games", "season"]).default("auto"),
   meta: z.enum(["0", "1"]).default("0"),
 });
 const sourceSchema = z.object({
@@ -101,7 +102,7 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 });
 
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, q, page, meta } = c.req.valid("query");
+  const { season, q, page, archive, meta } = c.req.valid("query");
   const db = researchDb(c.env);
   const gameDb = ncaaBoxDb(c.env);
   if (meta === "1") {
@@ -155,8 +156,10 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       validation: parseValidation(validationRow),
     });
   }
-  const rawCount = await gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>();
-  const archiveMode = Number(rawCount?.total || 0) > 0 ? "games" : "season";
+  const rawCount = archive === "auto"
+    ? await gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>()
+    : null;
+  const archiveMode = archive === "games" || (archive === "auto" && Number(rawCount?.total || 0) > 0) ? "games" : "season";
   const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
   const clauses = ["season=?"];
   const binds: Array<string | number> = [season];

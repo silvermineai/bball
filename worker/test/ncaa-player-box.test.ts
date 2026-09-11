@@ -82,4 +82,29 @@ describe("NCAA player source archive", () => {
     expect(gamePrepare).toHaveBeenCalled();
     expect(researchPrepare).toHaveBeenCalled();
   });
+
+  it("allows an explicit season-total view when game rows also exist", async () => {
+    const researchPrepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: async () => ({ total: 1 }),
+        all: async () => sql.includes("bb_ncaa_player_season")
+          ? { results: [{ season: 2025, contest_id: null, team_id: "7", player_id: "42", game_date: null, team_name: "Example U", opponent_name: null, player_name: "Example Veteran", stats_json: JSON.stringify({ mins: 900, pts: 400 }) }] }
+          : { results: [] },
+      })),
+    }));
+    const gamePrepare = vi.fn();
+    const response = await ncaaPlayerBox.request(
+      "/?season=2025&archive=season",
+      {},
+      { DB: { prepare: researchPrepare }, NCAA_BOX_DB: { prepare: gamePrepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      archive_mode: "season",
+      total: 1,
+      rows: [{ player_id: "42", stats: { mins: 900, pts: 400 } }],
+    });
+    expect(gamePrepare).not.toHaveBeenCalled();
+    expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("FROM bb_ncaa_player_season"))).toBe(true);
+  });
 });
