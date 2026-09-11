@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SeasonRouteImport } from './routes/season'
+import { Route as GameContextRouteImport } from './routes/game_context'
 import { Route as RecruitingRouteImport } from './routes/recruiting'
 import { Route as RankingsRouteImport } from './routes/rankings'
 import { Route as PressroomRouteImport } from './routes/pressroom'
@@ -32,6 +33,11 @@ import { Route as GamesContestIdRouteImport } from './routes/games/$contestId'
 const SeasonRoute = SeasonRouteImport.update({
   id: '/season',
   path: '/season',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GameContextRoute = GameContextRouteImport.update({
+  id: '/game_context',
+  path: '/game_context',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecruitingRoute = RecruitingRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
   '/season': typeof SeasonRoute
+  '/game_context': typeof GameContextRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
   '/season': typeof SeasonRoute
+  '/game_context': typeof GameContextRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/rankings': typeof RankingsRoute
   '/recruiting': typeof RecruitingRoute
   '/season': typeof SeasonRoute
+  '/game_context': typeof GameContextRoute
   '/games/$contestId': typeof GamesContestIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/scout/$teamId': typeof ScoutTeamIdRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/rankings'
     | '/recruiting'
     | '/season'
+    | '/game_context'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/rankings'
     | '/recruiting'
     | '/season'
+    | '/game_context'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/rankings'
     | '/recruiting'
     | '/season'
+    | '/game_context'
     | '/games/$contestId'
     | '/players/$playerId'
     | '/scout/$teamId'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   RankingsRoute: typeof RankingsRoute
   RecruitingRoute: typeof RecruitingRoute
   SeasonRoute: typeof SeasonRoute
+  GameContextRoute: typeof GameContextRoute
   GamesContestIdRoute: typeof GamesContestIdRoute
   PlayersPlayerIdRoute: typeof PlayersPlayerIdRoute
   ScoutTeamIdRoute: typeof ScoutTeamIdRoute
@@ -279,6 +292,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/game_context': {
+      id: '/game_context'
+      path: '/game_context'
+      fullPath: '/game_context'
+      preLoaderRoute: typeof GameContextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/season': {
       id: '/season'
       path: '/season'
@@ -427,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   RankingsRoute: RankingsRoute,
   RecruitingRoute: RecruitingRoute,
   SeasonRoute: SeasonRoute,
+  GameContextRoute: GameContextRoute,
   GamesContestIdRoute: GamesContestIdRoute,
   PlayersPlayerIdRoute: PlayersPlayerIdRoute,
   ScoutTeamIdRoute: ScoutTeamIdRoute,

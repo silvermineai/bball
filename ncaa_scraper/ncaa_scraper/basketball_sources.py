@@ -47,6 +47,17 @@ DATASETS = {
     "ncaa_team_rosters": ("ncaa_mbb_team_rosters", "ncaa_mbb_team_rosters_{year}.parquet"),
     "ncaa_shots": ("ncaa_mbb_shots", "ncaa_mbb_shots_{year}.parquet"),
     "ncaa_possessions": ("ncaa_mbb_possessions", "ncaa_mbb_possessions_{year}.parquet"),
+    # ESPN game context released through SportsDataverse. These rows are kept
+    # source-native so availability and officiating can be audited separately
+    # from box-score performance.
+    "ncaa_game_rosters": (
+        PREFIX + "game_rosters",
+        "game_rosters_{year}.parquet",
+    ),
+    "ncaa_officials": (
+        PREFIX + "officials",
+        "officials_{year}.parquet",
+    ),
 }
 BASKETBALL_ATTRIBUTION = {
     **ATTRIBUTION,

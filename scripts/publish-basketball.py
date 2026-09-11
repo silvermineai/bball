@@ -703,6 +703,18 @@ run_remote_migration(
         "migrations/0028_basketball_ncaa_game_archive.sql",
     ]
 )
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        NCAA_BOX_D1_DATABASE,
+        "--remote",
+        "--file",
+        "migrations/0032_basketball_game_context.sql",
+    ]
+)
 import_sql_batches(
     ROOT / ".local/basketball.sql",
     "basketball-publish-d1",

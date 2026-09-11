@@ -25,6 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/teams", label: "Teams" },
     { to: "/games", label: "Games" },
     { to: "/players", label: "Players" },
+    { to: "/game_context", label: "Game Context" },
     ...(data?.user?.isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 

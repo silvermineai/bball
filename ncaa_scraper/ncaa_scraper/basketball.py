@@ -158,6 +158,8 @@ def ingest(conn, dataset, year, rows, receipt):
         "ncaa_player_season": "bb_ncaa_player_season",
         "ncaa_team_rosters": "bb_ncaa_rosters",
         "ncaa_shots": "bb_ncaa_player_shooting",
+        "ncaa_game_rosters": "bb_ncaa_game_rosters",
+        "ncaa_officials": "bb_ncaa_officials",
         }
         if dataset in tables:
             conn.execute(f"DELETE FROM {tables[dataset]} WHERE season=?", (year,))
@@ -536,6 +538,53 @@ def ingest(conn, dataset, year, rows, receipt):
                     )
                     for (player_id, team_id), entry in season_totals.items()
                 ],
+            )
+        elif dataset == "ncaa_game_rosters":
+            conn.execute("DELETE FROM bb_unresolved WHERE dataset=? AND season=?", (dataset, year))
+            valid = []
+            for i, r in enumerate(rows):
+                if not r.get("game_id") or not r.get("team_id") or not r.get("athlete_id"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing game, team or athlete ID", json.dumps(r)),
+                    )
+                    continue
+                raw = {k: v for k, v in r.items() if v not in (None, "")}
+                valid.append(
+                    (
+                        year, identity(r["game_id"]), identity(r["team_id"]), identity(r["athlete_id"]),
+                        r.get("team_display_name"), r.get("home_away"), r.get("athlete_display_name"),
+                        r.get("athlete_jersey"), r.get("athlete_position"),
+                        int(r.get("starter") == "true"), int(r.get("did_not_play") == "true"),
+                        int(r.get("active") == "true"), int(r.get("ejected") == "true"),
+                        r.get("reason"), json.dumps(raw, separators=(",", ":")),
+                    )
+                )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_game_rosters VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                valid,
+            )
+        elif dataset == "ncaa_officials":
+            conn.execute("DELETE FROM bb_unresolved WHERE dataset=? AND season=?", (dataset, year))
+            valid = []
+            for i, r in enumerate(rows):
+                if not r.get("game_id") or not r.get("official_order"):
+                    conn.execute(
+                        "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
+                        (dataset, year, i, "Missing game or official order", json.dumps(r)),
+                    )
+                    continue
+                raw = {k: v for k, v in r.items() if v not in (None, "")}
+                valid.append(
+                    (
+                        year, identity(r["game_id"]), int(float(r["official_order"])), r.get("official_full_name") or r.get("official_display_name"),
+                        r.get("official_position"), int(float(r["official_position_id"])) if r.get("official_position_id") else None,
+                        json.dumps(raw, separators=(",", ":")),
+                    )
+                )
+            conn.executemany(
+                "INSERT OR REPLACE INTO bb_ncaa_officials VALUES (?,?,?,?,?,?,?)",
+                valid,
             )
         elif dataset == "ncaa_team_rosters":
             conn.execute(
@@ -1538,6 +1587,8 @@ def dataset_catalog(conn):
         ("ncaa_team_rosters", "NCAA roster and school context", "bb_ncaa_rosters", "SportsDataverse NCAA rosters"),
         ("ncaa_shots", "NCAA attributed shooting profiles", "bb_ncaa_player_shooting", "SportsDataverse NCAA shots"),
         ("ncaa_possessions", "NCAA possession-style profiles", "bb_possession_style", "SportsDataverse NCAA possessions; team-season descriptive aggregates"),
+        ("ncaa_game_rosters", "ESPN game-day rosters", "bb_ncaa_game_rosters", "SportsDataverse ESPN game rosters; starter, active and DNP flags retained"),
+        ("ncaa_officials", "Game officiating assignments", "bb_ncaa_officials", "SportsDataverse ESPN officials release"),
     )
     receipts = defaultdict(list)
     for row in conn.execute("SELECT dataset,season,receipt_json FROM bb_sources"):
@@ -1928,7 +1979,12 @@ def export_sql(conn, path, incremental=False):
     # current editions, so keep the D1 table available without replaying it.
     # This leaves the compact research tables importable and avoids a failed
     # all-or-nothing import when the model grows.
-    excluded_tables = {"bb_models", "bb_ncaa_player_box"}
+    excluded_tables = {
+        "bb_models",
+        "bb_ncaa_player_box",
+        "bb_ncaa_game_rosters",
+        "bb_ncaa_officials",
+    }
     tables = [
         "bb_games",
         "bb_team_box",
@@ -1948,6 +2004,7 @@ def export_sql(conn, path, incremental=False):
         "bb_unresolved",
         "bb_participation",
         "bb_possession_style",
+        "bb_sources",
     ]
     # Small fixtures and older local warehouses can predate optional layers;
     # keep export useful while including the crosswalk whenever it exists.
@@ -1991,10 +2048,11 @@ def export_sql(conn, path, incremental=False):
 
 
 NCAA_PLAYER_BOX_GAME_SEASONS = tuple(range(2010, 2027))
+NCAA_GAME_CONTEXT_SEASONS = tuple(range(2010, 2027))
 
 
 def export_ncaa_player_box_sql(conn, path, seasons=NCAA_PLAYER_BOX_GAME_SEASONS):
-    """Export every retained NCAA game-row season (2010–11 through 2025–26)."""
+    """Export NCAA game rows plus retained roster/officiating context."""
     seasons = tuple(sorted({int(season) for season in seasons}))
     if not seasons:
         raise ValueError("At least one NCAA player-box season is required")
@@ -2017,6 +2075,30 @@ def export_ncaa_player_box_sql(conn, path, seasons=NCAA_PLAYER_BOX_GAME_SEASONS)
                     + ",".join(values)
                     + ");\n"
                 )
+            for table, columns in (
+                (
+                    "bb_ncaa_game_rosters",
+                    "season,game_id,team_id,athlete_id,team_name,home_away,athlete_name,jersey,position,starter,did_not_play,active,ejected,reason,raw_json",
+                ),
+                (
+                    "bb_ncaa_officials",
+                    "season,game_id,official_order,official_name,official_position,official_position_id,raw_json",
+                ),
+            ):
+                available = conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                ).fetchone()
+                if not available:
+                    continue
+                yield f"DELETE FROM {table} WHERE season={season};\n"
+                for row in conn.execute(
+                    f"SELECT {columns} FROM {table} WHERE season=?", (season,)
+                ):
+                    values = [
+                        "NULL" if value is None else "'" + str(value).replace("'", "''") + "'"
+                        for value in row
+                    ]
+                    yield f"INSERT OR REPLACE INTO {table} VALUES (" + ",".join(values) + ");\n"
 
     return write_sql_batches(statements(), path)
 
@@ -2108,7 +2190,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0031_basketball_player_crosswalk.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0028_basketball_ncaa_game_archive.sql", "0031_basketball_player_crosswalk.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -2221,10 +2303,24 @@ def main():
                 )
                 ingest(conn, "ncaa_shots", year, rows, receipt)
                 print(f"Imported ncaa_shots/{year}: {len(rows):,}", flush=True)
+        # ESPN game-day availability and officiating are useful matchup
+        # context. Keep the current two-season window in the daily refresh;
+        # the source client and archive exporter support the full history.
+        for year in (2025, 2026):
+            for dataset in ("ncaa_game_rosters", "ncaa_officials"):
+                rows, receipt = c.load(
+                    dataset,
+                    year,
+                    refresh=source_refresh_enabled(args.refresh, incremental, year),
+                )
+                ingest(conn, dataset, year, rows, receipt)
+                print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql, incremental=incremental)
-        ncaa_seasons = (max(NCAA_PLAYER_BOX_GAME_SEASONS),) if incremental else NCAA_PLAYER_BOX_GAME_SEASONS
+        # Keep two active seasons for game context so the desk can compare the
+        # current roster/official snapshot with the prior tournament cycle.
+        ncaa_seasons = tuple(sorted(NCAA_PLAYER_BOX_GAME_SEASONS)[-2:]) if incremental else NCAA_PLAYER_BOX_GAME_SEASONS
         export_ncaa_player_box_sql(
             conn,
             args.sql.with_name("ncaa-player-box-2026.sql"),
