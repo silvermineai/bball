@@ -172,6 +172,45 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         raise ValueError("football coverage has no dataset rows")
     football_ages = receipt_ages(football, "football", checked_at, max_age_hours)
 
+    # Personnel is a separate high-volume football archive. Keep its source
+    # receipts in the monitor so a successful forecast refresh cannot publish
+    # a stale or empty roster/recruiting desk unnoticed.
+    football_recruiting = get_json(base_url, "/api/football/recruiting?meta=1")
+    personnel_seasons = football_recruiting.get("seasons")
+    personnel_datasets = football_recruiting.get("datasets")
+    personnel_receipts = football_recruiting.get("receipts")
+    if (
+        not isinstance(personnel_seasons, list)
+        or 2026 not in personnel_seasons
+        or not isinstance(personnel_datasets, list)
+        or not isinstance(personnel_receipts, list)
+    ):
+        raise ValueError("football recruiting catalog is malformed")
+    current_personnel = {
+        str(row.get("dataset")): row.get("rows")
+        for row in personnel_datasets
+        if isinstance(row, dict) and row.get("season") == 2026
+    }
+    required_personnel = {"rosters", "recruits", "team_talent", "returning_production"}
+    if (
+        set(current_personnel) != required_personnel
+        or any(not isinstance(current_personnel[name], int) or current_personnel[name] <= 0 for name in required_personnel)
+    ):
+        raise ValueError("football recruiting catalog has incomplete current-season coverage")
+    personnel_ages = []
+    for receipt in personnel_receipts:
+        if not isinstance(receipt, dict) or receipt.get("season") != 2026:
+            continue
+        captured = receipt.get("fetched_at")
+        if not isinstance(captured, str):
+            raise ValueError("football recruiting source receipt is malformed")
+        age = (checked_at - timestamp(captured)).total_seconds() / 3600
+        if age < -24 or age > max_age_hours:
+            raise ValueError(f"football recruiting source is {max(age, 0):.1f} hours old")
+        personnel_ages.append(age)
+    if len(personnel_ages) != len(required_personnel):
+        raise ValueError("football recruiting catalog has incomplete source receipts")
+
     forecasts = get_json(base_url, "/api/basketball/research/forecasts?meta=1")
     models = forecasts.get("models")
     if not isinstance(models, list) or not models:
@@ -258,6 +297,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "basketball_source_max_age_hours": round(max(ages), 2),
         "football_datasets": len(football["coverage"]),
         "football_source_max_age_hours": round(max(football_ages), 2),
+        "football_personnel_rows": sum(current_personnel.values()),
+        "football_personnel_source_max_age_hours": round(max(personnel_ages), 2),
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
         "forecast_age_hours": round(max(model_age, 0), 2),

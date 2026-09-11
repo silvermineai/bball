@@ -292,6 +292,10 @@ jobs:
                 -o /tmp/football-source-meta.json
               curl --fail --silent --show-error --retry 3 --retry-delay 2 \
                 -H 'Cache-Control: no-cache' \
+                'https://bball.silvermine.dev/api/football/recruiting?meta=1&workflow_smoke=1' \
+                -o /tmp/football-recruiting-meta.json
+              curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+                -H 'Cache-Control: no-cache' \
                 'https://bball.silvermine.dev/api/football/events?dataset=defense&season=2025&sort=sacks&positive=1&workflow_smoke=1' \
                 -o /tmp/football-events.json
               curl --fail --silent --show-error --retry 3 --retry-delay 2 \
@@ -315,6 +319,21 @@ jobs:
           if not isinstance(source_meta.get('datasets'), list) or not source_meta['datasets']:
               raise SystemExit('football source metadata has no datasets')
 
+          personnel = json.loads(Path('/tmp/football-recruiting-meta.json').read_text())
+          if 2026 not in personnel.get('seasons', []):
+              raise SystemExit('football recruiting metadata is missing the current season')
+          current = {
+              row.get('dataset'): row.get('rows')
+              for row in personnel.get('datasets', [])
+              if row.get('season') == 2026
+          }
+          required = {'rosters', 'recruits', 'team_talent', 'returning_production'}
+          if set(current) != required or any(not isinstance(current[name], int) or current[name] <= 0 for name in required):
+              raise SystemExit('football recruiting metadata has incomplete current-season coverage')
+          receipts = [row for row in personnel.get('receipts', []) if row.get('season') == 2026]
+          if len(receipts) != len(required):
+              raise SystemExit('football recruiting metadata has incomplete source receipts')
+
           events = json.loads(Path('/tmp/football-events.json').read_text())
           if events.get('dataset') != 'defense' or events.get('season') != 2025:
               raise SystemExit('football events smoke has an unexpected edition')
@@ -332,7 +351,7 @@ jobs:
               for field in ('game_id', 'model_id', 'kickoff', 'home_id', 'away_id', 'home_margin', 'total', 'home_win_probability'):
                   if row.get(field) in (None, ''):
                       raise SystemExit(f'football forecast row is missing {field}')
-          print('Production football coverage, source, event and forecast smoke tests passed')
+          print('Production football coverage, source, personnel, event and forecast smoke tests passed')
           PY
               ;;
           esac

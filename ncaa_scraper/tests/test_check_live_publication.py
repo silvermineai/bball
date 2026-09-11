@@ -20,6 +20,17 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
             },
+            "/api/football/recruiting?meta=1": {
+                "seasons": [2026, 2025],
+                "datasets": [
+                    {"dataset": dataset, "season": 2026, "rows": 10}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
+                "receipts": [
+                    {"dataset": dataset, "season": 2026, "fetched_at": "2026-09-10T18:00:00Z"}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
+            },
             "/api/basketball/research/forecasts?meta=1": {
                 "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
             },
@@ -83,6 +94,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["recruiting_reviewed_players"], 96)
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
+        self.assertEqual(report["football_personnel_rows"], 40)
+        self.assertEqual(report["football_personnel_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
         self.assertEqual(report["basketball_player_identified_rows"], 196865)
         self.assertEqual(report["basketball_player_team_entries"], 9990)
@@ -110,6 +123,17 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/football/coverage": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/football/recruiting?meta=1": {
+                "seasons": [2026],
+                "datasets": [
+                    {"dataset": dataset, "season": 2026, "rows": 10}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
+                "receipts": [
+                    {"dataset": dataset, "season": 2026, "fetched_at": "2026-09-10T18:00:00Z"}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
             },
             "/api/basketball/research/forecasts?meta=1": {
                 "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
@@ -194,6 +218,17 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/football/coverage": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+            },
+            "/api/football/recruiting?meta=1": {
+                "seasons": [2026],
+                "datasets": [
+                    {"dataset": dataset, "season": 2026, "rows": 10}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
+                "receipts": [
+                    {"dataset": dataset, "season": 2026, "fetched_at": "2026-09-10T18:00:00Z"}
+                    for dataset in ("rosters", "recruits", "team_talent", "returning_production")
+                ],
             },
             "/api/basketball/research/forecasts?meta=1": {
                 "models": [{"model_id": "model-1", "target_season": 2027, "forecasts": 100, "last_created_at": "2026-09-10T18:00:00Z"}],
