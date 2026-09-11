@@ -47,7 +47,11 @@ export function findSimilarPlayers(
   limit = 5,
 ): SimilarPlayer[] {
   const cohort = players.filter(
-    (player) => player.season === target.season && player.id !== target.id,
+    (player) => player.season === target.season
+      && player.id !== target.id
+      // Match the player index's full-sample gate so one-game or partial
+      // profiles do not become misleading nearest neighbors.
+      && player.qualified,
   );
   const distributions = new Map<keyof BBPlayer, number[]>();
   for (const metric of metrics) {

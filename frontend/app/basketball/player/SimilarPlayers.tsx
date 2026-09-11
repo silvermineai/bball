@@ -46,7 +46,7 @@ export default function SimilarPlayers({ id, season }: { id: string; season: num
         </div>
         <span className="note">Descriptive similarity</span>
       </div>
-      <p className="note">These matches use observed rate and workload percentiles from the same source season. They are a learning aid, not an identity link, projection or recruiting recommendation; sparse profiles stay out of the comparison.</p>
+      <p className="note">These matches use observed rate and workload percentiles from the same source season. They are a learning aid, not an identity link, projection or recruiting recommendation; the player index&apos;s full-sample qualification gate keeps sparse profiles out of the comparison.</p>
       {rows.length ? (
         <div className="table-scroll">
           <table className="data-table">

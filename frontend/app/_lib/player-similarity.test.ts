@@ -43,7 +43,7 @@ describe("findSimilarPlayers", () => {
 
   it("keeps sparse comparisons out of the similarity board", () => {
     const target = player({});
-    const sparse = player({ id: "sparse", ppg: null, rpg: null, apg: null, spg: null, bpg: null, ts: null, efg: null });
+    const sparse = player({ id: "sparse", qualified: false, ppg: null, rpg: null, apg: null, spg: null, bpg: null, ts: null, efg: null });
     expect(findSimilarPlayers(target, [target, sparse])).toEqual([]);
   });
 });
