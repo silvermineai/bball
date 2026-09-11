@@ -39,6 +39,13 @@ DATASETS = {
     # The release has names and team/contest IDs, but no stable athlete ID;
     # callers must not join these rows to the ESPN player archive by name.
     "ncaa_player_stats": ("ncaa_mfb_player_stats", "ncaa_mfb_player_stats_{year}.csv.gz"),
+    # The cfbfastR release store also publishes season rosters and recruiting
+    # context. These records retain stable provider IDs where supplied and are
+    # kept as source evidence separate from the forecast fit.
+    "rosters": ("espn_cfb_rosters", "cfb_rosters_{year}.parquet"),
+    "recruits": ("cfb_recruits", "cfb_recruits_{year}.parquet"),
+    "team_talent": ("cfb_team_talent", "cfb_team_talent_{year}.parquet"),
+    "returning_production": ("cfb_returning_production", "cfb_returning_production_{year}.parquet"),
 }
 
 

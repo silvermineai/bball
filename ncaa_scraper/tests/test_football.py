@@ -128,6 +128,9 @@ class ImportTests(unittest.TestCase):
         self.assertIn("ncaa_player_stats", datasets_for_year(2026, 2022))
         self.assertIn("ncaa_player_stats", datasets_for_year(2026, 2025))
         self.assertNotIn("ncaa_player_stats", datasets_for_year(2026, 2026))
+        self.assertIn("rosters", datasets_for_year(2026, 2026))
+        self.assertIn("recruits", datasets_for_year(2026, 2025))
+        self.assertIn("team_talent", datasets_for_year(2026, 2026))
         self.assertEqual(datasets_for_year(2027, 2012), [])
 
     def setUp(self):

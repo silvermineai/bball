@@ -253,9 +253,13 @@ def make_catalog(conn, out):
                 "team_placeholder_box_rows": sum(
                     r.get("athlete_id", "").startswith("-") for r in boxes
                 ),
-                "excluded_team_placeholder_entries": board[
-                    "excluded_team_placeholder_entries"
-                ],
+                # Forecast-window player boards are emitted by football.py and
+                # do not carry the historical import's exclusion counter.
+                # Treat the absent field as zero so one catalog can cover both
+                # board producers.
+                "excluded_team_placeholder_entries": board.get(
+                    "excluded_team_placeholder_entries", 0
+                ),
                 "box_games": len({r["game_id"] for r in boxes}),
                 "completed_schedule_games": conn.execute(
                     "SELECT count(*) FROM football_games WHERE season=? AND completed=1",

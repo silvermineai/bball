@@ -28,6 +28,11 @@ const paths = [
     "/football/source-stats/",
     "Search every retained source row, including fields that are not yet mapped into a ranking or model feature.",
   ],
+  [
+    "Read personnel context",
+    "/football/recruiting/",
+    "Compare source-listed rosters, recruiting commitments, team talent and returning production before asking a matchup question.",
+  ],
 ];
 
 const concepts = [

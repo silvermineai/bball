@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { footballDb } from "./football-db";
 
-const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats"] as const;
+const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats", "rosters", "recruits", "team_talent", "returning_production"] as const;
 type Dataset = (typeof DATASETS)[number];
 
 const querySchema = z.object({
@@ -65,8 +65,12 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
           team_advanced: "Advanced team rates",
           teams: "Team directory",
           betting: "Historical market archive",
-          ncaa_player_stats: "NCAA-derived player game stats",
-        } satisfies Record<Dataset, string>,
+        ncaa_player_stats: "NCAA-derived player game stats",
+        rosters: "Season rosters",
+        recruits: "Recruiting commitments",
+        team_talent: "Team talent",
+        returning_production: "Returning production",
+      } satisfies Record<Dataset, string>,
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

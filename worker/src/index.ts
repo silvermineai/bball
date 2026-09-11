@@ -33,6 +33,7 @@ import { lineupSource } from "./lineup-source";
 import { basketballForecasts } from "./basketball-forecasts";
 import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
+import { footballRecruiting } from "./football-recruiting";
 import { footballForecasts } from "./football-forecasts";
 import { possessionStyle } from "./possession-style";
 import { ncaaBoxDb, researchDb } from "./research-db";
@@ -173,6 +174,7 @@ app.get("/api/football/events/", (c) => {
 app.route("/api/football/events", footballEvents);
 app.route("/api/football/player-history", footballPlayerHistory);
 app.route("/api/football/source-stats", footballSourceStats);
+app.route("/api/football/recruiting", footballRecruiting);
 app.route("/api/football/research/forecasts", footballForecasts);
 
 const footballPlayerQuery = z.object({

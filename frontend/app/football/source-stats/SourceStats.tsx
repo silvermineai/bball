@@ -5,7 +5,7 @@ import Link from "next/link";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
-type Dataset = "all" | "box" | "passing" | "rushing" | "receiving" | "defense" | "specialists" | "team_advanced" | "teams" | "betting" | "ncaa_player_stats";
+type Dataset = "all" | "box" | "passing" | "rushing" | "receiving" | "defense" | "specialists" | "team_advanced" | "teams" | "betting" | "ncaa_player_stats" | "rosters" | "recruits" | "team_talent" | "returning_production";
 type Meta = { seasons: number[]; datasets: { dataset: Exclude<Dataset, "all">; rows: number }[]; dataset_labels: Record<Exclude<Dataset, "all">, string> };
 type Row = {
   dataset: Exclude<Dataset, "all">;
@@ -26,7 +26,7 @@ type Row = {
 type Result = { dataset: Dataset; season: number; page: number; page_size: number; total: number; source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; url: string; fetched_at: string; sha256: string }>; rows: Row[] };
 
 const fallbackLabels: Record<Exclude<Dataset, "all">, string> = {
-  box: "Player box scores", passing: "Passing aggregates", rushing: "Rushing aggregates", receiving: "Receiving aggregates", defense: "Defensive events", specialists: "Kicking, punting & returns", team_advanced: "Advanced team rates", teams: "Team directory", betting: "Historical market archive", ncaa_player_stats: "NCAA-derived player game stats",
+  box: "Player box scores", passing: "Passing aggregates", rushing: "Rushing aggregates", receiving: "Receiving aggregates", defense: "Defensive events", specialists: "Kicking, punting & returns", team_advanced: "Advanced team rates", teams: "Team directory", betting: "Historical market archive", ncaa_player_stats: "NCAA-derived player game stats", rosters: "Season rosters", recruits: "Recruiting commitments", team_talent: "Team talent", returning_production: "Returning production",
 };
 const pretty = (key: string) => key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const display = (value: unknown) => value == null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -52,7 +52,7 @@ export default function SourceStats() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("dataset") as Dataset | null;
-    if (requested && ["all", "box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats"].includes(requested)) setDataset(requested);
+    if (requested && ["all", "box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats", "rosters", "recruits", "team_talent", "returning_production"].includes(requested)) setDataset(requested);
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
     const requestedPage = Number(params.get("page"));
