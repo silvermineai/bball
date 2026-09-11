@@ -37,7 +37,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     [sort, setSort] = useState<RecruitingSort>("latest"),
     [copied, setCopied] = useState(""),
     [coverageQuery, setCoverageQuery] = useState(""),
-    [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "unrepresented" | "name">("reviewed"),
+    [coverageSort, setCoverageSort] = useState<"reviewed" | "prior" | "unrepresented" | "latest" | "name">("reviewed"),
     [coverageStatus, setCoverageStatus] = useState<"all" | "reviewed" | "unreviewed">("all");
   const [rosters, setRosters] = useState<BBRosters | null>(null),
     [rosterError, setRosterError] = useState("");
@@ -166,6 +166,13 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const latestPublication = activity.events[0]?.source.published_on || null;
   const activePrograms = new Set(activity.events.map((event) => event.team_id)).size;
   const additionEvents = activity.events.filter((event) => event.kind === "addition").length;
+  const latestProgramPublication = new Map<string, string>();
+  for (const event of activity.events) {
+    const current = latestProgramPublication.get(event.team_id);
+    if (!current || event.source.published_on > current) {
+      latestProgramPublication.set(event.team_id, event.source.published_on);
+    }
+  }
   const coverageBaseRows = (rosters.team_summaries || [])
     .map((summary) => {
       const reviewed = release.programs.some((program) => program.id === summary.team_id);
@@ -175,6 +182,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
         reviewed,
         additions: additions?.additions || 0,
         linkedProfiles: additions?.linked_profiles || 0,
+        latestReviewed: latestProgramPublication.get(summary.team_id) || null,
       };
     });
   const coverageRows = coverageBaseRows
@@ -186,6 +194,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       if (coverageSort === "name") return a.team.localeCompare(b.team);
       if (coverageSort === "prior") return (b.prior_minutes || 0) - (a.prior_minutes || 0) || a.team.localeCompare(b.team);
       if (coverageSort === "unrepresented") return (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || a.team.localeCompare(b.team);
+      if (coverageSort === "latest") return (b.latestReviewed || "").localeCompare(a.latestReviewed || "") || a.team.localeCompare(b.team);
       return Number(b.reviewed) - Number(a.reviewed) || (b.additions - a.additions) || a.team.localeCompare(b.team);
     });
   const reviewQueueRows = [...coverageBaseRows]
@@ -565,8 +574,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   downloadCsv(
                     "basketball-recruiting-program-coverage.csv",
                     toCsv(
-                      ["Program", "Program ID", "Evidence status", "Announced additions", "Linked prior profiles", "Listed players", "Returning minutes share", "Prior minutes", "Unrepresented prior minutes"],
-                      coverageRows.map((row) => [row.team, row.team_id, row.reviewed ? "Reviewed school announcements" : "Roster observation only", row.additions, row.linkedProfiles, row.listed_players, row.returning_minutes_share == null ? null : row.returning_minutes_share * 100, row.prior_minutes, row.unrepresented_prior_minutes]),
+                      ["Program", "Program ID", "Evidence status", "Latest reviewed publication", "Announced additions", "Linked prior profiles", "Listed players", "Returning minutes share", "Prior minutes", "Unrepresented prior minutes"],
+                      coverageRows.map((row) => [row.team, row.team_id, row.reviewed ? "Reviewed school announcements" : "Roster observation only", row.latestReviewed, row.additions, row.linkedProfiles, row.listed_players, row.returning_minutes_share == null ? null : row.returning_minutes_share * 100, row.prior_minutes, row.unrepresented_prior_minutes]),
                     ),
                   )
                 }
@@ -588,6 +597,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   <option value="reviewed">Reviewed programs first</option>
                   <option value="prior">Prior minutes</option>
                   <option value="unrepresented">Unrepresented prior minutes</option>
+                  <option value="latest">Latest reviewed publication</option>
                   <option value="name">Program name</option>
                 </select>
               </label>
@@ -638,10 +648,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             )}
             <div className="table-scroll" id="recruiting-coverage-table">
               <table className="data-table">
-                <thead><tr><th>Program</th><th>Evidence status</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th></tr></thead>
+                <thead><tr><th>Program</th><th>Evidence status</th><th>Latest reviewed publication</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th></tr></thead>
                 <tbody>{coverageRows.map((row) => <tr key={row.team_id}>
                   <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small><small><Link href={`/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(row.team)}`}>Review roster rows →</Link></small></td>
                   <td>{row.reviewed ? "Reviewed school announcements" : "Roster observation only"}</td>
+                  <td>{row.latestReviewed ? publicationDate(row.latestReviewed) : "No reviewed statement"}</td>
                   <td className="numeric">{row.additions || "—"}</td>
                   <td className="numeric">{row.linkedProfiles || "—"}</td>
                   <td className="numeric">{row.listed_players}</td>

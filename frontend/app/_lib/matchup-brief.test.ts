@@ -107,7 +107,22 @@ describe("matchup evidence and scenario handoff", () => {
     expect(count).toBe(overview.coverage.forecast_games);
   });
   it("rejects mixed profile editions and mismatched ledger snapshots", () => {
-    const game = overview.upcoming.find((g) => g.prediction)!;
+    const versionRows = ledger.versions?.length ? ledger.versions : ledger.games;
+    // Select a game represented by the active ledger edition. The upcoming
+    // archive can legitimately contain unregistered cold-start rows, so a
+    // fixed first game is not a valid fixture for ledger integrity checks.
+    const candidate = overview.upcoming.find(
+      (g) =>
+        !!g.prediction &&
+        profiles.has(g.home_id) &&
+        profiles.has(g.away_id) &&
+        versionRows.some(
+          (row) => row.game_id === g.id && row.model_id === overview.model.id,
+        ),
+    );
+    expect(candidate).toBeDefined();
+    if (!candidate) return;
+    const game = candidate;
     const home = profiles.get(game.home_id)!,
       away = profiles.get(game.away_id)!;
     expect(() =>
@@ -120,7 +135,6 @@ describe("matchup evidence and scenario handoff", () => {
         ledger,
       ),
     ).toThrow(/edition/);
-    const versionRows = ledger.versions?.length ? ledger.versions : ledger.games;
     const original = versionRows.find(
       (r) => r.game_id === game.id && r.model_id === overview.model.id,
     )!;
