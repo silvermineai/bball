@@ -90,6 +90,15 @@ type NewsMeta = {
   }>;
 };
 
+type BriefArchiveMeta = {
+  total?: number;
+  rows?: Array<{
+    sport?: string;
+    revision?: string;
+    game_id?: string;
+  }>;
+};
+
 type NCAALeaderMeta = {
   season: number;
   coverage: {
@@ -138,6 +147,7 @@ export default function CoverageLive() {
   const [footballForecast, setFootballForecast] = useState<ForecastMeta | null>(null);
   const [recruiting, setRecruiting] = useState<RecruitingMeta | null>(null);
   const [news, setNews] = useState<NewsMeta | null>(null);
+  const [briefArchive, setBriefArchive] = useState<BriefArchiveMeta | null>(null);
   const [ncaaLeaders, setNcaaLeaders] = useState<NCAALeaderMeta | null>(null);
   const [ncaaLeadersError, setNcaaLeadersError] = useState("");
   const [error, setError] = useState("");
@@ -160,6 +170,7 @@ export default function CoverageLive() {
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);
     void load<RecruitingMeta>("/api/basketball/research/recruiting?season=2027", setRecruiting, () => undefined);
     void load<NewsMeta>("/api/basketball/research/news?meta=1&limit=1", setNews, () => undefined);
+    void load<BriefArchiveMeta>("/api/research/briefs?sport=all&page=0", setBriefArchive, () => undefined);
     void load<NCAALeaderMeta>("/api/basketball/research/ncaa-leaders?meta=1", setNcaaLeaders, setNcaaLeadersError);
     void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
@@ -197,7 +208,7 @@ export default function CoverageLive() {
       <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
       {error && <p className="status-error" role="alert">Basketball: {error}</p>}
       {footballError && <p className="status-error" role="alert">Football: {footballError}</p>}
-      {(basketballModel || footballModel || recruiting?.coverage || news?.summary) && <div className="strip" style={{ marginTop: 20 }}>
+      {(basketballModel || footballModel || recruiting?.coverage || news?.summary || briefArchive) && <div className="strip" style={{ marginTop: 20 }}>
         <div>
           <strong>{basketballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
           <span>Basketball forecasts · {basketballModel?.target_season ?? 2027}</span>
@@ -217,6 +228,11 @@ export default function CoverageLive() {
           <strong>{news?.summary?.total?.toLocaleString() ?? "—"}</strong>
           <span>Publisher-wire headlines</span>
           <small>{news?.summary?.latest_published ? `latest ${date(news.summary.latest_published)}` : "publication clock unavailable"}</small>
+        </div>
+        <div>
+          <strong>{briefArchive?.total?.toLocaleString() ?? "—"}</strong>
+          <span>Archived game notebooks</span>
+          <small><Link href="/research/briefs/">Open the reading archive →</Link></small>
         </div>
       </div>}
       {!data && !football ? <p className="empty" role="status">Loading remote coverage…</p> : (
