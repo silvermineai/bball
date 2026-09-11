@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Markets from "./Markets";
+import FootballMarketBenchmark from "./FootballMarketBenchmark";
 
 export const metadata = {
   title: "Historical market archive",
@@ -48,6 +49,7 @@ export default function Page() {
       <Suspense fallback={<p role="status">Loading market archive…</p>}>
         <Markets />
       </Suspense>
+      <FootballMarketBenchmark />
       <section id="market-policy" className="section">
         <div className="section-heading">
           <div>
