@@ -101,7 +101,12 @@ def main() -> None:
             "ON CONFLICT(id) DO UPDATE SET publisher=excluded.publisher,sport=excluded.sport,division=excluded.division,"
             "headline=excluded.headline,description=excluded.description,published=excluded.published,"
             "link=excluded.link,categories_json=excluded.categories_json,author=excluded.author,"
-            "last_seen_at=excluded.last_seen_at;"
+            "last_seen_at=excluded.last_seen_at "
+            "WHERE publisher IS NOT excluded.publisher OR sport IS NOT excluded.sport "
+            "OR division IS NOT excluded.division OR headline IS NOT excluded.headline "
+            "OR description IS NOT excluded.description OR published IS NOT excluded.published "
+            "OR link IS NOT excluded.link OR categories_json IS NOT excluded.categories_json "
+            "OR author IS NOT excluded.author;"
         )
     SQL.write_text("\n".join(statements) + "\n")
     for migration in MIGRATIONS:
