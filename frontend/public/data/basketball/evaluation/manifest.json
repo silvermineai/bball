@@ -1,13 +1,13 @@
 {
-  "signature": "c28a7d143984a6f247be13615666a21a35789a4e34e57384aab0a612a9a21033",
+  "signature": "c2df170438098f41491bb9b12ade3737c062e9f838a60143518709571cf9d30d",
   "files": {
-    "summary.json": "f3afbe7bb87be6b1e24ebb912b18ae67d6868bf94feeed781b62e871538bf8c5",
-    "games.json": "d0481b410ab3d6560dd82fa50504ced266da8e0e4bb3382cc060733e80b5f028",
-    "calibration-games.json": "8c72207fa410ef2465f730d98ae9cf9ae29a8cc2dfc090428cff9d1c4d417eca",
-    "fits.json": "b140c96e3b93679958a58bbd3173d48fb9fbb09ae6fb1a481b1964d45c277e8e",
-    "transitions.json": "43ee6ecd733698db01f08d0121a78acf7fac63e974a9ae2c6e77fd6f7d0b5cba",
-    "transition-2024.json": "1900b4a18ae20b4b06fea50f7d67ebff272735718b91b62e8c6d1442159650eb",
-    "transition-2025.json": "b2e0b78bf05ec08fd81a04659d86010f023dcb5ae5badf563e7b3679231bb250",
-    "transition-2026.json": "36401a9a7b5ef53d7cadf3068f11975f0dac68220bec97b794cfdc1fc4a94bd3"
+    "summary.json": "a49230a66135e13159c10fe11928d450f06e40d252a086609b389c6b58d190a7",
+    "games.json": "d0614328cf06ab3b286acb1e9a9ec3efca3e44590d72f1ed0c5d2c5a16e873ca",
+    "calibration-games.json": "4c0625724867bd835378db5036c12b7417ed5272e0d4993ee379434b18d36263",
+    "fits.json": "5cf1f1f87ae22fd8dfa65ba26b7a07d802264689e41f48492be2038f25fa9b32",
+    "transitions.json": "ae7dfc5fb65685d23d522a6b748403abac32a7e5053fd7d4f544b833d3b2b315",
+    "transition-2024.json": "d46515b882344d81a82435266b4bcc0dc0b083aa232a270bc4de8755a0c95099",
+    "transition-2025.json": "2c26196299c2c83bde01feee46b0542c91f4ea7da97f94a44034f12fc13cf43f",
+    "transition-2026.json": "8798f25703d7c59b863665eecc248126596e2461f8270fe01877de8d7b82cb81"
   }
 }
