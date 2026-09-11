@@ -196,6 +196,17 @@ describe("bball api", () => {
     expect(body.rows[0]).toMatchObject({ season: 2025, team: "Example U", plays: 100, epa: 12.5 });
   });
 
+  it("accepts a 2010 football player log from the expanded archive", async () => {
+    const prepare = vi.fn(() => ({
+      bind: () => ({
+        first: async () => ({ total: 0 }),
+        all: async () => ({ results: [] }),
+      }),
+    }));
+    const response = await app.request("/api/football/players/123?season=2010", {}, { DB: { prepare } });
+    expect(response.status).toBe(404);
+  });
+
   it("serves bounded football forecasts from the latest registered D1 model", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT id,created_at,cutoff,artifact_json FROM football_models")) {

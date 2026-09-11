@@ -8,7 +8,7 @@ type Dataset = (typeof DATASETS)[number];
 
 const querySchema = z.object({
   dataset: z.enum(["all", ...DATASETS]).default("box"),
-  season: z.coerce.number().int().min(2018).max(2035).default(2025),
+  season: z.coerce.number().int().min(2010).max(2035).default(2025),
   q: z.string().trim().max(100).default(""),
   team: z.string().regex(/^\d{1,15}$/).optional(),
   game: z.string().regex(/^\d{1,15}$/).optional(),

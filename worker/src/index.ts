@@ -172,7 +172,7 @@ app.route("/api/football/source-stats", footballSourceStats);
 app.route("/api/football/research/forecasts", footballForecasts);
 
 const footballPlayerQuery = z.object({
-  season: z.coerce.number().int().min(2018).max(2035).default(2025),
+  season: z.coerce.number().int().min(2010).max(2035).default(2025),
   page: z.coerce.number().int().min(0).max(200).default(0),
 });
 

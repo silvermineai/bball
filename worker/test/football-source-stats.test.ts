@@ -69,4 +69,16 @@ describe("football source statistics", () => {
       datasets: [{ dataset: "box", rows: 4 }],
     });
   });
+
+  it("accepts the earliest published player archive season", async () => {
+    const prepare = vi.fn(() => ({
+      bind: () => ({
+        first: async () => ({ total: 0 }),
+        all: async () => ({ results: [] }),
+      }),
+    }));
+    const response = await app.request("/api/football/source-stats?season=2010", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ season: 2010, total: 0 });
+  });
 });
