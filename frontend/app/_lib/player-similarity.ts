@@ -46,6 +46,10 @@ export function findSimilarPlayers(
   players: BBPlayer[],
   limit = 5,
 ): SimilarPlayer[] {
+  // Keep the selected profile under the same full-sample gate as its peers.
+  // A sparse target can still contain four numeric fields by chance, but its
+  // percentile position is not comparable to the qualified season cohort.
+  if (!target.qualified) return [];
   const cohort = players.filter(
     (player) => player.season === target.season
       && player.id !== target.id

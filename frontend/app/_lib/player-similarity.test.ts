@@ -46,4 +46,10 @@ describe("findSimilarPlayers", () => {
     const sparse = player({ id: "sparse", qualified: false, ppg: null, rpg: null, apg: null, spg: null, bpg: null, ts: null, efg: null });
     expect(findSimilarPlayers(target, [target, sparse])).toEqual([]);
   });
+
+  it("does not rank a sparse target against qualified peers", () => {
+    const target = player({ qualified: false, ppg: 18, rpg: 5, apg: 6, ts: 0.6 });
+    const peer = player({ id: "peer", name: "Peer", team_id: "2", team: "Beta" });
+    expect(findSimilarPlayers(target, [target, peer])).toEqual([]);
+  });
 });
