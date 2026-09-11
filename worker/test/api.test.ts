@@ -1344,6 +1344,8 @@ describe("bball api", () => {
       "/api/basketball/research/ncaa-careers?minMinutes=-1",
       "/api/basketball/research/ncaa-careers?minDenominator=-1",
       "/api/basketball/research/ncaa-careers?page=-1",
+      "/api/basketball/research/ncaa-careers?classYear=%27%20OR%201%3D1%20--",
+      "/api/basketball/research/ncaa-careers?position=%27%20OR%201%3D1%20--",
       "/api/basketball/research/ncaa-careers?fromSeason=2026&toSeason=2010",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
@@ -1417,6 +1419,26 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     const careerSql = prepare.mock.calls.map(([sql]) => String(sql)).filter((sql) => sql.includes("FROM bb_ncaa_player_season")).join("\n");
     expect(careerSql).toContain("tpa >= ?");
+  });
+
+  it("filters historical NCAA careers by exact roster class and position", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 0 }),
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      })),
+      all: vi.fn().mockResolvedValue({ results: [{ season: 2026 }, { value: "Senior" }, { value: "G" }] }),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-careers?fromSeason=2025&toSeason=2026&classYear=Senior&position=G&metric=ppg",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const careerSql = prepare.mock.calls.map(([sql]) => String(sql)).filter((sql) => sql.includes("FROM bb_ncaa_player_season")).join("\n");
+    expect(careerSql).toContain("json_extract(r.profile_json,'$.class')=?");
+    expect(careerSql).toContain("json_extract(r.profile_json,'$.position')=?");
   });
 
   it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {

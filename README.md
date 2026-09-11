@@ -50,7 +50,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | NCAA player cards | `/basketball/ncaa-player/` | Open one source-native NCAA ID across season production, live multi-metric ranking placement, shot profile, roster/high-school context, RAPM and recent game evidence |
 | NCAA player comparison | `/basketball/ncaa-compare/` | Find players by name or program, then compare up to three exact NCAA source IDs across production, shooting, roster context and impact |
 | NCAA player rankings | `/basketball/ncaa-rankings/` | Rank current NCAA-derived player/team rows by scoring, rebounding, playmaking, defense, fouls or shooting efficiency with configurable game, minute, position and class filters |
-| NCAA historical leaderboard | `/basketball/ncaa-careers/` | Compare NCAA player-season rows across a selectable historical window with explicit workload filters and source identity |
+| NCAA historical leaderboard | `/basketball/ncaa-careers/` | Compare NCAA player-season rows across a selectable historical window with workload, exact source-roster class and position filters |
 | NCAA roster intel | `/basketball/ncaa-rosters/` | Search NCAA roster records by class, position, size, hometown and high school; compare program-level source-ID continuity across adjacent releases |
 | High-school pipeline | `/basketball/ncaa-high-schools/` | Aggregate source roster rows by high school, programs represented and recorded college production, with links back to the evidence rows |
 | NCAA shooting profiles | `/basketball/ncaa-shooting/` | Compare NCAA-derived shot volume, zone efficiency and average distance by player/team across 2019–26 |

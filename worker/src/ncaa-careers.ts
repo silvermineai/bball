@@ -38,6 +38,8 @@ const querySchema = z.object({
   minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
   minDenominator: z.coerce.number().int().min(0).max(10000).default(0),
   q: z.string().trim().max(120).optional(),
+  classYear: z.string().trim().regex(/^[A-Za-z0-9. -]{0,20}$/).optional(),
+  position: z.string().trim().regex(/^[A-Za-z0-9 -]{0,20}$/).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
 });
@@ -88,12 +90,22 @@ const metricDenominator = (metric: Metric): string | null => metricDenominators[
 const sourceNumber = (path: string) => `CASE WHEN json_extract(stats_json,'$.${path}') IS NOT NULL THEN CAST(json_extract(stats_json,'$.${path}') AS REAL) ELSE NULL END`;
 
 ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
-  const { fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, q, page, meta } = c.req.valid("query");
+  const { fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, q, classYear, position, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
   if (meta === "1") {
-    const seasons = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>();
+    const db = researchDb(c.env);
+    const [seasons, classes, positions] = await Promise.all([
+      db.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>(),
+      db.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE value IS NOT NULL AND value != '' ORDER BY value").all<{ value: string }>(),
+      db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE value IS NOT NULL AND value != '' ORDER BY value").all<{ value: string }>(),
+    ]);
     c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: seasons.results.map((row) => row.season), metrics });
+    return c.json({
+      seasons: seasons.results.map((row) => row.season),
+      metrics,
+      classes: classes.results.map((row) => String(row.value)),
+      positions: positions.results.map((row) => String(row.value)),
+    });
   }
   const clauses = ["season BETWEEN ? AND ?"];
   const binds: Array<string | number> = [fromSeason, toSeason];
@@ -101,6 +113,14 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
     clauses.push("(player_name LIKE ? OR team_name LIKE ? OR player_id LIKE ?)");
     const search = `%${q}%`;
     binds.push(search, search, search);
+  }
+  if (classYear) {
+    clauses.push("EXISTS (SELECT 1 FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id AND json_extract(r.profile_json,'$.class')=?)");
+    binds.push(classYear);
+  }
+  if (position) {
+    clauses.push("EXISTS (SELECT 1 FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id AND json_extract(r.profile_json,'$.position')=?)");
+    binds.push(position);
   }
   const where = clauses.join(" AND ");
   const aggregate = `
@@ -122,7 +142,7 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
       ${sourceNumber("tpm")} AS tpm,
       ${sourceNumber("fta")} AS fta,
       ${sourceNumber("ftm")} AS ftm
-    FROM bb_ncaa_player_season WHERE ${where}`;
+    FROM bb_ncaa_player_season s WHERE ${where}`;
   const value = metricExpression(metric);
   const denominator = metricDenominator(metric);
   const effectiveMinDenominator = denominator ? minDenominator : 0;
