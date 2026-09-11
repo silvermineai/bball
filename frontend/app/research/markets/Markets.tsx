@@ -210,7 +210,26 @@ export default function Markets() {
       {error ? <div className="status-error" role="alert">{error}</div> : !data ? <p className="empty" role="status">Loading retained observations…</p> : <>
         <p className="note" role="status">{data.total.toLocaleString()} observations · page {page + 1} of {pages} · every row labelled as archival reference</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Observed</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
-        {!data.rows.length && <p className="empty">No retained rows match this search.</p>}
+        {!data.rows.length && data.total === 0 && !query.trim() && (
+          <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
+            <div className="eyebrow">Connector status</div>
+            <h3>{sport === "basketball" ? "No basketball quote feed is connected yet." : "No market observations are connected yet."}</h3>
+            <p>
+              The archive is empty for this sport because no authorized provider
+              export has been ingested. This is unavailable evidence, not proof
+              that a game had no line. The prospective scorecard stays clean
+              until a provider ID, timing clocks and exact participants arrive.
+            </p>
+            <div className="button-row">
+              <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>
+                {sport === "basketball" ? "Open basketball forecast lab →" : "Open football scorecard →"}
+              </a>
+              {sport === "basketball" && <a className="hero-link" href="/basketball/briefs/">Use the manual quote checker →</a>}
+              <a className="hero-link" href="#csv-import">Read the authorized import path →</a>
+            </div>
+          </div>
+        )}
+        {!data.rows.length && (data.total > 0 || query.trim()) && <p className="empty">No retained rows match this search.</p>}
         <div className="pagination"><button className="button secondary" disabled={page === 0} onClick={() => setPage((n) => n - 1)}>Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage((n) => n + 1)}>Next</button></div>
       </>}
     </section>
