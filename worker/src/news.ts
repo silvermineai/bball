@@ -1,5 +1,5 @@
 import { researchDb } from "./research-db";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -17,6 +17,108 @@ function escapeLike(value: string) {
 }
 
 export const news = new Hono<{ Bindings: Env }>();
+type NewsContext = Context<{ Bindings: Env }>;
+
+const DB_TIMEOUT_MS = 5000;
+
+type NewsArticle = {
+  id: string;
+  publisher: string;
+  sport: string;
+  division?: string;
+  headline: string;
+  description?: string;
+  published: string;
+  link: string;
+  categories?: string[];
+  author?: string;
+};
+
+type NewsRelease = {
+  generated_at: string;
+  feeds: unknown[];
+  articles: NewsArticle[];
+};
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("news database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function bundledRelease(c: { env: Env; req: { url: string } }): Promise<NewsRelease | null> {
+  if (!c.env.ASSETS) return null;
+  const response = await c.env.ASSETS.fetch(new Request(new URL("/data/news.json", c.req.url)));
+  if (!response.ok) return null;
+  const payload = await response.json() as Partial<NewsRelease>;
+  if (
+    typeof payload.generated_at !== "string" ||
+    !Array.isArray(payload.feeds) ||
+    !Array.isArray(payload.articles)
+  ) return null;
+  const articles = payload.articles.filter((article): article is NewsArticle => (
+    !!article && typeof article === "object" &&
+    typeof article.id === "string" && typeof article.publisher === "string" &&
+    typeof article.sport === "string" && typeof article.headline === "string" &&
+    typeof article.published === "string" && typeof article.link === "string"
+  ));
+  return { generated_at: payload.generated_at, feeds: payload.feeds, articles };
+}
+
+function bundledRows(release: NewsRelease, sport: string, division: string | undefined, q: string | undefined) {
+  const needle = q?.trim().toLowerCase() || "";
+  return release.articles
+    .filter((article) => article.sport === sport)
+    .filter((article) => !division || article.division === division)
+    .filter((article) => !needle || [article.headline, article.description || "", ...(article.categories || [])]
+      .join(" ").toLowerCase().includes(needle))
+    .sort((left, right) => right.published.localeCompare(left.published) || right.id.localeCompare(left.id))
+    .map((article) => ({
+      ...article,
+      description: article.description || "",
+      categories: article.categories || [],
+      author: article.author || "",
+      first_seen_at: release.generated_at,
+      last_seen_at: release.generated_at,
+    }));
+}
+
+async function bundledResponse(c: NewsContext, sport: string, division: string | undefined, q: string | undefined, page: number, limit: number, meta: string) {
+  const release = await bundledRelease(c);
+  if (!release) return c.text("Publisher news archive is temporarily unavailable", 503);
+  const rows = bundledRows(release, sport, division, q);
+  if (meta === "1") {
+    return c.json({
+      sport,
+      division: division || "",
+      q: q || "",
+      summary: {
+        total: rows.length,
+        latest_published: rows[0]?.published || null,
+        latest_seen_at: release.generated_at,
+      },
+      releases: [{
+        edition: `bundled-${release.generated_at}`,
+        generated_at: release.generated_at,
+        article_count: release.articles.length,
+        feeds: release.feeds,
+      }],
+      source: "bundled_release",
+    });
+  }
+  return c.json({
+    sport,
+    division: division || "",
+    q: q || "",
+    page,
+    page_size: limit,
+    total: rows.length,
+    rows: rows.slice(page * limit, (page + 1) * limit),
+    source: "bundled_release",
+  });
+}
 
 news.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, division, q, page, limit, meta } = c.req.valid("query");
@@ -33,57 +135,65 @@ news.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = clauses.join(" AND ");
 
-  if (meta === "1") {
-    const [summary, releases] = await researchDb(c.env).batch([
-      researchDb(c.env).prepare(
-        `SELECT count(*) AS total, max(published) AS latest_published,
-                max(last_seen_at) AS latest_seen_at
-           FROM bb_news_articles WHERE ${where}`,
-      ).bind(...binds),
-      researchDb(c.env).prepare(
-        "SELECT edition,generated_at,article_count,feeds_json FROM bb_news_releases ORDER BY generated_at DESC LIMIT 12",
-      ),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
-      sport,
-      division: division || "",
-      q: q || "",
-      summary: summary.results[0],
-      releases: releases.results.map((row) => {
-        const item = row as Record<string, unknown>;
-        let feeds: unknown[] = [];
-        try {
-          const parsed = JSON.parse(String(item.feeds_json || "[]"));
-          if (Array.isArray(parsed)) feeds = parsed;
-        } catch {
-          // Keep a malformed release catalog visible without failing the endpoint.
-        }
-        return { ...item, feeds };
-      }),
-    });
-  }
+  try {
+    return await withTimeout((async () => {
+      if (meta === "1") {
+        const [summary, releases] = await researchDb(c.env).batch([
+          researchDb(c.env).prepare(
+            `SELECT count(*) AS total, max(published) AS latest_published,
+                    max(last_seen_at) AS latest_seen_at
+               FROM bb_news_articles WHERE ${where}`,
+          ).bind(...binds),
+          researchDb(c.env).prepare(
+            "SELECT edition,generated_at,article_count,feeds_json FROM bb_news_releases ORDER BY generated_at DESC LIMIT 12",
+          ),
+        ]);
+        c.header("Cache-Control", "public, max-age=300");
+        return c.json({
+          sport,
+          division: division || "",
+          q: q || "",
+          summary: summary.results[0],
+          releases: releases.results.map((row) => {
+            const item = row as Record<string, unknown>;
+            let feeds: unknown[] = [];
+            try {
+              const parsed = JSON.parse(String(item.feeds_json || "[]"));
+              if (Array.isArray(parsed)) feeds = parsed;
+            } catch {
+              // Keep a malformed release catalog visible without failing the endpoint.
+            }
+            return { ...item, feeds };
+          }),
+        });
+      }
 
-  const [count, rows] = await researchDb(c.env).batch([
-    researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_news_articles WHERE ${where}`).bind(...binds),
-    researchDb(c.env).prepare(
-      `SELECT id,publisher,sport,division,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at
-         FROM bb_news_articles WHERE ${where}
-        ORDER BY published DESC,id DESC LIMIT ? OFFSET ?`,
-    ).bind(...binds, limit, page * limit),
-  ]);
-  const parsedRows = rows.results.map((row) => {
-    const item = row as Record<string, unknown>;
-    let categories: string[] = [];
-    try {
-      const parsed = JSON.parse(String(item.categories_json || "[]"));
-      if (Array.isArray(parsed)) categories = parsed.filter((value): value is string => typeof value === "string");
-    } catch {
-      // A malformed category list should not hide an otherwise valid headline.
-    }
-    const { categories_json: _categories, ...rest } = item;
-    return { ...rest, categories };
-  });
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ sport, division: division || "", q: q || "", page, page_size: limit, total: Number((count.results[0] as { total?: number }).total || 0), rows: parsedRows });
+      const [count, rows] = await researchDb(c.env).batch([
+        researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_news_articles WHERE ${where}`).bind(...binds),
+        researchDb(c.env).prepare(
+          `SELECT id,publisher,sport,division,headline,description,published,link,categories_json,author,first_seen_at,last_seen_at
+             FROM bb_news_articles WHERE ${where}
+            ORDER BY published DESC,id DESC LIMIT ? OFFSET ?`,
+        ).bind(...binds, limit, page * limit),
+      ]);
+      const parsedRows = rows.results.map((row) => {
+        const item = row as Record<string, unknown>;
+        let categories: string[] = [];
+        try {
+          const parsed = JSON.parse(String(item.categories_json || "[]"));
+          if (Array.isArray(parsed)) categories = parsed.filter((value): value is string => typeof value === "string");
+        } catch {
+          // A malformed category list should not hide an otherwise valid headline.
+        }
+        const { categories_json: _categories, ...rest } = item;
+        return { ...rest, categories };
+      });
+      c.header("Cache-Control", "public, max-age=300");
+      return c.json({ sport, division: division || "", q: q || "", page, page_size: limit, total: Number((count.results[0] as { total?: number }).total || 0), rows: parsedRows });
+    })(), DB_TIMEOUT_MS);
+  } catch {
+    const response = await bundledResponse(c, sport, division, q, page, limit, meta);
+    response.headers.set("Cache-Control", "public, max-age=60");
+    return response;
+  }
 });

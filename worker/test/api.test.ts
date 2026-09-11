@@ -648,6 +648,38 @@ describe("bball api", () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
+  it("falls back to the bundled publisher release when the news warehouse is unavailable", async () => {
+    const batch = vi.fn().mockRejectedValue(new Error("D1 unavailable"));
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      schema_version: 2,
+      generated_at: "2026-09-11T16:04:39.076753Z",
+      feeds: [{ publisher: "NCAA.com", sport: "mens-college-basketball", division: "D-II" }],
+      articles: [{
+        id: "bundled-1",
+        publisher: "NCAA.com",
+        sport: "mens-college-basketball",
+        division: "D-II",
+        headline: "Portal update",
+        description: "A source-linked update.",
+        published: "2026-09-11T14:17:33Z",
+        link: "https://www.ncaa.com/news/basketball-men/d2/article",
+        categories: ["transfer portal"],
+        author: "Reporter",
+      }],
+    }), { headers: { "Content-Type": "application/json" } }));
+    const response = await app.request(
+      "/api/basketball/research/news?meta=1&division=D-II&q=portal",
+      {},
+      { DB: { prepare: vi.fn() }, RESEARCH_DB: { batch }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { source: string; summary: { total: number }; releases: unknown[] };
+    expect(body.source).toBe("bundled_release");
+    expect(body.summary.total).toBe(1);
+    expect(body.releases).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("serves native basketball pages while preserving known archive routes", async () => {
     const fetch = vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
