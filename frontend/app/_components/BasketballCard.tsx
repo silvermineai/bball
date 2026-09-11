@@ -159,6 +159,10 @@ export default function BasketballCard({
               </small>
             </div>
           )}
+          <div className="button-row matchup-program-links" aria-label="Program research links">
+            <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.away_id)}/`}>Away program dossier ↗</Link>
+            <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.home_id)}/`}>Home program dossier ↗</Link>
+          </div>
           {g.market_comparisons?.length ? (
             <div className="market-quotes">
               <div className="match-detail">
