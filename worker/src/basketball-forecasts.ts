@@ -21,6 +21,16 @@ const querySchema = z.object({
 });
 
 export const basketballForecasts = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("basketball forecast database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
@@ -28,9 +38,22 @@ function escapeLike(value: string) {
 
 basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const { season, gameId, status, q, model, page, limit, meta } = c.req.valid("query");
+  const cache = typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the forecast endpoint fail.
+    }
+  }
 
   if (meta === "1") {
-    const [seasons, models, modelMeta] = await researchDb(c.env).batch([
+    try {
+    const [seasons, models, modelMeta] = await withTimeout(researchDb(c.env).batch([
       researchDb(c.env).prepare(
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
@@ -55,8 +78,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
            FROM bb_models
           ORDER BY created_at DESC, id`,
       ),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
+    ]), DB_TIMEOUT_MS);
     const metadataById = new Map(
       modelMeta.results.map((row) => {
         const item = row as Record<string, unknown>;
@@ -100,10 +122,16 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       if (leftUsable !== rightUsable) return leftUsable - rightUsable;
       return String(rightRecord.last_created_at || "").localeCompare(String(leftRecord.last_created_at || ""));
     });
-    return c.json({
+    const response = c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       models: modelsWithMetadata,
     });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+    } catch {
+      return c.json({ error: "The live basketball forecast catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
 
   const clauses = ["g.season=?"];
@@ -126,10 +154,11 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(model);
   }
   const where = clauses.join(" AND ");
-  const count = await researchDb(c.env).prepare(
+  try {
+  const count = await withTimeout(researchDb(c.env).prepare(
     `SELECT count(*) AS total FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id WHERE ${where}`,
-  ).bind(...binds).first<{ total: number }>();
-  const rows = await researchDb(c.env).prepare(
+  ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+  const rows = await withTimeout(researchDb(c.env).prepare(
     `SELECT f.game_id,f.model_id,f.created_at,f.prediction_json,
             g.season,g.starts_at,g.home_id,g.away_id,g.home_name,g.away_name,
             g.home_score,g.away_score,g.completed,g.neutral,g.time_tbd,g.venue,g.broadcast
@@ -155,9 +184,8 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     time_tbd: number;
     venue: string | null;
     broadcast: string | null;
-  }>();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  }>(), DB_TIMEOUT_MS);
+  const response = c.json({
     season,
     status,
     model,
@@ -178,4 +206,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       return { ...row, prediction };
     }),
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The live basketball forecasts are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
