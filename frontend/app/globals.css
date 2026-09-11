@@ -1385,6 +1385,36 @@ th,
 .market-import-preflight-result ul {
   margin: 8px 0 0 18px;
 }
+.market-import-preview {
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 20px;
+}
+.market-import-preview h4 {
+  margin: 6px 0 8px;
+  font: 400 24px/1.15 "Libre Caslon Display", Georgia, serif;
+}
+.market-import-preview > .note {
+  max-width: 760px;
+}
+.market-import-preview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 16px 0;
+  color: var(--muted);
+  font: 10px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.market-import-preview-stats strong {
+  color: var(--ink);
+  font-size: 16px;
+  margin-right: 5px;
+}
+.market-import-preview .data-table {
+  background: var(--paper);
+}
 .learning-directory-heading h3 {
   font-size: 28px;
 }

@@ -14,6 +14,22 @@ export type MarketImportPreflight = {
   warnings: string[];
 };
 
+export type MarketImportRow = {
+  gameId: string;
+  market: "spreads" | "totals" | "h2h" | string;
+  startsAt: string;
+  capturedAt: string;
+  updatedAt: string;
+  homeName: string;
+  awayName: string;
+  bookmaker: string;
+  line: number | null;
+  homePrice: number | null;
+  awayPrice: number | null;
+  overPrice: number | null;
+  underPrice: number | null;
+};
+
 /** Parse RFC 4180-style CSV locally; the selected file never leaves the browser. */
 export function parseMarketCsv(text: string): string[][] {
   const rows: string[][] = [];
@@ -51,6 +67,40 @@ const price = (decimal: string, american: string) => {
   const parsedAmerican = number(american);
   return parsedAmerican != null && parsedAmerican !== 0;
 };
+
+const decimalPrice = (decimal: string, american: string) => {
+  const parsedDecimal = number(decimal);
+  if (parsedDecimal != null && parsedDecimal > 1) return parsedDecimal;
+  const parsedAmerican = number(american);
+  if (parsedAmerican == null || parsedAmerican === 0) return null;
+  return parsedAmerican > 0 ? 1 + parsedAmerican / 100 : 1 + 100 / Math.abs(parsedAmerican);
+};
+
+/** Parse validated provider rows into a browser-only comparison preview. */
+export function parseMarketImportRows(text: string): MarketImportRow[] {
+  const parsed = parseMarketCsv(text);
+  const headers = (parsed[0] || []).map((header) => header.trim());
+  if (!headers.length) return [];
+  const index = new Map(headers.map((header, position) => [header, position]));
+  return parsed.slice(1).map((cells) => {
+    const value = (column: string) => (cells[index.get(column) ?? -1] || "").trim();
+    return {
+      gameId: value("game_id"),
+      market: value("market").toLowerCase(),
+      startsAt: value("starts_at"),
+      capturedAt: value("captured_at"),
+      updatedAt: value("updated_at"),
+      homeName: value("home_name"),
+      awayName: value("away_name"),
+      bookmaker: value("bookmaker"),
+      line: number(value("line")) ?? number(value("home_spread")),
+      homePrice: decimalPrice(value("home_price"), value("home_american")),
+      awayPrice: decimalPrice(value("away_price"), value("away_american")),
+      overPrice: decimalPrice(value("over_price"), value("over_american")),
+      underPrice: decimalPrice(value("under_price"), value("under_american")),
+    };
+  });
+}
 
 /** Match the server importer’s row checks before an operator sends an export for import. */
 export function validateMarketImportCsv(text: string, now = new Date()): MarketImportPreflight {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarketCsv, validateMarketImportCsv } from "./market-import";
+import { parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
@@ -16,5 +16,16 @@ describe("market import preflight", () => {
     expect(result.errors.join(" ")).toContain("before starts_at");
     expect(result.errors.join(" ")).toContain("updated_at cannot be after");
     expect(result.errors.join(" ")).toContain("h2h requires valid");
+  });
+
+  it("normalizes decimal and American prices for a browser comparison preview", () => {
+    const csv = `${header}\n${["401", "h2h", "2027-01-01T20:00:00Z", "2026-12-31T20:00:00Z", "2026-12-31T19:59:00Z", "Home", "Away", "Book", "", "", "", "", "", "-120", "105", "", "", "event-1"].join(",")}`;
+    expect(parseMarketImportRows(csv)).toMatchObject([{
+      gameId: "401",
+      market: "h2h",
+      homePrice: 1 + 100 / 120,
+      awayPrice: 2.05,
+      line: null,
+    }]);
   });
 });
