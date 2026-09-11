@@ -78,7 +78,7 @@ export default function NcaaPlayerCard() {
     setCard(null); setImpact(null); setError(""); setAllGames(null); setLoadingGames(false);
     Promise.all([
       fetch(`/api/basketball/research/ncaa-player-card/${encodeURIComponent(id)}?season=${season}`, { signal: controller.signal }).then(async (r) => { if (!r.ok) throw Error(r.status === 404 ? "No NCAA source record was found for that player ID." : "The NCAA player card could not be loaded."); return r.json() as Promise<Card>; }),
-      fetch("/data/basketball/impact.json", { signal: controller.signal }).then((r) => r.ok ? r.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
+      fetch(`/data/basketball/impact-${season}.json`, { signal: controller.signal }).then((r) => r.ok ? r.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
     ]).then(([next, release]) => { if (!controller.signal.aborted) { setCard(next); setImpact(release.players.find((row) => row.season === season && row.player_id === id) || null); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
   }, [id, season]);

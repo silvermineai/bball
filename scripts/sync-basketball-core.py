@@ -148,6 +148,18 @@ def build(season=2023):
         except sqlite3.OperationalError:
             # Optional tables are absent in small development fixtures.
             continue
+    # League-wide RAPM is a compact historical board (2011–26). Publish all
+    # season partitions through this core sync so the rankings API can answer
+    # historical season queries without replaying the multi-gigabyte player
+    # game archive.
+    try:
+        for impact_season in range(2011, 2027):
+            statements.extend(row_statements(conn, "bb_impact", impact_season))
+            statements.extend(
+                row_statements(conn, "bb_sources", impact_season)
+            )
+    except sqlite3.OperationalError:
+        pass
     # The main basketball SQL release clears the season-partitioned profile
     # table before import. Re-publish every season here so a refresh cannot
     # leave a historical season sparse when the compact core release is

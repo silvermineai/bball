@@ -335,6 +335,7 @@ export type BBRosterModel = {
   scenarios: BBRosterScenario[];
 };
 export type BBImpact = {
+  season: number;
   player_id: string;
   person_id: string;
   player: string;

@@ -83,7 +83,7 @@ export default function NcaaCompare() {
     setLoading(true); setError("");
     Promise.all([
       Promise.all(ids.map((id) => fetch(`/api/basketball/research/ncaa-player-card/${encodeURIComponent(id)}?season=${season}`, { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(`NCAA player ${id} was not found.`); return response.json() as Promise<Card>; }))),
-      fetch("/data/basketball/impact.json", { signal: controller.signal }).then((response) => response.ok ? response.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
+      fetch(`/data/basketball/impact-${season}.json`, { signal: controller.signal }).then((response) => response.ok ? response.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
     ]).then(([nextCards, release]) => { if (!controller.signal.aborted) { setCards(nextCards); setImpact(release.players); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The NCAA comparison could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [ids, season]);

@@ -1660,24 +1660,36 @@ def build(conn, target=2027):
         "ratings": ratings,
         "sources": sources,
     }
-    impact = [
-        json.loads(r[0])
-        for r in conn.execute(
-            "SELECT data_json FROM bb_impact WHERE season=?", (target - 1,)
+    def impact_for_season(season):
+        rows = [
+            json.loads(r[0])
+            for r in conn.execute(
+                "SELECT data_json FROM bb_impact WHERE season=?", (season,)
+            )
+        ]
+        for row in rows:
+            for key in ["orapm", "drapm", "rapm_net", "off_poss", "def_poss"]:
+                row[key] = number(row.get(key))
+            row["season"] = season
+            row["qualified"] = (row["off_poss"] or 0) >= 500 and (row["def_poss"] or 0) >= 500
+        rows.sort(key=lambda row: -(row["rapm_net"] if row["rapm_net"] is not None else -999))
+        rank = 0
+        for row in rows:
+            if row["qualified"]:
+                rank += 1
+                row["rank"] = rank
+            else:
+                row["rank"] = None
+        return rows
+
+    impact_seasons = [
+        int(row[0])
+        for row in conn.execute(
+            "SELECT DISTINCT season FROM bb_impact WHERE season IS NOT NULL ORDER BY season"
         )
     ]
-    for r in impact:
-        for k in ["orapm", "drapm", "rapm_net", "off_poss", "def_poss"]:
-            r[k] = number(r.get(k))
-        r["qualified"] = (r["off_poss"] or 0) >= 500 and (r["def_poss"] or 0) >= 500
-    impact.sort(key=lambda r: -(r["rapm_net"] if r["rapm_net"] is not None else -999))
-    rank = 0
-    for r in impact:
-        if r["qualified"]:
-            rank += 1
-            r["rank"] = rank
-        else:
-            r["rank"] = None
+    impact_by_season = {season: impact_for_season(season) for season in impact_seasons}
+    impact = impact_by_season.get(target - 1, [])
     season_players = player_index(conn, target - 1)
     ncaa_player_box_seasons = [
         {"season": int(row[0]), "rows": int(row[1])}
@@ -1714,6 +1726,10 @@ def build(conn, target=2027):
         "impact": {
             "season": target - 1,
             "players": impact,
+            "seasons": [
+                {"season": season, "players": len(rows), "qualified": sum(bool(row["qualified"]) for row in rows)}
+                for season, rows in impact_by_season.items()
+            ],
             "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
         },
         "ncaa-player-box-catalog": {
@@ -1725,6 +1741,14 @@ def build(conn, target=2027):
         },
         "ncaa-player-box-fields": ncaa_player_box_field_coverage(conn, now),
     }
+    # Keep each historical board in its own static asset so the default board
+    # stays fast and season comparisons never require a giant client payload.
+    for season, rows in impact_by_season.items():
+        artifacts[f"impact-{season}"] = {
+            "season": season,
+            "players": rows,
+            "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
+        }
     OUT.mkdir(parents=True, exist_ok=True)
     for name, data in artifacts.items():
         (OUT / f"{name}.json").write_text(
@@ -1948,6 +1972,13 @@ def main():
                 rows, receipt = c.load(dataset, year, refresh=args.refresh)
                 ingest(conn, dataset, year, rows, receipt)
                 print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
+        # League-wide NCAA RAPM is a compact, source-native impact archive
+        # published for 2011–26. Keep every edition for historical scouting;
+        # it remains descriptive and is never used as a forecast feature.
+        for year in range(2011, 2027):
+            rows, receipt = c.load("ncaa_rapm", year, refresh=args.refresh)
+            ingest(conn, "ncaa_rapm", year, rows, receipt)
+            print(f"Imported ncaa_rapm/{year}: {len(rows):,}", flush=True)
         # The boutique publisher model releases extend back to 2006. Keep
         # those compact historical tables complete without expanding the
         # schedule/box-score training archive in this refresh.

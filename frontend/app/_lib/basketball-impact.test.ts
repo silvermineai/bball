@@ -3,6 +3,7 @@ import { sortImpactRows } from "./basketball-impact";
 import type { BBImpact } from "./basketball-types";
 
 const row = (id: string, player: string, net: number | null, rank: number | null): BBImpact => ({
+  season: 2026,
   player_id: id,
   person_id: `person-${id}`,
   player,

@@ -18,8 +18,13 @@ const sortLabels: Record<ImpactSortKey, string> = {
   def_poss: "Defensive possessions",
 };
 export default function Impact() {
+  const { data: catalog, error: catalogError } = useBasketballRelease<{
+    season: number;
+    seasons?: Array<{ season: number; players: number; qualified: number }>;
+  }>("impact");
+  const [season, setSeason] = useState(2026);
   const { data, error } = useBasketballRelease<{ players: BBImpact[] }>(
-    "impact",
+    season === 2026 ? "impact" : `impact-${season}`,
   );
   const [q, setQ] = useState(""),
     [qualified, setQualified] = useState(true),
@@ -38,6 +43,14 @@ export default function Impact() {
   return (
     <>
       <div className="toolbar">
+        <label className="control">
+          <span>IMPACT SEASON</span>
+          <select value={season} onChange={(e) => { setSeason(Number(e.target.value)); setPage(0); }}>
+            {(catalog?.seasons || [{ season: 2026, players: 0, qualified: 0 }]).slice().sort((a, b) => b.season - a.season).map((item) => (
+              <option key={item.season} value={item.season}>{item.season - 1}–{String(item.season).slice(-2)} · {item.players.toLocaleString()} players</option>
+            ))}
+          </select>
+        </label>
         <label className="control">
           <span>PLAYER OR TEAM</span>
           <input
@@ -78,9 +91,9 @@ export default function Impact() {
         />{" "}
         Qualified sample only · 500 possessions at each end
       </label>
-      {error ? (
+      {catalogError || error ? (
         <p role="alert" className="status-error">
-          {error}
+          {catalogError || error}
         </p>
       ) : !data ? (
         <p className="empty" role="status">
@@ -124,10 +137,10 @@ export default function Impact() {
               </thead>
               <tbody>
                 {rows.slice(page * 40, page * 40 + 40).map((p) => (
-                  <tr key={p.player_id}>
+                  <tr key={`${p.season}-${p.player_id}`}>
                     <td className="rank-number">{p.rank ?? "—"}</td>
                     <td>
-                      <Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(p.player_id)}&season=2026`}>
+                      <Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(p.player_id)}&season=${p.season}`}>
                         {p.player.replaceAll(".", " ")} →
                       </Link>
                       <small>NCAA {p.player_id}</small>

@@ -4,10 +4,12 @@ export default function Page() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">Player impact / 2025–26 NCAA data</div>
+          <div className="eyebrow">Player impact / historical NCAA data</div>
         <h1>Beyond the box score.</h1>
         <p>
-          League-wide regularized adjusted plus-minus (RAPM) from
+          League-wide regularized adjusted plus-minus (RAPM), with a season
+          selector spanning the permitted 2011–12 through 2025–26 releases,
+          from
           SportsDataverse’s NCAA-derived lineup data. The publisher fits a ridge
           model across Division I stints to estimate player contributions with
           teammate and opponent context. These estimates are retrospective
