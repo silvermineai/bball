@@ -4,6 +4,7 @@ import MarketProbabilityCalculator from "./MarketProbabilityCalculator";
 import RecruitingWorkloadCalculator from "./RecruitingWorkloadCalculator";
 import ScoreProjectionCalculator from "./ScoreProjectionCalculator";
 import MetricExplorer from "./MetricExplorer";
+import LearningProgress from "./LearningProgress";
 import type { LearningMetric, LearningTopic } from "../../_lib/metric-explorer";
 
 export const metadata = {
@@ -396,6 +397,7 @@ export default function Page() {
             </article>
           ))}
         </div>
+        <LearningProgress />
         <div className="section-heading learning-directory-heading">
           <div>
             <div className="eyebrow">Desk directory</div>

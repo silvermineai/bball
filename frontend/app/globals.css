@@ -1282,6 +1282,78 @@ th,
   text-decoration-color: var(--orange);
   text-underline-offset: 4px;
 }
+.learning-progress {
+  margin: 0 0 42px;
+  background: #f0eee5;
+}
+.learning-progress-meter {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 15px 0;
+  margin-top: 20px;
+}
+.learning-progress-meter strong,
+.learning-progress-meter span {
+  display: block;
+}
+.learning-progress-meter strong {
+  font: 18px "IBM Plex Mono", monospace;
+}
+.learning-progress-meter span {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.learning-progress-meter progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--orange);
+}
+.learning-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-top: 20px;
+}
+.learning-progress-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  padding: 12px;
+  cursor: pointer;
+}
+.learning-progress-step input {
+  margin-top: 3px;
+  accent-color: var(--orange);
+}
+.learning-progress-step > div {
+  display: block;
+}
+.learning-progress-step small {
+  display: block;
+  color: var(--muted);
+  font: 10px "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.learning-progress-step label {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-underline-offset: 4px;
+}
+.learning-progress-step.is-complete {
+  background: #e2e7d6;
+}
+.learning-progress-step.is-complete a {
+  text-decoration-color: var(--ink);
+}
 .learning-directory-heading {
   margin-top: 4px;
 }
@@ -1573,6 +1645,7 @@ summary {
   .match-grid,
   .article-grid,
   .learning-path-grid,
+  .learning-progress-grid,
   .two-col,
   .leader-grid {
     grid-template-columns: 1fr;
