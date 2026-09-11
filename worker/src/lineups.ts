@@ -22,13 +22,46 @@ const schema = z.object({
   direction: z.enum(["desc", "asc"]).default("desc"),
   meta: z.enum(["0", "1"]).default("0"),
 });
+
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("lineup archive query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 export const lineups = new Hono<{ Bindings: Bindings }>();
 lineups.get("/", zValidator("query", schema), async (c) => {
   const { season, metric: requested, q, minPoss, page, direction, meta } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the lineup browser fail.
+    }
+  }
   if (meta === "1") {
-    const available = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_lineups ORDER BY season DESC").all<{ season: number }>();
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: available.results.map((row) => row.season), metrics });
+    try {
+      const available = await withTimeout(db.prepare("SELECT DISTINCT season FROM bb_lineups ORDER BY season DESC").all<{ season: number }>(), DB_TIMEOUT_MS);
+      const response = c.json({ seasons: available.results.map((row) => row.season), metrics });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The lineup catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const metric = metrics.find((m) => m.key === requested);
   if (!metric) return c.json({ error: "Unknown lineup metric" }, 400);
@@ -38,16 +71,28 @@ lineups.get("/", zValidator("query", schema), async (c) => {
     ? "season=? AND json_extract(stats_json,'$.poss')>=? AND (team_name LIKE ? OR players_json LIKE ?)"
     : "season=? AND json_extract(stats_json,'$.poss')>=?";
   const binds: Array<string | number> = search ? [season, minPoss, search, search] : [season, minPoss];
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_lineups WHERE ${where}`).bind(path, ...binds).first<{ total: number; non_null: number }>();
-  const order = `json_extract(stats_json, '${path}') IS NULL, json_extract(stats_json, '${path}') ${direction === "asc" ? "ASC" : "DESC"}, team_name ASC, lineup_key ASC`;
-  const rows = await researchDb(c.env).prepare(`SELECT lineup_key,team_name,players_json,stats_json FROM bb_lineups WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all<{ lineup_key: string; team_name: string; players_json: string; stats_json: string }>();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  try {
+    const count = await withTimeout(db.prepare(`SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_lineups WHERE ${where}`).bind(path, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
+    const order = `json_extract(stats_json, '${path}') IS NULL, json_extract(stats_json, '${path}') ${direction === "asc" ? "ASC" : "DESC"}, team_name ASC, lineup_key ASC`;
+    const rows = await withTimeout(db.prepare(`SELECT lineup_key,team_name,players_json,stats_json FROM bb_lineups WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all<{ lineup_key: string; team_name: string; players_json: string; stats_json: string }>(), DB_TIMEOUT_MS);
+    const response = c.json({
     season, metric, min_poss: minPoss, page, page_size: 40,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
-    rows: rows.results.map((row) => {
-      const stats = JSON.parse(row.stats_json) as Record<string, number | null>;
-      return { id: row.lineup_key, team: row.team_name, players: JSON.parse(row.players_json), value: stats[metric.key] ?? null, stats };
+    rows: rows.results.flatMap((row) => {
+      try {
+        const stats = JSON.parse(row.stats_json) as Record<string, number | null>;
+        const players = JSON.parse(row.players_json);
+        if (!stats || typeof stats !== "object" || !Array.isArray(players)) return [];
+        return [{ id: row.lineup_key, team: row.team_name, players, value: stats[metric.key] ?? null, stats }];
+      } catch {
+        return [];
+      }
     }),
-  });
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({ error: "The lineup archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

@@ -30,6 +30,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const fallbackEdition = useMemo(() => catalog.seasons.find((edition) => edition.season === Number(season)), [catalog.seasons, season]);
   const fallbackRows = useMemo(() => (fallbackEdition?.teams || []).map((row) => ({ ...row, season: Number(season) })), [fallbackEdition, season]);
@@ -42,7 +43,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
       .then((value) => { if (controller.signal.aborted) return; setMeta(value); setStatus("live"); const available = (value.seasons || []).sort((a, b) => b - a); if (available.length && !available.includes(Number(season))) setSeason(String(available[0])); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setStatus("fallback"); });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,7 +59,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
         setRows(filtered.slice(page * 40, page * 40 + 40)); setTotal(filtered.length); setStatus("fallback"); setError("");
       });
     return () => controller.abort();
-  }, [direction, fallbackRows, page, query, season, sort]);
+  }, [direction, fallbackRows, page, query, retryNonce, season, sort]);
 
   const seasons = meta?.seasons?.length ? meta.seasons : fallbackSeasons;
   const edition = fallbackEdition;
@@ -79,7 +80,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
       <div><strong>{seasons.length}</strong><span>Available seasons</span></div>
       <div><strong>{edition ? `${(edition.coverage.invalid_flag_rows ?? 0) + (edition.coverage.invalid_points ?? 0)}` : "—"}</strong><span>Malformed source values disclosed</span></div>
     </div>
-    <p className="note" role="status">{status === "live" ? "Cloudflare D1 possession-style archive connected; rows are aggregated from the retained source release." : status === "fallback" ? "Cloudflare D1 archive unavailable; showing the verified bundled release." : "Checking the Cloudflare D1 archive…"}</p>
+    <p className="note" role="status">{status === "live" ? "Cloudflare D1 possession-style archive connected; rows are aggregated from the retained source release." : status === "fallback" ? <>Cloudflare D1 archive unavailable; showing the verified bundled release. <button className="button secondary" type="button" onClick={() => { setError(""); setStatus("checking"); setRetryNonce((value) => value + 1); }}>Retry live archive</button></> : "Checking the Cloudflare D1 archive…"}</p>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setSeason(event.target.value); setPage(0); }}>{seasons.map((value) => <option value={value} key={value}>{value - 1}–{String(value).slice(-2)}</option>)}</select></label>
       <label className="control"><span>TEAM SEARCH</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Program or source ID" /></label>

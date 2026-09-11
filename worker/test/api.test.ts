@@ -1177,6 +1177,50 @@ describe("bball api", () => {
     expect(await response.json()).toEqual({ error: "The boutique model archive is temporarily unavailable." });
   });
 
+  it("returns a retryable response when the lineup catalog or rows are busy", async () => {
+    const catalog = await app.request(
+      "/api/basketball/research/lineups?meta=1",
+      {},
+      { DB: { prepare: vi.fn().mockReturnValue({ all: vi.fn().mockRejectedValue(new Error("D1 busy")) }) } },
+    );
+    expect(catalog.status).toBe(503);
+    expect(catalog.headers.get("Cache-Control")).toBe("no-store");
+    expect(await catalog.json()).toEqual({ error: "The lineup catalog is temporarily unavailable." });
+
+    const prepare = vi.fn().mockReturnValue({ bind: vi.fn(() => ({ first: vi.fn().mockRejectedValue(new Error("D1 busy")), all: async () => ({ results: [] }) })) });
+    const rows = await app.request(
+      "/api/basketball/research/lineups?season=2026&metric=net_per_100",
+      {},
+      { DB: { prepare } },
+    );
+    expect(rows.status).toBe(503);
+    expect(rows.headers.get("Cache-Control")).toBe("no-store");
+    expect(await rows.json()).toEqual({ error: "The lineup archive is temporarily unavailable." });
+  });
+
+  it("returns a retryable response when the possession-style catalog or rows are busy", async () => {
+    const catalog = await app.request(
+      "/api/basketball/research/possession-style?meta=1",
+      {},
+      { DB: { batch: vi.fn().mockRejectedValue(new Error("D1 busy")) } },
+    );
+    expect(catalog.status).toBe(503);
+    expect(catalog.headers.get("Cache-Control")).toBe("no-store");
+    expect(await catalog.json()).toEqual({ error: "The possession-style catalog is temporarily unavailable." });
+
+    const prepare = vi.fn((sql: string) => sql.includes("count(*)")
+      ? { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 1 }) }) }
+      : { bind: () => ({ all: vi.fn().mockRejectedValue(new Error("D1 busy")) }) });
+    const rows = await app.request(
+      "/api/basketball/research/possession-style?season=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(rows.status).toBe(503);
+    expect(rows.headers.get("Cache-Control")).toBe("no-store");
+    expect(await rows.json()).toEqual({ error: "The possession-style archive is temporarily unavailable." });
+  });
+
   it("rejects invalid lineup metrics before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/lineups?season=2018",
