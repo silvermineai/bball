@@ -24,7 +24,7 @@ type ArchiveValidation = {
   invalid_minutes: number;
   zero_minutes_with_stats: number;
 };
-type Meta = { seasons: number[]; total: number; source?: { fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
+type Meta = { seasons: number[]; total: number; source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
 type FieldCoverage = {
   fields: string[];
   seasons: Array<{
@@ -240,7 +240,12 @@ export default function NcaaPlayerBox() {
       <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `NCAA team ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n(safeSum(s.orb, s.drb), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? trueShooting(s))}</td></tr>; })}</tbody></table></div>
       {!result.rows.length && <p className="empty">No NCAA player rows match this search.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
-      <p className="note" style={{ marginTop: 24 }}>Source: NCAA-derived player box release via SportsDataverse{meta?.source?.fetched_at ? ` · receipt fetched ${new Date(meta.source.fetched_at).toLocaleDateString()}` : ""}. The clock describes the retained source edition, not a live stat correction or eligibility update. This archive is descriptive and does not assert eligibility, roster status or a verified identity match to ESPN records.</p>
+      <div className="paper-panel" style={{ marginTop: 24 }}>
+        <div className="eyebrow">Source receipt / {label(Number(season))}</div>
+        <p className="note">NCAA-derived player box release via SportsDataverse{meta?.source?.fetched_at ? ` · fetched ${new Date(meta.source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. The clock describes the retained source edition, not a live stat correction or eligibility update.</p>
+        <p className="note">{meta?.source?.sha256 ? <><code>{meta.source.sha256}</code> · </> : ""}{meta?.source?.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open canonical source release ↗</a> : "Canonical source URL unavailable in this receipt."} · <a href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download the retained Parquet ↗</a></p>
+        <p className="note">This archive is descriptive and does not assert eligibility, roster status or a verified identity match to ESPN records.</p>
+      </div>
     </>}
   </>;
 }

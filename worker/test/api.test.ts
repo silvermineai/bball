@@ -1490,7 +1490,7 @@ describe("bball api", () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2026 }] },
       { results: [{ total: 99 }] },
-      { results: [{ fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) }] },
+      { results: [{ url: "https://example.test/player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) }] },
       { results: [{ total_rows: 99, missing_ids: 0, missing_names: 1, missing_game_dates: 0, malformed_game_dates: 0, same_team_opponent: 0, malformed_stats_json: 0, invalid_possessions: 0, impossible_shooting: 0, invalid_minutes: 0, zero_minutes_with_stats: 2 }] },
     ]);
     const response = await app.request(
@@ -1501,7 +1501,7 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       total: 99,
-      source: { fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) },
+      source: { url: "https://example.test/player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) },
       validation: { total_rows: 99, missing_names: 1, zero_minutes_with_stats: 2 },
     });
     expect(batch).toHaveBeenCalledOnce();

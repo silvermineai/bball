@@ -50,7 +50,7 @@ describe("NCAA player source archive", () => {
     const researchPrepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
         first: async () => sql.includes("receipt_json")
-          ? { fetched_at: "2026-09-08T02:12:45Z", sha256: digest }
+          ? { url: "https://example.test/player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: digest }
           : { total: 3 },
         all: async () => ({ results: [{ season: 2026 }] }),
       })),
@@ -76,7 +76,7 @@ describe("NCAA player source archive", () => {
     await expect(response.json()).resolves.toMatchObject({
       seasons: [2026],
       total: 7,
-      source: { sha256: digest },
+      source: { url: "https://example.test/player-box.parquet", sha256: digest },
       validation: { total_rows: 7 },
     });
     expect(gamePrepare).toHaveBeenCalled();
