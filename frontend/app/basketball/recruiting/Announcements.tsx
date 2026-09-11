@@ -25,6 +25,7 @@ type LiveRosterMeta = {
   total: number;
   source?: { fetched_at?: string | null; sha256?: string | null };
 };
+const WATCHLIST_STORAGE_KEY = "silvermine-recruiting-watchlist-v1";
 const number = (n: number | null) => (n == null ? "—" : n.toFixed(1));
 const percent = (n: number | null) =>
   n == null ? "—" : `${(n * 100).toFixed(1)}%`;
@@ -45,6 +46,17 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const [liveData, setLiveData] = useState<RecruitingRelease | null>(null),
     [releaseError, setReleaseError] = useState(""),
     [hydrated, setHydrated] = useState(false);
+  const [watchlistKeys, setWatchlistKeys] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(WATCHLIST_STORAGE_KEY) || "[]") as unknown;
+      if (Array.isArray(stored)) {
+        setWatchlistKeys(stored.filter((value): value is string => typeof value === "string" && value.length <= 160));
+      }
+    } catch {
+      // The watchlist is optional; a blocked storage API keeps the desk usable.
+    }
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
@@ -147,6 +159,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   }
   const release = liveData || data;
   const allRows = recruitingRows(release);
+  const watchlistRows = allRows.filter((row) => watchlistKeys.includes(row.key));
   const programSummary = summarizeRecruitingPrograms(allRows);
   const activity = summarizeRecruitingActivity(release);
   const latestActivity = activity.events.slice(0, 8);
@@ -203,6 +216,53 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     : sortRecruitingRows(matchingRows, sort);
   const exactRosterMatches = allRows.filter((row) => rosterMatch(row.name, row.team_id) === "exact").length;
   const sourceSeason = rosters.previous_season;
+  const toggleWatchlist = (key: string) => {
+    setWatchlistKeys((current) => {
+      const next = current.includes(key) ? current.filter((value) => value !== key) : [...current, key];
+      try {
+        window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Keep the current session usable when local storage is blocked.
+      }
+      return next;
+    });
+  };
+  const clearWatchlist = () => {
+    setWatchlistKeys([]);
+    try {
+      window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+    } catch {
+      // Optional browser storage.
+    }
+  };
+  const downloadWatchlist = () => downloadCsv(
+    "basketball-recruiting-watchlist.csv",
+    toCsv(
+      ["Player", "Source key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Publisher", "Source URL", "Roster name check", "Reviewed at"],
+      watchlistRows.map((p) => [
+        p.name,
+        p.key,
+        categoryLabels[p.category],
+        p.program.name,
+        p.team_id,
+        p.previous_program,
+        p.stats?.team,
+        p.stats?.games,
+        p.stats?.mpg,
+        p.stats?.ppg,
+        p.stats?.rpg,
+        p.stats?.apg,
+        p.stats?.efg == null ? null : p.stats.efg * 100,
+        p.stats?.ts == null ? null : p.stats.ts * 100,
+        eventLabels[p.latest.kind],
+        p.latest.source.published_on,
+        p.latest.source.publisher,
+        p.latest.source.url,
+        rosterMatch(p.name, p.team_id),
+        p.latest.source.checked_at,
+      ]),
+    ),
+  );
   return (
     <>
       <div className="recruiting-views" aria-label="Recruiting evidence view">
@@ -652,6 +712,22 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             This filtered view updates the URL, so a coaching staff can bookmark
             or share the exact recruiting evidence slice.
           </p>
+          <section className="recruiting-watchlist" aria-labelledby="recruiting-watchlist-title">
+            <div>
+              <div className="eyebrow">Private study list / this browser</div>
+              <h2 id="recruiting-watchlist-title">Keep the next call in view.</h2>
+              <p>Save an announced player while you work through the evidence. The list stores source keys only in this browser and never changes rankings, forecasts or recruiting status.</p>
+            </div>
+            <div className="recruiting-watchlist-actions">
+              <strong>{watchlistRows.length}</strong>
+              <span>saved player{watchlistRows.length === 1 ? "" : "s"}</span>
+              <div className="button-row">
+                <button className="button secondary" type="button" disabled={!watchlistRows.length} onClick={downloadWatchlist}>Download shortlist CSV ↓</button>
+                {watchlistRows.length > 0 && <button className="hero-link" type="button" onClick={clearWatchlist}>Clear list</button>}
+              </div>
+            </div>
+            {watchlistRows.length > 0 && <div className="recruiting-watchlist-items" role="status">{watchlistRows.slice(0, 8).map((p) => <Link key={p.key} href={`/basketball/recruiting/?q=${encodeURIComponent(p.name)}`}>{p.name} · {p.program.name} ↗</Link>)}{watchlistRows.length > 8 && <span>+ {watchlistRows.length - 8} more in CSV</span>}</div>}
+          </section>
           <div className="section-heading recruiting-results">
             <p role="status">
               {rows.length} player{rows.length === 1 ? "" : "s"} ·{" "}
@@ -756,6 +832,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     {p.program.name} ↗
                   </Link>
                   <span>{categoryLabels[p.category]}</span>
+                  <button className={`recruiting-watchlist-toggle${watchlistKeys.includes(p.key) ? " is-saved" : ""}`} type="button" aria-pressed={watchlistKeys.includes(p.key)} onClick={() => toggleWatchlist(p.key)}>
+                    {watchlistKeys.includes(p.key) ? "Saved to study list" : "Save to study list"}
+                  </button>
                 </div>
                 <h2>{p.name}</h2>
                 <p className="recruiting-origin">
