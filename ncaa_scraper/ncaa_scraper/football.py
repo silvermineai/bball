@@ -425,6 +425,23 @@ def export_sql(conn, path: Path):
     print(f"D1 upserts: {path}")
 
 
+def datasets_for_year(season: int, year: int) -> list[str]:
+    """Return source datasets for a year without narrowing NCAA history."""
+    source_years = set(range(season - 4, season + 1))
+    ncaa_player_years = set(range(2013, min(season, 2025) + 1))
+    if year not in source_years:
+        return ["ncaa_player_stats"] if year in ncaa_player_years else []
+    if year < season - 1:
+        datasets = ["schedule", "teams", "team_advanced"]
+        if year in ncaa_player_years:
+            datasets.append("ncaa_player_stats")
+        return datasets
+    return [
+        dataset for dataset in DATASETS
+        if dataset != "ncaa_player_stats" or year in ncaa_player_years
+    ]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh", action="store_true")
@@ -444,21 +461,7 @@ def main():
         source_years = set(range(args.season - 4, args.season + 1))
         ncaa_player_years = set(range(2013, min(args.season, 2025) + 1))
         for year in sorted(source_years | ncaa_player_years):
-            if year not in source_years:
-                datasets = ["ncaa_player_stats"]
-            elif year < args.season - 1:
-                datasets = ["schedule", "teams", "team_advanced"]
-                # Keep the NCAA source history in the same five-season
-                # warehouse window. The upstream release currently ends in
-                # 2025, so never turn a missing 2026 file into a failed
-                # football publication.
-                if 2013 <= year <= 2025:
-                    datasets.append("ncaa_player_stats")
-            else:
-                datasets = [
-                    dataset for dataset in DATASETS
-                    if dataset != "ncaa_player_stats" or year <= 2025
-                ]
+            datasets = datasets_for_year(args.season, year)
             for dataset in datasets:
                 # Required downloads fail the run instead of silently producing partial coverage.
                 rows, receipt = client.load(dataset, year, refresh=args.refresh)

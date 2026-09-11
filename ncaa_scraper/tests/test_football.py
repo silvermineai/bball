@@ -5,7 +5,7 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from ncaa_scraper.football import ROOT, number, store_rows
+from ncaa_scraper.football import ROOT, datasets_for_year, number, store_rows
 from ncaa_scraper.football_model import (
     calibrate,
     eligible,
@@ -123,6 +123,13 @@ class ModelTests(unittest.TestCase):
 
 
 class ImportTests(unittest.TestCase):
+    def test_dataset_selection_keeps_full_ncaa_player_history(self):
+        self.assertEqual(datasets_for_year(2026, 2013), ["ncaa_player_stats"])
+        self.assertIn("ncaa_player_stats", datasets_for_year(2026, 2022))
+        self.assertIn("ncaa_player_stats", datasets_for_year(2026, 2025))
+        self.assertNotIn("ncaa_player_stats", datasets_for_year(2026, 2026))
+        self.assertEqual(datasets_for_year(2027, 2012), [])
+
     def setUp(self):
         self.conn = sqlite3.connect(":memory:")
         self.conn.executescript(
