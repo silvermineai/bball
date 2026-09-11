@@ -17,6 +17,7 @@ import {
 import LegacyRecords from "./LegacyRecords";
 import PlayerRecruitingContext from "./PlayerRecruitingContext";
 import PlayerValuePanel from "./PlayerValuePanel";
+import ProviderIdentityPanel from "./ProviderIdentityPanel";
 import { comparisonHref } from "../../_lib/player-comparison";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const statLabels: Record<StatKey, string> = {
@@ -201,6 +202,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
           )}
           <PlayerRecruitingContext id={id} />
           <PlayerValuePanel id={id} season={data.season} />
+          <ProviderIdentityPanel id={id} />
           <div className="career-toolbar">
             <label className="control">
               <span>STAT SEASON</span>
