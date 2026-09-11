@@ -59,6 +59,7 @@ type PriorRateMetric =
 
 export type RosterFilters = {
   season: "2027" | "2026" | "2025";
+  teamId?: string;
   q: string;
   position: string;
   classYear: string;
@@ -70,7 +71,7 @@ export type RosterFilters = {
   minMinutes: number;
   minStarterRate: number;
 };
-export type RosterObservationQuery = Pick<RosterFilters, "q" | "position" | "classYear" | "status" | "minGames" | "minMinutes" | "minStarterRate">;
+export type RosterObservationQuery = Pick<RosterFilters, "q" | "teamId" | "position" | "classYear" | "status" | "minGames" | "minMinutes" | "minStarterRate">;
 
 const statusOrder: Record<string, number> = {
   different_program: 0,
@@ -152,8 +153,11 @@ export function parseRosterFilters(search: string): RosterFilters {
   const minGames = Number(params.get("rosterMinGames") || 0);
   const minMinutes = Number(params.get("rosterMinMinutes") || 0);
   const minStarterRate = Number(params.get("rosterMinStarterRate") || 0);
+  const requestedTeam = params.get("team") || params.get("rosterTeam") || "";
+  const teamId = /^\d+$/.test(requestedTeam) ? requestedTeam : "";
   return {
     season: season === "2026" || season === "2025" ? season : "2027",
+    teamId,
     q: params.get("rosterQ") || "",
     position: params.get("rosterPosition") || "",
     classYear: params.get("rosterClass") || "",
@@ -171,6 +175,7 @@ export function parseRosterFilters(search: string): RosterFilters {
 export function rosterFilterSearch(filters: RosterFilters) {
   const params = new URLSearchParams();
   if (filters.season !== "2027") params.set("rosterSeason", filters.season);
+  if (filters.teamId) params.set("team", filters.teamId);
   if (filters.q) params.set("rosterQ", filters.q);
   if (filters.position) params.set("rosterPosition", filters.position);
   if (filters.classYear) params.set("rosterClass", filters.classYear);
@@ -198,6 +203,7 @@ export function filterRosterObservations(rows: BBRoster[], filters: RosterObserv
   const query = filters.q.toLowerCase();
   return rows.filter((row) =>
     (row.name + " " + row.team + " " + row.previous_teams.join(" ")).toLowerCase().includes(query) &&
+    (!filters.teamId || row.team_id === filters.teamId) &&
     (!filters.position || row.position === filters.position) &&
     (!filters.classYear || row.class_year === filters.classYear) &&
     (!filters.minGames || (row.prior_production?.games ?? 0) >= filters.minGames) &&

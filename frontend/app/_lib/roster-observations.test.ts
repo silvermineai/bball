@@ -152,6 +152,7 @@ describe("shareable roster observation filters", () => {
   it("parses supported values and ignores invalid values", () => {
     expect(parseRosterFilters("?view=observations&rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterMinStarterRate=0.5")).toEqual({
       season: "2026",
+      teamId: "",
       q: "Arizona",
       position: "G",
       classYear: "Senior",
@@ -165,6 +166,7 @@ describe("shareable roster observation filters", () => {
     });
     expect(parseRosterFilters("?rosterSeason=2000&rosterStatus=nope&rosterSort=bad&rosterPage=-4&rosterMinGames=99&rosterMinMinutes=-1")).toEqual({
       season: "2027",
+      teamId: "",
       q: "",
       position: "",
       classYear: "",
@@ -183,6 +185,9 @@ describe("shareable roster observation filters", () => {
     expect(rosterFilterSearch({ season: "2026", q: "Arizona", position: "G", classYear: "Senior", status: "different_program", sort: "prior_tov_rate", page: 3, picks: ["123", "456"], minGames: 10, minMinutes: 400, minStarterRate: 0.5 })).toBe("?rosterSeason=2026&rosterQ=Arizona&rosterPosition=G&rosterClass=Senior&rosterStatus=different_program&rosterSort=prior_tov_rate&rosterPage=3&rosterMinGames=10&rosterMinMinutes=400&rosterMinStarterRate=0.5&rosterPick=123&rosterPick=456");
     expect(rosterFilterSearch({ season: "2027", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0, minStarterRate: 0 })).toBe("");
     expect(rosterFilterSearch({ season: "2025", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0, minStarterRate: 0 })).toBe("?rosterSeason=2025");
+    expect(parseRosterFilters("?team=248").teamId).toBe("248");
+    expect(parseRosterFilters("?team=not-an-id").teamId).toBe("");
+    expect(rosterFilterSearch({ season: "2027", teamId: "248", q: "", position: "", classYear: "", status: "all", sort: "status", page: 0, picks: [], minGames: 0, minMinutes: 0, minStarterRate: 0 })).toBe("?team=248");
   });
 
   it("limits shortlist IDs to twelve numeric source identities", () => {
@@ -207,6 +212,7 @@ describe("shareable roster observation filters", () => {
     ];
     expect(filterRosterObservations(rows, { q: "", position: "G", classYear: "", status: "all", minGames: 20, minMinutes: 400, minStarterRate: 0 }).map((r) => r.name)).toEqual(["Beta"]);
     expect(filterRosterObservations(rows, { q: "alpha", position: "", classYear: "Junior", status: "same_program", minGames: 0, minMinutes: 0, minStarterRate: 0 }).map((r) => r.name)).toEqual(["Alpha"]);
+    expect(filterRosterObservations(rows, { q: "", teamId: "b", position: "", classYear: "", status: "all", minGames: 0, minMinutes: 0, minStarterRate: 0 }).map((r) => r.name)).toEqual(["Beta"]);
   });
 
   it("filters for a reported starting sample without treating missing rates as zero", () => {

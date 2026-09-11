@@ -71,6 +71,7 @@ const labels: Record<string, string> = {
 export default function Recruiting() {
   const [season, setSeason] = useState("2027"),
     [q, setQ] = useState(""),
+    [teamId, setTeamId] = useState(""),
     [position, setPosition] = useState(""),
     [classYear, setClassYear] = useState(""),
     [status, setStatus] = useState("all"),
@@ -87,6 +88,7 @@ export default function Recruiting() {
   useEffect(() => {
     const filters = parseRosterFilters(window.location.search);
     setSeason(filters.season);
+    setTeamId(filters.teamId || "");
     setQ(filters.q);
     setPosition(filters.position);
     setClassYear(filters.classYear);
@@ -105,6 +107,7 @@ export default function Recruiting() {
     const params = new URLSearchParams(
       rosterFilterSearch({
         season: season === "2026" || season === "2025" ? season : "2027",
+        teamId,
         q,
         position,
         classYear,
@@ -120,7 +123,7 @@ export default function Recruiting() {
     params.set("view", "observations");
     url.search = params.toString();
     window.history.replaceState(window.history.state, "", url);
-  }, [classYear, hydrated, minGames, minMinutes, minStarterRate, page, picks, position, q, season, sort, status]);
+  }, [classYear, hydrated, minGames, minMinutes, minStarterRate, page, picks, position, q, season, sort, status, teamId]);
   const { data, error } = useBasketballRelease<BBRosters>(
     season === "2027" ? "rosters" : season === "2026" ? "rosters-2026" : "rosters-2025",
   );
@@ -161,6 +164,7 @@ export default function Recruiting() {
   const rows = sortRosterObservations(
     filterRosterObservations(rosterData?.players || [], {
       q,
+      teamId,
       position,
       classYear,
       minGames,
@@ -337,6 +341,12 @@ export default function Recruiting() {
           </select>
         </label>
       </div>
+      {teamId && (
+        <p className="note" role="status" style={{ marginTop: 12, marginBottom: 8 }}>
+          Program handoff: <strong>{rosterData?.players.find((player) => player.team_id === teamId)?.team || teamId}</strong> · exact source team ID {teamId}.{" "}
+          <button className="text-link" type="button" onClick={() => { setTeamId(""); setPage(0); }}>Clear program filter</button>
+        </p>
+      )}
       <p className="note" role="status" style={{ marginBottom: 8 }}>
         {liveRoster
           ? "Live Cloudflare D1 roster edition connected; current source listings and workload continuity are refreshed from the research warehouse."
