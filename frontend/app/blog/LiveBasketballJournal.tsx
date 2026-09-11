@@ -46,10 +46,10 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
     const rows = activeGames.filter((game) => savedIds.includes(game.id) && game.prediction);
     if (!rows.length) return;
     downloadCsv("basketball-prep-list.csv", toCsv(
-      ["Game ID", "Start (UTC)", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition"],
+      ["Game ID", "Start (UTC)", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
       rows.map((game) => {
         const p = game.prediction!;
-        return [game.id, game.starts_at, game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null];
+        return [game.id, game.starts_at, game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null];
       }),
     ));
     setSavedMessage(`Exported ${rows.length} saved game${rows.length === 1 ? "" : "s"}.`);
