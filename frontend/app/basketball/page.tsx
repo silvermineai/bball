@@ -87,6 +87,13 @@ function receiptStatus(dataset: BBDatasetCoverage, editionAt: string) {
   return { label: "Review receipt", className: "review", detail: `${lag} days behind this edition` };
 }
 
+function sourceSeasonRange(dataset: BBDatasetCoverage | undefined) {
+  const seasons = [...(dataset?.seasons ?? [])].sort((a, b) => a - b);
+  if (!seasons.length) return "archive";
+  if (seasons.length === 1) return seasonLabel(seasons[0]);
+  return `${seasonLabel(seasons[0])} through ${seasonLabel(seasons.at(-1)!)}`;
+}
+
 export const metadata = {
   title: "2026–27 basketball stats, scouting and recruiting research",
 };
@@ -96,6 +103,7 @@ export default function Page() {
     recruiting = getRecruiting(),
     rosterModel = getRosterModel(),
     e = d.model.evaluation,
+    playerBoxDataset = d.coverage.datasets?.find((dataset) => dataset.key === "player_box"),
     leaders = getBasketballLeaders(d.season),
     news = getBasketballNews();
   return (
@@ -158,7 +166,7 @@ export default function Page() {
       <div className="strip">
         <div>
           <strong>{d.coverage.player_box_rows.toLocaleString()}</strong>
-          <span>Player box-score records · 2025–26</span>
+          <span>Player box-score records · {sourceSeasonRange(playerBoxDataset)}</span>
         </div>
         <div>
           <strong>{d.coverage.forecast_games.toLocaleString()}</strong>
