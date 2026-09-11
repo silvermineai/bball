@@ -454,6 +454,21 @@ app.get(
   },
 );
 app.get("/api/basketball/research/coverage", async (c) => {
+  // The coverage desk is a deliberately deep, read-only audit. Cache the
+  // verified response briefly so the monitor and multiple staff views do not
+  // concurrently repeat the full warehouse scan during a refresh.
+  const cache = typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the diagnostic endpoint fail.
+    }
+  }
   const db = researchDb(c.env);
   const gameDb = ncaaBoxDb(c.env);
   const dedicatedGameDb = Boolean((c.env as Env & { NCAA_BOX_DB?: D1Database }).NCAA_BOX_DB);
@@ -622,7 +637,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
       ORDER BY dataset`,
   ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>();
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  const response = c.json({
     coverage: Object.keys(tables).map((dataset) => ({
       dataset,
       rows: countByDataset.get(dataset) ?? 0,
@@ -637,6 +652,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
       return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
     })(),
   });
+  if (cache) {
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  }
+  return response;
 });
 
 const unresolvedResearchQuery = z.object({
