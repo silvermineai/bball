@@ -43,6 +43,10 @@ export default function AuthorizedIntake() {
   }, []);
   const providerFeeds = coverage?.provider_feeds ?? [];
   const providerCapabilities = coverage?.provider_capabilities ?? [];
+  const importedProviders = new Set([
+    ...(coverage?.providers ?? []).map((provider) => provider.provider),
+    ...providerFeeds.map((feed) => feed.provider),
+  ]);
   return (
     <section className="section">
       <div className="paper-panel recruiting-intake">
@@ -67,8 +71,8 @@ export default function AuthorizedIntake() {
               <span>source-reported rows imported</span>
             </div>
             <div>
-              <strong>{(coverage.providers.length + new Set(providerFeeds.map((feed) => feed.provider)).size).toLocaleString()}</strong>
-              <span>authorized providers</span>
+              <strong>{importedProviders.size.toLocaleString()}</strong>
+              <span>providers with retained rows</span>
             </div>
             <div>
               <strong>{clock(coverage.latest_captured_at)}</strong>
