@@ -77,10 +77,37 @@ export default function Evaluation({
     [query, setQuery] = useState("");
   const [order, setOrder] = useState("date"),
     [page, setPage] = useState(0);
+  const [hydrated, setHydrated] = useState(false),
+    [copied, setCopied] = useState("");
   const [selectedBin, setSelectedBin] = useState<{
     method: Method;
     index: number;
   } | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedVenue = params.get("venue");
+    const requestedOrder = params.get("order");
+    const allowedOrders = new Set(["date", "error", "improvement"]);
+    setMonth(params.get("month") || "");
+    setVenue(requestedVenue === "neutral" || requestedVenue === "home" ? requestedVenue : "");
+    setQuery((params.get("q") || "").slice(0, 120));
+    setOrder(requestedOrder && allowedOrders.has(requestedOrder) ? requestedOrder : "date");
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (month) params.set("month", month);
+    if (venue) params.set("venue", venue);
+    if (query.trim()) params.set("q", query.trim());
+    if (order !== "date") params.set("order", order);
+    const value = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      value ? `${window.location.pathname}?${value}#evaluation-evidence` : `${window.location.pathname}#evaluation-evidence`,
+    );
+  }, [hydrated, month, order, query, venue]);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/data/basketball/evaluation/games.json", {
@@ -184,6 +211,14 @@ export default function Evaluation({
     a.download = "basketball-evaluation-2026.csv";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Evaluation link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
   };
   return (
     <>
@@ -467,12 +502,17 @@ export default function Evaluation({
             <span>PROGRAM SEARCH</span>
             <input
               value={query}
+              maxLength={120}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Duke, Houston, Gonzaga…"
             />
           </label>
+          <button className="button secondary" type="button" onClick={share}>
+            Copy evaluation link
+          </button>
           <button
             className="button secondary"
+            type="button"
             onClick={() => {
               setMonth("");
               setVenue("");
@@ -482,6 +522,7 @@ export default function Evaluation({
             Reset filters
           </button>
         </div>
+        {copied && <p className="note" role="status">{copied}</p>}
         {error ? (
           <p className="status-error" role="alert">
             {error}
