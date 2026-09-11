@@ -18,6 +18,7 @@ import LegacyRecords from "./LegacyRecords";
 import PlayerRecruitingContext from "./PlayerRecruitingContext";
 import PlayerValuePanel from "./PlayerValuePanel";
 import ProviderIdentityPanel from "./ProviderIdentityPanel";
+import SimilarPlayers from "./SimilarPlayers";
 import { comparisonHref } from "../../_lib/player-comparison";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const statLabels: Record<StatKey, string> = {
@@ -318,6 +319,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               <span>Estimated true shooting</span>
             </div>
           </div>
+          <SimilarPlayers id={id} season={data.season} />
           <section className="section career-development">
             <div className="section-heading">
               <div>
