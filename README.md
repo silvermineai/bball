@@ -23,7 +23,7 @@ Cloudflare uses four stores: `bball-football-v1` holds the high-volume football 
 | Learning guide | `/football/learn/` | Plain-language explanations of EPA, success rate, team efficiency, forecasts and source coverage |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
-The current football archive contains **18,759 schedule records** across 2022–26, **264,061 raw player box-score rows**, **57,909 name-attributed defensive and specialist events**, and **789 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
+The current football archive contains **18,758 schedule records** across 2022–26, **87,661 current model player box-score rows**, **1,015,076 NCAA-derived player-game rows across 2013–25**, **120,255 name-attributed defensive and specialist events**, and **788 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 

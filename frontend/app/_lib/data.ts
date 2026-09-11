@@ -88,6 +88,7 @@ export type Overview = {
     upcoming_games: number;
     forecast_games: number;
     box_rows: number;
+    ncaa_player_stats_rows: number;
     market_observations: number;
     pregame_market_observations: number;
   };

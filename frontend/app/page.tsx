@@ -159,6 +159,10 @@ export default function Home() {
           <span>Current model player box-score rows</span>
         </div>
         <div>
+          <strong>{d.coverage.ncaa_player_stats_rows.toLocaleString()}</strong>
+          <span>NCAA player-game evidence · 2013–25</span>
+        </div>
+        <div>
           <strong>{d.coverage.forecast_games}</strong>
           <span>Upcoming FBS forecasts</span>
         </div>
