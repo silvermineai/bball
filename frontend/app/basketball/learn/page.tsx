@@ -157,6 +157,11 @@ const metrics = [
     use: "Use it to frame a recruiting question about experience and workload. It is not a transfer ledger, eligibility ruling or forecast feature.",
   },
   {
+    name: "Similar source profiles",
+    value: "A same-season distance lookup across observed player percentiles for scoring, rebounding, playmaking, events, workload and shooting rates.",
+    use: "Use it to learn which qualified source profiles occupy a comparable statistical role. It is not an identity match, recruiting grade or future-role projection.",
+  },
+  {
     name: "Possession-style profile",
     value: "Team-season points per possession, possessions per game, and source-recorded transition, assisted and garbage-time possession shares.",
     use: "Use it to describe how a team’s possessions were recorded across the season. It is a descriptive team context layer; it does not assign credit to individual players or feed the forecast model.",
@@ -193,6 +198,7 @@ const metricTopics: Record<string, LearningTopic> = {
   "Lineup net performance": "impact",
   "Shot-location profile": "impact",
   "Roster workload continuity": "recruiting",
+  "Similar source profiles": "player",
   "Possession-style profile": "team",
 };
 
@@ -226,6 +232,7 @@ const metricLinks: Record<string, string> = {
   "Lineup net performance": "/basketball/lineups/",
   "Shot-location profile": "/basketball/shooting/",
   "Roster workload continuity": "/basketball/roster-lab/",
+  "Similar source profiles": "/basketball/players/",
   "Possession-style profile": "/basketball/possession-style/",
 };
 
