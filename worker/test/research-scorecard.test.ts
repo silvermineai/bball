@@ -98,4 +98,15 @@ describe("live research scorecard", () => {
     const body = await response.json() as { sports: { basketball: { metrics: { reliability: Array<{ lower: number; upper: number; games: number; predicted: number; observed: number }> } } } };
     expect(body.sports.basketball.metrics.reliability).toEqual([{ lower: 0.7, upper: 0.8, games: 1, predicted: 0.7, observed: 1 }]);
   });
+
+  it("returns a retryable response when the scorecard warehouse is busy", async () => {
+    const response = await researchScorecard.request(
+      "/?sport=basketball&season=2027",
+      {},
+      { RESEARCH_DB: { prepare: vi.fn(() => ({ bind: () => ({ first: vi.fn().mockRejectedValue(new Error("D1 busy")), all: vi.fn().mockRejectedValue(new Error("D1 busy")) }) })) } as never },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The live research scorecard is temporarily unavailable." });
+  });
 });

@@ -27,6 +27,21 @@ const querySchema = z.object({
 
 export const researchScorecard = new Hono<{ Bindings: Bindings }>();
 
+const CACHE_TTL = 60;
+const DB_TIMEOUT_MS = 10000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("research scorecard query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 const POLICY = "first-eligible-registration-v1";
 const LIMITATION = [
   "Registration times are local pipeline observations, not independently notarized publication times.",
@@ -329,8 +344,23 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
 
 researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, season, q, status, page, limit } = c.req.valid("query");
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the scorecard fail.
+    }
+  }
   const now = new Date().toISOString();
-  const report = await loadReport(researchDb(c.env), sport, season, now);
+  let report: Awaited<ReturnType<typeof loadReport>>;
+  try {
+    report = await withTimeout(loadReport(researchDb(c.env), sport, season, now), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The live research scorecard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
   const filtered = report.games.filter((row) => {
     if (status !== "all" && row.status !== status) return false;
     if (!q) return true;
@@ -338,11 +368,13 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
   });
   const pageRows = filtered.slice(page * limit, page * limit + limit);
   const selectedSports = Object.fromEntries(report.loaded.map(({ code }) => [code, report.summaries[code]]));
-  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-  return c.json({
+  const response = c.json({
     live: true, generated_at: now, policy: POLICY, sport, season: season ?? null, status, query: q || null, page, page_size: limit, total: filtered.length,
     seasons: Object.fromEntries(report.loaded.map(({ code, season: target }) => [code, target])), sports: selectedSports, games: pageRows,
     market_observations: report.market_observations, unmatched_events: report.unmatched_events,
     selection: "First eligible registration per game. Latest captured pregame quote per provider, bookmaker and market after registration; not a verified closing line.", limitations: LIMITATION,
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}, stale-while-revalidate=300`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
 });
