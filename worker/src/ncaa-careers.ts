@@ -52,6 +52,22 @@ const querySchema = z.object({
 });
 
 export const ncaaCareers = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA historical leaderboard query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
 
 const metricExpression = (metric: Metric) => ({
   points: "points",
@@ -110,20 +126,36 @@ const parseReceipt = (dataset: string, season: number, value: string): SourceRec
 ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const { fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, q, classYear, position, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the historical leaderboard fail.
+    }
+  }
   if (meta === "1") {
+    try {
     const db = researchDb(c.env);
-    const [seasons, classes, positions] = await Promise.all([
+    const [seasons, classes, positions] = await withTimeout(Promise.all([
       db.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all<{ season: number }>(),
       db.prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE value IS NOT NULL AND value != '' ORDER BY value").all<{ value: string }>(),
       db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE value IS NOT NULL AND value != '' ORDER BY value").all<{ value: string }>(),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
+    ]), DB_TIMEOUT_MS);
+    const response = c.json({
       seasons: seasons.results.map((row) => row.season),
       metrics,
       classes: classes.results.map((row) => String(row.value)),
       positions: positions.results.map((row) => String(row.value)),
     });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+    } catch {
+      return c.json({ error: "The NCAA historical leaderboard catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const clauses = ["season BETWEEN ? AND ?"];
   const binds: Array<string | number> = [fromSeason, toSeason];
@@ -170,17 +202,23 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const denominatorClause = denominator && effectiveMinDenominator > 0 ? ` AND ${denominator} >= ?` : "";
   const qualification = `games >= ? AND minutes >= ? AND (${value}) IS NOT NULL${denominatorClause}`;
   const qualificationBinds = denominatorClause ? [minGames, minMinutes, effectiveMinDenominator] : [minGames, minMinutes];
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, ...qualificationBinds).first<{ total: number }>();
-  const rows = await researchDb(c.env).prepare(`WITH historical AS (${aggregate}), ranked AS (
+  try {
+  const count = await withTimeout(researchDb(c.env).prepare(`SELECT count(*) AS total FROM (${aggregate}) historical WHERE ${qualification}`).bind(...binds, ...qualificationBinds).first<{ total: number }>(), DB_TIMEOUT_MS);
+  const rows = await withTimeout(researchDb(c.env).prepare(`WITH historical AS (${aggregate}), ranked AS (
       SELECT historical.*, ${value} AS value FROM historical WHERE ${qualification}
     ) SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
-    ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, ...qualificationBinds, page * 50).all();
-  const receipts = await researchDb(c.env).prepare(
+    ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, ...qualificationBinds, page * 50).all(), DB_TIMEOUT_MS);
+  const receipts = await withTimeout(researchDb(c.env).prepare(
     "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset IN ('ncaa_player_box','ncaa_team_rosters') AND season BETWEEN ? AND ? ORDER BY season DESC,dataset",
-  ).bind(fromSeason, toSeason).all<{ dataset: string; season: number; receipt_json: string }>();
+  ).bind(fromSeason, toSeason).all<{ dataset: string; season: number; receipt_json: string }>(), DB_TIMEOUT_MS);
   const sourceReceipts = receipts.results
     .map((row) => parseReceipt(row.dataset, row.season, row.receipt_json))
     .filter((receipt): receipt is SourceReceipt => receipt !== null);
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, min_denominator: effectiveMinDenominator, denominator_field: denominator, page, page_size: 50, total: Number(count?.total || 0), source_receipts: sourceReceipts, rows: rows.results });
+  const response = c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, min_denominator: effectiveMinDenominator, denominator_field: denominator, page, page_size: 50, total: Number(count?.total || 0), source_receipts: sourceReceipts, rows: rows.results });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The NCAA historical leaderboard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
