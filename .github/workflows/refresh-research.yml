@@ -37,7 +37,7 @@ on:
         type: boolean
         default: false
       full_d1_rebuild:
-        description: Replay every historical basketball D1 partition (use for a deliberate bootstrap or repair)
+        description: Refresh every historical basketball source and replay every D1 partition (deliberate bootstrap or repair)
         required: true
         type: boolean
         default: false
