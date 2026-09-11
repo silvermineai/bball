@@ -156,11 +156,22 @@ def run_logged(args, log_path, cwd=ROOT):
             and '"finalBookmark"' in output
             and ("Processed " in output or "Executed " in output)
         )
-        if result.returncode == 0 or completed_receipt:
+        # Wrangler can lose the import-status stream after D1 has committed a
+        # chunk. In that case it prints "Not currently importing anything"
+        # after reporting processed queries, without returning the final
+        # receipt. Treat the processed chunk as committed; replaying its
+        # DELETE/INSERT batch is more dangerous than continuing idempotently
+        # and was the cause of otherwise healthy scheduled runs failing.
+        completed_status_stream = (
+            "Not currently importing anything" in output
+            and "Processed " in output
+            and "D1 DB storage operation exceeded timeout" not in output
+        )
+        if result.returncode == 0 or completed_receipt or completed_status_stream:
             if result.returncode != 0:
                 print(
-                    "Remote SQL import returned a successful D1 receipt despite "
-                    "Wrangler exit status 1; continuing.",
+                    "Remote SQL import returned a committed or complete D1 "
+                    "status despite Wrangler exit status 1; continuing.",
                     file=sys.stderr,
                 )
             return
