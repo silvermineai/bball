@@ -2,6 +2,23 @@ import { researchDb } from "./research-db";
 import { Hono } from "hono";
 export const careers = new Hono<{ Bindings: Env }>();
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA career database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
+
 type CareerCoverage = Record<string, unknown>;
 
 type CareerHistoryIndex = {
@@ -14,9 +31,24 @@ type CareerHistoryIndex = {
 
 /** Expose archive coverage metadata without returning the player warehouse. */
 careers.get("/meta", async (c) => {
-  const result = await researchDb(c.env).prepare(
-    "SELECT season,edition,coverage_json,receipt_json FROM bb_career_seasons ORDER BY season DESC",
-  ).all<{ season: number; edition: string; coverage_json: string; receipt_json: string }>();
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the career endpoint fail.
+    }
+  }
+  let result: { results: Array<{ season: number; edition: string; coverage_json: string; receipt_json: string }> };
+  try {
+    result = await withTimeout(researchDb(c.env).prepare(
+      "SELECT season,edition,coverage_json,receipt_json FROM bb_career_seasons ORDER BY season DESC",
+    ).all<{ season: number; edition: string; coverage_json: string; receipt_json: string }>(), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The NCAA career catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
   const seasons = result.results.map((row) => {
     let coverage: Record<string, unknown> = {};
     let receipts: unknown[] = [];
@@ -50,8 +82,10 @@ careers.get("/meta", async (c) => {
       latest_receipt: latestReceipt,
     };
   });
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ seasons, latest_receipt: seasons.map((row) => row.latest_receipt).filter((value): value is string => value !== null).sort().at(-1) || null });
+  const response = c.json({ seasons, latest_receipt: seasons.map((row) => row.latest_receipt).filter((value): value is string => value !== null).sort().at(-1) || null });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
 });
 
 /**
@@ -86,9 +120,14 @@ careers.get("/source", async (c) => {
   if (value === undefined || !/^\d{4}$/.test(value) || +value < 2003 || +value > 2026)
     return c.json({ error: "Invalid historical source season" }, 400);
   const season = +value;
-  const row = await researchDb(c.env).prepare(
-    "SELECT receipt_json FROM bb_career_seasons WHERE season=?",
-  ).bind(season).first<{ receipt_json: string }>();
+  let row: { receipt_json: string } | null = null;
+  try {
+    row = await withTimeout(researchDb(c.env).prepare(
+      "SELECT receipt_json FROM bb_career_seasons WHERE season=?",
+    ).bind(season).first<{ receipt_json: string }>(), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The historical career source is temporarily unavailable" }, 503, { "Cache-Control": "no-store" });
+  }
   let source: { sha256?: unknown } | null = null;
   try {
     const receipts = row?.receipt_json ? JSON.parse(row.receipt_json) : [];
@@ -111,7 +150,12 @@ careers.get("/source", async (c) => {
   });
   if (c.req.header("If-None-Match")?.split(",").map((tag) => tag.trim()).includes(`"${digest}"`))
     return new Response(null, { status: 304, headers });
-  const object = await c.env.RESEARCH_ARCHIVE.get(`basketball/careers/player-box/${season}/${digest}.parquet`);
+  let object: R2ObjectBody | null = null;
+  try {
+    object = await withTimeout(c.env.RESEARCH_ARCHIVE.get(`basketball/careers/player-box/${season}/${digest}.parquet`) as Promise<R2ObjectBody | null>, DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "Historical player-box source is temporarily unavailable" }, 503, { "Cache-Control": "no-store" });
+  }
   if (!object || !("body" in object))
     return c.json({ error: "Historical player-box source release is temporarily unavailable" }, 503);
   return new Response(object.body, { headers });
@@ -126,21 +170,32 @@ careers.get("/:id", async (c) => {
       (!/^\d{4}$/.test(value) || +value < 2003 || +value > 2026))
   )
     return c.json({ error: "Invalid player or historical season" }, 400);
-  const profiles = await researchDb(c.env).prepare(
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the career endpoint fail.
+    }
+  }
+  try {
+  const profiles = await withTimeout(researchDb(c.env).prepare(
     `SELECT p.season,p.payload_json,s.edition
     FROM bb_career_profiles p JOIN bb_career_seasons s ON s.season=p.season AND s.edition=p.edition
     WHERE p.athlete_id=? ORDER BY p.season DESC`,
   )
     .bind(id)
-    .all<{ season: number; payload_json: string; edition: string }>();
+    .all<{ season: number; payload_json: string; edition: string }>(), DB_TIMEOUT_MS);
   if (!profiles.results.length)
     return c.json({ error: "No historical box-score identity found" }, 404);
   const season = value === undefined ? profiles.results[0].season : +value;
-  const source = await researchDb(c.env).prepare(
+  const source = await withTimeout(researchDb(c.env).prepare(
     "SELECT edition,receipt_json,coverage_json FROM bb_career_seasons WHERE season=?",
   )
     .bind(season)
-    .first<{ edition: string; receipt_json: string; coverage_json: string }>();
+    .first<{ edition: string; receipt_json: string; coverage_json: string }>(), DB_TIMEOUT_MS);
   if (!source)
     return c.json(
       { error: "This historical season has not been imported" },
@@ -153,16 +208,16 @@ careers.get("/:id", async (c) => {
       { error: "A new historical edition is activating. Please reload." },
       503,
     );
-  const logs = await researchDb(c.env).prepare(
+  const logs = await withTimeout(researchDb(c.env).prepare(
     "SELECT payload_json FROM bb_career_logs WHERE edition=? AND season=? AND athlete_id=? ORDER BY part",
   )
     .bind(source.edition, season, id)
-    .all<{ payload_json: string }>();
-  const core = await researchDb(c.env).prepare(
+    .all<{ payload_json: string }>(), DB_TIMEOUT_MS);
+  const core = await withTimeout(researchDb(c.env).prepare(
     "SELECT season,profile_json FROM bb_player_core WHERE athlete_id=? ORDER BY season DESC",
   )
     .bind(id)
-    .all<{ season: number; profile_json: string }>();
+    .all<{ season: number; profile_json: string }>(), DB_TIMEOUT_MS);
   const parsedProfiles = profiles.results.map((p) => ({
     ...JSON.parse(p.payload_json),
     edition: p.edition,
@@ -190,8 +245,7 @@ careers.get("/:id", async (c) => {
   }
   const fieldCoverage = await matchingFieldCoverage(c, season, source.edition);
   if (fieldCoverage) coverage = { ...coverage, field_coverage: fieldCoverage };
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  const response = c.json({
     id,
     season,
     edition: source.edition,
@@ -207,4 +261,10 @@ careers.get("/:id", async (c) => {
         profile: JSON.parse(profile_json),
       })),
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The NCAA career archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

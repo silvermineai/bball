@@ -40,6 +40,16 @@ function database({ mismatch = false, none = false } = {}) {
   return { DB: { prepare } };
 }
 describe("historical careers API", () => {
+  it("returns a retryable status when the career catalog is unavailable", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await careers.request("/meta", {}, { DB: { prepare } });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "The NCAA career catalog is temporarily unavailable.",
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("reports bounded D1 archive metadata without exposing player rows", async () => {
     const prepare = vi.fn((sql: string) => {
       const result = {
