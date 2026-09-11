@@ -67,14 +67,22 @@ export default function LearningCheckpoint() {
   const percent = useMemo(() => Math.round((answered / questions.length) * 100), [answered]);
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem(BEST_SCORE_KEY));
-    if (Number.isInteger(stored) && stored >= 0 && stored <= questions.length) setBestScore(stored);
+    try {
+      const stored = Number(window.localStorage.getItem(BEST_SCORE_KEY));
+      if (Number.isInteger(stored) && stored >= 0 && stored <= questions.length) setBestScore(stored);
+    } catch {
+      // Private browsing modes can deny storage; the checkpoint remains usable for this visit.
+    }
   }, []);
   useEffect(() => {
     if (!complete) return;
     setBestScore((value) => {
       const next = Math.max(value ?? 0, score);
-      window.localStorage.setItem(BEST_SCORE_KEY, String(next));
+      try {
+        window.localStorage.setItem(BEST_SCORE_KEY, String(next));
+      } catch {
+        // A blocked storage API should never prevent the result from rendering.
+      }
       return next;
     });
   }, [complete, score]);
