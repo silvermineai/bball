@@ -42,6 +42,7 @@ export default function Shooting({
   const [q, setQ] = useState("");
   const [data, setData] = useState<ShotData | null>(null),
     [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [matched, setMatched] = useState(true),
     [game, setGame] = useState("all"),
     [type, setType] = useState("all"),
@@ -72,7 +73,8 @@ export default function Shooting({
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => c.abort();
-  }, [kind, id, activeCatalog.season]);
+  }, [activeCatalog.season, id, kind, retryNonce]);
+  const retryArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
   const people = activeCatalog.players.filter((p) => p.teams.includes(team));
   const results = people.filter((p) =>
     p.name.toLowerCase().includes(q.toLowerCase()),
@@ -176,9 +178,9 @@ export default function Shooting({
           </p>
         )}
         {error ? (
-          <p role="alert" className="status-error">
-            {error}
-          </p>
+          <div role="alert" className="status-error">
+            <span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry shooting archive</button>
+          </div>
         ) : !data ? (
           <p role="status" className="empty">
             Loading source shots and reconciliation checks…

@@ -63,4 +63,14 @@ describe("shooting evidence", () => {
     };
     expect((await shooting.request("/team/1", {}, env)).status).toBe(404);
   });
+
+  it("returns a retryable response when the shooting warehouse is busy", async () => {
+    const env = {
+      RESEARCH_DB: { prepare: () => ({ bind: () => ({ first: vi.fn().mockRejectedValue(new Error("D1 busy")) }) }) },
+    };
+    const response = await shooting.request("/team/150?season=2026", {}, env);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The shooting archive is temporarily unavailable." });
+  });
 });
