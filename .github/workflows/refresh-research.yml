@@ -93,6 +93,17 @@ jobs:
           npm ci --prefix frontend
           npm ci --prefix worker
 
+      - name: Restore attributed source release cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .local/basketball
+            .local/football
+            ncaa_scraper/ncaa_scraper/cache
+          key: research-source-cache-${{ runner.os }}-${{ hashFiles('ncaa_scraper/ncaa_scraper/*sources.py', 'ncaa_scraper/ncaa_scraper/fetcher.py') }}
+          restore-keys: |
+            research-source-cache-${{ runner.os }}-
+
       - name: Require Cloudflare deployment credentials
         run: |
           test -n "$CF_ACCOUNT_ID" || { echo "Missing repository secret CF_ACCOUNT_ID" >&2; exit 1; }

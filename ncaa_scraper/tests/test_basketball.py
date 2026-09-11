@@ -21,6 +21,7 @@ from ncaa_scraper.basketball import (
     publisher_leaders,
     publisher_value_leaders,
     roster_changes,
+    source_refresh_enabled,
     write_sql_batches,
 )
 from ncaa_scraper.basketball_model import (
@@ -59,6 +60,13 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_incremental_refresh_reuses_historical_source_releases(self):
+        self.assertFalse(source_refresh_enabled(True, True, 2025))
+        self.assertTrue(source_refresh_enabled(True, True, 2026))
+        self.assertTrue(source_refresh_enabled(True, True, 2027))
+        self.assertTrue(source_refresh_enabled(True, False, 2025))
+        self.assertFalse(source_refresh_enabled(False, False, 2026))
+
     def test_ncaa_player_box_field_coverage_counts_zero_as_observed(self):
         conn = sqlite3.connect(":memory:")
         conn.execute("CREATE TABLE bb_ncaa_player_box (season INTEGER, stats_json TEXT)")

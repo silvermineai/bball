@@ -2019,12 +2019,19 @@ def write_sql_batches(statements, path, max_batch_bytes=SQL_BATCH_BYTES):
     return [path.parent / item["name"] for item in batches]
 
 
+def source_refresh_enabled(refresh: bool, incremental: bool, year: int) -> bool:
+    """Refresh current partitions while reusing immutable historical releases."""
+    return bool(refresh and (not incremental or year >= 2026))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--build-only", action="store_true")
     parser.add_argument("--sql", type=Path)
     args = parser.parse_args()
+    incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
+
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -2075,14 +2082,22 @@ def main():
             if 2019 <= year <= 2026:
                 datasets.append("ncaa_lineups")
             for dataset in datasets:
-                rows, receipt = c.load(dataset, year, refresh=args.refresh)
+                rows, receipt = c.load(
+                    dataset,
+                    year,
+                    refresh=source_refresh_enabled(args.refresh, incremental, year),
+                )
                 ingest(conn, dataset, year, rows, receipt)
                 print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
         # League-wide NCAA RAPM is a compact, source-native impact archive
         # published for 2011–26. Keep every edition for historical scouting;
         # it remains descriptive and is never used as a forecast feature.
         for year in range(2011, 2027):
-            rows, receipt = c.load("ncaa_rapm", year, refresh=args.refresh)
+            rows, receipt = c.load(
+                "ncaa_rapm",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
             ingest(conn, "ncaa_rapm", year, rows, receipt)
             print(f"Imported ncaa_rapm/{year}: {len(rows):,}", flush=True)
         # The boutique publisher model releases extend back to 2006. Keep
@@ -2090,31 +2105,50 @@ def main():
         # schedule/box-score training archive in this refresh.
         for year in range(2006, 2024):
             for dataset in ("publisher_ratings", "publisher_player_value"):
-                rows, receipt = c.load(dataset, year, refresh=args.refresh)
+                rows, receipt = c.load(
+                    dataset,
+                    year,
+                    refresh=source_refresh_enabled(args.refresh, incremental, year),
+                )
                 ingest(conn, dataset, year, rows, receipt)
                 print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
         # ESPN-derived player identity files extend back to 2003. They are
         # kept separate from box-score identity and do not alter model inputs.
         for year in range(2003, 2024):
-            rows, receipt = c.load("player_core", year, refresh=args.refresh)
+            rows, receipt = c.load(
+                "player_core",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
             ingest(conn, "player_core", year, rows, receipt)
             print(f"Imported player_core/{year}: {len(rows):,}", flush=True)
         # NCAA-derived advanced player box scores begin in 2010. Their player
         # IDs are intentionally kept in a separate namespace from ESPN.
         for year in range(2010, 2027):
-            rows, receipt = c.load("ncaa_player_box", year, refresh=args.refresh)
+            rows, receipt = c.load(
+                "ncaa_player_box",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
             ingest(conn, "ncaa_player_box", year, rows, receipt)
             print(f"Imported ncaa_player_box/{year}: {len(rows):,}", flush=True)
-            rows, receipt = c.load("ncaa_team_rosters", year, refresh=args.refresh)
+            rows, receipt = c.load(
+                "ncaa_team_rosters",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
             ingest(conn, "ncaa_team_rosters", year, rows, receipt)
             print(f"Imported ncaa_team_rosters/{year}: {len(rows):,}", flush=True)
             if 2019 <= year <= 2026:
-                rows, receipt = c.load("ncaa_shots", year, refresh=args.refresh)
+                rows, receipt = c.load(
+                    "ncaa_shots",
+                    year,
+                    refresh=source_refresh_enabled(args.refresh, incremental, year),
+                )
                 ingest(conn, "ncaa_shots", year, rows, receipt)
                 print(f"Imported ncaa_shots/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
-        incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
         export_sql(conn, args.sql, incremental=incremental)
         ncaa_seasons = (max(NCAA_PLAYER_BOX_GAME_SEASONS),) if incremental else NCAA_PLAYER_BOX_GAME_SEASONS
         export_ncaa_player_box_sql(
