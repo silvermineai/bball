@@ -90,6 +90,16 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         evaluation_interval_coverage: item.evaluation_interval_coverage == null ? null : Number(item.evaluation_interval_coverage),
       };
     });
+    // Forecast rows can outlive their model metadata during a replay. Keep
+    // metadata-backed editions first so `latest` in the catalog is usable.
+    modelsWithMetadata.sort((left, right) => {
+      const leftRecord = left as Record<string, unknown>;
+      const rightRecord = right as Record<string, unknown>;
+      const leftUsable = left.target_season == null ? 1 : 0;
+      const rightUsable = right.target_season == null ? 1 : 0;
+      if (leftUsable !== rightUsable) return leftUsable - rightUsable;
+      return String(rightRecord.last_created_at || "").localeCompare(String(leftRecord.last_created_at || ""));
+    });
     return c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       models: modelsWithMetadata,
