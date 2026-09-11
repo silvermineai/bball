@@ -7,6 +7,8 @@ type Meta = {
   seasons: number[];
   total: number;
   pregame: number;
+  source?: string;
+  unavailable_reason?: string;
   provider_capabilities?: Array<{
     provider: string;
     markets: string[];
@@ -35,7 +37,7 @@ type Row = {
   bookmaker?: string | null;
   provider?: string | null;
 };
-type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
+type Result = { season: number; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string };
 
 const clock = (value: string | null) =>
   value
@@ -69,6 +71,7 @@ export default function Markets() {
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const archiveUnavailable = meta?.source === "unavailable" || data?.source === "unavailable";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -191,7 +194,9 @@ export default function Markets() {
       <div className="paper-panel brief-archive-note">
         <strong>Archive status: historical reference.</strong>
         <p>
-          {meta ? `${meta.total.toLocaleString()} retained observations across ${meta.seasons.length} seasons.` : "Loading archive coverage…"} {meta?.pregame || 0} records currently carry the pregame flag. Rows are excluded from prospective odds evaluation until their timing evidence qualifies.
+          {archiveUnavailable
+            ? "The market archive read is temporarily unavailable; zero counts are not evidence that no lines exist."
+            : meta ? `${meta.total.toLocaleString()} retained observations across ${meta.seasons.length} seasons. ${meta.pregame || 0} records currently carry the pregame flag.` : "Loading archive coverage…"} Rows are excluded from prospective odds evaluation until their timing evidence qualifies.
         </p>
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market provider capabilities">
           {meta.provider_capabilities.map((capability) => <span key={capability.provider}>
@@ -209,17 +214,19 @@ export default function Markets() {
       </div>
       {(copied || exportMessage) && <p className="note" role="status">{copied || exportMessage}</p>}
       {error ? <div className="status-error" role="alert">{error}</div> : !data ? <p className="empty" role="status">Loading retained observations…</p> : <>
-        <p className="note" role="status">{data.total.toLocaleString()} observations · page {page + 1} of {pages} · every row labelled as archival reference</p>
+        <p className="note" role="status">{archiveUnavailable ? "Archive read unavailable; no rows were returned." : `${data.total.toLocaleString()} observations · page ${page + 1} of ${pages} · every row labelled as archival reference`}</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Captured</th><th>Provider update</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td>{clock(r.updated_at)}{!r.updated_at && <small>Provider clock unavailable</small>}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
         {!data.rows.length && data.total === 0 && !query.trim() && (
           <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
             <div className="eyebrow">Connector status</div>
-            <h3>{sport === "basketball" ? "No basketball quote feed is connected yet." : "No market observations are connected yet."}</h3>
+            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? "No basketball quote feed is connected yet." : "No market observations are connected yet."}</h3>
             <p>
-              The archive is empty for this sport because no authorized provider
+              {archiveUnavailable
+                ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about provider coverage."
+                : <>The archive is empty for this sport because no authorized provider
               export has been ingested. This is unavailable evidence, not proof
               that a game had no line. The prospective scorecard stays clean
-              until a provider ID, timing clocks and exact participants arrive.
+              until a provider ID, timing clocks and exact participants arrive.</>}
             </p>
             <div className="button-row">
               <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>

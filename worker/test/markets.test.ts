@@ -43,4 +43,21 @@ describe("market archive metadata", () => {
     expect(legacyBatch).toHaveBeenCalled();
     expect(researchBatch).not.toHaveBeenCalled();
   });
+
+  it("returns an explicit unavailable state when the archive warehouse is busy", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await markets.request(
+      "/?meta=1&sport=basketball",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(expect.objectContaining({
+      sport: "basketball",
+      total: 0,
+      source: "unavailable",
+      unavailable_reason: expect.stringContaining("did not respond"),
+    }));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
 });

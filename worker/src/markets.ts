@@ -15,6 +15,16 @@ const querySchema = z.object({
 });
 
 export const markets = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("market archive database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 const providerCapabilities = [
   {
@@ -41,6 +51,18 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   // The established football archive uses football_markets in the legacy
   // store; basketball quotes use the append-only audit ledger in research D1.
   const db = football ? footballDb(c.env) : researchDb(c.env);
+  const cache = typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the archive fail.
+    }
+  }
   if (meta === "1") {
     const seasonsSql = football
       ? "SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"
@@ -48,17 +70,31 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     const archiveSql = football
       ? "SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"
       : "SELECT count(*) AS total, count(*) AS pregame FROM audit_markets WHERE sport=?";
-    const [seasons, archive] = football
-      ? await db.batch([db.prepare(seasonsSql), db.prepare(archiveSql)])
-      : await db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport)]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
-      sport,
-      seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
-      total: Number((archive.results[0] as { total: number }).total || 0),
-      pregame: Number((archive.results[0] as { pregame: number | null }).pregame || 0),
-      provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
-    });
+    try {
+      const [seasons, archive] = football
+        ? await withTimeout(db.batch([db.prepare(seasonsSql), db.prepare(archiveSql)]), DB_TIMEOUT_MS)
+        : await withTimeout(db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport)]), DB_TIMEOUT_MS);
+      const response = c.json({
+        sport,
+        seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+        total: Number((archive.results[0] as { total: number }).total || 0),
+        pregame: Number((archive.results[0] as { pregame: number | null }).pregame || 0),
+        provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({
+        sport,
+        seasons: [],
+        total: 0,
+        pregame: 0,
+        provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
+        source: "unavailable",
+        unavailable_reason: "The market archive warehouse did not respond within the read window.",
+      }, 200, { "Cache-Control": "no-store" });
+    }
   }
   const search = q ? `%${q}%` : null;
   const where = football
@@ -73,12 +109,13 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     : search ? [season, sport, search, search, search, search] : [season, sport];
   const marketTable = football ? "football_markets" : "audit_markets";
   const gameTable = football ? "football_games" : "bb_games";
-  const count = await db.prepare(
-    `SELECT count(*) AS total FROM ${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id WHERE ${where}`,
-  ).bind(...binds).first<{ total: number }>();
-  const rows = await db.prepare(
-    football
-      ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
+  try {
+    const count = await withTimeout(db.prepare(
+      `SELECT count(*) AS total FROM ${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id WHERE ${where}`,
+    ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+    const rows = await withTimeout(db.prepare(
+      football
+        ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
                 NULL AS updated_at,
                 NULL AS home_price,NULL AS away_price,NULL AS over_price,NULL AS under_price,
@@ -86,7 +123,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
            FROM football_markets m JOIN football_games g ON g.id=m.game_id
           WHERE ${where}
           ORDER BY g.kickoff DESC,m.observed_at DESC,m.game_id DESC LIMIT 40 OFFSET ?`
-      : `SELECT m.game_id,g.season,g.starts_at AS kickoff,g.home_name,g.away_name,
+        : `SELECT m.game_id,g.season,g.starts_at AS kickoff,g.home_name,g.away_name,
                 CASE WHEN m.market='spreads' THEN json_extract(m.payload_json,'$.line') END AS home_spread,
                 CASE WHEN m.market='totals' THEN json_extract(m.payload_json,'$.line') END AS total,
                 json_extract(m.payload_json,'$.home_price') AS home_price,
@@ -98,14 +135,28 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
            FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
           WHERE ${where}
           ORDER BY g.starts_at DESC,m.captured_at DESC,m.game_id DESC LIMIT 40 OFFSET ?`,
-  ).bind(...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
-    sport,
-    season,
-    page,
-    page_size: 40,
-    total: count?.total ?? 0,
-    rows: rows.results,
-  });
+    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+    const response = c.json({
+      sport,
+      season,
+      page,
+      page_size: 40,
+      total: count?.total ?? 0,
+      rows: rows.results,
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({
+      sport,
+      season,
+      page,
+      page_size: 40,
+      total: 0,
+      rows: [],
+      source: "unavailable",
+      unavailable_reason: "The market archive warehouse did not respond within the read window.",
+    }, 200, { "Cache-Control": "no-store" });
+  }
 });
