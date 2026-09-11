@@ -438,8 +438,15 @@ def main():
     conn.executescript((ROOT / "worker/migrations/0008_football.sql").read_text())
     if not args.build_only:
         client = ReleaseClient()
-        for year in range(args.season - 4, args.season + 1):
-            if year < args.season - 1:
+        # The NCAA-derived player release is legally available from 2013
+        # through 2025. Retain that complete source history even though the
+        # model's schedule/team warehouse remains a five-season window.
+        source_years = set(range(args.season - 4, args.season + 1))
+        ncaa_player_years = set(range(2013, min(args.season, 2025) + 1))
+        for year in sorted(source_years | ncaa_player_years):
+            if year not in source_years:
+                datasets = ["ncaa_player_stats"]
+            elif year < args.season - 1:
                 datasets = ["schedule", "teams", "team_advanced"]
                 # Keep the NCAA source history in the same five-season
                 # warehouse window. The upstream release currently ends in
