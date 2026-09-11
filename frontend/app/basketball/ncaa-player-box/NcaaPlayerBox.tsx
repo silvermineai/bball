@@ -93,6 +93,7 @@ export default function NcaaPlayerBox() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [copied, setCopied] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
@@ -118,7 +119,7 @@ export default function NcaaPlayerBox() {
     fetch(`/api/basketball/research/ncaa-player-box?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA player archive could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, [season]);
+  }, [retryNonce, season]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page), archive });
@@ -129,7 +130,7 @@ export default function NcaaPlayerBox() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [archive, season, query, page]);
+  }, [archive, page, query, retryNonce, season]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const selectedCoverage = fieldCoverage?.seasons.find((entry) => entry.season === Number(season));
@@ -180,6 +181,10 @@ export default function NcaaPlayerBox() {
     } finally {
       setExporting(false);
     }
+  };
+  const retryLiveArchive = () => {
+    setError("");
+    setRetryNonce((value) => value + 1);
   };
   return <>
     <div className="page-title">
@@ -235,7 +240,7 @@ export default function NcaaPlayerBox() {
       </div>
       <p className="note">The source release carries team/opponent labels and dates, but no venue or home/away field. Location-dependent analysis therefore stays on the schedule archive; these checks flag unusable matchup context and impossible player totals before a row is used for ranking or coaching review.</p>
     </section>}
-    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live archive</button></div> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {copied && <p role="status">{copied}</p>}
