@@ -30,30 +30,63 @@ const querySchema = z.object({
 });
 
 export const boutique = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("boutique model archive query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
+
 boutique.get("/", zValidator("query", querySchema), async (c) => {
   const { kind, season, metric: requestedMetric, q, playerId, page, direction, meta } = c.req.valid("query");
   if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
+  const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the model archive fail.
+    }
+  }
   if (meta === "1") {
-    const db = researchDb(c.env);
     const dataset = kind === "ratings" ? "publisher_ratings" : "publisher_player_value";
-    const [seasons, sources] = await db.batch([
-      db.prepare(`SELECT DISTINCT season FROM ${kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value"} ORDER BY season DESC`),
-      db.prepare("SELECT season,receipt_json FROM bb_sources WHERE dataset=? ORDER BY season DESC").bind(dataset),
-    ]);
-    const sourceReceipts = sources.results.flatMap((row) => {
-      const item = row as { season?: number; receipt_json?: string };
-      if (typeof item.season !== "number" || typeof item.receipt_json !== "string") return [];
-      try {
-        const receipt = JSON.parse(item.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
-        if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
-        return [{ season: item.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
-      } catch {
-        return [];
-      }
-    });
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({ kind, seasons: seasons.results.map((row) => Number((row as { season: number }).season)), metrics, source_receipts: sourceReceipts });
+    try {
+      const [seasons, sources] = await withTimeout(db.batch([
+        db.prepare(`SELECT DISTINCT season FROM ${kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value"} ORDER BY season DESC`),
+        db.prepare("SELECT season,receipt_json FROM bb_sources WHERE dataset=? ORDER BY season DESC").bind(dataset),
+      ]), DB_TIMEOUT_MS);
+      const sourceReceipts = sources.results.flatMap((row) => {
+        const item = row as { season?: number; receipt_json?: string };
+        if (typeof item.season !== "number" || typeof item.receipt_json !== "string") return [];
+        try {
+          const receipt = JSON.parse(item.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
+          if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
+          return [{ season: item.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+        } catch {
+          return [];
+        }
+      });
+      const response = c.json({ kind, seasons: seasons.results.map((row) => Number((row as { season: number }).season)), metrics, source_receipts: sourceReceipts });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The boutique model catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const metric = metrics.find((candidate) => candidate.key === (requestedMetric || metrics[0].key));
   if (!metric) return c.json({ error: "Unknown boutique metric" }, 400);
@@ -70,16 +103,22 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
     : search
       ? kind === "ratings" ? [season, search, search] : [season, search, search, search]
       : [season];
-  const count = await researchDb(c.env).prepare(
-    `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
-  ).bind(path, ...binds).first<{ total: number; non_null: number }>();
-  const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
-  const select = kind === "ratings"
-    ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
-    : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
-  const rows = await researchDb(c.env).prepare(
-    `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`,
-  ).bind(...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ kind, season, metric, page, page_size: 40, total: count?.total ?? 0, non_null: count?.non_null ?? 0, rows: rows.results });
+  try {
+    const count = await withTimeout(db.prepare(
+      `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
+    ).bind(path, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
+    const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
+    const select = kind === "ratings"
+      ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
+      : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
+    const rows = await withTimeout(db.prepare(
+      `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`,
+    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+    const response = c.json({ kind, season, metric, page, page_size: 40, total: count?.total ?? 0, non_null: count?.non_null ?? 0, rows: rows.results });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({ error: "The boutique model archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

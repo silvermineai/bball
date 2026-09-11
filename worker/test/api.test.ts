@@ -1106,6 +1106,31 @@ describe("bball api", () => {
     });
   });
 
+  it("returns a retryable response when the boutique catalog is busy", async () => {
+    const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=ratings&meta=1",
+      {},
+      { DB: { prepare: vi.fn(), batch } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The boutique model catalog is temporarily unavailable." });
+  });
+
+  it("returns a retryable response when the boutique rows are busy", async () => {
+    const first = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first, all: async () => ({ results: [] }) })) }));
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=ratings&season=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The boutique model archive is temporarily unavailable." });
+  });
+
   it("rejects invalid lineup metrics before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/lineups?season=2018",
