@@ -15,6 +15,10 @@ import {
 } from "../_lib/live-basketball-forecasts";
 
 const PREP_LIST_KEY = "silvermine-basketball-prep-list-v1";
+type SavedGame = Pick<BBGame, "id" | "starts_at" | "away_name" | "home_name"> & {
+  prediction: NonNullable<BBGame["prediction"]>;
+  marketContext?: string | null;
+};
 
 export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
   const [activeGames, setActiveGames] = useState(games);
@@ -22,34 +26,67 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
   const [edition, setEdition] = useState<{ modelId: string; capturedAt: string } | null>(null);
   const [markets, setMarkets] = useState<Record<string, Comparison[]>>({});
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedGames, setSavedGames] = useState<Record<string, SavedGame>>({});
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem(PREP_LIST_KEY) || "[]") as unknown;
-      if (Array.isArray(saved)) setSavedIds(saved.filter((id): id is string => typeof id === "string" && id.length <= 80));
+      if (Array.isArray(saved)) {
+        setSavedIds(saved.filter((id): id is string => typeof id === "string" && id.length <= 80));
+      } else if (saved && typeof saved === "object") {
+        const value = saved as { ids?: unknown; games?: unknown };
+        if (Array.isArray(value.ids)) setSavedIds(value.ids.filter((id): id is string => typeof id === "string" && id.length <= 80));
+        if (value.games && typeof value.games === "object") setSavedGames(value.games as Record<string, SavedGame>);
+      }
     } catch {
       // A blocked storage API leaves the journal usable for the current visit.
     }
   }, []);
 
   const toggleSaved = (gameId: string) => {
+    const game = activeGames.find((item) => item.id === gameId);
+    if (!game?.prediction) return;
     setSavedIds((current) => {
-      const next = current.includes(gameId) ? current.filter((id) => id !== gameId) : [...current, gameId].slice(-30);
-      try { window.localStorage.setItem(PREP_LIST_KEY, JSON.stringify(next)); } catch { /* optional storage */ }
-      setSavedMessage(current.includes(gameId) ? "Removed from prep list." : "Saved to prep list.");
+      const removing = current.includes(gameId);
+      const next = removing ? current.filter((id) => id !== gameId) : [...current, gameId].slice(-30);
+      setSavedGames((existing) => {
+        const updated = { ...existing };
+        if (removing) delete updated[gameId];
+        else updated[gameId] = {
+          id: game.id,
+          starts_at: game.starts_at,
+          away_name: game.away_name,
+          home_name: game.home_name,
+          prediction: game.prediction!,
+          marketContext: markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null,
+        };
+        try { window.localStorage.setItem(PREP_LIST_KEY, JSON.stringify({ ids: next, games: updated })); } catch { /* optional storage */ }
+        return updated;
+      });
+      setSavedMessage(removing ? "Removed from prep list." : "Saved forecast snapshot to prep list.");
       return next;
     });
   };
 
   const exportPrepList = () => {
-    const rows = activeGames.filter((game) => savedIds.includes(game.id) && game.prediction);
+    const rows = savedIds.map((id) => {
+      const live = activeGames.find((game) => game.id === id);
+      return live?.prediction ? {
+        id: live.id,
+        starts_at: live.starts_at,
+        away_name: live.away_name,
+        home_name: live.home_name,
+        prediction: live.prediction,
+        marketContext: markets[live.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || savedGames[id]?.marketContext || null,
+      } satisfies SavedGame : savedGames[id];
+    }).filter((game): game is SavedGame => Boolean(game?.prediction));
     if (!rows.length) return;
     downloadCsv("basketball-prep-list.csv", toCsv(
       ["Game ID", "Start (UTC)", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
       rows.map((game) => {
         const p = game.prediction!;
-        return [game.id, game.starts_at, game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null];
+        return [game.id, game.starts_at, game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, game.marketContext || null];
       }),
     ));
     setSavedMessage(`Exported ${rows.length} saved game${rows.length === 1 ? "" : "s"}.`);
@@ -94,7 +131,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
       </p>
       {savedIds.length > 0 && <div className="journal-prep-list" role="status">
         <div><strong>{savedIds.length}</strong><span>game{savedIds.length === 1 ? "" : "s"} in your private prep list</span></div>
-        <div className="button-row"><button className="button secondary" type="button" onClick={exportPrepList}>Export prep list ↓</button><button className="hero-link" type="button" onClick={() => { setSavedIds([]); try { window.localStorage.removeItem(PREP_LIST_KEY); } catch { /* optional storage */ } setSavedMessage("Prep list cleared."); }}>Clear list</button></div>
+        <div className="button-row"><button className="button secondary" type="button" onClick={exportPrepList}>Export prep list ↓</button><button className="hero-link" type="button" onClick={() => { setSavedIds([]); setSavedGames({}); try { window.localStorage.removeItem(PREP_LIST_KEY); } catch { /* optional storage */ } setSavedMessage("Prep list cleared."); }}>Clear list</button></div>
         {savedMessage && <small>{savedMessage}</small>}
       </div>}
       <div className="article-grid">
