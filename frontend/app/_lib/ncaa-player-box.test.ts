@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeStatsSum, effectiveFieldGoal, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
 
 describe("NCAA player box rate helpers", () => {
   it("keeps missing source fields unavailable while preserving recorded zero makes", () => {
@@ -26,6 +26,17 @@ describe("NCAA player box rate helpers", () => {
     expect(completeStatsSum([{ stats: { pts: 20 } }, { stats: { pts: 30 } }], "pts")).toBe(50);
     expect(completeStatsSum([{ stats: { pts: 20 } }, { stats: { pts: null } }], "pts")).toBeNull();
     expect(completeStatsSum([{ stats: { pts: 0 } }, { stats: { pts: 5 } }], "pts")).toBe(5);
+  });
+
+  it("derives player rates only from their recorded denominators", () => {
+    expect(playerAdvancedRates({ pts: 30, o_poss: 20, tpa: 4, fga: 10, fta: 6, ast: 5, tov: 2 })).toEqual({
+      pointsPerPossession: 1.5,
+      threePointAttemptRate: 0.4,
+      freeThrowAttemptRate: 0.6,
+      assistRate: 0.25,
+      turnoverRate: 0.1,
+    });
+    expect(playerAdvancedRates({ pts: 30, o_poss: null, tpa: 4, fga: 10, fta: 6, ast: 5, tov: 2 }).pointsPerPossession).toBeNull();
   });
 
   it("requires threes as well as field goals for the eFG fallback", () => {

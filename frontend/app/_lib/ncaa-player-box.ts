@@ -45,3 +45,14 @@ export function trueShooting(stats: NumericStats) {
   const denominator = 2 * (fga + 0.475 * fta);
   return denominator > 0 ? points / denominator : null;
 }
+
+/** Derive compact source rates for a player card without imputing missing fields. */
+export function playerAdvancedRates(stats: NumericStats) {
+  return {
+    pointsPerPossession: safeRate(stats.pts, stats.o_poss),
+    threePointAttemptRate: safeRate(stats.tpa, stats.fga),
+    freeThrowAttemptRate: safeRate(stats.fta, stats.fga),
+    assistRate: safeRate(stats.ast, stats.o_poss),
+    turnoverRate: safeRate(stats.tov, stats.o_poss),
+  };
+}
