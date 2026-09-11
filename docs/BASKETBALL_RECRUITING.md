@@ -83,6 +83,8 @@ Both evidence and release records get a database-generated `first_recorded_at`; 
 
 `GET /api/basketball/research/recruiting?season=2027` reads one consistent active D1 edition and returns its actual database observation timestamp. Malformed seasons return 400; seasons without reviewed data return 404. The downloadable JSON is the same edition served as a Cloudflare asset.
 
+The endpoint caches successful edition reads at the edge for five minutes and bounds the D1 query. A busy warehouse returns a retryable 503 with no-store headers, allowing the browser to keep the bundled reviewed edition visible without presenting a stale response as current.
+
 Run from the project root:
 
 ```sh

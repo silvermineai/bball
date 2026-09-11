@@ -45,4 +45,11 @@ describe("reviewed recruiting editions", () => {
       ).status,
     ).toBe(404);
   });
+  it("returns a bounded retryable status when the edition read is busy", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await recruiting.request("/?season=2027", {}, { DB: { prepare } });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "The reviewed recruiting edition is temporarily unavailable." });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
 });
