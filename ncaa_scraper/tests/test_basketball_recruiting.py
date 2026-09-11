@@ -28,6 +28,9 @@ class RecruitingTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["events"], 98)
         self.assertFalse(release["coverage"]["complete_national_coverage"])
         self.assertTrue(
+            all(len(source.get("source_sha256", "")) == 64 for source in release["sources"])
+        )
+        self.assertTrue(
             all(
                 p["stats"] is None
                 for p in release["people"]

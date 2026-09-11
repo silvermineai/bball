@@ -114,7 +114,8 @@
       "published_on": "2026-04-29",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "8dbf9cf44f13076fb42010965df3f16418633cacd1e871716fc36179249bce0c"
     },
     {
       "id": "uconn-nash-shaw",
@@ -125,7 +126,8 @@
       "published_on": "2026-05-27",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "8c06c0fa67f6bef60afea6c9cd6a547f9b66e508d5d85124c20ec21160235f34"
     },
     {
       "id": "uconn-dzafic",
@@ -136,7 +138,8 @@
       "published_on": "2026-06-02",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "ab51db7383788264fbef9336fe88388f0afc99901314a6984011169c120de020"
     },
     {
       "id": "uconn-amosov",
@@ -147,7 +150,8 @@
       "published_on": "2026-07-06",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "923ae1d6acfc10e925fe913d233e5eaea6801d4934ef8e5daac670ec0191b2c6"
     },
     {
       "id": "houston-1",
@@ -158,7 +162,8 @@
       "published_on": "2026-08-10",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "5ff37a656f0ee9cf7a604680c782d965fd66bed285a3b81e1effcc68d657f154"
     },
     {
       "id": "houston-2",
@@ -169,7 +174,8 @@
       "published_on": "2026-05-07",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "5153eb41e3aef48c9a46955cc8e1c848c5ad80dae633bc68e0e6dc6d38c337c7"
     },
     {
       "id": "houston-3",
@@ -180,7 +186,8 @@
       "published_on": "2026-05-05",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "1e95a4b44e4e70b895adbb3309c59f9d2ae3729bb6a4e43c8db2de3096ab1e73"
     },
     {
       "id": "houston-4",
@@ -191,7 +198,8 @@
       "published_on": "2026-04-24",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "fdd0cddb05f01ea57d03f6f3a7f55f148bddf409fc72adf89ed0ecef737c81f3"
     },
     {
       "id": "houston-5",
@@ -202,7 +210,8 @@
       "published_on": "2026-04-24",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "ac9e94ba2c9cbd7dc20659ff3721a2249d6ce9b062887e882c37c54e04b79658"
     },
     {
       "id": "houston-6",
@@ -213,7 +222,8 @@
       "published_on": "2026-04-23",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "1b42b5b59de16d89720ed1483fe8c7cdc80e67c870b0b1158feb56a552ac3d03"
     },
     {
       "id": "houston-7",
@@ -224,7 +234,8 @@
       "published_on": "2026-04-22",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "cf1775c420bf292195912c0ad953aaddd8db75b927c01fa8df020f897ff0dbf3"
     },
     {
       "id": "michigan-early",
@@ -235,7 +246,8 @@
       "published_on": "2025-11-14",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "7f5ba38900c864a84bf656d3ec92520d24583c76a9d26e3a60d1159fba341ebd"
     },
     {
       "id": "michigan-mccoy-cosby",
@@ -246,7 +258,8 @@
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "948e322c7252585610cfd536480af2319ebbd8a0101eb49a29f64d8aea1e6d6e"
     },
     {
       "id": "michigan-mccoy-unavailable",
@@ -257,7 +270,8 @@
       "published_on": "2026-09-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "e42667e64c73cf4be36f31dbfbea5693374a9bcf200da7bc5edfff004d14fbc7"
     },
     {
       "id": "michigan-estrella",
@@ -268,7 +282,8 @@
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": "Article display and announcement text say April 28; URL path says April 26."
+      "review_note": "Article display and announcement text say April 28; URL path says April 26.",
+      "source_sha256": "a0fe26f15ad24a0dc4f6bb5a525b18705cab5a7d50f44f741914935e9f8644bc"
     },
     {
       "id": "michigan-reed",
@@ -279,7 +294,8 @@
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "60602f7256564d3454d62d947fa29ad346db85cef1706595ef98c3b2fbfd6d13"
     },
     {
       "id": "michigan-thiam",
@@ -290,7 +306,8 @@
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "7ecd7caf945d807ad24d71fdb91ed78e4b5adc9f1075f4c7e087d24085d9e472"
     },
     {
       "id": "kentucky-momcilovic",
@@ -301,7 +318,8 @@
       "published_on": "2026-06-05",
       "date_basis": "article:published_time metadata: 2026-06-05T13:00:26-04:00",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": "The closing paragraph labels the roster 2025–26. Kentucky’s June 15, 2026 schedule announcement explicitly places Momcilovic in its 2026–27 transfer class: https://ukathletics.com/news/2026/06/15/kentucky-announces-seven-home-nonconference-games/"
+      "review_note": "The closing paragraph labels the roster 2025–26. Kentucky’s June 15, 2026 schedule announcement explicitly places Momcilovic in its 2026–27 transfer class: https://ukathletics.com/news/2026/06/15/kentucky-announces-seven-home-nonconference-games/",
+      "source_sha256": "4db4753d6e8377f8079ee035b4a42787224065600f930a82eef8057c057c5c62"
     },
     {
       "id": "kentucky-ndiaye",
@@ -312,7 +330,8 @@
       "published_on": "2026-05-07",
       "date_basis": "article:published_time metadata: 2026-05-07T13:08:32-04:00",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "b76cf768092e8ecb119abfceff4f65d152f45ff2133c9fdb0b95d2b9f489c60d"
     },
     {
       "id": "kentucky-mcbride",
@@ -323,7 +342,8 @@
       "published_on": "2026-04-30",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:22:08.000000+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "e02df11ab14d2692b77ffcda17b13c6fd46ca38320b387669af5b832b9eb7ddf"
     },
     {
       "id": "arizona-dixon",
@@ -334,7 +354,8 @@
       "published_on": "2026-04-16",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T06:47:40.047960+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "b79936dc589e4330535711613ce17254fd139c12439c8746e8c72940a86d617e"
     },
     {
       "id": "hawaii-june-additions",
@@ -345,7 +366,8 @@
       "published_on": "2026-06-09",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": "This is a June roster-addition update; its publication date is not the original commitment date for every player. Historical box totals remain a separate source."
+      "review_note": "This is a June roster-addition update; its publication date is not the original commitment date for every player. Historical box totals remain a separate source.",
+      "source_sha256": "697635969005337fb15c3515bd4d889a3bf70e0015c741ea3f02f4212c5e7c3b"
     },
     {
       "id": "purdue-pierce",
@@ -356,7 +378,8 @@
       "published_on": "2026-04-07",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "f7f0de76b275a0e239efd84e65fcf924df1342c1e0f8a35b28757ece59c80c78"
     },
     {
       "id": "purdue-three-prep",
@@ -367,7 +390,8 @@
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "97841ed8ed36b8bac27d0e79fa28a4600c7a9b449e7263e05ced5bb605be289d"
     },
     {
       "id": "purdue-huan",
@@ -378,7 +402,8 @@
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "f518ff2e7a89d63783f98a804445107411e655019a84f008bed24f5abebacc13"
     },
     {
       "id": "kansas-dawes",
@@ -389,7 +414,8 @@
       "published_on": "2026-04-21",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "a2c68ae537733dd70dc29571bd58c7869d01fc8565d09a581ef6c56a42feb0b1"
     },
     {
       "id": "kansas-blyden",
@@ -400,7 +426,8 @@
       "published_on": "2026-04-22",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "10f252dcb817249a1913d3959bbf292d10b8b5a6db7be10502fcc2bfc696d061"
     },
     {
       "id": "kansas-stokes",
@@ -411,7 +438,8 @@
       "published_on": "2026-04-29",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "98cfca710fe6a7409218ae125269a3e1af197b3d83254ff64fb135ddc610f474"
     },
     {
       "id": "kansas-reeves",
@@ -422,7 +450,8 @@
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "f358b7fc4d8efd3aef797039ef54130dea12b3d7659e6cb6b73bfb59c1339d14"
     },
     {
       "id": "kansas-parker",
@@ -433,7 +462,8 @@
       "published_on": "2026-05-11",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "b5ef040b3f50bf8141f8417a9d729044c932dedb609af41839e27eec465de25b"
     },
     {
       "id": "kansas-richmond",
@@ -444,7 +474,8 @@
       "published_on": "2026-05-12",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "7ec7425e55f3a6e21d3de94aa2d4a5cc21e0267d1b308fc6fdc3c60709e01169"
     },
     {
       "id": "kansas-grant-mordini",
@@ -455,7 +486,8 @@
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T08:29:47.820523+00:00",
-      "review_note": "This article also identifies previously signed freshmen; their listed event date is this update, not an inferred original signing date."
+      "review_note": "This article also identifies previously signed freshmen; their listed event date is this update, not an inferred original signing date.",
+      "source_sha256": "9e080f69d9c6d198c3a0ea703cb2186e0cd53591dbda78f96dd340d9661892b3"
     },
     {
       "id": "unc-august-roster",
@@ -466,7 +498,8 @@
       "published_on": "2026-08-21",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": "Events use the roster-update date, not an inferred signing date. Neo Avdalas is unlinked because the archive uses Neoklis Avdalas; no name alias is assumed. Cade Bennerman has no matching 2025–26 box profile. Sayon Keita is grouped by his international club pathway, although the school lists him as a freshman."
+      "review_note": "Events use the roster-update date, not an inferred signing date. Neo Avdalas is unlinked because the archive uses Neoklis Avdalas; no name alias is assumed. Cade Bennerman has no matching 2025–26 box profile. Sayon Keita is grouped by his international club pathway, although the school lists him as a freshman.",
+      "source_sha256": "8ae1c4cc0bf2c92d6d6715bfe06b970149e0e0f00bc07b904dc654a179b5e628"
     },
     {
       "id": "illinois-ethan-brown",
@@ -477,7 +510,8 @@
       "published_on": "2025-11-15",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "e17cdac116ffe55f7e42ef70511fd2a94482fda2eafc372973ef3823854953ab"
     },
     {
       "id": "illinois-landon-davis",
@@ -488,7 +522,8 @@
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "a9e990cd0ae093bb43a282ef5b001b1a3a21823de4f504e4fbec839e75d9460e"
     },
     {
       "id": "illinois-lucas-morillo",
@@ -499,7 +534,8 @@
       "published_on": "2025-11-20",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "9ea3beec8b58224a10d5b941add3b119497cae91bb2b5f861ab9623a7390d1df"
     },
     {
       "id": "illinois-zavier-zens",
@@ -510,7 +546,8 @@
       "published_on": "2026-04-17",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "6ed125b0686ebca618ddc14e0da487db7c97dafc2677bb06b5c9aef3296dfdc2"
     },
     {
       "id": "illinois-quentin-coleman",
@@ -521,7 +558,8 @@
       "published_on": "2026-04-19",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "7deae990b3b7585071ae6af98674e922f40a0b4178f867f73411734579c594fc"
     },
     {
       "id": "illinois-lincoln-williams",
@@ -532,7 +570,8 @@
       "published_on": "2026-06-08",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "16ac1d790e9ba3098df7ece0681a75570ed8fff288a72e1908a5bd23ed27ad02"
     },
     {
       "id": "illinois-stefan-vaaks",
@@ -543,7 +582,8 @@
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-05T10:09:41.078188+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "01e605f686dfc41d4ae15d1fc01411c977ac11d4886fa609b2616c3e0df5337e"
     },
     {
       "id": "duke-three-signees",
@@ -554,7 +594,8 @@
       "published_on": "2025-11-20",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:22:08.000000+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "53c54f41c74449fad4a1b8f0757c4c5b948dd09c1763e2df08c124ced2f616e0"
     },
     {
       "id": "alabama-seven-additions",
@@ -565,7 +606,8 @@
       "published_on": "2026-06-03",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:30:00.000000+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "bf33685810b97b1ce43368e4bbb6b193e7474d38e87100e99a766c6c87f5055c"
     },
     {
       "id": "oregon-portal-additions",
@@ -576,7 +618,8 @@
       "published_on": "2026-06-01",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:30:00.000000+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "f526d9a90631acfdd3c8d6855e8df5e206797e8d7480870c68d6df6304ff2828"
     },
     {
       "id": "arkansas-four-freshmen",
@@ -587,7 +630,8 @@
       "published_on": "2026-07-21",
       "date_basis": "Displayed publication date",
       "checked_at": "2026-09-08T10:30:00.000000+00:00",
-      "review_note": null
+      "review_note": null,
+      "source_sha256": "bd2593e56c605dd60ec83b7537cda2beeb30ff0c9fdde5f8c9d40e9d7a4ed618"
     }
   ],
   "people": [
@@ -3038,5 +3082,5 @@
       "summary": "Illinois announced the signing of Stefan Vaaks for its 2026–27 additions."
     }
   ],
-  "edition": "1f809e07b24c523adb908b38f43dfdcad30e8aaada07decb1003679ce83096fa"
+  "edition": "52d7e7b3221fb7c3d71be516386e2303db51bb13fe2a836784d0b08335b89cc0"
 }

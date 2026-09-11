@@ -10,6 +10,7 @@ export type AnnouncementSource = {
   date_basis: string;
   checked_at: string;
   review_note: string | null;
+  source_sha256?: string;
 };
 export type RecruitingPerson = {
   key: string;

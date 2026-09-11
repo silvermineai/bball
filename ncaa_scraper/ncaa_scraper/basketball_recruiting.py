@@ -73,6 +73,7 @@ def build(document, box_release, rated_programs):
         if canonical(program["name"]) != canonical(rated_programs[program["id"]]):
             raise ValueError("Program identity/name mismatch")
     now = datetime.now(timezone.utc)
+    output_sources = []
     for source in sources.values():
         program = programs[source["team_id"]]
         url = urlsplit(source["url"])
@@ -99,6 +100,9 @@ def build(document, box_release, rated_programs):
             raise ValueError("Invalid publication/review chronology")
         if not source["date_basis"] or source["publisher"] != program["publisher"]:
             raise ValueError("Missing publication evidence")
+        # Hash reviewed source metadata before adding the receipt itself. This
+        # provides a stable integrity check without republishing article text.
+        output_sources.append({**source, "source_sha256": digest(source)})
     output_people = []
     for person in people.values():
         if person["team_id"] not in programs or person["category"] not in {
@@ -208,7 +212,7 @@ def build(document, box_release, rated_programs):
             "release_sha256": digest(box_release),
         },
         "programs": list(programs.values()),
-        "sources": list(sources.values()),
+        "sources": output_sources,
         "people": output_people,
         "events": document["events"],
     }

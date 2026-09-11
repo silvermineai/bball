@@ -238,7 +238,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const downloadWatchlist = () => downloadCsv(
     "basketball-recruiting-watchlist.csv",
     toCsv(
-      ["Player", "Source key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Publisher", "Source URL", "Roster name check", "Reviewed at"],
+      ["Player", "Source key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Publisher", "Source URL", "Source metadata SHA-256", "Roster name check", "Reviewed at"],
       watchlistRows.map((p) => [
         p.name,
         p.key,
@@ -258,6 +258,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
         p.latest.source.published_on,
         p.latest.source.publisher,
         p.latest.source.url,
+        p.latest.source.source_sha256,
         rosterMatch(p.name, p.team_id),
         p.latest.source.checked_at,
       ]),
@@ -775,6 +776,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         "Turnover rate",
                         "Source title",
                         "Source URL",
+                        "Source metadata SHA-256",
                         "Reviewed at",
                       ],
                       rows.map((p) => [
@@ -810,6 +812,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                           : p.stats.tov_rate * 100,
                         p.latest.source.title,
                         p.latest.source.url,
+                        p.latest.source.source_sha256,
                         p.latest.source.checked_at,
                       ]),
                     ),
@@ -979,6 +982,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                           {e.source.publisher} · Reviewed{" "}
                           {publicationDate(e.source.checked_at)}
                         </small>
+                        {e.source.source_sha256 && (
+                          <small className="recruiting-receipt">
+                            Source metadata receipt: <code>{e.source.source_sha256}</code>
+                          </small>
+                        )}
                         {e.source.review_note && (
                           <p className="note">
                             Review note: {e.source.review_note}

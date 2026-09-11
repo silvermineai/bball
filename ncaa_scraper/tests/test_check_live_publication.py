@@ -70,6 +70,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+                "sources": [{"source_sha256": "a" * 64} for _ in range(44)],
             },
             "/api/basketball/research/news?meta=1": {
                 "summary": {"total": 83, "latest_published": "2026-09-10T19:00:00Z", "latest_seen_at": "2026-09-10T19:00:00Z"},
@@ -171,6 +172,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
+                "sources": [{"source_sha256": "a" * 64} for _ in range(44)],
             },
             "/api/basketball/research/news?meta=1": {
                 "summary": {"total": 83, "latest_published": "2026-09-10T19:00:00Z", "latest_seen_at": "2026-09-10T19:00:00Z"},

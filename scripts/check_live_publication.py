@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
@@ -161,10 +162,19 @@ def validate_reviewed_recruiting_release(
     """Validate that the reviewed recruiting edition is present and non-empty."""
     release_coverage = payload.get("coverage")
     required_counts = ("programs", "players", "events", "sources")
+    sources = payload.get("sources")
     if (
         payload.get("season") != 2027
         or not isinstance(release_coverage, dict)
         or not isinstance(payload.get("reviewed_at"), str)
+        or not isinstance(sources, list)
+        or len(sources) != release_coverage.get("sources")
+        or any(
+            not isinstance(source, dict)
+            or not isinstance(source.get("source_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", source["source_sha256"])
+            for source in sources
+        )
         or any(
             not isinstance(release_coverage.get(key), int)
             or release_coverage[key] <= 0
