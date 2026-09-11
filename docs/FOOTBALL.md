@@ -121,7 +121,7 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 ## Remaining goal scope
 
 - The active basketball pages have migrated to Next.js; the TanStack shell remains only for archived compatibility URLs.
-- Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
+- Continue collecting timestamped basketball roster transitions and independent holdouts before considering any roster feature for the production efficiency baseline.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Extend the football efficiency challenger with more retained historical seasons and evaluate rolling splits and calibration stability before considering any production change.
 - Configure and validate the licensed odds connector against a live account; collect pregame observations and evaluate future real finals through the shared ledger.

@@ -25,10 +25,50 @@ const percent = (value: number | null) =>
 const sourceGameUrl = (id: string) =>
   `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 
+type RosterTransition = {
+  test_season: number;
+  training_seasons: number[];
+  training_rows: number;
+  rows: {
+    teams: number;
+    mae: number;
+    rmse: number;
+    baseline_mae: number;
+    improvement_vs_prior_net: number;
+  };
+};
+
+type RosterModel = {
+  version: string;
+  generated_at: string;
+  target_season: number;
+  training_seasons: number[];
+  feature_definition: string;
+  evaluation: {
+    held_out_transition: number;
+    teams: number;
+    mae: number;
+    rmse: number;
+    baseline_mae: number;
+    improvement_vs_prior_net: number;
+  };
+  historical_evaluation: {
+    transition_evaluations: RosterTransition[];
+  };
+  coverage: {
+    transition_rows: Record<string, number>;
+    current_predicted_teams: number;
+    scenario_games: number;
+  };
+  limitations: string[];
+};
+
 export default function Evaluation({
   summary,
+  rosterModel,
 }: {
   summary: EvaluationSummary;
+  rosterModel: RosterModel;
 }) {
   const [games, setGames] = useState<EvaluationGame[] | null>(null),
     [error, setError] = useState("");
@@ -268,6 +308,42 @@ export default function Evaluation({
           </p>
         </section>
       ) : null}
+      <section className="section paper-panel" aria-labelledby="roster-challenger-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Research track / Dated roster features</div>
+            <h2 id="roster-challenger-title">Does continuity explain the next season?</h2>
+          </div>
+          <span className="note">{rosterModel.version} · generated {date(rosterModel.generated_at)}</span>
+        </div>
+        <p>
+          This separate ridge challenger combines prior net efficiency with exact-ID roster continuity, represented prior minutes and listed-player counts. It is evaluated chronologically and stays outside the production forecast until more dated transitions are available.
+        </p>
+        <div className="strip">
+          <div><strong>{fmt(rosterModel.evaluation.mae, 2)}</strong><span>Held-out MAE · {rosterModel.evaluation.held_out_transition - 1}–{String(rosterModel.evaluation.held_out_transition).slice(-2)}</span></div>
+          <div><strong>{fmt(rosterModel.evaluation.baseline_mae, 2)}</strong><span>Prior-net baseline MAE</span></div>
+          <div><strong>{fmt(rosterModel.evaluation.improvement_vs_prior_net, 2)}</strong><span>Points improved vs baseline</span></div>
+          <div><strong>{rosterModel.coverage.scenario_games.toLocaleString()}</strong><span>2026–27 scenario games</span></div>
+        </div>
+        <div className="table-scroll" style={{ marginTop: 18 }}>
+          <table className="data-table evaluation-metrics">
+            <thead><tr><th>Test season</th><th>Training seasons</th><th className="numeric">Teams</th><th className="numeric">MAE</th><th className="numeric">Baseline MAE</th><th className="numeric">Improvement</th></tr></thead>
+            <tbody>{rosterModel.historical_evaluation.transition_evaluations.map((transition) => <tr key={transition.test_season}>
+              <th scope="row">{transition.test_season - 1}–{String(transition.test_season).slice(-2)}</th>
+              <td>{transition.training_seasons.map((season) => `${season - 1}–${String(season).slice(-2)}`).join(", ")}</td>
+              <td className="numeric">{transition.rows.teams.toLocaleString()}</td>
+              <td className="numeric">{fmt(transition.rows.mae, 2)}</td>
+              <td className="numeric">{fmt(transition.rows.baseline_mae, 2)}</td>
+              <td className="numeric">{fmt(transition.rows.improvement_vs_prior_net, 2)} pts</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="note" style={{ marginTop: 16 }}>
+          Historical transitions use the NCAA roster release and have no publisher Box BPM, so their scores are not directly comparable with the current ESPN-derived production challenger. {rosterModel.coverage.current_predicted_teams.toLocaleString()} teams have current roster features; the 2026–27 scenario is a research prompt and does not change win probabilities, uncertainty or ledger registrations.
+        </p>
+        <p className="note">{rosterModel.limitations.join(" ")}</p>
+        <p><Link href="/basketball/gameplan/">Open roster-aware game planning ↗</Link></p>
+      </section>
       {games && rows.length > 0 && (
         <section className="section" aria-label="Evaluation review queue">
           <div className="section-heading">

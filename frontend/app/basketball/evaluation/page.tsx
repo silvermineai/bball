@@ -17,5 +17,11 @@ export default function Page() {
       "utf8",
     ),
   );
-  return <Evaluation summary={summary} />;
+  const rosterModel = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/roster-model.json"),
+      "utf8",
+    ),
+  );
+  return <Evaluation summary={summary} rosterModel={rosterModel} />;
 }
