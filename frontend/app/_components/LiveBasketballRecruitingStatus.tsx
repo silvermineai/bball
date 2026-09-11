@@ -8,9 +8,12 @@ type RecruitingEdition = {
   reviewed_at?: string;
   first_recorded_at?: string;
   coverage?: {
+    complete_national_coverage?: boolean;
     players?: number;
     programs?: number;
     events?: number;
+    historical_links?: number;
+    sources?: number;
   };
 };
 
@@ -41,7 +44,7 @@ export default function LiveBasketballRecruitingStatus() {
     <p className="note" role="status">
       {status === "live" && edition
         ? <>
-            Live D1 recruiting edition: {(edition.coverage?.players || 0).toLocaleString()} announced additions across {(edition.coverage?.programs || 0).toLocaleString()} reviewed programs · {edition.coverage?.events?.toLocaleString() || "—"} source events{edition.reviewed_at ? ` · reviewed ${date(edition.reviewed_at)}` : ""}{edition.first_recorded_at ? ` · recorded ${date(edition.first_recorded_at)}` : ""}. <Link href="/basketball/recruiting/">Open the evidence board →</Link>
+            Live D1 recruiting edition: {(edition.coverage?.players || 0).toLocaleString()} announced additions across {(edition.coverage?.programs || 0).toLocaleString()} reviewed programs · {edition.coverage?.events?.toLocaleString() || "—"} source events · {edition.coverage?.historical_links?.toLocaleString() || "—"} historical stat links · {edition.coverage?.sources?.toLocaleString() || "—"} source records · {edition.coverage?.complete_national_coverage === false ? "partial national coverage" : edition.coverage?.complete_national_coverage === true ? "complete national coverage" : "coverage scope unavailable"}{edition.reviewed_at ? ` · reviewed ${date(edition.reviewed_at)}` : ""}{edition.first_recorded_at ? ` · recorded ${date(edition.first_recorded_at)}` : ""}. <Link href="/basketball/recruiting/">Open the evidence board →</Link>
           </>
         : status === "fallback"
           ? <>Live recruiting edition unavailable; the published landing-page coverage remains available. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></>
