@@ -47,6 +47,7 @@ export default function Crosswalk() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -65,6 +66,8 @@ export default function Crosswalk() {
     window.history.replaceState(window.history.state, "", url);
   }, [page, provider, query]);
 
+  const retryArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
+
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/player-crosswalk?meta=1", { signal: controller.signal })
@@ -72,7 +75,7 @@ export default function Crosswalk() {
       .then(setMeta)
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player crosswalk metadata is unavailable."); });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -84,7 +87,7 @@ export default function Crosswalk() {
       .then((payload) => { if (!controller.signal.aborted) setResult(payload); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player crosswalk could not be loaded."); });
     return () => controller.abort();
-  }, [page, provider, query]);
+  }, [page, provider, query, retryNonce]);
 
   const pages = Math.max(1, Math.ceil((result?.total || 0) / (result?.page_size || 40)));
   const exportPage = () => {
@@ -109,7 +112,7 @@ export default function Crosswalk() {
         <label className="control"><span>PROVIDER COVERAGE</span><select value={provider} onChange={(event) => { setProvider(event.target.value as Provider); setPage(0); }}>{Object.entries(providerLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={exportPage} disabled={!result?.rows.length}>Download page CSV ↓</button>
       </div>
-      {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading identifier evidence…</p> : <>
+      {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry crosswalk archive</button></div> : !result ? <p className="empty" role="status">Loading identifier evidence…</p> : <>
         <p className="note" role="status">{result.total.toLocaleString()} matching rows · page {page + 1} of {pages}</p>
         <div className="table-scroll">
           <table className="data-table">
@@ -131,4 +134,3 @@ export default function Crosswalk() {
     </section>
   );
 }
-

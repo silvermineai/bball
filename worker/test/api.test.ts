@@ -1221,6 +1221,29 @@ describe("bball api", () => {
     expect(await rows.json()).toEqual({ error: "The possession-style archive is temporarily unavailable." });
   });
 
+  it("returns a retryable response when the player crosswalk catalog or rows are busy", async () => {
+    const catalog = await app.request(
+      "/api/basketball/research/player-crosswalk?meta=1",
+      {},
+      { DB: { batch: vi.fn().mockRejectedValue(new Error("D1 busy")) } },
+    );
+    expect(catalog.status).toBe(503);
+    expect(catalog.headers.get("Cache-Control")).toBe("no-store");
+    expect(await catalog.json()).toEqual({ error: "The player crosswalk catalog is temporarily unavailable." });
+
+    const prepare = vi.fn((sql: string) => sql.includes("COUNT(*) AS total")
+      ? { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 1 }) }) }
+      : { bind: () => ({ all: vi.fn().mockRejectedValue(new Error("D1 busy")) }) });
+    const rows = await app.request(
+      "/api/basketball/research/player-crosswalk?season=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(rows.status).toBe(503);
+    expect(rows.headers.get("Cache-Control")).toBe("no-store");
+    expect(await rows.json()).toEqual({ error: "The player crosswalk archive is temporarily unavailable." });
+  });
+
   it("rejects invalid lineup metrics before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/lineups?season=2018",

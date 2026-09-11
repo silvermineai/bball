@@ -14,6 +14,21 @@ const querySchema = z.object({
   meta: z.enum(["0", "1"]).default("0"),
 });
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("player crosswalk query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 export const playerCrosswalk = new Hono<{ Bindings: Bindings }>();
 
 /**
@@ -24,25 +39,35 @@ export const playerCrosswalk = new Hono<{ Bindings: Bindings }>();
 playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, espnId, provider, page, meta } = c.req.valid("query");
   const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the identity browser fail.
+    }
+  }
   if (meta === "1") {
-    const [seasons, counts, source] = await db.batch([
-      db.prepare("SELECT DISTINCT season FROM bb_player_crosswalk ORDER BY season DESC"),
-      db.prepare(
-        "SELECT COUNT(*) AS rows, COUNT(DISTINCT espn_athlete_id) AS players, " +
-        "COUNT(fox_athlete_id) AS fox_ids, COUNT(yahoo_player_id) AS yahoo_ids " +
-        "FROM bb_player_crosswalk WHERE season=?",
-      ).bind(season),
-      db.prepare(
-        "SELECT json_extract(receipt_json,'$.url') AS url, " +
-        "json_extract(receipt_json,'$.fetched_at') AS fetched_at, " +
-        "json_extract(receipt_json,'$.sha256') AS sha256 " +
-        "FROM bb_sources WHERE dataset='player_crosswalk' AND season=?",
-      ).bind(season),
-    ]);
+    try {
+      const [seasons, counts, source] = await withTimeout(db.batch([
+        db.prepare("SELECT DISTINCT season FROM bb_player_crosswalk ORDER BY season DESC"),
+        db.prepare(
+          "SELECT COUNT(*) AS rows, COUNT(DISTINCT espn_athlete_id) AS players, " +
+          "COUNT(fox_athlete_id) AS fox_ids, COUNT(yahoo_player_id) AS yahoo_ids " +
+          "FROM bb_player_crosswalk WHERE season=?",
+        ).bind(season),
+        db.prepare(
+          "SELECT json_extract(receipt_json,'$.url') AS url, " +
+          "json_extract(receipt_json,'$.fetched_at') AS fetched_at, " +
+          "json_extract(receipt_json,'$.sha256') AS sha256 " +
+          "FROM bb_sources WHERE dataset='player_crosswalk' AND season=?",
+        ).bind(season),
+      ]), DB_TIMEOUT_MS);
     const count = counts.results[0] as { rows?: number; players?: number; fox_ids?: number; yahoo_ids?: number } | undefined;
     const receipt = source.results[0] as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
+      const response = c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       season,
       rows: Number(count?.rows || 0),
@@ -55,7 +80,13 @@ playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
         sha256: typeof receipt?.sha256 === "string" ? receipt.sha256 : null,
       },
       identity_note: "Source-published ESPN/Fox/Yahoo identifiers with match method and confidence retained. No NCAA ID join is asserted.",
-    });
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The player crosswalk catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
 
   const clauses = ["season=?"];
@@ -72,8 +103,9 @@ playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
   if (provider === "fox") clauses.push("fox_athlete_id IS NOT NULL AND fox_athlete_id != ''");
   if (provider === "yahoo") clauses.push("yahoo_player_id IS NOT NULL AND yahoo_player_id != ''");
   const where = clauses.join(" AND ");
-  const count = await db.prepare(`SELECT COUNT(*) AS total FROM bb_player_crosswalk WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const rows = await db.prepare(
+  try {
+  const count = await withTimeout(db.prepare(`SELECT COUNT(*) AS total FROM bb_player_crosswalk WHERE ${where}`).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+  const rows = await withTimeout(db.prepare(
     `SELECT season,espn_team_id,team_abbreviation,player_name,espn_athlete_id,
       espn_full_name,espn_jersey,espn_position,fox_athlete_id,fox_player,
       fox_jersey,fox_position_group,yahoo_player_id,yahoo_player_name,
@@ -81,9 +113,8 @@ playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
      FROM bb_player_crosswalk WHERE ${where}
      ORDER BY player_name ASC, espn_athlete_id ASC
      LIMIT 40 OFFSET ?`,
-  ).bind(...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+  const response = c.json({
     season,
     provider,
     page,
@@ -95,5 +126,10 @@ playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
       match_confidence: (row as { match_confidence: unknown }).match_confidence == null ? null : Number((row as { match_confidence: unknown }).match_confidence),
     })),
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The player crosswalk archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
-
