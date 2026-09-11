@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -166,6 +168,18 @@ def build_release(
                 sport=sport,
                 division=division,
             )
+            # RSS publishers may shorten or reorder their visible window. A
+            # successful response is still allowed to omit older headlines,
+            # so carry forward the source-specific retained rows before the
+            # global bound is applied below. This keeps a healthy archive from
+            # shrinking during ordinary feed churn.
+            parsed.extend(
+                article
+                for article in previous_articles
+                if article.get("publisher") == publisher
+                and article.get("sport") == sport
+                and (not division or article.get("division") == division)
+            )
         except (ET.ParseError, OSError, URLError, TimeoutError) as error:
             # A transient empty or blocked feed must not erase a previously
             # published source edition. Keep the source-specific rows and
@@ -233,7 +247,21 @@ def write_release(output: Path = DEFAULT_OUTPUT, *, feeds: tuple[dict, ...] = FE
         previous_articles=previous_articles,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
+    content = json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n"
+    # Publish the complete JSON in one rename so an interrupted refresh never
+    # leaves a truncated release for the static site or the D1 sync step.
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{output.name}.", dir=output.parent)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, output)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
     return release
 
 
