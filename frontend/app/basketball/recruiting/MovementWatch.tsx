@@ -119,7 +119,7 @@ export default function MovementWatch() {
             <tbody>
               {players.map((player) => (
                 <tr key={`${player.id}-${player.team_id}`}>
-                  <td><strong><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${data?.season ? data.season - 1 : 2025}`}>{player.name}</Link></strong><small>Source ID {player.id}</small></td>
+                  <td><strong><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${data?.season ? data.season - 1 : 2025}`}>{player.name}</Link></strong><small>Source ID {player.id}</small><small><Link href={`/basketball/crosswalk/?q=${encodeURIComponent(player.id)}`}>Search provider IDs →</Link></small></td>
                   <td>{player.team}</td>
                   <td>{player.previous_teams.length ? player.previous_teams.join(", ") : "Not recorded"}</td>
                   <td>{player.position || "—"}</td>
