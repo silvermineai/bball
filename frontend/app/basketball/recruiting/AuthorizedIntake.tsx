@@ -100,7 +100,7 @@ export default function AuthorizedIntake() {
           </div>
           <label className="button secondary recruiting-intake-file">
             {fileName ? `Check ${fileName}` : "Choose authorized CSV"}
-            <input type="file" accept=".csv,text/csv" onChange={(event) => {
+            <input name="authorized-recruiting-csv" type="file" accept=".csv,text/csv" onChange={(event) => {
               const file = event.target.files?.[0];
               if (!file) return;
               setFileName(file.name);

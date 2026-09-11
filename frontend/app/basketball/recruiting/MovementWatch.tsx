@@ -84,14 +84,14 @@ export default function MovementWatch() {
         <div className="button-row">
           <label className="control">
             <span>VIEW</span>
-            <select value={season} onChange={(event) => setSeason(Number(event.target.value))}>
+            <select name="movement-season" value={season} onChange={(event) => setSeason(Number(event.target.value))}>
               <option value={2026}>2025–26 observed</option>
               <option value={2027}>2026–27 listed</option>
             </select>
           </label>
           <label className="control">
             <span>OBSERVATION</span>
-            <select value={status} onChange={(event) => setStatus(event.target.value as MovementStatus)}>
+            <select name="movement-status" value={status} onChange={(event) => setStatus(event.target.value as MovementStatus)}>
               <option value="different_program">Changed program</option>
               <option value="new_to_dataset">New to dataset</option>
             </select>

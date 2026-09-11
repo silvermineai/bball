@@ -197,18 +197,21 @@ export default function Matchups({
         <label className="control">
           <span>TEAM</span>
           <input
+            name="matchup-team"
+            autoComplete="off"
             type="search"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
               setPage(0);
             }}
-            placeholder="Search a program"
+            placeholder="Search a program…"
           />
         </label>
         <label className="control">
           <span>MONTH</span>
           <select
+            name="matchup-month"
             value={month}
             onChange={(e) => {
               setMonth(e.target.value);
@@ -232,6 +235,7 @@ export default function Matchups({
           <label className="control">
             <span>FORECAST</span>
             <select
+              name="matchup-forecast"
               value={coverage}
               onChange={(e) => {
                 setCoverage(e.target.value as MatchupCoverage);
@@ -247,6 +251,7 @@ export default function Matchups({
         <label className="control">
           <span>MODEL SIGNAL</span>
           <select
+            name="matchup-signal"
             value={signal}
             onChange={(e) => {
               setSignal(e.target.value as MatchupSignal);
@@ -262,6 +267,7 @@ export default function Matchups({
         <label className="control">
           <span>SORT BY</span>
           <select
+            name="matchup-sort"
             value={sort}
             onChange={(e) => {
               setSort(e.target.value as MatchupSort);
