@@ -35,10 +35,14 @@ def dataset_rows(overview: dict) -> dict[str, int]:
         "bb_player_value": datasets["publisher_player_value"],
         "bb_lineups": datasets["ncaa_lineups"],
         "bb_player_core": datasets["player_core"],
-        "bb_impact": len(
-            json.loads(
-                (ROOT / "frontend/public/data/basketball/impact.json").read_text()
-            )["players"]
+        # The D1 impact table retains every historical player-season row;
+        # the frontend impact JSON is a current-player presentation slice.
+        # Compare D1 against the local warehouse export so the gate validates
+        # the complete publication rather than that UI slice.
+        "bb_impact": int(
+            sqlite3.connect(ROOT / ".local/basketball.sqlite3")
+            .execute("SELECT COUNT(*) FROM bb_impact")
+            .fetchone()[0]
         ),
         "bb_ncaa_rosters": datasets["ncaa_team_rosters"],
         "bb_ncaa_player_shooting": datasets["ncaa_shots"],
