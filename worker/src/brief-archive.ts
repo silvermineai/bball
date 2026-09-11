@@ -32,7 +32,7 @@ type BundledBrief = {
 
 async function bundledArchive(c: BriefContext, q: z.infer<typeof query>): Promise<Response> {
   if (!c.env.ASSETS) return c.text("Archived content temporarily unavailable", 503);
-  const asset = await c.env.ASSETS.fetch(new Request(new URL("/data/research/ledger.json", c.req.url)));
+  const asset = await withTimeout(c.env.ASSETS.fetch(new Request(new URL("/data/research/ledger.json", c.req.url))), 2000);
   if (!asset.ok) return c.text("Archived content temporarily unavailable", 503);
   const payload = await asset.json() as { games?: BundledBrief[] };
   const needle = q.q.trim().toLowerCase();
@@ -79,7 +79,7 @@ briefArchive.get(
     const cacheKey = new Request(c.req.url, { method: "GET" });
     if (cache) {
       try {
-        const cached = await cache.match(cacheKey);
+        const cached = await withTimeout(cache.match(cacheKey), 1000);
         if (cached) return cached;
       } catch {
         // Cache availability must never make the archive fail.
