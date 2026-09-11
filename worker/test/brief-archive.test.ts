@@ -174,4 +174,36 @@ describe("retained matchup reading views", () => {
       db.prepare.mock.calls.some(([sql]) => sql.includes("sequence<=?")),
     ).toBe(true);
   });
+  it("serves the bundled archive when the D1 listing is temporarily unavailable", async () => {
+    const prepare = vi.fn(() => ({
+      first: vi.fn().mockRejectedValue(new Error("D1 busy")),
+    }));
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      games: [{
+        id: digest,
+        sport: "basketball",
+        game_id: "123",
+        season: 2027,
+        home_name: "Duke",
+        away_name: "North Carolina",
+        starts_at: "2026-11-02T05:00:00Z",
+        time_tbd: 1,
+        model_id: "model-1",
+        generated_at: "2026-09-11T00:00:00Z",
+        registered_at: "2026-09-11T00:01:00Z",
+      }],
+    }), { headers: { "Content-Type": "application/json" } }));
+    const response = await briefArchive.request(
+      "/api/research/briefs?sport=basketball&q=duke",
+      {},
+      { DB: { prepare }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      source: "bundled_release",
+      total: 1,
+      rows: [{ game_id: "123", original_path: "/basketball/briefs/123/" }],
+    });
+    expect(fetch).toHaveBeenCalledOnce();
+  });
 });

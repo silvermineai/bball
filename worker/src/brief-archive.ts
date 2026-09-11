@@ -4,6 +4,51 @@ import { zValidator } from "@hono/zod-validator";
 import { researchDb } from "./research-db";
 
 export const briefArchive = new Hono<{ Bindings: Env }>({ strict: false });
+const ARCHIVE_CACHE_TTL = 300;
+
+type BriefContext = import("hono").Context<{ Bindings: Env }>;
+type BundledBrief = {
+  id?: string;
+  sport?: string;
+  game_id?: string;
+  season?: number;
+  home_name?: string;
+  away_name?: string;
+  starts_at?: string;
+  time_tbd?: number;
+  model_id?: string;
+  generated_at?: string;
+  registered_at?: string;
+};
+
+async function bundledArchive(c: BriefContext, q: z.infer<typeof query>): Promise<Response> {
+  if (!c.env.ASSETS) return c.text("Archived content temporarily unavailable", 503);
+  const asset = await c.env.ASSETS.fetch(new Request(new URL("/data/research/ledger.json", c.req.url)));
+  if (!asset.ok) return c.text("Archived content temporarily unavailable", 503);
+  const payload = await asset.json() as { games?: BundledBrief[] };
+  const needle = q.q.trim().toLowerCase();
+  const rows = (Array.isArray(payload.games) ? payload.games : [])
+    .filter((row) => (q.sport === "all" || row.sport === q.sport) && (!q.game || row.game_id === q.game))
+    .filter((row) => !needle || `${row.home_name || ""} ${row.away_name || ""}`.toLowerCase().includes(needle))
+    .map((row) => ({
+      revision: row.id || "",
+      sport: row.sport || "",
+      game_id: row.game_id || "",
+      season: Number(row.season || 0),
+      home_name: row.home_name || "Unknown",
+      away_name: row.away_name || "Unknown",
+      starts_at: row.starts_at || "",
+      time_tbd: Number(row.time_tbd || 0),
+      model_id: row.model_id || "",
+      forecast_generated_at: row.generated_at || "",
+      first_recorded_at: row.registered_at || row.generated_at || "",
+      sequence: 0,
+      original_path: row.sport === "basketball" ? `/basketball/briefs/${row.game_id}/` : `/blog/game-${row.game_id}/`,
+    }));
+  const response = c.json({ rows: rows.slice(q.page * 24, (q.page + 1) * 24), total: rows.length, page: q.page, asof: 0, source: "bundled_release" });
+  response.headers.set("Cache-Control", `public, max-age=${ARCHIVE_CACHE_TTL}`);
+  return response;
+}
 const hash = /^[a-f0-9]{64}$/;
 const gameID = /^\d{1,15}$/;
 const query = z.object({
@@ -19,38 +64,58 @@ briefArchive.get(
   zValidator("query", query),
   async (c) => {
     const q = c.req.valid("query");
-    const top = await researchDb(c.env).prepare(
+    const cache = typeof caches === "undefined"
+      ? null
+      : (caches as unknown as { default: Cache }).default;
+    const cacheKey = new Request(c.req.url, { method: "GET" });
+    if (cache) {
+      try {
+        const cached = await cache.match(cacheKey);
+        if (cached) return cached;
+      } catch {
+        // Cache availability must never make the archive fail.
+      }
+    }
+    try {
+      const top = await researchDb(c.env).prepare(
       "SELECT coalesce(max(sequence),0) AS sequence FROM brief_archive_versions",
-    ).first<{ sequence: number }>();
-    const asof = Math.min(q.asof ?? top!.sequence, top!.sequence);
-    const where =
-      "sequence<=? AND (?='all' OR sport=?) AND (? IS NULL OR game_id=?)";
-    const cte = `WITH snapshots AS (SELECT *,row_number() OVER (PARTITION BY sport,game_id ORDER BY sequence DESC) AS position FROM brief_archive_versions WHERE ${where}), selected AS (SELECT * FROM snapshots WHERE (?='versions' OR position=1) AND instr(lower(home_name||' '||away_name),lower(?))>0)`;
-    const values = [
-      asof,
-      q.sport,
-      q.sport,
-      q.game ?? null,
-      q.game ?? null,
-      q.view,
-      q.q,
-    ];
-    const [count, rows] = await researchDb(c.env).batch([
-      researchDb(c.env).prepare(cte + " SELECT count(*) AS total FROM selected").bind(
-        ...values,
-      ),
-      researchDb(c.env).prepare(
-        cte +
-          " SELECT revision,sport,game_id,season,home_name,away_name,starts_at,time_tbd,model_id,forecast_generated_at,original_path,first_recorded_at,sequence FROM selected ORDER BY starts_at,sport,game_id,sequence DESC LIMIT 24 OFFSET ?",
-      ).bind(...values, q.page * 24),
-    ]);
-    c.header("Cache-Control", "no-store");
-    return c.json({
-      rows: rows.results,
-      total: (count.results[0] as { total: number }).total,
-      page: q.page,
-      asof,
-    });
+      ).first<{ sequence: number }>();
+      const asof = Math.min(q.asof ?? top!.sequence, top!.sequence);
+      const where =
+        "sequence<=? AND (?='all' OR sport=?) AND (? IS NULL OR game_id=?)";
+      const cte = `WITH snapshots AS (SELECT *,row_number() OVER (PARTITION BY sport,game_id ORDER BY sequence DESC) AS position FROM brief_archive_versions WHERE ${where}), selected AS (SELECT * FROM snapshots WHERE (?='versions' OR position=1) AND instr(lower(home_name||' '||away_name),lower(?))>0)`;
+      const values = [
+        asof,
+        q.sport,
+        q.sport,
+        q.game ?? null,
+        q.game ?? null,
+        q.view,
+        q.q,
+      ];
+      const [count, rows] = await researchDb(c.env).batch([
+        researchDb(c.env).prepare(cte + " SELECT count(*) AS total FROM selected").bind(
+          ...values,
+        ),
+        researchDb(c.env).prepare(
+          cte +
+            " SELECT revision,sport,game_id,season,home_name,away_name,starts_at,time_tbd,model_id,forecast_generated_at,original_path,first_recorded_at,sequence FROM selected ORDER BY starts_at,sport,game_id,sequence DESC LIMIT 24 OFFSET ?",
+        ).bind(...values, q.page * 24),
+      ]);
+      const response = c.json({
+        rows: rows.results,
+        total: (count.results[0] as { total: number }).total,
+        page: q.page,
+        asof,
+      });
+      response.headers.set("Cache-Control", `public, max-age=${ARCHIVE_CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      const response = await bundledArchive(c, q);
+      response.headers.set("X-Archive-Source", "bundled_release");
+      return response;
+    }
   },
 );
 
