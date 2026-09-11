@@ -49,6 +49,30 @@ const query = z.object({
   page: z.coerce.number().int().min(0).max(1000).default(0),
 });
 export const footballEvents = new Hono<{ Bindings: Env }>();
+
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("football event query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 footballEvents.get("/", zValidator("query", query), async (c) => {
   const q = c.req.valid("query");
   const keys: readonly string[] = metrics[q.dataset];
@@ -66,7 +90,24 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       400,
     );
   const db = footballDb(c.env);
-  const edition = await db.prepare(
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the event notebook fail.
+    }
+  }
+  let edition: {
+    edition: string;
+    generated_at: string;
+    receipt_json: string;
+    coverage_json: string;
+  } | null;
+  try {
+    edition = await withTimeout(db.prepare(
     `SELECT e.* FROM football_event_editions e ${q.edition ? "" : "JOIN football_event_active a ON a.edition=e.edition AND a.dataset=e.dataset AND a.season=e.season"}
      WHERE e.dataset=? AND e.season=? ${q.edition ? "AND e.edition=?" : ""}`,
   )
@@ -76,7 +117,10 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       generated_at: string;
       receipt_json: string;
       coverage_json: string;
-    }>();
+    }>(), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The football event archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
   if (!edition)
     return c.json({ error: "This source edition has not been published" }, 404);
   const conditions = ["edition=?"];
@@ -114,7 +158,10 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       FROM football_events WHERE ${where}
       GROUP BY player_name,team_id,division`;
     const leaderFilter = q.positive === "1" ? "value>0" : "value IS NOT NULL";
-    const [count, rows] = await Promise.all([
+    let count: { total: number } | null;
+    let rows: { results: Array<{ player_name: string; team_id: string | null; division: string | null; team: string | null; records: number; games: number; value: number | null }> };
+    try {
+      [count, rows] = await withTimeout(Promise.all([
       db.prepare(`SELECT count(*) AS total FROM (${grouped}) leaders WHERE ${leaderFilter}`)
         .bind(...values)
         .first<{ total: number }>(),
@@ -125,10 +172,12 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
          LIMIT 40 OFFSET ?`,
       )
         .bind(...values, q.page * 40)
-        .all(),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
+        .all<{ player_name: string; team_id: string | null; division: string | null; team: string | null; records: number; games: number; value: number | null }>(),
+      ]), DB_TIMEOUT_MS);
+    } catch {
+      return c.json({ error: "The football event archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
+    const response = c.json({
       view: q.view,
       dataset: q.dataset,
       season: q.season,
@@ -136,14 +185,20 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       page_size: 40,
       total: count?.total ?? 0,
       edition: edition.edition,
-      evidence: JSON.parse(edition.receipt_json),
-      coverage: JSON.parse(edition.coverage_json),
+      evidence: parseJson(edition.receipt_json),
+      coverage: parseJson(edition.coverage_json),
       metric: q.sort,
       direction: q.direction,
       rows: rows.results,
     });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
   }
-  const [count, rows] = await Promise.all([
+  let count: { total: number } | null;
+  let rows: { results: Array<{ payload_json: string }> };
+  try {
+    [count, rows] = await withTimeout(Promise.all([
     db.prepare(
       `SELECT count(*) AS total FROM football_events WHERE ${where}`,
     )
@@ -155,9 +210,11 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
     )
       .bind(...values, q.page * 40)
       .all<{ payload_json: string }>(),
-  ]);
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+    ]), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The football event archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
+  const response = c.json({
     view: q.view,
     dataset: q.dataset,
     season: q.season,
@@ -175,8 +232,14 @@ footballEvents.get("/", zValidator("query", query), async (c) => {
       direction: q.direction,
       positive: q.positive === "1",
     },
-    evidence: JSON.parse(edition.receipt_json),
-    coverage: JSON.parse(edition.coverage_json),
-    rows: rows.results.map((r) => JSON.parse(r.payload_json)),
+    evidence: parseJson(edition.receipt_json),
+    coverage: parseJson(edition.coverage_json),
+    rows: rows.results.flatMap((r) => {
+      const parsed = parseJson(r.payload_json);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? [parsed] : [];
+    }),
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
 });

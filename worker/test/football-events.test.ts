@@ -118,4 +118,26 @@ describe("football name-attributed events", () => {
     );
     expect(response.status).toBe(404);
   });
+
+  it("returns a retryable response when the event warehouse is busy", async () => {
+    const response = await footballEvents.request(
+      "/?dataset=defense&season=2025",
+      {},
+      { DB: { prepare: () => ({ bind: () => ({ first: vi.fn().mockRejectedValue(new Error("D1 busy")) }) }) } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "The football event archive is temporarily unavailable." });
+  });
+
+  it("withholds a malformed source payload without dropping the event response", async () => {
+    const response = await footballEvents.request("/?dataset=defense&season=2025", {}, {
+      DB: { prepare: vi.fn((sql: string) => ({ bind: () => ({
+        first: async () => sql.includes("football_event_editions") ? { edition, generated_at: "2026-09-05", receipt_json: "{}", coverage_json: "{}" } : { total: 1 },
+        all: async () => ({ results: [{ payload_json: "not-json" }] }),
+      }) })) },
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ rows: [] });
+  });
 });
