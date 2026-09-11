@@ -36,6 +36,15 @@ export default function Page() {
     (sum, season) => sum + season.player_team_records,
     0,
   );
+  const footballNcaaReceipts = football.sources.filter(
+    (source) => source.dataset === "ncaa_player_stats",
+  );
+  const footballNcaaLatest = [...footballNcaaReceipts].sort((a, b) =>
+    b.fetched_at.localeCompare(a.fetched_at),
+  )[0];
+  const footballNcaaSeasons = footballNcaaReceipts
+    .map((source) => source.season)
+    .sort((a, b) => a - b);
   const footballEvents = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/football/events.json"), "utf8"),
   ) as {
@@ -351,6 +360,10 @@ export default function Page() {
                 <strong>{count(footballArchiveRows)}</strong>
               </div>
               <div>
+                <span>NCAA player-game evidence · 2013–25</span>
+                <strong>{count(football.coverage.ncaa_player_stats_rows)}</strong>
+              </div>
+              <div>
                 <span>Upcoming FBS forecasts</span>
                 <strong>{count(football.coverage.forecast_games)}</strong>
               </div>
@@ -417,7 +430,9 @@ export default function Page() {
           The identified archive and the event notebook are complementary. Box
           rows use source athlete IDs and support player profiles; defensive and
           specialist releases carry names and game context without stable
-          athlete IDs, so they remain separate and are never name-joined.
+          athlete IDs, so they remain separate and are never name-joined. The
+          NCAA-derived player-game release is listed separately because it
+          carries contest context but no stable athlete ID.
         </p>
         <div className="table-scroll">
           <table className="data-table">
@@ -447,6 +462,26 @@ export default function Page() {
                 <td>
                   <small>Source athlete IDs; offensive and retained box categories.</small>
                   <Link href="/football/players/">Open identified player index →</Link>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>NCAA-derived player-game archive</strong>
+                  <small>{footballNcaaReceipts.length} source editions; names and contest context retained</small>
+                </td>
+                <td className="numeric">{football.coverage.ncaa_player_stats_rows.toLocaleString()}</td>
+                <td>
+                  {footballNcaaSeasons[0]}–{footballNcaaSeasons[footballNcaaSeasons.length - 1]}
+                </td>
+                <td className="numeric">—</td>
+                <td>
+                  <small>No stable athlete ID; never joined to the ESPN career archive by name.</small>
+                  <Link href="/football/source-stats/?dataset=ncaa_player_stats&season=2025">Open NCAA source rows →</Link>
+                  {footballNcaaLatest?.url && (
+                    <a href={footballNcaaLatest.url} target="_blank" rel="noreferrer">
+                      Latest release receipt ↗
+                    </a>
+                  )}
                 </td>
               </tr>
               {(["defense", "specialists"] as const).map((dataset) => {
