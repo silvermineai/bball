@@ -163,6 +163,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         <label className="control">
           <span>STAT SEASON</span>
           <select
+            name="player-archive-season"
             value={season}
             onChange={(e) => {
               setSeason(e.target.value);
@@ -181,18 +182,21 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         <label className="control">
           <span>PLAYER OR PROGRAM</span>
           <input
+            name="player-archive-search"
+            autoComplete="off"
             type="search"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
               setPage(0);
             }}
-            placeholder="Search players"
+            placeholder="Search players…"
           />
         </label>
         <label className="control">
           <span>SORT</span>
           <select
+            name="player-archive-sort"
             value={sort}
             onChange={(e) => {
               setSort(e.target.value as PlayerIndexSort);
@@ -220,6 +224,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
       </div>
       <label className="note">
         <input
+          name="player-archive-qualified"
           type="checkbox"
           checked={qualified}
           onChange={(e) => {

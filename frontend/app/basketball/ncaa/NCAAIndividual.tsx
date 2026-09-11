@@ -154,9 +154,9 @@ export default function NCAAIndividual() {
   return (
     <>
       <div className="toolbar">
-        <label className="control"><span>DIVISION</span><select value={division} onChange={(e) => setDivision(e.target.value as NCAADivisionFilter)}><option value="1">Division I</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">All divisions</option></select></label>
-        <label className="control"><span>LEADERBOARD</span><select value={stat} onChange={(e) => setStat(e.target.value as NCAAStatKey)}>{stats.map((key) => <option key={key} value={key}>{ncaaStatLabels[key]}</option>)}</select></label>
-        <label className="control"><span>PLAYER OR PROGRAM</span><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search national records" /></label>
+        <label className="control"><span>DIVISION</span><select name="ncaa-leader-division" value={division} onChange={(e) => setDivision(e.target.value as NCAADivisionFilter)}><option value="1">Division I</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">All divisions</option></select></label>
+        <label className="control"><span>LEADERBOARD</span><select name="ncaa-leader-stat" value={stat} onChange={(e) => setStat(e.target.value as NCAAStatKey)}>{stats.map((key) => <option key={key} value={key}>{ncaaStatLabels[key]}</option>)}</select></label>
+        <label className="control"><span>PLAYER OR PROGRAM</span><input name="ncaa-leader-search" autoComplete="off" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search national records…" /></label>
         <button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button>
       </div>
       {copied && <p role="status">{copied}</p>}
