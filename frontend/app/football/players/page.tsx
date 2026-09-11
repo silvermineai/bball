@@ -30,6 +30,9 @@ export default function Page() {
       <p className="note" style={{ marginBottom: 24 }}>
         Need a field that is not on the ranking board? <Link href="/football/source-stats/">Search every retained source record →</Link> by dataset, season or literal source text.
       </p>
+      <p className="note" style={{ marginBottom: 24 }}>
+        Want source-native NCAA totals? <Link href="/football/ncaa-leaders/">Open the NCAA player leaders board →</Link> for season-scoped name/team aggregates with raw-row links.
+      </p>
       <PlayerBrowser
         catalog={JSON.parse(
           fs.readFileSync(

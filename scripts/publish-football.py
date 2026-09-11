@@ -255,6 +255,7 @@ run(
 run([PY, "-m", "ncaa_scraper.football_history"])
 run([PY, "-m", "ncaa_scraper.football_evaluation"])
 run([PY, "scripts/build-football-market-benchmark.py"])
+run([PY, "scripts/build-football-ncaa-leaders.py"])
 run([PY, "-m", "ncaa_scraper.football_features"])
 run(
     [

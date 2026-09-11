@@ -63,6 +63,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       .map((g) => `/basketball/briefs/${g.id}/`),
     "/football/matchups/",
     "/football/players/",
+    "/football/ncaa-leaders/",
     "/football/source-stats/",
     "/football/careers/",
     "/football/events/",

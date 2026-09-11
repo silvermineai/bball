@@ -15,6 +15,7 @@ Cloudflare uses four stores: `bball-football-v1` holds the high-volume football 
 | Football desk | `/football/` | Upcoming games, model context, national ratings and journal |
 | Matchups | `/football/matchups/` | Search by team/conference/week; current D1-backed projected scores, win estimates and uncertainty with a static evidence fallback |
 | Player index | `/football/players/` | Search imported players; shareable season, role, division and qualification slices with offensive EPA rankings |
+| NCAA leaders | `/football/ncaa-leaders/` | Source-native NCAA player/game leaderboards for passing, rushing, receiving, defense, kicking and punt returns |
 | Player careers | `/football/careers/` | Search 35,834 identified source athletes across nine seasons, compare category-specific career EPA and workload, and follow each team trail |
 | Player game logs | `/football/player/?id=…&season=2025` | Exact-ID season production summary, EPA ranks, box-category coverage and raw source rows from Cloudflare D1 |
 | Power ratings | `/football/ratings/` | Independent opponent-adjusted ridge team ratings |
