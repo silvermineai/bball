@@ -939,6 +939,30 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY game_date DESC"))).toBe(true);
   });
 
+  it("returns a retryable response when the NCAA player game archive is busy", async () => {
+    const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-card/123/games?season=2026&limit=500",
+      {},
+      { DB: { prepare: vi.fn(), batch } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The NCAA player game archive is temporarily unavailable." });
+  });
+
+  it("returns a retryable response when the NCAA player card archive is busy", async () => {
+    const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-card/123?season=2026",
+      {},
+      { DB: { prepare: vi.fn(), batch } },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The NCAA player card is temporarily unavailable." });
+  });
+
   it("attaches selected-season source receipts to the NCAA player card", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: () => sql.includes("FROM bb_sources")

@@ -72,6 +72,7 @@ export default function NcaaPlayerCard() {
   const [exporting, setExporting] = useState(false);
   const [allGames, setAllGames] = useState<GameRow[] | null>(null);
   const [loadingGames, setLoadingGames] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   useEffect(() => {
     if (!id) return;
     const controller = new AbortController();
@@ -81,7 +82,8 @@ export default function NcaaPlayerCard() {
       fetch(`/data/basketball/impact-${season}.json`, { signal: controller.signal }).then((r) => r.ok ? r.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
     ]).then(([next, release]) => { if (!controller.signal.aborted) { setCard(next); setImpact(release.players.find((row) => row.season === season && row.player_id === id) || null); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
-  }, [id, season]);
+  }, [id, retryNonce, season]);
+  const retryPlayerCard = () => { setError(""); setRetryNonce((value) => value + 1); };
   useEffect(() => { if (!id) return; const url = new URL(window.location.href); url.searchParams.set("season", String(season)); window.history.replaceState(null, "", url); }, [id, season]);
   const selected = useMemo(() => card?.seasons.filter((row) => row.season === season), [card, season]);
   const selectedRow = selected?.[0];
@@ -145,7 +147,7 @@ export default function NcaaPlayerCard() {
   return <>
     <Link className="eyebrow" href="/basketball/ncaa-rankings/">← NCAA player rankings</Link>
     <div className="page-title"><div className="eyebrow">NCAA player card / source ID {id}</div><h1>{name}</h1><p>{team} · {label(season)}. This card keeps the NCAA identity namespace intact while bringing production, shot selection, roster fields and impact evidence together. It does not assert current eligibility or join the record to ESPN by name.</p><div className="hero-actions"><a className="hero-link" href={`https://stats.ncaa.org/players/${encodeURIComponent(id)}`} target="_blank" rel="noreferrer">Open NCAA source ↗</a><Link className="hero-link" href={`/basketball/ncaa-player-box/?season=${season}&q=${encodeURIComponent(id)}`}>Open box archive rows →</Link><Link className="hero-link" href={`/basketball/players/?q=${encodeURIComponent(name)}`}>Search ESPN-derived archive →</Link><Link className="hero-link" href={`/basketball/source-stats/?q=${encodeURIComponent(name)}`}>Search publisher stat fields →</Link></div></div>
-    {error ? <p className="status-error" role="alert">{error}</p> : !card ? <p className="empty" role="status">Loading source-native player evidence…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryPlayerCard}>Retry player card</button></div> : !card ? <p className="empty" role="status">Loading source-native player evidence…</p> : <>
       <div className="strip"><div><strong>{card.seasons.length}</strong><span>Season-team records</span></div><div><strong>{games || "—"}</strong><span>{label(season)} games</span></div><div><strong>{points == null || !games ? "—" : fmt(points / games)}</strong><span>Points per game</span></div><div><strong>{pct(ts)}</strong><span>Estimated TS%</span></div></div>
       <div className="toolbar"><label className="control"><span>STAT SEASON</span><select value={season} onChange={(e) => setSeason(Number(e.target.value))}>{Array.from(new Set(card.seasons.map((row) => row.season))).sort((a, b) => b - a).map((year) => <option value={year} key={year}>{label(year)}</option>)}</select></label><span className="note">{card.identity_note}</span></div>
       {card.source_receipts?.length ? <details className="paper-panel" style={{ marginBottom: 24 }}><summary><strong>Source receipts for the {label(season)} evidence</strong> · {card.source_receipts.length} release{card.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{card.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>{receipt.dataset.replace(/^ncaa_/, "NCAA ")}</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details> : null}
