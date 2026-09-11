@@ -17,12 +17,13 @@ footballPlayerHistory.get("/source", async (c) => {
   }
   const key = typeof archive?.key === "string" ? archive.key : "";
   const digest = typeof archive?.sha256 === "string" ? archive.sha256 : "";
-  if (!/^bball-research\/football\/player-history\/[a-f0-9]{64}\.tar$/.test(key) || !/^[a-f0-9]{64}$/.test(digest)) {
+  if (!/^bball-research\/football\/player-history\/[a-f0-9]{64}\.(?:tar|tar\.gz)$/.test(key) || !/^[a-f0-9]{64}$/.test(digest)) {
     return c.text("Football player source archive not published", 404);
   }
+  const compressed = key.endsWith(".tar.gz");
   const headers = new Headers({
-    "Content-Type": "application/x-tar",
-    "Content-Disposition": 'attachment; filename="football-player-history-sources.tar"',
+    "Content-Type": compressed ? "application/gzip" : "application/x-tar",
+    "Content-Disposition": `attachment; filename="football-player-history-sources.${compressed ? "tar.gz" : "tar"}"`,
     ETag: `"${digest}"`,
     "Cache-Control": "public, max-age=31536000, immutable",
     "X-Content-Type-Options": "nosniff",

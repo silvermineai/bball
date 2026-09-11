@@ -2,7 +2,7 @@ import CareerBrowser from "./CareerBrowser";
 
 export const metadata = {
   title: "College football player careers across seasons",
-  description: "Search identified college football player records across nine SportsDataverse source seasons, with category-specific EPA, workload and team history.",
+  description: "Search identified college football player records across 17 SportsDataverse source seasons, with category-specific EPA, workload and team history.",
   alternates: { canonical: "/football/careers/" },
 };
 

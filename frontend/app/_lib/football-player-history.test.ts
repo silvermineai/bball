@@ -11,9 +11,9 @@ const catalog: PlayerCatalog = JSON.parse(
 const bytes = (data: Buffer) => Uint8Array.from(data).buffer;
 describe("football player history", () => {
   it("verifies all season hashes, positive identities and offensive rank cohorts", async () => {
-    expect(catalog.seasons.map((s) => s.season)).toEqual([
-      2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026,
-    ]);
+    expect(catalog.seasons.map((s) => s.season)).toEqual(
+      Array.from({ length: 17 }, (_, index) => 2010 + index),
+    );
     for (const season of catalog.seasons) {
       const d = await verifyPlayerIndex(
         bytes(fs.readFileSync(root + season.file)),

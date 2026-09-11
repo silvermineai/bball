@@ -3,6 +3,7 @@ import { footballPlayerHistory } from "../src/football-player-history";
 
 const digest = "b".repeat(64);
 const key = `bball-research/football/player-history/${digest}.tar`;
+const compressedKey = `bball-research/football/player-history/${digest}.tar.gz`;
 
 function bindings(payload = JSON.stringify({ archive: { key, sha256: digest } })) {
   const prepare = vi.fn(() => ({ first: async () => ({ payload_json: payload }) }));
@@ -34,5 +35,14 @@ describe("football player source archive", () => {
     const response = await footballPlayerHistory.request("/source", { headers: { "If-None-Match": `"${digest}"` } }, env);
     expect(response.status).toBe(304);
     expect(env.RESEARCH_ARCHIVE.get).not.toHaveBeenCalled();
+  });
+
+  it("streams compressed archives with an accurate download type", async () => {
+    const env = bindings(JSON.stringify({ archive: { key: compressedKey, sha256: digest } }));
+    const response = await footballPlayerHistory.request("/source", {}, env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/gzip");
+    expect(response.headers.get("content-disposition")).toContain("football-player-history-sources.tar.gz");
+    expect(env.RESEARCH_ARCHIVE.get).toHaveBeenCalledWith(compressedKey.slice("bball-research/".length));
   });
 });

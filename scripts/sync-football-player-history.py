@@ -2,8 +2,10 @@
 
 import concurrent.futures
 import fcntl
+import gzip
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -135,16 +137,23 @@ for receipt in manifest["dependencies"]:
             or json.loads(actual[0]["receipt_json"])["sha256"] != receipt["sha256"]
         ):
             raise SystemExit("Remote schedule/directory source differs after sync")
-archive = LOCAL / "sources.tar"
-with tarfile.open(archive, "w") as tar:
+tar_archive = LOCAL / "sources.tar"
+with tarfile.open(tar_archive, "w") as tar:
     for path, name in files:
         info = tar.gettarinfo(str(path), arcname=name)
         info.mtime = info.uid = info.gid = 0
         info.uname = info.gname = ""
         with path.open("rb") as stream:
             tar.addfile(info, stream)
+# Wrangler/R2 rejects uploads over 300 MiB. Compress the deterministic tar
+# with an explicit zero mtime and no embedded filename so the content hash is
+# stable across runs while preserving the complete source bundle.
+archive = LOCAL / "sources.tar.gz"
+with tar_archive.open("rb") as source, archive.open("wb") as compressed:
+    with gzip.GzipFile(filename="", mode="wb", fileobj=compressed, mtime=0) as target:
+        shutil.copyfileobj(source, target)
 digest = sha(archive)
-key = f"bball-research/football/player-history/{digest}.tar"
+key = f"bball-research/football/player-history/{digest}.tar.gz"
 checkpoint = LOCAL / "archive.json"
 previous = json.loads(checkpoint.read_text()) if checkpoint.exists() else {}
 if previous.get("sha256") != digest:
@@ -157,7 +166,7 @@ if previous.get("sha256") != digest:
             "--file",
             str(archive),
             "--content-type",
-            "application/x-tar",
+            "application/gzip",
             "--remote",
         ]
     )
@@ -257,12 +266,17 @@ archive_manifest = {
     "archive": {
         "key": key,
         "sha256": digest,
-        "content_type": "application/x-tar",
+        "content_type": "application/gzip",
     },
 }
+# Keep the large manifest update within D1's statement/request limits. The
+# active row already contains the full manifest from `activate`; only the
+# small archive pointer is added afterward.
+archive_pointer = json.dumps(archive_manifest["archive"], sort_keys=True, separators=(",", ":"))
 query(
-    "UPDATE football_artifacts SET payload_json="
-    + quote(json.dumps(archive_manifest, sort_keys=True, separators=(",", ":")))
+    "UPDATE football_artifacts SET payload_json=json_set(payload_json,'$.archive',json("
+    + quote(archive_pointer)
+    + "))"
     + " WHERE name='football-player-history'"
 )
 if json.loads(

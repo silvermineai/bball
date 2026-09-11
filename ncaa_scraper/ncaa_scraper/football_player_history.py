@@ -14,9 +14,9 @@ from .football import DB_PATH, player_board, read_stats, store_rows
 from .football_careers import write as write_careers
 from .football_sources import CACHE, DATASETS, RELEASES, ROOT, ReleaseClient
 
-# SportsDataverse's public football player releases are available back to 2018.
+# SportsDataverse's public football player releases are available back to 2010.
 # Keep this archive independent from the forecast model's 2022+ evaluation window.
-YEARS = tuple(range(2018, 2025))
+YEARS = tuple(range(2010, 2025))
 KINDS = ("box", "passing", "rushing", "receiving", "defense", "specialists")
 LOCAL = ROOT / ".local/football-player-history"
 OUT = ROOT / "frontend/public/data/football"
@@ -390,7 +390,7 @@ def main():
             conn.row_factory = sqlite3.Row
             # The normal forecast refresh intentionally retains only its
             # five-season model window. Historical player validation reaches
-            # back to 2018, so load the permitted team and schedule releases
+            # back to 2010, so load the permitted team and schedule releases
             # before checking player rows instead of assuming they are present.
             ensure_historical_dependencies(conn, client, refresh=args.refresh)
             downloads = [
