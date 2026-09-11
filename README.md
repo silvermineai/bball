@@ -47,7 +47,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Shooting lab | `/basketball/shooting/` | 1.45 million recorded attempts across 2024–25 and 2025–26, player/program shot maps and box-score reconciliation |
 | Play-by-play archive | `/basketball/pbp/` | Search 15.8 million indexed events across eight published seasons and jump to the publisher game page for the complete event log |
 | Player statistics | `/basketball/players/` | 9,990 player/team entries, shareable ranking filters, workload filters and D1 game logs |
-| Player source profiles | `/basketball/player/?id=…` | ESPN-derived identity, position, size, experience and status context across 24 seasons |
+| Player source profiles | `/basketball/player/?id=…` | ESPN-derived identity, position, size, experience and status context across 24 seasons, with publisher season/game rows and release receipts |
 | Player ID crosswalk | `/basketball/crosswalk/` | Search 2025–26 SportsDataverse ESPN/Fox/Yahoo identifiers with publisher match confidence and source receipt |
 | Player profile browser | `/basketball/player-profiles/` | Search the complete legal source-profile archive by season, position, status or player ID; share filtered profile links and jump to dated evidence |
 | NCAA player box archive | `/basketball/ncaa-player-box/` | Browse NCAA-derived game-level rows across 2010–11 through 2025–26 with shooting splits, playmaking context and a season-scoped integrity audit in the separate NCAA ID namespace |
