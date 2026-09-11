@@ -358,6 +358,10 @@ def import_history(conn, downloads, out=OUT, local=LOCAL, cache=CACHE):
     # Build the cross-season index only after every season board and its catalog
     # have been written, so the reproducibility manifest can include its hash.
     write_careers(out)
+    career_files = [
+        "player-careers.json",
+        *sorted(path.name for path in out.glob("player-careers-*.json")),
+    ]
     manifest = {
         "sources": sources,
         "dependencies": dependencies,
@@ -366,7 +370,7 @@ def import_history(conn, downloads, out=OUT, local=LOCAL, cache=CACHE):
             name: sha(out / name)
             for name in [
                 "player-catalog.json",
-                "player-careers.json",
+                *career_files,
                 *[s["file"] for s in catalog["seasons"]],
             ]
         },

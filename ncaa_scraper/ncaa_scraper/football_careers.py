@@ -29,6 +29,7 @@ CATEGORIES = (
     "kickReturns",
     "puntReturns",
 )
+CAREER_CHUNK_SIZE = 5000
 
 
 def _number(value):
@@ -200,8 +201,35 @@ def write(public: Path = PUBLIC) -> dict:
     catalog_path = public / "player-catalog.json"
     catalog = json.loads(catalog_path.read_text()) if catalog_path.exists() else {}
     result = build(rows, seasons, source_catalog_edition=catalog.get("edition"))
+    # Keep every deployable asset below Cloudflare Workers' 25 MiB limit. The
+    # manifest carries the shared metadata; chunks preserve the complete
+    # player list and are merged only in the browser.
+    chunk_names = [
+        f"player-careers-{index:02d}.json"
+        for index in range(max(1, (len(result["players"]) + CAREER_CHUNK_SIZE - 1) // CAREER_CHUNK_SIZE))
+    ]
+    for old in public.glob("player-careers-*.json"):
+        if old.name not in chunk_names:
+            old.unlink()
+    shared = {key: value for key, value in result.items() if key != "players"}
+    for index, name in enumerate(chunk_names):
+        chunk = {
+            **shared,
+            "chunk_index": index,
+            "chunk_count": len(chunk_names),
+            "players": result["players"][index * CAREER_CHUNK_SIZE : (index + 1) * CAREER_CHUNK_SIZE],
+        }
+        (public / name).write_text(
+            json.dumps(chunk, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+            + "\n"
+        )
+    manifest = {
+        **shared,
+        "chunk_size": CAREER_CHUNK_SIZE,
+        "chunks": chunk_names,
+    }
     (public / "player-careers.json").write_text(
-        json.dumps(result, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        json.dumps(manifest, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
         + "\n"
     )
     return result
