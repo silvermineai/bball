@@ -25,8 +25,9 @@ export default function Page() {
           </h1>
           <p>
             Search historical market observations held in the research ledger.
-            Each row keeps its source and capture context so a coach can see
-            what evidence was available around a matchup.
+            Each row keeps its source, provider update clock and capture
+            context so a coach can see what evidence was available around a
+            matchup.
           </p>
           <a className="hero-link" href="#market-policy">
             Read the evidence policy ↓
@@ -63,7 +64,7 @@ export default function Page() {
             <p>
               The archive joins a retained market observation to the game
               record: season, teams, scheduled kickoff, line or decimal
-              prices, source and observed time. Moneyline rows also show the
+              prices, source, provider update clock and observed time. Moneyline rows also show the
               no-vig-style two-sided implied home probability calculated from
               the retained prices. A row can be downloaded from the desk for
               further review.

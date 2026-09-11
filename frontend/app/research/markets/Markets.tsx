@@ -28,6 +28,7 @@ type Row = {
   over_price: number | null;
   under_price: number | null;
   observed_at: string | null;
+  updated_at: string | null;
   source: string | null;
   is_pregame: number;
   market?: string | null;
@@ -139,8 +140,8 @@ export default function Markets() {
     return () => controller.abort();
   }, [sport, season, query, page]);
 
-  const headers = ["season", "away", "home", "kickoff", "market", "home_spread", "total", "home_price_decimal", "away_price_decimal", "over_price_decimal", "under_price_decimal", "home_implied_probability", "observed_at", "source", "is_pregame"];
-  const rowValues = (r: Row) => [r.season, r.away_name, r.home_name, r.kickoff, r.market, r.home_spread, r.total, r.home_price, r.away_price, r.over_price, r.under_price, homeImplied(r), r.observed_at, r.source, r.is_pregame];
+  const headers = ["season", "away", "home", "kickoff", "market", "home_spread", "total", "home_price_decimal", "away_price_decimal", "over_price_decimal", "under_price_decimal", "home_implied_probability", "observed_at", "updated_at", "source", "is_pregame"];
+  const rowValues = (r: Row) => [r.season, r.away_name, r.home_name, r.kickoff, r.market, r.home_spread, r.total, r.home_price, r.away_price, r.over_price, r.under_price, homeImplied(r), r.observed_at, r.updated_at, r.source, r.is_pregame];
   const downloadRows = (rows: Row[], filename: string) => {
     const lines = [headers, ...rows.map(rowValues)];
     const csv = lines.map((line) => line.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
@@ -209,7 +210,7 @@ export default function Markets() {
       {(copied || exportMessage) && <p className="note" role="status">{copied || exportMessage}</p>}
       {error ? <div className="status-error" role="alert">{error}</div> : !data ? <p className="empty" role="status">Loading retained observations…</p> : <>
         <p className="note" role="status">{data.total.toLocaleString()} observations · page {page + 1} of {pages} · every row labelled as archival reference</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Observed</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Observed line / price</th><th>Captured</th><th>Provider update</th><th>Source / status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.source}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}{r.bookmaker && <small>{r.bookmaker}</small>}</td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td>{clock(r.updated_at)}{!r.updated_at && <small>Provider clock unavailable</small>}</td><td><small>{r.source || "Unattributed source"}</small><br /><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
         {!data.rows.length && data.total === 0 && !query.trim() && (
           <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
             <div className="eyebrow">Connector status</div>

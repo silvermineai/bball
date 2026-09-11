@@ -80,6 +80,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     football
       ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
+                NULL AS updated_at,
                 NULL AS home_price,NULL AS away_price,NULL AS over_price,NULL AS under_price,
                 NULL AS market,NULL AS bookmaker,NULL AS provider
            FROM football_markets m JOIN football_games g ON g.id=m.game_id
@@ -92,7 +93,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(m.payload_json,'$.away_price') AS away_price,
                 json_extract(m.payload_json,'$.over_price') AS over_price,
                 json_extract(m.payload_json,'$.under_price') AS under_price,
-                m.captured_at AS observed_at,m.provider AS source,1 AS is_pregame,
+                m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,1 AS is_pregame,
                 m.market,m.bookmaker,m.provider
            FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
           WHERE ${where}
