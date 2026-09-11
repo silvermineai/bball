@@ -15,6 +15,9 @@ export default function robots(): MetadataRoute.Robots {
         "/basketball/login",
       ],
     },
-    sitemap: "https://bball.silvermine.dev/sitemap.xml",
+    // Cloudflare can retain a negative cache entry for Next's conventional
+    // sitemap.xml asset. Publish the same generated document under a stable
+    // alternate key in the combined Workers asset directory.
+    sitemap: "https://bball.silvermine.dev/sitemap-index.xml",
   };
 }

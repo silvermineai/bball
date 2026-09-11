@@ -2,6 +2,9 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 await rm("dist/client", { recursive: true, force: true });
 await mkdir("dist/client", { recursive: true });
 await cp("out", "dist/client", { recursive: true });
+// Keep the generated sitemap reachable when a previous negative cache entry
+// exists for Next's conventional /sitemap.xml key.
+await cp("out/sitemap.xml", "dist/client/sitemap-index.xml");
 await mkdir("dist/client/basketball-shell", { recursive: true });
 await cp(
   "dist/basketball/index.html",
