@@ -51,6 +51,7 @@ export default function Impact() {
             ))}
           </select>
         </label>
+        <a className="button secondary" href={`/api/basketball/research/impact/source?season=${season}`}>Download source parquet ↓</a>
         <label className="control">
           <span>PLAYER OR TEAM</span>
           <input

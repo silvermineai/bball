@@ -1689,6 +1689,12 @@ def build(conn, target=2027):
         )
     ]
     impact_by_season = {season: impact_for_season(season) for season in impact_seasons}
+    impact_receipts = {
+        int(row[0]): json.loads(row[1])
+        for row in conn.execute(
+            "SELECT season, receipt_json FROM bb_sources WHERE dataset='ncaa_rapm'"
+        )
+    }
     impact = impact_by_season.get(target - 1, [])
     season_players = player_index(conn, target - 1)
     ncaa_player_box_seasons = [
@@ -1727,7 +1733,16 @@ def build(conn, target=2027):
             "season": target - 1,
             "players": impact,
             "seasons": [
-                {"season": season, "players": len(rows), "qualified": sum(bool(row["qualified"]) for row in rows)}
+                {
+                    "season": season,
+                    "players": len(rows),
+                    "qualified": sum(bool(row["qualified"]) for row in rows),
+                    "source": {
+                        "sha256": impact_receipts.get(season, {}).get("sha256"),
+                        "url": impact_receipts.get(season, {}).get("url"),
+                        "fetched_at": impact_receipts.get(season, {}).get("fetched_at"),
+                    },
+                }
                 for season, rows in impact_by_season.items()
             ],
             "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
