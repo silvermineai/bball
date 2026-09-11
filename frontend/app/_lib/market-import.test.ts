@@ -28,4 +28,26 @@ describe("market import preflight", () => {
       line: null,
     }]);
   });
+
+  it("accepts provider line aliases used by the server importer", () => {
+    const aliasHeader = header.replace("line,", "home_spread,total_line,");
+    const cells = new Array<string>(aliasHeader.split(",").length).fill("");
+    Object.assign(cells, {
+      0: "401",
+      1: "spreads",
+      2: "2027-01-01T20:00:00Z",
+      3: "2026-12-31T20:00:00Z",
+      4: "2026-12-31T19:59:00Z",
+      5: "Home",
+      6: "Away",
+      7: "Book",
+      8: "-3.5",
+      10: "1.91",
+      11: "1.91",
+      19: "event-2",
+    });
+    const csv = `${aliasHeader}\n${cells.join(",")}`;
+    expect(validateMarketImportCsv(csv, new Date("2026-12-31T21:00:00Z"))).toMatchObject({ rows: 1, markets: { spreads: 1 }, errors: [] });
+    expect(parseMarketImportRows(csv)[0].line).toBe(-3.5);
+  });
 });
