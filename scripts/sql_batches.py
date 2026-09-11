@@ -15,6 +15,7 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "db reset because its code was updated",
     "d1 db storage operation exceeded timeout",
     "storage operation exceeded timeout",
+    "not currently importing anything",
 )
 
 
