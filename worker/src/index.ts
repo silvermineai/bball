@@ -743,15 +743,39 @@ const ncaaLeaderQuery = z.object({
   page: z.coerce.number().int().min(0).max(100).default(0),
   meta: z.enum(["0", "1"]).default("0"),
 });
+const NCAA_LEADER_CACHE_TTL = 300;
+const NCAA_LEADER_TIMEOUT_MS = 5000;
+
+function withNCAALeaderTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA leaderboard database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
   const db = researchDb(c.env);
   const { division, stat, q, page, meta } = c.req.valid("query");
+  const cache = typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withNCAALeaderTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the leaderboard fail.
+    }
+  }
   if (meta === "1") {
     // Keep the national page's coverage matrix in the compact D1 warehouse so
     // the browser can use the live release without downloading the large
     // checked-in fallback. Payload fields are counted only when the source
     // actually supplied a numeric value; missing fields stay unavailable.
-    const records = await db.prepare(
+    try {
+    const records = await withNCAALeaderTimeout(db.prepare(
       "SELECT division,ppg,rpg,apg,mpg,payload_json FROM ncaa_individual_players WHERE season=?",
     ).bind(2026).all<{
       division: number;
@@ -760,7 +784,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       apg: number | null;
       mpg: number | null;
       payload_json: string;
-    }>();
+    }>(), NCAA_LEADER_TIMEOUT_MS);
     const coverageStats = ["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"] as const;
     const divisions: Record<string, { players: number; [key: string]: number }> = {
       "1": { players: 0 },
@@ -789,12 +813,17 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
         if (typeof value === "number" && Number.isFinite(value)) bucket[key] += 1;
       }
     }
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
+    const response = c.json({
       season: 2026,
       coverage: { players: records.results.length, divisions },
       provenance: { kind: "publisher_snapshot", dataset: "ncaa_final_national_rankings", publisher_rank: true },
     });
+    response.headers.set("Cache-Control", `public, max-age=${NCAA_LEADER_CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+    } catch {
+      return c.json({ error: "The NCAA leaderboard catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const where = division === "all" ? "season=?" : "season=? AND division=?";
   const binds: Array<string | number> = division === "all" ? [2026] : [2026, Number(division)];
@@ -808,8 +837,8 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   // one column per measure (the production database is at its size ceiling).
   const publisherRankColumn = stat === "apg" || stat === "ast" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
-  const rows = await db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
+  try {
+  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
   const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
   const provenance = stat === "apg" || stat === "ast"
     ? {
@@ -837,7 +866,23 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       publisher_rank: true,
     };
   const total = rows.results.length ? Number((rows.results[0] as Record<string, unknown>).total_count || 0) : 0;
-  return c.json({ season: 2026, division, stat, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => { const payload = JSON.parse(String(row.payload_json)); const { payload_json, stat_value, total_count, ...summary } = row as Record<string, unknown>; return { ...summary, [stat]: stat_value, payload }; }) });
+  const response = c.json({ season: 2026, division, stat, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => {
+    let payload: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(String(row.payload_json));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) payload = parsed as Record<string, unknown>;
+    } catch {
+      // Preserve the leaderboard row while withholding malformed source JSON.
+    }
+    const { payload_json, stat_value, total_count, ...summary } = row as Record<string, unknown>;
+    return { ...summary, [stat]: stat_value, payload };
+  }) });
+  response.headers.set("Cache-Control", `public, max-age=${NCAA_LEADER_CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The NCAA leaderboard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
 
 // Keep completed-game reading snapshots reachable from their original URLs.

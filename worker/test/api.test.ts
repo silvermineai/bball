@@ -741,6 +741,20 @@ describe("bball api", () => {
     }
   });
 
+  it("returns a retryable status when the NCAA leaderboard catalog is unavailable", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?meta=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "The NCAA leaderboard catalog is temporarily unavailable.",
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("labels NCAA assist leaderboard provenance without inventing a publisher rank", async () => {
     const prepare = vi.fn(() => ({
       bind: vi.fn(() => ({
