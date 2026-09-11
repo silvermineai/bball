@@ -144,10 +144,12 @@ export default function GlobalSearch() {
       <label>
         <span className="sr-only">Search college basketball and football players and programs</span>
         <input
+          name="global-search"
+          autoComplete="off"
           type="search"
           value={query}
           maxLength={120}
-          placeholder="Search players or programs"
+          placeholder="Search players or programs…"
           aria-label="Search college basketball and football players and programs"
           aria-expanded={open}
           onFocus={() => { if (results.length) setOpen(true); }}
