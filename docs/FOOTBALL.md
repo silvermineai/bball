@@ -1,6 +1,6 @@
 # Football data and forecasting
 
-The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. Football research uses the dedicated `bball-football-v1` database; the legacy `bball-silvermine` store keeps shared authentication, scouting and compatibility tables. This split keeps the high-volume football archive below D1's per-database size limit while preserving the same public API routes. The plain-language [football learning guide](/football/learn/) maps the raw source archive to EPA, team efficiency, forecast and matchup questions. Native basketball forecasts and research pages now start at `/basketball/`; preserved TanStack scouting tools remain on their archive routes. See [basketball documentation](BASKETBALL.md).
+The football-first publication is built in **Next.js 16**, React and Tailwind, statically exported to Cloudflare Workers Assets. Structured source records, model versions, forecasts and market observations are stored in **Cloudflare D1**. Football research uses the dedicated `bball-football-v1` database; the legacy `bball-silvermine` store keeps shared authentication, scouting and compatibility tables. This split keeps the high-volume football archive below D1's per-database size limit while preserving the same public API routes. The plain-language [football learning guide](/football/learn/) maps the raw source archive to EPA, team efficiency, forecast and matchup questions. Native basketball forecasts and research pages now start at `/basketball/`; the preserved TanStack shell is retained only for archived compatibility links. See [basketball documentation](BASKETBALL.md).
 
 ## Published data edition
 
@@ -49,7 +49,7 @@ The matchup desk also publishes a **research-only football efficiency challenger
 
 ## Calibration release verification
 
-The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 15 Worker tests, plus Worker type checking and the combined production build. An independent database audit checked exact temporal cohorts, the fitted logistic gradient, all 744 legacy forecast reproductions, unchanged point forecasts, retained historical rows and the implementation hash. Browser checks covered desktop/mobile layout, chart hydration, the evidence download, a game brief and the forecast guide. The existing 519 KB legacy basketball bundle warning remains.
+The v2 release passed 12 football tests, 12 ledger tests, 23 frontend tests and 15 Worker tests, plus Worker type checking and the combined production build. An independent database audit checked exact temporal cohorts, the fitted logistic gradient, all 744 legacy forecast reproductions, unchanged point forecasts, retained historical rows and the implementation hash. Browser checks covered desktop/mobile layout, chart hydration, the evidence download, a game brief and the forecast guide. The compatibility shell remains a 523 KB JavaScript bundle and no longer copies the research data tree into its temporary Vite output.
 
 Production verification checked byte equality for the model/evidence/ledger assets, methodology, forecast guide, sample brief and homepage, and confirmed the basketball overview was unchanged. Live D1 history retains both v1 and v2 with their original registration clocks. Deployed Worker version: `5f1acb0c-0962-4d7e-86b0-d5b17c5f64ed`.
 
@@ -120,7 +120,7 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 
 ## Remaining goal scope
 
-- Finish migrating basketball pages from TanStack to Next.js.
+- The active basketball pages have migrated to Next.js; the TanStack shell remains only for archived compatibility URLs.
 - Extend the verified basketball efficiency baseline with dated roster features and rolling evaluations.
 - Add verified rosters, recruiting records, eligibility and transfers with provenance.
 - Extend the football efficiency challenger with more retained historical seasons and evaluate rolling splits and calibration stability before considering any production change.
