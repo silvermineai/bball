@@ -133,7 +133,7 @@ export default function Recruiting() {
     const controller = new AbortController();
     setLiveRoster(null);
     setLiveRosterError("");
-    fetch(`/api/basketball/research/rosters?season=${season}`, { signal: controller.signal })
+    fetch(`/api/basketball/research/rosters?season=${season}&limit=10000`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live roster observation edition is unavailable.");
         return response.json() as Promise<BBRosters>;
@@ -381,6 +381,11 @@ export default function Recruiting() {
         rows without enough recorded games or minutes. A starter-rate threshold
         also excludes rows where the source did not report a start flag.
       </p>
+      {rosterData?.players_truncated && (
+        <p className="career-coverage-warning" role="status">
+          The live source release is larger than the browser safety limit; showing {rosterData.players_returned?.toLocaleString() || rosterData.players.length.toLocaleString()} of {rosterData.players_observed.toLocaleString()} player rows. Use the exact parquet release above for the complete file.
+        </p>
+      )}
       {error ? (
         <p role="alert" className="status-error">
           {error}

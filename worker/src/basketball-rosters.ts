@@ -6,7 +6,11 @@ import { researchDb } from "./research-db";
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
   status: z.enum(["all", "same_program", "different_program", "new_to_dataset", "ambiguous"]).default("all"),
-  limit: z.coerce.number().int().min(1).max(1000).default(1000),
+  // The recruiting board is a source browser, so its default must include
+  // the complete current release (currently ~5.5k rows). Keep a bounded cap
+  // for unusually large future editions rather than silently returning the
+  // first 1,000 names while reporting the full source count.
+  limit: z.coerce.number().int().min(1).max(10000).default(10000),
 });
 
 type RosterRow = { team_id: string; athlete_id: string; profile_json: string };
@@ -186,6 +190,8 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     status_counts: statusCounts,
     team_summaries: teamSummaries,
     players: filteredPlayers,
+    players_returned: filteredPlayers.length,
+    players_truncated: filteredPlayers.length < players.length,
     player_filter: { status, limit },
     source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });

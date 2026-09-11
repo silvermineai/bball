@@ -231,6 +231,8 @@ export type BBRosters = {
   previous_season: number;
   teams_observed: number;
   players_observed: number;
+  players_returned?: number;
+  players_truncated?: boolean;
   prior_players_not_observed: number;
   unusable_rows?: number;
   status_counts: Record<string, number>;
