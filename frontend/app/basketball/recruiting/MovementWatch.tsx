@@ -31,6 +31,7 @@ export default function MovementWatch() {
   const [status, setStatus] = useState<MovementStatus>("different_program");
   const [data, setData] = useState<MovementResponse | null>(null);
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const { data: published } = useBasketballRelease<BBRosters>(season === 2026 ? "rosters-2026" : "rosters");
 
   useEffect(() => {
@@ -51,7 +52,9 @@ export default function MovementWatch() {
         }
       });
     return () => controller.abort();
-  }, [season, status]);
+  }, [retryNonce, season, status]);
+
+  const retryLiveRoster = () => { setError(""); setRetryNonce((value) => value + 1); };
 
   const players = useMemo(
     () => [...(data?.players ?? [])]
@@ -101,7 +104,7 @@ export default function MovementWatch() {
       <p className="note">
         {data
           ? `${count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full source view.`
-          : error || "Checking the live roster observation edition…"}
+          : error ? <>{error} <button className="button secondary" type="button" onClick={retryLiveRoster}>Retry movement archive</button></> : "Checking the live roster observation edition…"}
       </p>
       {data?.source && (
         <p className="note" style={{ marginTop: 8 }}>

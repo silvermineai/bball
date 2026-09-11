@@ -39,20 +39,46 @@ const readProfile = (value: string): Record<string, unknown> => {
  */
 export const basketballRosters = new Hono<{ Bindings: Env }>();
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("roster archive query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
   const { season, status, q, limit } = c.req.valid("query");
   const previousSeason = season - 1;
   const sourceDataset = season === 2026 ? "player_box" : "rosters";
   const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make recruiting evidence disappear.
+    }
+  }
 
-  const [currentRoster, previousRoster, previousParticipation, currentParticipation, teams, source] = await Promise.all([
+  try {
+  const [currentRoster, previousRoster, previousParticipation, currentParticipation, teams, source] = await withTimeout(Promise.all([
     db.prepare("SELECT team_id,athlete_id,profile_json FROM bb_rosters WHERE season=? ORDER BY team_id,athlete_id").bind(season).all<RosterRow>(),
     db.prepare("SELECT team_id,athlete_id,profile_json FROM bb_rosters WHERE season=? ORDER BY team_id,athlete_id").bind(previousSeason).all<RosterRow>(),
     db.prepare("SELECT team_id,athlete_id,name,games,minutes FROM bb_participation WHERE season=? ORDER BY team_id,athlete_id").bind(previousSeason).all<ParticipationRow>(),
     db.prepare("SELECT team_id,athlete_id,name,games,minutes FROM bb_participation WHERE season=? ORDER BY team_id,athlete_id").bind(season).all<ParticipationRow>(),
     db.prepare("SELECT team_id,team_name FROM bb_team_season WHERE season IN (?,?) AND team_name IS NOT NULL").bind(previousSeason, season).all<{ team_id: string; team_name: string }>(),
     db.prepare("SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?").bind(sourceDataset, season).first<{ receipt_json: string }>(),
-  ]);
+  ]), DB_TIMEOUT_MS);
 
   // The 2025–26 view is a recorded participation view, matching the local
   // publisher's target=2026 behavior. Future views use source roster rows.
@@ -183,8 +209,7 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
 
   let receipt: Record<string, unknown> | null = null;
   try { receipt = source?.receipt_json ? JSON.parse(source.receipt_json) as Record<string, unknown> : null; } catch { receipt = null; }
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  const response = c.json({
     season,
     previous_season: previousSeason,
     basis: season === 2027 ? "Prior-season recorded appearances versus unconfirmed source roster listings" : "Prior-season recorded appearances versus recorded appearances",
@@ -201,4 +226,10 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     player_filter: q ? { status, q, limit } : { status, limit },
     source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The roster evidence archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

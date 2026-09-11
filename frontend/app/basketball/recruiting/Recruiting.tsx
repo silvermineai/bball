@@ -84,7 +84,8 @@ export default function Recruiting() {
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [picks, setPicks] = useState<string[]>([]),
-    [hydrated, setHydrated] = useState(false);
+    [hydrated, setHydrated] = useState(false),
+    [retryNonce, setRetryNonce] = useState(0);
   useEffect(() => {
     const filters = parseRosterFilters(window.location.search);
     setSeason(filters.season);
@@ -147,7 +148,8 @@ export default function Recruiting() {
         }
       });
     return () => controller.abort();
-  }, [season]);
+  }, [retryNonce, season]);
+  const retryLiveRoster = () => { setLiveRosterError(""); setRetryNonce((value) => value + 1); };
   const rosterData = liveRoster
     ? {
         ...liveRoster,
@@ -351,7 +353,7 @@ export default function Recruiting() {
         {liveRoster
           ? "Live Cloudflare D1 roster edition connected; current source listings and workload continuity are refreshed from the research warehouse."
           : liveRosterError
-            ? `${liveRosterError} Showing the bundled roster release.`
+            ? <>{liveRosterError} Showing the bundled roster release. <button className="button secondary" type="button" onClick={retryLiveRoster}>Retry live roster</button></>
             : "Checking the live roster observation edition…"}
       </p>
       {sourceReceipt && (sourceReceipt.url || sourceReceipt.sha256 || sourceReceipt.fetched_at) && (

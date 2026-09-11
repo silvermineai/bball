@@ -126,4 +126,17 @@ describe("live basketball roster observations", () => {
     expect(body.players_truncated).toBe(false);
     expect(body.player_filter).toEqual({ status: "all", q: "forward", limit: 10000 });
   });
+
+  it("returns a retryable response when the roster warehouse is busy", async () => {
+    const prepare = vi.fn(() => ({
+      bind: () => ({
+        all: vi.fn().mockRejectedValue(new Error("D1 busy")),
+        first: vi.fn().mockRejectedValue(new Error("D1 busy")),
+      }),
+    }));
+    const response = await basketballRosters.request("/?season=2027", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "The roster evidence archive is temporarily unavailable." });
+  });
 });
