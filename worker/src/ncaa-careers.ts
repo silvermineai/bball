@@ -4,6 +4,13 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
+type SourceReceipt = {
+  dataset: string;
+  season: number;
+  url: string;
+  fetched_at: string;
+  sha256: string;
+};
 const metrics = [
   "points",
   "ppg",
@@ -89,6 +96,17 @@ const metricDenominator = (metric: Metric): string | null => metricDenominators[
 // board or in an export.
 const sourceNumber = (path: string) => `CASE WHEN json_extract(stats_json,'$.${path}') IS NOT NULL THEN CAST(json_extract(stats_json,'$.${path}') AS REAL) ELSE NULL END`;
 
+const parseReceipt = (dataset: string, season: number, value: string): SourceReceipt | null => {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return typeof parsed.url === "string" && typeof parsed.fetched_at === "string" && typeof parsed.sha256 === "string"
+      ? { dataset, season, url: parsed.url, fetched_at: parsed.fetched_at, sha256: parsed.sha256 }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   const { fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, q, classYear, position, page, meta } = c.req.valid("query");
   if (fromSeason > toSeason) return c.json({ error: "fromSeason must be no later than toSeason" }, 400);
@@ -154,6 +172,12 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
       SELECT historical.*, ${value} AS value FROM historical WHERE ${qualification}
     ) SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM ranked
     ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`).bind(...binds, ...qualificationBinds, page * 50).all();
+  const receipts = await researchDb(c.env).prepare(
+    "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset IN ('ncaa_player_box','ncaa_team_rosters') AND season BETWEEN ? AND ? ORDER BY season DESC,dataset",
+  ).bind(fromSeason, toSeason).all<{ dataset: string; season: number; receipt_json: string }>();
+  const sourceReceipts = receipts.results
+    .map((row) => parseReceipt(row.dataset, row.season, row.receipt_json))
+    .filter((receipt): receipt is SourceReceipt => receipt !== null);
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, min_denominator: effectiveMinDenominator, denominator_field: denominator, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  return c.json({ from_season: fromSeason, to_season: toSeason, metric, min_games: minGames, min_minutes: minMinutes, min_denominator: effectiveMinDenominator, denominator_field: denominator, page, page_size: 50, total: Number(count?.total || 0), source_receipts: sourceReceipts, rows: rows.results });
 });
