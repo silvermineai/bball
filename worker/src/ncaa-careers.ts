@@ -142,7 +142,10 @@ ncaaCareers.get("/", zValidator("query", querySchema), async (c) => {
   }
   const where = clauses.join(" AND ");
   const aggregate = `
-    SELECT season, player_id, team_id, player_name, team_name, games,
+    SELECT season, player_id, team_id, player_name, team_name,
+      (SELECT MAX(json_extract(r.profile_json,'$.position')) FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id) AS position,
+      (SELECT MAX(json_extract(r.profile_json,'$.class')) FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id) AS class_year,
+      games,
       ${sourceNumber("mins")} AS minutes,
       ${sourceNumber("pts")} AS points,
       CASE WHEN json_extract(stats_json,'$.orb') IS NOT NULL AND json_extract(stats_json,'$.drb') IS NOT NULL THEN CAST(json_extract(stats_json,'$.orb') AS REAL) + CAST(json_extract(stats_json,'$.drb') AS REAL) ELSE NULL END AS rebounds,

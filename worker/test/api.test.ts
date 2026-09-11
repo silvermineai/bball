@@ -1439,6 +1439,8 @@ describe("bball api", () => {
     const careerSql = prepare.mock.calls.map(([sql]) => String(sql)).filter((sql) => sql.includes("FROM bb_ncaa_player_season")).join("\n");
     expect(careerSql).toContain("json_extract(r.profile_json,'$.class')=?");
     expect(careerSql).toContain("json_extract(r.profile_json,'$.position')=?");
+    expect(careerSql).toContain("AS class_year");
+    expect(careerSql).toContain("AS position");
   });
 
   it("rejects invalid NCAA high-school pipeline parameters before querying D1", async () => {
