@@ -48,6 +48,8 @@ When a licensed provider supplies a CSV export instead of an API credential, `ma
 
 The market desk provides a header-only [CSV template](../frontend/public/data/research/market-import-template.csv) so an operator can start an authorized export without copying the schema from this document. It contains no provider data and is only a shape guide; the importer still requires the provider identity, license URL and all market-specific values.
 
+The market desk also offers a browser-only preflight for that template. It checks the required columns, exact participant fields, market-specific lines and paired prices, timezone-bearing capture/update/start clocks, and the rule that a quote must be captured before kickoff. The selected file is read locally and never uploaded; a successful preflight is a preparation aid, not an import or a license check.
+
 For example:
 
 ```bash
