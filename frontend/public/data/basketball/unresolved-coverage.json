@@ -1,9 +1,15 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-11T07:05:11.393219Z",
-  "total_rows": 444505,
+  "generated_at": "2026-09-11T20:49:44.970627Z",
+  "total_rows": 445520,
   "rows_with_observed_stats": 444461,
   "rows": [
+    {
+      "dataset": "ncaa_game_rosters",
+      "reason": "Missing game, team or athlete ID",
+      "rows": 1015,
+      "rows_with_observed_stats": 0
+    },
     {
       "dataset": "ncaa_player_box",
       "reason": "Missing contest, team or player ID",
