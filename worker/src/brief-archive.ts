@@ -5,6 +5,15 @@ import { researchDb } from "./research-db";
 
 export const briefArchive = new Hono<{ Bindings: Env }>({ strict: false });
 const ARCHIVE_CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("brief archive database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 type BriefContext = import("hono").Context<{ Bindings: Env }>;
 type BundledBrief = {
@@ -77,9 +86,9 @@ briefArchive.get(
       }
     }
     try {
-      const top = await researchDb(c.env).prepare(
+      const top = await withTimeout(researchDb(c.env).prepare(
       "SELECT coalesce(max(sequence),0) AS sequence FROM brief_archive_versions",
-      ).first<{ sequence: number }>();
+      ).first<{ sequence: number }>(), DB_TIMEOUT_MS);
       const asof = Math.min(q.asof ?? top!.sequence, top!.sequence);
       const where =
         "sequence<=? AND (?='all' OR sport=?) AND (? IS NULL OR game_id=?)";
@@ -93,7 +102,7 @@ briefArchive.get(
         q.view,
         q.q,
       ];
-      const [count, rows] = await researchDb(c.env).batch([
+      const [count, rows] = await withTimeout(researchDb(c.env).batch([
         researchDb(c.env).prepare(cte + " SELECT count(*) AS total FROM selected").bind(
           ...values,
         ),
@@ -101,7 +110,7 @@ briefArchive.get(
           cte +
             " SELECT revision,sport,game_id,season,home_name,away_name,starts_at,time_tbd,model_id,forecast_generated_at,original_path,first_recorded_at,sequence FROM selected ORDER BY starts_at,sport,game_id,sequence DESC LIMIT 24 OFFSET ?",
         ).bind(...values, q.page * 24),
-      ]);
+      ]), DB_TIMEOUT_MS);
       const response = c.json({
         rows: rows.results,
         total: (count.results[0] as { total: number }).total,
