@@ -68,7 +68,7 @@ The recruiting wire uses the published ESPN and NCAA.com men’s-basketball RSS 
 
 The live coverage desk also reads `GET /api/basketball/research/news?meta=1` and shows the retained headline count, latest source publication, D1 capture clock and permitted feed scope beside the statistical receipts. This is a publisher-wire freshness check; it does not imply complete national recruiting coverage or a player-level transaction feed.
 
-Parquet downloads substantially reduce network transfer. The shared release client maintains polite request spacing, conditional caching and bounded retries. Every published release used for this edition is listed in the model notebook.
+Parquet downloads substantially reduce network transfer. The shared release client maintains polite request spacing, conditional caching and bounded retries. Every published release used for this edition is listed in the model notebook. The [licensed source catalog audit](SOURCE_CATALOG_AUDIT.md) records the current public SportsDataverse release families, the supplemental upstream outputs intentionally kept outside the player-stat warehouse, and the identity-crosswalk boundary.
 
 The NCAA player-box ingester keeps every numeric source field on valid identified rows, including fields added by a later publisher release; its explicit metadata keys remain separate. Unknown non-numeric labels stay in the retained unresolved payload rather than being guessed into a stat.
 
