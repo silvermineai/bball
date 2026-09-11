@@ -16,6 +16,8 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "d1 db storage operation exceeded timeout",
     "storage operation exceeded timeout",
     "not currently importing anything",
+    "connection closed",
+    "no longer active",
 )
 
 

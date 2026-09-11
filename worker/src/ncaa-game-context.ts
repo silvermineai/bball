@@ -5,7 +5,7 @@ import { ncaaBoxDb, researchDb } from "./research-db";
 
 type Bindings = Env;
 const querySchema = z.object({
-  season: z.coerce.number().int().min(2010).max(2026).default(2026),
+  season: z.coerce.number().int().min(2003).max(2026).default(2026),
   view: z.enum(["rosters", "officials"]).default("rosters"),
   gameId: z.string().trim().max(40).optional(),
   teamId: z.string().trim().max(40).optional(),

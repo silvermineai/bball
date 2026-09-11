@@ -46,12 +46,26 @@ def dataset_rows(overview: dict) -> dict[str, int]:
         ),
         "bb_ncaa_rosters": datasets["ncaa_team_rosters"],
         "bb_ncaa_player_shooting": datasets["ncaa_shots"],
+        "bb_ncaa_game_rosters": datasets["ncaa_game_rosters"],
+        "bb_ncaa_officials": datasets["ncaa_officials"],
+        # The incremental main export retains unresolved roster rows only for
+        # the newest two context seasons; older roster context (and its
+        # unresolved records) is published in the dedicated NCAA context D1.
         "bb_unresolved": int(coverage["unresolved_rows"]),
     }
     local_path = ROOT / ".local/basketball.sqlite3"
     if not local_path.exists():
         raise SystemExit(f"Missing local basketball warehouse: {local_path}")
     with sqlite3.connect(local_path) as database:
+        latest_context = database.execute(
+            "SELECT MAX(season) FROM bb_unresolved WHERE dataset='ncaa_game_rosters'"
+        ).fetchone()[0]
+        if latest_context is not None:
+            expected["bb_unresolved"] = int(database.execute(
+                "SELECT COUNT(*) FROM bb_unresolved "
+                "WHERE dataset <> 'ncaa_game_rosters' OR season >= ?",
+                (int(latest_context) - 1,),
+            ).fetchone()[0])
         expected["bb_ncaa_player_box"] = int(database.execute(
             "SELECT COUNT(*) FROM bb_ncaa_player_box"
         ).fetchone()[0])
@@ -102,6 +116,7 @@ def main() -> None:
     )
     expected = dataset_rows(overview)
     game_expected = {"bb_ncaa_player_box": expected.pop("bb_ncaa_player_box")}
+    game_expected.update({key: expected.pop(key) for key in ("bb_ncaa_game_rosters", "bb_ncaa_officials")})
     actual = remote_counts(list(expected), D1_DB_NAME)
     actual.update(remote_counts(list(game_expected), NCAA_BOX_D1_DATABASE))
     expected.update(game_expected)

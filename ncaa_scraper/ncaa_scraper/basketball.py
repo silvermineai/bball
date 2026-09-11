@@ -2048,11 +2048,17 @@ def export_sql(conn, path, incremental=False):
 
 
 NCAA_PLAYER_BOX_GAME_SEASONS = tuple(range(2010, 2027))
-NCAA_GAME_CONTEXT_SEASONS = tuple(range(2010, 2027))
+# The ESPN context releases extend to 2003. 2010 has no officials parquet
+# release, so retain that gap explicitly rather than treating a missing source
+# as an empty season.
+NCAA_GAME_CONTEXT_SEASONS = tuple(range(2003, 2027))
+NCAA_OFFICIAL_SEASONS = tuple(season for season in NCAA_GAME_CONTEXT_SEASONS if season != 2010)
 
 
-def export_ncaa_player_box_sql(conn, path, seasons=NCAA_PLAYER_BOX_GAME_SEASONS):
-    """Export NCAA game rows plus retained roster/officiating context."""
+def export_ncaa_player_box_sql(
+    conn, path, seasons=NCAA_PLAYER_BOX_GAME_SEASONS, include_context=True
+):
+    """Export NCAA game rows and optionally the separate game context tables."""
     seasons = tuple(sorted({int(season) for season in seasons}))
     if not seasons:
         raise ValueError("At least one NCAA player-box season is required")
@@ -2075,6 +2081,44 @@ def export_ncaa_player_box_sql(conn, path, seasons=NCAA_PLAYER_BOX_GAME_SEASONS)
                     + ",".join(values)
                     + ");\n"
                 )
+            if not include_context:
+                continue
+            for table, columns in (
+                (
+                    "bb_ncaa_game_rosters",
+                    "season,game_id,team_id,athlete_id,team_name,home_away,athlete_name,jersey,position,starter,did_not_play,active,ejected,reason,raw_json",
+                ),
+                (
+                    "bb_ncaa_officials",
+                    "season,game_id,official_order,official_name,official_position,official_position_id,raw_json",
+                ),
+            ):
+                available = conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                ).fetchone()
+                if not available:
+                    continue
+                yield f"DELETE FROM {table} WHERE season={season};\n"
+                for row in conn.execute(
+                    f"SELECT {columns} FROM {table} WHERE season=?", (season,)
+                ):
+                    values = [
+                        "NULL" if value is None else "'" + str(value).replace("'", "''") + "'"
+                        for value in row
+                    ]
+                    yield f"INSERT OR REPLACE INTO {table} VALUES (" + ",".join(values) + ");\n"
+
+    return write_sql_batches(statements(), path)
+
+
+def export_ncaa_game_context_sql(conn, path, seasons=NCAA_GAME_CONTEXT_SEASONS):
+    """Export all retained ESPN game-roster and officials context rows."""
+    seasons = tuple(sorted({int(season) for season in seasons}))
+    if not seasons:
+        raise ValueError("At least one game context season is required")
+
+    def statements():
+        for season in seasons:
             for table, columns in (
                 (
                     "bb_ncaa_game_rosters",
@@ -2190,7 +2234,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0028_basketball_ncaa_game_archive.sql", "0031_basketball_player_crosswalk.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0028_basketball_ncaa_game_archive.sql", "0031_basketball_player_crosswalk.sql", "0032_basketball_game_context.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -2304,28 +2348,42 @@ def main():
                 ingest(conn, "ncaa_shots", year, rows, receipt)
                 print(f"Imported ncaa_shots/{year}: {len(rows):,}", flush=True)
         # ESPN game-day availability and officiating are useful matchup
-        # context. Keep the current two-season window in the daily refresh;
-        # the source client and archive exporter support the full history.
-        for year in (2025, 2026):
-            for dataset in ("ncaa_game_rosters", "ncaa_officials"):
-                rows, receipt = c.load(
-                    dataset,
-                    year,
-                    refresh=source_refresh_enabled(args.refresh, incremental, year),
-                )
-                ingest(conn, dataset, year, rows, receipt)
-                print(f"Imported {dataset}/{year}: {len(rows):,}", flush=True)
+        # context. Retain the complete 2010–26 source window alongside the
+        # NCAA player-game archive; incremental exports only rewrite the
+        # latest two seasons while older context remains immutable in D1.
+        for year in NCAA_GAME_CONTEXT_SEASONS:
+            rows, receipt = c.load(
+                "ncaa_game_rosters",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
+            ingest(conn, "ncaa_game_rosters", year, rows, receipt)
+            print(f"Imported ncaa_game_rosters/{year}: {len(rows):,}", flush=True)
+        for year in NCAA_OFFICIAL_SEASONS:
+            rows, receipt = c.load(
+                "ncaa_officials",
+                year,
+                refresh=source_refresh_enabled(args.refresh, incremental, year),
+            )
+            ingest(conn, "ncaa_officials", year, rows, receipt)
+            print(f"Imported ncaa_officials/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
         export_sql(conn, args.sql, incremental=incremental)
         # Keep two active seasons for game context so the desk can compare the
         # current roster/official snapshot with the prior tournament cycle.
         ncaa_seasons = tuple(sorted(NCAA_PLAYER_BOX_GAME_SEASONS)[-2:]) if incremental else NCAA_PLAYER_BOX_GAME_SEASONS
+        context_path = args.sql.with_name("ncaa-game-context.sql")
+        context_path.unlink(missing_ok=True)
+        context_path.with_name(f"{context_path.stem}-manifest.json").unlink(missing_ok=True)
         export_ncaa_player_box_sql(
             conn,
             args.sql.with_name("ncaa-player-box-2026.sql"),
             seasons=ncaa_seasons,
+            include_context=incremental,
         )
+        if not incremental:
+            export_ncaa_game_context_sql(conn, context_path)
     conn.close()
 
 

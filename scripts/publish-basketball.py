@@ -256,9 +256,9 @@ def import_sql_batches(first_path, log_prefix, start_env, database_name=D1_DB_NA
         # never has to replay the whole multi-megabyte transaction.
         chunks = [target]
         if (
-            target.name in {"basketball.sql", "ncaa-player-box-2026.sql"}
+            target.name in {"basketball.sql", "ncaa-player-box-2026.sql", "ncaa-game-context.sql"}
             and index == 0
-            and first_path.name in {"basketball.sql", "ncaa-player-box-2026.sql"}
+            and first_path.name in {"basketball.sql", "ncaa-player-box-2026.sql", "ncaa-game-context.sql"}
         ):
             chunk_dir = ROOT / ".local" / "basketball-import-chunks"
             chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -726,6 +726,14 @@ import_sql_batches(
     "NCAA_PLAYER_BOX_SQL_BATCH_START",
     NCAA_BOX_D1_DATABASE,
 )
+context_sql = ROOT / ".local/ncaa-game-context.sql"
+if context_sql.exists():
+    import_sql_batches(
+        context_sql,
+        "ncaa-game-context-publish-d1",
+        "NCAA_GAME_CONTEXT_SQL_BATCH_START",
+        NCAA_BOX_D1_DATABASE,
+    )
 run([PY, "scripts/sync-basketball-core.py", "--remote"])
 run([PY, "scripts/sync-ledger.py"])
 run([PY, "scripts/sync-shooting.py"])
