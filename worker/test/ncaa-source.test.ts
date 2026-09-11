@@ -21,6 +21,20 @@ describe("NCAA roster and shooting source archives", () => {
     expect(bindings.RESEARCH_ARCHIVE.get).toHaveBeenCalledWith(`basketball/ncaa-rosters/2026/${digest}.parquet`);
   });
 
+  it("returns a retryable status when the roster catalog is unavailable", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await ncaaRosters.request(
+      "/?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch: vi.fn() } },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "The NCAA roster catalog is temporarily unavailable.",
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("streams an exact shot release", async () => {
     const bindings = env("ncaa_shots", 2026);
     const response = await ncaaShooting.request("/source?season=2026", {}, bindings);
