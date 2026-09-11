@@ -4,6 +4,7 @@ import {
   adjustedFactorPoints,
   briefEvidence,
   briefScenarioUrl,
+  headToHeadSummary,
   historicalPersonnel,
   pressurePoints,
 } from "./matchup-brief";
@@ -174,6 +175,24 @@ describe("matchup evidence and scenario handoff", () => {
       players: first.players.map((p) => ({ ...p, minutes: 199 })),
     };
     expect(historicalPersonnel(empty)).toHaveLength(0);
+  });
+  it("summarizes exact-ID prior meetings in newest-first home perspective", () => {
+    const [baseHome, baseAway] = [...profiles.values()];
+    const home = structuredClone(baseHome);
+    const away = structuredClone(baseAway);
+    const template = home.games[0];
+    home.games = [
+      { ...template, id: "older", opponent_id: away.id, starts_at: "2025-01-10T00:00:00Z", score: 68, allowed: 72, result: "L" },
+      { ...template, id: "newer", opponent_id: away.id, starts_at: "2025-02-10T00:00:00Z", score: 81, allowed: 75, result: "W" },
+      { ...template, id: "other", opponent_id: "different", starts_at: "2025-03-10T00:00:00Z", score: 90, allowed: 70, result: "W" },
+    ];
+    const summary = headToHeadSummary(home, away, 1);
+    expect(summary.total).toBe(2);
+    expect(summary.wins).toBe(1);
+    expect(summary.losses).toBe(1);
+    expect(summary.averageMargin).toBe(1);
+    expect(summary.games.map((game) => game.id)).toEqual(["newer"]);
+    expect(headToHeadSummary(home, away, 0).games).toEqual([]);
   });
   it("keeps later availability statements and does not claim reviewed coverage for other schools", () => {
     const covered = overview.upcoming.find(

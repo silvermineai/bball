@@ -171,6 +171,50 @@ export function historicalPersonnel(profile: ScoutProfile): ScoutPlayer[] {
     .slice(0, 3);
 }
 
+export type HeadToHeadSummary = {
+  total: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  averageMargin: number | null;
+  games: ScoutProfile["games"];
+};
+
+/**
+ * Summarize prior meetings using the exact source team IDs in the scouting
+ * profiles. The selected rows stay in the home team's perspective so the
+ * score, result and average margin have one stable direction.
+ */
+export function headToHeadSummary(
+  home: ScoutProfile,
+  away: ScoutProfile,
+  limit = 5,
+): HeadToHeadSummary {
+  const meetings = home.games
+    .filter(
+      (game) =>
+        game.opponent_id === away.id &&
+        game.score != null &&
+        game.allowed != null,
+    )
+    .sort(
+      (a, b) =>
+        b.starts_at.localeCompare(a.starts_at) || b.id.localeCompare(a.id),
+    );
+  const margins = meetings.map((game) => game.score! - game.allowed!);
+  return {
+    total: meetings.length,
+    wins: meetings.filter((game) => game.result === "W").length,
+    losses: meetings.filter((game) => game.result === "L").length,
+    ties: meetings.filter((game) => game.result === "T").length,
+    averageMargin:
+      margins.length > 0
+        ? margins.reduce((sum, margin) => sum + margin, 0) / margins.length
+        : null,
+    games: meetings.slice(0, Math.max(0, limit)),
+  };
+}
+
 export type BriefRosterContext = {
   listed: number;
   sameProgram: number;

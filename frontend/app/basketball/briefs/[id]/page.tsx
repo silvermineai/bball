@@ -16,6 +16,7 @@ import {
   briefEvidence,
   briefFactors,
   briefScenarioUrl,
+  headToHeadSummary,
 } from "../../../_lib/matchup-brief";
 import { eventLabels, publicationDate } from "../../../_lib/recruiting";
 import { reasons } from "../../../_lib/research-types";
@@ -171,6 +172,7 @@ export default async function Page({
     rosters = getRosters(),
     ledger = getLedger();
   const evidence = briefEvidence(g, d, home, away, recruiting, ledger, rosters),
+    headToHead = headToHeadSummary(home, away),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
   const tasks = [
     ...evidence.pressures.map(
@@ -542,10 +544,48 @@ export default async function Page({
           </div>
         </div>
       </section>
+      <section className="section" aria-label="Prior meetings">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">03 / Prior meetings / exact source IDs</div>
+            <h2>What happened when these programs met?</h2>
+          </div>
+          <span className="note">2025–26 source schedule</span>
+        </div>
+        <p className="note brief-explainer">
+          This is a descriptive look at completed meetings where the home and
+          away source team IDs matched exactly in the scouting archive. It is
+          context for preparation, not a head-to-head forecast; a missing row
+          means this source edition did not retain a qualifying meeting.
+        </p>
+        {headToHead.total ? (
+          <>
+            <div className="strip">
+              <div><strong>{headToHead.total}</strong><span>Recorded meetings</span></div>
+              <div><strong>{headToHead.wins}–{headToHead.losses}{headToHead.ties ? `–${headToHead.ties}` : ""}</strong><span>{home.name} record</span></div>
+              <div><strong>{headToHead.averageMargin == null ? "—" : signed(headToHead.averageMargin)}</strong><span>Average {home.name} margin</span></div>
+              <div><strong>{date(headToHead.games[0]?.starts_at || "")}</strong><span>Latest shown</span></div>
+            </div>
+            <div className="table-scroll" style={{ marginTop: 18 }}>
+              <table className="data-table">
+                <thead><tr><th>Date</th><th>Location</th><th className="numeric">Score</th><th>Result</th><th className="numeric">Margin</th><th>Evidence</th></tr></thead>
+                <tbody>{headToHead.games.map((game) => <tr key={game.id}>
+                  <td>{date(game.starts_at)}<small>Game {game.id}</small></td>
+                  <td>{game.location === "home" ? `${home.name} home` : game.location === "road" ? `${home.name} road` : "Neutral"}</td>
+                  <td className="numeric">{game.score}–{game.allowed}</td>
+                  <td>{game.result || "—"}</td>
+                  <td className="numeric">{game.score != null && game.allowed != null ? signed(game.score - game.allowed) : "—"}</td>
+                  <td><a href={espnGameUrl(game.id)} target="_blank" rel="noreferrer">ESPN source ↗</a></td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </>
+        ) : <p className="empty">No completed exact-ID meetings are available in this source edition.</p>}
+      </section>
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">03 / Schedule-adjusted lens</div>
+            <div className="eyebrow">04 / Schedule-adjusted lens</div>
             <h2>What survives a harder schedule?</h2>
           </div>
         </div>
@@ -614,7 +654,7 @@ export default async function Page({
         <div className="section-heading">
           <div>
             <div className="eyebrow">
-              04 / Historical workload, then roster verification
+              05 / Historical workload, then roster verification
             </div>
             <h2>Who carried the old possessions?</h2>
           </div>
@@ -687,7 +727,7 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">05 / Source roster observation</div>
+            <div className="eyebrow">06 / Source roster observation</div>
             <h2>How much old workload is represented?</h2>
           </div>
           <span className="note">2026–27 listing · unconfirmed</span>
@@ -830,7 +870,7 @@ export default async function Page({
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">06 / Dated school evidence</div>
+            <div className="eyebrow">07 / Dated school evidence</div>
             <h2>What changed after those box scores?</h2>
           </div>
           <span className="note">
@@ -913,7 +953,7 @@ export default async function Page({
         <section className="section">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">07 / Publisher context</div>
+              <div className="eyebrow">08 / Publisher context</div>
               <h2>What the source wire is saying.</h2>
             </div>
             <Link href="/basketball/recruiting/">Open the full source wire →</Link>
@@ -934,7 +974,7 @@ export default async function Page({
       <section className="section brief-market" id="market-trail">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">08 / Compare only matching records</div>
+            <div className="eyebrow">09 / Compare only matching records</div>
             <h2>The forecast and market trail.</h2>
           </div>
         </div>
