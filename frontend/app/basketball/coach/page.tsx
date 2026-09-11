@@ -9,6 +9,9 @@ import {
 } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
 import { seasonLabel } from "../../_lib/careers";
+import LiveBasketballForecastStatus from "../../_components/LiveBasketballForecastStatus";
+import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
+import LiveBasketballMarketStatus from "../../_components/LiveBasketballMarketStatus";
 
 export const metadata = {
   title: "Basketball coach's desk",
@@ -73,6 +76,12 @@ export default function Page() {
           <Link className="hero-link" href="/basketball/matchups/">Browse the full slate →</Link>
           <Link className="hero-link" href="/basketball/recruiting/">Review recruiting evidence →</Link>
         </div>
+      </section>
+
+      <section className="section" aria-label="Live publication checks" style={{ paddingTop: 0, paddingBottom: 0 }}>
+        <LiveBasketballForecastStatus />
+        <LiveBasketballRecruitingStatus />
+        <LiveBasketballMarketStatus />
       </section>
 
       <section className="section" aria-labelledby="coach-pulse-title">
