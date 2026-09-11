@@ -580,6 +580,18 @@ run_remote_migration(
         D1_DB_NAME,
         "--remote",
         "--file",
+        "migrations/0031_basketball_player_crosswalk.sql",
+    ]
+)
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        D1_DB_NAME,
+        "--remote",
+        "--file",
         "migrations/0017_basketball_team_season.sql",
     ]
 )

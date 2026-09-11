@@ -230,6 +230,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         At least 15 games and 400 minutes, with complete box-score fields
       </label>
       <div className="button-row" style={{ marginTop: 12 }}>
+        <Link className="button secondary" href={`/basketball/crosswalk/?q=${encodeURIComponent(q)}`}>
+          Open provider ID crosswalk →
+        </Link>
         <button
           className="button secondary"
           type="button"

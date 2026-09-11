@@ -148,6 +148,7 @@ def build(season=2023):
             "bb_team_season",
             "bb_publisher_ratings",
             "bb_player_value",
+            "bb_player_crosswalk",
         ):
             try:
                 statements.extend(row_statements(conn, table, season))

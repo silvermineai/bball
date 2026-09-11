@@ -145,6 +145,7 @@ def ingest(conn, dataset, year, rows, receipt):
             "schedule": "bb_games",
             "team_box": "bb_team_box",
             "player_box": "bb_player_box",
+            "player_crosswalk": "bb_player_crosswalk",
             "rosters": "bb_rosters",
             "player_season": "bb_player_season",
             "team_season": "bb_team_season",
@@ -227,6 +228,37 @@ def ingest(conn, dataset, year, rows, receipt):
                         json.dumps(numeric_box(r, True)),
                     ),
                 )
+        elif dataset == "player_crosswalk":
+            # The crosswalk is source-published identifier evidence. Preserve
+            # the publisher's match method and confidence; never collapse it
+            # into the NCAA namespace or infer a person from a name alone.
+            conn.executemany(
+                """INSERT OR REPLACE INTO bb_player_crosswalk VALUES
+                (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                [
+                    (
+                        year,
+                        identity(r.get("espn_team_id")),
+                        r.get("team_abbreviation") or None,
+                        r.get("player_name") or None,
+                        identity(r.get("espn_athlete_id")),
+                        r.get("espn_full_name") or None,
+                        r.get("espn_jersey") or None,
+                        r.get("espn_position") or None,
+                        r.get("fox_athlete_id") or None,
+                        r.get("fox_player") or None,
+                        r.get("fox_jersey") or None,
+                        r.get("fox_position_group") or None,
+                        r.get("yahoo_player_id") or None,
+                        r.get("yahoo_player_name") or None,
+                        r.get("match_method") or "unreported",
+                        number(r.get("match_confidence")),
+                        r.get("match_keys") or None,
+                    )
+                    for r in rows
+                    if r.get("espn_team_id") and r.get("espn_athlete_id")
+                ],
+            )
         elif dataset == "rosters":
             for r in rows:
                 aid = identity(r["athlete_id"])
@@ -1492,6 +1524,7 @@ def dataset_catalog(conn):
         ("schedule", "Schedule and finals", "bb_games", "ESPN-derived schedule"),
         ("team_box", "Team box scores", "bb_team_box", "ESPN-derived team boxes"),
         ("player_box", "Player game box scores", "bb_player_box", "ESPN-derived player boxes"),
+        ("player_crosswalk", "Cross-publisher player identifiers", "bb_player_crosswalk", "SportsDataverse ESPN/Fox/Yahoo crosswalk; source match confidence retained"),
         ("rosters", "Current roster observations", "bb_rosters", "ESPN-derived roster release"),
         ("player_season", "Publisher player-season stats", "bb_player_season", "SportsDataverse player season"),
         ("team_season", "Publisher team-season stats", "bb_team_season", "SportsDataverse team season"),
@@ -1721,6 +1754,26 @@ def build(conn, target=2027):
                 "fetched_at": receipt.get("fetched_at"),
             }
         )
+    crosswalk_receipt = {}
+    try:
+        crosswalk_receipt = json.loads(
+            conn.execute(
+                "SELECT receipt_json FROM bb_sources WHERE dataset='player_crosswalk' AND season=2026"
+            ).fetchone()[0]
+        )
+    except (TypeError, IndexError, sqlite3.OperationalError, json.JSONDecodeError):
+        crosswalk_receipt = {}
+    crosswalk_rows = []
+    try:
+        crosswalk_rows = [dict(row) for row in conn.execute(
+            "SELECT season,espn_team_id,team_abbreviation,player_name,"
+            "espn_athlete_id,espn_full_name,espn_jersey,espn_position,"
+            "fox_athlete_id,fox_player,fox_jersey,fox_position_group,"
+            "yahoo_player_id,yahoo_player_name,match_method,match_confidence,match_keys "
+            "FROM bb_player_crosswalk WHERE season=2026 ORDER BY player_name,espn_athlete_id"
+        )]
+    except sqlite3.OperationalError:
+        crosswalk_rows = []
     artifacts = {
         "overview": overview,
         "roster-model": roster_model,
@@ -1756,6 +1809,17 @@ def build(conn, target=2027):
             "identity_note": "NCAA source IDs; no unverified name-only join to ESPN identities.",
         },
         "ncaa-player-box-fields": ncaa_player_box_field_coverage(conn, now),
+        "player-crosswalk-2026": {
+            "season": 2026,
+            "rows": crosswalk_rows,
+            "source": {
+                "url": crosswalk_receipt.get("url"),
+                "fetched_at": crosswalk_receipt.get("fetched_at"),
+                "sha256": crosswalk_receipt.get("sha256"),
+            },
+            "attribution": crosswalk_receipt.get("attribution", BASKETBALL_ATTRIBUTION),
+            "identity_note": "SportsDataverse source crosswalk linking ESPN, Fox and Yahoo identifiers. It does not map NCAA IDs or establish eligibility, transfers or a unique person beyond the source match evidence.",
+        },
     }
     # Keep each historical board in its own static asset so the default board
     # stays fast and season comparisons never require a giant client payload.
@@ -1833,6 +1897,7 @@ INCREMENTAL_SEASON_WINDOWS = {
     "bb_participation": 3,
     "bb_team_box": 2,
     "bb_player_box": 2,
+    "bb_player_crosswalk": 2,
     "bb_player_season": 2,
     "bb_team_season": 2,
     "bb_publisher_ratings": 2,
@@ -1868,6 +1933,7 @@ def export_sql(conn, path, incremental=False):
         "bb_games",
         "bb_team_box",
         "bb_player_box",
+        "bb_player_crosswalk",
         "bb_player_season",
         "bb_team_season",
         "bb_publisher_ratings",
@@ -1883,6 +1949,13 @@ def export_sql(conn, path, incremental=False):
         "bb_participation",
         "bb_possession_style",
     ]
+    # Small fixtures and older local warehouses can predate optional layers;
+    # keep export useful while including the crosswalk whenever it exists.
+    available_tables = {
+        str(row[0])
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    tables = [table for table in tables if table in available_tables]
 
     def statements():
         for table in tables:
@@ -2035,7 +2108,7 @@ def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
-    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql"):
+    for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0031_basketball_player_crosswalk.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
         c = client()
@@ -2061,6 +2134,7 @@ def main():
                             "player_box",
                             "player_season",
                             "ncaa_rapm",
+                            "player_crosswalk",
                         ]
                         if year == 2026
                         else ["schedule", "rosters"]

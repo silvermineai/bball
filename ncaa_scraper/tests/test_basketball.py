@@ -286,6 +286,9 @@ class BasketballIngestTests(unittest.TestCase):
         self.conn.executescript(
             (ROOT / "worker/migrations/0009_basketball_research.sql").read_text()
         )
+        self.conn.executescript(
+            (ROOT / "worker/migrations/0031_basketball_player_crosswalk.sql").read_text()
+        )
 
     def tearDown(self):
         self.conn.close()
@@ -305,6 +308,31 @@ class BasketballIngestTests(unittest.TestCase):
         )
         self.assertEqual(
             self.conn.execute("SELECT count(*) FROM bb_unresolved").fetchone()[0], 1
+        )
+
+    def test_player_crosswalk_preserves_provider_ids_and_match_confidence(self):
+        ingest(
+            self.conn,
+            "player_crosswalk",
+            2026,
+            [{
+                "espn_team_id": "2000",
+                "team_abbreviation": "ACU",
+                "player_name": "christian alston",
+                "espn_athlete_id": "5241312",
+                "espn_full_name": "Christian Alston",
+                "fox_athlete_id": "76284",
+                "yahoo_player_id": "y-42",
+                "match_method": "exact_name",
+                "match_confidence": "1.0",
+            }],
+            {"sha256": "a" * 64},
+        )
+        self.assertEqual(
+            tuple(self.conn.execute(
+                "SELECT espn_athlete_id,fox_athlete_id,yahoo_player_id,match_method,match_confidence FROM bb_player_crosswalk"
+            ).fetchone()),
+            ("5241312", "76284", "y-42", "exact_name", 1.0),
         )
 
     def test_unknown_numeric_ncaa_source_stats_are_retained(self):
