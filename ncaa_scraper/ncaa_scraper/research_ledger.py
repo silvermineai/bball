@@ -491,10 +491,19 @@ def build_report(conn, now):
         elif key not in selected:
             selected[key] = row
     rows = []
-    # Show one row per game; when none is eligible, show the first excluded registration.
+    # Show one row per game. Eligible games use the first registration for the
+    # prospective scorecard; when every registration is excluded (for example
+    # because a start remains TBD), surface the newest model version so the
+    # visible row reflects the current forecast rather than an obsolete one.
     seen = set(selected)
     display = [(r, None) for r in selected.values()]
+    latest_excluded = {}
     for row, reason in excluded:
+        key = (row["sport"], row["game_id"])
+        prior = latest_excluded.get(key)
+        if prior is None or (row["registered_at"], row["generated_at"], row["id"]) > (prior[0]["registered_at"], prior[0]["generated_at"], prior[0]["id"]):
+            latest_excluded[key] = (row, reason)
+    for row, reason in latest_excluded.values():
         key = (row["sport"], row["game_id"])
         if key not in seen:
             display.append((row, reason))

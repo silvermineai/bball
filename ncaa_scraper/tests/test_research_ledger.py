@@ -189,6 +189,15 @@ class LedgerTests(unittest.TestCase):
             "registered_after_start",
         )
 
+    def test_latest_excluded_registration_is_visible_for_unconfirmed_slate(self):
+        newer = game()
+        newer["prediction"]["home_margin"] = 12
+        register(self.c, "football", newer, model("newer"), T1, T1)
+        observe_state(self.c, "football", "123", {**state(), "time_tbd": 1}, END)
+        row = self.report()["games"][0]
+        self.assertEqual(row["model_id"], "newer")
+        self.assertEqual(row["exclusion"], "unconfirmed_start")
+
     def test_missing_final_and_corrections_keep_history(self):
         observe_state(self.c, "football", "123", state(True, home=None), END)
         self.assertEqual(self.report()["games"][0]["status"], "final_missing_scores")
