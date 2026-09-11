@@ -59,6 +59,7 @@ export default function SourceStats() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const field = useMemo(
     () => fields.find((candidate) => `${candidate.category}:${candidate.key}` === fieldKey) || null,
     [fields, fieldKey],
@@ -95,7 +96,7 @@ export default function SourceStats() {
         if (reason.name !== "AbortError") setError(reason.message);
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   useEffect(() => {
     if (!fields.length || fields.some((candidate) => `${candidate.category}:${candidate.key}` === fieldKey)) return;
@@ -143,7 +144,7 @@ export default function SourceStats() {
         if (reason.name !== "AbortError") setError(reason.message);
       });
     return () => controller.abort();
-  }, [field, season, page, direction, query, minGames]);
+  }, [direction, field, minGames, page, query, retryNonce, season]);
 
   const grouped = useMemo(
     () => fields.reduce<Record<string, Field[]>>((groups, candidate) => {
@@ -156,6 +157,7 @@ export default function SourceStats() {
     setPage(0);
     callback();
   };
+  const retryArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -261,7 +263,7 @@ export default function SourceStats() {
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
       {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing source records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
-      {error ? <p role="alert" className="status-error">{error}</p> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
+      {error ? <div role="alert" className="status-error"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry source archive</button></div> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
         <>
           {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Publisher player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
           <div className="section-heading" style={{ marginBottom: 20 }}>

@@ -1075,6 +1075,52 @@ describe("bball api", () => {
     expect(String(sql)).toContain(">= ?");
   });
 
+  it("returns retryable responses when source-stat catalogs or rows are busy", async () => {
+    const catalogResponse = await app.request(
+      "/api/basketball/research/publisher-stats?meta=1",
+      {},
+      { DB: { prepare: vi.fn().mockReturnValue({ all: vi.fn().mockRejectedValue(new Error("busy")) }) } },
+    );
+    expect(catalogResponse.status).toBe(503);
+    expect(catalogResponse.headers.get("Cache-Control")).toBe("no-store");
+    expect(await catalogResponse.json()).toEqual({ error: "The source-field catalog is temporarily unavailable." });
+
+    const rowPrepare = vi.fn((sql: string) => sql.includes("count(*) AS total")
+      ? { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 1, non_null: 1 }) }) }
+      : { bind: () => ({ all: vi.fn().mockRejectedValue(new Error("busy")) }) });
+    const rowResponse = await app.request(
+      "/api/basketball/research/publisher-stats?season=2026&category=averages&stat=avgPoints",
+      {},
+      { DB: { prepare: rowPrepare } },
+    );
+    expect(rowResponse.status).toBe(503);
+    expect(rowResponse.headers.get("Cache-Control")).toBe("no-store");
+    expect(await rowResponse.json()).toEqual({ error: "The source statistics archive is temporarily unavailable." });
+  });
+
+  it("returns retryable responses when the team-stat catalog or rows are busy", async () => {
+    const catalogResponse = await app.request(
+      "/api/basketball/research/team-stats?meta=1",
+      {},
+      { DB: { prepare: vi.fn().mockReturnValue({ all: vi.fn().mockRejectedValue(new Error("busy")) }) } },
+    );
+    expect(catalogResponse.status).toBe(503);
+    expect(catalogResponse.headers.get("Cache-Control")).toBe("no-store");
+    expect(await catalogResponse.json()).toEqual({ error: "The team-field catalog is temporarily unavailable." });
+
+    const rowPrepare = vi.fn((sql: string) => sql.includes("count(*) AS total")
+      ? { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 1, non_null: 1 }) }) }
+      : { bind: () => ({ all: vi.fn().mockRejectedValue(new Error("busy")) }) });
+    const rowResponse = await app.request(
+      "/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints",
+      {},
+      { DB: { prepare: rowPrepare } },
+    );
+    expect(rowResponse.status).toBe(503);
+    expect(rowResponse.headers.get("Cache-Control")).toBe("no-store");
+    expect(await rowResponse.json()).toEqual({ error: "The team statistics archive is temporarily unavailable." });
+  });
+
   it("rejects invalid team and boutique source parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",

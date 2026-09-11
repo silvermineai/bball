@@ -69,13 +69,45 @@ const querySchema = z.object({
   meta: z.enum(["0", "1"]).default("0"),
 });
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("team statistics query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 export const teamStats = new Hono<{ Bindings: Bindings }>();
 teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const { season, category, stat, q, page, direction, meta } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the source browser fail.
+    }
+  }
   if (meta === "1") {
-    const seasons = await researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_team_season ORDER BY season DESC").all<{ season: number }>();
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: seasons.results.map((row) => row.season), fields });
+    try {
+      const seasons = await withTimeout(db.prepare("SELECT DISTINCT season FROM bb_team_season ORDER BY season DESC").all<{ season: number }>(), DB_TIMEOUT_MS);
+      const response = c.json({ seasons: seasons.results.map((row) => row.season), fields });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The team-field catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const field = fields.find((candidate) => candidate.category === category && candidate.key === stat);
   if (!field) return c.json({ error: "Unknown team source field" }, 400);
@@ -84,19 +116,19 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const search = q ? `%${q}%` : null;
   const where = search ? "season=? AND (team_name LIKE ? OR team_id LIKE ?)" : "season=?";
   const binds: Array<string | number> = search ? [season, search, search] : [season];
-  const count = await researchDb(c.env).prepare(
-    `SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_team_season WHERE ${where}`,
-  ).bind(valuePath, ...binds).first<{ total: number; non_null: number }>();
+  try {
+    const count = await withTimeout(db.prepare(
+      `SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_team_season WHERE ${where}`,
+    ).bind(valuePath, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
   const order = `json_extract(stats_json, '${valuePath}') IS NULL, json_extract(stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, team_name ASC, team_id ASC`;
-  const rows = await researchDb(c.env).prepare(
+    const rows = await withTimeout(db.prepare(
     `SELECT team_id,team_name,team_abbreviation,
             json_extract(stats_json, '${valuePath}') AS value,
             json_extract(stats_json, '${displayPath}') AS display
        FROM bb_team_season WHERE ${where}
       ORDER BY ${order} LIMIT 40 OFFSET ?`,
-  ).bind(...binds, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+    const response = c.json({
     season, field, page, page_size: 40,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
     rows: rows.results.map((row) => ({
@@ -104,5 +136,11 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
       value: typeof row.value === "number" ? row.value : null,
       display: row.display == null ? null : String(row.display),
     })),
-  });
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({ error: "The team statistics archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });

@@ -78,16 +78,48 @@ const querySchema = z.object({
   meta: z.enum(["0", "1"]).default("0"),
 });
 
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("publisher statistics query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
+}
+
 export const publisherStats = new Hono<{ Bindings: Bindings }>();
 
 publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   const { season, category, stat, q, min_games, page, direction, meta } = c.req.valid("query");
+  const db = researchDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the source browser fail.
+    }
+  }
   if (meta === "1") {
-    const seasons = await researchDb(c.env).prepare(
-      "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
-    ).all<{ season: number }>();
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({ seasons: seasons.results.map((row) => row.season), fields: PUBLISHER_FIELDS });
+    try {
+      const seasons = await withTimeout(db.prepare(
+        "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
+      ).all<{ season: number }>(), DB_TIMEOUT_MS);
+      const response = c.json({ seasons: seasons.results.map((row) => row.season), fields: PUBLISHER_FIELDS });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The source-field catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const field = PUBLISHER_FIELDS.find((candidate) => candidate.category === category && candidate.key === stat);
   if (!field) return c.json({ error: "Unknown publisher field" }, 400);
@@ -109,7 +141,8 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   // display string instead of inventing a numeric value. Count that display
   // path for completeness so the browser reflects the source rows accurately.
   const completenessPath = field.unit === "text" ? displayPath : valuePath;
-  const count = await researchDb(c.env).prepare(
+  try {
+  const count = await withTimeout(db.prepare(
     `SELECT count(*) AS total, count(json_extract(s.stats_json, ?)) AS non_null
        FROM bb_player_season s
        LEFT JOIN bb_players p ON p.id=s.athlete_id
@@ -117,11 +150,11 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
                   FROM bb_rosters WHERE season=? GROUP BY season,team_id,athlete_id) r
          ON r.season=s.season AND r.team_id=s.team_id AND r.athlete_id=s.athlete_id
       WHERE ${where}`,
-  ).bind(completenessPath, season, ...binds).first<{ total: number; non_null: number }>();
+  ).bind(completenessPath, season, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
   const order = field.unit === "text"
     ? "p.name ASC, s.athlete_id ASC"
     : `json_extract(s.stats_json, '${valuePath}') IS NULL, json_extract(s.stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, p.name ASC, s.athlete_id ASC`;
-  const rows = await researchDb(c.env).prepare(
+  const rows = await withTimeout(db.prepare(
     `SELECT s.athlete_id AS id,p.name,p.position,s.team_id,
             COALESCE(r.team_name,s.team_id) AS team,
             json_extract(s.stats_json, '${valuePath}') AS value,
@@ -134,10 +167,10 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
          ON r.season=s.season AND r.team_id=s.team_id AND r.athlete_id=s.athlete_id
       WHERE ${where}
       ORDER BY ${order} LIMIT 40 OFFSET ?`,
-  ).bind(season, ...binds, page * 40).all();
-  const receipts = await researchDb(c.env).prepare(
+  ).bind(season, ...binds, page * 40).all(), DB_TIMEOUT_MS);
+  const receipts = await withTimeout(db.prepare(
     "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset='player_season' AND season=? ORDER BY dataset,season",
-  ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>();
+  ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>(), DB_TIMEOUT_MS);
   const sourceReceipts = receipts.results.flatMap((row) => {
     try {
       const receipt = JSON.parse(row.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
@@ -147,8 +180,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
       return [];
     }
   });
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  const response = c.json({
     season,
     field,
     page,
@@ -163,4 +195,10 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
       games: typeof row.games === "number" ? row.games : null,
     })),
   });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The source statistics archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
