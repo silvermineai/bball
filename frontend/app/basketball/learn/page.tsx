@@ -5,6 +5,7 @@ import RecruitingWorkloadCalculator from "./RecruitingWorkloadCalculator";
 import ScoreProjectionCalculator from "./ScoreProjectionCalculator";
 import MetricExplorer from "./MetricExplorer";
 import LearningProgress from "./LearningProgress";
+import LearningCheckpoint from "./LearningCheckpoint";
 import type { LearningMetric, LearningTopic } from "../../_lib/metric-explorer";
 
 export const metadata = {
@@ -466,6 +467,10 @@ export default function Page() {
 
       <section className="section" aria-label="Interactive recruiting workload lesson">
         <RecruitingWorkloadCalculator />
+      </section>
+
+      <section className="section" aria-label="Basketball analytics learning checkpoint">
+        <LearningCheckpoint />
       </section>
 
       <section className="section two-col">
