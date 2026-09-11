@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/research/briefs/",
     "/research/coverage/",
     "/basketball/",
+    "/basketball/coach/",
     "/basketball/learn/",
     "/basketball/ratings/",
     "/basketball/rankings/",

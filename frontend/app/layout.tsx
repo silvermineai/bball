@@ -55,6 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/research/scorecard/">Forecast record</Link>
             <Link href="/research/markets/">Market archive</Link>
             <a href="/basketball/">Basketball ↗</a>
+            <Link href="/basketball/coach/">Coach&apos;s desk</Link>
             <Link href="/basketball/matchups/">Basketball matchups</Link>
             <Link href="/basketball/forecast-lab/">Forecast lab</Link>
             <Link href="/basketball/players/">Player archive</Link>
