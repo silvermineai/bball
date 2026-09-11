@@ -36,6 +36,11 @@ on:
         required: true
         type: boolean
         default: false
+      full_d1_rebuild:
+        description: Replay every historical basketball D1 partition (use for a deliberate bootstrap or repair)
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: research-publication
@@ -55,9 +60,9 @@ jobs:
       CF_API_TOKEN_ACCOUNT: ${{ secrets.CF_API_TOKEN_ACCOUNT }}
       FOOTBALL_D1_DATABASE: bball-football-v1
       # The historical basketball archive is already retained in D1. Daily
-      # maintenance refreshes only the newest source partitions; a deliberate
-      # bootstrap/rebuild can unset this variable when the database is empty.
-      BASKETBALL_D1_INCREMENTAL: "1"
+      # maintenance refreshes only the newest source partitions. A manual
+      # full_d1_rebuild dispatch explicitly unsets the maintenance mode.
+      BASKETBALL_D1_INCREMENTAL: ${{ (github.event_name != 'workflow_dispatch' || inputs.full_d1_rebuild != true) && '1' || '' }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       CBBD_API_KEY: ${{ secrets.CBBD_API_KEY }}
     steps:
