@@ -66,6 +66,7 @@ export default function NcaaCareers() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function NcaaCareers() {
     fetch("/api/basketball/research/ncaa-careers?meta=1")
       .then((r) => { if (!r.ok) throw Error("The NCAA career catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, []);
+  }, [retryNonce]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, page: String(page) });
@@ -94,10 +95,11 @@ export default function NcaaCareers() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, query, classYear, position, page]);
+  }, [fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, query, classYear, position, page, retryNonce]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
   const changeFromSeason = (value: string) => reset(() => {
     setFromSeason(value);
     if (Number(value) > Number(toSeason)) setToSeason(value);
@@ -177,7 +179,7 @@ export default function NcaaCareers() {
       <label className="control"><span>MINIMUM {denominatorLabel || "RATE DENOMINATOR"}</span><select value={denominatorLabel ? minDenominator : "0"} disabled={!denominatorLabel} onChange={(e) => reset(() => setMinDenominator(e.target.value))}>{[0, 25, 50, 100, 200, 400].map((n) => <option key={n} value={n}>{n ? `${n.toLocaleString()} ${denominatorLabel || "attempts"}` : "No extra denominator minimum"}</option>)}</select></label>
       <label className="control"><span>PLAYER</span><input type="search" maxLength={120} placeholder="Search a player" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
-    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA career records…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live history</button></div> : !result ? <p className="empty" role="status">Loading NCAA career records…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player-seasons · ranked by {labels[result.metric].toLowerCase()} · at least {result.min_games} games and {result.min_minutes} recorded minutes{result.min_denominator > 0 && result.denominator_field ? ` · ${result.min_denominator.toLocaleString()} ${result.denominator_field.toUpperCase()}` : ""}{classYear ? ` · class ${classYear}` : ""}{position ? ` · position ${position}` : ""}.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button></div></div>
       {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
       {!!result.source_receipts?.length && <details className="career-coverage-details" style={{ marginBottom: 20 }}><summary>Source receipts for this season window ({result.source_receipts.length})</summary><p className="note">Each receipt identifies the retained release behind the player-season rows. The roster receipt supports the optional class and position filters; the player-box receipt supplies the statistics. Retrieval clocks and hashes are shown exactly as recorded.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Dataset</th><th>Season</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><th scope="row">{receipt.dataset.replaceAll("_", " ")}</th><td>{seasonLabel(receipt.season)}</td><td>{new Date(receipt.fetched_at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })}</td><td><code>{receipt.sha256}</code></td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}

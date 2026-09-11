@@ -31,6 +31,7 @@ export default function NcaaRosters() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
@@ -55,13 +56,13 @@ export default function NcaaRosters() {
       .then((value) => { if (!controller.signal.aborted) setTransitions(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season]);
+  }, [retryNonce, season]);
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-rosters?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA roster catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, [season]);
+  }, [retryNonce, season]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page) });
@@ -74,10 +75,11 @@ export default function NcaaRosters() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, query, classYear, position, page]);
+  }, [classYear, page, position, query, retryNonce, season]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -146,7 +148,7 @@ export default function NcaaRosters() {
     </div>
     {meta?.source ? <details className="note" style={{ marginTop: 16 }}><summary>NCAA roster receipt for {label(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody><tr><td>{sourceDate(meta.source.fetched_at)}</td><td><code>{meta.source.sha256 || "—"}</code></td><td>{meta.source.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td></tr></tbody></table></div><p style={{ marginTop: 12 }}>This clock describes the retained source edition, not a live roster, eligibility or transfer update. CSV exports carry the same receipt fields.</p></details> : null}
     {transitions ? <section className="note" style={{ marginTop: 24 }}><div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Program planning lens</div><h2>Roster continuity, source release to source release</h2></div><span>{transitions.total.toLocaleString()} programs</span></div><p>Compare the {label(transitions.from_season)} and {label(transitions.to_season)} NCAA-derived releases by program. “Overlap” means the same NCAA source player ID appears for the same team in both editions; it is a research signal, not a transfer, person-match or eligibility ruling.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Program</th><th className="numeric">Prior</th><th className="numeric">Current</th><th className="numeric">Overlap</th><th className="numeric">Continuity</th><th className="numeric">New IDs</th><th className="numeric">Departed IDs</th></tr></thead><tbody>{transitions.rows.map((row) => <tr key={row.team_id}><td><strong>{row.team_name}</strong><small>NCAA team {row.team_id}</small></td><td className="numeric">{row.previous_players}</td><td className="numeric">{row.current_players}</td><td className="numeric">{row.overlap_players}</td><td className="numeric"><strong>{row.continuity_rate == null ? "—" : `${(100 * row.continuity_rate).toFixed(0)}%`}</strong></td><td className="numeric">{row.new_players}</td><td className="numeric">{row.departed_players}</td></tr>)}</tbody></table></div><p className="note" style={{ marginTop: 12 }}>This table is intentionally program-level. Use the dated recruiting wire and school or conference statements to verify an individual movement claim.</p></section> : null}
-    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA roster rows…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live roster</button></div> : !result ? <p className="empty" role="status">Loading NCAA roster rows…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching roster rows · page {page + 1} of {pages} · class, school and hometown fields are retained exactly as supplied by the source. Shooting columns appear when a same-season NCAA shot profile exists.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a><button className="button secondary" type="button" onClick={share}>Copy roster link</button></div></div>
       {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th>Class / position</th><th>Size</th><th>Hometown</th><th>High school</th><th className="numeric">Roster GP</th><th className="numeric">Roster GS</th><th className="numeric">Recorded PPG</th><th className="numeric">Recorded MPG</th><th className="numeric">Shot ATT</th><th className="numeric">3P%</th><th className="numeric">Rim%</th><th className="numeric">Avg dist.</th></tr></thead><tbody>{result.rows.map((row) => { const p = row.profile; const s = row.shooting; const z = s?.zones || {}; const threeAttempts = safeSum(z.abovebreak3?.attempts, z.corner3?.attempts); const threeMakes = safeSum(z.abovebreak3?.makes, z.corner3?.makes); const three: Zone | undefined = s && threeAttempts != null && threeMakes != null ? { attempts: threeAttempts, makes: threeMakes, points: 0 } : undefined; const recordedPpg = row.recorded_games && row.recorded_points != null ? row.recorded_points / row.recorded_games : null; return <tr key={`${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}>{row.player_name || row.player_id} →</Link><small>NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a> · <Link href={`/basketball/ncaa-compare/?ids=${encodeURIComponent(row.player_id)}&season=${row.season}`}>Compare →</Link></small></td><td><strong>{row.team_name || row.team_id}</strong><small>NCAA team {row.team_id}</small></td><td>{p.class || "—"}<small>{p.position || "Position unavailable"}</small></td><td>{p.height || "—"}<small>{p.ht_inches ? `${p.ht_inches} in` : ""}</small></td><td>{p.hometown || "—"}</td><td>{p.high_school || "—"}</td><td className="numeric">{p.gp || "—"}</td><td className="numeric">{p.gs || "—"}</td><td className="numeric">{fmt(recordedPpg)}</td><td className="numeric">{fmt(row.recorded_minutes && row.recorded_games ? row.recorded_minutes / row.recorded_games : null)}</td><td className="numeric">{s?.attempts?.toLocaleString() || "—"}</td><td className="numeric">{pct(three)}</td><td className="numeric">{pct(z.rim)}</td><td className="numeric">{s?.distance_count ? `${(s.distance_sum / s.distance_count).toFixed(1)} ft` : "—"}</td></tr>; })}</tbody></table></div>
