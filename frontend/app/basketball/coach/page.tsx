@@ -44,6 +44,13 @@ export default function Page() {
   const upcoming = basketball.upcoming
     .filter((game) => game.prediction || game.fallback_prediction)
     .slice(0, 5);
+  const rosterSummaries = (rosters.team_summaries || []).filter((team) => team.prior_minutes > 0);
+  const movementRadar = [...rosterSummaries]
+    .sort((a, b) => (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || a.team.localeCompare(b.team))
+    .slice(0, 6);
+  const incomingRadar = [...rosterSummaries]
+    .sort((a, b) => (b.incoming_prior_minutes || 0) - (a.incoming_prior_minutes || 0) || a.team.localeCompare(b.team))
+    .slice(0, 6);
   const news = getNews();
   const evaluation = basketball.model.evaluation;
 
@@ -145,9 +152,53 @@ export default function Page() {
         </aside>
       </section>
 
+      <section className="section paper-panel" aria-labelledby="movement-radar-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">04 / Recruiting radar · national roster observations</div>
+            <h2 id="movement-radar-title">Find the workload questions first.</h2>
+          </div>
+          <Link href="/basketball/recruiting/?view=observations">Open the full observation lab →</Link>
+        </div>
+        <p className="note">
+          These rankings compare exact source player IDs across the retained roster and participation releases. “Unrepresented” is prior minutes without a matching current listing; “incoming” is prior minutes attached to a player listed at a different program. Neither field proves a portal move, eligibility or availability.
+        </p>
+        <div className="two-col">
+          <div>
+            <div className="eyebrow">Largest unrepresented workload</div>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+              <table className="data-table">
+                <thead><tr><th>Program</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th><th className="numeric">Listed</th></tr></thead>
+                <tbody>{movementRadar.map((team) => <tr key={`unrepresented-${team.team_id}`}>
+                  <td><Link href={`/basketball/programs/${encodeURIComponent(team.team_id)}/`}>{team.team}</Link></td>
+                  <td className="numeric">{Math.round(team.prior_minutes).toLocaleString()}</td>
+                  <td className="numeric"><strong>{Math.round(team.unrepresented_prior_minutes || 0).toLocaleString()}</strong></td>
+                  <td className="numeric">{team.listed_players}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div className="eyebrow">Largest incoming prior workload</div>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+              <table className="data-table">
+                <thead><tr><th>Program</th><th className="numeric">Incoming minutes</th><th className="numeric">Represented</th><th className="numeric">Listed</th></tr></thead>
+                <tbody>{incomingRadar.map((team) => <tr key={`incoming-${team.team_id}`}>
+                  <td><Link href={`/basketball/programs/${encodeURIComponent(team.team_id)}/`}>{team.team}</Link></td>
+                  <td className="numeric"><strong>{Math.round(team.incoming_prior_minutes || 0).toLocaleString()}</strong></td>
+                  <td className="numeric">{Math.round(team.represented_prior_minutes || 0).toLocaleString()}</td>
+                  <td className="numeric">{team.listed_players}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <p className="section-note">Source frame: {rosters.players_observed.toLocaleString()} listed players across {rosters.teams_observed.toLocaleString()} programs. Use the exact player rows and source links before treating a radar entry as a recruiting lead.</p>
+      </section>
+
       {news.length > 0 && <section className="section" aria-labelledby="coach-wire-title">
         <div className="section-heading">
-          <div><div className="eyebrow">04 / Context</div><h2 id="coach-wire-title">Keep the current story close.</h2></div>
+          <div><div className="eyebrow">05 / Context</div><h2 id="coach-wire-title">Keep the current story close.</h2></div>
           <Link href="/basketball/news/">Open the publisher wire →</Link>
         </div>
         <div className="article-grid">
@@ -156,7 +207,7 @@ export default function Page() {
       </section>}
 
       <section className="section banner">
-        <div><div className="eyebrow">05 / Keep the ledger honest</div><h3 style={{ marginTop: 12 }}>A missing quote is missing evidence.</h3><p>Compare forecasts with licensed, timestamped pregame observations when they exist. Historical lines without a verified clock stay archival references.</p></div>
+        <div><div className="eyebrow">06 / Keep the ledger honest</div><h3 style={{ marginTop: 12 }}>A missing quote is missing evidence.</h3><p>Compare forecasts with licensed, timestamped pregame observations when they exist. Historical lines without a verified clock stay archival references.</p></div>
         <div className="button-row"><Link className="button secondary" href="/research/scorecard/?sport=basketball">Forecast scorecard ↗</Link><Link className="hero-link" href="/research/markets/?sport=basketball">Market archive →</Link></div>
       </section>
     </>
