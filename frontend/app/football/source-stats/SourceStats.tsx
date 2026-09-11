@@ -47,6 +47,7 @@ export default function SourceStats() {
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,7 +58,7 @@ export default function SourceStats() {
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 1000) setPage(requestedPage);
     setHydrated(true);
-  }, []);
+  }, [retryNonce]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -93,7 +94,7 @@ export default function SourceStats() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The football source records could not be loaded."); });
     return () => controller.abort();
-  }, [dataset, meta, page, query, season]);
+  }, [dataset, meta, page, query, retryNonce, season]);
 
   const labels = meta?.dataset_labels || fallbackLabels;
   const change = (fn: () => void) => { setPage(0); setError(""); fn(); };
@@ -151,7 +152,7 @@ export default function SourceStats() {
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive, specialist and NCAA-derived player releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
-      {error && <p className="status-error" role="alert">{error}</p>}
+      {error && <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => { setError(""); setRetryNonce((value) => value + 1); }}>Retry football source archive</button></div>}
       {!result ? <p className="empty" role="status">{meta ? "Loading source records…" : "Loading source catalog…"}</p> : <>
         {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>{labels[receipt.dataset]}</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><Link className="hero-link" href="/football/players/">Open identified player rankings →</Link></div>

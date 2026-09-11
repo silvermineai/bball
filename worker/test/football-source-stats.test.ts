@@ -81,4 +81,17 @@ describe("football source statistics", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ season: 2010, total: 0 });
   });
+
+  it("returns a retryable response when the football warehouse is busy", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total")) {
+        return { bind: () => ({ first: vi.fn().mockRejectedValue(new Error("D1 busy")) }) };
+      }
+      return { bind: () => ({ all: vi.fn().mockResolvedValue({ results: [] }) }) };
+    });
+    const response = await app.request("/api/football/source-stats?season=2025", {}, { DB: { prepare } });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "The football source archive is temporarily unavailable." });
+  });
 });
