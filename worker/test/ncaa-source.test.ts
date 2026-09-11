@@ -44,6 +44,20 @@ describe("NCAA roster and shooting source archives", () => {
     expect(bindings.RESEARCH_ARCHIVE.get).toHaveBeenCalledWith(`basketball/ncaa-shots/2026/${digest}.parquet`);
   });
 
+  it("returns a retryable status when the shooting catalog is unavailable", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const response = await ncaaShooting.request(
+      "/?meta=1&season=2026",
+      {},
+      { DB: { prepare, batch: vi.fn() } },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "The NCAA shooting catalog is temporarily unavailable.",
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("returns 304 without reading R2", async () => {
     const bindings = env("ncaa_shots", 2026);
     const response = await ncaaShooting.request("/source?season=2026", { headers: { "If-None-Match": `"${digest}"` } }, bindings);

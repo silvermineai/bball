@@ -19,6 +19,22 @@ const sourceSchema = z.object({
 });
 
 export const ncaaShooting = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA shooting database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
 const expression = (metric: Metric) => ({
   volume: "json_extract(stats_json,'$.attempts')",
   fg_pct: "CASE WHEN json_extract(stats_json,'$.attempts') > 0 THEN 100.0 * json_extract(stats_json,'$.makes') / json_extract(stats_json,'$.attempts') END",
@@ -39,9 +55,14 @@ const qualification = (metric: Metric) => ({
 /** Stream the exact NCAA shot release whose receipt is active in D1. */
 ncaaShooting.get("/source", zValidator("query", sourceSchema), async (c) => {
   const { season } = c.req.valid("query");
-  const row = await researchDb(c.env).prepare(
-    "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
-  ).bind("ncaa_shots", season).first<{ receipt_json: string }>();
+  let row: { receipt_json: string } | null = null;
+  try {
+    row = await withTimeout(researchDb(c.env).prepare(
+      "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
+    ).bind("ncaa_shots", season).first<{ receipt_json: string }>(), DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The NCAA shooting source is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
   let digest = "";
   try {
     const receipt = row?.receipt_json ? JSON.parse(row.receipt_json) as { sha256?: unknown } : null;
@@ -59,21 +80,36 @@ ncaaShooting.get("/source", zValidator("query", sourceSchema), async (c) => {
     "X-Robots-Tag": "noindex, follow",
   });
   if (c.req.header("If-None-Match")?.split(",").map((tag) => tag.trim()).includes(`"${digest}"`)) return new Response(null, { status: 304, headers });
-  const object = await c.env.RESEARCH_ARCHIVE.get(`basketball/ncaa-shots/${season}/${digest}.parquet`);
+  let object: R2ObjectBody | null = null;
+  try {
+    object = await withTimeout(c.env.RESEARCH_ARCHIVE.get(`basketball/ncaa-shots/${season}/${digest}.parquet`) as Promise<R2ObjectBody | null>, DB_TIMEOUT_MS);
+  } catch {
+    return c.json({ error: "The NCAA shooting source is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
   if (!object || !("body" in object)) return c.text("NCAA shooting source release is temporarily unavailable", 503);
   return new Response(object.body, { headers });
 });
 
 ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minAttempts, q, page, meta } = c.req.valid("query");
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the shooting endpoint fail.
+    }
+  }
   if (meta === "1") {
-    const [seasons, source] = await researchDb(c.env).batch([
+    try {
+    const [seasons, source] = await withTimeout(researchDb(c.env).batch([
       researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_shooting ORDER BY season DESC"),
       researchDb(c.env).prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_shots' AND season=?").bind(season),
-    ]);
+    ]), DB_TIMEOUT_MS);
     const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
+    const response = c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
       metrics,
       source: {
@@ -81,6 +117,12 @@ ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
         sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
       },
     });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+    } catch {
+      return c.json({ error: "The NCAA shooting catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const clauses = ["season=?"];
   const binds: Array<string | number> = [season];
@@ -92,8 +134,23 @@ ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const where = clauses.join(" AND ");
   const value = expression(metric);
   const qualified = qualification(metric);
-  const count = await researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>();
-  const rows = await researchDb(c.env).prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, metric, min_attempts: minAttempts, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })) });
+  try {
+  const count = await withTimeout(researchDb(c.env).prepare(`SELECT count(*) AS total FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL`).bind(...binds, minAttempts).first<{ total: number }>(), DB_TIMEOUT_MS);
+  const rows = await withTimeout(researchDb(c.env).prepare(`SELECT season,player_id,team_id,player_name,team_name,stats_json,${value} AS value FROM bb_ncaa_player_shooting WHERE ${where} AND (${qualified}) >= ? AND (${value}) IS NOT NULL ORDER BY value DESC,player_name ASC,player_id ASC LIMIT 40 OFFSET ?`).bind(...binds, minAttempts, page * 40).all(), DB_TIMEOUT_MS);
+  const response = c.json({ season, metric, min_attempts: minAttempts, page, page_size: 40, total: Number(count?.total || 0), rows: rows.results.map(({ stats_json, ...row }) => {
+    let stats: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(String(stats_json));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stats = parsed as Record<string, unknown>;
+    } catch {
+      // Preserve the ranked row while withholding a malformed shot payload.
+    }
+    return { ...row, stats };
+  }) });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The NCAA shooting archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
