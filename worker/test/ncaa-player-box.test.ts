@@ -107,4 +107,25 @@ describe("NCAA player source archive", () => {
     expect(gamePrepare).not.toHaveBeenCalled();
     expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("FROM bb_ncaa_player_season"))).toBe(true);
   });
+
+  it("returns a bounded retryable error when the archive read does not settle", async () => {
+    vi.useFakeTimers();
+    try {
+      const prepare = vi.fn(() => ({
+        bind: vi.fn(() => ({ first: () => new Promise(() => undefined) })),
+      }));
+      const request = ncaaPlayerBox.request(
+        "/?season=2025&archive=season",
+        {},
+        { DB: { prepare }, NCAA_BOX_DB: { prepare } } as never,
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      const response = await request;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "The NCAA player archive is temporarily unavailable." });
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

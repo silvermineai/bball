@@ -61,6 +61,22 @@ const sourceSchema = z.object({
 });
 
 export const ncaaPlayerBox = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA player archive database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
 
 ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
   const { season } = c.req.valid("query");
@@ -105,23 +121,65 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   const { season, q, page, archive, meta } = c.req.valid("query");
   const db = researchDb(c.env);
   const gameDb = ncaaBoxDb(c.env);
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the archive fail.
+    }
+  }
   if (meta === "1") {
     // Preserve the compact single-database path for local fixtures and older
     // deployments. The dedicated binding uses the split path below.
     const dedicatedGameDb = (c.env as Env & { NCAA_BOX_DB?: D1Database }).NCAA_BOX_DB;
     if (!dedicatedGameDb) {
-      const [legacySeasons, count, source, validation] = await db.batch([
-        db.prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
-        db.prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
-        db.prepare("SELECT json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
-        db.prepare(validationSql).bind(season),
-      ]);
-      const sourceRow = source.results[0] as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
-      const validationRow = validation?.results[0] as Record<string, unknown> | undefined;
-      c.header("Cache-Control", "public, max-age=300");
-      return c.json({
-        seasons: legacySeasons.results.map((row) => Number((row as { season: number }).season)),
-        total: Number((count.results[0] as { total: number }).total || 0),
+      try {
+        const [legacySeasons, count, source, validation] = await withTimeout(db.batch([
+          db.prepare("SELECT season FROM bb_ncaa_player_box UNION SELECT season FROM bb_ncaa_player_season ORDER BY season DESC"),
+          db.prepare("SELECT (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?) + (CASE WHEN (SELECT count(*) FROM bb_ncaa_player_box WHERE season=?)=0 THEN (SELECT count(*) FROM bb_ncaa_player_season WHERE season=?) ELSE 0 END) AS total").bind(season, season, season),
+          db.prepare("SELECT json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season),
+          db.prepare(validationSql).bind(season),
+        ]), DB_TIMEOUT_MS);
+        const sourceRow = source.results[0] as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
+        const validationRow = validation?.results[0] as Record<string, unknown> | undefined;
+        const response = c.json({
+          seasons: legacySeasons.results.map((row) => Number((row as { season: number }).season)),
+          total: Number((count.results[0] as { total: number }).total || 0),
+          source: {
+            url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
+            fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
+            sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
+          },
+          validation: parseValidation(validationRow),
+        });
+        response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+        if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+        return response;
+      } catch {
+        return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+      }
+    }
+    try {
+      const [gameSeasons, seasonSeasons, gameCount, seasonCount, source, validation] = await withTimeout(Promise.all([
+        gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all(),
+        db.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all(),
+        gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>(),
+        db.prepare("SELECT count(*) AS total FROM bb_ncaa_player_season WHERE season=?").bind(season).first<{ total: number }>(),
+        db.prepare("SELECT json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season).first(),
+        gameDb.prepare(validationSql).bind(season).first(),
+      ]), DB_TIMEOUT_MS);
+      const sourceRow = source as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
+      const validationRow = validation as Record<string, unknown> | undefined;
+      const seasons = [...new Set([
+        ...gameSeasons.results.map((row) => Number((row as { season: number }).season)),
+        ...seasonSeasons.results.map((row) => Number((row as { season: number }).season)),
+      ])].sort((a, b) => b - a);
+      const response = c.json({
+        seasons,
+        total: Number((gameCount?.total || seasonCount?.total || 0)),
         source: {
           url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
           fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
@@ -129,65 +187,60 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         },
         validation: parseValidation(validationRow),
       });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
-    const [gameSeasons, seasonSeasons, gameCount, seasonCount, source, validation] = await Promise.all([
-      gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all(),
-      db.prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC").all(),
-      gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>(),
-      db.prepare("SELECT count(*) AS total FROM bb_ncaa_player_season WHERE season=?").bind(season).first<{ total: number }>(),
-      db.prepare("SELECT json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='ncaa_player_box' AND season=?").bind(season).first(),
-      gameDb.prepare(validationSql).bind(season).first(),
-    ]);
-    const sourceRow = source as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
-    const validationRow = validation as Record<string, unknown> | undefined;
-    const seasons = [...new Set([
-      ...gameSeasons.results.map((row) => Number((row as { season: number }).season)),
-      ...seasonSeasons.results.map((row) => Number((row as { season: number }).season)),
-    ])].sort((a, b) => b - a);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
-      seasons,
-      total: Number((gameCount?.total || seasonCount?.total || 0)),
-      source: {
-        url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
-        fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
-        sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
-      },
-      validation: parseValidation(validationRow),
+  }
+  try {
+    const rawCount = archive === "auto"
+      ? await withTimeout(gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>(), DB_TIMEOUT_MS)
+      : null;
+    const archiveMode = archive === "games" || (archive === "auto" && Number(rawCount?.total || 0) > 0) ? "games" : "season";
+    const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
+    const clauses = ["season=?"];
+    const binds: Array<string | number> = [season];
+    if (q) {
+      clauses.push(archiveMode === "games"
+        ? "(player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)"
+        : "(player_name LIKE ? OR team_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)");
+      const search = `%${q}%`;
+      binds.push(...(archiveMode === "games" ? [search, search, search, search, search] : [search, search, search, search]));
+    }
+    const where = clauses.join(" AND ");
+    const queryDb = archiveMode === "games" ? gameDb : db;
+    const count = await withTimeout(queryDb.prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+    const rows = await withTimeout(queryDb.prepare(
+      archiveMode === "games"
+        ? `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
+           FROM bb_ncaa_player_box WHERE ${where}
+           ORDER BY game_date DESC, player_name ASC, contest_id ASC LIMIT 50 OFFSET ?`
+        : `SELECT season,NULL AS contest_id,team_id,player_id,NULL AS game_date,team_name,NULL AS opponent_name,player_name,stats_json
+           FROM bb_ncaa_player_season WHERE ${where}
+           ORDER BY player_name ASC, team_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
+    ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
+    const response = c.json({
+      season, archive_mode: archiveMode,
+      page,
+      page_size: 50,
+      total: Number(count?.total || 0),
+      rows: rows.results.map(({ stats_json, ...row }) => {
+        let stats: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(String(stats_json));
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stats = parsed as Record<string, unknown>;
+        } catch {
+          // Integrity metadata reports malformed payloads; withhold only this row's stats.
+        }
+        return { ...row, stats };
+      }),
     });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+    return response;
+  } catch {
+    return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
-  const rawCount = archive === "auto"
-    ? await gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>()
-    : null;
-  const archiveMode = archive === "games" || (archive === "auto" && Number(rawCount?.total || 0) > 0) ? "games" : "season";
-  const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
-  const clauses = ["season=?"];
-  const binds: Array<string | number> = [season];
-  if (q) {
-    clauses.push(archiveMode === "games"
-      ? "(player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)"
-      : "(player_name LIKE ? OR team_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)");
-    const search = `%${q}%`;
-    binds.push(...(archiveMode === "games" ? [search, search, search, search, search] : [search, search, search, search]));
-  }
-  const where = clauses.join(" AND ");
-  const queryDb = archiveMode === "games" ? gameDb : db;
-  const count = await queryDb.prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>();
-  const rows = await queryDb.prepare(
-    archiveMode === "games"
-      ? `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
-         FROM bb_ncaa_player_box WHERE ${where}
-         ORDER BY game_date DESC, player_name ASC, contest_id ASC LIMIT 50 OFFSET ?`
-      : `SELECT season,NULL AS contest_id,team_id,player_id,NULL AS game_date,team_name,NULL AS opponent_name,player_name,stats_json
-         FROM bb_ncaa_player_season WHERE ${where}
-         ORDER BY player_name ASC, team_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
-  ).bind(...binds, page * 50).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({
-    season, archive_mode: archiveMode,
-    page,
-    page_size: 50,
-    total: Number(count?.total || 0),
-    rows: rows.results.map(({ stats_json, ...row }) => ({ ...row, stats: JSON.parse(String(stats_json)) })),
-  });
 });
