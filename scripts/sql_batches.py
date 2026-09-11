@@ -13,6 +13,8 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "cancelled due to no poll() received",
     "d1 db reset because its code was updated",
     "db reset because its code was updated",
+    "d1 db storage operation exceeded timeout",
+    "storage operation exceeded timeout",
 )
 
 

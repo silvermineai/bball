@@ -15,6 +15,11 @@ class SqlBatchTests(unittest.TestCase):
         self.assertTrue(
             is_retryable_d1_import_error("Currently processing a long-running import")
         )
+        self.assertTrue(
+            is_retryable_d1_import_error(
+                "D1 DB storage operation exceeded timeout which caused object to be reset."
+            )
+        )
         self.assertFalse(is_retryable_d1_import_error("no such table: football_games"))
 
     def test_deletes_are_isolated_and_inserts_are_bounded(self):
