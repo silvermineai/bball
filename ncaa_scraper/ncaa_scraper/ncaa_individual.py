@@ -270,6 +270,38 @@ def export_sql(conn: sqlite3.Connection, release: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def release_is_degraded(previous: dict, candidate: dict) -> bool:
+    """Keep a stronger same-season snapshot when a source refresh is sparse.
+
+    NCAA ranking pages can return a short body when a ranking period or stat
+    endpoint is unavailable.  The scraper intentionally continues so other
+    divisions and measures can be cached, but publishing that partial merge
+    would erase a usable public leaderboard.  Compare only the stable D1
+    coverage counters and use conservative floors so a transiently short
+    response cannot replace the last good release.
+    """
+    if previous.get("season") != candidate.get("season"):
+        return False
+    previous_divisions = previous.get("coverage", {}).get("divisions", {})
+    candidate_divisions = candidate.get("coverage", {}).get("divisions", {})
+    previous_d1 = previous_divisions.get("1") if isinstance(previous_divisions, dict) else None
+    candidate_d1 = candidate_divisions.get("1") if isinstance(candidate_divisions, dict) else None
+    if not isinstance(previous_d1, dict):
+        return False
+    if not isinstance(candidate_d1, dict):
+        return True
+    # A release with no D1 players or no points-per-game rows is never a
+    # viable replacement.  For the remaining counters, tolerate ordinary
+    # qualification changes while rejecting an endpoint that has collapsed.
+    for field, floor in (("players", 0.8), ("ppg", 0.8), ("rpg", 0.5), ("mpg", 0.5)):
+        old = previous_d1.get(field)
+        new = candidate_d1.get(field)
+        if isinstance(old, (int, float)) and not isinstance(old, bool) and old > 0:
+            if not isinstance(new, (int, float)) or isinstance(new, bool) or new < old * floor:
+                return True
+    return False
+
+
 def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, division: str) -> None:
     div_int = int(float(division))
     period = final_period(fetcher, division)
@@ -437,10 +469,24 @@ def main() -> None:
         scrape_division(fetcher, conn, div)
     release = export_release(conn)
     PUBLIC_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PUBLIC_PATH.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
-    SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SQL_PATH.write_text(export_sql(conn, release))
-    print(f"[individual] published {len(release['players']):,} players to {PUBLIC_PATH}", flush=True)
+    previous = None
+    if PUBLIC_PATH.exists():
+        try:
+            decoded = json.loads(PUBLIC_PATH.read_text())
+            if isinstance(decoded, dict):
+                previous = decoded
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            previous = None
+    if previous is not None and release_is_degraded(previous, release):
+        print(
+            "[individual] source snapshot is sparse; preserving the existing public release",
+            flush=True,
+        )
+    else:
+        PUBLIC_PATH.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
+        SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SQL_PATH.write_text(export_sql(conn, release))
+        print(f"[individual] published {len(release['players']):,} players to {PUBLIC_PATH}", flush=True)
     conn.close()
 
 

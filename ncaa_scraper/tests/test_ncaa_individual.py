@@ -10,6 +10,7 @@ from ncaa_scraper.ncaa_individual import (
     ensure_schema,
     invalid_ranking_page,
     parse_table,
+    release_is_degraded,
     to_num,
 )
 
@@ -79,6 +80,30 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertNotIn("216.0", INDIVIDUAL_STATS)
         self.assertTrue(invalid_ranking_page("b'Invalid ranking period'"))
         self.assertFalse(invalid_ranking_page("<table><tbody><tr><td>1</td></tr></tbody></table>"))
+
+    def test_sparse_same_season_release_does_not_replace_d1_snapshot(self):
+        previous = {
+            "season": 2026,
+            "coverage": {"divisions": {"1": {"players": 1791, "ppg": 1791, "rpg": 1791, "mpg": 1791}}},
+        }
+        candidate = {
+            "season": 2026,
+            "coverage": {"divisions": {"1": {"players": 1496, "ppg": 1496, "rpg": 350, "mpg": 350}}},
+        }
+        self.assertTrue(release_is_degraded(previous, candidate))
+
+        self.assertTrue(release_is_degraded(previous, {"season": 2026, "coverage": {"divisions": {}}}))
+
+    def test_different_season_is_not_compared_to_previous_snapshot(self):
+        previous = {
+            "season": 2025,
+            "coverage": {"divisions": {"1": {"players": 1791, "ppg": 1791, "rpg": 1791, "mpg": 1791}}},
+        }
+        candidate = {
+            "season": 2026,
+            "coverage": {"divisions": {"1": {"players": 1, "ppg": 1, "rpg": 1, "mpg": 1}}},
+        }
+        self.assertFalse(release_is_degraded(previous, candidate))
 
 
 if __name__ == "__main__":
