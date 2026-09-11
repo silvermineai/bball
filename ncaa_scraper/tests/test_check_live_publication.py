@@ -71,6 +71,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "provider_update_clock": True,
                 }],
             },
+            "/api/research/briefs?sport=all&page=0": {
+                "total": 2323,
+                "rows": [{"sport": "basketball", "game_id": "401902275", "revision": "d25ebd383e9b591503777f3fde5bce62e972e57bc0f85f4ae363afda79739f32"}],
+            },
         }
         with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
             report = check_live("https://example.test", now=now)
@@ -90,6 +94,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["basketball_market_pregame"], 0)
         self.assertEqual(report["football_market_observations"], 12)
         self.assertEqual(report["football_market_pregame"], 12)
+        self.assertEqual(report["brief_archive_total"], 2323)
+        self.assertEqual(report["brief_archive_page_rows"], 1)
 
     def test_rejects_malformed_market_metadata(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)

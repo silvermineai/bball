@@ -86,6 +86,24 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
     return total, pregame, len(capabilities)
 
 
+def brief_archive_metadata(payload: dict) -> tuple[int, int]:
+    """Validate the durable reading archive without downloading snapshots."""
+    total = payload.get("total")
+    rows = payload.get("rows")
+    if not isinstance(total, int) or total <= 0 or not isinstance(rows, list) or not rows:
+        raise ValueError("brief archive metadata is malformed")
+    for row in rows:
+        if (
+            not isinstance(row, dict)
+            or row.get("sport") not in {"basketball", "football"}
+            or not isinstance(row.get("game_id"), str)
+            or not isinstance(row.get("revision"), str)
+            or len(row["revision"]) != 64
+        ):
+            raise ValueError("brief archive row is malformed")
+    return total, len(rows)
+
+
 def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int, int]:
     """Validate the player archive and ensure derived assist fields are live."""
     seasons = careers.get("seasons")
@@ -231,6 +249,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     football_market_total, football_market_pregame, football_market_capabilities = market_metadata(
         football_markets, "football"
     )
+    brief_archive = get_json(base_url, "/api/research/briefs?sport=all&page=0")
+    brief_archive_total, brief_archive_page = brief_archive_metadata(brief_archive)
     return {
         "base_url": base_url.rstrip("/"),
         "checked_at": checked_at.isoformat().replace("+00:00", "Z"),
@@ -267,6 +287,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_market_observations": football_market_total,
         "football_market_pregame": football_market_pregame,
         "football_market_capabilities": football_market_capabilities,
+        "brief_archive_total": brief_archive_total,
+        "brief_archive_page_rows": brief_archive_page,
     }
 
 
