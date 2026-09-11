@@ -35,6 +35,10 @@ DATASETS = {
     "specialists": ("espn_cfb_adv_specialists", "adv_specialists_{year}.csv"),
     "team_advanced": ("espn_cfb_adv_team", "adv_team_{year}.csv"),
     "betting": ("espn_cfb_betting", "betting_{year}.csv"),
+    # NCAA-derived player game rows are kept in a separate source namespace.
+    # The release has names and team/contest IDs, but no stable athlete ID;
+    # callers must not join these rows to the ESPN player archive by name.
+    "ncaa_player_stats": ("ncaa_mfb_player_stats", "ncaa_mfb_player_stats_{year}.csv.gz"),
 }
 
 

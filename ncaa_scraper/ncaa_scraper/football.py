@@ -96,7 +96,14 @@ def store_rows(conn, dataset, year, rows, receipt):
                         row.get("team_id")
                         or row.get("pos_team_id")
                         or row.get("def_pos_team_id"),
-                        row.get("game_id"),
+                        # NCAA-derived player rows call these identifiers
+                        # contest_id/espn_game_id. Prefer the ESPN game ID
+                        # when supplied so the raw evidence can show schedule
+                        # context; preserve contest ID when it is the only
+                        # game key available.
+                        row.get("game_id")
+                        or row.get("espn_game_id")
+                        or row.get("contest_id"),
                         row.get("category") or dataset,
                         json.dumps(compact),
                     )
@@ -318,6 +325,9 @@ def build(conn, season=2026):
             "SELECT count(*) FROM football_stats WHERE dataset='box' AND season BETWEEN ? AND ?",
             (season - 1, season),
         ).fetchone()[0],
+        "ncaa_player_stats_rows": conn.execute(
+            "SELECT count(*) FROM football_stats WHERE dataset='ncaa_player_stats'"
+        ).fetchone()[0],
         "market_observations": conn.execute(
             "SELECT count(*) FROM football_markets"
         ).fetchone()[0],
@@ -429,11 +439,20 @@ def main():
     if not args.build_only:
         client = ReleaseClient()
         for year in range(args.season - 4, args.season + 1):
-            for dataset in (
-                ["schedule", "teams", "team_advanced"]
-                if year < args.season - 1
-                else DATASETS
-            ):
+            if year < args.season - 1:
+                datasets = ["schedule", "teams", "team_advanced"]
+                # Keep the NCAA source history in the same five-season
+                # warehouse window. The upstream release currently ends in
+                # 2025, so never turn a missing 2026 file into a failed
+                # football publication.
+                if 2013 <= year <= 2025:
+                    datasets.append("ncaa_player_stats")
+            else:
+                datasets = [
+                    dataset for dataset in DATASETS
+                    if dataset != "ncaa_player_stats" or year <= 2025
+                ]
+            for dataset in datasets:
                 # Required downloads fail the run instead of silently producing partial coverage.
                 rows, receipt = client.load(dataset, year, refresh=args.refresh)
                 store_rows(conn, dataset, year, rows, receipt)

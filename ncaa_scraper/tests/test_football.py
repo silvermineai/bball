@@ -208,6 +208,25 @@ class ImportTests(unittest.TestCase):
         self.assertEqual(stored["stat_1"], "11/17")
         self.assertNotIn("passingYards", stored)
 
+    def test_ncaa_player_rows_keep_game_context_without_identity_join(self):
+        row = {
+            "contest_id": "ncaa-contest",
+            "espn_game_id": "game-123",
+            "team_id": "8166431",
+            "name": "Source Player",
+            "category": "rushing",
+            "rush_attempts": "4",
+        }
+        store_rows(self.conn, "ncaa_player_stats", 2025, [row], {"fetched_at": "2026-09-11T00:00:00Z"})
+        stored = self.conn.execute(
+            "SELECT athlete_id,team_id,game_id,category,stats_json FROM football_stats"
+        ).fetchone()
+        self.assertIsNone(stored[0])
+        self.assertEqual(stored[1:4], ("8166431", "game-123", "rushing"))
+        payload = json.loads(stored[4])
+        self.assertEqual(payload["contest_id"], "ncaa-contest")
+        self.assertEqual(payload["name"], "Source Player")
+
 
 if __name__ == "__main__":
     unittest.main()

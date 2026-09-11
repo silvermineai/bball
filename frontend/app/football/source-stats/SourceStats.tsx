@@ -5,7 +5,7 @@ import Link from "next/link";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
-type Dataset = "all" | "box" | "passing" | "rushing" | "receiving" | "defense" | "specialists" | "team_advanced" | "teams" | "betting";
+type Dataset = "all" | "box" | "passing" | "rushing" | "receiving" | "defense" | "specialists" | "team_advanced" | "teams" | "betting" | "ncaa_player_stats";
 type Meta = { seasons: number[]; datasets: { dataset: Exclude<Dataset, "all">; rows: number }[]; dataset_labels: Record<Exclude<Dataset, "all">, string> };
 type Row = {
   dataset: Exclude<Dataset, "all">;
@@ -26,7 +26,7 @@ type Row = {
 type Result = { dataset: Dataset; season: number; page: number; page_size: number; total: number; source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; url: string; fetched_at: string; sha256: string }>; rows: Row[] };
 
 const fallbackLabels: Record<Exclude<Dataset, "all">, string> = {
-  box: "Player box scores", passing: "Passing aggregates", rushing: "Rushing aggregates", receiving: "Receiving aggregates", defense: "Defensive events", specialists: "Kicking, punting & returns", team_advanced: "Advanced team rates", teams: "Team directory", betting: "Historical market archive",
+  box: "Player box scores", passing: "Passing aggregates", rushing: "Rushing aggregates", receiving: "Receiving aggregates", defense: "Defensive events", specialists: "Kicking, punting & returns", team_advanced: "Advanced team rates", teams: "Team directory", betting: "Historical market archive", ncaa_player_stats: "NCAA-derived player game stats",
 };
 const pretty = (key: string) => key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const display = (value: unknown) => value == null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -51,7 +51,7 @@ export default function SourceStats() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("dataset") as Dataset | null;
-    if (requested && ["all", "box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting"].includes(requested)) setDataset(requested);
+    if (requested && ["all", "box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats"].includes(requested)) setDataset(requested);
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
     const requestedPage = Number(params.get("page"));
@@ -150,7 +150,7 @@ export default function SourceStats() {
         {result && <><button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></>}
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
-      <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive and specialist releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
+      <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive, specialist and NCAA-derived player releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
       {error && <p className="status-error" role="alert">{error}</p>}
       {!result ? <p className="empty" role="status">{meta ? "Loading source records…" : "Loading source catalog…"}</p> : <>
         {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>{labels[receipt.dataset]}</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
@@ -159,7 +159,7 @@ export default function SourceStats() {
         {!result.rows.length && <p className="empty">No source records match these filters.</p>}
         <div className="pagination"><span>{result.total.toLocaleString()} records · source values remain auditable</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       </>}
-      <section className="section paper-panel"><div className="eyebrow">Source boundary</div><h2>Everything stays in its namespace.</h2><p>SportsDataverse releases are attributed under CC BY 4.0 and retain ESPN / CollegeFootballData source fields. This browser makes the raw evidence discoverable without turning a name-only event record into a player identity, adding a composite grade or presenting archived betting rows as verified pregame lines.</p><p><Link href="/research/coverage/">Review source receipts and live row counts →</Link> · <Link href="/football/events/">Open the defense and specialist notebook →</Link></p></section>
+      <section className="section paper-panel"><div className="eyebrow">Source boundary</div><h2>Everything stays in its namespace.</h2><p>SportsDataverse releases are attributed under CC BY 4.0 and retain ESPN / CollegeFootballData source fields. NCAA-derived player rows add contest-level evidence while retaining the source name and team identifiers; they do not supply a stable athlete ID and are never joined to the ESPN player archive by name. This browser makes raw evidence discoverable without adding a composite grade or presenting archived betting rows as verified pregame lines.</p><p><Link href="/research/coverage/">Review source receipts and live row counts →</Link> · <Link href="/football/events/">Open the defense and specialist notebook →</Link></p></section>
     </>
   );
 }

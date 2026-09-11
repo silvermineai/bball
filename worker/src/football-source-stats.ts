@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { footballDb } from "./football-db";
 
-const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting"] as const;
+const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats"] as const;
 type Dataset = (typeof DATASETS)[number];
 
 const querySchema = z.object({
@@ -40,6 +40,7 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
         team_advanced: "Advanced team rates",
         teams: "Team directory",
         betting: "Historical market archive",
+        ncaa_player_stats: "NCAA-derived player game stats",
       } satisfies Record<Dataset, string>,
     });
   }
