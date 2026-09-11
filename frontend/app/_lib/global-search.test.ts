@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combineSearchResults, searchPrograms, searchRecruitingPeople } from "./global-search";
+import { combineSearchResults, searchPrograms, searchRecruitingPeople, searchRosterPeople } from "./global-search";
 
 describe("global basketball search", () => {
   it("prioritizes program names that start with the query", () => {
@@ -32,5 +32,15 @@ describe("global basketball search", () => {
     expect(rows.map((row) => row.name)).toEqual(["Smithson, Alex", "Jordan Smith"]);
     expect(rows[0]).toMatchObject({ type: "player", sport: "basketball", detail: "Recruiting evidence · freshman" });
     expect(rows[0].href).toBe("/basketball/recruiting/?q=Smithson%2C%20Alex");
+  });
+
+  it("routes source-listed roster names to the observation view", () => {
+    const rows = searchRosterPeople([
+      { id: "2", name: "Jordan Smith", team: "Duke", status: "same_program" },
+      { id: "1", name: "Smithson, Alex", team: "Kentucky", status: "new_to_dataset" },
+    ], "smith");
+    expect(rows.map((row) => row.name)).toEqual(["Smithson, Alex", "Jordan Smith"]);
+    expect(rows[0]).toMatchObject({ type: "player", sport: "basketball", detail: "Roster observation · Kentucky · new to dataset" });
+    expect(rows[0].href).toBe("/basketball/recruiting/?view=observations&rosterQ=Smithson%2C%20Alex");
   });
 });

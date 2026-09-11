@@ -1,5 +1,6 @@
 export type SearchProgram = { id: string; name: string };
 export type SearchRecruitingPerson = { key: string; name: string; category?: string };
+export type SearchRosterPerson = { id: string; name: string; team?: string | null; status?: string | null };
 
 export type SearchResult = {
   id: string;
@@ -63,6 +64,32 @@ export function searchRecruitingPeople(
       sport: "basketball",
       detail: `Recruiting evidence${person.category ? ` · ${person.category.replaceAll("_", " ")}` : ""}`,
       href: `/basketball/recruiting/?q=${encodeURIComponent(person.name)}`,
+    }));
+}
+
+/** Find current source-listed roster observations without calling them transactions. */
+export function searchRosterPeople(
+  people: SearchRosterPerson[],
+  query: string,
+  limit = 4,
+): SearchResult[] {
+  const needle = normalize(query);
+  if (!needle) return [];
+  return people
+    .filter((person) => normalize(`${person.name} ${person.team || ""}`).includes(needle))
+    .sort((a, b) => {
+      const aName = normalize(a.name);
+      const bName = normalize(b.name);
+      return Number(!aName.startsWith(needle)) - Number(!bName.startsWith(needle)) || aName.localeCompare(bName) || a.id.localeCompare(b.id);
+    })
+    .slice(0, limit)
+    .map((person) => ({
+      id: `roster-${person.id}`,
+      name: person.name,
+      type: "player",
+      sport: "basketball",
+      detail: `Roster observation${person.team ? ` · ${person.team}` : ""}${person.status ? ` · ${person.status.replaceAll("_", " ")}` : ""}`,
+      href: `/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(person.name)}`,
     }));
 }
 

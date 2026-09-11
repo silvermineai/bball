@@ -101,4 +101,29 @@ describe("live basketball roster observations", () => {
     expect(body.players_truncated).toBe(false);
     expect(body.player_filter).toEqual({ status: "all", limit: 10000 });
   });
+
+  it("applies literal player and program search before the response cap", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        all: async () => ({
+          results: sql.includes("FROM bb_rosters") && args[0] === 2027
+            ? [
+                { team_id: "team", athlete_id: "1", profile_json: JSON.stringify({ full_name: "One Guard", team_display_name: "U" }) },
+                { team_id: "team", athlete_id: "2", profile_json: JSON.stringify({ full_name: "Two Forward", team_display_name: "U" }) },
+              ]
+            : [],
+        }),
+        first: async () => ({ receipt_json: null }),
+      }),
+    }));
+    const response = await basketballRosters.request("/?season=2027&q=forward", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { players: Array<Record<string, unknown>>; players_observed: number; players_available: number; players_returned: number; players_truncated: boolean; player_filter: Record<string, unknown> };
+    expect(body.players.map((player) => player.name)).toEqual(["Two Forward"]);
+    expect(body.players_observed).toBe(2);
+    expect(body.players_available).toBe(1);
+    expect(body.players_returned).toBe(1);
+    expect(body.players_truncated).toBe(false);
+    expect(body.player_filter).toEqual({ status: "all", q: "forward", limit: 10000 });
+  });
 });

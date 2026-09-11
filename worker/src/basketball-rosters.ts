@@ -6,6 +6,7 @@ import { researchDb } from "./research-db";
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
   status: z.enum(["all", "same_program", "different_program", "new_to_dataset", "ambiguous"]).default("all"),
+  q: z.string().trim().max(120).optional(),
   // The recruiting board is a source browser, so its default must include
   // the complete current release (currently ~5.5k rows). Keep a bounded cap
   // for unusually large future editions rather than silently returning the
@@ -39,7 +40,7 @@ const readProfile = (value: string): Record<string, unknown> => {
 export const basketballRosters = new Hono<{ Bindings: Env }>();
 
 basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, status, limit } = c.req.valid("query");
+  const { season, status, q, limit } = c.req.valid("query");
   const previousSeason = season - 1;
   const sourceDataset = season === 2026 ? "player_box" : "rosters";
   const db = researchDb(c.env);
@@ -174,7 +175,10 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     };
   }).sort((a, b) => a.team.localeCompare(b.team));
 
-  const availablePlayers = status === "all" ? players : players.filter((player) => player.status === status);
+  const needle = q?.toLocaleLowerCase() || "";
+  const availablePlayers = (status === "all" ? players : players.filter((player) => player.status === status)).filter((player) =>
+    !needle || `${player.name} ${player.team} ${player.previous_teams.join(" ")}`.toLocaleLowerCase().includes(needle),
+  );
   const filteredPlayers = availablePlayers.slice(0, limit);
 
   let receipt: Record<string, unknown> | null = null;
@@ -194,7 +198,7 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     players_available: availablePlayers.length,
     players_returned: filteredPlayers.length,
     players_truncated: filteredPlayers.length < availablePlayers.length,
-    player_filter: { status, limit },
+    player_filter: q ? { status, q, limit } : { status, limit },
     source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
   });
 });
