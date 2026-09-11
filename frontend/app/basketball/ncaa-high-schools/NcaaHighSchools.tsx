@@ -26,6 +26,7 @@ export default function NcaaHighSchools() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => { const params = new URLSearchParams({ season, metric, minPlayers }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minPlayers, query, page]);
@@ -34,7 +35,7 @@ export default function NcaaHighSchools() {
     fetch(`/api/basketball/research/ncaa-high-schools?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA high-school catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, [season]);
+  }, [retryNonce, season]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, metric, minPlayers, page: String(page) });
@@ -45,7 +46,9 @@ export default function NcaaHighSchools() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, metric, minPlayers, query, page]);
+  }, [metric, minPlayers, page, query, retryNonce, season]);
+
+  const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
@@ -104,7 +107,7 @@ export default function NcaaHighSchools() {
       <label className="control"><span>MINIMUM PLAYERS</span><select value={minPlayers} onChange={(e) => reset(() => setMinPlayers(e.target.value))}>{[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n} players</option>)}</select></label>
       <label className="control"><span>HIGH SCHOOL</span><input type="search" maxLength={120} placeholder="Search a source school label" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
-    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading high-school pipeline…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry high-school pipeline</button></div> : !result ? <p className="empty" role="status">Loading high-school pipeline…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} high-school labels · ranked by {labels[result.metric].toLowerCase()} · source roster rows only.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy pipeline link</button></div></div>{(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>High school</th><th className="numeric">Players</th><th className="numeric">Programs</th><th className="numeric">Games</th><th className="numeric">Points</th><th className="numeric">{labels[result.metric]}</th><th>Evidence</th></tr></thead><tbody>{result.rows.map((row) => <tr key={row.high_school}><td className="numeric"><strong>#{row.rank}</strong></td><td><strong>{row.high_school}</strong></td><td className="numeric">{fmt(row.players, 0)}</td><td className="numeric">{fmt(row.programs, 0)}</td><td className="numeric">{fmt(row.games, 0)}</td><td className="numeric">{fmt(row.points, 0)}</td><td className="numeric"><strong>{fmt(row.value, result.metric === "ppg" ? 1 : 0)}</strong></td><td><Link href={`/basketball/ncaa-rosters/?season=${result.season}&q=${encodeURIComponent(row.high_school)}`}>Open roster rows →</Link></td></tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No source high-school labels match this filter.</p>}
