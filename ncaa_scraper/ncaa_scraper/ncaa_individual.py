@@ -23,8 +23,10 @@ import argparse
 import ast
 import html as htmllib
 import json
+import os
 import re
 import sqlite3
+import tempfile
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -252,6 +254,29 @@ def quote(value):
     if value is None:
         return "NULL"
     return "'" + str(value).replace("'", "''") + "'"
+
+
+def atomic_write(path: Path, content: str) -> None:
+    """Replace a publication file only after its complete bytes are written."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
 
 
 def export_sql(conn: sqlite3.Connection, release: dict) -> str:
@@ -483,9 +508,8 @@ def main() -> None:
             flush=True,
         )
     else:
-        PUBLIC_PATH.write_text(json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
-        SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
-        SQL_PATH.write_text(export_sql(conn, release))
+        atomic_write(PUBLIC_PATH, json.dumps(release, ensure_ascii=False, separators=(",", ":")) + "\n")
+        atomic_write(SQL_PATH, export_sql(conn, release))
         print(f"[individual] published {len(release['players']):,} players to {PUBLIC_PATH}", flush=True)
     conn.close()
 

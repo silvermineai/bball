@@ -1,5 +1,7 @@
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 
 from ncaa_scraper.ncaa_individual import (
     INDIVIDUAL_STATS,
@@ -10,6 +12,7 @@ from ncaa_scraper.ncaa_individual import (
     ensure_schema,
     invalid_ranking_page,
     parse_table,
+    atomic_write,
     release_is_degraded,
     to_num,
 )
@@ -104,6 +107,14 @@ class NCAAIndividualTests(unittest.TestCase):
             "coverage": {"divisions": {"1": {"players": 1, "ppg": 1, "rpg": 1, "mpg": 1}}},
         }
         self.assertFalse(release_is_degraded(previous, candidate))
+
+    def test_atomic_write_replaces_complete_file_and_leaves_no_temp(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "release.json"
+            path.write_text("old\n")
+            atomic_write(path, "new\n")
+            self.assertEqual(path.read_text(), "new\n")
+            self.assertEqual(list(Path(directory).glob(".*.tmp")), [])
 
 
 if __name__ == "__main__":
