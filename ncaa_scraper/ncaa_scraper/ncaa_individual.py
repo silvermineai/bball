@@ -142,8 +142,22 @@ def final_period(fetcher: ScraplingNCAAFetcher, division: str) -> str | None:
         f"/rankings/change_sport_year_div?academic_year={YEAR}&division={division}&sport_code={SPORT}",
         cache_key=f"rk_change_{SPORT}_{division}",
     ))
-    m = re.search(r'<option value="([\d.]+)"[^>]*>[^<]*Final Statistics</option>', html)
-    return m.group(1) if m else None
+    # The change page can retain several historical periods whose labels all
+    # contain “Final Statistics”.  Prefer the option the publisher marked as
+    # selected; falling back to the first matching option keeps older cached
+    # pages (which did not include the selected attribute) deterministic.
+    options = re.findall(r"<option\b([^>]*)>(.*?)</option>", html, re.DOTALL | re.IGNORECASE)
+    matching: list[tuple[str, bool]] = []
+    for attrs, label in options:
+        value = re.search(r'\bvalue=["\']([\d.]+)["\']', attrs, re.IGNORECASE)
+        if not value or not re.search(r"Final Statistics", htmllib.unescape(TAG_RE.sub("", label)), re.IGNORECASE):
+            continue
+        selected = bool(re.search(r"\bselected(?:\s*=|\s|$)", attrs, re.IGNORECASE))
+        matching.append((value.group(1), selected))
+    for value, selected in matching:
+        if selected:
+            return value
+    return matching[0][0] if matching else None
 
 
 def parse_table(html: str):

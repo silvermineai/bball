@@ -9,6 +9,7 @@ from ncaa_scraper.ncaa_individual import (
     SCHEMA,
     decode_html,
     export_release,
+    final_period,
     ensure_schema,
     invalid_ranking_page,
     parse_table,
@@ -19,6 +20,25 @@ from ncaa_scraper.ncaa_individual import (
 
 
 class NCAAIndividualTests(unittest.TestCase):
+    def test_final_period_prefers_publishers_selected_final_statistics_option(self):
+        class CachedFetcher:
+            def fetch(self, *_args, **_kwargs):
+                return (
+                    '<select>'
+                    '<option value="12.0">03/01/2026-Final Statistics</option>'
+                    '<option value="19.0" selected>04/05/2026-Final Statistics</option>'
+                    '</select>'
+                )
+
+        self.assertEqual(final_period(CachedFetcher(), "2.0"), "19.0")
+
+    def test_final_period_falls_back_to_first_final_option_for_legacy_cache(self):
+        class CachedFetcher:
+            def fetch(self, *_args, **_kwargs):
+                return '<option value="12.0">03/01/2026-Final Statistics</option>'
+
+        self.assertEqual(final_period(CachedFetcher(), "2.0"), "12.0")
+
     def test_cached_byte_repr_decodes_and_minutes_parse(self):
         html = "b'<tbody>\\n<tr><td>1</td><td>Player, School (Conf)</td><td>Sr.</td><td>6-4</td><td>G</td><td>\\n 35 \\n</td><td>\\n 1,233 \\n</td><td>\\n 39:47 \\n</td></tr>\\n</tbody>'"
         decoded = decode_html(html)
