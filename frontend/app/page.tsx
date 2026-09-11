@@ -56,6 +56,28 @@ function getFootballEventLeaders() {
   };
 }
 
+function getRecruitingSnapshot() {
+  const recruiting = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/recruiting.json"),
+      "utf8",
+    ),
+  ) as { coverage?: { programs?: number; players?: number; events?: number } };
+  const rosters = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/rosters.json"),
+      "utf8",
+    ),
+  ) as { players_observed?: number; teams_observed?: number };
+  return {
+    reviewedPrograms: recruiting.coverage?.programs || 0,
+    reviewedPlayers: recruiting.coverage?.players || 0,
+    datedEvents: recruiting.coverage?.events || 0,
+    observedPlayers: rosters.players_observed || 0,
+    observedPrograms: rosters.teams_observed || 0,
+  };
+}
+
 const leaderCategoryLabels = {
   passing: "Passing EPA",
   rushing: "Rushing EPA",
@@ -112,6 +134,7 @@ export default function Home() {
     p = g?.prediction,
     leaders = getFootballLeaders(),
     eventLeaders = getFootballEventLeaders(),
+    recruiting = getRecruitingSnapshot(),
     sources = groupedSources(d.sources);
   return (
     <>
@@ -460,10 +483,22 @@ export default function Home() {
             production and observed roster changes, alongside the scouting
             archive.
           </p>
+          <p className="note">
+            Recruiting evidence: {recruiting.reviewedPlayers} reviewed player
+            records across {recruiting.reviewedPrograms} programs and{" "}
+            {recruiting.datedEvents} dated school statements. The source roster
+            frame contains {recruiting.observedPlayers.toLocaleString()} listed
+            players across {recruiting.observedPrograms} programs.
+          </p>
         </div>
-        <a className="button secondary" href="/basketball/">
-          Enter basketball ↗
-        </a>
+        <div className="button-row">
+          <a className="button secondary" href="/basketball/">
+            Enter basketball ↗
+          </a>
+          <a className="button secondary" href="/basketball/recruiting/">
+            Open recruiting board ↗
+          </a>
+        </div>
       </section>
       <section className="section">
         <div className="section-heading">
