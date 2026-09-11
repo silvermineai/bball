@@ -2,6 +2,13 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { fmt } from "../../_lib/format";
+type SourceReceipt = {
+  dataset: string;
+  season: number;
+  url: string;
+  fetched_at: string;
+  sha256: string;
+};
 type Data = {
   player: { id: string; name: string; position: string | null };
   season: number;
@@ -40,6 +47,13 @@ type Data = {
     games: number;
     minutes: number;
   }[];
+  source_receipts?: SourceReceipt[];
+};
+
+const sourceLabels: Record<string, string> = {
+  player_box: "ESPN-derived game boxes",
+  player_season: "Publisher season aggregates",
+  rosters: "Roster profiles",
 };
 export default function LegacyRecords() {
   const params = useSearchParams(),
@@ -54,6 +68,7 @@ export default function LegacyRecords() {
   const page = 0;
   const [data, setData] = useState<Data | null>(null),
     [error, setError] = useState("");
+  const sourceReceipts = data?.source_receipts || [];
   useEffect(() => {
     setSeason(initialSeason);
   }, [initialSeason]);
@@ -173,6 +188,31 @@ export default function LegacyRecords() {
                 ))}
               </div>
             ))}
+          </section>
+          <section className="section paper-panel">
+            <div className="section-heading">
+              <h2>Source receipts.</h2>
+            </div>
+            <p className="note">
+              These are the release clocks and SHA-256 hashes behind the rows
+              above. A receipt identifies the imported file; it does not imply
+              that every field is populated for this player.
+            </p>
+            {sourceReceipts.length ? (
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Dataset</th><th>Season</th><th>Fetched</th><th>Receipt hash</th></tr></thead>
+                  <tbody>{sourceReceipts.map((receipt) => (
+                    <tr key={`${receipt.dataset}-${receipt.season}`}>
+                      <td><a href={receipt.url} target="_blank" rel="noreferrer">{sourceLabels[receipt.dataset] || receipt.dataset} ↗</a></td>
+                      <td>{receipt.season - 1}–{String(receipt.season).slice(-2)}</td>
+                      <td>{receipt.fetched_at}</td>
+                      <td><code>{receipt.sha256}</code></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <p className="empty">No source receipt is available for this imported player view.</p>}
           </section>
           <p className="note">
             Source: SportsDataverse bulk releases (CC BY 4.0). NBA-style,

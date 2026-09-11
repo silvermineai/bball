@@ -44,6 +44,17 @@ import { footballDb } from "./football-db";
 
 type Bindings = Env;
 
+function parseObject(value: unknown): Record<string, unknown> {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 type AppEnv = {
   Bindings: Bindings;
   Variables: {
@@ -401,7 +412,7 @@ app.get(
       .bind(id)
       .first();
     if (!player) return c.json({ error: "Player not found" }, 404);
-    const [count, box, rosters, totals, participation] = await Promise.all([
+    const [count, box, rosters, totals, participation, receipts] = await Promise.all([
       db.prepare(
         "SELECT count(*) AS total FROM bb_player_box WHERE athlete_id=? AND season=?",
       )
@@ -435,25 +446,36 @@ app.get(
       )
         .bind(id)
         .all(),
+      db.prepare(
+        "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset IN ('player_box','player_season','rosters') ORDER BY season DESC,dataset",
+      )
+        .all<{ dataset: string; season: number; receipt_json: string }>(),
     ]);
     c.header("Cache-Control", "public, max-age=300");
+    const sourceReceipts = receipts.results.flatMap((row) => {
+      const receipt = parseObject(row.receipt_json);
+      return typeof receipt.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
+        ? [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
+        : [];
+    });
     return c.json({
       player,
       season,
       total: count?.total ?? 0,
       rows: box.results.map(({ stats_json, ...row }) => ({
         ...row,
-        stats: JSON.parse(stats_json),
+        stats: parseObject(stats_json),
       })),
       rosters: rosters.results.map(({ profile_json, ...row }) => ({
         ...row,
-        profile: JSON.parse(profile_json),
+        profile: parseObject(profile_json),
       })),
       seasonStats: totals.results.map(({ stats_json, ...row }) => ({
         ...row,
-        stats: JSON.parse(stats_json),
+        stats: parseObject(stats_json),
       })),
       participation: participation.results,
+      source_receipts: sourceReceipts,
     });
   },
 );
