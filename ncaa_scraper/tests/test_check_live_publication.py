@@ -66,7 +66,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 },
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
-            "/api/basketball/research/recruiting?season=2027": {
+            "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
@@ -168,7 +168,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
-            "/api/basketball/research/recruiting?season=2027": {
+            "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
@@ -264,7 +264,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
-            "/api/basketball/research/recruiting?season=2027": {
+            "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-08-01T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},

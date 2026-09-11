@@ -281,7 +281,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
         raise ValueError("recruiting intake coverage is malformed")
-    recruiting_release = get_json(base_url, "/api/basketball/research/recruiting?season=2027")
+    # Use a distinct cache key so a post-sync monitor never validates an older
+    # edge-cached recruiting edition.
+    recruiting_release = get_json(base_url, "/api/basketball/research/recruiting?season=2027&publication_check=1")
     release_coverage, recruiting_reviewed_age = validate_reviewed_recruiting_release(
         recruiting_release, checked_at, max_age_hours
     )
