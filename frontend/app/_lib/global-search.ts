@@ -66,11 +66,42 @@ export function searchRecruitingPeople(
     }));
 }
 
-/** Keep API player results ahead of local program matches, with a bounded list. */
+const resultKey = (result: SearchResult) => `${result.type}|${result.sport || ""}|${result.href}`;
+
+/**
+ * Merge source-backed records into a small, useful search list.
+ *
+ * The API intentionally returns several source namespaces for one query. A
+ * route is the strongest identity we have in the browser, so remove repeated
+ * routes while retaining the first (highest quality) source result. When a
+ * query is supplied, exact and prefix matches rise above broad substring
+ * matches; this keeps an exact program visible even when several player
+ * sources match the same word.
+ */
 export function combineSearchResults(
   players: SearchResult[],
   programs: SearchResult[],
   limit = 8,
+  query = "",
 ): SearchResult[] {
-  return [...players, ...programs].slice(0, limit);
+  const seen = new Set<string>();
+  const unique = [...players, ...programs].filter((result) => {
+    const key = resultKey(result);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const needle = normalize(query);
+  if (!needle) return unique.slice(0, limit);
+  return unique
+    .map((result, index) => ({ result, index }))
+    .sort((a, b) => {
+      const rank = (result: SearchResult) => {
+        const name = normalize(result.name);
+        return name === needle ? 0 : name.startsWith(needle) ? 1 : 2;
+      };
+      return rank(a.result) - rank(b.result) || a.index - b.index;
+    })
+    .slice(0, limit)
+    .map(({ result }) => result);
 }

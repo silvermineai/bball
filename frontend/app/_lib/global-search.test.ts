@@ -11,11 +11,17 @@ describe("global basketball search", () => {
     expect(rows[0].href).toBe("/basketball/programs/1/");
   });
 
-  it("returns no local rows for a blank query and bounds the combined list", () => {
+  it("returns no local rows for a blank query and removes duplicate routes", () => {
     expect(searchPrograms([{ id: "1", name: "Duke" }], "   ")).toEqual([]);
     const player = { id: "p1", name: "Player", type: "player" as const, href: "/basketball/player/?id=p1" };
     const program = { id: "t1", name: "Program", type: "program" as const, href: "/basketball/programs/t1/" };
-    expect(combineSearchResults([player, player], [program, program], 3)).toHaveLength(3);
+    expect(combineSearchResults([player, player], [program, program], 3)).toHaveLength(2);
+  });
+
+  it("keeps an exact program match visible above broad player matches", () => {
+    const player = { id: "p1", name: "Duke Johnson", type: "player" as const, sport: "basketball" as const, href: "/basketball/player/?id=p1" };
+    const program = { id: "t1", name: "Duke", type: "program" as const, sport: "basketball" as const, href: "/basketball/programs/t1/" };
+    expect(combineSearchResults([player], [program], 2, "duke").map((row) => row.name)).toEqual(["Duke", "Duke Johnson"]);
   });
 
   it("routes announced recruiting names back to dated evidence", () => {

@@ -110,7 +110,7 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...footballResults], searchPrograms(programs, needle, 4), 8));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
           setOpen(true);
         })
         .catch((reason: unknown) => {
