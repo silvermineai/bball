@@ -9,6 +9,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ncaa_scraper"))
@@ -23,6 +24,18 @@ PUBLIC = ROOT / "frontend/public/data/news.json"
 # the idempotent table/index creation so the scheduled job stays repeatable.
 MIGRATIONS = (ROOT / "worker/migrations/0024_news_archive.sql",)
 SQL = ROOT / ".local/news.sql"
+
+
+def run_remote(arguments: list[str], *, attempts: int = 4) -> None:
+    """Run one idempotent Wrangler request, retrying transient D1 failures."""
+    for attempt in range(attempts):
+        try:
+            subprocess.run(arguments, cwd=ROOT, check=True)
+            return
+        except subprocess.CalledProcessError:
+            if attempt + 1 >= attempts:
+                raise
+            time.sleep(10 * (2**attempt))
 
 
 def sql_string(value: object) -> str:
@@ -92,10 +105,8 @@ def main() -> None:
         )
     SQL.write_text("\n".join(statements) + "\n")
     for migration in MIGRATIONS:
-        subprocess.run(
+        run_remote(
             [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--file", str(migration)],
-            cwd=ROOT,
-            check=True,
         )
     # D1's import endpoint can spend a long time on an otherwise tiny file
     # when the database is busy. Execute idempotent chunks through the query
@@ -103,12 +114,13 @@ def main() -> None:
     # Do not wrap these commands in SQL BEGIN/COMMIT statements. D1's query
     # endpoint handles each idempotent statement safely, while explicit SQL
     # transactions are rejected by the API and can leave a refresh half done.
-    commands = ["\n".join(statements[start : start + 5]) for start in range(0, len(statements), 5)]
+    # Keep each write independent. D1 occasionally returns an internal error
+    # for a multi-statement request while the same idempotent single statement
+    # succeeds; one-row requests also make retries resume at a clear boundary.
+    commands = statements
     for command in commands:
-        subprocess.run(
+        run_remote(
             [sys.executable, str(ROOT / "scripts/cloudflare.py"), "d1", "execute", D1_DB_NAME, "--remote", "--command", command],
-            cwd=ROOT,
-            check=True,
         )
     print(json.dumps({"edition": edition, "articles": len(normalized), "generated_at": generated_at}))
 
