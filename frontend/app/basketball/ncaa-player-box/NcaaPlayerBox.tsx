@@ -131,6 +131,7 @@ export default function NcaaPlayerBox() {
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const selectedCoverage = fieldCoverage?.seasons.find((entry) => entry.season === Number(season));
+  const sparseEdition = (meta?.total ?? selectedCoverage?.rows ?? 0) < 10000;
   const sourceFields = fieldCoverage?.fields || [];
   const csvHeaders = [...exportHeaders, ...sourceFields.map((field) => `Source ${field}`)];
   const share = async () => {
@@ -203,6 +204,7 @@ export default function NcaaPlayerBox() {
         <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} source keys</span>
       </div>
       <p className="note">Observed counts include source-reported zeroes. A blank or null source value is unavailable and is never converted into zero.</p>
+      {sparseEdition && <p className="status-error" role="status">This retained source edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the source receipt before comparing it with later seasons.</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th className="numeric">Observed</th><th className="numeric">Coverage</th></tr></thead><tbody>{fieldCoverage?.fields.map((field) => {
         const value = selectedCoverage.fields[field];
         return <tr key={field}><td><code>{field}</code></td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{value ? (value.share * 100).toFixed(1) + "%" : "0.0%"}</td></tr>;
