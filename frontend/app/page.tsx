@@ -160,7 +160,12 @@ export default function Home() {
         </div>
         <div>
           <strong>{d.coverage.ncaa_player_stats_rows.toLocaleString()}</strong>
-          <span>NCAA player-game evidence · 2013–25</span>
+          <span>
+            NCAA player-game evidence · 2013–25{" "}
+            <Link href="/football/source-stats/?dataset=ncaa_player_stats&season=2025">
+              Browse archive →
+            </Link>
+          </span>
         </div>
         <div>
           <strong>{d.coverage.forecast_games}</strong>
