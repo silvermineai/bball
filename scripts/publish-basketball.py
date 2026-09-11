@@ -65,7 +65,14 @@ def run(args, cwd=ROOT):
     if RESUME_D1 and SOURCE_PHASE:
         print(f"Skipping source-phase command for D1 resume: {' '.join(args)}", flush=True)
         return
+    label = " ".join(args[1:])
+    started = time.monotonic()
+    print(f"Starting basketball publication step: {label}", flush=True)
     subprocess.run(args, cwd=cwd, env=ENV, check=True)
+    print(
+        f"Completed basketball publication step in {time.monotonic() - started:.1f}s: {label}",
+        flush=True,
+    )
 
 
 def run_remote_migration(args, cwd=ROOT, database_name=None):
@@ -138,6 +145,11 @@ def run_logged(args, log_path, cwd=ROOT):
                 log.write(
                     f"\nRetrying remote SQL import (attempt {attempt}/{max_attempts})\n"
                 )
+            started = time.monotonic()
+            print(
+                f"Starting remote SQL import {log_path.name} (attempt {attempt}/{max_attempts})",
+                flush=True,
+            )
             result = subprocess.run(
                 args,
                 cwd=cwd,
@@ -146,6 +158,11 @@ def run_logged(args, log_path, cwd=ROOT):
                 stderr=subprocess.STDOUT,
                 check=False,
             )
+        print(
+            f"Remote SQL import attempt finished in {time.monotonic() - started:.1f}s "
+            f"(attempt {attempt}/{max_attempts})",
+            flush=True,
+        )
         tail = log_path.read_text(errors="replace").splitlines()[-80:]
         output = "\n".join(tail)
         # Wrangler 4.93 can report a successful import receipt and still exit
