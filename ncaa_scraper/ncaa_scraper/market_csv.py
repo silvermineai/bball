@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .football_sources import ROOT, utcnow
 from .odds_feed import normalize_market, schedules
-from .research_ledger import build_report, connect, digest, encoded, export_sql, ingest_published, timestamp
+from .research_ledger import brief_bundle, build_report, connect, digest, encoded, export_sql, ingest_published, timestamp
 
 MARKETS = {"spreads", "totals", "h2h"}
 REQUIRED = {"game_id", "market", "captured_at", "updated_at", "home_name", "away_name", "starts_at"}
@@ -189,6 +189,7 @@ def main():
         report = build_report(conn, now)
         (ROOT / "frontend/public/data/research").mkdir(parents=True, exist_ok=True)
         (ROOT / "frontend/public/data/research/ledger.json").write_text(encoded(report))
+        (ROOT / "frontend/public/data/research/briefs.json").write_text(encoded(brief_bundle(report)))
         export_sql(conn, args.sql)
         print(json.dumps({**result, "market_observations": report["market_observations"]}, indent=2))
     finally:

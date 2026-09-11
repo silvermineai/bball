@@ -4,7 +4,7 @@ The shared Next.js scorecard lives at `/research/scorecard/`. It reads the curre
 
 The historical market archive lives at `/research/markets/` and reads retained football archive observations plus any matched basketball/football `audit_markets` quotes through `/api/research/markets`. It is a searchable, paginated research view with page and bounded full-filter CSV exports and a sport selector. Basketball rows expose retained decimal prices and the two-sided implied home probability for moneylines. The archive metadata also lists the connectors available for the selected sport, supported markets and whether a provider-update clock is available. Every row carries its source, observed/capture time and provider update time when supplied; the scorecard only uses observations that pass its provider, capture-time, participant and kickoff checks.
 
-The immutable brief list at `/api/research/briefs` caches successful read-only slices at the edge for five minutes. If D1 is temporarily unavailable, it serves the latest static ledger release from `frontend/public/data/research/ledger.json` with `source:"bundled_release"`; those fallback rows preserve archive availability but do not add historical versions beyond the bundled edition.
+The immutable brief list at `/api/research/briefs` caches successful read-only slices at the edge for five minutes. If D1 is temporarily unavailable, it serves the latest static ledger release from the compact `frontend/public/data/research/briefs.json` release with `source:"bundled_release"`; those fallback rows preserve archive availability but do not add historical versions beyond the bundled edition.
 
 ## Current edition
 

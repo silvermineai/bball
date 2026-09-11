@@ -28,6 +28,17 @@ def encoded(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def brief_bundle(report):
+    fields = (
+        "id", "sport", "game_id", "season", "home_name", "away_name",
+        "starts_at", "time_tbd", "model_id", "generated_at", "registered_at",
+    )
+    return {
+        "generated_at": report.get("generated_at", ""),
+        "games": [{field: row.get(field) for field in fields} for row in report.get("games", [])],
+    }
+
+
 def digest(value):
     return hashlib.sha256(encoded(value).encode()).hexdigest()
 
@@ -693,6 +704,7 @@ def main():
         )
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "ledger.json").write_text(encoded(report))
+    (OUT / "briefs.json").write_text(encoded(brief_bundle(report)))
     if args.sql:
         export_sql(conn, args.sql)
     print(
