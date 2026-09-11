@@ -20,6 +20,22 @@ const querySchema = z.object({
 });
 
 export const ncaaPlayerRankings = new Hono<{ Bindings: Bindings }>();
+const CACHE_TTL = 300;
+const DB_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("NCAA player rankings database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function edgeCache() {
+  return typeof caches === "undefined"
+    ? null
+    : (caches as unknown as { default: Cache }).default;
+}
 
 // Season aggregates retain only source-observed numeric fields. A missing
 // field must stay unavailable; coercing it to zero would create a false
@@ -225,26 +241,42 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta } = c.req.valid("query");
+  const cache = edgeCache();
+  const cacheKey = new Request(c.req.url, { method: "GET" });
+  if (cache) {
+    try {
+      const cached = await withTimeout(cache.match(cacheKey), 1000);
+      if (cached) return cached;
+    } catch {
+      // Cache availability must never make the rankings board fail.
+    }
+  }
   if (meta === "1") {
-    const [seasons, classes, positions, sources] = await researchDb(c.env).batch([
-      researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
-      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-      researchDb(c.env).prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
-    ]);
-    c.header("Cache-Control", "public, max-age=300");
-    return c.json({
-      seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
-      metrics,
-      classes: classes.results.map((row) => String((row as { value: string }).value)),
-      positions: positions.results.map((row) => String((row as { value: string }).value)),
-      sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => ({
-        dataset: String(row.dataset || ""),
-        url: typeof row.url === "string" ? row.url : null,
-        fetched_at: typeof row.fetched_at === "string" ? row.fetched_at : null,
-        sha256: typeof row.sha256 === "string" ? row.sha256 : null,
-      })),
-    });
+    try {
+      const [seasons, classes, positions, sources] = await withTimeout(researchDb(c.env).batch([
+        researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
+        researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+        researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
+        researchDb(c.env).prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
+      ]), DB_TIMEOUT_MS);
+      const response = c.json({
+        seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+        metrics,
+        classes: classes.results.map((row) => String((row as { value: string }).value)),
+        positions: positions.results.map((row) => String((row as { value: string }).value)),
+        sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => ({
+          dataset: String(row.dataset || ""),
+          url: typeof row.url === "string" ? row.url : null,
+          fetched_at: typeof row.fetched_at === "string" ? row.fetched_at : null,
+          sha256: typeof row.sha256 === "string" ? row.sha256 : null,
+        })),
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    } catch {
+      return c.json({ error: "The NCAA player rankings catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+    }
   }
   const clauses = ["s.season=?"];
   const binds: Array<string | number> = [season];
@@ -269,30 +301,31 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const volume = volumeColumn(metric);
   const volumeQualification = volume ? `${volume} >= ?` : "1=1";
   const volumeBinds = volume ? [minVolume] : [];
+  try {
   const count: { total: number } | null = metric === "balanced_index"
-    ? await (() => {
+    ? await withTimeout((() => {
       const query = balancedQueries(where, minGames, minMinutes);
       return researchDb(c.env).prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
-    })()
+    })(), DB_TIMEOUT_MS)
     : metric === "impact_index"
-      ? await (() => {
+      ? await withTimeout((() => {
         const query = impactQueries(where, minGames, minMinutes);
         return researchDb(c.env).prepare(query.count).bind(...binds, ...query.binds).first<{ total: number }>();
-      })()
-    : await researchDb(c.env).prepare(
+      })(), DB_TIMEOUT_MS)
+    : await withTimeout(researchDb(c.env).prepare(
       `SELECT count(*) AS total FROM (${aggregate(where)}) a WHERE a.games >= ? AND a.minutes >= ? AND ${qualification} AND ${volumeQualification} AND (${expression}) IS NOT NULL`,
-    ).bind(...binds, minGames, minMinutes, ...volumeBinds).first<{ total: number }>();
+    ).bind(...binds, minGames, minMinutes, ...volumeBinds).first<{ total: number }>(), DB_TIMEOUT_MS);
   const rows = metric === "balanced_index"
-    ? await (() => {
+    ? await withTimeout((() => {
       const query = balancedQueries(where, minGames, minMinutes);
       return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
-    })()
+    })(), DB_TIMEOUT_MS)
     : metric === "impact_index"
-      ? await (() => {
+      ? await withTimeout((() => {
         const query = impactQueries(where, minGames, minMinutes);
         return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
-      })()
-    : await researchDb(c.env).prepare(
+      })(), DB_TIMEOUT_MS)
+    : await withTimeout(researchDb(c.env).prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
         SELECT aggregate.*, ${expression} AS value
         FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}
@@ -300,7 +333,12 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       SELECT *, RANK() OVER (ORDER BY value ${rankOrder}) AS rank FROM ranked
       WHERE value IS NOT NULL ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
-    ).bind(...binds, minGames, minMinutes, ...volumeBinds, page * 50).all();
-  c.header("Cache-Control", "public, max-age=300");
-  return c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+    ).bind(...binds, minGames, minMinutes, ...volumeBinds, page * 50).all(), DB_TIMEOUT_MS);
+  const response = c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
+  } catch {
+    return c.json({ error: "The NCAA player rankings are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
 });
