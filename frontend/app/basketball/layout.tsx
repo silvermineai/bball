@@ -5,6 +5,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <>
       <nav className="sport-nav" aria-label="Basketball navigation">
         <Link href="/basketball/">Basketball desk</Link>
+        <Link href="/basketball/coach/">Coach&apos;s desk</Link>
         <Link href="/basketball/learn/">Learn the game</Link>
         <Link href="/basketball/matchups/">2026–27 matchups</Link>
         <Link href="/basketball/briefs/">Game briefs</Link>

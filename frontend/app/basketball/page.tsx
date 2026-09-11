@@ -128,6 +128,9 @@ export default function Page() {
             <Link className="button" href="/basketball/gameplan/">
               Open the game plan ↗
             </Link>
+            <Link className="hero-link" href="/basketball/coach/">
+              Open the coach&apos;s desk →
+            </Link>
             <Link className="hero-link" href="/basketball/briefs/">
               Read the game briefs →
             </Link>
