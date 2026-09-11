@@ -34,6 +34,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Tool | Route | What it does |
 |---|---|---|
 | Basketball desk | `/basketball/` | Upcoming forecasts, ratings and research coverage |
+| Coach's desk | `/basketball/coach/` | One-page staff brief with the next slate, decision lanes, model holdout context and national recruiting workload radar |
 | Matchups | `/basketball/matchups/` | 1,579 primary forecasts plus 50 labeled cold-start estimates for 2026–27, with score ranges, adjusted Four Factor lenses, dated publisher context and matchup briefs |
 | Efficiency ratings | `/basketball/ratings/` | 366 independently rated teams, tempo, schedule strength and opponent-adjusted four factors |
 | Boutique model archive | `/basketball/boutique/` | Attributed publisher adjusted team ratings and player Box Plus/Minus across 2005–06 through 2025–26, with model comparison context |
