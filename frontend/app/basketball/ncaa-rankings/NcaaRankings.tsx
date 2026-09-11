@@ -53,6 +53,7 @@ export default function NcaaRankings() {
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   const [copied, setCopied] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
@@ -73,7 +74,7 @@ export default function NcaaRankings() {
     fetch(`/api/basketball/research/ncaa-player-rankings?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The NCAA ranking catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, [season]);
+  }, [retryNonce, season]);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume, page: String(page) });
@@ -86,10 +87,11 @@ export default function NcaaRankings() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page]);
+  }, [classYear, metric, minGames, minMinutes, minVolume, page, position, query, retryNonce, season]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
+  const retryLiveRankings = () => { setError(""); setRetryNonce((value) => value + 1); };
   const toggleCompare = (playerId: string) => {
     setCompareIds((current) => current.includes(playerId)
       ? current.filter((id) => id !== playerId)
@@ -201,7 +203,7 @@ export default function NcaaRankings() {
       <label className="control"><span>CLASS</span><select name="ncaa-ranking-class" value={classYear} onChange={(e) => reset(() => setClassYear(e.target.value))}><option value="">All classes</option>{classYear && !meta?.classes.includes(classYear) && <option value={classYear}>{classYear} · not in sample</option>}{(meta?.classes || []).map((value) => <option key={value}>{value}</option>)}</select></label>
     </div>
     {meta?.sources?.length ? <details className="note" style={{ marginTop: 16 }}><summary>Source receipts for {label(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Fetched (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{meta.sources.map((source) => <tr key={source.dataset}><th>{source.dataset.replace(/^ncaa_/, "NCAA ")}</th><td>{sourceDate(source.fetched_at)}</td><td><code>{source.sha256 || "digest unavailable"}</code></td><td>{source.url ? <a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "URL unavailable"}</td></tr>)}</tbody></table></div><div className="button-row" style={{ marginTop: 12 }}><button className="button secondary" type="button" onClick={downloadManifest}>Download source manifest ↓</button></div><p style={{ marginTop: 12 }}>These receipts identify the retained releases behind this board. They describe the source archive, not live roster status.</p></details> : null}
-    {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveRankings}>Retry live rankings</button></div> : !result ? <p className="empty" role="status">Loading NCAA rankings…</p> : <>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} qualified player/team rows · ranked by {labels[result.metric].toLowerCase()} ({result.direction === "asc" ? "lowest first" : "highest first"}) · minimum {result.min_games} games and {result.min_minutes} recorded minutes{result.min_volume ? ` · ${result.min_volume} denominator units on rate boards` : ""}. Percentile is calculated against this full qualified cohort, so it remains meaningful when you move between pages.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy ranking link</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {(result.metric === "rapm_net" || result.metric === "orapm" || result.metric === "drapm") && <p className="note">{labels[result.metric]} is the publisher&apos;s lineup estimate and is shown only when the exact NCAA player ID has at least 500 offensive and 500 defensive possessions. The controls above additionally require the selected box-score games and minutes.</p>}
