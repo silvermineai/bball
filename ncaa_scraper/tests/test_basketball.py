@@ -11,6 +11,7 @@ from ncaa_scraper.basketball import (
     adjusted_factor_ratings,
     canonical_date,
     dataset_catalog,
+    export_sql,
     export_ncaa_player_box_sql,
     ingest,
     matchup_factor_edges,
@@ -96,6 +97,32 @@ class BasketballModelTests(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(content).hexdigest(), item["sha256"])
                 replica.executescript(content.decode())
             self.assertEqual(replica.execute("SELECT count(*) FROM sample").fetchone()[0], 2)
+
+    def test_incremental_sql_export_limits_partitioned_rewrites(self):
+        tables = (
+            "bb_games", "bb_team_box", "bb_player_box", "bb_player_season",
+            "bb_team_season", "bb_publisher_ratings", "bb_player_value",
+            "bb_lineups", "bb_player_core", "bb_rosters", "bb_impact",
+            "bb_ncaa_player_season", "bb_ncaa_rosters", "bb_ncaa_player_shooting",
+            "bb_unresolved", "bb_participation", "bb_possession_style",
+        )
+        conn = sqlite3.connect(":memory:")
+        for table in tables:
+            conn.execute(f"CREATE TABLE {table} (season INTEGER, value TEXT)")
+            conn.executemany(
+                f"INSERT INTO {table} VALUES (?, ?)",
+                [(2023, "old"), (2024, "middle"), (2025, "current")],
+            )
+        conn.execute("CREATE TABLE bb_players (id TEXT, name TEXT, position TEXT)")
+        conn.execute("INSERT INTO bb_players VALUES ('p-1', 'Player', 'G')")
+        with tempfile.TemporaryDirectory() as directory:
+            files = export_sql(conn, Path(directory) / "basketball.sql", incremental=True)
+            text = "".join(path.read_text() for path in files)
+        self.assertIn("DELETE FROM bb_player_box WHERE season=2024;", text)
+        self.assertIn("DELETE FROM bb_player_box WHERE season=2025;", text)
+        self.assertNotIn("DELETE FROM bb_player_box WHERE season=2023;", text)
+        self.assertIn("INSERT OR REPLACE INTO bb_players", text)
+        conn.close()
 
     def test_possessions_require_both_boxes_and_preserve_overtime(self):
         game = sample(1, 2026)

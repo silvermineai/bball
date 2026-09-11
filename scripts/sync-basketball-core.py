@@ -4,6 +4,10 @@ The main basketball SQL export intentionally omits the large model table. This
 small, idempotent release keeps the latest model and forecast rows in D1 and
 also supports adding a cached historical season without replaying every other
 research table. SQL is split below D1's request and statement limits.
+
+Scheduled maintenance sets ``BASKETBALL_D1_INCREMENTAL=1``. That keeps the
+model and current forecast rows fresh while leaving historical player and
+impact partitions in D1; unset it for an empty-database bootstrap.
 """
 
 from __future__ import annotations
@@ -79,6 +83,7 @@ def build(season=2023):
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
     )
     model = overview["model"]
+    incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
     if not model.get("id", "").startswith("basketball-efficiency-v2-"):
         raise ValueError("Unexpected basketball model ID")
     conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
@@ -133,42 +138,45 @@ def build(season=2023):
     # Add the 2022–23 ESPN-derived season and its compact identity context.
     # Full publishers may replay these rows; INSERT OR REPLACE keeps either
     # path safe and preserves all existing editions.
-    for table in (
-        "bb_sources",
-        "bb_games",
-        "bb_team_box",
-        "bb_player_box",
-        "bb_participation",
-        "bb_team_season",
-        "bb_publisher_ratings",
-        "bb_player_value",
-    ):
-        try:
-            statements.extend(row_statements(conn, table, season))
-        except sqlite3.OperationalError:
-            # Optional tables are absent in small development fixtures.
-            continue
+    if not incremental:
+        for table in (
+            "bb_sources",
+            "bb_games",
+            "bb_team_box",
+            "bb_player_box",
+            "bb_participation",
+            "bb_team_season",
+            "bb_publisher_ratings",
+            "bb_player_value",
+        ):
+            try:
+                statements.extend(row_statements(conn, table, season))
+            except sqlite3.OperationalError:
+                # Optional tables are absent in small development fixtures.
+                continue
     # League-wide RAPM is a compact historical board (2011–26). Publish all
     # season partitions through this core sync so the rankings API can answer
     # historical season queries without replaying the multi-gigabyte player
     # game archive.
-    try:
-        for impact_season in range(2011, 2027):
-            statements.extend(row_statements(conn, "bb_impact", impact_season))
-            statements.extend(
-                row_statements(conn, "bb_sources", impact_season)
-            )
-    except sqlite3.OperationalError:
-        pass
+    if not incremental:
+        try:
+            for impact_season in range(2011, 2027):
+                statements.extend(row_statements(conn, "bb_impact", impact_season))
+                statements.extend(
+                    row_statements(conn, "bb_sources", impact_season)
+                )
+        except sqlite3.OperationalError:
+            pass
     # The main basketball SQL release clears the season-partitioned profile
     # table before import. Re-publish every season here so a refresh cannot
     # leave a historical season sparse when the compact core release is
     # synced after the large edition.
-    try:
-        for core_season in range(2003, 2027):
-            statements.extend(row_statements(conn, "bb_player_core", core_season))
-    except sqlite3.OperationalError:
-        pass
+    if not incremental:
+        try:
+            for core_season in range(2003, 2027):
+                statements.extend(row_statements(conn, "bb_player_core", core_season))
+        except sqlite3.OperationalError:
+            pass
     # Player identities are global, so include the current compact dictionary
     # needed by player-box lookups after adding a historical season.
     columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]

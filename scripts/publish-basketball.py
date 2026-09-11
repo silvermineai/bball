@@ -1,4 +1,10 @@
-"""Refresh basketball releases, validate, sync Cloudflare D1 and publish the site."""
+"""Refresh basketball releases, validate, sync Cloudflare D1 and publish the site.
+
+Scheduled maintenance sets ``BASKETBALL_D1_INCREMENTAL=1``. In that mode the
+warehouse still rebuilds every local artifact, but the D1 SQL export writes
+only the newest source partitions and leaves older rows in place. Unset the
+variable for a deliberate empty-database bootstrap or historical rebuild.
+"""
 
 import argparse
 import hashlib

@@ -156,6 +156,8 @@ PYTHONPATH=ncaa_scraper .venv/bin/python -m unittest discover -s ncaa_scraper/te
 
 Cloudflare credentials are read from process environment or `CF_API_TOKEN_ACCOUNT` and `CF_ACCOUNT_ID` in `~/.env`; secrets never enter client code. A serialized daily GitHub Actions refresh is defined in [`.github/workflows/refresh-research.yml`](.github/workflows/refresh-research.yml). It requires repository secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN_ACCOUNT`; a manual run can select one sport and optionally use `THE_ODDS_API_KEY` for a licensed odds snapshot. Each successful deployment captures immutable matchup reading metadata in the research D1 and its content in R2. The legacy football/scouting store is no longer used for research refresh writes.
 
+The scheduled basketball job uses an incremental D1 maintenance export: it refreshes the newest source seasons and preserves the complete historical archive already stored in Cloudflare. This avoids replaying millions of unchanged rows and keeps the daily job inside D1 storage limits. A new empty database must run `scripts/publish-basketball.py` with `BASKETBALL_D1_INCREMENTAL` unset once before enabling scheduled maintenance.
+
 ## Data policy
 
 Football and native basketball data come from the [SportsDataverse release store](https://github.com/sportsdataverse/sportsdataverse-data), which labels its datasets [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution and per-download provenance are retained. We normalize records, calculate rankings and fit an independent score model.

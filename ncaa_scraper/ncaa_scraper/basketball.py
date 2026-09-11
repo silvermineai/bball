@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -1788,40 +1789,130 @@ def build(conn, target=2027):
     )
 
 
-def export_sql(conn, path):
+def _sql_value(value):
+    """Render one SQLite value for the idempotent D1 import format."""
+    if value is None:
+        return "NULL"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return repr(value)
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _table_insert_statements(conn, table, seasons=None):
+    """Yield explicit INSERT statements for a table and optional seasons."""
+    columns = [row[1] for row in conn.execute(f"PRAGMA table_info({table})")]
+    if not columns:
+        raise ValueError(f"Unknown table: {table}")
+    column_sql = ",".join(columns)
+    if seasons is None:
+        rows = conn.execute(f"SELECT {column_sql} FROM {table}")
+    else:
+        values = tuple(sorted({int(season) for season in seasons}))
+        if not values:
+            return
+        placeholders = ",".join("?" for _ in values)
+        rows = conn.execute(
+            f"SELECT {column_sql} FROM {table} WHERE season IN ({placeholders})",
+            values,
+        )
+    prefix = f"INSERT OR REPLACE INTO {table} ({column_sql}) VALUES ("
+    for row in rows:
+        yield prefix + ",".join(_sql_value(value) for value in row) + ");\n"
+
+
+# A maintenance publication keeps the historical rows already stored in D1
+# and refreshes only the source partitions that can change during the current
+# season. This cuts a daily publication from millions of rewrites to the
+# current source window, while the default full export remains available for
+# bootstrapping or a deliberate historical rebuild.
+INCREMENTAL_SEASON_WINDOWS = {
+    "bb_games": 3,  # include 2025–27 schedule context
+    "bb_rosters": 3,
+    "bb_participation": 3,
+    "bb_team_box": 2,
+    "bb_player_box": 2,
+    "bb_player_season": 2,
+    "bb_team_season": 2,
+    "bb_publisher_ratings": 2,
+    "bb_player_value": 2,
+    "bb_lineups": 2,
+    "bb_player_core": 2,
+    "bb_impact": 2,
+    "bb_ncaa_player_season": 2,
+    "bb_ncaa_rosters": 2,
+    "bb_ncaa_player_shooting": 2,
+    "bb_unresolved": 2,
+    "bb_possession_style": 2,
+    "bb_sources": 3,
+}
+
+
+def _incremental_seasons(conn, table, window):
+    rows = conn.execute(
+        f"SELECT DISTINCT season FROM {table} WHERE season IS NOT NULL ORDER BY season DESC LIMIT ?",
+        (window,),
+    )
+    return tuple(int(row[0]) for row in rows)
+
+
+def export_sql(conn, path, incremental=False):
     # The full fitted model is already published in overview.json and is not
     # queried by the Worker. Its JSON blob is over D1's per-statement limit on
     # current editions, so keep the D1 table available without replaying it.
     # This leaves the compact research tables importable and avoids a failed
     # all-or-nothing import when the model grows.
     excluded_tables = {"bb_models", "bb_ncaa_player_box"}
+    tables = [
+        "bb_games",
+        "bb_team_box",
+        "bb_player_box",
+        "bb_player_season",
+        "bb_team_season",
+        "bb_publisher_ratings",
+        "bb_player_value",
+        "bb_lineups",
+        "bb_player_core",
+        "bb_rosters",
+        "bb_impact",
+        "bb_ncaa_player_season",
+        "bb_ncaa_rosters",
+        "bb_ncaa_player_shooting",
+        "bb_unresolved",
+        "bb_participation",
+        "bb_possession_style",
+    ]
+
     def statements():
-        for table in [
-            "bb_games",
-            "bb_team_box",
-            "bb_player_box",
-            "bb_player_season",
-            "bb_team_season",
-            "bb_publisher_ratings",
-            "bb_player_value",
-            "bb_lineups",
-            "bb_player_core",
-            "bb_rosters",
-            "bb_impact",
-            "bb_ncaa_player_season",
-            "bb_ncaa_rosters",
-            "bb_ncaa_player_shooting",
-            "bb_unresolved",
-            "bb_participation",
-            "bb_possession_style",
-        ]:
-            for row in conn.execute(f"SELECT DISTINCT season FROM {table}"):
-                yield f"DELETE FROM {table} WHERE season={int(row[0])};\n"
-        for line in conn.iterdump():
-            if line.startswith("INSERT INTO") and not any(
-                line.startswith(f'INSERT INTO "{table}"') for table in excluded_tables
-            ):
-                yield line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n"
+        for table in tables:
+            seasons = None
+            if incremental:
+                seasons = _incremental_seasons(
+                    conn, table, INCREMENTAL_SEASON_WINDOWS.get(table, 1)
+                )
+            selected = seasons if incremental else tuple(
+                row[0] for row in conn.execute(f"SELECT DISTINCT season FROM {table}")
+            )
+            for season in selected:
+                yield f"DELETE FROM {table} WHERE season={int(season)};\n"
+        if incremental:
+            # Forecast metadata and the current model are synchronized by
+            # sync-basketball-core.py. Keep the global identity dictionary,
+            # which can gain new athletes without a season column, and only
+            # write the newest rows for every season-partitioned table.
+            for table in tables:
+                seasons = _incremental_seasons(
+                    conn, table, INCREMENTAL_SEASON_WINDOWS.get(table, 1)
+                )
+                yield from _table_insert_statements(conn, table, seasons)
+            yield from _table_insert_statements(conn, "bb_players")
+        else:
+            for line in conn.iterdump():
+                if line.startswith("INSERT INTO") and not any(
+                    line.startswith(f'INSERT INTO "{table}"') for table in excluded_tables
+                ):
+                    yield line.replace("INSERT INTO", "INSERT OR REPLACE INTO", 1) + "\n"
 
     return write_sql_batches(statements(), path)
 
@@ -2023,8 +2114,14 @@ def main():
                 print(f"Imported ncaa_shots/{year}: {len(rows):,}", flush=True)
     build(conn)
     if args.sql:
-        export_sql(conn, args.sql)
-        export_ncaa_player_box_sql(conn, args.sql.with_name("ncaa-player-box-2026.sql"))
+        incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
+        export_sql(conn, args.sql, incremental=incremental)
+        ncaa_seasons = (max(NCAA_PLAYER_BOX_GAME_SEASONS),) if incremental else NCAA_PLAYER_BOX_GAME_SEASONS
+        export_ncaa_player_box_sql(
+            conn,
+            args.sql.with_name("ncaa-player-box-2026.sql"),
+            seasons=ncaa_seasons,
+        )
     conn.close()
 
 
