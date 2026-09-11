@@ -13,11 +13,15 @@
 * {
   box-sizing: border-box;
 }
+html {
+  overflow-x: hidden;
+}
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: "DM Sans", sans-serif;
+  overflow-x: hidden;
 }
 a {
   color: inherit;
