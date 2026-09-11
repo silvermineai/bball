@@ -23,6 +23,7 @@ function signedPoints(value: number) {
 
 type SavedQuote = {
   savedAt: string;
+  gameId?: string | null;
   source: string;
   modelId?: string | null;
   modelCapturedAt?: string | null;
@@ -152,6 +153,7 @@ export default function ManualMarketCheck({
     }
     const quote: SavedQuote = {
       savedAt: new Date().toISOString(),
+      gameId: gameId || null,
       source: source.trim(),
       modelId: liveModel?.model_id || (modelId && modelId !== "latest" ? modelId : null),
       modelCapturedAt: liveModel?.created_at || null,
@@ -191,8 +193,8 @@ export default function ManualMarketCheck({
     downloadCsv(
       "manual-market-notebook.csv",
       toCsv(
-        ["Saved at", "Source", "Model ID", "Model captured at", "Model home margin", "Model total", "Model home probability", "Model margin low", "Model margin high", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Home moneyline expected return", "Away moneyline expected return", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
-        history.map((quote) => [quote.savedAt, quote.source, quote.modelId, quote.modelCapturedAt, quote.modelMargin, quote.modelTotal, quote.modelHomeWinProbability == null ? null : quote.modelHomeWinProbability * 100, quote.modelMarginLow, quote.modelMarginHigh, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.homeMoneylineExpectedValue == null ? null : quote.homeMoneylineExpectedValue * 100, quote.awayMoneylineExpectedValue == null ? null : quote.awayMoneylineExpectedValue * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
+        ["Saved at", "Game ID", "Source", "Model ID", "Model captured at", "Model home margin", "Model total", "Model home probability", "Model margin low", "Model margin high", "Home spread", "Game total", "Home moneyline", "Away moneyline", "Market no-vig home probability", "Home moneyline expected return", "Away moneyline expected return", "Spread edge", "Approx. spread cover probability", "Total edge", "Moneyline probability edge"],
+        history.map((quote) => [quote.savedAt, quote.gameId, quote.source, quote.modelId, quote.modelCapturedAt, quote.modelMargin, quote.modelTotal, quote.modelHomeWinProbability == null ? null : quote.modelHomeWinProbability * 100, quote.modelMarginLow, quote.modelMarginHigh, quote.spread, quote.total, quote.moneyline, quote.awayMoneyline, quote.moneylineHomeProbability == null ? null : quote.moneylineHomeProbability * 100, quote.homeMoneylineExpectedValue == null ? null : quote.homeMoneylineExpectedValue * 100, quote.awayMoneylineExpectedValue == null ? null : quote.awayMoneylineExpectedValue * 100, quote.spreadEdge, quote.spreadCoverProbability == null ? null : quote.spreadCoverProbability * 100, quote.totalEdge, quote.moneylineEdge == null ? null : quote.moneylineEdge * 100]),
       ),
     );
   };
@@ -216,59 +218,69 @@ export default function ManualMarketCheck({
         <label className="control">
           <span>HOME SPREAD</span>
           <input
+            name="manual-home-spread"
+            autoComplete="off"
             inputMode="decimal"
             type="number"
             step="0.5"
             value={spread}
             onChange={(event) => setSpread(event.target.value)}
-            placeholder="-3.5"
+            placeholder="-3.5…"
           />
           <small>Negative means {homeName} is favored.</small>
         </label>
         <label className="control">
           <span>GAME TOTAL</span>
           <input
+            name="manual-game-total"
+            autoComplete="off"
             inputMode="decimal"
             type="number"
             step="0.5"
             value={total}
             onChange={(event) => setTotal(event.target.value)}
-            placeholder="145.5"
+            placeholder="145.5…"
           />
           <small>Use the full-game over/under number.</small>
         </label>
         <label className="control">
           <span>{homeName.toUpperCase()} MONEYLINE</span>
           <input
+            name="manual-home-moneyline"
+            autoComplete="off"
             inputMode="numeric"
             type="number"
             step="1"
             value={moneyline}
             onChange={(event) => setMoneyline(event.target.value)}
-            placeholder="+125"
+            placeholder="+125…"
           />
           <small>American odds, at least +100 or at most -100.</small>
         </label>
         <label className="control">
           <span>AWAY MONEYLINE</span>
           <input
+            name="manual-away-moneyline"
+            autoComplete="off"
             inputMode="numeric"
             type="number"
             step="1"
             value={awayMoneyline}
             onChange={(event) => setAwayMoneyline(event.target.value)}
-            placeholder="-145"
+            placeholder="-145…"
           />
           <small>Enter both sides to remove two-way vig.</small>
         </label>
         <label className="control">
           <span>OBSERVED SOURCE</span>
           <input
+            name="manual-observed-source"
+            autoComplete="off"
             type="text"
             maxLength={120}
             value={source}
             onChange={(event) => setSource(event.target.value)}
-            placeholder="Bookmaker or screen"
+            placeholder="Bookmaker or screen…"
           />
           <small>Label the line so your local notes remain auditable.</small>
         </label>
@@ -352,7 +364,7 @@ export default function ManualMarketCheck({
             <table className="data-table">
               <thead><tr><th>Saved / source</th><th className="numeric">Spread</th><th className="numeric">Total</th><th className="numeric">Moneyline</th><th className="numeric">Edges</th></tr></thead>
               <tbody>{history.map((quote) => <tr key={`${quote.savedAt}-${quote.source}`}>
-                <td><strong>{quote.source}</strong><small>{new Date(quote.savedAt).toLocaleString()}</small><small>{quote.modelId ? `Model ${quote.modelId}` : "Model edition unavailable"}{quote.modelCapturedAt ? ` · ${date(quote.modelCapturedAt)}` : ""}</small></td>
+                <td><strong>{quote.source}</strong><small>{quote.gameId ? `Game ${quote.gameId}` : "Game ID unavailable"}</small><small>{new Date(quote.savedAt).toLocaleString()}</small><small>{quote.modelId ? `Model ${quote.modelId}` : "Model edition unavailable"}{quote.modelCapturedAt ? ` · ${date(quote.modelCapturedAt)}` : ""}</small></td>
                 <td className="numeric">{quote.spread == null ? "—" : quote.spread.toFixed(1)}<small>{quote.spreadEdge == null ? "" : signedPoints(quote.spreadEdge)}</small><small>{quote.spreadCoverProbability == null ? "" : `${(quote.spreadCoverProbability * 100).toFixed(1)}% cover approx.`}</small><small>{quote.modelMargin == null ? "Model margin —" : `Model ${signedPoints(quote.modelMargin)}`}</small></td>
                 <td className="numeric">{quote.total == null ? "—" : quote.total.toFixed(1)}<small>{quote.totalEdge == null ? "" : signedPoints(quote.totalEdge)}</small><small>{quote.modelTotal == null ? "Model total —" : `Model ${quote.modelTotal.toFixed(1)}`}</small></td>
                 <td className="numeric">{quote.moneyline == null ? "—" : quote.moneyline > 0 ? `+${quote.moneyline}` : quote.moneyline}<small>{quote.awayMoneyline == null ? "Away —" : `Away ${quote.awayMoneyline > 0 ? "+" : ""}${quote.awayMoneyline}`}</small><small>{quote.moneylineHomeProbability == null ? "" : `No-vig home ${(quote.moneylineHomeProbability * 100).toFixed(1)}%`}</small><small>{quote.moneylineEdge == null ? "" : `${quote.moneylineEdge > 0 ? "+" : ""}${(quote.moneylineEdge * 100).toFixed(1)} pp`}</small><small>{quote.homeMoneylineExpectedValue == null ? "" : `Home EV ${(quote.homeMoneylineExpectedValue * 100).toFixed(1)}%`}</small><small>{quote.awayMoneylineExpectedValue == null ? "" : `Away EV ${(quote.awayMoneylineExpectedValue * 100).toFixed(1)}%`}</small></td>
