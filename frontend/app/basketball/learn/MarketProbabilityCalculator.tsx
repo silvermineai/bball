@@ -56,17 +56,17 @@ export default function MarketProbabilityCalculator() {
       <div className="manual-market-controls recruiting-workload-controls">
         <label className="control">
           <span>MODEL PROBABILITY (%)</span>
-          <input type="number" min="0" max="100" step="0.1" inputMode="decimal" value={model} onChange={(event) => setModel(event.target.value)} />
+          <input name="market-model-probability" autoComplete="off" type="number" min="0" max="100" step="0.1" inputMode="decimal" value={model} onChange={(event) => setModel(event.target.value)} />
           <small>Use a calibrated win or cover probability.</small>
         </label>
         <label className="control">
           <span>PRICE (AMERICAN ODDS)</span>
-          <input type="number" step="1" inputMode="numeric" value={odds} onChange={(event) => setOdds(event.target.value)} />
+          <input name="market-price" autoComplete="off" type="number" step="1" inputMode="numeric" value={odds} onChange={(event) => setOdds(event.target.value)} />
           <small>For example, −110 or +150.</small>
         </label>
         <label className="control">
           <span>OPPOSING PRICE</span>
-          <input type="number" step="1" inputMode="numeric" value={opposingOdds} onChange={(event) => setOpposingOdds(event.target.value)} />
+          <input name="market-opposing-price" autoComplete="off" type="number" step="1" inputMode="numeric" value={opposingOdds} onChange={(event) => setOpposingOdds(event.target.value)} />
           <small>Needed to remove the two-way overround.</small>
         </label>
       </div>
@@ -86,20 +86,20 @@ export default function MarketProbabilityCalculator() {
       <div className="manual-market-controls recruiting-workload-controls">
         <label className="control">
           <span>MODEL MARGIN</span>
-          <input type="number" step="0.1" inputMode="decimal" value={margin} onChange={(event) => setMargin(event.target.value)} />
+          <input name="market-model-margin" autoComplete="off" type="number" step="0.1" inputMode="decimal" value={margin} onChange={(event) => setMargin(event.target.value)} />
           <small>Home margin; positive favors the home team.</small>
         </label>
         <label className="control">
           <span>INTERVAL LOW</span>
-          <input type="number" step="0.1" inputMode="decimal" value={marginLow} onChange={(event) => setMarginLow(event.target.value)} />
+          <input name="market-margin-low" autoComplete="off" type="number" step="0.1" inputMode="decimal" value={marginLow} onChange={(event) => setMarginLow(event.target.value)} />
         </label>
         <label className="control">
           <span>INTERVAL HIGH</span>
-          <input type="number" step="0.1" inputMode="decimal" value={marginHigh} onChange={(event) => setMarginHigh(event.target.value)} />
+          <input name="market-margin-high" autoComplete="off" type="number" step="0.1" inputMode="decimal" value={marginHigh} onChange={(event) => setMarginHigh(event.target.value)} />
         </label>
         <label className="control">
           <span>HOME SPREAD</span>
-          <input type="number" step="0.1" inputMode="decimal" value={spread} onChange={(event) => setSpread(event.target.value)} />
+          <input name="market-home-spread" autoComplete="off" type="number" step="0.1" inputMode="decimal" value={spread} onChange={(event) => setSpread(event.target.value)} />
           <small>American-style line; −3 means home −3.</small>
         </label>
       </div>

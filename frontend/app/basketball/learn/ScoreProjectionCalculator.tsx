@@ -69,7 +69,7 @@ export default function ScoreProjectionCalculator() {
         {fields.map(([key, label, hint]) => (
           <label className="control" key={key}>
             <span>{label}</span>
-            <input type="number" step="0.1" inputMode="decimal" value={form[key]} onChange={(event) => set(key, event.target.value)} />
+            <input name={`score-projection-${key}`} autoComplete="off" type="number" step="0.1" inputMode="decimal" value={form[key]} onChange={(event) => set(key, event.target.value)} />
             <small>{hint}</small>
           </label>
         ))}

@@ -37,17 +37,17 @@ export default function RecruitingWorkloadCalculator() {
       <div className="manual-market-controls recruiting-workload-controls">
         <label className="control">
           <span>PRIOR TEAM MINUTES</span>
-          <input inputMode="decimal" type="number" min="0" step="1" value={prior} onChange={(event) => setPrior(event.target.value)} />
+          <input name="recruiting-prior-minutes" autoComplete="off" inputMode="decimal" type="number" min="0" step="1" value={prior} onChange={(event) => setPrior(event.target.value)} />
           <small>The denominator from the recorded prior team sample.</small>
         </label>
         <label className="control">
           <span>RETURNING MINUTES</span>
-          <input inputMode="decimal" type="number" min="0" step="1" value={returning} onChange={(event) => setReturning(event.target.value)} />
+          <input name="recruiting-returning-minutes" autoComplete="off" inputMode="decimal" type="number" min="0" step="1" value={returning} onChange={(event) => setReturning(event.target.value)} />
           <small>Prior minutes for source IDs listed at the same program.</small>
         </label>
         <label className="control">
           <span>INCOMING PRIOR MINUTES</span>
-          <input inputMode="decimal" type="number" min="0" step="1" value={incoming} onChange={(event) => setIncoming(event.target.value)} />
+          <input name="recruiting-incoming-minutes" autoComplete="off" inputMode="decimal" type="number" min="0" step="1" value={incoming} onChange={(event) => setIncoming(event.target.value)} />
           <small>Prior minutes for source IDs listed from another program.</small>
         </label>
       </div>

@@ -47,6 +47,8 @@ export default function MetricExplorer({ metrics }: { metrics: LearningMetric[] 
         <label className="control">
           <span>SEARCH DEFINITIONS</span>
           <input
+            name="metric-search"
+            autoComplete="off"
             type="search"
             maxLength={120}
             value={query}
@@ -56,7 +58,7 @@ export default function MetricExplorer({ metrics }: { metrics: LearningMetric[] 
         </label>
         <label className="control">
           <span>TOPIC</span>
-          <select value={topic} onChange={(event) => { setTopic(event.target.value as LearningTopic | "all"); setSelectedName(""); }}>
+          <select name="metric-topic" value={topic} onChange={(event) => { setTopic(event.target.value as LearningTopic | "all"); setSelectedName(""); }}>
             {(Object.keys(topicLabels) as Array<LearningTopic | "all">).map((value) => <option key={value} value={value}>{topicLabels[value]}</option>)}
           </select>
         </label>

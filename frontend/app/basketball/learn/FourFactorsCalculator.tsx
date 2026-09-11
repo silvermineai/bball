@@ -77,6 +77,8 @@ export default function FourFactorsCalculator() {
           <label className="control" key={key}>
             <span>{label}</span>
             <input
+              name={`four-factors-${key}`}
+              autoComplete="off"
               type="number"
               min="0"
               step="any"
