@@ -747,6 +747,10 @@ run([PY, "scripts/sync-ncaa-team-box.py"])
 run([PY, "scripts/sync-ncaa-player-box.py"])
 run([PY, "scripts/sync-ncaa-source-releases.py"])
 run([PY, "scripts/sync-within-impact.py"])
+# The overview edition can be refreshed by a later derived-artifact step.
+# Rebuild this compact identity-review summary at the end so its timestamp
+# always matches the overview that the freshness gate and browser publish.
+run([PY, "scripts/build-basketball-coverage.py"])
 run([PY, "scripts/verify-basketball-d1.py"])
 run([PY, "scripts/archive-evaluation.py"])
 if not BATCH_PUBLICATION:
