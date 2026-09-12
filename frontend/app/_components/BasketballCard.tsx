@@ -107,6 +107,10 @@ export default function BasketballCard({
                 <span>SOS · H / A</span>
                 <span>{fmt(homeRating?.sos, 1)} / {fmt(awayRating?.sos, 1)}</span>
               </div>
+              <div className="button-row" style={{ marginTop: 8 }}>
+                {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} publisher model ↗</Link>}
+                {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} publisher model ↗</Link>}
+              </div>
               <small>
                 Prior opponent-adjusted team strength and schedule context. It is descriptive history; roster changes, injuries and the forecast model remain separate.
               </small>

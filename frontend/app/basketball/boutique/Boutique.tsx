@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt } from "../../_lib/format";
 import type { BBTeam } from "../../_lib/basketball-types";
@@ -17,11 +18,15 @@ function deltaDisplay(publisherRank: number | null, independentRank: number | nu
   return delta === 0 ? "0" : `${delta > 0 ? "+" : "−"}${Math.abs(delta)}`;
 }
 export default function Boutique({ ratings }: { ratings: BBTeam[] }) {
-  const [kind, setKind] = useState<Kind>("ratings"), [seasons, setSeasons] = useState<number[]>([]), [metrics, setMetrics] = useState<Metric[]>([]), [sourceReceipts, setSourceReceipts] = useState<SourceReceipt[]>([]);
-  const [season, setSeason] = useState("2026"), [metric, setMetric] = useState("rank"), [query, setQuery] = useState(""), [direction, setDirection] = useState<"desc" | "asc">("asc"), [page, setPage] = useState(0);
+  const params = useSearchParams();
+  const initialKind = params.get("kind") === "players" ? "players" : "ratings";
+  const initialSeason = /^\d{4}$/.test(params.get("season") || "") ? params.get("season")! : "2026";
+  const initialMetric = /^[a-z_]{2,20}$/.test(params.get("metric") || "") ? params.get("metric")! : initialKind === "ratings" ? "rank" : "box_bpm";
+  const [kind, setKind] = useState<Kind>(initialKind), [seasons, setSeasons] = useState<number[]>([]), [metrics, setMetrics] = useState<Metric[]>([]), [sourceReceipts, setSourceReceipts] = useState<SourceReceipt[]>([]);
+  const [season, setSeason] = useState(initialSeason), [metric, setMetric] = useState(initialMetric), [query, setQuery] = useState(params.get("q") || ""), [direction, setDirection] = useState<"desc" | "asc">(params.get("direction") === "desc" ? "desc" : "asc"), [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null), [error, setError] = useState(""), [retryNonce, setRetryNonce] = useState(0);
   const independentRatings = useMemo(() => new Map(ratings.map((rating) => [rating.id, rating])), [ratings]);
-  useEffect(() => { const controller = new AbortController(); fetch(`/api/basketball/research/boutique?kind=${kind}&meta=1`, { signal: controller.signal }).then((r) => { if (!r.ok) throw new Error("The boutique model catalog is unavailable."); return r.json() as Promise<{ seasons: number[]; metrics: Metric[]; source_receipts?: SourceReceipt[] }>; }).then((p) => { setSeasons(p.seasons); setMetrics(p.metrics); setSourceReceipts(p.source_receipts || []); setMetric(p.metrics[0]?.key || ""); if (p.seasons.length && !p.seasons.includes(Number(season))) setSeason(String(p.seasons[0])); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [kind, retryNonce]);
+  useEffect(() => { const controller = new AbortController(); fetch(`/api/basketball/research/boutique?kind=${kind}&meta=1`, { signal: controller.signal }).then((r) => { if (!r.ok) throw new Error("The boutique model catalog is unavailable."); return r.json() as Promise<{ seasons: number[]; metrics: Metric[]; source_receipts?: SourceReceipt[] }>; }).then((p) => { setSeasons(p.seasons); setMetrics(p.metrics); setSourceReceipts(p.source_receipts || []); if (!p.metrics.some((candidate) => candidate.key === metric)) setMetric(p.metrics[0]?.key || ""); if (p.seasons.length && !p.seasons.includes(Number(season))) setSeason(String(p.seasons[0])); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [kind, metric, retryNonce, season]);
   const selected = useMemo(() => metrics.find((m) => m.key === metric) || metrics[0] || null, [metrics, metric]);
   const sourceReceipt = sourceReceipts.find((receipt) => receipt.season === Number(season));
   useEffect(() => { if (!selected) return; const controller = new AbortController(); setResult(null); setError(""); const params = new URLSearchParams({ kind, season, metric: selected.key, page: String(page), direction }); if (query.trim()) params.set("q", query.trim()); fetch(`/api/basketball/research/boutique?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw new Error("The boutique model rows could not be loaded. Please reload."); return r.json() as Promise<Result>; }).then(setResult).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [direction, kind, page, query, retryNonce, season, selected]);
