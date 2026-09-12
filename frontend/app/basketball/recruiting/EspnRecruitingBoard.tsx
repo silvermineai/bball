@@ -176,6 +176,9 @@ export default function EspnRecruitingBoard() {
     return () => controller.abort();
   }, []);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
+  const movementEvidence = result?.rank_movement
+    ? result.rank_movement.moved_up + result.rank_movement.moved_down + result.rank_movement.unchanged + result.rank_movement.rank_unavailable
+    : 0;
   return (
     <section className="section">
       <div className="section-heading">
@@ -225,8 +228,7 @@ export default function EspnRecruitingBoard() {
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} source rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain ESPN&apos;s source rank and the board&apos;s name ordering.</p>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
-              <div><div className="eyebrow">Release-to-release movement</div><h3>See what changed in the source board.</h3></div>
-              <span className="note">Compared with the latest earlier capture for each athlete</span>
+              <div><div className="eyebrow">{movementEvidence ? "Release-to-release movement" : "Baseline release"}</div><h3>{movementEvidence ? "See what changed in the source board." : "Establish the source board before tracking change."}</h3></div><span className="note">{movementEvidence ? "Compared with the latest earlier capture for each athlete" : "No earlier capture is retained for these exact athlete IDs"}</span>
             </div>
             <div className="strip">
               <div><strong>{result.rank_movement.moved_up.toLocaleString()}</strong><span>Moved up</span></div>
@@ -234,7 +236,7 @@ export default function EspnRecruitingBoard() {
               <div><strong>{result.rank_movement.unchanged.toLocaleString()}</strong><span>Unchanged</span></div>
               <div><strong>{result.rank_movement.new_to_release.toLocaleString()}</strong><span>New to archive</span></div>
             </div>
-            <p className="note">A positive change means the national rank number improved (for example, 80 to 55). “New to archive” means no earlier ESPN release is retained for that exact athlete ID. Missing ranks stay unavailable.</p>
+            <p className="note">A positive change means the national rank number improved (for example, 80 to 55). “New to archive” means no earlier ESPN release is retained for that exact athlete ID. {result.rank_movement.new_to_release === result.rank_movement.total ? "This is the first retained release for the current cohort, so movement is not yet measurable." : "Missing ranks stay unavailable."}</p>
           </section>}
           <div className="button-row" style={{ marginBottom: 16 }}>
             <button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button>
