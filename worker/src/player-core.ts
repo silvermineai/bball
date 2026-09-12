@@ -130,7 +130,7 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
        FROM bb_rosters GROUP BY season,athlete_id
      ) r ON r.season=bb_player_core.season AND r.athlete_id=bb_player_core.athlete_id
      WHERE ${rowWhere}
-     ORDER BY name ${order}, season DESC, id ASC LIMIT 40 OFFSET ?`,
+     ORDER BY name ${order}, bb_player_core.season DESC, id ASC LIMIT 40 OFFSET ?`,
     ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
     const response = c.json({
       season,
