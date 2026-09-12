@@ -80,7 +80,7 @@ The [reading room](/basketball/learn/) includes browser-only lessons for Four Fa
 
 ## Source policy and identifiers
 
-All new imports use the SportsDataverse GitHub release store. The publisher labels datasets CC BY 4.0. Attribution, source URLs, retrieval times, ETags, last-modified metadata and SHA-256 hashes are retained. Direct ESPN extraction remains disabled; NCAA requests must pass robots checks and currently cannot proceed.
+All player and game-stat imports use the SportsDataverse GitHub release store. The publisher labels datasets CC BY 4.0. Attribution, source URLs, retrieval times, ETags, last-modified metadata and SHA-256 hashes are retained. Direct ESPN game/stat extraction remains disabled; the separate ESPN recruiting connector is a bounded, source-labeled public prospect release and retains only its ranking/profile fields. NCAA requests must pass robots checks and currently cannot proceed.
 
 The recruiting wire uses the published ESPN and NCAA.com men’s-basketball RSS feeds for current editorial context. NCAA Division I, II and III feeds retain their feed scope, while the broad ESPN feed remains division-neutral. The refresh stores each feed-supplied headline, summary and URL without fetching or rewriting linked article pages, stamps its retrieval time, and labels the publisher. Successful refreshes carry forward source-specific retained headlines when a publisher temporarily shortens its RSS window, and the release is written atomically. It does not turn a headline into a transaction, eligibility or availability claim. The scheduled research workflow refreshes these feeds before basketball publication.
 
