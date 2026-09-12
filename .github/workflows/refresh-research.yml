@@ -141,6 +141,14 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
         run: python scripts/refresh-news-rss.py
 
+      - name: Refresh public ESPN basketball recruiting rankings
+        # The source exposes a bounded class ranking release. Keep it
+        # separate from school-announcement review and portal evidence.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: |
+          python -m ncaa_scraper.espn_recruiting --season 2027 --workers 4
+          python scripts/sync-espn-recruiting.py
+
       - name: Refresh selected sources, models and publication
         env:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}

@@ -201,9 +201,19 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = 21, limit: int = 120)
             with requests.get(url, headers={"Accept": "application/json", "User-Agent": "SilvermineResearch/1.0 (bball.silvermine.dev)"}, timeout=(5, 15), stream=True, allow_redirects=False) as response:
                 if response.status_code != 200:
                     continue
-                body = response.raw.read(MAX_RESPONSE_BYTES + 1)
-                if len(body) > MAX_RESPONSE_BYTES:
+                chunks: list[bytes] = []
+                size = 0
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if not chunk:
+                        continue
+                    size += len(chunk)
+                    if size > MAX_RESPONSE_BYTES:
+                        chunks = []
+                        break
+                    chunks.append(chunk)
+                if not chunks:
                     continue
+                body = b"".join(chunks)
                 summary = json.loads(body.decode("utf-8"))
                 if not isinstance(summary, dict):
                     continue

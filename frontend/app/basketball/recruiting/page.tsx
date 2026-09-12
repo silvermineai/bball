@@ -6,6 +6,7 @@ import { getRecruiting } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
+import EspnRecruitingBoard from "./EspnRecruitingBoard";
 export const metadata = {
   title: "Basketball recruiting: school announcements and transfer evidence",
   description:
@@ -61,6 +62,7 @@ export default function Page() {
       </div>
       <RecruitingWire articles={recruitingNews} />
       <MovementWatch />
+      <EspnRecruitingBoard />
       <AuthorizedIntake />
       <section className="section recruiting-context">
         <div className="section-heading">
