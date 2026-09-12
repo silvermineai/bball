@@ -25,7 +25,9 @@ PROVIDER = "ESPN Recruiting"
 BASE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball"
 LIST_URL = BASE + "/seasons/{season}/recruits?limit=500"
 DETAIL_URL = BASE + "/recruits/{athlete_id}?lang=en&region=us"
+TEAM_URL = BASE + "/seasons/{season}/teams/{team_id}?lang=en&region=us"
 CACHE = ROOT / ".local/recruiting/espn"
+TEAM_CACHE = ROOT / ".local/recruiting/espn-teams"
 MIGRATION = ROOT / "worker/migrations/0033_espn_recruiting.sql"
 DEFAULT_SQL = ROOT / ".local/espn-recruiting.sql"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
@@ -104,6 +106,71 @@ def _team_names() -> dict[str, str]:
         return names
     finally:
         conn.close()
+
+
+def _team_name(payload: dict, expected_id: str) -> str | None:
+    """Return a display name only when the public response has the same ID."""
+    if str(payload.get("id", "")) != str(expected_id):
+        return None
+    value = payload.get("displayName") or payload.get("shortDisplayName") or payload.get("name")
+    name = str(value).strip() if value is not None else ""
+    return name if name and len(name) <= 160 else None
+
+
+def _fetch_team_names(team_ids: set[str], season: int, workers: int) -> dict[str, str]:
+    """Resolve missing committed ESPN team IDs through bounded public responses.
+
+    The recruit detail payload carries an exact team ID but often omits its
+    display name.  CI runners do not have the local team directory, so resolve
+    only the distinct IDs that appear in committed rows and cache each bounded
+    response for the next refresh.
+    """
+    if not team_ids:
+        return {}
+    TEAM_CACHE.mkdir(parents=True, exist_ok=True)
+
+    def load(team_id: str) -> tuple[str, str] | None:
+        path = TEAM_CACHE / f"{season}-{team_id}.json"
+        body: bytes | None = None
+        try:
+            if path.exists():
+                body = path.read_bytes()
+            else:
+                url = TEAM_URL.format(season=season, team_id=team_id)
+                with requests.get(
+                    url,
+                    headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+                    timeout=(5, 20),
+                    stream=True,
+                    allow_redirects=False,
+                ) as response:
+                    if response.status_code != 200:
+                        return None
+                    chunks: list[bytes] = []
+                    size = 0
+                    for chunk in response.iter_content(chunk_size=64 * 1024):
+                        if not chunk:
+                            continue
+                        size += len(chunk)
+                        if size > MAX_RESPONSE_BYTES:
+                            return None
+                        chunks.append(chunk)
+                    body = b"".join(chunks)
+                path.write_bytes(body)
+            value = json.loads(body.decode("utf-8"))
+            if not isinstance(value, dict):
+                return None
+            name = _team_name(value, team_id)
+            return (team_id, name) if name else None
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError, requests.RequestException):
+            return None
+
+    resolved: dict[str, str] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(workers, 4)) as pool:
+        for item in pool.map(load, sorted(team_ids)):
+            if item:
+                resolved[item[0]] = item[1]
+    return resolved
 
 
 def normalize_detail(detail: dict, season: int, captured_at: str, team_names: dict[str, str], raw_body: bytes) -> dict:
@@ -198,6 +265,18 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
     records.sort(key=lambda row: (row.get("rank") is None, row.get("rank") or 10**6, row["athlete_id"]))
     if not records:
         raise RuntimeError("ESPN recruiting detail refresh returned no valid records")
+    missing_team_ids = {
+        str(row["committed_team_id"])
+        for row in records
+        if row.get("committed_team_id") and not row.get("committed_team_name")
+    }
+    resolved_team_names = _fetch_team_names(missing_team_ids, season, workers)
+    for row in records:
+        if row.get("committed_team_name"):
+            continue
+        team_id = row.get("committed_team_id")
+        if team_id:
+            row["committed_team_name"] = resolved_team_names.get(str(team_id))
     edition = digest({"season": season, "records": [{key: value for key, value in row.items() if key != "captured_at"} for row in records]})
     return {
         "schema_version": 1,
@@ -223,7 +302,7 @@ def sql_export(release: dict, migration: Path = MIGRATION) -> str:
     columns = ["edition", "season", "athlete_id", "name", "position", "grade", "rank", "position_rank", "state_rank", "region_rank", "status", "committed_team_id", "committed_team_name", "school_ids_json", "high_school", "hometown", "height_inches", "weight_pounds", "captured_at", "source_url", "source_sha256", "payload_json"]
     for row in release["records"]:
         values = [release["edition"], release["season"], row["athlete_id"], row["name"], row["position"], row["grade"], row["rank"], row["position_rank"], row["state_rank"], row["region_rank"], row["status"], row["committed_team_id"], row["committed_team_name"], compact(row["school_ids"]), row["high_school"], row["hometown"], row["height_inches"], row["weight_pounds"], release["captured_at"], row["source_url"], row["source_sha256"], compact(row)]
-        lines.append("INSERT INTO bb_espn_recruiting (" + ",".join(columns) + ") VALUES (" + ",".join(quote(value) for value in values) + ") ON CONFLICT(edition,athlete_id) DO UPDATE SET captured_at=excluded.captured_at,source_url=excluded.source_url,source_sha256=excluded.source_sha256,payload_json=excluded.payload_json;")
+        lines.append("INSERT INTO bb_espn_recruiting (" + ",".join(columns) + ") VALUES (" + ",".join(quote(value) for value in values) + ") ON CONFLICT(edition,athlete_id) DO UPDATE SET committed_team_name=excluded.committed_team_name,captured_at=excluded.captured_at,source_url=excluded.source_url,source_sha256=excluded.source_sha256,payload_json=excluded.payload_json;")
     lines.append("INSERT INTO bb_espn_recruiting_current (season,edition,captured_at) VALUES (" + ",".join(quote(value) for value in (release["season"], release["edition"], release["captured_at"])) + ") ON CONFLICT(season) DO UPDATE SET edition=excluded.edition,captured_at=excluded.captured_at;")
     return "\n".join(lines) + "\n"
 

@@ -1,7 +1,7 @@
 import sqlite3
 import unittest
 
-from ncaa_scraper.espn_recruiting import sql_export
+from ncaa_scraper.espn_recruiting import _team_name, sql_export
 
 
 def release(edition: str, captured_at: str):
@@ -33,12 +33,20 @@ def release(edition: str, captured_at: str):
 
 
 class EspnRecruitingTests(unittest.TestCase):
+    def test_team_name_requires_exact_id_and_prefers_display_name(self):
+        self.assertEqual(_team_name({"id": "84", "displayName": "Indiana Hoosiers", "name": "Hoosiers"}, "84"), "Indiana Hoosiers")
+        self.assertIsNone(_team_name({"id": "84", "displayName": "Indiana Hoosiers"}, "153"))
+        self.assertIsNone(_team_name({"id": "84", "displayName": ""}, "84"))
+
     def test_same_content_capture_updates_clock_without_creating_a_second_row(self):
         db = sqlite3.connect(":memory:")
         db.executescript(sql_export(release("edition-1", "2026-09-12T01:00:00Z")))
-        db.executescript(sql_export(release("edition-1", "2026-09-12T02:00:00Z")))
+        hydrated = release("edition-1", "2026-09-12T02:00:00Z")
+        hydrated["records"][0]["committed_team_name"] = "Example University"
+        db.executescript(sql_export(hydrated))
         row = db.execute("SELECT count(*), captured_at FROM bb_espn_recruiting").fetchone()
         self.assertEqual(row, (1, "2026-09-12T02:00:00Z"))
+        self.assertEqual(db.execute("SELECT committed_team_name FROM bb_espn_recruiting").fetchone()[0], "Example University")
         current = db.execute("SELECT edition, captured_at FROM bb_espn_recruiting_current").fetchone()
         self.assertEqual(current, ("edition-1", "2026-09-12T02:00:00Z"))
 
