@@ -18,6 +18,7 @@ import { seasonLabel } from "../_lib/careers";
 import type { BBDatasetCoverage } from "../_lib/basketball-types";
 import LiveBasketballForecastStatus from "../_components/LiveBasketballForecastStatus";
 import LiveBasketballRecruitingStatus from "../_components/LiveBasketballRecruitingStatus";
+import LiveBasketballProspectStatus from "../_components/LiveBasketballProspectStatus";
 import LiveBasketballMarketStatus from "../_components/LiveBasketballMarketStatus";
 import LiveBasketballNewsStatus from "../_components/LiveBasketballNewsStatus";
 
@@ -186,6 +187,7 @@ export default function Page() {
       </div>
       <LiveBasketballForecastStatus />
       <LiveBasketballRecruitingStatus />
+      <LiveBasketballProspectStatus />
       <LiveBasketballMarketStatus />
       <section className="section coach-path" aria-labelledby="coach-path-title">
         <div className="section-heading">
