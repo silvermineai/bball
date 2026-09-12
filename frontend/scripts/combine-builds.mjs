@@ -26,5 +26,5 @@ await writeFile(
   // Match the directory prefix without a trailing slash so archive snapshots
   // stay available to the post-deploy R2 capture without counting toward the
   // Workers static-asset manifest.
-  "/blog/game-*\n/data/research/ledger.json\n",
+  "blog/game-*\ndata/research/ledger.json\n",
 );
