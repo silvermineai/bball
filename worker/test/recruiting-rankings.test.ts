@@ -6,15 +6,16 @@ describe("ESPN recruiting rankings", () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
         first: vi.fn(async () => sql.includes("count(*)") ? { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
-        all: vi.fn(async () => ({ results: sql.includes("GROUP BY") ? [{ position: "PG", total: 1 }] : [{ athlete_id: "272415", name: "Danny Abass", rank: 225, school_ids_json: '["257","526"]' }] })),
+        all: vi.fn(async () => ({ results: sql.includes("SELECT TRIM(r.committed_team_name)") ? [{ team: "PG", total: 1 }] : sql.includes("GROUP BY") ? [{ position: "PG", total: 1 }] : [{ athlete_id: "272415", name: "Danny Abass", rank: 225, school_ids_json: '["257","526"]' }] })),
       })),
     }));
     const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; cohort: { committed: number; ranked: number; graded: number }; position_breakdown: Array<{ position: string; total: number }>; rows: Array<{ name: string; school_ids: string[]; school_ids_json?: string }> };
+    const body = await response.json() as { total: number; cohort: { committed: number; ranked: number; graded: number }; position_breakdown: Array<{ position: string; total: number }>; commitment_destinations: Array<{ team: string; total: number }>; rows: Array<{ name: string; school_ids: string[]; school_ids_json?: string }> };
     expect(body.total).toBe(1);
     expect(body.cohort).toEqual({ committed: 1, ranked: 1, graded: 1 });
     expect(body.position_breakdown).toEqual([{ position: "PG", total: 1 }]);
+    expect(body.commitment_destinations).toEqual([{ team: "PG", total: 1 }]);
     expect(body.rows[0]).toEqual(expect.objectContaining({ name: "Danny Abass", school_ids: ["257", "526"] }));
     expect(body.rows[0].school_ids_json).toBeUndefined();
   });

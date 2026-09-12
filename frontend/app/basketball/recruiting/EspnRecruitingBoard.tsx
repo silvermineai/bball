@@ -26,6 +26,7 @@ type Result = {
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
   position_breakdown?: Array<{ position: string; total: number }>;
+  commitment_destinations?: Array<{ team: string; total: number }>;
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -174,6 +175,20 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          {committed !== "no" && (result.commitment_destinations || []).length > 0 && <section className="paper-panel" aria-label="Recruiting commitment destinations" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Destination board / active cohort</div><h3>Where the commitments are landing.</h3></div>
+              <span className="note">Top 12 destinations</span>
+            </div>
+            <div className="article-grid">
+              {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={destination.team}>
+                <div className="eyebrow">{destination.total === 1 ? "One commitment" : `${destination.total} commitments`}</div>
+                <h3>{destination.team}</h3>
+                <p>Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</p>
+              </article>)}
+            </div>
+            <p className="note" style={{ marginTop: 12 }}>Counts use ESPN&apos;s committed team field and the same season, rank, position, search and status filters as the table. They are source-reported destinations, not confirmation of enrollment or eligibility.</p>
+          </section>}
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>

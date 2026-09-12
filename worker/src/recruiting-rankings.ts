@@ -83,6 +83,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         GROUP BY COALESCE(NULLIF(upper(r.position),''),'Unknown')
         ORDER BY total DESC, position ASC`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const destinations = await withTimeout(db.prepare(
+      `SELECT TRIM(r.committed_team_name) AS team, count(*) AS total
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE ${filters} AND r.committed_team_name IS NOT NULL AND TRIM(r.committed_team_name) <> ''
+        GROUP BY TRIM(r.committed_team_name)
+        ORDER BY total DESC, team ASC
+        LIMIT 12`,
+    ).bind(...binds).all(), DB_TIMEOUT_MS);
     const current = await withTimeout(db.prepare(
       "SELECT edition,captured_at FROM bb_espn_recruiting_current WHERE season=?",
     ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
@@ -98,6 +106,10 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       },
       position_breakdown: positions.results.map((row) => ({
         position: String((row as { position?: string }).position || "Unknown"),
+        total: Number((row as { total?: number }).total || 0),
+      })),
+      commitment_destinations: destinations.results.map((row) => ({
+        team: String((row as { team?: string }).team || "Unknown"),
         total: Number((row as { total?: number }).total || 0),
       })),
       edition: current?.edition || null,
@@ -117,6 +129,6 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], commitment_destinations: [], rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
   }
 });
