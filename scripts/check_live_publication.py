@@ -477,9 +477,10 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
 
+    probe_key = str(int(checked_at.timestamp()))
     schedule_clock = get_json(
         base_url,
-        "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1",
+        f"/api/basketball/research/schedule-times?season=2027&meta=1&publication_check={probe_key}",
     )
     schedule_clock_total, schedule_clock_confirmed, schedule_clock_age = schedule_clock_metadata(schedule_clock, checked_at, max_age_hours)
 
@@ -548,11 +549,11 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     news_age = (checked_at - timestamp(news_summary["latest_seen_at"])).total_seconds() / 3600
     if news_age < -24 or news_age > max_age_hours:
         raise ValueError(f"basketball news archive is {max(news_age, 0):.1f} hours old")
-    basketball_markets = get_json(base_url, "/api/research/markets?meta=1&sport=basketball&publication_check=1")
+    basketball_markets = get_json(base_url, f"/api/research/markets?meta=1&sport=basketball&publication_check={probe_key}")
     basketball_market_total, basketball_market_pregame, basketball_market_capabilities, basketball_market_receipts = market_metadata(
         basketball_markets, "basketball"
     )
-    football_markets = get_json(base_url, "/api/research/markets?meta=1&sport=football&publication_check=1")
+    football_markets = get_json(base_url, f"/api/research/markets?meta=1&sport=football&publication_check={probe_key}")
     football_market_total, football_market_pregame, football_market_capabilities, football_market_receipts = market_metadata(
         football_markets, "football"
     )
