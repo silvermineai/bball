@@ -57,6 +57,7 @@ export default function EspnRecruitingBoard() {
   const [position, setPosition] = useState("");
   const [rankMax, setRankMax] = useState("");
   const [committed, setCommitted] = useState("all");
+  const [movement, setMovement] = useState("all");
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
@@ -78,6 +79,8 @@ export default function EspnRecruitingBoard() {
     if (requestedRank && ["25", "50", "100", "250"].includes(requestedRank)) setRankMax(requestedRank);
     const requestedCommitted = params.get("committed");
     if (requestedCommitted === "yes" || requestedCommitted === "no") setCommitted(requestedCommitted);
+    const requestedMovement = params.get("movement");
+    if (requestedMovement && ["up", "down", "unchanged", "new", "unavailable"].includes(requestedMovement)) setMovement(requestedMovement);
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0) setPage(Math.min(requestedPage, 1000));
     setHydrated(true);
@@ -90,11 +93,12 @@ export default function EspnRecruitingBoard() {
     if (position) params.set("position", position);
     if (rankMax) params.set("rank", rankMax);
     if (committed !== "all") params.set("committed", committed);
+    if (movement !== "all") params.set("movement", movement);
     if (page > 0) params.set("page", String(page));
     const search = params.toString();
     window.history.replaceState(window.history.state, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
     setCopied("");
-  }, [committed, hydrated, page, position, query, rankMax, season]);
+  }, [committed, hydrated, movement, page, position, query, rankMax, season]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -118,7 +122,7 @@ export default function EspnRecruitingBoard() {
       const all: Prospect[] = [];
       const pages = Math.max(1, Math.ceil(result.total / result.page_size));
       for (let requestedPage = 0; requestedPage < pages; requestedPage += 1) {
-        const params = new URLSearchParams({ season, page: String(requestedPage), committed });
+        const params = new URLSearchParams({ season, page: String(requestedPage), committed, movement });
         if (query.trim()) params.set("q", query.trim());
         if (position) params.set("position", position);
         if (rankMax) params.set("rank_max", rankMax);
@@ -138,7 +142,7 @@ export default function EspnRecruitingBoard() {
   };
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ season, page: String(page), committed });
+    const params = new URLSearchParams({ season, page: String(page), committed, movement });
     if (query.trim()) params.set("q", query.trim());
     if (position) params.set("position", position);
     if (rankMax) params.set("rank_max", rankMax);
@@ -155,7 +159,7 @@ export default function EspnRecruitingBoard() {
         }
       });
     return () => controller.abort();
-  }, [committed, page, position, query, rankMax, season]);
+  }, [committed, movement, page, position, query, rankMax, season]);
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled(["2026", "2027", "2028"].map(async (classYear) => {
@@ -186,6 +190,7 @@ export default function EspnRecruitingBoard() {
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
         <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All source ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
+        <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
         <button className="button secondary" type="button" onClick={share}>Copy board link</button>
       </div>
       {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">

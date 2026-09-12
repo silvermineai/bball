@@ -89,4 +89,20 @@ describe("ESPN recruiting rankings", () => {
     expect(body.rank_movement).toEqual(expect.objectContaining({ moved_up: 1, moved_down: 1, new_to_release: 1 }));
     expect(body.rows[0]).toEqual(expect.objectContaining({ previous_rank: 18, previous_captured_at: "2026-08-01T00:00:00Z" }));
   });
+
+  it("adds an exact release movement filter to the bounded query", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&movement=up&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls.some((sql) => sql.includes("r.rank < (SELECT p.rank"))).toBe(true);
+  });
 });

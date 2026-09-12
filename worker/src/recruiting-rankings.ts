@@ -13,6 +13,7 @@ const querySchema = z.object({
   position: z.string().trim().max(12).optional(),
   rank_max: z.coerce.number().int().min(1).max(1000).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
+  movement: z.enum(["all", "up", "down", "unchanged", "new", "unavailable"]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
 });
 
@@ -29,7 +30,7 @@ function escapeLike(value: string) {
 }
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, q, position, rank_max, committed, page } = c.req.valid("query");
+  const { season, athlete_id, q, position, rank_max, committed, movement, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -37,6 +38,19 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     : committed === "no"
       ? "r.committed_team_id IS NULL"
       : "1=1";
+  const previousRank = `(SELECT p.rank FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
+  const previousCapture = `(SELECT p.captured_at FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
+  const movementClause = movement === "up"
+    ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank < ${previousRank}`
+    : movement === "down"
+      ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank > ${previousRank}`
+      : movement === "unchanged"
+        ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank = ${previousRank}`
+        : movement === "new"
+          ? `${previousCapture} IS NULL`
+          : movement === "unavailable"
+            ? `${previousCapture} IS NOT NULL AND (${previousRank} IS NULL OR r.rank IS NULL)`
+            : "1=1";
   const filters = [
     "r.season=?",
     "r.edition=c.edition",
@@ -45,6 +59,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     ...(positionValue ? ["upper(r.position)=?"] : []),
     ...(rank_max != null ? ["r.rank IS NOT NULL AND r.rank<=?"] : []),
     committedClause,
+    movementClause,
   ].join(" AND ");
   const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : []), ...(rank_max != null ? [rank_max] : [])];
   const db = researchDb(c.env);
