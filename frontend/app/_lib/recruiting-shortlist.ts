@@ -10,6 +10,8 @@ export type RecruitingShortlistEntry = {
   committed_team_name: string | null;
   high_school: string | null;
   source_url: string;
+  edition?: string | null;
+  captured_at?: string | null;
 };
 
 export const RECRUITING_SHORTLIST_STORAGE_KEY = "silvermine:recruiting-shortlist:v1";
@@ -47,6 +49,8 @@ export function readRecruitingShortlist(raw: string | null): RecruitingShortlist
         committed_team_name: nullableString(row.committed_team_name),
         high_school: nullableString(row.high_school),
         source_url: row.source_url,
+        edition: nullableString(row.edition),
+        captured_at: nullableString(row.captured_at),
       });
     }
     return entries.slice(0, 100);

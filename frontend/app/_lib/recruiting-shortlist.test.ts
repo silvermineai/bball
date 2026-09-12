@@ -18,6 +18,8 @@ const entry = (key = recruitingShortlistKey("2027", "42")): RecruitingShortlistE
   committed_team_name: "Example U",
   high_school: "Example High",
   source_url: "https://example.test/prospect",
+  edition: null,
+  captured_at: null,
 });
 
 describe("recruiting prospect shortlist", () => {

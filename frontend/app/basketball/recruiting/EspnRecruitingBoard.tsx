@@ -133,6 +133,7 @@ export default function EspnRecruitingBoard() {
     }
   };
   const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url"];
+  const shortlistExportHeaders = [...exportHeaders, "source_edition", "source_captured_at"];
   const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
   const downloadPage = () => {
     if (!result) return;
@@ -177,13 +178,15 @@ export default function EspnRecruitingBoard() {
     committed_team_name: row.committed_team_name,
     high_school: row.high_school,
     source_url: row.source_url,
+    edition: result?.edition || null,
+    captured_at: result?.captured_at || null,
   });
   const toggleShortlist = (row: Prospect) => setShortlist((current) => toggleRecruitingShortlist(current, shortlistEntry(row)));
   const removeShortlist = (key: string) => setShortlist((current) => current.filter((entry) => entry.key !== key));
   const downloadShortlist = () => {
     if (!shortlist.length) return;
-    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.source_url]);
-    downloadCsv("espn-recruiting-shortlist.csv", toCsv(exportHeaders, rows));
+    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.source_url, row.edition, row.captured_at]);
+    downloadCsv("espn-recruiting-shortlist.csv", toCsv(shortlistExportHeaders, rows));
     setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
   };
   useEffect(() => {
@@ -249,7 +252,7 @@ export default function EspnRecruitingBoard() {
           <span className="note">{shortlist.length} saved · available on this browser</span>
         </div>
         <p className="note">Shortlist entries preserve the ESPN class, exact athlete ID and source link. They stay in this browser and do not merge identities across providers.</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Commitment</th><th>Source</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{grade(row.grade)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Commitment</th><th>Source snapshot</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{grade(row.grade)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>)}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
       </section>}
       {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">

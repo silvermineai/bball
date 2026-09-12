@@ -42,7 +42,7 @@ type RankHistoryEntry = {
   committed_team_name: string | null;
   source_url: string;
 };
-type Response = { season: number; rows: Prospect[]; captured_at: string | null; history?: RankHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RankHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -59,6 +59,7 @@ export default function ProspectPage() {
   const [prospect, setProspect] = useState<Prospect | null>(null);
   const [history, setHistory] = useState<RankHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
+  const [edition, setEdition] = useState<string | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an ESPN athlete ID.");
 
@@ -78,6 +79,7 @@ export default function ProspectPage() {
       .then((value) => {
         if (controller.signal.aborted) return;
         setSource(value.source);
+        setEdition(value.edition || null);
         setHistory(value.history || []);
         if (value.unavailable_reason) setError(value.unavailable_reason);
         else if (!value.rows.length) setError("That ESPN prospect is not in the selected class release.");
@@ -105,6 +107,8 @@ export default function ProspectPage() {
       committed_team_name: prospect.committed_team_name,
       high_school: prospect.high_school,
       source_url: prospect.source_url,
+      edition,
+      captured_at: prospect.captured_at,
     };
     const next = toggleRecruitingShortlist(shortlist, entry);
     setShortlist(next);
