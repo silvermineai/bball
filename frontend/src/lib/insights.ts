@@ -147,6 +147,8 @@ export type NewsArticle = {
   link: string | null;
   image: string | null;
   categories: string[];
+  publisher?: string;
+  division?: string;
 };
 
 export type RecruitingTeam = {

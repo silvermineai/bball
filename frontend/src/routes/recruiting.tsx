@@ -49,6 +49,9 @@ function RecruitingPage() {
   const [boardQuery, setBoardQuery] = useState("");
   const [boardPage, setBoardPage] = useState(0);
   const [boardPageSize, setBoardPageSize] = useState(80);
+  const [newsQuery, setNewsQuery] = useState("");
+  const [newsPublisher, setNewsPublisher] = useState<"all" | "ESPN" | "NCAA.com">("all");
+  const [newsPage, setNewsPage] = useState(0);
   const [targets, setTargets] = useState<Target[]>([]);
 
   useEffect(() => {
@@ -78,9 +81,16 @@ function RecruitingPage() {
   const visibleBoard = board.slice(boardPage * boardPageSize, (boardPage + 1) * boardPageSize);
   const boardPages = Math.max(1, Math.ceil(board.length / boardPageSize));
 
-  const recruitingNews = (newsData?.articles ?? []).filter((a) =>
-    /recruit|transfer|portal|commit|sign|class of|prospect/i.test(`${a.headline} ${a.description}`),
-  );
+  const recruitingNews = useMemo(() => {
+    const query = newsQuery.trim().toLocaleLowerCase();
+    return (newsData?.articles ?? []).filter((a) =>
+      /recruit|transfer|portal|commit|sign|class of|prospect/i.test(`${a.headline} ${a.description}`)
+      && (newsPublisher === "all" || a.publisher === newsPublisher)
+      && (!query || `${a.headline} ${a.description} ${a.publisher} ${a.division ?? ""}`.toLocaleLowerCase().includes(query)),
+    );
+  }, [newsData, newsPublisher, newsQuery]);
+  const newsPages = Math.max(1, Math.ceil(recruitingNews.length / 9));
+  const visibleRecruitingNews = recruitingNews.slice(newsPage * 9, (newsPage + 1) * 9);
   const movementPlayers = useMemo(
     () => [...(movementData?.players ?? [])].sort((a, b) => (b.previous_minutes ?? -1) - (a.previous_minutes ?? -1)),
     [movementData],
@@ -352,9 +362,28 @@ function RecruitingPage() {
 
       {/* recruiting wire */}
       <section className="rise rise-5">
-        <SectionTitle kicker="The Wire" title="Recruiting & portal news" />
+        <SectionTitle
+          kicker="The Wire"
+          title="Recruiting & portal news"
+          right={
+            <div className="flex flex-wrap justify-end gap-2">
+              <input
+                aria-label="Search recruiting news"
+                className="w-48 rounded-md border-line bg-white text-sm"
+                placeholder="Search the wire"
+                value={newsQuery}
+                onChange={(e) => { setNewsQuery(e.target.value); setNewsPage(0); }}
+              />
+              <select aria-label="Recruiting news source" className="rounded-md border-line bg-white text-sm" value={newsPublisher} onChange={(e) => { setNewsPublisher(e.target.value as typeof newsPublisher); setNewsPage(0); }}>
+                <option value="all">All sources</option>
+                <option value="ESPN">ESPN</option>
+                <option value="NCAA.com">NCAA.com</option>
+              </select>
+            </div>
+          }
+        />
         <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {recruitingNews.slice(0, 9).map((a) => (
+          {visibleRecruitingNews.map((a) => (
             <a
               key={a.id}
               href={a.link ?? "#"}
@@ -365,12 +394,22 @@ function RecruitingPage() {
               <div className="text-sm font-semibold leading-snug">{a.headline}</div>
               <div className="mt-1 line-clamp-2 text-[12px] text-graphite">{a.description}</div>
               <div className="mt-2 font-stat text-[10px] uppercase tracking-wider text-court">
-                ESPN · {a.published ? new Date(a.published).toLocaleDateString() : ""}
+                {a.publisher}{a.division ? ` · ${a.division}` : ""} · {a.published ? new Date(a.published).toLocaleDateString() : ""}
               </div>
             </a>
           ))}
           {recruitingNews.length === 0 ? <p className="text-sm text-graphite">No recruiting stories in the current feed.</p> : null}
         </div>
+        {recruitingNews.length > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-graphite">
+            <span>{recruitingNews.length.toLocaleString()} recruiting stories match</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="rounded border border-line px-2 py-1 disabled:opacity-40" disabled={newsPage === 0} onClick={() => setNewsPage((page) => page - 1)}>← Previous</button>
+              <span>Page {newsPage + 1} of {newsPages}</span>
+              <button type="button" className="rounded border border-line px-2 py-1 disabled:opacity-40" disabled={newsPage + 1 >= newsPages} onClick={() => setNewsPage((page) => page + 1)}>Next →</button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
