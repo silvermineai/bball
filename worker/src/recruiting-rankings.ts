@@ -166,7 +166,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters} AND r.committed_team_name IS NOT NULL AND TRIM(r.committed_team_name) <> ''
         GROUP BY CAST(r.committed_team_id AS TEXT), TRIM(r.committed_team_name)
-        ORDER BY ranked_total DESC, top100_total DESC, total DESC, team ASC
+        ORDER BY source_rank_points DESC, top100_total DESC, ranked_total DESC, total DESC, team ASC
         LIMIT 12`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
     const destinationPositions = await withTimeout(db.prepare(

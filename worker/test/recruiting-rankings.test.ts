@@ -21,6 +21,23 @@ describe("ESPN recruiting rankings", () => {
     expect(body.rows[0].school_ids_json).toBeUndefined();
   });
 
+  it("orders commitment destinations by transparent source-rank points", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const destinationSql = sqlCalls.find((sql) => sql.includes("GROUP BY CAST(r.committed_team_id"));
+    expect(destinationSql).toContain("ORDER BY source_rank_points DESC");
+  });
+
   it("fails closed with a 200 unavailable response when D1 is unavailable", async () => {
     const response = await recruitingRankings.request("/?season=2027", {}, { RESEARCH_DB: { prepare: vi.fn(() => { throw new Error("busy"); }) } });
     expect(response.status).toBe(200);
