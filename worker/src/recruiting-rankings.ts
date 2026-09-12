@@ -23,9 +23,13 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, athlete_id, q, position, committed, page } = c.req.valid("query");
-  const search = q ? `%${q}%` : null;
+  const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
     ? "r.committed_team_id IS NOT NULL"
@@ -36,7 +40,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     "r.season=?",
     "r.edition=c.edition",
     ...(athlete_id ? ["r.athlete_id=?"] : []),
-    ...(search ? ["(r.name LIKE ? OR r.high_school LIKE ? OR r.hometown LIKE ? OR r.committed_team_name LIKE ?)"] : []),
+    ...(search ? ["(r.name LIKE ? ESCAPE '\\' OR r.high_school LIKE ? ESCAPE '\\' OR r.hometown LIKE ? ESCAPE '\\' OR r.committed_team_name LIKE ? ESCAPE '\\')"] : []),
     ...(positionValue ? ["upper(r.position)=?"] : []),
     committedClause,
   ].join(" AND ");

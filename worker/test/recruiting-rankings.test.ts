@@ -39,4 +39,17 @@ describe("ESPN recruiting rankings", () => {
     expect(bind.mock.calls[0]).toContain("272415");
     expect((await response.json() as { total: number }).total).toBe(1);
   });
+
+  it("escapes wildcard characters in prospect searches", async () => {
+    const bind = vi.fn(() => ({
+      first: vi.fn(async () => ({ total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 })),
+      all: vi.fn(async () => ({ results: [] })),
+    }));
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => { sqlCalls.push(sql); return { bind }; });
+    const response = await recruitingRankings.request("/?season=2027&q=100%25_under&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls.some((sql) => sql.includes("ESCAPE '\\'"))).toBe(true);
+    expect(bind.mock.calls.some((args) => args.some((value) => value === "%100\\%\\_under%"))).toBe(true);
+  });
 });
