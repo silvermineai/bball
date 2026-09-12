@@ -8,9 +8,9 @@ import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
 import EspnRecruitingBoard from "./EspnRecruitingBoard";
 export const metadata = {
-  title: "Basketball recruiting: school announcements and transfer evidence",
+  title: "Basketball recruiting: ESPN prospect rankings and transfer evidence",
   description:
-    "Dated 2026–27 school announcements, prior college stats, availability updates and all-program coverage labels. Source-linked recruiting research with explicit coverage limits.",
+    "Search live ESPN 2026–28 prospect rankings alongside dated school announcements, prior college stats, availability updates and all-program coverage labels.",
   alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {
@@ -125,9 +125,10 @@ export default function Page() {
           </article>
         </div>
         <p className="section-note">
-          This edition keeps player-level recruiting evidence to source-linked
-          school announcements and attributed roster observations. A missing
-          announcement or portal record does not imply no transfer activity.
+          This edition keeps source-ranked prospect fields separate from
+          school announcements, roster observations and portal evidence. A
+          missing announcement or portal record does not imply no transfer
+          activity.
         </p>
       </section>
       <Announcements data={data} />
