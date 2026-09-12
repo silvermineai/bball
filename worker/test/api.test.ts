@@ -484,6 +484,7 @@ describe("bball api", () => {
     expect(body.rows[1].prediction).toBeNull();
     expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_models"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("audit_schedule_times") && String(query).includes("schedule_rank"))).toBe(true);
   });
 
   it("publishes forecast model metadata without exposing the stored coefficient artifact", async () => {
