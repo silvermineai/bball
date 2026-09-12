@@ -22,6 +22,20 @@ DB = ROOT / ".local/research-ledger.sqlite3"
 OUT = ROOT / "frontend/public/data/research"
 POLICY = "first-eligible-registration-v1"
 SPORTS = ("football", "basketball")
+BASKETBALL_SOURCE_MIGRATIONS = (
+    "0009_basketball_research.sql",
+    "0017_basketball_team_season.sql",
+    "0018_basketball_boutique.sql",
+    "0019_basketball_lineups.sql",
+    "0020_basketball_player_core.sql",
+    "0021_basketball_ncaa_player_box.sql",
+    "0022_basketball_ncaa_rosters.sql",
+    "0023_basketball_ncaa_shooting.sql",
+    "0027_basketball_possession_style.sql",
+    "0028_basketball_ncaa_game_archive.sql",
+    "0031_basketball_player_crosswalk.sql",
+    "0032_basketball_game_context.sql",
+)
 
 
 def encoded(value):
@@ -96,15 +110,18 @@ def source_connection(sport):
         # overview. Without its source artifact, leave that sport untouched.
         yield None
         return
-    migration = (
-        ROOT / "worker/migrations/0008_football.sql"
+    migrations = (
+        ("0008_football.sql",)
         if sport == "football"
-        else ROOT / "worker/migrations/0009_basketball_research.sql"
+        else BASKETBALL_SOURCE_MIGRATIONS
     )
     with tempfile.TemporaryDirectory(prefix=f"ledger-{sport}-") as directory:
         source = sqlite3.connect(Path(directory) / f"{sport}.sqlite3")
         try:
-            source.executescript(migration.read_text())
+            for migration in migrations:
+                source.executescript(
+                    (ROOT / "worker/migrations" / migration).read_text()
+                )
             source.executescript(sql_path.read_text())
             yield source
         finally:
@@ -230,7 +247,6 @@ def ingest_published(conn, now):
                 ).fetchone()
                 state = None
                 if g:
-                    receipt = schedule_receipts[g["season"]]
                     state = {
                         k: g[k]
                         for k in (
@@ -242,12 +258,19 @@ def ingest_published(conn, now):
                             "time_tbd",
                         )
                     }
-                    state.update(
-                        starts_at=g[clock],
-                        source_url=receipt["url"],
-                        source_fetched_at=receipt["fetched_at"],
-                        source_sha256=receipt["sha256"],
-                    )
+                    state["starts_at"] = g[clock]
+                    # Incremental SQL exports intentionally contain only the
+                    # newest source partitions. Preserve schedule identity and
+                    # timing even when the matching historical receipt is not
+                    # present in the replayed export; source provenance stays
+                    # unavailable rather than aborting the ledger build.
+                    receipt = schedule_receipts.get(g["season"])
+                    if receipt:
+                        state.update(
+                            source_url=receipt["url"],
+                            source_fetched_at=receipt["fetched_at"],
+                            source_sha256=receipt["sha256"],
+                        )
                 observe_state(conn, sport, row[0], state, now)
     conn.commit()
     return refreshed
