@@ -58,13 +58,14 @@ def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours:
     return ages
 
 
-def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
+def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     """Validate market archive metadata without requiring any quotes."""
     if payload.get("sport") != sport:
         raise ValueError(f"{sport} market archive returned the wrong sport")
     total = payload.get("total")
     pregame = payload.get("pregame")
     capabilities = payload.get("provider_capabilities")
+    receipts = payload.get("archive_receipts")
     if (
         not isinstance(total, int)
         or not isinstance(pregame, int)
@@ -73,6 +74,7 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
         or pregame > total
         or not isinstance(capabilities, list)
         or not capabilities
+        or not isinstance(receipts, list)
     ):
         raise ValueError(f"{sport} market archive metadata is malformed")
     for capability in capabilities:
@@ -84,7 +86,21 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
             or not isinstance(capability.get("provider_update_clock"), bool)
         ):
             raise ValueError(f"{sport} market provider capability is malformed")
-    return total, pregame, len(capabilities)
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("dataset"), str)
+            or not isinstance(receipt.get("season"), int)
+            or not isinstance(receipt.get("url"), str)
+            or not receipt["url"].startswith("https://")
+            or not isinstance(receipt.get("fetched_at"), str)
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+        ):
+            raise ValueError(f"{sport} market archive receipt is malformed")
+    if sport == "football" and not receipts:
+        raise ValueError("football market archive has no source receipts")
+    return total, pregame, len(capabilities), len(receipts)
 
 
 def schedule_clock_metadata(payload: dict) -> tuple[int, int]:
@@ -525,12 +541,12 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     news_age = (checked_at - timestamp(news_summary["latest_seen_at"])).total_seconds() / 3600
     if news_age < -24 or news_age > max_age_hours:
         raise ValueError(f"basketball news archive is {max(news_age, 0):.1f} hours old")
-    basketball_markets = get_json(base_url, "/api/research/markets?meta=1&sport=basketball")
-    basketball_market_total, basketball_market_pregame, basketball_market_capabilities = market_metadata(
+    basketball_markets = get_json(base_url, "/api/research/markets?meta=1&sport=basketball&publication_check=1")
+    basketball_market_total, basketball_market_pregame, basketball_market_capabilities, basketball_market_receipts = market_metadata(
         basketball_markets, "basketball"
     )
-    football_markets = get_json(base_url, "/api/research/markets?meta=1&sport=football")
-    football_market_total, football_market_pregame, football_market_capabilities = market_metadata(
+    football_markets = get_json(base_url, "/api/research/markets?meta=1&sport=football&publication_check=1")
+    football_market_total, football_market_pregame, football_market_capabilities, football_market_receipts = market_metadata(
         football_markets, "football"
     )
     brief_archive = get_json(base_url, "/api/research/briefs?sport=all&page=0")
@@ -580,9 +596,11 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "basketball_market_observations": basketball_market_total,
         "basketball_market_pregame": basketball_market_pregame,
         "basketball_market_capabilities": basketball_market_capabilities,
+        "basketball_market_receipts": basketball_market_receipts,
         "football_market_observations": football_market_total,
         "football_market_pregame": football_market_pregame,
         "football_market_capabilities": football_market_capabilities,
+        "football_market_receipts": football_market_receipts,
         "brief_archive_total": brief_archive_total,
         "brief_archive_page_rows": brief_archive_page,
     }
