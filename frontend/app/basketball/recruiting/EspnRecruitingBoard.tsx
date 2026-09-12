@@ -36,7 +36,7 @@ type Result = {
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
-  source?: { provider: string; methodology: string };
+  source?: { provider: string; methodology: string; url?: string };
   unavailable_reason?: string;
 };
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
@@ -51,6 +51,9 @@ const size = (height: number | null, weight: number | null) => {
   return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
 };
 const rate = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(0)}%` : "—";
+const captureLabel = (value: string | null) => value
+  ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
+  : "capture date unavailable";
 
 export default function EspnRecruitingBoard() {
   const [season, setSeason] = useState("2027");
@@ -227,8 +230,9 @@ export default function EspnRecruitingBoard() {
           </div>
           <p className="note" role="status">
             Active ESPN edition <span className="source-hash">{result.edition || "unavailable"}</span>
-            {result.captured_at ? <> · captured {new Date(result.captured_at).toLocaleString()}</> : " · capture date unavailable"}.
-            The edition identifier lets a staff member reproduce this exact source board after a later refresh.
+            {result.captured_at ? <> · captured {captureLabel(result.captured_at)} UTC</> : " · capture date unavailable"}.
+            {result.source?.url && <> · <a className="text-link" href={result.source.url} target="_blank" rel="noreferrer">Open ESPN release ↗</a></>}
+            {" "}The edition identifier lets a staff member reproduce this exact source board after a later refresh.
           </p>
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} source rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain ESPN&apos;s source rank and the board&apos;s name ordering.</p>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
@@ -286,7 +290,7 @@ export default function EspnRecruitingBoard() {
             <button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button>
             <button className="button secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Next</button>
           </div>
-          <p className="section-note">Source edition captured {result.captured_at ? new Date(result.captured_at).toLocaleString() : "—"}. ESPN rank, grade and status remain attributed source evidence; they do not establish a roster spot, transfer date or NCAA eligibility.</p>
+          <p className="section-note">Source edition captured {result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "—"}. ESPN rank, grade and status remain attributed source evidence; they do not establish a roster spot, transfer date or NCAA eligibility.</p>
         </>
       )}
     </section>
