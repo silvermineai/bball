@@ -38,7 +38,7 @@ type Row = {
   bookmaker?: string | null;
   provider?: string | null;
 };
-type Result = { season: number; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string };
+type Result = { season: number | "all"; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string };
 
 const clock = (value: string | null) =>
   value
@@ -207,7 +207,7 @@ export default function Markets() {
       </div>
       <div className="toolbar">
         <label className="control"><span>SPORT</span><select value={sport} onChange={(e) => { setSport(e.target.value as typeof sport); setPage(0); setSeason("2025"); }}><option value="football">College football</option><option value="basketball">Men&apos;s college basketball</option></select></label>
-        <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}>{(meta?.seasons || [2025]).map((s) => <option key={s}>{s}</option>)}</select></label>
+        <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}><option value="all">All retained seasons</option>{(meta?.seasons || [2025]).map((s) => <option key={s}>{s}</option>)}</select></label>
         <label className="control"><span>TEAM OR SOURCE</span><input type="search" maxLength={120} placeholder="Try Alabama or SportsDataverse" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
         <button className="button secondary" type="button" onClick={download} disabled={!data?.rows.length}>Download page CSV</button>
         <button className="button secondary" type="button" onClick={downloadAll} disabled={!data?.rows.length || exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV"}</button>

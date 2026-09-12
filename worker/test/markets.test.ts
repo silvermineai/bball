@@ -61,4 +61,21 @@ describe("market archive metadata", () => {
     }));
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
+
+  it("supports a bounded all-season archive read", async () => {
+    const first = vi.fn().mockResolvedValue({ total: 2 });
+    const all = vi.fn().mockResolvedValue({ results: [] });
+    const bound = { first, all };
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => bound) }));
+    const response = await markets.request(
+      "/?sport=football&season=all&page=0",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ season: "all", total: 2, rows: [] });
+    const calls = prepare.mock.calls as unknown as Array<[string]>;
+    expect(calls[0]?.[0] || "").toContain("WHERE 1=1");
+    expect(calls[0]?.[0] || "").not.toContain("g.season=?");
+  });
 });

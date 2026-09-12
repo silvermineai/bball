@@ -8,7 +8,7 @@ type Bindings = Env;
 
 const querySchema = z.object({
   sport: z.enum(["football", "basketball"]).default("football"),
-  season: z.coerce.number().int().min(2022).max(2035).default(2025),
+  season: z.union([z.coerce.number().int().min(2022).max(2035), z.literal("all")]).default(2025),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
@@ -105,16 +105,21 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     }
   }
   const search = q ? `%${q}%` : null;
+  const seasonClause = season === "all" ? "" : "g.season=? AND ";
   const where = football
     ? search
-      ? "g.season=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)"
-      : "g.season=?"
+      ? `${seasonClause}(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)`
+      : (season === "all" ? "1=1" : "g.season=?")
     : search
-      ? "g.season=? AND m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)"
-      : "g.season=? AND m.sport=?";
+      ? `${seasonClause}m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`
+      : `${seasonClause}m.sport=?`;
   const binds: Array<string | number> = football
-    ? search ? [season, search, search, search] : [season]
-    : search ? [season, sport, search, search, search, search] : [season, sport];
+    ? search
+      ? (season === "all" ? [search, search, search] : [season, search, search, search])
+      : (season === "all" ? [] : [season])
+    : search
+      ? (season === "all" ? [sport, search, search, search, search] : [season, sport, search, search, search, search])
+      : (season === "all" ? [sport] : [season, sport]);
   const marketTable = football ? "football_markets" : "audit_markets";
   const gameTable = football ? "football_games" : "bb_games";
   try {
