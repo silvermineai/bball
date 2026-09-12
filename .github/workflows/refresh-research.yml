@@ -146,8 +146,10 @@ jobs:
         # separate from school-announcement review and portal evidence.
         if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
         run: |
-          python -m ncaa_scraper.espn_recruiting --season 2027 --workers 4
-          python scripts/sync-espn-recruiting.py
+          for season in 2026 2027 2028; do
+            python -m ncaa_scraper.espn_recruiting --season "$season" --workers 4
+            python scripts/sync-espn-recruiting.py
+          done
 
       - name: Refresh selected sources, models and publication
         env:

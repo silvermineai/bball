@@ -31,6 +31,7 @@ type Result = {
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 
 export default function EspnRecruitingBoard() {
+  const [season, setSeason] = useState("2027");
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("");
   const [committed, setCommitted] = useState("all");
@@ -39,7 +40,7 @@ export default function EspnRecruitingBoard() {
   const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ season: "2027", page: String(page), committed });
+    const params = new URLSearchParams({ season, page: String(page), committed });
     if (query.trim()) params.set("q", query.trim());
     if (position) params.set("position", position);
     setError("");
@@ -55,18 +56,19 @@ export default function EspnRecruitingBoard() {
         }
       });
     return () => controller.abort();
-  }, [committed, page, position, query]);
+  }, [committed, page, position, query, season]);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
   return (
     <section className="section">
       <div className="section-heading">
         <div>
           <div className="eyebrow">National prospect board / ESPN source</div>
-          <h2>2027 recruiting rankings.</h2>
+          <h2>{season} recruiting rankings.</h2>
         </div>
         <p>Search the source-ranked class, inspect commitment status and open the original ESPN prospect card. Ranking and grade are source fields, not eligibility or a Silvermine scouting grade.</p>
       </div>
       <div className="toolbar">
+        <label className="control"><span>CLASS</span><select value={season} onChange={(event) => { setSeason(event.target.value); setPage(0); }}><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option></select></label>
         <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Prospect, school or hometown" /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
