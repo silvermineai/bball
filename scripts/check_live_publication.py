@@ -506,10 +506,19 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     prospect_rank_ties = {}
     prospect_ages = {}
     for prospect_season in (2026, 2027, 2028, 2029, 2030):
-        recruiting_rankings = get_json(
-            base_url,
-            f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check={probe_key}",
-        )
+        # The rankings endpoint runs several bounded D1 reads over a large
+        # archive. A transient 5-second database timeout is represented as a
+        # deliberate 200/source-unavailable payload; retry that semantic
+        # response with a fresh cache key before failing the publication audit.
+        recruiting_rankings = {}
+        ranking_path = f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check={probe_key}"
+        for retry in range(3):
+            path = ranking_path if retry == 0 else f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check={probe_key}{retry}"
+            recruiting_rankings = get_json(base_url, path)
+            if isinstance(recruiting_rankings.get("rank_quality"), dict):
+                break
+            if retry < 2:
+                time.sleep(2**retry)
         prospect_total = recruiting_rankings.get("total")
         prospect_rows = recruiting_rankings.get("rows")
         commitment_destinations = recruiting_rankings.get("commitment_destinations")
