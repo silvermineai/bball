@@ -21,6 +21,7 @@ type Result = {
   total: number;
   page: number;
   page_size: number;
+  cohort?: { committed: number; ranked: number; graded: number };
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -83,6 +84,12 @@ export default function EspnRecruitingBoard() {
       </div>
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source-ranked prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
         <>
+          <div className="strip" style={{ marginBottom: 24 }}>
+            <div><strong>{result.total.toLocaleString()}</strong><span>Matching prospects</span></div>
+            <div><strong>{(result.cohort?.committed ?? 0).toLocaleString()}</strong><span>Committed in cohort</span></div>
+            <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
+            <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
+          </div>
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">ESPN 2027 basketball recruiting prospects</caption>
