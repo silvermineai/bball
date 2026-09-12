@@ -10,7 +10,8 @@ export type ScheduleClockRow = {
 export type ScheduleClockResponse = {
   rows?: ScheduleClockRow[];
   total?: number;
-  confirmed?: number;
+  confirmed?: number | boolean;
+  confirmed_count?: number;
 };
 
 export async function loadLiveBasketballScheduleClocks(

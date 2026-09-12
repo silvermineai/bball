@@ -236,6 +236,12 @@ export default function Matchups({
   const prepRows = prepIds
     .map((id) => scheduledGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
+  const confirmedScheduleCount = scheduleClocks
+    ? scheduleClocks.confirmed_count
+      ?? (typeof scheduleClocks.confirmed === "number"
+        ? scheduleClocks.confirmed
+        : scheduleClocks.rows?.filter((row) => row.source_time_valid).length || 0)
+    : 0;
   const togglePrep = (id: string) => {
     setPrepIds((current) => current.includes(id)
       ? current.filter((value) => value !== id)
@@ -371,7 +377,7 @@ export default function Matchups({
       </p>
       <p className="note" role="status">
         {scheduleClocks
-          ? `ESPN schedule clocks: ${(scheduleClocks.confirmed || 0).toLocaleString()} of ${(scheduleClocks.total || 0).toLocaleString()} observed games have source-confirmed starts; canonical TBD rows remain labeled until confirmed.`
+          ? `ESPN schedule clocks: ${confirmedScheduleCount.toLocaleString()} of ${(scheduleClocks.total || 0).toLocaleString()} observed games have source-confirmed starts; canonical TBD rows remain labeled until confirmed.`
           : scheduleClockError
             ? `${scheduleClockError} Showing canonical schedule clocks.`
             : "Checking ESPN schedule-clock evidence…"}

@@ -21,7 +21,7 @@ describe("live basketball schedule clocks", () => {
   it("loads and bounds scoreboard observations to numeric game IDs", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ total: 2, confirmed: 1, rows: [
+      json: async () => ({ total: 2, confirmed: false, confirmed_count: 1, rows: [
         { game_id: "401", source_start: "2026-11-02T05:00:00Z", source_time_valid: true },
         { game_id: "bad", source_start: null, source_time_valid: false },
       ] }),
@@ -29,7 +29,8 @@ describe("live basketball schedule clocks", () => {
     vi.stubGlobal("fetch", fetcher);
     await expect(loadLiveBasketballScheduleClocks()).resolves.toEqual({
       total: 2,
-      confirmed: 1,
+      confirmed: false,
+      confirmed_count: 1,
       rows: [{ game_id: "401", source_start: "2026-11-02T05:00:00Z", source_time_valid: true }],
     });
     expect(fetcher).toHaveBeenCalledWith(
