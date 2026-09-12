@@ -15,6 +15,9 @@ type MarketMetadata = {
   total?: number;
   pregame?: number;
   provider_capabilities?: Array<{ provider?: string }>;
+  source?: "partial" | "unavailable";
+  unavailable_reason?: string;
+  unavailable_sources?: string[];
 };
 
 export default function LiveBasketballMarketStatus() {
@@ -39,7 +42,7 @@ export default function LiveBasketballMarketStatus() {
         if (!controller.signal.aborted) {
           setScorecard(scorecardPayload);
           setArchive(archivePayload);
-          setStatus("live");
+          setStatus(archivePayload.source === "unavailable" ? "fallback" : "live");
         }
       })
       .catch((reason: unknown) => {
@@ -57,11 +60,17 @@ export default function LiveBasketballMarketStatus() {
     ? ` (${providerNames.join(", ")})`
     : "";
 
+  const archiveNote = archive?.source === "partial"
+    ? `One archive binding is busy (${(archive.unavailable_sources || []).join(", ") || "unknown source"}); the counts below are partial.`
+    : archive?.source === "unavailable"
+      ? archive.unavailable_reason || "The market archive warehouse is temporarily unavailable."
+      : "";
+
   return (
     <p className="note" role="status">
       {status === "live" && scorecard
         ? <>
-            Live market bridge: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable connector{archive?.provider_capabilities?.length === 1 ? "" : "s"}{providerLabel}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. Quotes require an authorized provider clock, exact participants and a pre-tip capture. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
+            Live market bridge: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable connector{archive?.provider_capabilities?.length === 1 ? "" : "s"}{providerLabel}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}Quotes require an authorized provider clock, exact participants and a pre-tip capture. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
           </>
         : status === "fallback"
           ? <>Live market scorecard unavailable; the retained market archive remains available. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link></>

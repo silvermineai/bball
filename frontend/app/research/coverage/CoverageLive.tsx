@@ -103,6 +103,9 @@ type MarketMeta = {
   total?: number;
   pregame?: number;
   seasons?: number[];
+  source?: "partial" | "unavailable";
+  unavailable_reason?: string;
+  unavailable_sources?: string[];
 };
 
 type NCAALeaderMeta = {
@@ -270,6 +273,12 @@ export default function CoverageLive() {
       </div>}
       {!data && !football ? <p className="empty" role="status">Loading remote coverage…</p> : (
         <>
+          {(basketballMarkets?.source === "unavailable" || footballMarkets?.source === "unavailable") && <p className="status-error" role="alert">
+            Market archive read unavailable for {[basketballMarkets?.source === "unavailable" ? "basketball" : null, footballMarkets?.source === "unavailable" ? "football" : null].filter((value): value is string => value !== null).join(" and ")}. The bundled ledger remains available; retry this page after the D1 read window clears.
+          </p>}
+          {(basketballMarkets?.source === "partial" || footballMarkets?.source === "partial") && <p className="note" role="status">
+            Market metadata is partial while one archive binding is busy. Counts shown above reflect the binding that answered, and the missing source is kept out of any inference.
+          </p>}
           {data && <><div className="eyebrow" style={{ marginTop: 20 }}>Basketball D1</div><div className="strip">
             {rows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{labels[row.dataset]}</span></div>)}
           </div><div className="table-scroll" style={{ marginTop: 20 }}>
