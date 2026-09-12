@@ -37,6 +37,10 @@ export type BBGame = {
   time_tbd: number;
   venue: string;
   broadcast: string;
+  /** Latest bounded ESPN scoreboard observation, when available. */
+  source_start?: string | null;
+  source_time_valid?: boolean;
+  source_observed_at?: string | null;
   prediction: BBPrediction | null;
   fallback_prediction?: BBPrediction | null;
   matchup_factors?: BBMatchupFactors | null;

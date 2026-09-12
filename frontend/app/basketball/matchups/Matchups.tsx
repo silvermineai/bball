@@ -22,6 +22,11 @@ import {
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
+import {
+  loadLiveBasketballScheduleClocks,
+  mergeBasketballScheduleClocks,
+  type ScheduleClockResponse,
+} from "../../_lib/live-basketball-schedule";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -69,12 +74,35 @@ export default function Matchups({
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, NonNullable<BBGame["market_comparisons"]>> | null>(null),
     [liveMarketsError, setLiveMarketsError] = useState(""),
     [publisherRatings, setPublisherRatings] = useState<Record<string, PublisherRating>>({}),
-    [publisherRatingsError, setPublisherRatingsError] = useState("");
+    [publisherRatingsError, setPublisherRatingsError] = useState(""),
+    [scheduleClocks, setScheduleClocks] = useState<ScheduleClockResponse | null>(null),
+    [scheduleClockError, setScheduleClockError] = useState("");
   const activeGames = liveGames || games;
+  const scheduledGames = useMemo(
+    () => mergeBasketballScheduleClocks(activeGames, scheduleClocks?.rows || []),
+    [activeGames, scheduleClocks],
+  );
   const publisherTeamIds = useMemo(
     () => [...new Set(activeGames.flatMap((game) => [game.home_id, game.away_id]))].filter((id) => /^\d+$/.test(id)).slice(0, 400),
     [activeGames],
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadLiveBasketballScheduleClocks(controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setScheduleClocks(value);
+          setScheduleClockError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setScheduleClockError(reason instanceof Error ? reason.message : "Live schedule-clock evidence unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (!publisherTeamIds.length) return;
@@ -185,7 +213,7 @@ export default function Matchups({
       );
     }
   }, [q, month, coverage, signal, sort, page, prepIds]);
-  const eligibleGames = scope === "forecasted" ? activeGames.filter((g) => g.prediction != null || g.fallback_prediction != null) : activeGames;
+  const eligibleGames = scope === "forecasted" ? scheduledGames.filter((g) => g.prediction != null || g.fallback_prediction != null) : scheduledGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
     eligibleGames.filter((g) => {
@@ -206,7 +234,7 @@ export default function Matchups({
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const prepRows = prepIds
-    .map((id) => activeGames.find((game) => game.id === id))
+    .map((id) => scheduledGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
   const togglePrep = (id: string) => {
     setPrepIds((current) => current.includes(id)
@@ -342,6 +370,13 @@ export default function Matchups({
             : "Checking live matchup rows…"}
       </p>
       <p className="note" role="status">
+        {scheduleClocks
+          ? `ESPN schedule clocks: ${(scheduleClocks.confirmed || 0).toLocaleString()} of ${(scheduleClocks.total || 0).toLocaleString()} observed games have source-confirmed starts; canonical TBD rows remain labeled until confirmed.`
+          : scheduleClockError
+            ? `${scheduleClockError} Showing canonical schedule clocks.`
+            : "Checking ESPN schedule-clock evidence…"}
+      </p>
+      <p className="note" role="status">
         {Object.keys(publisherRatings).length
           ? `Publisher adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 source release.`
           : publisherRatingsError
@@ -361,6 +396,8 @@ export default function Matchups({
               toCsv(
                 [
                   "Scheduled start",
+                  "ESPN source start",
+                  "ESPN time valid",
                   "Away program",
                   "Home program",
                   "Venue",
@@ -385,6 +422,8 @@ export default function Matchups({
                 ],
                 rows.map((g) => [
                   g.starts_at,
+                  g.source_start,
+                  g.source_time_valid == null ? null : g.source_time_valid ? "yes" : "no",
                   g.away_name,
                   g.home_name,
                   g.venue,
@@ -440,7 +479,7 @@ export default function Matchups({
               <div className="matchup-prep-item" key={game.id}>
                 <div>
                   <strong>{game.away_name} at {game.home_name}</strong>
-                  <small>{game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
+                    <small>{game.source_time_valid && game.source_start ? `ESPN ${kick(game.source_start)}` : game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
                 </div>
                 <div className="button-row">
                   {(game.prediction || game.fallback_prediction) && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}

@@ -39,7 +39,11 @@ export default function BasketballCard({
       <div className="meta">
         <span>{g.neutral ? "NEUTRAL FLOOR" : "ON THE SCHEDULE"}</span>
         <span>
-          {g.time_tbd ? `${date(g.starts_at)} · TIME TBD` : kick(g.starts_at)}
+          {g.source_time_valid && g.source_start
+            ? `ESPN ${kick(g.source_start)}`
+            : g.time_tbd
+              ? `${date(g.starts_at)} · TIME TBD`
+              : kick(g.starts_at)}
         </span>
       </div>
       <h3>
