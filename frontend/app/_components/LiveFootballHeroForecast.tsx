@@ -31,10 +31,12 @@ type Props = {
 
 export default function LiveFootballHeroForecast({ fallback }: Props) {
   const [forecast, setForecast] = useState<Forecast | null>(null);
-  const [live, setLive] = useState(false);
+  const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     fetch("/api/football/research/forecasts?season=2026&status=upcoming&limit=1&page=0", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live forecast unavailable");
@@ -43,14 +45,14 @@ export default function LiveFootballHeroForecast({ fallback }: Props) {
       .then((payload) => {
         if (!controller.signal.aborted) {
           setForecast(payload.rows?.[0] || null);
-          setLive(Boolean(payload.rows?.[0]));
+          setStatus(payload.rows?.[0] ? "live" : "fallback");
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setLive(false);
+        if (!controller.signal.aborted) setStatus("fallback");
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   const home = forecast?.home_name || fallback.home_name || "Home team";
   const away = forecast?.away_name || fallback.away_name || "Away team";
@@ -74,11 +76,12 @@ export default function LiveFootballHeroForecast({ fallback }: Props) {
         <strong>{fmt(homeScore)}</strong>
       </div>
       <div className="field-note">
-        {live ? "LIVE D1 MODEL ESTIMATE · NOT A RESULT" : "MODEL ESTIMATE · NOT A RESULT"}
+        {status === "live" ? "LIVE D1 MODEL ESTIMATE · NOT A RESULT" : "MODEL ESTIMATE · NOT A RESULT"}
         <br />
         HOME WIN PROBABILITY {fmt(winProbability == null ? null : winProbability * 100)}%
         <br />
-        {live ? "Current forecast · uncertainty included" : "Calibrated score model · uncertainty included"}
+        {status === "live" ? "Current forecast · uncertainty included" : "Calibrated score model · uncertainty included"}
+        {status === "fallback" && <><br /><button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live forecast</button></>}
       </div>
     </div>
   );

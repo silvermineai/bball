@@ -60,9 +60,11 @@ export default function LivePressroomForecasts({ games }: { games: BBGame[] }) {
   const [activeGames, setActiveGames] = useState(games);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [edition, setEdition] = useState<{ modelId: string; capturedAt: string } | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     loadLiveBasketballForecasts(controller.signal, { maxPages: 1 })
       .then((rows) => {
         if (!controller.signal.aborted) {
@@ -75,7 +77,7 @@ export default function LivePressroomForecasts({ games }: { games: BBGame[] }) {
         if (!controller.signal.aborted) setStatus("fallback");
       });
     return () => controller.abort();
-  }, [games]);
+  }, [games, retryNonce]);
 
   return (
     <>
@@ -83,7 +85,7 @@ export default function LivePressroomForecasts({ games }: { games: BBGame[] }) {
         {status === "live"
           ? `Live D1 forecasts connected; press cards use ${edition?.modelId || "the latest retained model"}${edition?.capturedAt ? ` captured ${date(edition.capturedAt)}` : ""}.`
           : status === "fallback"
-            ? "Live forecast refresh unavailable; showing the bundled press-room edition."
+            ? <>Live forecast refresh unavailable; showing the bundled press-room edition. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live forecast</button></>
             : "Checking the live forecast edition…"}
       </p>
       <div className="article-grid">
