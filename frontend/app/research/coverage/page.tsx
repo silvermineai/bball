@@ -290,6 +290,17 @@ export default function Page() {
   ];
   const footballLedger = ledger.sports.football;
   const basketballLedger = ledger.sports.basketball;
+  const marketBySport = ledger.games.reduce(
+    (summary, game) => {
+      summary[game.sport].observations += game.comparisons.length;
+      if (game.comparisons.length > 0) summary[game.sport].games += 1;
+      return summary;
+    },
+    {
+      football: { observations: 0, games: 0 },
+      basketball: { observations: 0, games: 0 },
+    },
+  );
   const unresolvedBreakdown = unresolved.rows;
   const unresolvedObserved = unresolved.rows_with_observed_stats;
 
@@ -741,6 +752,18 @@ export default function Page() {
               </strong>
             </div>
             <div>
+              <span>Football market observations</span>
+              <strong>
+                {count(marketBySport.football.observations)} · {count(marketBySport.football.games)} games
+              </strong>
+            </div>
+            <div>
+              <span>Basketball market observations</span>
+              <strong>
+                {count(marketBySport.basketball.observations)} · {count(marketBySport.basketball.games)} games
+              </strong>
+            </div>
+            <div>
               <span>Settled games in the prospective record</span>
               <strong>
                 {count(
@@ -751,9 +774,12 @@ export default function Page() {
             </div>
           </div>
           <p className="note">
-            No verified pregame odds are currently stored. Historical imported
-            lines without a publisher clock remain outside market evaluation.
-            Retained reading snapshots are separate from the scorecard.
+            The archive currently retains {count(marketBySport.football.observations)}
+            football observations across {count(marketBySport.football.games)} games
+            from the prospective ESPN Summary capture. Basketball has {count(marketBySport.basketball.observations)}
+            qualifying observations in this edition. Historical imported lines
+            without a publisher clock remain outside market evaluation, and
+            retained reading snapshots stay separate from the scorecard.
           </p>
           <p>
             <Link href="/research/scorecard/">Open the prospective record →</Link>
