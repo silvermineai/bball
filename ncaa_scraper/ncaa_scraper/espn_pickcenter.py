@@ -28,6 +28,7 @@ BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-colleg
 DOCS_URL = "https://www.espn.com/mens-college-basketball/"
 CACHE = ROOT / ".local/odds"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+DEFAULT_HORIZON_DAYS = 60
 
 
 def american_to_decimal(value: object) -> float:
@@ -186,7 +187,7 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
     ]
 
 
-def fetch_upcoming(season: int = 2027, horizon_days: int = 60, limit: int = 120) -> tuple[list[dict], dict]:
+def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS, limit: int = 120) -> tuple[list[dict], dict]:
     now = datetime.now(timezone.utc)
     games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
     if limit < 1 or limit > 300:
@@ -225,11 +226,16 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = 60, limit: int = 120)
     return summaries, receipt
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", type=int, default=2027)
-    parser.add_argument("--horizon-days", type=int, default=21)
+    parser.add_argument("--horizon-days", type=int, default=DEFAULT_HORIZON_DAYS)
     parser.add_argument("--limit", type=int, default=120)
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
     try:
         summaries, receipt = fetch_upcoming(args.season, args.horizon_days, args.limit)

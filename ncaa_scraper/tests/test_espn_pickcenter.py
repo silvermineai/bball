@@ -2,7 +2,7 @@ import json
 import sqlite3
 import unittest
 
-from ncaa_scraper.espn_pickcenter import american_to_decimal, ingest, parse_pickcenter
+from ncaa_scraper.espn_pickcenter import american_to_decimal, build_parser, ingest, parse_pickcenter
 
 
 GAME = {
@@ -42,6 +42,9 @@ def summary():
 
 
 class EspnPickcenterTests(unittest.TestCase):
+    def test_cli_defaults_to_the_scheduled_capture_horizon(self):
+        self.assertEqual(build_parser().parse_args([]).horizon_days, 60)
+
     def test_american_conversion_rejects_sentinels(self):
         self.assertAlmostEqual(american_to_decimal("+120"), 2.2)
         self.assertAlmostEqual(american_to_decimal("-140"), 1.7142857)
