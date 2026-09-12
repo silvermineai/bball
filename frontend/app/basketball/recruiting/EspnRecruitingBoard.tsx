@@ -29,6 +29,7 @@ type Result = {
 };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
+const grade = (value: number | null) => value == null || value <= 0 ? "—" : number(value);
 
 export default function EspnRecruitingBoard() {
   const [season, setSeason] = useState("2027");
@@ -38,6 +39,10 @@ export default function EspnRecruitingBoard() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("q");
+    if (requested) setQuery(requested);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page), committed });
@@ -83,7 +88,7 @@ export default function EspnRecruitingBoard() {
                 <td>{number(row.rank)}</td>
                 <td><strong>{row.name}</strong><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
                 <td>{row.position || "—"}<br /><span className="note">#{number(row.position_rank)}</span></td>
-                <td>{number(row.grade)}</td>
+                <td>{grade(row.grade)}</td>
                 <td>{row.committed_team_name || row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td>
