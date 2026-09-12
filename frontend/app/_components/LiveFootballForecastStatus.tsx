@@ -14,9 +14,11 @@ type ForecastMeta = { models?: ForecastModel[] };
 export default function LiveFootballForecastStatus() {
   const [model, setModel] = useState<ForecastModel | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     fetch("/api/football/research/forecasts?season=2026&meta=1", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live football forecast index unavailable");
@@ -34,14 +36,14 @@ export default function LiveFootballForecastStatus() {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   return (
     <p className="note" role="status">
       {status === "live" && model
         ? `Live D1 football forecast index: ${(model.forecasts || 0).toLocaleString()} rows · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}.`
         : status === "fallback"
-          ? "Live football forecast index unavailable; the published landing-page edition remains available."
+          ? <>Live football forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live football forecast index…"}
     </p>
   );

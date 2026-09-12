@@ -18,9 +18,11 @@ type ForecastMeta = { models?: ForecastModel[] };
 export default function LiveBasketballForecastStatus() {
   const [model, setModel] = useState<ForecastModel | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live forecast index unavailable");
@@ -36,7 +38,7 @@ export default function LiveBasketballForecastStatus() {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("fallback");
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   return (
     <p className="note" role="status">
@@ -45,7 +47,7 @@ export default function LiveBasketballForecastStatus() {
             (model.evaluation_winner_accuracy * 100).toFixed(1)
           }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
         : status === "fallback"
-          ? "Live forecast index unavailable; the published landing-page edition remains available."
+          ? <>Live forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live forecast index…"}
     </p>
   );

@@ -16,9 +16,11 @@ type NewsMeta = {
 export default function LiveBasketballNewsStatus() {
   const [meta, setMeta] = useState<NewsMeta | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "bundled" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     fetch("/api/basketball/research/news?sport=mens-college-basketball&meta=1", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("live publisher wire unavailable");
@@ -34,7 +36,7 @@ export default function LiveBasketballNewsStatus() {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("fallback");
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   return (
     <p className="note" role="status">
@@ -43,7 +45,7 @@ export default function LiveBasketballNewsStatus() {
         : status === "bundled" && meta
           ? <>D1 publisher wire is busy; the bundled release is serving {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest publisher date ${date(meta.summary.latest_published)}` : ""}. <Link href="/basketball/news/">Open the news archive →</Link></>
           : status === "fallback"
-          ? <>Live publisher wire unavailable; the bundled headline release remains visible. <Link href="/basketball/news/">Open the news archive →</Link></>
+          ? <>Live publisher wire unavailable; the bundled headline release remains visible. <Link href="/basketball/news/">Open the news archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live publisher wire…"}
     </p>
   );

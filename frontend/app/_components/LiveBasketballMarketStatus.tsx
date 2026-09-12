@@ -26,9 +26,11 @@ export default function LiveBasketballMarketStatus() {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
   const [archive, setArchive] = useState<MarketMetadata | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
     Promise.all([
       fetch("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal }),
       fetch("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal }),
@@ -53,7 +55,7 @@ export default function LiveBasketballMarketStatus() {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   const providerNames = (archive?.provider_capabilities || [])
     .map((provider) => provider.provider)
@@ -80,7 +82,7 @@ export default function LiveBasketballMarketStatus() {
             Live market bridge: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable connector{archive?.provider_capabilities?.length === 1 ? "" : "s"}{providerLabel}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}{captureNote} Quotes require an authorized provider clock, exact participants and a pre-tip capture. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link>
           </>
         : status === "fallback"
-          ? <>Live market scorecard unavailable; the retained market archive remains available. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link></>
+          ? <>Live market scorecard unavailable; the retained market archive remains available. <Link href="/research/markets/?sport=basketball">Open the market archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live market bridge…"}
     </p>
   );
