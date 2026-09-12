@@ -1,3 +1,4 @@
+import re
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -11,6 +12,31 @@ from scripts.check_live_publication import (
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    @staticmethod
+    def response_for(responses):
+        """Allow the production cache-busting probe key in fixture lookups."""
+        def lookup(_base, path):
+            canonical = re.sub(r"publication_check=\d+", "publication_check=1", path)
+            if path.startswith("/api/basketball/research/schedule-times?"):
+                value = responses.get("/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1", {
+                    "season": 2027,
+                    "total": 1,
+                    "confirmed": 1,
+                    "latest_observed_at": "2026-09-10T18:00:00Z",
+                    "provider": "ESPN Scoreboard",
+                })
+                return {**value, "latest_observed_at": value.get("latest_observed_at", "2026-09-10T18:00:00Z")}
+            candidates = (
+                canonical,
+                canonical.replace("&publication_check=1", ""),
+                canonical.replace("?publication_check=1", ""),
+            )
+            for candidate in candidates:
+                if candidate in responses:
+                    return responses[candidate]
+            return responses[canonical]
+        return lookup
+
     def test_accepts_complete_player_box_field_coverage(self):
         payload = {
             "fields": ["pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"],
@@ -179,6 +205,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "sport": "basketball",
                 "total": 0,
                 "pregame": 0,
+                "archive_receipts": [],
                 "provider_capabilities": [{
                     "provider": "The Odds API",
                     "markets": ["h2h", "spreads", "totals"],
@@ -189,6 +216,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "sport": "football",
                 "total": 12,
                 "pregame": 12,
+                "archive_receipts": [{"dataset": "odds", "season": 2026, "url": "https://example.test/odds", "fetched_at": "2026-09-10T18:00:00Z", "sha256": "a" * 64}],
                 "provider_capabilities": [{
                     "provider": "The Odds API",
                     "markets": ["h2h", "spreads", "totals"],
@@ -200,7 +228,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "rows": [{"sport": "basketball", "game_id": "401902275", "revision": "d25ebd383e9b591503777f3fde5bce62e972e57bc0f85f4ae363afda79739f32"}],
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             report = check_live("https://example.test", now=now)
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["recruiting_intake_rows"], 0)
@@ -305,7 +333,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "sport": "basketball", "total": 1, "pregame": 2, "provider_capabilities": [],
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             with self.assertRaisesRegex(ValueError, "basketball market archive metadata"):
                 check_live("https://example.test", now=now)
 
@@ -320,7 +348,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "possession_validation": {},
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             with self.assertRaisesRegex(ValueError, "source games"):
                 check_live("https://example.test", now=now)
 
@@ -339,7 +367,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-08-01T18:00:00Z"}],
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             with self.assertRaisesRegex(ValueError, "football source games"):
                 check_live("https://example.test", now=now)
 
@@ -407,7 +435,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "games": [],
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=lambda _base, path: responses[path]):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             with self.assertRaisesRegex(ValueError, "reviewed recruiting release"):
                 check_live("https://example.test", now=now)
 
