@@ -2,7 +2,7 @@
 
 Refresh either sport first to collect newer schedules/results. --odds performs
 at most one call per in-season sport through an already-configured account;
---espn-lines captures bounded prospective public ESPN summaries for basketball.
+--espn-lines captures bounded prospective public ESPN summaries for both sports.
 """
 
 import argparse
@@ -17,7 +17,7 @@ PY = sys.executable
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--odds", action="store_true")
 parser.add_argument("--cbbd-lines", action="store_true", help="capture authorized CBBD pregame moneylines")
-parser.add_argument("--espn-lines", action="store_true", help="capture prospective ESPN basketball pickcenter quotes")
+parser.add_argument("--espn-lines", action="store_true", help="capture prospective ESPN pickcenter quotes for basketball and football")
 parser.add_argument("--espn-schedule", action="store_true", help="capture bounded public ESPN basketball schedule-clock observations")
 args = parser.parse_args()
 
@@ -85,6 +85,16 @@ if args.espn_schedule or args.espn_lines:
     )
 if args.espn_lines:
     run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027"])
+    run(
+        [
+            PY,
+            "-m",
+            "ncaa_scraper.research_ledger",
+            "--sql",
+            str(ROOT / ".local/research-ledger.sql"),
+        ]
+    )
+    run([PY, "-m", "ncaa_scraper.espn_football_pickcenter", "--season", "2026"])
     run(
         [
             PY,

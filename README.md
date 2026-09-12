@@ -25,7 +25,7 @@ Cloudflare uses four stores: `bball-football-v1` holds the high-volume football 
 | Learning guide | `/football/learn/` | Plain-language explanations of EPA, success rate, team efficiency, forecasts and source coverage |
 | Journal | `/blog/` | Generated matchup briefs and original statistical field guides |
 
-The current football archive contains **18,758 schedule records** across 2022–26, **87,661 current model player box-score rows**, **1,015,076 NCAA-derived player-game rows across 2013–25**, **120,255 name-attributed defensive and specialist events**, and **788 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the imported archive contains zero verified pregame line observations.
+The current football archive contains **18,758 schedule records** across 2022–26, **87,661 current model player box-score rows**, **1,015,076 NCAA-derived player-game rows across 2013–25**, **120,255 name-attributed defensive and specialist events**, and **788 current-season FBS schedule records**, of which **710 have a primary forecast**. Coverage is not a complete roster census. The independent 2025 test scored 784 games at **65.4% winner accuracy** and **14.24-point margin MAE**. No prospective betting advantage is claimed: the legacy imported betting archive has zero verified pregame line observations, while the separate ESPN Summary capture records only future rows that pass exact-ID and pregame-clock checks.
 
 See [football architecture, source policy, model design, refresh workflow and remaining scope](docs/FOOTBALL.md).
 
@@ -90,7 +90,7 @@ See [shooting evidence, source coverage and Cloudflare storage](docs/BASKETBALL_
 
 The [prospective scorecard](https://bball.silvermine.dev/research/scorecard/) preserves original football and basketball predictions, explains exclusions and links to D1-backed game histories. The ledger contains 2,323 forecasted games, of which 411 have confirmed starts. The [immutable reading archive](https://bball.silvermine.dev/research/briefs/) preserves each captured brief version separately. No prospective result or market advantage is claimed before qualifying games settle.
 
-The [historical market archive](https://bball.silvermine.dev/research/markets/) exposes retained football market observations with matchup, source and capture-time context. These rows are labeled archival references and stay outside prospective odds evaluation until the timing evidence qualifies.
+The [historical market archive](https://bball.silvermine.dev/research/markets/) exposes retained football market observations with matchup, source and capture-time context. Select the current 2026 season to inspect prospective ESPN Summary captures alongside the legacy archive; each row retains its provider, bookmaker, exact game ID and capture clock, and the timing policy keeps unsupported rows out of model comparison.
 
 The [coverage desk](https://bball.silvermine.dev/research/coverage/) gathers current source editions, player/recruiting counts, model holdouts, forecast clocks and explicit source limitations in one dated view.
 

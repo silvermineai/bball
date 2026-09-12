@@ -63,7 +63,9 @@ describe("market archive metadata", () => {
     );
     expect(response.status).toBe(200);
     expect(legacyBatch).toHaveBeenCalled();
-    expect(researchBatch).not.toHaveBeenCalled();
+    // The split research binding is probed for current ESPN Summary captures;
+    // the legacy archive remains the fallback when that binding is absent.
+    expect(researchBatch).toHaveBeenCalled();
   });
 
   it("returns an explicit unavailable state when the archive warehouse is busy", async () => {

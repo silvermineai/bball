@@ -27,7 +27,7 @@ on:
         type: boolean
         default: false
       capture_espn_lines:
-        description: Capture prospective public ESPN basketball pickcenter quotes after the refresh
+        description: Capture prospective public ESPN football and basketball pickcenter quotes after the refresh
         required: true
         type: boolean
         default: false

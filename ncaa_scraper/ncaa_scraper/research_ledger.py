@@ -285,7 +285,13 @@ def preserve_unpublished_sports(report, prior, refreshed):
     # These totals are cross-sport and cannot be recomputed from a partial
     # source connection. The prior report is the complete authoritative view.
     for key in ("provider_receipts", "market_observations", "unmatched_events"):
-        if key in prior:
+        if key not in prior:
+            continue
+        # The append-only ledger itself is complete even when one source
+        # warehouse is unavailable. Preserve an older cross-sport value only
+        # when this partial run produced no value at all; never overwrite a
+        # newly captured market or unmatched-event count.
+        if report.get(key, 0) in (None, 0):
             report[key] = prior[key]
     return report
 
