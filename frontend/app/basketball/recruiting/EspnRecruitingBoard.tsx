@@ -40,13 +40,43 @@ export default function EspnRecruitingBoard() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("q");
     const requestedSeason = params.get("season");
     if (requestedSeason === "2026" || requestedSeason === "2027" || requestedSeason === "2028") setSeason(requestedSeason);
     if (requested) setQuery(requested);
+    const requestedPosition = params.get("position");
+    const normalizedPosition = requestedPosition?.toUpperCase();
+    if (normalizedPosition && ["PG", "SG", "SF", "PF", "C"].includes(normalizedPosition)) setPosition(normalizedPosition);
+    const requestedCommitted = params.get("committed");
+    if (requestedCommitted === "yes" || requestedCommitted === "no") setCommitted(requestedCommitted);
+    const requestedPage = Number(params.get("page"));
+    if (Number.isInteger(requestedPage) && requestedPage >= 0) setPage(Math.min(requestedPage, 1000));
+    setHydrated(true);
   }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (season !== "2027") params.set("season", season);
+    if (query.trim()) params.set("q", query.trim());
+    if (position) params.set("position", position);
+    if (committed !== "all") params.set("committed", committed);
+    if (page > 0) params.set("page", String(page));
+    const search = params.toString();
+    window.history.replaceState(window.history.state, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
+    setCopied("");
+  }, [committed, hydrated, page, position, query, season]);
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("Recruiting board link copied.");
+    } catch {
+      setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page), committed });
@@ -81,7 +111,9 @@ export default function EspnRecruitingBoard() {
         <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Prospect, school or hometown" /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
+        <button className="button secondary" type="button" onClick={share}>Copy board link</button>
       </div>
+      {copied && <p className="note" role="status">{copied}</p>}
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source-ranked prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
         <>
           <div className="strip" style={{ marginBottom: 24 }}>
@@ -92,7 +124,7 @@ export default function EspnRecruitingBoard() {
           </div>
           <div className="table-wrap">
             <table className="data-table">
-              <caption className="sr-only">ESPN 2027 basketball recruiting prospects</caption>
+              <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>
               <thead><tr><th>Rank</th><th>Prospect</th><th>Pos</th><th>Grade</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
