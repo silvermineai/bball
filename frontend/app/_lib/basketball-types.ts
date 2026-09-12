@@ -39,7 +39,7 @@ export type BBGame = {
   broadcast: string;
   /** Latest bounded ESPN scoreboard observation, when available. */
   source_start?: string | null;
-  source_time_valid?: boolean;
+  source_time_valid?: boolean | null;
   source_observed_at?: string | null;
   prediction: BBPrediction | null;
   fallback_prediction?: BBPrediction | null;

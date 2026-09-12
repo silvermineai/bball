@@ -159,10 +159,18 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     `SELECT count(*) AS total FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
   const rows = await withTimeout(researchDb(c.env).prepare(
-    `SELECT f.game_id,f.model_id,f.created_at,f.prediction_json,
+    `WITH latest_schedule AS (
+        SELECT game_id,source_start,source_time_valid,observed_at,
+               ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS schedule_rank
+           FROM audit_schedule_times
+          WHERE sport='basketball'
+      )
+      SELECT f.game_id,f.model_id,f.created_at,f.prediction_json,
             g.season,g.starts_at,g.home_id,g.away_id,g.home_name,g.away_name,
-            g.home_score,g.away_score,g.completed,g.neutral,g.time_tbd,g.venue,g.broadcast
+            g.home_score,g.away_score,g.completed,g.neutral,g.time_tbd,g.venue,g.broadcast,
+            s.source_start,s.source_time_valid,s.observed_at AS source_observed_at
        FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id
+       LEFT JOIN latest_schedule s ON s.game_id=f.game_id AND s.schedule_rank=1
       WHERE ${where}
       ORDER BY g.starts_at ASC,f.created_at ASC,f.model_id ASC
       LIMIT ? OFFSET ?`,
@@ -184,6 +192,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     time_tbd: number;
     venue: string | null;
     broadcast: string | null;
+    source_start: string | null;
+    source_time_valid: number | null;
+    source_observed_at: string | null;
   }>(), DB_TIMEOUT_MS);
   const response = c.json({
     season,
@@ -203,7 +214,11 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       } catch {
         // A malformed stored payload is withheld instead of failing the whole page.
       }
-      return { ...row, prediction };
+      return {
+        ...row,
+        source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
+        prediction,
+      };
     }),
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

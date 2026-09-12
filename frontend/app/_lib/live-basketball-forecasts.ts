@@ -15,6 +15,9 @@ export type LiveForecastRow = {
   time_tbd: number;
   venue: string | null;
   broadcast: string | null;
+  source_start?: string | null;
+  source_time_valid?: boolean | null;
+  source_observed_at?: string | null;
   prediction: BBGame["prediction"];
 };
 
@@ -108,6 +111,9 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
       time_tbd: row.time_tbd,
       venue: row.venue || base?.venue || "",
       broadcast: row.broadcast || base?.broadcast || "",
+      source_start: row.source_start ?? base?.source_start ?? null,
+      source_time_valid: row.source_time_valid ?? base?.source_time_valid ?? null,
+      source_observed_at: row.source_observed_at ?? base?.source_observed_at ?? null,
       prediction: row.prediction,
     } satisfies BBGame];
   });
