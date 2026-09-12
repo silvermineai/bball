@@ -132,9 +132,9 @@ export default function EspnRecruitingBoard() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url"];
-  const shortlistExportHeaders = [...exportHeaders, "source_edition", "source_captured_at"];
-  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
+  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url", "source_edition", "source_captured_at"];
+  const shortlistExportHeaders = exportHeaders;
+  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url, result?.edition || null, result?.captured_at || null];
   const downloadPage = () => {
     if (!result) return;
     downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
@@ -283,7 +283,7 @@ export default function EspnRecruitingBoard() {
             <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
             <small>{(snapshot.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position unavailable"}</small>
             <small>{(snapshot.commitment_destinations || []).slice(0, 3).map((item) => `${item.team} ${item.total}`).join(" · ") || "No source-listed destinations"}</small>
-            <small>{snapshot.captured_at ? `Source captured ${new Date(snapshot.captured_at).toLocaleDateString()}` : "Capture date unavailable"}</small>
+            <small>{snapshot.captured_at ? `Source captured ${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small>
           </button>)}
         </div>
       </div>}
