@@ -14,6 +14,7 @@ type Prospect = {
   state_rank: number | null;
   region_rank: number | null;
   status: string | null;
+  committed_team_id: string | null;
   committed_team_name: string | null;
   high_school: string | null;
   hometown: string | null;
@@ -99,8 +100,8 @@ export default function EspnRecruitingBoard() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "status", "high_school", "hometown", "athlete_id", "source_url"];
-  const exportRow = (row: Prospect) => [season, row.rank, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
+  const exportHeaders = ["season", "rank", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url"];
+  const exportRow = (row: Prospect) => [season, row.rank, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
   const downloadPage = () => {
     if (!result) return;
     downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
@@ -242,7 +243,7 @@ export default function EspnRecruitingBoard() {
                 <td>{row.position || "—"}<br /><span className="note">Pos #{number(row.position_rank)}</span><br /><span className="note">State #{number(row.state_rank)} · Region #{number(row.region_rank)}</span></td>
                 <td>{grade(row.grade)}</td>
                 <td>{size(row.height_inches, row.weight_pounds)}</td>
-                <td>{row.committed_team_name || row.status || "—"}</td>
+                <td>{row.committed_team_name ? row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link> : row.committed_team_name : row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td>
               </tr>)}</tbody>

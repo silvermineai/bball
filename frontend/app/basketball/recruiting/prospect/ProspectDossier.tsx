@@ -14,6 +14,7 @@ type Prospect = {
   state_rank: number | null;
   region_rank: number | null;
   status: string | null;
+  committed_team_id: string | null;
   committed_team_name: string | null;
   high_school: string | null;
   hometown: string | null;
@@ -71,7 +72,7 @@ export default function ProspectPage() {
             <div><strong>{rank(prospect.rank)}</strong><span>National source rank</span></div>
             <div><strong>{prospect.grade == null || prospect.grade <= 0 ? "—" : number(prospect.grade, 1)}</strong><span>ESPN source grade</span></div>
             <div><strong>{rank(prospect.position_rank)}</strong><span>{prospect.position || "Position"} rank</span></div>
-            <div><strong>{prospect.committed_team_name || "—"}</strong><span>Committed team</span></div>
+            <div><strong>{prospect.committed_team_name ? prospect.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(prospect.committed_team_id)}/`}>{prospect.committed_team_name} →</Link> : prospect.committed_team_name : "—"}</strong><span>Committed team</span></div>
           </div>
           <section className="section">
             <div className="two-col">
