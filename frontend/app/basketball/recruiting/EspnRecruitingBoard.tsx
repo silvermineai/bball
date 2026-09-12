@@ -43,6 +43,7 @@ const size = (height: number | null, weight: number | null) => {
   const weightLabel = weight == null || weight <= 0 ? null : `${Math.round(weight)} lb`;
   return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
 };
+const rate = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(0)}%` : "—";
 
 export default function EspnRecruitingBoard() {
   const [season, setSeason] = useState("2027");
@@ -151,9 +152,10 @@ export default function EspnRecruitingBoard() {
             onClick={() => { setSeason(snapshot.season); setPage(0); }}
           >
             <strong>{snapshot.season}</strong>
-            <span>{snapshot.total.toLocaleString()} prospects · {(snapshot.cohort?.committed ?? 0).toLocaleString()} committed</span>
+            <span>{snapshot.total.toLocaleString()} prospects · {(snapshot.cohort?.committed ?? 0).toLocaleString()} committed ({rate(snapshot.cohort?.committed ?? 0, snapshot.total)})</span>
             <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
             <small>{(snapshot.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position unavailable"}</small>
+            <small>{snapshot.captured_at ? `Source captured ${new Date(snapshot.captured_at).toLocaleDateString()}` : "Capture date unavailable"}</small>
           </button>)}
         </div>
       </div>}
