@@ -1,6 +1,27 @@
 export type ForecastLabView = "all" | "scenario" | "cold-start" | "market" | "model-delta";
 export type ForecastLabSort = "date" | "disagreement" | "confidence" | "uncertainty";
 
+export type ForecastModelOption = {
+  model_id: string;
+  version?: string | null;
+  forecasts: number;
+  last_created_at?: string | null;
+  target_season?: number | null;
+};
+
+/** Keep repeated model versions distinguishable in the audit selector. */
+export const formatForecastModelOption = (model: ForecastModelOption): string => {
+  const captured = model.last_created_at
+    ? new Date(model.last_created_at)
+    : null;
+  const date = captured && Number.isFinite(captured.getTime())
+    ? captured.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    : "date unavailable";
+  const fingerprint = model.model_id.split("-").pop() || model.model_id;
+  const metadata = model.target_season == null ? " · metadata unavailable" : "";
+  return `${model.version || "Unlabeled edition"} · ${date} · ${model.forecasts.toLocaleString()} rows · ${fingerprint}${metadata}`;
+};
+
 const views = new Set<ForecastLabView>(["all", "scenario", "cold-start", "market", "model-delta"]);
 const sorts = new Set<ForecastLabSort>(["date", "disagreement", "confidence", "uncertainty"]);
 

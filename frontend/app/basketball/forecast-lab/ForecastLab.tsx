@@ -15,6 +15,7 @@ import {
 } from "../../_lib/live-basketball-forecasts";
 import {
   forecastLabFilterSearch,
+  formatForecastModelOption,
   parseForecastLabFilters,
   type ForecastLabSort,
   type ForecastLabView,
@@ -350,7 +351,7 @@ export default function ForecastLab({
     <>
       <div className="toolbar">
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
-        <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{model.version || model.model_id} · {model.forecasts.toLocaleString()} rows</option>)}</select></label>
+        <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{formatForecastModelOption(model)}</option>)}</select></label>
         <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
       </div>

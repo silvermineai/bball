@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastLabFilterSearch, parseForecastLabFilters } from "./forecast-lab-view";
+import { forecastLabFilterSearch, formatForecastModelOption, parseForecastLabFilters } from "./forecast-lab-view";
 
 describe("forecast lab filters", () => {
   it("round-trips a selected market game with the lab view", () => {
@@ -21,6 +21,22 @@ describe("forecast lab filters", () => {
     const filters = parseForecastLabFilters("?view=model-delta&model=model-2027-a");
     expect(filters.view).toBe("model-delta");
     expect(forecastLabFilterSearch(filters)).toBe("?view=model-delta&model=model-2027-a");
+  });
+
+  it("keeps repeated model versions auditable in the selector label", () => {
+    expect(formatForecastModelOption({
+      model_id: "basketball-efficiency-v2-65f2629d5bd3",
+      version: "basketball-efficiency-v2",
+      forecasts: 1579,
+      last_created_at: "2026-09-12T07:18:21.423011Z",
+      target_season: 2027,
+    })).toBe("basketball-efficiency-v2 · Sep 12 · 1,579 rows · 65f2629d5bd3");
+    expect(formatForecastModelOption({
+      model_id: "basketball-efficiency-v2-338f9be0c3b6",
+      forecasts: 1579,
+      last_created_at: null,
+      target_season: null,
+    })).toBe("Unlabeled edition · date unavailable · 1,579 rows · 338f9be0c3b6 · metadata unavailable");
   });
 
 });
