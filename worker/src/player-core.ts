@@ -60,12 +60,17 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
   }
   if (meta === "1") {
     try {
+      const hasSeason = typeof season === "number";
+      const seasonClause = hasSeason ? "season=? AND " : "";
+      const seasonBind = hasSeason ? [season] : [];
       const [seasons, positions, statuses, count, source] = await withTimeout(db.batch([
         db.prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
-        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(typeof season === "number" ? season : 2026),
-        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(typeof season === "number" ? season : 2026),
-        db.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(typeof season === "number" ? season : 2026),
-        db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(typeof season === "number" ? season : 2026),
+        db.prepare(`SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE ${seasonClause}value IS NOT NULL AND value != '' ORDER BY value`).bind(...seasonBind),
+        db.prepare(`SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE ${seasonClause}value IS NOT NULL AND value != '' ORDER BY value`).bind(...seasonBind),
+        db.prepare(`SELECT count(*) AS total FROM bb_player_core${hasSeason ? " WHERE season=?" : ""}`).bind(...seasonBind),
+        hasSeason
+          ? db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(...seasonBind)
+          : db.prepare("SELECT MAX(json_extract(receipt_json,'$.fetched_at')) AS fetched_at, NULL AS sha256 FROM bb_sources WHERE dataset='player_core'"),
       ]), DB_TIMEOUT_MS);
       const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
       const response = c.json({

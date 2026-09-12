@@ -6,6 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Row = {
   id: string;
+  season: number;
   name: string | null;
   position: string | null;
   height: string | null;
@@ -17,7 +18,7 @@ type Row = {
   team: string | null;
   profile: Record<string, string>;
 };
-type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
+type Result = { season: number | "all"; page: number; page_size: number; total: number; rows: Row[] };
 type Meta = { seasons: number[]; positions: string[]; statuses: string[]; total: number; source?: { fetched_at: string | null; sha256: string | null } };
 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
@@ -41,7 +42,7 @@ export default function Profiles() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedPage = Number(params.get("page") || 0);
-    setSeason(params.get("season") || "2026");
+    setSeason(params.get("season") === "all" ? "all" : params.get("season") || "2026");
     setQuery(params.get("q") || "");
     setPosition(params.get("position") || "");
     setStatus(params.get("status") || "");
@@ -91,14 +92,14 @@ export default function Profiles() {
   };
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
   const exportHeaders = ["Season", "Player", "Source ID", "ESPN profile URL", "Program", "Team ID", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Raw profile JSON"];
-  const exportRow = (row: Row, activeSeason: number) => {
+  const exportRow = (row: Row) => {
     const slug = row.profile.slug || "";
     const sourceUrl = `https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(row.id)}${slug ? `/${encodeURIComponent(slug)}` : ""}`;
-    return [label(activeSeason), row.name, row.id, sourceUrl, row.team, row.team_id, row.position, row.height, row.weight, row.jersey, row.experience, row.status, JSON.stringify(row.profile)];
+    return [label(row.season), row.name, row.id, sourceUrl, row.team, row.team_id, row.position, row.height, row.weight, row.jersey, row.experience, row.status, JSON.stringify(row.profile)];
   };
   const download = () => {
     if (!result) return;
-    downloadCsv(`basketball-player-profiles-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map((row) => exportRow(row, result.season))));
+    downloadCsv(`basketball-player-profiles-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
   };
   const downloadAll = async () => {
     if (!result || exporting) return;
@@ -122,7 +123,7 @@ export default function Profiles() {
         rows.push(...payload.rows);
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} profiles…`);
       }
-      downloadCsv(`basketball-player-profiles-${season}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result.season))));
+      downloadCsv(`basketball-player-profiles-${season}-all.csv`, toCsv(exportHeaders, rows.map(exportRow)));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} player profiles.`);
     } catch (reason) {
       setExportMessage(reason instanceof Error ? reason.message : "The complete player profile export could not be loaded.");
@@ -138,22 +139,22 @@ export default function Profiles() {
         <p>Browse the publisher&apos;s historical identity records before you evaluate production, roster movement or a matchup. These fields orient the source archive; they do not prove eligibility or a current roster place.</p>
       </div>
       <div className="strip">
-        <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Profiles in selected season</span></div>
+        <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Profiles in {season === "all" ? "archive" : "selected season"}</span></div>
         <div><strong>{meta?.positions.length ?? "—"}</strong><span>Position labels</span></div>
         <div><strong>{meta?.statuses.length ?? "—"}</strong><span>Status labels</span></div>
         <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Source seasons</span></div>
       </div>
       <div className="toolbar">
-        <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => { setSeason(e.target.value); setPosition(""); setStatus(""); })}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
+        <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => { setSeason(e.target.value); setPosition(""); setStatus(""); })}><option value="all">All retained seasons</option>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
         <label className="control"><span>PLAYER OR ID</span><input type="search" maxLength={120} placeholder="Search a player or source ID" value={query} onChange={(e) => reset(() => setQuery(e.target.value))} /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{(meta?.positions || []).map((v) => <option key={v}>{v}</option>)}</select></label>
         <label className="control"><span>STATUS</span><select value={status} onChange={(e) => reset(() => setStatus(e.target.value))}><option value="">All statuses</option>{(meta?.statuses || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       </div>
-      {meta?.source ? <p className="note" style={{ marginTop: 16 }}>ESPN-derived profile receipt for {label(Number(season))}: fetched {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
+      {meta?.source ? <p className="note" style={{ marginTop: 16 }}>ESPN-derived profile receipt for {season === "all" ? "all retained seasons" : label(Number(season))}: latest fetch {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
       {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry source profiles</button></div> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
         <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!result.rows.length} onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
         {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={r.id}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Season</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={`${r.season}-${r.id}`}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${r.season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{label(r.season)}</td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
         {!result.rows.length && <p className="empty">No source profiles match these filters.</p>}
         <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 40 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
         <p className="note" style={{ marginTop: 24 }}>Source: ESPN-derived player-core release via SportsDataverse. Personal birth-date, age and birth-location fields are omitted. A source profile is not a verified roster, eligibility or transfer record.</p>
