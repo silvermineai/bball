@@ -42,6 +42,15 @@ type RankHistoryEntry = {
   committed_team_name: string | null;
   source_url: string;
 };
+type PublisherMention = {
+  id: string;
+  publisher: string;
+  headline: string;
+  description?: string;
+  published: string;
+  link: string;
+  division?: string;
+};
 type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RankHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
@@ -61,6 +70,9 @@ export default function ProspectPage() {
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
+  const [mentions, setMentions] = useState<PublisherMention[]>([]);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStatus, setMentionStatus] = useState<"idle" | "loading" | "live" | "none" | "unavailable">("idle");
   const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an ESPN athlete ID.");
 
   useEffect(() => {
@@ -90,6 +102,37 @@ export default function ProspectPage() {
       });
     return () => controller.abort();
   }, [athleteId, season]);
+
+  useEffect(() => {
+    if (!prospect) return;
+    const controller = new AbortController();
+    const queries = [prospect.name, prospect.committed_team_name || ""]
+      .map((value) => value.trim())
+      .filter((value, index, values) => value && values.indexOf(value) === index);
+    setMentions([]);
+    setMentionQuery(queries[0] || "");
+    setMentionStatus(queries.length ? "loading" : "none");
+    const load = async () => {
+      for (const query of queries) {
+        const response = await fetch(`/api/basketball/research/news?sport=mens-college-basketball&q=${encodeURIComponent(query)}&limit=4&prospect_dossier=1`, { signal: controller.signal });
+        if (!response.ok) continue;
+        const value = await response.json() as { rows?: PublisherMention[] };
+        if (Array.isArray(value.rows) && value.rows.length) {
+          if (!controller.signal.aborted) {
+            setMentions(value.rows.slice(0, 4));
+            setMentionQuery(query);
+            setMentionStatus("live");
+          }
+          return;
+        }
+      }
+      if (!controller.signal.aborted) setMentionStatus("none");
+    };
+    load().catch(() => {
+      if (!controller.signal.aborted) setMentionStatus("unavailable");
+    });
+    return () => controller.abort();
+  }, [prospect]);
 
   const shortlistKey = prospect ? recruitingShortlistKey(season, prospect.athlete_id) : "";
   const isShortlisted = Boolean(shortlistKey && shortlist.some((entry) => entry.key === shortlistKey));
@@ -160,6 +203,28 @@ export default function ProspectPage() {
               <article className="paper-panel"><div className="eyebrow">Source profile</div><h2>{prospect.position || "Position not listed"}</h2><dl className="roster-stat-grid"><div><dt>High school</dt><dd>{prospect.high_school || "—"}</dd></div><div><dt>Hometown</dt><dd>{prospect.hometown || "—"}</dd></div><div><dt>Status</dt><dd>{prospect.status || "—"}</dd></div><div><dt>State rank</dt><dd>{rank(prospect.state_rank)}</dd></div><div><dt>Region rank</dt><dd>{rank(prospect.region_rank)}</dd></div><div><dt>Height</dt><dd>{prospect.height_inches == null ? "—" : `${number(prospect.height_inches / 12, 1)} ft`}</dd></div><div><dt>Weight</dt><dd>{prospect.weight_pounds == null ? "—" : `${number(prospect.weight_pounds)} lb`}</dd></div><div><dt>ESPN athlete ID</dt><dd>{prospect.athlete_id}</dd></div></dl></article>
               <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>{source?.methodology || "ESPN rank, grade and commitment fields are source-reported."}</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or NCAA eligibility determination. Use the original ESPN card for the source context.</p><a className="text-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open source record ↗</a></article>
             </div>
+          </section>
+          <section className="section paper-panel" aria-labelledby="prospect-publisher-mentions">
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Publisher wire / literal search</div><h2 id="prospect-publisher-mentions">Keep the reporting context close.</h2></div>
+              <span className="note">ESPN + NCAA.com RSS</span>
+            </div>
+            <p className="note">This is a literal headline search for the prospect name, then the source-listed destination when needed. A mention is reporting context; it is not an identity match, transaction record, availability ruling or eligibility evidence.</p>
+            {mentionStatus === "loading" && <p className="empty" role="status">Checking the permitted publisher wire…</p>}
+            {mentionStatus === "unavailable" && <p className="empty" role="status">The publisher wire is temporarily unavailable. Open the news archive to search again.</p>}
+            {mentionStatus === "none" && <p className="empty" role="status">No retained headline matched this prospect or source-listed destination.</p>}
+            {mentions.length > 0 && <>
+              <p className="note" role="status">Showing {mentions.length} retained headline{mentions.length === 1 ? "" : "s"} for “{mentionQuery}”.</p>
+              <div className="article-grid">
+                {mentions.map((mention) => <article className="article-card" key={mention.id}>
+                  <div className="eyebrow">{mention.publisher}{mention.division ? ` · ${mention.division}` : ""} · {mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
+                  <h3>{mention.headline}</h3>
+                  {mention.description && <p>{mention.description}</p>}
+                  <a href={mention.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
+                </article>)}
+              </div>
+            </>}
+            <p style={{ marginTop: 12 }}><Link href={`/basketball/news/?q=${encodeURIComponent(prospect.name)}`}>Search the complete publisher archive →</Link></p>
           </section>
           <section className="section paper-panel" aria-labelledby="prospect-research-handoffs">
             <div className="section-heading" style={{ marginBottom: 12 }}>
