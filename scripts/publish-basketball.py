@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -59,6 +60,29 @@ SOURCE_PHASE = True
 if RESUME_D1:
     os.environ["BATCH_PUBLICATION"] = "1"
 BATCH_PUBLICATION = os.getenv("BATCH_PUBLICATION") == "1"
+
+
+def ensure_source_workspace_capacity() -> None:
+    """Stop before a rebuild if the local workspace cannot hold its staging DB.
+
+    A first build creates a several-gigabyte SQLite warehouse before any D1
+    import can begin. Reusing an existing warehouse needs less headroom, but a
+    fresh rebuild must leave room for SQLite journals and derived exports.
+    """
+    if RESUME_D1:
+        return
+    free = shutil.disk_usage(ROOT).free
+    gib = 1024**3
+    required = 8 * gib if not (ROOT / ".local/basketball.sqlite3").exists() else 2 * gib
+    if free < required:
+        raise SystemExit(
+            "Insufficient local disk space for the basketball source rebuild: "
+            f"{free / gib:.1f} GiB free, {required / gib:.1f} GiB required. "
+            "Free workspace capacity or use --resume-d1 with verified artifacts."
+        )
+
+
+ensure_source_workspace_capacity()
 
 
 def run(args, cwd=ROOT):
