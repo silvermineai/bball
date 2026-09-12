@@ -24,4 +24,18 @@ describe("ESPN recruiting rankings", () => {
     expect(await response.json()).toEqual(expect.objectContaining({ source: "unavailable", rows: [] }));
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
+
+  it("supports exact athlete lookups for stable prospect dossiers", async () => {
+    const bind = vi.fn(() => ({
+      first: vi.fn(async () => ({ total: 1, committed_total: 0, ranked_total: 1, grade_total: 1 })),
+      all: vi.fn(async () => ({ results: [{ athlete_id: "272415", name: "Danny Abass", rank: 225, school_ids_json: "[]" }] })),
+    }));
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => { sqlCalls.push(sql); return { bind }; });
+    const response = await recruitingRankings.request("/?season=2027&athlete_id=272415&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls[0]).toContain("r.athlete_id=?");
+    expect(bind.mock.calls[0]).toContain("272415");
+    expect((await response.json() as { total: number }).total).toBe(1);
+  });
 });

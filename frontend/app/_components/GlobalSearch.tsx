@@ -120,7 +120,7 @@ export default function GlobalSearch() {
               type: "player",
               sport: "basketball",
               detail: `ESPN ${row.season} prospect${row.committed_team_name ? ` · ${row.committed_team_name}` : row.position ? ` · ${row.position}` : ""}`,
-              href: `/basketball/recruiting/?season=${row.season}&q=${encodeURIComponent(row.name)}`,
+              href: `/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`,
             }));
           const rosterResults = searchRosterPeople(rosterPeople, needle, 3);
           const footballResults: SearchResult[] = (football.results || [])

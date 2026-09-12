@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type Prospect = {
   athlete_id: string;
@@ -128,7 +129,7 @@ export default function EspnRecruitingBoard() {
               <thead><tr><th>Rank</th><th>Prospect</th><th>Pos</th><th>Grade</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
-                <td><strong>{row.name}</strong><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
+                <td><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}`}><strong>{row.name}</strong></Link><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
                 <td>{row.position || "—"}<br /><span className="note">#{number(row.position_rank)}</span></td>
                 <td>{grade(row.grade)}</td>
                 <td>{row.committed_team_name || row.status || "—"}</td>

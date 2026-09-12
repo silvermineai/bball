@@ -8,6 +8,7 @@ const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
+  athlete_id: z.string().regex(/^\d{1,15}$/).optional(),
   q: z.string().trim().max(100).optional(),
   position: z.string().trim().max(12).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
@@ -23,7 +24,7 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
 }
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, q, position, committed, page } = c.req.valid("query");
+  const { season, athlete_id, q, position, committed, page } = c.req.valid("query");
   const search = q ? `%${q}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -34,11 +35,12 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
   const filters = [
     "r.season=?",
     "r.edition=c.edition",
+    ...(athlete_id ? ["r.athlete_id=?"] : []),
     ...(search ? ["(r.name LIKE ? OR r.high_school LIKE ? OR r.hometown LIKE ? OR r.committed_team_name LIKE ?)"] : []),
     ...(positionValue ? ["upper(r.position)=?"] : []),
     committedClause,
   ].join(" AND ");
-  const binds: Array<string | number> = [season, ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : [])];
+  const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : [])];
   const db = researchDb(c.env);
   const cache = typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
   const cacheKey = new Request(c.req.url, { method: "GET" });
@@ -98,6 +100,6 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, page, page_size: 50, total: 0, rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
   }
 });
