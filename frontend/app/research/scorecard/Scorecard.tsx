@@ -7,6 +7,13 @@ import { reasons, type Ledger } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
+type RetrospectiveBenchmark = {
+  coverage: { evaluation_games: number; market_games: number; pregame_market_games: number };
+  metrics: {
+    model: { margin_mae: number | null; winner_accuracy: number | null };
+    archived_line: { margin_mae: number | null; winner_accuracy: number | null };
+  };
+};
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -16,6 +23,7 @@ export default function Scorecard() {
     [error, setError] = useState(""),
     [source, setSource] = useState<"live" | "edition">("edition"),
     [refreshing, setRefreshing] = useState(true);
+  const [benchmark, setBenchmark] = useState<RetrospectiveBenchmark | null>(null);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
     [page, setPage] = useState(() => {
@@ -62,6 +70,18 @@ export default function Scorecard() {
     return () => c.abort();
   };
   useEffect(() => refresh(), []);
+  useEffect(() => {
+    if (sport !== "football") {
+      setBenchmark(null);
+      return;
+    }
+    const controller = new AbortController();
+    fetch("/data/football/market-benchmark.json", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<RetrospectiveBenchmark> : Promise.reject(new Error("benchmark unavailable")))
+      .then((next) => { if (!controller.signal.aborted) setBenchmark(next); })
+      .catch(() => { if (!controller.signal.aborted) setBenchmark(null); });
+    return () => controller.abort();
+  }, [sport]);
   if (error)
     return (
       <p role="alert" className="status-error">
@@ -301,6 +321,26 @@ export default function Scorecard() {
             </tbody>
           </table>
         </div>
+      )}
+      {sport === "football" && benchmark && (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="retrospective-benchmark-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Football / retrospective reference</div>
+              <h3 id="retrospective-benchmark-title">Model beside the archived line.</h3>
+            </div>
+            <Link className="hero-link" href="/research/markets/">Open full benchmark →</Link>
+          </div>
+          <p className="note">
+            {benchmark.coverage.market_games.toLocaleString()} of {benchmark.coverage.evaluation_games.toLocaleString()} held-out 2025 games have an exact archived line. The archive has {benchmark.coverage.pregame_market_games.toLocaleString()} verified pregame captures, so this is descriptive reference evidence and stays outside the prospective scorecard.
+          </p>
+          <div className="stat-grid" style={{ marginTop: 16 }}>
+            <div><strong>{fmt(benchmark.metrics.model.margin_mae)}</strong><span>model margin MAE</span></div>
+            <div><strong>{fmt(benchmark.metrics.archived_line.margin_mae)}</strong><span>archived line margin MAE</span></div>
+            <div><strong>{benchmark.metrics.model.winner_accuracy == null ? "—" : `${fmt(benchmark.metrics.model.winner_accuracy * 100)}%`}</strong><span>model winner accuracy</span></div>
+            <div><strong>{benchmark.metrics.archived_line.winner_accuracy == null ? "—" : `${fmt(benchmark.metrics.archived_line.winner_accuracy * 100)}%`}</strong><span>archived line winner accuracy</span></div>
+          </div>
+        </section>
       )}
       <section className="section">
         <div className="section-heading">
