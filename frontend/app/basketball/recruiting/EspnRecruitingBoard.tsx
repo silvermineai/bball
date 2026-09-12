@@ -225,6 +225,11 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          <p className="note" role="status">
+            Active ESPN edition <span className="source-hash">{result.edition || "unavailable"}</span>
+            {result.captured_at ? <> · captured {new Date(result.captured_at).toLocaleString()}</> : " · capture date unavailable"}.
+            The edition identifier lets a staff member reproduce this exact source board after a later refresh.
+          </p>
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} source rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain ESPN&apos;s source rank and the board&apos;s name ordering.</p>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
