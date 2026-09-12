@@ -40,7 +40,10 @@ export default function EspnRecruitingBoard() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("q");
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("q");
+    const requestedSeason = params.get("season");
+    if (requestedSeason === "2026" || requestedSeason === "2027" || requestedSeason === "2028") setSeason(requestedSeason);
     if (requested) setQuery(requested);
   }, []);
   useEffect(() => {
