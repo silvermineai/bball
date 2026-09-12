@@ -483,11 +483,29 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
 
-    schedule_clock = get_json(
-        base_url,
-        f"/api/basketball/research/schedule-times?season=2027&meta=1&publication_check={probe_key}",
-    )
-    schedule_clock_total, schedule_clock_confirmed, schedule_clock_age = schedule_clock_metadata(schedule_clock, checked_at, max_age_hours)
+    schedule_clock_total = schedule_clock_confirmed = 0
+    schedule_clock_age: float | None = None
+    schedule_clock_error: ValueError | None = None
+    # A deploy can leave one edge location serving the previous metadata
+    # contract for a short interval. Retry semantic shape failures with a
+    # distinct probe key so the monitor does not report a false outage while
+    # the new Worker propagates. HTTP failures are already retried by
+    # get_json; this loop covers a valid 200 response with stale fields.
+    for schedule_retry in range(3):
+        schedule_clock = get_json(
+            base_url,
+            f"/api/basketball/research/schedule-times?season=2027&meta=1&publication_check={probe_key}{schedule_retry or ''}",
+        )
+        try:
+            schedule_clock_total, schedule_clock_confirmed, schedule_clock_age = schedule_clock_metadata(schedule_clock, checked_at, max_age_hours)
+            schedule_clock_error = None
+            break
+        except ValueError as exc:
+            schedule_clock_error = exc
+            if schedule_retry < 2:
+                time.sleep(2**schedule_retry)
+    if schedule_clock_error is not None:
+        raise schedule_clock_error
 
     careers = get_json(base_url, "/api/basketball/research/careers/meta")
     leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
