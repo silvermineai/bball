@@ -501,6 +501,13 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     release_coverage, recruiting_reviewed_age = validate_reviewed_recruiting_release(
         recruiting_release, checked_at, max_age_hours
     )
+    # Older monitor fixtures and releases may omit the optional people array;
+    # coverage validation above remains authoritative for the reviewed school
+    # evidence, while a missing array contributes zero to the convenience
+    # count instead of masking a later archive check.
+    reviewed_people = recruiting_release.get("people")
+    if not isinstance(reviewed_people, list):
+        reviewed_people = []
     prospect_counts = {}
     prospect_destination_counts = {}
     prospect_rank_ties = {}
@@ -599,7 +606,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         # Keep provider intake and reviewed school evidence separate. The
         # former can be zero when no licensed export is configured while the
         # latter remains the public recruiting release.
-        "recruiting_rows": recruiting["total"],
+        "recruiting_rows": len(reviewed_people),
         "recruiting_intake_rows": recruiting["total"],
         "recruiting_reviewed_programs": release_coverage["programs"],
         "recruiting_reviewed_players": release_coverage["players"],

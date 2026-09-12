@@ -196,6 +196,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "reviewed_at": "2026-09-10T18:00:00Z",
                 "coverage": {"programs": 14, "players": 96, "events": 98, "sources": 44},
                 "sources": [{"source_sha256": "a" * 64} for _ in range(44)],
+                "people": [{"name": "Example one"}, {"name": "Example two"}],
             },
             "/api/basketball/research/news?meta=1": {
                 "summary": {"total": 83, "latest_published": "2026-09-10T19:00:00Z", "latest_seen_at": "2026-09-10T19:00:00Z"},
@@ -232,6 +233,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             report = check_live("https://example.test", now=now)
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["recruiting_intake_rows"], 0)
+        self.assertEqual(report["recruiting_rows"], 2)
         self.assertEqual(report["recruiting_reviewed_players"], 96)
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
         self.assertEqual(report["recruiting_prospect_destination_groups"], {"2026": 1, "2027": 1, "2028": 1, "2029": 1, "2030": 1})
