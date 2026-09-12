@@ -1,18 +1,13 @@
-"""ESPN public API scraper for men's college basketball.
+"""Legacy ESPN API connector for men's college basketball (disabled).
 
-Pulls real, public data from ESPN's JSON APIs:
-  - site.api.espn.com  (teams, scoreboard, rankings, news, rosters)
-  - sports.core.api.espn.com  (team season statistics, leaders, groups)
-  - site.web.api.espn.com  (conference standings)
-
-Everything lands in the project SQLite database (data/ncaa_mbb.sqlite3)
-in espn_* tables, which the analytics engine reads to build the static
-JSON artifacts served by the frontend.
-
-Usage:
-  python -m ncaa_scraper.espn --teams --games --rankings --news
-  python -m ncaa_scraper.espn --rosters --team-stats --leaders --standings
-  python -m ncaa_scraper.espn --all
+This module retains the old local schema and parser code for historical
+reference, but its network request function is deliberately fail-closed.
+Direct ESPN game, roster and statistics extraction is outside the project's
+current source policy. Use the attributed SportsDataverse bulk-release
+pipeline (``python -m ncaa_scraper.basketball``) for player and team stats.
+The separately documented ``espn_schedule``, ``espn_pickcenter`` and
+``espn_recruiting`` connectors are bounded, source-specific integrations and
+must not be treated as permission to re-enable this legacy scraper.
 """
 
 from __future__ import annotations
@@ -47,7 +42,7 @@ session.headers.update({"User-Agent": "bball-silvermine-research/1.0 (public dat
 def get_json(url: str, params: Optional[dict] = None, retries: int = 3) -> Optional[dict]:
     raise RuntimeError(
         "Direct ESPN automation is disabled: source terms restrict extraction and model training. "
-        "Use the attributed SportsDataverse bulk-release pipeline: python -m ncaa_scraper.football. "
+        "Use the attributed SportsDataverse bulk-release pipeline: python -m ncaa_scraper.basketball. "
         "Do not re-enable this connector without an appropriate source license."
     )
 
