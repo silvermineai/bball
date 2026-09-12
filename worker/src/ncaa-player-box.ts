@@ -63,6 +63,7 @@ const sourceSchema = z.object({
 export const ncaaPlayerBox = new Hono<{ Bindings: Bindings }>();
 const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
+const CROSS_SEASON_TIMEOUT_MS = 15000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -244,12 +245,12 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
     // within those partitions, then merge only the rows needed for the page.
     // This preserves global season-desc ordering while keeping the read bounded.
     if (allSeasons && archiveMode === "games") {
-      const gameSeasons = await withTimeout(gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all<{ season: number }>(), DB_TIMEOUT_MS);
+      const gameSeasons = await withTimeout(gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all<{ season: number }>(), CROSS_SEASON_TIMEOUT_MS);
       const search = q ? `%${q}%` : null;
       const countStatements = gameSeasons.results.map((row) => gameDb.prepare(
         `SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}`,
       ).bind(...([row.season, ...(search ? [search, search, search, search, search] : [])] as Array<string | number>)));
-      const counted = await withTimeout(gameDb.batch(countStatements), DB_TIMEOUT_MS);
+      const counted = await withTimeout(gameDb.batch(countStatements), CROSS_SEASON_TIMEOUT_MS);
       const counts = gameSeasons.results.map((row, index) => ({ season: row.season, total: Number((counted[index]?.results?.[0] as { total?: number } | undefined)?.total || 0) }));
       const total = counts.reduce((sum, row) => sum + row.total, 0);
       let offset = page * 50;
@@ -274,7 +275,7 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         ).bind(...([request.season, ...(search ? [search, search, search, search, search] : []), request.limit, request.offset] as Array<string | number>));
         const result = await statement.all();
         return result.results;
-      })), DB_TIMEOUT_MS);
+      })), CROSS_SEASON_TIMEOUT_MS);
       const merged = rowsByPartition.flat().slice(0, 50) as Array<Record<string, unknown>>;
       const response = c.json({
         season, archive_mode: archiveMode, page, page_size: 50, total,
