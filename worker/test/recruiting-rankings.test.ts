@@ -67,4 +67,26 @@ describe("ESPN recruiting rankings", () => {
     expect(bind.mock.calls.some((args) => args.includes(25))).toBe(true);
     expect((await response.json() as { total: number }).total).toBe(27);
   });
+
+  it("returns release-to-release movement alongside the current row", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("WITH current_rows")) return {
+        bind: vi.fn(() => ({ first: vi.fn(async () => ({ total: 3, new_to_release: 1, moved_up: 1, moved_down: 1, unchanged: 0, rank_unavailable: 0 })) })),
+      };
+      if (sql.includes("SELECT r.athlete_id")) return {
+        bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: [{ athlete_id: "7", name: "Ava Example", rank: 12, previous_rank: 18, previous_captured_at: "2026-08-01T00:00:00Z", school_ids_json: "[]" }] })) })),
+      };
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => ({ total: 1, committed_total: 0, ranked_total: 1, grade_total: 1 })),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rank_movement: { moved_up: number; moved_down: number; new_to_release: number }; rows: Array<{ previous_rank: number; previous_captured_at: string }> };
+    expect(body.rank_movement).toEqual(expect.objectContaining({ moved_up: 1, moved_down: 1, new_to_release: 1 }));
+    expect(body.rows[0]).toEqual(expect.objectContaining({ previous_rank: 18, previous_captured_at: "2026-08-01T00:00:00Z" }));
+  });
 });

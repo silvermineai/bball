@@ -5210,3 +5210,10 @@ summary {
 .signal-bar > span { display: block; height: 100%; background: var(--orange); }
 .signal-bar.empty { background: repeating-linear-gradient(135deg, transparent, transparent 4px, var(--line) 4px, var(--line) 5px); }
 @media (max-width: 760px) { .roster-lab-table .signal-value { min-width: 125px; } .signal-bar { width: 56px; } }
+
+/* Recruiting source-release movement */
+.recruiting-movement-panel { margin: 0 0 24px; }
+.recruiting-movement-panel .strip { margin-top: 14px; }
+.movement-up { color: #23724a; font-weight: 600; }
+.movement-down { color: #a44732; font-weight: 600; }
+.data-table td .movement-up small, .data-table td .movement-down small { display: block; margin-top: 3px; color: var(--muted); font: 10px "IBM Plex Mono", monospace; font-weight: 400; }

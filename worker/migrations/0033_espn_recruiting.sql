@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS bb_espn_recruiting (
 );
 CREATE INDEX IF NOT EXISTS bb_espn_recruiting_season_rank
   ON bb_espn_recruiting(season, rank, captured_at);
+CREATE INDEX IF NOT EXISTS bb_espn_recruiting_athlete_history
+  ON bb_espn_recruiting(season, athlete_id, captured_at);
 CREATE TABLE IF NOT EXISTS bb_espn_recruiting_current (
   season INTEGER PRIMARY KEY,
   edition TEXT NOT NULL,

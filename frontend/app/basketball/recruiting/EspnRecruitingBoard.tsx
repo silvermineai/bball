@@ -21,6 +21,8 @@ type Prospect = {
   height_inches: number | null;
   weight_pounds: number | null;
   source_url: string;
+  previous_rank?: number | null;
+  previous_captured_at?: string | null;
 };
 type Result = {
   total: number;
@@ -29,6 +31,7 @@ type Result = {
   cohort?: { committed: number; ranked: number; graded: number };
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
+  rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -100,8 +103,8 @@ export default function EspnRecruitingBoard() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url"];
-  const exportRow = (row: Prospect) => [season, row.rank, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
+  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url"];
+  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
   const downloadPage = () => {
     if (!result) return;
     downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
@@ -213,6 +216,19 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Release-to-release movement</div><h3>See what changed in the source board.</h3></div>
+              <span className="note">Compared with the latest earlier capture for each athlete</span>
+            </div>
+            <div className="strip">
+              <div><strong>{result.rank_movement.moved_up.toLocaleString()}</strong><span>Moved up</span></div>
+              <div><strong>{result.rank_movement.moved_down.toLocaleString()}</strong><span>Moved down</span></div>
+              <div><strong>{result.rank_movement.unchanged.toLocaleString()}</strong><span>Unchanged</span></div>
+              <div><strong>{result.rank_movement.new_to_release.toLocaleString()}</strong><span>New to archive</span></div>
+            </div>
+            <p className="note">A positive change means the national rank number improved (for example, 80 to 55). “New to archive” means no earlier ESPN release is retained for that exact athlete ID. Missing ranks stay unavailable.</p>
+          </section>}
           <div className="button-row" style={{ marginBottom: 16 }}>
             <button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button>
             <button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>
@@ -237,9 +253,10 @@ export default function EspnRecruitingBoard() {
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>
-              <thead><tr><th>Rank</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
+                <td>{row.previous_rank == null || row.rank == null ? <span className="note">New / —</span> : <span className={row.previous_rank - row.rank > 0 ? "movement-up" : row.previous_rank - row.rank < 0 ? "movement-down" : "note"}>{row.previous_rank - row.rank > 0 ? "▲" : row.previous_rank - row.rank < 0 ? "▼" : "="} {Math.abs(row.previous_rank - row.rank)} <small>from #{row.previous_rank}</small></span>}</td>
                 <td><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}`}><strong>{row.name}</strong></Link><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
                 <td>{row.position || "—"}<br /><span className="note">Pos #{number(row.position_rank)}</span><br /><span className="note">State #{number(row.state_rank)} · Region #{number(row.region_rank)}</span></td>
                 <td>{grade(row.grade)}</td>

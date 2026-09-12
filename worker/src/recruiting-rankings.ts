@@ -70,12 +70,45 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const rows = await withTimeout(db.prepare(
       `SELECT r.athlete_id,r.name,r.position,r.grade,r.rank,r.position_rank,r.state_rank,r.region_rank,
               r.status,r.committed_team_id,r.committed_team_name,r.school_ids_json,r.high_school,
-              r.hometown,r.height_inches,r.weight_pounds,r.captured_at,r.source_url
+              r.hometown,r.height_inches,r.weight_pounds,r.captured_at,r.source_url,
+              (SELECT p.rank FROM bb_espn_recruiting p
+                WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+                  AND p.captured_at < c.captured_at
+                ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_rank,
+              (SELECT p.captured_at FROM bb_espn_recruiting p
+                WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+                  AND p.captured_at < c.captured_at
+                ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_captured_at
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}
         ORDER BY CASE WHEN r.rank IS NULL THEN 1 ELSE 0 END,r.rank,r.name
         LIMIT 50 OFFSET ?`,
     ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
+    const movement = await withTimeout(db.prepare(
+      `WITH current_rows AS (
+        SELECT r.rank,
+          (SELECT p.rank FROM bb_espn_recruiting p
+            WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+              AND p.captured_at < c.captured_at
+            ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_rank
+          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+         WHERE ${filters}
+      )
+      SELECT count(*) AS total,
+        sum(CASE WHEN previous_rank IS NULL THEN 1 ELSE 0 END) AS new_to_release,
+        sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank < previous_rank THEN 1 ELSE 0 END) AS moved_up,
+        sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank > previous_rank THEN 1 ELSE 0 END) AS moved_down,
+        sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank = previous_rank THEN 1 ELSE 0 END) AS unchanged,
+        sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NULL THEN 1 ELSE 0 END) AS rank_unavailable
+        FROM current_rows`,
+    ).bind(...binds).first<{
+      total: number;
+      new_to_release: number | null;
+      moved_up: number | null;
+      moved_down: number | null;
+      unchanged: number | null;
+      rank_unavailable: number | null;
+    }>(), DB_TIMEOUT_MS);
     const positions = await withTimeout(db.prepare(
       `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -144,6 +177,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         average_rank: row.average_rank == null ? null : Number(row.average_rank),
         position_breakdown: row.team_id == null ? [] : positionsByTeam.get(String(row.team_id)) || [],
       })),
+      rank_movement: {
+        total: Number(movement?.total || 0),
+        new_to_release: Number(movement?.new_to_release || 0),
+        moved_up: Number(movement?.moved_up || 0),
+        moved_down: Number(movement?.moved_down || 0),
+        unchanged: Number(movement?.unchanged || 0),
+        rank_unavailable: Number(movement?.rank_unavailable || 0),
+      },
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
       source: {
@@ -153,6 +194,8 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       },
       rows: rows.results.map((row) => ({
         ...row,
+        previous_rank: row.previous_rank == null ? null : Number(row.previous_rank),
+        previous_captured_at: row.previous_captured_at == null ? null : String(row.previous_captured_at),
         school_ids: (() => { try { return JSON.parse(String((row as { school_ids_json?: string }).school_ids_json || "[]")); } catch { return []; } })(),
         school_ids_json: undefined,
       })),
