@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { BBGame } from "../../_lib/basketball-types";
-import { date, fmt, signed } from "../../_lib/format";
+import { date, fmt, kick, signed } from "../../_lib/format";
 import {
   loadLiveBasketballForecasts,
   mergeLiveBasketballForecasts,
@@ -24,9 +24,10 @@ function signal(game: BBGame) {
 function GameCard({ game }: { game: BBGame }) {
   const prediction = game.prediction!;
   const lens = basketballEditorialLens(game);
+  const sourceClock = game.source_time_valid && game.source_start ? ` · ESPN ${kick(game.source_start)}` : "";
   return (
     <article className="article-card">
-      <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}</div>
+      <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}{sourceClock}</div>
       <h2>{game.away_name} <span className="brief-versus">at</span> {game.home_name}</h2>
       <p>{signal(game)}</p>
       {lens && (

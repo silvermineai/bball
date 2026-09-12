@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { BBGame } from "../_lib/basketball-types";
 import type { Comparison } from "../_lib/research-types";
-import { date } from "../_lib/format";
+import { date, kick } from "../_lib/format";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { comparisonQuoteSummary } from "../_lib/market-display";
 import { downloadCsv, toCsv } from "../_lib/csv";
@@ -15,7 +15,7 @@ import {
 } from "../_lib/live-basketball-forecasts";
 
 const PREP_LIST_KEY = "silvermine-basketball-prep-list-v1";
-type SavedGame = Pick<BBGame, "id" | "starts_at" | "away_name" | "home_name"> & {
+type SavedGame = Pick<BBGame, "id" | "starts_at" | "away_name" | "home_name" | "source_start" | "source_time_valid"> & {
   prediction: NonNullable<BBGame["prediction"]>;
   marketContext?: string | null;
 };
@@ -58,6 +58,8 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
           starts_at: game.starts_at,
           away_name: game.away_name,
           home_name: game.home_name,
+          source_start: game.source_start,
+          source_time_valid: game.source_time_valid,
           prediction: game.prediction!,
           marketContext: markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null,
         };
@@ -77,16 +79,18 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
         starts_at: live.starts_at,
         away_name: live.away_name,
         home_name: live.home_name,
+        source_start: live.source_start,
+        source_time_valid: live.source_time_valid,
         prediction: live.prediction,
         marketContext: markets[live.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || savedGames[id]?.marketContext || null,
       } satisfies SavedGame : savedGames[id];
     }).filter((game): game is SavedGame => Boolean(game?.prediction));
     if (!rows.length) return;
     downloadCsv("basketball-prep-list.csv", toCsv(
-      ["Game ID", "Start (UTC)", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
+      ["Game ID", "Start (UTC)", "ESPN source start (UTC)", "ESPN time valid", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
       rows.map((game) => {
         const p = game.prediction!;
-        return [game.id, game.starts_at, game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, game.marketContext || null];
+        return [game.id, game.starts_at, game.source_start || null, game.source_time_valid == null ? null : game.source_time_valid ? "yes" : "no", game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, game.marketContext || null];
       }),
     ));
     setSavedMessage(`Exported ${rows.length} saved game${rows.length === 1 ? "" : "s"}.`);
@@ -142,8 +146,9 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
             const p = g.prediction;
             if (!p) return null;
             const lens = basketballEditorialLens(g);
+            const sourceClock = g.source_time_valid && g.source_start ? ` · ESPN ${kick(g.source_start)}` : "";
             return <article className="article-card" key={g.id}>
-              <div className="eyebrow">{date(g.starts_at)} · Model brief</div>
+              <div className="eyebrow">{date(g.starts_at)} · Model brief{sourceClock}</div>
               <h2>
                 {g.away_name} vs {g.home_name}
               </h2>

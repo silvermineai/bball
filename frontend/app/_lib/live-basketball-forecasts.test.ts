@@ -96,6 +96,9 @@ describe("live basketball forecast merge", () => {
       time_tbd: 0,
       venue: "Updated venue",
       broadcast: "ESPN",
+      source_start: "2026-11-02T06:00:00Z",
+      source_time_valid: true,
+      source_observed_at: "2026-09-10T00:00:00Z",
       prediction: prediction(9),
     }] satisfies LiveForecastRow[];
 
@@ -103,6 +106,8 @@ describe("live basketball forecast merge", () => {
     expect(merged.map((item) => item.id)).toEqual(["a", "b"]);
     expect(merged[0].prediction?.home_margin).toBe(9);
     expect(merged[0].venue).toBe("Updated venue");
+    expect(merged[0].source_start).toBe("2026-11-02T06:00:00Z");
+    expect(merged[0].source_time_valid).toBe(true);
     expect(merged[1].prediction).toBeNull();
   });
 
