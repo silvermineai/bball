@@ -14,6 +14,7 @@ const querySchema = z.object({
   rank_max: z.coerce.number().int().min(1).max(1000).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
   movement: z.enum(["all", "up", "down", "unchanged", "new", "unavailable"]).default("all"),
+  history: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
 });
 
@@ -30,7 +31,7 @@ function escapeLike(value: string) {
 }
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, q, position, rank_max, committed, movement, page } = c.req.valid("query");
+  const { season, athlete_id, q, position, rank_max, committed, movement, history: includeHistory, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -190,6 +191,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const current = await withTimeout(db.prepare(
       "SELECT edition,captured_at FROM bb_espn_recruiting_current WHERE season=?",
     ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
+    const historyRows = athlete_id && includeHistory === "1"
+      ? await withTimeout(db.prepare(
+        `SELECT edition,captured_at,rank,grade,status,committed_team_id,committed_team_name,source_url
+           FROM bb_espn_recruiting
+          WHERE season=? AND athlete_id=?
+          ORDER BY captured_at ASC, edition ASC`,
+      ).bind(season, athlete_id).all(), DB_TIMEOUT_MS)
+      : null;
     const response = c.json({
       season,
       page,
@@ -229,6 +238,18 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       },
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
+      history: historyRows
+        ? historyRows.results.map((row) => ({
+          edition: String((row as { edition?: string }).edition || ""),
+          captured_at: String((row as { captured_at?: string }).captured_at || ""),
+          rank: row.rank == null ? null : Number(row.rank),
+          grade: row.grade == null ? null : Number(row.grade),
+          status: row.status == null ? null : String(row.status),
+          committed_team_id: row.committed_team_id == null ? null : String(row.committed_team_id),
+          committed_team_name: row.committed_team_name == null ? null : String(row.committed_team_name),
+          source_url: String((row as { source_url?: string }).source_url || ""),
+        }))
+        : undefined,
       source: {
         provider: "ESPN Recruiting",
         url: `https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/${season}/recruits`,

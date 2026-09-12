@@ -42,6 +42,26 @@ describe("ESPN recruiting rankings", () => {
     expect((await response.json() as { total: number }).total).toBe(1);
   });
 
+  it("returns the complete retained rank history for an exact athlete lookup", async () => {
+    const history = [
+      { edition: "august", captured_at: "2026-08-01T00:00:00Z", rank: 42, grade: 96, status: "", committed_team_id: null, committed_team_name: null, source_url: "https://espn.test/42" },
+      { edition: "september", captured_at: "2026-09-01T00:00:00Z", rank: 31, grade: 97, status: "", committed_team_id: "2755", committed_team_name: "Example", source_url: "https://espn.test/31" },
+    ];
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("ORDER BY captured_at ASC")) return { bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: history })) })) };
+      if (sql.includes("SELECT r.athlete_id")) return { bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: [{ athlete_id: "272415", name: "Danny Abass", rank: 31, school_ids_json: "[]" }] })) })) };
+      if (sql.includes("WITH current_rows")) return { bind: vi.fn(() => ({ first: vi.fn(async () => ({ total: 1, new_to_release: 0, moved_up: 1, moved_down: 0, unchanged: 0, rank_unavailable: 0 })) })) };
+      return { bind: vi.fn(() => ({ first: vi.fn(async () => sql.includes("bb_espn_recruiting_current") && sql.includes("SELECT edition") ? { edition: "september", captured_at: "2026-09-01T00:00:00Z" } : sql.includes("count(*)") ? { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 } : { tied_rank_values: 0, tied_rows: 0 }), all: vi.fn(async () => ({ results: [] })) })) };
+    });
+    const response = await recruitingRankings.request("/?season=2027&athlete_id=272415&history=1&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { history: Array<{ edition: string; rank: number | null }> };
+    expect(body.history).toEqual(expect.arrayContaining([
+      expect.objectContaining({ edition: "august", rank: 42 }),
+      expect.objectContaining({ edition: "september", rank: 31 }),
+    ]));
+  });
+
   it("escapes wildcard characters in prospect searches", async () => {
     const bind = vi.fn(() => ({
       first: vi.fn(async () => ({ total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 })),

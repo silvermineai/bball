@@ -25,7 +25,17 @@ type Prospect = {
   previous_rank?: number | null;
   previous_captured_at?: string | null;
 };
-type Response = { season: number; rows: Prospect[]; captured_at: string | null; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type RankHistoryEntry = {
+  edition: string;
+  captured_at: string;
+  rank: number | null;
+  grade: number | null;
+  status: string | null;
+  committed_team_id: string | null;
+  committed_team_name: string | null;
+  source_url: string;
+};
+type Response = { season: number; rows: Prospect[]; captured_at: string | null; history?: RankHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -40,6 +50,7 @@ export default function ProspectPage() {
   const season = /^\d{4}$/.test(params.get("season") || "") ? params.get("season")! : "2027";
   const athleteId = /^\d{1,15}$/.test(params.get("id") || "") ? params.get("id")! : "";
   const [prospect, setProspect] = useState<Prospect | null>(null);
+  const [history, setHistory] = useState<RankHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
   const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an ESPN athlete ID.");
 
@@ -47,7 +58,7 @@ export default function ProspectPage() {
     if (!athleteId) return;
     const controller = new AbortController();
     setError("");
-    fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&page=0`, { signal: controller.signal })
+    fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The ESPN prospect release is unavailable.");
         return response.json() as Promise<Response>;
@@ -55,6 +66,7 @@ export default function ProspectPage() {
       .then((value) => {
         if (controller.signal.aborted) return;
         setSource(value.source);
+        setHistory(value.history || []);
         if (value.unavailable_reason) setError(value.unavailable_reason);
         else if (!value.rows.length) setError("That ESPN prospect is not in the selected class release.");
         else setProspect(value.rows[0]);
@@ -83,6 +95,18 @@ export default function ProspectPage() {
               <p className="note">{rankMovement ? `Previous source rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier ESPN edition for this exact athlete ID is retained yet. Future source releases will establish the comparison baseline."}</p>
             </section>;
           })()}
+          {history.length > 1 && <section className="paper-panel" aria-label="Prospect rank history" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Retained ESPN editions</div><h2>See the rank over time.</h2></div>
+              <span className="note">{history.length} source captures</span>
+            </div>
+            <p className="note">This timeline uses every retained source edition for the exact ESPN athlete ID. A blank rank means ESPN did not supply a rank in that capture; it is not a zero or a demotion.</p>
+            <div className="table-scroll"><table className="data-table"><thead><tr><th>Captured</th><th className="numeric">National rank</th><th className="numeric">Change</th><th className="numeric">Grade</th><th>Commitment / status</th><th>Source</th></tr></thead><tbody>{history.map((entry, index) => {
+              const prior = history[index - 1];
+              const change = prior?.rank != null && entry.rank != null ? prior.rank - entry.rank : null;
+              return <tr key={`${entry.edition}-${entry.captured_at}`}><td>{entry.captured_at ? new Date(entry.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}<small>{entry.edition}</small></td><td className="numeric"><strong>{rank(entry.rank)}</strong></td><td className={`numeric${change == null ? "" : change > 0 ? " movement-up" : change < 0 ? " movement-down" : ""}`}>{change == null ? "—" : change > 0 ? `▲ ${change}` : change < 0 ? `▼ ${Math.abs(change)}` : "= 0"}</td><td className="numeric">{entry.grade == null || entry.grade <= 0 ? "—" : number(entry.grade, 1)}</td><td>{entry.committed_team_name || entry.status || "—"}</td><td>{entry.source_url ? <a className="text-link" href={entry.source_url} target="_blank" rel="noreferrer">ESPN ↗</a> : "—"}</td></tr>;
+            })}</tbody></table></div>
+          </section>}
           <div className="strip">
             <div><strong>{rank(prospect.rank)}</strong><span>National source rank</span></div>
             <div><strong>{prospect.grade == null || prospect.grade <= 0 ? "—" : number(prospect.grade, 1)}</strong><span>ESPN source grade</span></div>
