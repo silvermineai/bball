@@ -52,4 +52,18 @@ describe("ESPN recruiting rankings", () => {
     expect(sqlCalls.some((sql) => sql.includes("ESCAPE '\\'"))).toBe(true);
     expect(bind.mock.calls.some((args) => args.some((value) => value === "%100\\%\\_under%"))).toBe(true);
   });
+
+  it("applies a bounded source-rank cutoff", async () => {
+    const bind = vi.fn((..._args: unknown[]) => ({
+      first: vi.fn(async () => ({ total: 27, committed_total: 10, ranked_total: 27, grade_total: 27 })),
+      all: vi.fn(async () => ({ results: [] })),
+    }));
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => { sqlCalls.push(sql); return { bind }; });
+    const response = await recruitingRankings.request("/?season=2027&rank_max=25&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls.some((sql) => sql.includes("r.rank IS NOT NULL AND r.rank<=?"))).toBe(true);
+    expect(bind.mock.calls.some((args) => args.includes(25))).toBe(true);
+    expect((await response.json() as { total: number }).total).toBe(27);
+  });
 });
