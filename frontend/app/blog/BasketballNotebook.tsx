@@ -3,6 +3,7 @@ import type { BBGame } from "../_lib/basketball-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 import { espnGameUrl } from "../_lib/basketball-data";
+import LiveGamePublisherWire from "./LiveGamePublisherWire";
 
 const factorLabels: Record<string, string> = {
   efg: "Shot quality",
@@ -119,6 +120,8 @@ export default function BasketballNotebook({
           <p className="note">These are the stored matchup-factor estimates for this edition. They identify a film starting point; they do not establish a tactical result or a player availability decision.</p>
         </section>
       )}
+
+      <LiveGamePublisherWire away={game.away_name} home={game.home_name} />
 
       <section className="section two-col">
         <div className="paper-panel">
