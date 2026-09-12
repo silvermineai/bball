@@ -12,11 +12,20 @@ function wait(milliseconds: number, signal?: AbortSignal) {
       reject(new DOMException("The request was aborted.", "AbortError"));
       return;
     }
-    const timer = globalThis.setTimeout(resolve, milliseconds);
-    signal?.addEventListener("abort", () => {
+    let onAbort: (() => void) | undefined;
+    const cleanup = () => {
+      if (onAbort) signal?.removeEventListener("abort", onAbort);
+    };
+    const timer = globalThis.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, milliseconds);
+    onAbort = () => {
       globalThis.clearTimeout(timer);
+      cleanup();
       reject(new DOMException("The request was aborted.", "AbortError"));
-    }, { once: true });
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 

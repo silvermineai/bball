@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchJson } from "../../_lib/fetch-json";
 import { filterRecruitingWire, isRecruitingWireArticle, latestRecruitingWirePublication, parseRecruitingWireFilters, recruitingWireFilterSearch, type RecruitingWireArticle, type RecruitingWireTopic } from "../../_lib/recruiting-wire";
 
 const PAGE_SIZE = 12;
@@ -18,11 +19,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
   const [archiveStatus, setArchiveStatus] = useState<"loading" | "live" | "fallback">("loading");
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/news?sport=mens-college-basketball&limit=100", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("news archive unavailable");
-        return response.json() as Promise<{ rows?: RecruitingWireArticle[] }>;
-      })
+    fetchJson<{ rows?: RecruitingWireArticle[] }>("/api/basketball/research/news?sport=mens-college-basketball&limit=100", { signal: controller.signal })
       .then((payload) => {
         const rows = (payload.rows || []).filter(isRecruitingWireArticle);
         if (rows.length) {
