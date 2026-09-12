@@ -160,6 +160,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               count(*) AS total,
               sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
               sum(CASE WHEN r.rank IS NOT NULL AND r.rank<=100 THEN 1 ELSE 0 END) AS top100_total,
+              sum(CASE WHEN r.rank IS NOT NULL THEN MAX(1, 101-r.rank) ELSE 0 END) AS source_rank_points,
               min(r.rank) AS best_rank,
               avg(CASE WHEN r.rank IS NOT NULL THEN r.rank END) AS average_rank
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -219,6 +220,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         total: Number((row as { total?: number }).total || 0),
         ranked_total: Number((row as { ranked_total?: number }).ranked_total || 0),
         top100_total: Number((row as { top100_total?: number }).top100_total || 0),
+        source_rank_points: Number((row as { source_rank_points?: number }).source_rank_points || 0),
         best_rank: row.best_rank == null ? null : Number(row.best_rank),
         average_rank: row.average_rank == null ? null : Number(row.average_rank),
         position_breakdown: row.team_id == null ? [] : positionsByTeam.get(String(row.team_id)) || [],

@@ -30,7 +30,7 @@ type Result = {
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
   position_breakdown?: Array<{ position: string; total: number }>;
-  commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
+  commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
   rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number };
   edition: string | null;
@@ -250,12 +250,12 @@ export default function EspnRecruitingBoard() {
               {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={`${destination.team_id || "unknown"}-${destination.team}`}>
                 <div className="eyebrow">{destination.total === 1 ? "One commitment" : `${destination.total} commitments`}</div>
                 <h3>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team} →</Link> : destination.team}</h3>
-                <p>{destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
+                <p>{destination.source_rank_points.toLocaleString()} source-rank points · {destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
                 <small>{(destination.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position mix unavailable"}</small>
                 <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this source row."} · Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>
-            <p className="note" style={{ marginTop: 12 }}>Counts use ESPN&apos;s committed team field and the same season, rank, position, search and status filters as the table. Ranked, top-100, best-rank and average-rank values use source ranks; they are source-reported destinations, not confirmation of enrollment or eligibility.</p>
+            <p className="note" style={{ marginTop: 12 }}>Counts use ESPN&apos;s committed team field and the same season, rank, position, search and status filters as the table. Source-rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official ESPN class ranking or confirmation of enrollment or eligibility.</p>
           </section>}
           <div className="table-wrap">
             <table className="data-table">
