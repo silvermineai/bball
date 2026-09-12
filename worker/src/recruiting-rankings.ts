@@ -11,6 +11,7 @@ const querySchema = z.object({
   athlete_id: z.string().regex(/^\d{1,15}$/).optional(),
   q: z.string().trim().max(100).optional(),
   position: z.string().trim().max(12).optional(),
+  rank_max: z.coerce.number().int().min(1).max(1000).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
 });
@@ -28,7 +29,7 @@ function escapeLike(value: string) {
 }
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, q, position, committed, page } = c.req.valid("query");
+  const { season, athlete_id, q, position, rank_max, committed, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -42,9 +43,10 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     ...(athlete_id ? ["r.athlete_id=?"] : []),
     ...(search ? ["(r.name LIKE ? ESCAPE '\\' OR r.high_school LIKE ? ESCAPE '\\' OR r.hometown LIKE ? ESCAPE '\\' OR r.committed_team_name LIKE ? ESCAPE '\\')"] : []),
     ...(positionValue ? ["upper(r.position)=?"] : []),
+    ...(rank_max != null ? ["r.rank IS NOT NULL AND r.rank<=?"] : []),
     committedClause,
   ].join(" AND ");
-  const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : [])];
+  const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : []), ...(rank_max != null ? [rank_max] : [])];
   const db = researchDb(c.env);
   const cache = typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
   const cacheKey = new Request(c.req.url, { method: "GET" });
