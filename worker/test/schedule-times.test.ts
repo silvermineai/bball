@@ -33,7 +33,7 @@ describe("basketball schedule clock observations", () => {
   });
 
   it("honors the bounded page limit and strips the stored payload", async () => {
-    const first = vi.fn().mockResolvedValue({ total: 1 });
+    const first = vi.fn().mockResolvedValue({ total: 1, confirmed_count: 1 });
     const all = vi.fn().mockResolvedValue({ results: [{
       game_id: "401900001",
       season: 2027,
@@ -55,8 +55,9 @@ describe("basketball schedule clock observations", () => {
       { RESEARCH_DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { rows: Array<Record<string, unknown>>; page_size: number };
+    const body = await response.json() as { rows: Array<Record<string, unknown>>; page_size: number; confirmed_count: number };
     expect(body.page_size).toBe(200);
+    expect(body.confirmed_count).toBe(1);
     expect(body.rows[0]).toMatchObject({ game_id: "401900001", source_time_valid: false, source_url: "https://example.test" });
     expect(body.rows[0]).not.toHaveProperty("payload_json");
     expect(bind).toHaveBeenCalledWith(2027, 200, 0);

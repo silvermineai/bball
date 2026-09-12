@@ -80,9 +80,11 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
       return response;
     }
     const count = await withTimeout(db.prepare(`${LATEST}
-      SELECT count(*) AS total FROM ranked JOIN bb_games g ON g.id=ranked.game_id
+      SELECT count(*) AS total,
+        sum(CASE WHEN ranked.source_time_valid=1 THEN 1 ELSE 0 END) AS confirmed_count
+      FROM ranked JOIN bb_games g ON g.id=ranked.game_id
       WHERE ranked.row_number=1 AND ${filter}${confirmedClause}`
-    ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+    ).bind(...binds).first<{ total: number; confirmed_count: number | null }>(), DB_TIMEOUT_MS);
     const rows = await withTimeout(db.prepare(`${LATEST}
       SELECT ranked.game_id,g.season,g.home_name,g.away_name,g.starts_at AS canonical_start,
         g.time_tbd AS canonical_time_tbd,ranked.source_start,ranked.source_time_valid,
@@ -103,11 +105,11 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
       delete value.payload_json;
       return { ...value, source_time_valid: value.source_time_valid === 1, source_url: payload.source_url || null };
     });
-    const response = c.json({ season, confirmed: confirmed === "1", page, page_size: limit, total: Number(count?.total || 0), rows: output });
+    const response = c.json({ season, confirmed: confirmed === "1", confirmed_count: Number(count?.confirmed_count || 0), page, page_size: limit, total: Number(count?.total || 0), rows: output });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, confirmed: confirmed === "1", page, page_size: limit, total: 0, rows: [], source: "unavailable", unavailable_reason: "The schedule clock warehouse did not respond within the read window." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, confirmed: confirmed === "1", confirmed_count: 0, page, page_size: limit, total: 0, rows: [], source: "unavailable", unavailable_reason: "The schedule clock warehouse did not respond within the read window." }, 200, { "Cache-Control": "no-store" });
   }
 });

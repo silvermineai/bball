@@ -64,7 +64,7 @@ type ScheduleClockRow = {
   source_time_valid?: boolean;
   observed_at?: string | null;
 };
-type ScheduleClockResponse = { rows?: ScheduleClockRow[]; total?: number; confirmed?: number };
+type ScheduleClockResponse = { rows?: ScheduleClockRow[]; total?: number; confirmed?: number | boolean; confirmed_count?: number };
 
 function numeric(value: number | null | undefined, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
@@ -133,6 +133,7 @@ export default function ForecastLab({
   const [latestGames, setLatestGames] = useState<BBGame[] | null>(null);
   const [latestGamesError, setLatestGamesError] = useState("");
   const [scheduleClocks, setScheduleClocks] = useState<ScheduleClockRow[]>([]);
+  const [scheduleClockConfirmed, setScheduleClockConfirmed] = useState<number | null>(null);
   const [scheduleClockError, setScheduleClockError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
   const scheduleClockByGame = useMemo(() => new Map(scheduleClocks.map((row) => [row.game_id, row])), [scheduleClocks]);
@@ -148,11 +149,15 @@ export default function ForecastLab({
       .then((payload) => {
         if (!controller.signal.aborted) {
           setScheduleClocks(payload.rows || []);
+          setScheduleClockConfirmed(payload.confirmed_count ?? (payload.rows || []).filter((row) => row.source_time_valid).length);
           setScheduleClockError("");
         }
       })
       .catch((reason: unknown) => {
-        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setScheduleClockError(reason instanceof Error ? reason.message : "Live schedule-clock evidence unavailable.");
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setScheduleClockConfirmed(null);
+          setScheduleClockError(reason instanceof Error ? reason.message : "Live schedule-clock evidence unavailable.");
+        }
       });
     return () => controller.abort();
   }, []);
@@ -364,7 +369,7 @@ export default function ForecastLab({
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>
         <div><strong>{unconfirmedStartCount.toLocaleString()}</strong><span>Starts still marked TBD</span></div>
-        <div><strong>{scheduleClocks.filter((row) => row.source_time_valid).length.toLocaleString()}</strong><span>ESPN source clocks confirmed</span></div>
+        <div><strong>{(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()}</strong><span>ESPN source clocks confirmed</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
@@ -376,7 +381,7 @@ export default function ForecastLab({
             <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
             <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
             <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
-            <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate ESPN clock layer currently has {scheduleClocks.filter((row) => row.source_time_valid).length.toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
+            <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate ESPN clock layer currently has {(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
           </div>
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
