@@ -299,6 +299,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         recruiting_release, checked_at, max_age_hours
     )
     prospect_counts = {}
+    prospect_destination_counts = {}
     prospect_ages = {}
     for prospect_season in (2026, 2027, 2028):
         recruiting_rankings = get_json(
@@ -307,6 +308,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         )
         prospect_total = recruiting_rankings.get("total")
         prospect_rows = recruiting_rankings.get("rows")
+        commitment_destinations = recruiting_rankings.get("commitment_destinations")
         prospect_captured = recruiting_rankings.get("captured_at")
         prospect_source = recruiting_rankings.get("source")
         if (
@@ -315,6 +317,17 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
             or prospect_total <= 0
             or not isinstance(prospect_rows, list)
             or not prospect_rows
+            or not isinstance(commitment_destinations, list)
+            or len(commitment_destinations) > 12
+            or any(
+                not isinstance(destination, dict)
+                or not isinstance(destination.get("team"), str)
+                or not destination["team"].strip()
+                or not isinstance(destination.get("total"), int)
+                or isinstance(destination["total"], bool)
+                or destination["total"] <= 0
+                for destination in commitment_destinations
+            )
             or not isinstance(prospect_captured, str)
             or not isinstance(prospect_source, dict)
             or prospect_source.get("provider") != "ESPN Recruiting"
@@ -324,6 +337,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         if prospect_age < -24 or prospect_age > max_age_hours:
             raise ValueError(f"ESPN recruiting rankings release {prospect_season} is {max(prospect_age, 0):.1f} hours old")
         prospect_counts[str(prospect_season)] = prospect_total
+        prospect_destination_counts[str(prospect_season)] = len(commitment_destinations)
         prospect_ages[str(prospect_season)] = round(max(prospect_age, 0), 2)
     news = get_json(base_url, "/api/basketball/research/news?meta=1")
     news_summary = news.get("summary")
@@ -381,6 +395,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_sources": release_coverage["sources"],
         "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
         "recruiting_prospect_rows": prospect_counts,
+        "recruiting_prospect_destination_groups": prospect_destination_counts,
         "recruiting_prospect_age_hours": prospect_ages,
         "news_archive_total": news_summary["total"],
         "news_latest_published": news_summary.get("latest_published"),

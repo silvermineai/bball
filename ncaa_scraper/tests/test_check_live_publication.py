@@ -70,6 +70,9 @@ class LivePublicationCheckTest(unittest.TestCase):
                 },
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
             "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
@@ -111,6 +114,7 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["recruiting_intake_rows"], 0)
         self.assertEqual(report["recruiting_reviewed_players"], 96)
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
+        self.assertEqual(report["recruiting_prospect_destination_groups"], {"2026": 1, "2027": 1, "2028": 1})
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_personnel_rows"], 40)
         self.assertEqual(report["football_personnel_source_max_age_hours"], 2.0)
@@ -176,6 +180,9 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1}]},
             "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
