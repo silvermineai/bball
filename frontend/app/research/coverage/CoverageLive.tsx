@@ -99,6 +99,12 @@ type BriefArchiveMeta = {
   }>;
 };
 
+type MarketMeta = {
+  total?: number;
+  pregame?: number;
+  seasons?: number[];
+};
+
 type NCAALeaderMeta = {
   season: number;
   coverage: {
@@ -148,6 +154,8 @@ export default function CoverageLive() {
   const [recruiting, setRecruiting] = useState<RecruitingMeta | null>(null);
   const [news, setNews] = useState<NewsMeta | null>(null);
   const [briefArchive, setBriefArchive] = useState<BriefArchiveMeta | null>(null);
+  const [basketballMarkets, setBasketballMarkets] = useState<MarketMeta | null>(null);
+  const [footballMarkets, setFootballMarkets] = useState<MarketMeta | null>(null);
   const [ncaaLeaders, setNcaaLeaders] = useState<NCAALeaderMeta | null>(null);
   const [ncaaLeadersError, setNcaaLeadersError] = useState("");
   const [error, setError] = useState("");
@@ -184,6 +192,8 @@ export default function CoverageLive() {
     void load<RecruitingMeta>("/api/basketball/research/recruiting?season=2027", setRecruiting, () => undefined);
     void load<NewsMeta>("/api/basketball/research/news?meta=1&limit=1", setNews, () => undefined);
     void load<BriefArchiveMeta>("/api/research/briefs?sport=all&page=0", setBriefArchive, () => undefined);
+    void load<MarketMeta>("/api/research/markets?meta=1&sport=basketball", setBasketballMarkets, () => undefined);
+    void load<MarketMeta>("/api/research/markets?meta=1&sport=football", setFootballMarkets, () => undefined);
     void load<NCAALeaderMeta>("/api/basketball/research/ncaa-leaders?meta=1", setNcaaLeaders, setNcaaLeadersError);
     void fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
@@ -221,7 +231,7 @@ export default function CoverageLive() {
       <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
       {error && <p className="status-error" role="alert">Basketball: {error}</p>}
       {footballError && <p className="status-error" role="alert">Football: {footballError}</p>}
-      {(basketballModel || footballModel || recruiting?.coverage || news?.summary || briefArchive) && <div className="strip" style={{ marginTop: 20 }}>
+      {(basketballModel || footballModel || recruiting?.coverage || news?.summary || briefArchive || basketballMarkets || footballMarkets) && <div className="strip" style={{ marginTop: 20 }}>
         <div>
           <strong>{basketballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
           <span>Basketball forecasts · {basketballModel?.target_season ?? 2027}</span>
@@ -236,6 +246,16 @@ export default function CoverageLive() {
           <strong>{recruiting?.coverage?.players?.toLocaleString() ?? "—"}</strong>
           <span>Reviewed recruiting players</span>
           <small>{recruiting?.coverage?.programs?.toLocaleString() ?? "—"} programs · {recruiting?.coverage?.events?.toLocaleString() ?? "—"} dated statements</small>
+        </div>
+        <div>
+          <strong>{footballMarkets?.pregame?.toLocaleString() ?? "—"}</strong>
+          <span>Football pregame market rows</span>
+          <small>{footballMarkets?.total?.toLocaleString() ?? "—"} retained observations · {footballMarkets?.seasons?.length?.toLocaleString() ?? "—"} seasons</small>
+        </div>
+        <div>
+          <strong>{basketballMarkets?.pregame?.toLocaleString() ?? "—"}</strong>
+          <span>Basketball pregame market rows</span>
+          <small>{basketballMarkets?.total?.toLocaleString() ?? "—"} retained observations · {basketballMarkets?.seasons?.length?.toLocaleString() ?? "—"} seasons</small>
         </div>
         <div>
           <strong>{news?.summary?.total?.toLocaleString() ?? "—"}</strong>
