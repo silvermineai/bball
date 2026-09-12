@@ -40,6 +40,7 @@ import { footballForecasts } from "./football-forecasts";
 import { possessionStyle } from "./possession-style";
 import { ncaaBoxDb, researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
+import { scheduleTimes } from "./schedule-times";
 import { basketballRosters } from "./basketball-rosters";
 import { footballDb } from "./football-db";
 
@@ -182,6 +183,7 @@ app.route("/api/basketball/research/possession-style", possessionStyle);
 app.route("/api/basketball/research/news", news);
 app.route("/api/research/markets", markets);
 app.route("/api/research/scorecard", researchScorecard);
+app.route("/api/basketball/research/schedule-times", scheduleTimes);
 app.get("/api/football/events/", (c) => {
   const url = new URL(c.req.url);
   return c.redirect(`/api/football/events${url.search}`, 308);

@@ -87,6 +87,25 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int]:
     return total, pregame, len(capabilities)
 
 
+def schedule_clock_metadata(payload: dict) -> tuple[int, int]:
+    """Validate the exact-ID ESPN schedule-clock observation catalog."""
+    total = payload.get("total")
+    confirmed = payload.get("confirmed")
+    if (
+        payload.get("season") != 2027
+        or payload.get("provider") != "ESPN Scoreboard"
+        or not isinstance(total, int)
+        or isinstance(total, bool)
+        or total < 0
+        or not isinstance(confirmed, int)
+        or isinstance(confirmed, bool)
+        or confirmed < 0
+        or confirmed > total
+    ):
+        raise ValueError("basketball schedule-clock metadata is malformed")
+    return total, confirmed
+
+
 def brief_archive_metadata(payload: dict) -> tuple[int, int]:
     """Validate the durable reading archive without downloading snapshots."""
     total = payload.get("total")
@@ -435,6 +454,12 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
 
+    schedule_clock = get_json(
+        base_url,
+        "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1",
+    )
+    schedule_clock_total, schedule_clock_confirmed = schedule_clock_metadata(schedule_clock)
+
     careers = get_json(base_url, "/api/basketball/research/careers/meta")
     leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
     player_identified, player_entries, ncaa_d1_apg, ncaa_d1_ast = player_catalog_metadata(careers, leaders)
@@ -526,6 +551,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_forecast_model": football_latest.get("model_id"),
         "football_forecast_rows": football_latest["forecasts"],
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
+        "schedule_clock_observed_games": schedule_clock_total,
+        "schedule_clock_confirmed_games": schedule_clock_confirmed,
         "basketball_player_identified_rows": player_identified,
         "basketball_player_team_entries": player_entries,
         "ncaa_d1_apg_values": ncaa_d1_apg,

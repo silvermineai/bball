@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--odds", action="store_true")
 parser.add_argument("--cbbd-lines", action="store_true", help="capture authorized CBBD pregame moneylines")
 parser.add_argument("--espn-lines", action="store_true", help="capture prospective ESPN basketball pickcenter quotes")
+parser.add_argument("--espn-schedule", action="store_true", help="capture bounded public ESPN basketball schedule-clock observations")
 args = parser.parse_args()
 
 
@@ -60,6 +61,19 @@ if args.odds:
     )
 if args.cbbd_lines:
     run([PY, "-m", "ncaa_scraper.cbbd_lines", "--season", "2027"])
+    run(
+        [
+            PY,
+            "-m",
+            "ncaa_scraper.research_ledger",
+            "--sql",
+            str(ROOT / ".local/research-ledger.sql"),
+        ]
+    )
+if args.espn_schedule or args.espn_lines:
+    # Capture the source clock in the same bounded run as pickcenter quotes.
+    # Observations remain separate from canonical games and registrations.
+    run([PY, "-m", "ncaa_scraper.espn_schedule", "--season", "2027"])
     run(
         [
             PY,

@@ -23,3 +23,13 @@ CREATE TABLE IF NOT EXISTS audit_unmatched (
  id TEXT PRIMARY KEY, sport TEXT NOT NULL, event_id TEXT NOT NULL,
  captured_at TEXT NOT NULL, reason TEXT NOT NULL, payload_json TEXT NOT NULL
 );
+-- Immutable publisher clock observations. These rows intentionally stay
+-- separate from bb_games so an ESPN time correction cannot silently rewrite a
+-- model registration or the canonical schedule receipt.
+CREATE TABLE IF NOT EXISTS audit_schedule_times (
+ id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+ provider TEXT NOT NULL, observed_at TEXT NOT NULL, source_start TEXT NOT NULL,
+ source_time_valid INTEGER NOT NULL, payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS audit_schedule_times_game
+ ON audit_schedule_times(sport,game_id,observed_at);
