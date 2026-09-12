@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
+import { normalizeMarketSeason } from "../../_lib/market-view";
 
 type Meta = {
   seasons: number[];
@@ -97,8 +98,8 @@ export default function Markets() {
       })
       .then((value) => {
         setMeta(value);
-        if (value.seasons.length && !value.seasons.includes(Number(season)))
-          setSeason(String(value.seasons[0]));
+        const nextSeason = normalizeMarketSeason(season, value.seasons);
+        if (nextSeason !== season) setSeason(nextSeason);
       })
       .catch((e) => setError(e.message));
   }, [sport]);
