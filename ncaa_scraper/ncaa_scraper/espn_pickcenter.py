@@ -186,7 +186,7 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
     ]
 
 
-def fetch_upcoming(season: int = 2027, horizon_days: int = 21, limit: int = 120) -> tuple[list[dict], dict]:
+def fetch_upcoming(season: int = 2027, horizon_days: int = 60, limit: int = 120) -> tuple[list[dict], dict]:
     now = datetime.now(timezone.utc)
     games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
     if limit < 1 or limit > 300:
