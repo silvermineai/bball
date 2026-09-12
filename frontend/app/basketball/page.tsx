@@ -22,6 +22,7 @@ import LiveBasketballProspectStatus from "../_components/LiveBasketballProspectS
 import LiveBasketballMarketStatus from "../_components/LiveBasketballMarketStatus";
 import LiveBasketballNewsStatus from "../_components/LiveBasketballNewsStatus";
 import LiveBasketballScheduleStatus from "../_components/LiveBasketballScheduleStatus";
+import LiveBasketballPlayerArchiveStatus from "../_components/LiveBasketballPlayerArchiveStatus";
 
 function getBasketballLeaders(season: number) {
   const file = path.join(
@@ -189,6 +190,7 @@ export default function Page() {
       <LiveBasketballForecastStatus />
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
+      <LiveBasketballPlayerArchiveStatus />
       <LiveBasketballMarketStatus />
       <LiveBasketballScheduleStatus />
       <section className="section coach-path" aria-labelledby="coach-path-title">
