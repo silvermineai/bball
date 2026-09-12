@@ -9,6 +9,8 @@ type Meta = {
   seasons: number[];
   total: number;
   pregame: number;
+  research_receipts?: number;
+  research_latest_capture_at?: string | null;
   source?: string;
   unavailable_reason?: string;
   unavailable_sources?: string[];
@@ -255,14 +257,16 @@ export default function Markets() {
         {!data.rows.length && data.total === 0 && !query.trim() && (
           <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
             <div className="eyebrow">Connector status</div>
-            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? "No basketball quote feed is connected yet." : "No market observations are connected yet."}</h3>
+            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? meta?.research_receipts ? "No complete basketball quote passed validation yet." : "No basketball quote capture has been recorded yet." : "No market observations are connected yet."}</h3>
             <p>
               {archiveUnavailable
                 ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about provider coverage."
-                : <>The archive is empty for this sport because no authorized provider
+                : <>{sport === "basketball" && meta?.research_receipts
+                  ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
+                  : <>The archive is empty for this sport because no authorized provider
               export has been ingested. This is unavailable evidence, not proof
               that a game had no line. The prospective scorecard stays clean
-              until a provider ID, timing clocks and exact participants arrive.</>}
+              until a provider ID, timing clocks and exact participants arrive.</>}</>}
             </p>
             <div className="button-row">
               <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>

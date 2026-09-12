@@ -146,6 +146,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         ? withTimeout(researchDb(c.env).batch([
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(sport),
+          researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=?").bind(sport),
         ]), DB_TIMEOUT_MS)
         : Promise.resolve(null);
       const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);
@@ -169,12 +170,15 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       ])].sort((a, b) => b - a);
       const legacyArchive = (legacy?.[1]?.results[0] || {}) as { total?: number; pregame?: number | null };
       const ledgerArchive = (ledger?.[1]?.results[0] || {}) as { total?: number };
+      const ledgerReceipts = (ledger?.[2]?.results[0] || {}) as { receipts?: number; latest_captured_at?: string | null };
       const receipts = legacy?.[2]?.results || [];
       const response = c.json({
         sport,
         seasons,
         total: Number(legacyArchive.total || 0) + Number(ledgerArchive.total || 0),
         pregame: Number(legacyArchive.pregame || 0) + Number(ledgerArchive.total || 0),
+        research_receipts: Number(ledgerReceipts.receipts || 0),
+        research_latest_capture_at: ledgerReceipts.latest_captured_at || null,
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
         archive_receipts: parseArchiveReceipts(receipts),
         ...(legacyFailed || ledgerFailed
@@ -190,6 +194,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         seasons: [],
         total: 0,
         pregame: 0,
+        research_receipts: 0,
+        research_latest_capture_at: null,
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
         source: "unavailable",
         unavailable_reason: "The market archive warehouse did not respond within the read window.",
