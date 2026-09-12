@@ -175,12 +175,12 @@ function PlayerTrajectory({
   rows: TrajectorySeason[];
   selectedSeason: number;
 }) {
-  const latest = rows[0];
-  const prior = latest
-    ? rows.find((row) => row.season < latest.season)
+  const active = rows.find((row) => row.season === selectedSeason) || rows[0];
+  const prior = active
+    ? rows.find((row) => row.season < active.season)
     : undefined;
   const ppgDelta =
-    latest?.ppg != null && prior?.ppg != null ? latest.ppg - prior.ppg : null;
+    active?.ppg != null && prior?.ppg != null ? active.ppg - prior.ppg : null;
   const maxPpg = Math.max(...rows.map((row) => row.ppg || 0), 1);
   return (
     <section className="section paper-panel" aria-label="Player season trajectory">
@@ -197,11 +197,11 @@ function PlayerTrajectory({
         unavailable. This is a descriptive development view, not an identity
         claim about a different player with the same name.
       </p>
-      {latest && (
+      {active && (
         <div className="strip" style={{ marginTop: 18 }}>
           <div>
-            <strong>{trajectoryValue(latest.ppg)}</strong>
-            <span>Latest points / game</span>
+            <strong>{trajectoryValue(active.ppg)}</strong>
+            <span>{label(active.season)} points / game</span>
           </div>
           <div>
             <strong>
@@ -212,12 +212,12 @@ function PlayerTrajectory({
             <span>Change vs prior source season</span>
           </div>
           <div>
-            <strong>{trajectoryValue(latest.mpg)}</strong>
-            <span>Latest minutes / game</span>
+            <strong>{trajectoryValue(active.mpg)}</strong>
+            <span>{label(active.season)} minutes / game</span>
           </div>
           <div>
-            <strong>{trajectoryValue(latest.ts == null ? null : latest.ts * 100)}%</strong>
-            <span>Latest pooled TS%</span>
+            <strong>{trajectoryValue(active.ts == null ? null : active.ts * 100)}%</strong>
+            <span>{label(active.season)} pooled TS%</span>
           </div>
         </div>
       )}
@@ -255,6 +255,11 @@ function PlayerTrajectory({
               <span>
                 {trajectoryValue(row.mpg)} MPG ·{" "}
                 {trajectoryValue(row.ts == null ? null : row.ts * 100)}% TS
+                {(() => {
+                  const previous = rows.find((candidate) => candidate.season < row.season);
+                  const delta = row.ppg != null && previous?.ppg != null ? row.ppg - previous.ppg : null;
+                  return ` · ${delta == null ? "—" : `${delta >= 0 ? "+" : ""}${trajectoryValue(delta)}`} vs prior`;
+                })()}
               </span>
             </div>
           </div>
