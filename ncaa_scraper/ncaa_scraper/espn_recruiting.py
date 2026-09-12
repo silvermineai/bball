@@ -223,7 +223,7 @@ def sql_export(release: dict, migration: Path = MIGRATION) -> str:
     columns = ["edition", "season", "athlete_id", "name", "position", "grade", "rank", "position_rank", "state_rank", "region_rank", "status", "committed_team_id", "committed_team_name", "school_ids_json", "high_school", "hometown", "height_inches", "weight_pounds", "captured_at", "source_url", "source_sha256", "payload_json"]
     for row in release["records"]:
         values = [release["edition"], release["season"], row["athlete_id"], row["name"], row["position"], row["grade"], row["rank"], row["position_rank"], row["state_rank"], row["region_rank"], row["status"], row["committed_team_id"], row["committed_team_name"], compact(row["school_ids"]), row["high_school"], row["hometown"], row["height_inches"], row["weight_pounds"], release["captured_at"], row["source_url"], row["source_sha256"], compact(row)]
-        lines.append("INSERT OR IGNORE INTO bb_espn_recruiting (" + ",".join(columns) + ") VALUES (" + ",".join(quote(value) for value in values) + ");")
+        lines.append("INSERT INTO bb_espn_recruiting (" + ",".join(columns) + ") VALUES (" + ",".join(quote(value) for value in values) + ") ON CONFLICT(edition,athlete_id) DO UPDATE SET captured_at=excluded.captured_at,source_url=excluded.source_url,source_sha256=excluded.source_sha256,payload_json=excluded.payload_json;")
     lines.append("INSERT INTO bb_espn_recruiting_current (season,edition,captured_at) VALUES (" + ",".join(quote(value) for value in (release["season"], release["edition"], release["captured_at"])) + ") ON CONFLICT(season) DO UPDATE SET edition=excluded.edition,captured_at=excluded.captured_at;")
     return "\n".join(lines) + "\n"
 

@@ -73,10 +73,12 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               r.hometown,r.height_inches,r.weight_pounds,r.captured_at,r.source_url,
               (SELECT p.rank FROM bb_espn_recruiting p
                 WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+                  AND p.edition != r.edition
                   AND p.captured_at < c.captured_at
                 ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_rank,
               (SELECT p.captured_at FROM bb_espn_recruiting p
                 WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+                  AND p.edition != r.edition
                   AND p.captured_at < c.captured_at
                 ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_captured_at
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -89,6 +91,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         SELECT r.rank,
           (SELECT p.rank FROM bb_espn_recruiting p
             WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+              AND p.edition != r.edition
               AND p.captured_at < c.captured_at
             ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_rank
           FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
