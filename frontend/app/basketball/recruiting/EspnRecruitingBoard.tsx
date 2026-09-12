@@ -70,7 +70,7 @@ export default function EspnRecruitingBoard() {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("q");
     const requestedSeason = params.get("season");
-    if (requestedSeason === "2026" || requestedSeason === "2027" || requestedSeason === "2028" || requestedSeason === "2029") setSeason(requestedSeason);
+    if (requestedSeason === "2026" || requestedSeason === "2027" || requestedSeason === "2028" || requestedSeason === "2029" || requestedSeason === "2030") setSeason(requestedSeason);
     if (requested) setQuery(requested);
     const requestedPosition = params.get("position");
     const normalizedPosition = requestedPosition?.toUpperCase();
@@ -162,7 +162,7 @@ export default function EspnRecruitingBoard() {
   }, [committed, movement, page, position, query, rankMax, season]);
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled(["2026", "2027", "2028", "2029"].map(async (classYear) => {
+    Promise.allSettled(["2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
       const response = await fetch(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (!response.ok) throw new Error("class snapshot unavailable");
       const value = await response.json() as Result;
@@ -185,7 +185,7 @@ export default function EspnRecruitingBoard() {
         <p>Search the source-ranked class, inspect commitment status and open the original ESPN prospect card. Ranking and grade are source fields, not eligibility or a Silvermine scouting grade.</p>
       </div>
       <div className="toolbar">
-        <label className="control"><span>CLASS</span><select value={season} onChange={(event) => { setSeason(event.target.value); setPage(0); }}><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></label>
+        <label className="control"><span>CLASS</span><select value={season} onChange={(event) => { setSeason(event.target.value); setPage(0); }}><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option></select></label>
         <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Prospect, school or hometown" /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
         <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All source ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>

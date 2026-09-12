@@ -23,7 +23,7 @@ export default function LiveBasketballProspectStatus() {
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled([2026, 2027, 2028, 2029].map(async (season) => {
+    Promise.allSettled([2026, 2027, 2028, 2029, 2030].map(async (season) => {
       const response = await fetch(
         `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
         { signal: controller.signal },
@@ -52,7 +52,7 @@ export default function LiveBasketballProspectStatus() {
     <p className="note" role="status">
       {status === "live"
         ? <>
-            Live ESPN prospect board: {snapshots.map((snapshot) => `${snapshot.season} · ${snapshot.total.toLocaleString()}`).join("  /  ")} source-ranked prospects across the 2026–29 classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}Rank and commitment fields remain source evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
+            Live ESPN prospect board: {snapshots.map((snapshot) => `${snapshot.season} · ${snapshot.total.toLocaleString()}`).join("  /  ")} source-ranked prospects across the 2026–30 classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}Rank and commitment fields remain source evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
           </>
         : status === "fallback"
           ? <>The live ESPN prospect board is temporarily unavailable; the recruiting research file remains available. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></>

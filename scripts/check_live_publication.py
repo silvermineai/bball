@@ -438,7 +438,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     prospect_counts = {}
     prospect_destination_counts = {}
     prospect_ages = {}
-    for prospect_season in (2026, 2027, 2028, 2029):
+    for prospect_season in (2026, 2027, 2028, 2029, 2030):
         recruiting_rankings = get_json(
             base_url,
             f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check=1",

@@ -67,7 +67,7 @@ See [football architecture, source policy, model design, refresh workflow and re
 | Within-team RAPM | `/basketball/impact/within-team/` | Compare source-published within-team player impact across 17 seasons with team possession samples |
 | NCAA leaderboards | `/basketball/ncaa/` | Robots-respecting NCAA final national player-stat snapshots across D-I/D-II/D-III |
 | Roster observations | `/basketball/recruiting/` | Searchable publisher recruiting wire plus dated school evidence, an all-354-program coverage map and clearly marked unconfirmed future listings |
-| National prospect board | `/basketball/recruiting/` | Search the live ESPN 2026–29 men's basketball classes by rank, grade, position, commitment and destination, with exact source IDs and prospect-card links |
+| National prospect board | `/basketball/recruiting/` | Search the live ESPN 2026–30 men's basketball classes by rank, grade, position, commitment and destination, with exact source IDs and prospect-card links |
 | Authorized recruiting feeds | `/basketball/recruiting/` | Coverage-only status for licensed CSV imports and the optional server-side CollegeBasketballData portal/player/team connector; provider payloads stay private in D1 |
 | Roster impact lab | `/basketball/roster-lab/` | Compare returning workload, position continuity, class-year workload, incoming prior minutes, source-reported roster shape, efficiency rating and 2026–27 schedule coverage across source-listed programs |
 | Press room | `/basketball/pressroom/` | Model-generated story angles for upcoming games, with links to evidence |
