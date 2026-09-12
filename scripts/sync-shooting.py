@@ -5,7 +5,10 @@ import hashlib
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+from sql_batches import is_retryable_d1_import_error
 
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 
@@ -45,6 +48,58 @@ def run(args):
             stderr=subprocess.STDOUT,
             check=True,
         )
+
+
+def run_remote_d1(args):
+    """Run one D1 request with safe retries for transient Wrangler failures.
+
+    D1 imports can commit while Wrangler loses its polling response (or while
+    Cloudflare resets the import).  A successful receipt is authoritative; a
+    replay is only attempted for the retryable markers shared by the other
+    bounded importers.
+    """
+    retry_delays = (15, 30, 60, 120, 180)
+    command = [PY, "scripts/cloudflare.py", *args]
+    for attempt in range(1, len(retry_delays) + 2):
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        output = (result.stdout or "") + (result.stderr or "")
+        with log_path.open("a") as log:
+            log.write(
+                f"\nD1 request (attempt {attempt}/{len(retry_delays) + 1}): "
+                f"{' '.join(args)}\n{output}\n"
+            )
+        output = "\n".join(output.splitlines()[-100:])
+        completed_receipt = (
+            '"success"' in output
+            and '"finalBookmark"' in output
+            and ("Processed " in output or "Executed " in output)
+        )
+        completed_status_stream = (
+            "Not currently importing anything" in output
+            and "Processed " in output
+            and "D1 DB storage operation exceeded timeout" not in output
+        )
+        if result.returncode == 0 or completed_receipt or completed_status_stream:
+            if result.returncode != 0:
+                print(
+                    "D1 shooting import returned a committed receipt despite "
+                    "Wrangler exit status 1; continuing.",
+                    file=sys.stderr,
+                )
+            return
+        if attempt < len(retry_delays) + 1 and is_retryable_d1_import_error(output):
+            delay = retry_delays[attempt - 1]
+            print(
+                "D1 shooting import hit a transient Cloudflare error "
+                f"(attempt {attempt}/{len(retry_delays) + 1}); retrying in {delay} seconds.",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(delay)
+            continue
+        print("D1 shooting import failed; last log lines:", file=sys.stderr)
+        print(output, file=sys.stderr)
+        raise subprocess.CalledProcessError(result.returncode, command)
 
 
 for season_catalog in pbp_catalogs:
@@ -92,7 +147,7 @@ else:
     only = catalogs[0]
     if manifest["edition"] != only["coverage"]["edition"] or manifest["season"] != only["season"]:
         raise SystemExit("SQL and public data editions differ; rebuild shooting first")
-run(
+run_remote_d1(
     [
         "d1",
         "execute",
@@ -103,6 +158,6 @@ run(
     ]
 )
 for i, path in enumerate(files):
-    run(["d1", "execute", D1_DB_NAME, "--remote", "--file", str(path)])
+    run_remote_d1(["d1", "execute", D1_DB_NAME, "--remote", "--file", str(path)])
     print(f"D1 shooting batch {i + 1}/{len(files)} imported", flush=True)
 print("Complete shooting edition activated", flush=True)
