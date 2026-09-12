@@ -29,8 +29,8 @@ type Response = { season: number; rows: Prospect[]; captured_at: string | null; 
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
-const movement = (current: number | null, previous: number | null) => {
-  if (current == null || previous == null) return null;
+const movement = (current: number | null, previous: number | null, previousCapturedAt?: string | null) => {
+  if (current == null || previous == null) return previousCapturedAt ? { change: null, label: "Rank unavailable" } : null;
   const change = previous - current;
   return { change, label: change > 0 ? `▲ ${change}` : change < 0 ? `▼ ${Math.abs(change)}` : "= 0" };
 };
@@ -76,10 +76,10 @@ export default function ProspectPage() {
       {error ? <p className="status-error" role="alert">{error}</p> : !prospect ? <p className="empty" role="status">Loading exact ESPN prospect record…</p> : (
         <>
           {(() => {
-            const rankMovement = movement(prospect.rank, prospect.previous_rank ?? null);
+            const rankMovement = movement(prospect.rank, prospect.previous_rank ?? null, prospect.previous_captured_at);
             return <section className="paper-panel" aria-label="Prospect rank movement" style={{ marginBottom: 24 }}>
               <div className="eyebrow">Release-to-release movement</div>
-              <h2 style={{ marginTop: 12 }}>{rankMovement ? <span className={rankMovement.change > 0 ? "movement-up" : rankMovement.change < 0 ? "movement-down" : ""}>{rankMovement.label} national rank</span> : "First retained ESPN release"}</h2>
+              <h2 style={{ marginTop: 12 }}>{rankMovement ? <span className={rankMovement.change == null ? "" : rankMovement.change > 0 ? "movement-up" : rankMovement.change < 0 ? "movement-down" : ""}>{rankMovement.label}{rankMovement.change == null ? "" : " national rank"}</span> : "First retained ESPN release"}</h2>
               <p className="note">{rankMovement ? `Previous source rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier ESPN edition for this exact athlete ID is retained yet. Future source releases will establish the comparison baseline."}</p>
             </section>;
           })()}

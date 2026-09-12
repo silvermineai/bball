@@ -94,15 +94,20 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               AND p.edition != r.edition
               AND p.captured_at < c.captured_at
             ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_rank
+          ,(SELECT p.captured_at FROM bb_espn_recruiting p
+            WHERE p.season=r.season AND p.athlete_id=r.athlete_id
+              AND p.edition != r.edition
+              AND p.captured_at < c.captured_at
+            ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_captured_at
           FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
          WHERE ${filters}
       )
       SELECT count(*) AS total,
-        sum(CASE WHEN previous_rank IS NULL THEN 1 ELSE 0 END) AS new_to_release,
+        sum(CASE WHEN previous_captured_at IS NULL THEN 1 ELSE 0 END) AS new_to_release,
         sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank < previous_rank THEN 1 ELSE 0 END) AS moved_up,
         sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank > previous_rank THEN 1 ELSE 0 END) AS moved_down,
         sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NOT NULL AND rank = previous_rank THEN 1 ELSE 0 END) AS unchanged,
-        sum(CASE WHEN previous_rank IS NOT NULL AND rank IS NULL THEN 1 ELSE 0 END) AS rank_unavailable
+        sum(CASE WHEN previous_captured_at IS NOT NULL AND (previous_rank IS NULL OR rank IS NULL) THEN 1 ELSE 0 END) AS rank_unavailable
         FROM current_rows`,
     ).bind(...binds).first<{
       total: number;
