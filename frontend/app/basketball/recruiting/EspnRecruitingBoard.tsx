@@ -32,6 +32,7 @@ type Result = {
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
+  rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number };
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -221,6 +222,7 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} source rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain ESPN&apos;s source rank and the board&apos;s name ordering.</p>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Release-to-release movement</div><h3>See what changed in the source board.</h3></div>

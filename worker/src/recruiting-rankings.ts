@@ -132,6 +132,20 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       unchanged: number | null;
       rank_unavailable: number | null;
     }>(), DB_TIMEOUT_MS);
+    const rankQuality = await withTimeout(db.prepare(
+      `WITH ranked_rows AS (
+        SELECT r.rank
+          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+         WHERE ${filters} AND r.rank IS NOT NULL
+      ), tied_ranks AS (
+        SELECT rank, count(*) AS rows
+          FROM ranked_rows
+         GROUP BY rank
+        HAVING count(*) > 1
+      )
+      SELECT count(*) AS tied_rank_values, COALESCE(sum(rows),0) AS tied_rows
+        FROM tied_ranks`,
+    ).bind(...binds).first<{ tied_rank_values: number | null; tied_rows: number | null }>(), DB_TIMEOUT_MS);
     const positions = await withTimeout(db.prepare(
       `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -207,6 +221,11 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         moved_down: Number(movement?.moved_down || 0),
         unchanged: Number(movement?.unchanged || 0),
         rank_unavailable: Number(movement?.rank_unavailable || 0),
+      },
+      rank_quality: {
+        ranked_rows: Number(count?.ranked_total || 0),
+        tied_rank_values: Number(rankQuality?.tied_rank_values || 0),
+        tied_rows: Number(rankQuality?.tied_rows || 0),
       },
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
