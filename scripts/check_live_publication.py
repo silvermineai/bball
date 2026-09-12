@@ -323,6 +323,21 @@ def validate_recruiting_destinations(destinations: object) -> None:
             raise ValueError("ESPN recruiting destination position mix does not reconcile")
 
 
+def validate_recruiting_rank_quality(quality: object, total: object) -> tuple[int, int]:
+    """Validate the source board's tied-rank audit without rewriting ranks."""
+    if not isinstance(quality, dict) or not isinstance(total, int) or isinstance(total, bool) or total < 0:
+        raise ValueError("ESPN recruiting rank-quality audit is malformed")
+    ranked_rows = quality.get("ranked_rows")
+    tied_rank_values = quality.get("tied_rank_values")
+    tied_rows = quality.get("tied_rows")
+    values = (ranked_rows, tied_rank_values, tied_rows)
+    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in values):
+        raise ValueError("ESPN recruiting rank-quality audit is malformed")
+    if ranked_rows > total or tied_rank_values > ranked_rows or (tied_rank_values == 0 and tied_rows != 0) or tied_rows < tied_rank_values * 2 or tied_rows > ranked_rows:
+        raise ValueError("ESPN recruiting rank-quality audit is inconsistent")
+    return tied_rank_values, tied_rows
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -437,6 +452,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     )
     prospect_counts = {}
     prospect_destination_counts = {}
+    prospect_rank_ties = {}
     prospect_ages = {}
     for prospect_season in (2026, 2027, 2028, 2029, 2030):
         recruiting_rankings = get_json(
@@ -446,9 +462,11 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         prospect_total = recruiting_rankings.get("total")
         prospect_rows = recruiting_rankings.get("rows")
         commitment_destinations = recruiting_rankings.get("commitment_destinations")
+        rank_quality = recruiting_rankings.get("rank_quality")
         prospect_captured = recruiting_rankings.get("captured_at")
         prospect_source = recruiting_rankings.get("source")
         validate_recruiting_destinations(commitment_destinations)
+        tied_rank_values, tied_rows = validate_recruiting_rank_quality(rank_quality, prospect_total)
         if (
             recruiting_rankings.get("season") != prospect_season
             or not isinstance(prospect_total, int)
@@ -465,6 +483,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
             raise ValueError(f"ESPN recruiting rankings release {prospect_season} is {max(prospect_age, 0):.1f} hours old")
         prospect_counts[str(prospect_season)] = prospect_total
         prospect_destination_counts[str(prospect_season)] = len(commitment_destinations)
+        prospect_rank_ties[str(prospect_season)] = {"tied_rank_values": tied_rank_values, "tied_rows": tied_rows}
         prospect_ages[str(prospect_season)] = round(max(prospect_age, 0), 2)
     news = get_json(base_url, "/api/basketball/research/news?meta=1")
     news_summary = news.get("summary")
@@ -526,6 +545,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
         "recruiting_prospect_rows": prospect_counts,
         "recruiting_prospect_destination_groups": prospect_destination_counts,
+        "recruiting_prospect_rank_ties": prospect_rank_ties,
         "recruiting_prospect_age_hours": prospect_ages,
         "news_archive_total": news_summary["total"],
         "news_latest_published": news_summary.get("latest_published"),
