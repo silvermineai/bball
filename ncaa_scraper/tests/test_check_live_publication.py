@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from scripts.check_live_publication import (
     check_live,
+    market_metadata,
     player_box_field_metadata,
     validate_recruiting_destinations,
     validate_reviewed_recruiting_release,
@@ -50,6 +51,24 @@ class LivePublicationCheckTest(unittest.TestCase):
             }],
         }
         self.assertEqual(player_box_field_metadata(payload), (9, 10, 9))
+
+    def test_market_metadata_counts_research_capture_receipts(self):
+        total, pregame, capabilities, receipts = market_metadata(
+            {
+                "sport": "basketball",
+                "total": 0,
+                "pregame": 0,
+                "archive_receipts": [],
+                "research_receipts": 3,
+                "provider_capabilities": [{
+                    "provider": "ESPN Summary",
+                    "markets": ["h2h"],
+                    "provider_update_clock": False,
+                }],
+            },
+            "basketball",
+        )
+        self.assertEqual((total, pregame, capabilities, receipts), (0, 0, 1, 3))
 
     def test_rejects_player_box_field_coverage_without_core_stat(self):
         with self.assertRaisesRegex(ValueError, "missing core stats"):

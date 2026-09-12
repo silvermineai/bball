@@ -66,6 +66,7 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     pregame = payload.get("pregame")
     capabilities = payload.get("provider_capabilities")
     receipts = payload.get("archive_receipts")
+    research_receipts = payload.get("research_receipts", 0)
     if (
         not isinstance(total, int)
         or not isinstance(pregame, int)
@@ -75,6 +76,8 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
         or not isinstance(capabilities, list)
         or not capabilities
         or not isinstance(receipts, list)
+        or not isinstance(research_receipts, int)
+        or research_receipts < 0
     ):
         raise ValueError(f"{sport} market archive metadata is malformed")
     for capability in capabilities:
@@ -100,7 +103,7 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
             raise ValueError(f"{sport} market archive receipt is malformed")
     if sport == "football" and not receipts:
         raise ValueError("football market archive has no source receipts")
-    return total, pregame, len(capabilities), len(receipts)
+    return total, pregame, len(capabilities), len(receipts) + research_receipts
 
 
 def schedule_clock_metadata(payload: dict, checked_at: datetime, max_age_hours: float) -> tuple[int, int, float | None]:
