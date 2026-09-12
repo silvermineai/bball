@@ -16,7 +16,9 @@ const querySchema = z.object({
 
 export const markets = new Hono<{ Bindings: Bindings }>();
 const CACHE_TTL = 300;
-const DB_TIMEOUT_MS = 5000;
+// D1 can briefly queue a read behind a refresh batch. Keep the request bounded
+// while allowing the two independent archive bindings to resolve in parallel.
+const DB_TIMEOUT_MS = 8000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -129,21 +131,36 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   }
   if (meta === "1") {
     try {
-      const legacy = football
-        ? await withTimeout(db.batch([
+      // Legacy football and append-only research reads are independent. A
+      // busy archive should not erase the other binding's useful coverage.
+      const legacyPromise = football
+        ? withTimeout(db.batch([
           db.prepare("SELECT DISTINCT g.season FROM football_markets m JOIN football_games g ON g.id=m.game_id ORDER BY g.season DESC"),
           db.prepare("SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"),
           db.prepare("SELECT dataset,season,receipt_json FROM football_sources WHERE dataset='betting' ORDER BY season DESC"),
         ]), DB_TIMEOUT_MS)
-        : null;
+        : Promise.resolve(null);
       // In production the split binding is present. Older local fixtures may
       // only provide the legacy DB, so do not issue a duplicate batch there.
-      const ledger = (!football || hasResearchBinding)
-        ? await withTimeout(researchDb(c.env).batch([
+      const ledgerPromise = (!football || hasResearchBinding)
+        ? withTimeout(researchDb(c.env).batch([
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(sport),
         ]), DB_TIMEOUT_MS)
-        : null;
+        : Promise.resolve(null);
+      const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);
+      const legacy = legacyResult.status === "fulfilled" ? legacyResult.value : null;
+      const ledger = ledgerResult.status === "fulfilled" ? ledgerResult.value : null;
+      // Preserve the explicit unavailable contract when the only applicable
+      // archive failed, while retaining partial metadata when another source
+      // answered successfully.
+      const legacyFailed = legacyResult.status === "rejected";
+      const ledgerFailed = ledgerResult.status === "rejected";
+      const legacyUnavailable = football && legacyFailed;
+      const ledgerUnavailable = (!football || hasResearchBinding) && ledgerFailed;
+      if (legacyUnavailable && ledgerUnavailable) {
+        throw new Error("all applicable market archive reads failed");
+      }
       const legacySeasons = legacy?.[0]?.results || [];
       const ledgerSeasons = ledger?.[0]?.results || [];
       const seasons = [...new Set([
@@ -160,6 +177,9 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         pregame: Number(legacyArchive.pregame || 0) + Number(ledgerArchive.total || 0),
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
         archive_receipts: parseArchiveReceipts(receipts),
+        ...(legacyFailed || ledgerFailed
+          ? { source: "partial", unavailable_sources: [legacyFailed ? "legacy" : null, ledgerFailed ? "research" : null].filter((value): value is string => value !== null) }
+          : {}),
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

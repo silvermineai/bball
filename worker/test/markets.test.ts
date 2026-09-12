@@ -68,6 +68,31 @@ describe("market archive metadata", () => {
     expect(researchBatch).toHaveBeenCalled();
   });
 
+  it("keeps answered archive metadata when the secondary binding is busy", async () => {
+    const legacyBatch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2025 }] },
+      { results: [{ total: 12, pregame: 12 }] },
+      { results: [] },
+    ]);
+    const researchBatch = vi.fn().mockRejectedValue(new Error("D1 busy"));
+    const response = await markets.request(
+      "/?meta=1&sport=football",
+      {},
+      {
+        DB: { prepare: vi.fn(), batch: legacyBatch },
+        RESEARCH_DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch: researchBatch },
+      },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 12,
+      pregame: 12,
+      seasons: [2025],
+      source: "partial",
+      unavailable_sources: ["research"],
+    });
+  });
+
   it("returns an explicit unavailable state when the archive warehouse is busy", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await markets.request(
