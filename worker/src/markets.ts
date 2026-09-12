@@ -124,9 +124,10 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       ? "SELECT dataset,season,receipt_json FROM football_sources WHERE dataset='betting' ORDER BY season DESC"
       : "SELECT '' AS dataset,0 AS season,'' AS receipt_json WHERE 1=0";
     try {
-      const [seasons, archive, receipts] = football
-        ? await withTimeout(db.batch([db.prepare(seasonsSql), db.prepare(archiveSql), db.prepare(receiptsSql)]), DB_TIMEOUT_MS)
-        : await withTimeout(db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport), db.prepare(receiptsSql).bind(sport)]), DB_TIMEOUT_MS);
+      const statements = football
+        ? [db.prepare(seasonsSql), db.prepare(archiveSql), db.prepare(receiptsSql)]
+        : [db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport), db.prepare(receiptsSql)];
+      const [seasons, archive, receipts] = await withTimeout(db.batch(statements), DB_TIMEOUT_MS);
       const response = c.json({
         sport,
         seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
