@@ -136,7 +136,7 @@ The repository also defines a serialized daily GitHub Actions refresh in [`.gith
 
 ## Historical player expansion
 
-The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2010–2026: 693,203 raw player box rows and 119,462 athlete/program/season records. The 17-season catalog excludes 2,142 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
+The [historical player archive](FOOTBALL_PLAYER_HISTORY.md) now covers 2010–2026: 693,774 raw player box rows and 119,699 athlete/program/season records. The 17-season catalog excludes 2,146 retained team-placeholder entries from player indexes and exposes per-season source coverage and asset hashes. Defense and specialist events remain a separate name-attributed notebook; they are not joined to athlete profiles without stable source IDs. The active forecast snapshot above is intentionally narrower than this historical archive.
 
 The daily football publisher bootstraps the 2010–2024 schedule and team-directory releases from the same conditional, rate-limited source cache before rebuilding this archive. Those dependency receipts are synchronized to D1 when a remote edition is missing, so a clean GitHub Actions runner can validate and publish historical player rows without depending on a prior forecast-only checkout.
 
