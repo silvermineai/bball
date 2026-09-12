@@ -71,6 +71,13 @@ class EspnPickcenterTests(unittest.TestCase):
         rows = parse_pickcenter(partial, GAME, "2026-11-09T20:00:00Z", "receipt")
         self.assertEqual([row[1] for row in rows], ["h2h", "spreads"])
 
+    def test_parser_keeps_lines_when_moneyline_is_off(self):
+        partial = summary()
+        partial["pickcenter"][0]["moneyline"]["home"]["close"]["odds"] = "OFF"
+        partial["pickcenter"][0]["moneyline"]["away"]["close"]["odds"] = "OFF"
+        rows = parse_pickcenter(partial, GAME, "2026-11-09T20:00:00Z", "receipt")
+        self.assertEqual([row[1] for row in rows], ["spreads", "totals"])
+
     def test_ingest_writes_receipt_and_three_rows(self):
         self.conn = sqlite3.connect(":memory:")
         self.conn.executescript("""

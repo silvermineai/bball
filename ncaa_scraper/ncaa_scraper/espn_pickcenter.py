@@ -131,17 +131,26 @@ def parse_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: st
             "event_id": event_id,
             "receipt_id": receipt_id,
         }
+        # ESPN can mark one market (usually moneyline) as ``OFF`` while still
+        # publishing complete spread and total quotes. Validate each market
+        # independently so an unavailable market never discards usable lines.
         try:
             ml = pick["moneyline"]
             home_ml = american_to_decimal(_close(ml["home"])["odds"])
             away_ml = american_to_decimal(_close(ml["away"])["odds"])
             rows.append((bookmaker, "h2h", captured, {**base, "line": None, "home_price": home_ml, "away_price": away_ml}))
+        except (KeyError, TypeError, ValueError):
+            pass
+        try:
             spread = pick["pointSpread"]
             home_spread = numeric_line(_close(spread["home"])["line"])
             away_spread = numeric_line(_close(spread["away"])["line"])
             if abs(home_spread + away_spread) > 1e-9:
                 raise ValueError("Spread sides do not sum to zero")
             rows.append((bookmaker, "spreads", captured, {**base, "line": home_spread, "home_price": american_to_decimal(_close(spread["home"])["odds"]), "away_price": american_to_decimal(_close(spread["away"])["odds"])}))
+        except (KeyError, TypeError, ValueError):
+            pass
+        try:
             total = pick["total"]
             over = _close(total["over"])
             under = _close(total["under"])
@@ -150,9 +159,7 @@ def parse_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: st
                 raise ValueError("Total sides do not agree")
             rows.append((bookmaker, "totals", captured, {**base, "line": total_line, "over_price": american_to_decimal(over["odds"]), "under_price": american_to_decimal(under["odds"])}))
         except (KeyError, TypeError, ValueError):
-            # A provider occasionally publishes a partial pickcenter. Keep
-            # complete two-sided markets only; do not fabricate a missing side.
-            continue
+            pass
     if not rows:
         raise ValueError("No complete current pickcenter markets")
     return rows
