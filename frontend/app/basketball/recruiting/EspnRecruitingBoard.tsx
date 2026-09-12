@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchJson } from "../../_lib/fetch-json";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
   recruitingShortlistKey,
@@ -152,9 +153,7 @@ export default function EspnRecruitingBoard() {
         if (query.trim()) params.set("q", query.trim());
         if (position) params.set("position", position);
         if (rankMax) params.set("rank_max", rankMax);
-        const response = await fetch(`/api/basketball/research/recruiting-rankings?${params}`);
-        if (!response.ok) throw new Error("The complete recruiting export could not be loaded.");
-        const payload = await response.json() as Result;
+        const payload = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?${params}`);
         all.push(...payload.rows);
         setExportMessage(`Preparing ${all.length.toLocaleString()} of ${result.total.toLocaleString()} prospects…`);
       }
@@ -196,11 +195,7 @@ export default function EspnRecruitingBoard() {
     if (position) params.set("position", position);
     if (rankMax) params.set("rank_max", rankMax);
     setError("");
-    fetch(`/api/basketball/research/recruiting-rankings?${params}`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("The ESPN prospect release is unavailable.");
-        return response.json() as Promise<Result>;
-      })
+    fetchJson<Result>(`/api/basketball/research/recruiting-rankings?${params}`, { signal: controller.signal })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
@@ -212,9 +207,7 @@ export default function EspnRecruitingBoard() {
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled(["2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
-      const response = await fetch(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
-      if (!response.ok) throw new Error("class snapshot unavailable");
-      const value = await response.json() as Result;
+      const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
       return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations } satisfies ClassSnapshot;
     })).then((settled) => {
