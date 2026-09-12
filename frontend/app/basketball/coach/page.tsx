@@ -47,6 +47,7 @@ export default function Page() {
   const upcoming = basketball.upcoming
     .filter((game) => game.prediction || game.fallback_prediction)
     .slice(0, 5);
+  const rosterScenarioByGame = new Map(rosterModel.scenarios.map((scenario) => [scenario.game_id, scenario]));
   const rosterSummaries = (rosters.team_summaries || []).filter((team) => team.prior_minutes > 0);
   const movementRadar = [...rosterSummaries]
     .sort((a, b) => (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || a.team.localeCompare(b.team))
@@ -112,6 +113,10 @@ export default function Page() {
         <div className="article-grid">
           {upcoming.map((game) => {
             const prediction = game.prediction || game.fallback_prediction;
+            const rosterScenario = rosterScenarioByGame.get(game.id);
+            const confidence = prediction?.home_win_probability == null
+              ? null
+              : Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability) * 100;
             return (
               <article className="article-card" key={game.id}>
                 <div className="eyebrow">{date(game.starts_at)} · {game.neutral ? "Neutral" : "Home court"}</div>
@@ -122,6 +127,14 @@ export default function Page() {
                     ? ` · ${fmt(prediction.home_win_probability * 100)}% home win probability`
                     : ""}.
                 </p>
+                <p className="note">
+                  {prediction?.margin_low != null && prediction.margin_high != null
+                    ? `80% margin range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`
+                    : "Margin range unavailable"}
+                  {confidence == null ? "" : ` · ${fmt(confidence)}% model confidence`}
+                  {rosterScenario ? ` · roster lens ${rosterScenario.margin_delta > 0 ? "+" : ""}${fmt(rosterScenario.margin_delta)} pts` : ""}
+                </p>
+                {rosterScenario && <small>Roster lens is research-only and does not replace the primary forecast.</small>}
                 <Link href={`/basketball/briefs/${encodeURIComponent(game.id)}/`}>Open the game brief →</Link>
               </article>
             );
