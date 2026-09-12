@@ -56,7 +56,10 @@ def _fetch(url: str) -> tuple[dict, bytes]:
         body = b"".join(chunks)
     if len(body) > MAX_RESPONSE_BYTES:
         raise RuntimeError("ESPN recruiting response exceeds the 2 MB bound")
-    value = json.loads(body.decode("utf-8"))
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("ESPN recruiting response is not valid UTF-8 JSON") from error
     if not isinstance(value, dict):
         raise RuntimeError("ESPN recruiting response must be an object")
     return value, body
@@ -185,7 +188,7 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
             detail, body = _fetch(url)
             (CACHE / f"{season}-{athlete_id}.json").write_bytes(body)
             return normalize_detail(detail, season, captured_at, team_names, body)
-        except (OSError, RuntimeError, ValueError, json.JSONDecodeError, requests.RequestException):
+        except (OSError, RuntimeError, TypeError, ValueError, UnicodeError, json.JSONDecodeError, requests.RequestException):
             return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
