@@ -451,9 +451,12 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     model_age = (checked_at - timestamp(last_created)).total_seconds() / 3600
     if model_age < -24 or model_age > max_age_hours:
         raise ValueError(f"latest basketball model is {max(model_age, 0):.1f} hours old")
+    # Distinct probe key prevents a monitor from validating a stale edge-cache
+    # response after a publisher sync.
+    probe_key = str(int(checked_at.timestamp()))
     scorecard = get_json(
         base_url,
-        "/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check=1",
+        f"/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check={probe_key}",
     )
     scorecard_rows = scorecard.get("games")
     if not isinstance(scorecard_rows, list):
@@ -477,7 +480,6 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
 
-    probe_key = str(int(checked_at.timestamp()))
     schedule_clock = get_json(
         base_url,
         f"/api/basketball/research/schedule-times?season=2027&meta=1&publication_check={probe_key}",
@@ -495,7 +497,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         raise ValueError("recruiting intake coverage is malformed")
     # Use a distinct cache key so a post-sync monitor never validates an older
     # edge-cached recruiting edition.
-    recruiting_release = get_json(base_url, "/api/basketball/research/recruiting?season=2027&publication_check=1")
+    recruiting_release = get_json(base_url, f"/api/basketball/research/recruiting?season=2027&publication_check={probe_key}")
     release_coverage, recruiting_reviewed_age = validate_reviewed_recruiting_release(
         recruiting_release, checked_at, max_age_hours
     )
@@ -506,7 +508,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     for prospect_season in (2026, 2027, 2028, 2029, 2030):
         recruiting_rankings = get_json(
             base_url,
-            f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check=1",
+            f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check={probe_key}",
         )
         prospect_total = recruiting_rankings.get("total")
         prospect_rows = recruiting_rankings.get("rows")
