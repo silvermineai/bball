@@ -9,6 +9,7 @@ const querySchema = z.object({
   q: z.string().trim().max(120).optional(),
   confirmed: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
+  limit: z.coerce.number().int().min(1).max(200).default(40),
   meta: z.enum(["0", "1"]).default("0"),
 });
 
@@ -39,7 +40,7 @@ const LATEST = `
 `;
 
 scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, q, confirmed, page, meta } = c.req.valid("query");
+  const { season, q, confirmed, page, limit, meta } = c.req.valid("query");
   const db = researchDb(c.env);
   const cache = cacheFor();
   const cacheKey = new Request(c.req.url, { method: "GET" });
@@ -86,8 +87,8 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
         ranked.observed_at,ranked.provider,ranked.payload_json
       FROM ranked JOIN bb_games g ON g.id=ranked.game_id
       WHERE ranked.row_number=1 AND ${filter}${confirmedClause}
-      ORDER BY ranked.source_start ASC,ranked.game_id ASC LIMIT 40 OFFSET ?`
-    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+      ORDER BY ranked.source_start ASC,ranked.game_id ASC LIMIT ? OFFSET ?`
+    ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
     const output = rows.results.map((row) => {
       const value = row as Record<string, unknown>;
       let payload: Record<string, unknown> = {};
@@ -100,11 +101,11 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
       delete value.payload_json;
       return { ...value, source_time_valid: value.source_time_valid === 1, source_url: payload.source_url || null };
     });
-    const response = c.json({ season, confirmed: confirmed === "1", page, page_size: 40, total: Number(count?.total || 0), rows: output });
+    const response = c.json({ season, confirmed: confirmed === "1", page, page_size: limit, total: Number(count?.total || 0), rows: output });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, confirmed: confirmed === "1", page, page_size: 40, total: 0, rows: [], source: "unavailable", unavailable_reason: "The schedule clock warehouse did not respond within the read window." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, confirmed: confirmed === "1", page, page_size: limit, total: 0, rows: [], source: "unavailable", unavailable_reason: "The schedule clock warehouse did not respond within the read window." }, 200, { "Cache-Control": "no-store" });
   }
 });
