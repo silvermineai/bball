@@ -138,6 +138,36 @@ describe("NCAA player source archive", () => {
     expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY season DESC"))).toBe(true);
   });
 
+  it("partitions all-season game pages by indexed season", async () => {
+    const seasons = [{ season: 2026 }, { season: 2025 }];
+    const gamePrepare = vi.fn((sql: string) => {
+      const rows = (season: number) => ({ results: [{ season, contest_id: "game", team_id: "7", player_id: "42", game_date: "01/01/2026", team_name: "Example U", opponent_name: "Example State", player_name: "Example Veteran", stats_json: JSON.stringify({ mins: 30, pts: 20 }) }] });
+      return {
+        bind: vi.fn((...args: unknown[]) => ({
+          all: async () => sql.includes("SELECT DISTINCT season") ? { results: seasons } : rows(Number(args[0]) || 2026),
+        })),
+        all: async () => ({ results: seasons }),
+      };
+    });
+    const gameBatch = vi.fn(async (statements: unknown[]) => statements.map(() => ({ results: [{ total: 1 }] })));
+    const response = await ncaaPlayerBox.request(
+      "/?season=all&archive=games&q=Example",
+      {},
+      { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({ all: async () => ({ results: [] }) })) })) }, NCAA_BOX_DB: { prepare: gamePrepare, batch: gameBatch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      season: "all",
+      archive_mode: "games",
+      total: 2,
+      rows: [
+        { season: 2026, stats: { mins: 30, pts: 20 } },
+        { season: 2025, stats: { mins: 30, pts: 20 } },
+      ],
+    });
+    expect(gameBatch).toHaveBeenCalledTimes(1);
+  });
+
   it("returns a bounded retryable error when the archive read does not settle", async () => {
     vi.useFakeTimers();
     try {

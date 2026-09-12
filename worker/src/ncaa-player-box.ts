@@ -230,9 +230,69 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
   try {
     const allSeasons = season === "all";
     const rawCount = archive === "auto"
-      ? await withTimeout(gameDb.prepare(`SELECT count(*) AS total FROM bb_ncaa_player_box${allSeasons ? "" : " WHERE season=?"}`).bind(...(allSeasons ? [] : [season])).first<{ total: number }>(), DB_TIMEOUT_MS)
+      ? allSeasons
+        ? await withTimeout(gameDb.prepare("SELECT 1 AS present FROM bb_ncaa_player_box LIMIT 1").first<{ present: number }>(), DB_TIMEOUT_MS)
+        : await withTimeout(gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?").bind(season).first<{ total: number }>(), DB_TIMEOUT_MS)
       : null;
-    const archiveMode = archive === "games" || (archive === "auto" && Number(rawCount?.total || 0) > 0) ? "games" : "season";
+    const hasGameRows = allSeasons
+      ? rawCount != null && "present" in rawCount && rawCount.present === 1
+      : rawCount != null && "total" in rawCount && Number(rawCount.total || 0) > 0;
+    const archiveMode = archive === "games" || (archive === "auto" && hasGameRows) ? "games" : "season";
+
+    // A cross-season game archive is too large for one unpartitioned D1
+    // count/order query. Count each indexed season, locate the requested page
+    // within those partitions, then merge only the rows needed for the page.
+    // This preserves global season-desc ordering while keeping the read bounded.
+    if (allSeasons && archiveMode === "games") {
+      const gameSeasons = await withTimeout(gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all<{ season: number }>(), DB_TIMEOUT_MS);
+      const search = q ? `%${q}%` : null;
+      const countStatements = gameSeasons.results.map((row) => gameDb.prepare(
+        `SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}`,
+      ).bind(...([row.season, ...(search ? [search, search, search, search, search] : [])] as Array<string | number>)));
+      const counted = await withTimeout(gameDb.batch(countStatements), DB_TIMEOUT_MS);
+      const counts = gameSeasons.results.map((row, index) => ({ season: row.season, total: Number((counted[index]?.results?.[0] as { total?: number } | undefined)?.total || 0) }));
+      const total = counts.reduce((sum, row) => sum + row.total, 0);
+      let offset = page * 50;
+      let needed = 50;
+      const requests: Array<{ season: number; offset: number; limit: number }> = [];
+      for (const partition of counts) {
+        if (needed <= 0) break;
+        if (offset >= partition.total) {
+          offset -= partition.total;
+          continue;
+        }
+        const limit = Math.min(needed, partition.total - offset);
+        requests.push({ season: partition.season, offset, limit });
+        needed -= limit;
+        offset = 0;
+      }
+      const rowsByPartition = await withTimeout(Promise.all(requests.map(async (request) => {
+        const statement = gameDb.prepare(
+          `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
+           FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}
+           ORDER BY game_date DESC, player_name ASC, contest_id ASC LIMIT ? OFFSET ?`,
+        ).bind(...([request.season, ...(search ? [search, search, search, search, search] : []), request.limit, request.offset] as Array<string | number>));
+        const result = await statement.all();
+        return result.results;
+      })), DB_TIMEOUT_MS);
+      const merged = rowsByPartition.flat().slice(0, 50) as Array<Record<string, unknown>>;
+      const response = c.json({
+        season, archive_mode: archiveMode, page, page_size: 50, total,
+        rows: merged.map(({ stats_json, ...row }) => {
+          let stats: Record<string, unknown> = {};
+          try {
+            const parsed = JSON.parse(String(stats_json));
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stats = parsed as Record<string, unknown>;
+          } catch {
+            // Integrity metadata reports malformed payloads; withhold only this row's stats.
+          }
+          return { ...row, stats };
+        }),
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+      return response;
+    }
     const table = archiveMode === "games" ? "bb_ncaa_player_box" : "bb_ncaa_player_season";
     const clauses = allSeasons ? [] : ["season=?"];
     const binds: Array<string | number> = allSeasons ? [] : [season];
