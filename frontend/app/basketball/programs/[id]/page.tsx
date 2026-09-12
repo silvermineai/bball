@@ -8,6 +8,7 @@ import { getBasketball, getRecruiting, getRosters } from "../../../_lib/basketba
 import { buildRosterLabRows } from "../../../_lib/roster-readiness";
 import Dossier from "./Dossier";
 import ProgramRecruiting from "./ProgramRecruiting";
+import PublisherProgramContext from "./PublisherProgramContext";
 import LiveProgramSchedule from "./LiveProgramSchedule";
 import type { PossessionStyleCatalog, PossessionStyleRow } from "../../../_lib/possession-style";
 export function generateStaticParams() {
@@ -126,6 +127,7 @@ export default async function Page({
           <span>Model tempo · possessions / 40 min</span>
         </div>
       </div>
+      <PublisherProgramContext teamId={id} programName={p.name} />
       <Dossier profile={p} possessionStyle={possessionStyle} />
       <ProgramRecruiting
         teamId={id}
