@@ -63,6 +63,10 @@ export default function GlobalSearch() {
           fetch(`/api/basketball/research/recruiting-rankings?season=${season}&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
             .then((response) => response.ok ? response.json() as Promise<ProspectResponse> : { rows: [] })
             .then((payload) => (payload.rows || []).map((row) => ({ ...row, season })))
+            .catch((reason: unknown) => {
+              if ((reason as { name?: string })?.name === "AbortError") throw reason;
+              return [];
+            })
         )).then((groups) => groups.flat()),
         fetch(`/api/basketball/research/rosters?season=2027&q=${encodeURIComponent(needle)}&limit=5`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<RosterResponse> : { players: [] })
@@ -111,7 +115,7 @@ export default function GlobalSearch() {
             .filter((row): row is { athlete_id: string; name: string; position?: string | null; committed_team_name?: string | null; season: number } => !!row.athlete_id && !!row.name && typeof row.season === "number")
             .slice(0, 3)
             .map((row) => ({
-              id: `espn-recruit-${row.athlete_id}`,
+              id: `espn-recruit-${row.season}-${row.athlete_id}`,
               name: row.name,
               type: "player",
               sport: "basketball",
