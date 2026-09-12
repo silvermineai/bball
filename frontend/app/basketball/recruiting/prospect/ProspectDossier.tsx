@@ -186,6 +186,23 @@ export default function ProspectPage() {
               <span className="note">{history.length} source captures</span>
             </div>
             <p className="note">This timeline uses every retained source edition for the exact ESPN athlete ID. A blank rank means ESPN did not supply a rank in that capture; it is not a zero or a demotion.</p>
+            {(() => {
+              const ranked = history.map((entry) => entry.rank).filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
+              const ceiling = Math.max(...ranked, 25);
+              return <figure className="prospect-rank-chart" aria-label="Visual timeline of ESPN national rank">
+                <div className="prospect-rank-chart-bars">
+                  {history.map((entry) => {
+                    const height = entry.rank == null ? 8 : Math.max(10, Math.round(((ceiling - entry.rank + 1) / ceiling) * 100));
+                    return <div className={`prospect-rank-bar${entry.rank == null ? " is-unranked" : ""}`} key={`chart-${entry.edition}-${entry.captured_at}`}>
+                      <div className="prospect-rank-bar-value">{rank(entry.rank)}</div>
+                      <div className="prospect-rank-bar-track"><span style={{ height: `${height}%` }} /></div>
+                      <div className="prospect-rank-bar-date">{entry.captured_at ? new Date(entry.captured_at).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }) : "—"}</div>
+                    </div>;
+                  })}
+                </div>
+                <figcaption>Higher bars represent a better source rank within this retained history. Unranked captures remain visible at the baseline.</figcaption>
+              </figure>;
+            })()}
             <div className="table-scroll"><table className="data-table"><thead><tr><th>Captured</th><th className="numeric">National rank</th><th className="numeric">Change</th><th className="numeric">Grade</th><th>Commitment / status</th><th>Source</th></tr></thead><tbody>{history.map((entry, index) => {
               const prior = history[index - 1];
               const change = prior?.rank != null && entry.rank != null ? prior.rank - entry.rank : null;

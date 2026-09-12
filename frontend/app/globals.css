@@ -5217,3 +5217,12 @@ summary {
 .movement-up { color: #23724a; font-weight: 600; }
 .movement-down { color: #a44732; font-weight: 600; }
 .data-table td .movement-up small, .data-table td .movement-down small { display: block; margin-top: 3px; color: var(--muted); font: 10px "IBM Plex Mono", monospace; font-weight: 400; }
+.prospect-rank-chart { margin: 22px 0 26px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 18px 0 14px; }
+.prospect-rank-chart-bars { display: flex; align-items: end; gap: 10px; min-height: 150px; overflow-x: auto; padding: 0 4px; }
+.prospect-rank-bar { display: grid; grid-template-rows: auto 116px auto; flex: 1 1 56px; min-width: 56px; max-width: 100px; gap: 6px; text-align: center; }
+.prospect-rank-bar-value, .prospect-rank-bar-date { color: var(--muted); font: 10px "IBM Plex Mono", monospace; white-space: nowrap; }
+.prospect-rank-bar-track { display: flex; align-items: end; justify-content: center; height: 116px; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to top, transparent 0, transparent 28px, #e8e3d8 29px, transparent 30px); }
+.prospect-rank-bar-track span { display: block; width: min(34px, 62%); min-height: 7px; border-radius: 2px 2px 0 0; background: var(--orange); }
+.prospect-rank-bar.is-unranked .prospect-rank-bar-track span { background: repeating-linear-gradient(135deg, #d7d1c5 0, #d7d1c5 3px, #f4f1e9 3px, #f4f1e9 6px); }
+.prospect-rank-chart figcaption { margin-top: 12px; color: var(--muted); font-size: 12px; }
+@media (max-width: 600px) { .prospect-rank-chart-bars { gap: 7px; } .prospect-rank-bar { min-width: 50px; } .prospect-rank-bar-track span { width: 28px; } }
