@@ -10,6 +10,8 @@ type Prospect = {
   grade: number | null;
   rank: number | null;
   position_rank: number | null;
+  state_rank: number | null;
+  region_rank: number | null;
   status: string | null;
   committed_team_name: string | null;
   high_school: string | null;
@@ -32,6 +34,13 @@ type Result = {
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const grade = (value: number | null) => value == null || value <= 0 ? "—" : number(value);
+const size = (height: number | null, weight: number | null) => {
+  const heightLabel = height == null || height <= 0
+    ? null
+    : `${Math.floor(height / 12)}'${Math.round(height % 12)}"`;
+  const weightLabel = weight == null || weight <= 0 ? null : `${Math.round(weight)} lb`;
+  return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
+};
 
 export default function EspnRecruitingBoard() {
   const [season, setSeason] = useState("2027");
@@ -126,12 +135,13 @@ export default function EspnRecruitingBoard() {
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>
-              <thead><tr><th>Rank</th><th>Prospect</th><th>Pos</th><th>Grade</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
                 <td><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}`}><strong>{row.name}</strong></Link><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
-                <td>{row.position || "—"}<br /><span className="note">#{number(row.position_rank)}</span></td>
+                <td>{row.position || "—"}<br /><span className="note">Pos #{number(row.position_rank)}</span><br /><span className="note">State #{number(row.state_rank)} · Region #{number(row.region_rank)}</span></td>
                 <td>{grade(row.grade)}</td>
+                <td>{size(row.height_inches, row.weight_pounds)}</td>
                 <td>{row.committed_team_name || row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td>
