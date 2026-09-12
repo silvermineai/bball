@@ -70,6 +70,13 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ORDER BY CASE WHEN r.rank IS NULL THEN 1 ELSE 0 END,r.rank,r.name
         LIMIT 50 OFFSET ?`,
     ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
+    const positions = await withTimeout(db.prepare(
+      `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE ${filters}
+        GROUP BY COALESCE(NULLIF(upper(r.position),''),'Unknown')
+        ORDER BY total DESC, position ASC`,
+    ).bind(...binds).all(), DB_TIMEOUT_MS);
     const current = await withTimeout(db.prepare(
       "SELECT edition,captured_at FROM bb_espn_recruiting_current WHERE season=?",
     ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
@@ -83,6 +90,10 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ranked: Number(count?.ranked_total || 0),
         graded: Number(count?.grade_total || 0),
       },
+      position_breakdown: positions.results.map((row) => ({
+        position: String((row as { position?: string }).position || "Unknown"),
+        total: Number((row as { total?: number }).total || 0),
+      })),
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
       source: {
@@ -100,6 +111,6 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
   }
 });

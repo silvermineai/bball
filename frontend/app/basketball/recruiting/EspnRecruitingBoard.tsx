@@ -25,13 +25,14 @@ type Result = {
   page: number;
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
+  position_breakdown?: Array<{ position: string; total: number }>;
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
   source?: { provider: string; methodology: string };
   unavailable_reason?: string;
 };
-type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at"> & { season: string };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown"> & { season: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const grade = (value: number | null) => value == null || value <= 0 ? "—" : number(value);
@@ -115,7 +116,7 @@ export default function EspnRecruitingBoard() {
       if (!response.ok) throw new Error("class snapshot unavailable");
       const value = await response.json() as Result;
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
-      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at } satisfies ClassSnapshot;
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown } satisfies ClassSnapshot;
     })).then((settled) => {
       if (controller.signal.aborted) return;
       setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
@@ -152,6 +153,7 @@ export default function EspnRecruitingBoard() {
             <strong>{snapshot.season}</strong>
             <span>{snapshot.total.toLocaleString()} prospects · {(snapshot.cohort?.committed ?? 0).toLocaleString()} committed</span>
             <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
+            <small>{(snapshot.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position unavailable"}</small>
           </button>)}
         </div>
       </div>}
