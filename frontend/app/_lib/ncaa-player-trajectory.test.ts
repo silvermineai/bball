@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildNcaaPlayerTrajectory } from "./ncaa-player-trajectory";
+import { buildNcaaPlayerTrajectory, trajectoryContext } from "./ncaa-player-trajectory";
 
 describe("NCAA player trajectory", () => {
   it("aggregates exact source team rows and orders newest season first", () => {
@@ -50,5 +50,17 @@ describe("NCAA player trajectory", () => {
     expect(row.games).toBe(0);
     expect(row.ppg).toBeNull();
     expect(row.mpg).toBeNull();
+  });
+
+  it("uses the selected season for the summary and compares it with the prior row", () => {
+    const rows = buildNcaaPlayerTrajectory([
+      { season: 2024, team_id: "a", games: 20, stats: { mins: 400, pts: 200 } },
+      { season: 2025, team_id: "a", games: 20, stats: { mins: 500, pts: 300 } },
+      { season: 2026, team_id: "a", games: 20, stats: { mins: 600, pts: 500 } },
+    ]);
+    const context = trajectoryContext(rows, 2025);
+    expect(context.active?.season).toBe(2025);
+    expect(context.prior?.season).toBe(2024);
+    expect(context.ppgDelta).toBe(5);
   });
 });

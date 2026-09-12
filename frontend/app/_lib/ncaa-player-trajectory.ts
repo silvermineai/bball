@@ -19,6 +19,12 @@ export type TrajectorySeason = {
   efg: number | null;
 };
 
+export type TrajectoryContext = {
+  active: TrajectorySeason | undefined;
+  prior: TrajectorySeason | undefined;
+  ppgDelta: number | null;
+};
+
 const finite = (value: Numeric): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
@@ -81,4 +87,27 @@ export function buildNcaaPlayerTrajectory(
             : null,
       };
     });
+}
+
+/**
+ * Resolve the season shown in the player-card summary and its immediately
+ * preceding retained source season. The selected season wins; when a card is
+ * opened without a matching season, the newest retained row is the fallback.
+ */
+export function trajectoryContext(
+  rows: readonly TrajectorySeason[],
+  selectedSeason: number,
+): TrajectoryContext {
+  const active = rows.find((row) => row.season === selectedSeason) || rows[0];
+  const prior = active
+    ? rows.find((row) => row.season < active.season)
+    : undefined;
+  return {
+    active,
+    prior,
+    ppgDelta:
+      active?.ppg != null && prior?.ppg != null
+        ? active.ppg - prior.ppg
+        : null,
+  };
 }

@@ -10,6 +10,7 @@ import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeRate, sa
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import {
   buildNcaaPlayerTrajectory,
+  trajectoryContext,
   type TrajectorySeason,
 } from "../../_lib/ncaa-player-trajectory";
 
@@ -175,13 +176,13 @@ function PlayerTrajectory({
   rows: TrajectorySeason[];
   selectedSeason: number;
 }) {
-  const active = rows.find((row) => row.season === selectedSeason) || rows[0];
-  const prior = active
-    ? rows.find((row) => row.season < active.season)
-    : undefined;
-  const ppgDelta =
-    active?.ppg != null && prior?.ppg != null ? active.ppg - prior.ppg : null;
+  const { active, ppgDelta } = trajectoryContext(rows, selectedSeason);
   const maxPpg = Math.max(...rows.map((row) => row.ppg || 0), 1);
+  const ppgChangeLabel = (row: TrajectorySeason) => {
+    const previous = rows.find((candidate) => candidate.season < row.season);
+    const delta = row.ppg != null && previous?.ppg != null ? row.ppg - previous.ppg : null;
+    return delta == null ? "—" : `${delta >= 0 ? "+" : ""}${trajectoryValue(delta)}`;
+  };
   return (
     <section className="section paper-panel" aria-label="Player season trajectory">
       <div className="section-heading">
@@ -255,11 +256,7 @@ function PlayerTrajectory({
               <span>
                 {trajectoryValue(row.mpg)} MPG ·{" "}
                 {trajectoryValue(row.ts == null ? null : row.ts * 100)}% TS
-                {(() => {
-                  const previous = rows.find((candidate) => candidate.season < row.season);
-                  const delta = row.ppg != null && previous?.ppg != null ? row.ppg - previous.ppg : null;
-                  return ` · ${delta == null ? "—" : `${delta >= 0 ? "+" : ""}${trajectoryValue(delta)}`} vs prior`;
-                })()}
+                {` · ${ppgChangeLabel(row)} vs prior`}
               </span>
             </div>
           </div>
