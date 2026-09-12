@@ -4,6 +4,7 @@ import { date, fmt } from "./_lib/format";
 import MatchCard from "./_components/MatchCard";
 import LiveFootballForecastStatus from "./_components/LiveFootballForecastStatus";
 import LiveFootballHeroForecast from "./_components/LiveFootballHeroForecast";
+import LiveBasketballProspectStatus from "./_components/LiveBasketballProspectStatus";
 import fs from "node:fs";
 import path from "node:path";
 import { topFootballLeaders, type LeaderPlayer } from "./_lib/football-leaders";
@@ -490,6 +491,7 @@ export default function Home() {
             frame contains {recruiting.observedPlayers.toLocaleString()} listed
             players across {recruiting.observedPrograms} programs.
           </p>
+          <LiveBasketballProspectStatus />
         </div>
         <div className="button-row">
           <a className="button secondary" href="/basketball/">
