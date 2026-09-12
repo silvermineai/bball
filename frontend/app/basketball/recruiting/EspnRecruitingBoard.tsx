@@ -28,7 +28,7 @@ type Result = {
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
   position_breakdown?: Array<{ position: string; total: number }>;
-  commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null }>;
+  commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -228,6 +228,7 @@ export default function EspnRecruitingBoard() {
                 <div className="eyebrow">{destination.total === 1 ? "One commitment" : `${destination.total} commitments`}</div>
                 <h3>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team} →</Link> : destination.team}</h3>
                 <p>{destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
+                <small>{(destination.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position mix unavailable"}</small>
                 <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this source row."} · Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>

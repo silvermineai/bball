@@ -97,6 +97,26 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ORDER BY ranked_total DESC, top100_total DESC, total DESC, team ASC
         LIMIT 12`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const destinationPositions = await withTimeout(db.prepare(
+      `SELECT CAST(r.committed_team_id AS TEXT) AS team_id,
+              COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position,
+              count(*) AS total
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE ${filters} AND r.committed_team_id IS NOT NULL
+        GROUP BY CAST(r.committed_team_id AS TEXT), COALESCE(NULLIF(upper(r.position),''),'Unknown')
+        ORDER BY total DESC, position ASC`,
+    ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const positionsByTeam = new Map<string, Array<{ position: string; total: number }>>();
+    for (const row of destinationPositions.results) {
+      const teamId = row.team_id == null ? "" : String(row.team_id);
+      if (!teamId) continue;
+      const positions = positionsByTeam.get(teamId) || [];
+      positions.push({
+        position: String((row as { position?: string }).position || "Unknown"),
+        total: Number((row as { total?: number }).total || 0),
+      });
+      positionsByTeam.set(teamId, positions);
+    }
     const current = await withTimeout(db.prepare(
       "SELECT edition,captured_at FROM bb_espn_recruiting_current WHERE season=?",
     ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
@@ -122,6 +142,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         top100_total: Number((row as { top100_total?: number }).top100_total || 0),
         best_rank: row.best_rank == null ? null : Number(row.best_rank),
         average_rank: row.average_rank == null ? null : Number(row.average_rank),
+        position_breakdown: row.team_id == null ? [] : positionsByTeam.get(String(row.team_id)) || [],
       })),
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
