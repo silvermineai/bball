@@ -31,6 +31,7 @@ type Result = {
   source?: { provider: string; methodology: string };
   unavailable_reason?: string;
 };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at"> & { season: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const grade = (value: number | null) => value == null || value <= 0 ? "—" : number(value);
@@ -51,6 +52,7 @@ export default function EspnRecruitingBoard() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [classSnapshots, setClassSnapshots] = useState<ClassSnapshot[]>([]);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -106,6 +108,20 @@ export default function EspnRecruitingBoard() {
       });
     return () => controller.abort();
   }, [committed, page, position, query, season]);
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.allSettled(["2026", "2027", "2028"].map(async (classYear) => {
+      const response = await fetch(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
+      if (!response.ok) throw new Error("class snapshot unavailable");
+      const value = await response.json() as Result;
+      if (value.unavailable_reason) throw new Error(value.unavailable_reason);
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at } satisfies ClassSnapshot;
+    })).then((settled) => {
+      if (controller.signal.aborted) return;
+      setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
+    });
+    return () => controller.abort();
+  }, []);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
   return (
     <section className="section">
@@ -123,6 +139,22 @@ export default function EspnRecruitingBoard() {
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <button className="button secondary" type="button" onClick={share}>Copy board link</button>
       </div>
+      {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">
+        <div className="eyebrow">Class comparison / same ESPN release</div>
+        <div className="recruiting-class-grid">
+          {classSnapshots.map((snapshot) => <button
+            className={`recruiting-class-card${snapshot.season === season ? " is-active" : ""}`}
+            type="button"
+            key={snapshot.season}
+            aria-pressed={snapshot.season === season}
+            onClick={() => { setSeason(snapshot.season); setPage(0); }}
+          >
+            <strong>{snapshot.season}</strong>
+            <span>{snapshot.total.toLocaleString()} prospects · {(snapshot.cohort?.committed ?? 0).toLocaleString()} committed</span>
+            <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
+          </button>)}
+        </div>
+      </div>}
       {copied && <p className="note" role="status">{copied}</p>}
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source-ranked prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
         <>
