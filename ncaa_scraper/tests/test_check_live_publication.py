@@ -134,6 +134,12 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "total": 1,
                 "games": [{"model_id": "model-1"}],
             },
+            "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1": {
+                "season": 2027,
+                "total": 142,
+                "confirmed": 18,
+                "provider": "ESPN Scoreboard",
+            },
             "/api/basketball/research/careers/meta": {
                 "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
                 "latest_receipt": "2026-09-10T18:00:00Z",
@@ -257,6 +263,12 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "total": 1,
                 "games": [{"model_id": "model-1"}],
             },
+            "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1": {
+                "season": 2027,
+                "total": 142,
+                "confirmed": 18,
+                "provider": "ESPN Scoreboard",
+            },
             "/api/basketball/research/careers/meta": {
                 "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
                 "latest_receipt": "2026-09-10T18:00:00Z",
@@ -365,6 +377,12 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/careers/meta": {
                 "seasons": [{"season": 2026, "identified_rows": 196865, "player_team_entries": 9990}],
                 "latest_receipt": "2026-09-10T18:00:00Z",
+            },
+            "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1": {
+                "season": 2027,
+                "total": 142,
+                "confirmed": 18,
+                "provider": "ESPN Scoreboard",
             },
             "/api/basketball/research/ncaa-leaders?meta=1": {
                 "season": 2026,

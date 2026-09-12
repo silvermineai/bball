@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -24,11 +25,14 @@ from .research_ledger import connect, digest, encoded, finite, timestamp
 
 PROVIDER = "ESPN Summary"
 SPORT = "basketball"
-BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary"
+# ESPN's public web API host serves the same summary/pickcenter schema while
+# the site.api host intermittently rejects server-side research requests.
+BASE_URL = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary"
 DOCS_URL = "https://www.espn.com/mens-college-basketball/"
 CACHE = ROOT / ".local/odds"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 DEFAULT_HORIZON_DAYS = 60
+REQUEST_DELAY_SECONDS = 0.2
 
 
 def american_to_decimal(value: object) -> float:
@@ -195,7 +199,10 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
     CACHE.mkdir(parents=True, exist_ok=True)
-    for game in games:
+    for index, game in enumerate(games):
+        if index:
+            # Keep the bounded public capture polite to ESPN's endpoint.
+            time.sleep(REQUEST_DELAY_SECONDS)
         event_id = str(game["id"])
         url = f"{BASE_URL}?event={event_id}"
         try:

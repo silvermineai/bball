@@ -2,7 +2,7 @@ import json
 import sqlite3
 import unittest
 
-from ncaa_scraper.espn_pickcenter import american_to_decimal, build_parser, ingest, parse_pickcenter
+from ncaa_scraper.espn_pickcenter import BASE_URL, american_to_decimal, build_parser, ingest, parse_pickcenter
 
 
 GAME = {
@@ -42,6 +42,9 @@ def summary():
 
 
 class EspnPickcenterTests(unittest.TestCase):
+    def test_collector_uses_the_verified_public_web_api_host(self):
+        self.assertTrue(BASE_URL.startswith("https://site.web.api.espn.com/"))
+
     def test_cli_defaults_to_the_scheduled_capture_horizon(self):
         self.assertEqual(build_parser().parse_args([]).horizon_days, 60)
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -27,6 +28,7 @@ DOCS_URL = "https://www.espn.com/mens-college-basketball/"
 CACHE = ROOT / ".local/odds"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 DEFAULT_HORIZON_DAYS = 60
+REQUEST_DELAY_SECONDS = 0.2
 
 
 def _competition(event: dict) -> dict:
@@ -193,7 +195,10 @@ def fetch_upcoming(
     observations: list[dict] = []
     urls: list[str] = []
     CACHE.mkdir(parents=True, exist_ok=True)
-    for date in dates:
+    for index, date in enumerate(dates):
+        if index:
+            # Keep the bounded public capture polite to ESPN's endpoint.
+            time.sleep(REQUEST_DELAY_SECONDS)
         params = {"dates": date, "limit": 500}
         url = f"{BASE_URL}?dates={date}&limit=500"
         try:
