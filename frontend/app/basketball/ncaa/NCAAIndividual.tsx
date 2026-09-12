@@ -49,6 +49,7 @@ export default function NCAAIndividual() {
   const [live, setLive] = useState<{ rows: NCAAIndividualPlayer[]; total: number; provenance?: LiveLeaderResponse["provenance"] } | null>(null);
   const [liveMeta, setLiveMeta] = useState<LiveLeaderMeta | null>(null);
   const [liveError, setLiveError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/ncaa-leaders?meta=1", { signal: controller.signal })
@@ -63,7 +64,7 @@ export default function NCAAIndividual() {
         // The data request below owns the user-visible fallback message.
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
   useEffect(() => {
     const next = ncaaFilterSearch({ division, stat, query });
     if (next !== window.location.search) {
@@ -110,7 +111,7 @@ export default function NCAAIndividual() {
         }
       });
     return () => controller.abort();
-  }, [division, page, query, stat]);
+  }, [division, page, query, retryNonce, stat]);
   const rows = live?.rows || staticRows;
   const totalRows = live?.total ?? staticRows.length;
   const pageRows = live ? rows : rows.slice(page * 40, page * 40 + 40);
@@ -151,6 +152,10 @@ export default function NCAAIndividual() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
+  const retryLiveLeaders = () => {
+    setLiveError("");
+    setRetryNonce((value) => value + 1);
+  };
   return (
     <>
       <div className="toolbar">
@@ -167,7 +172,7 @@ export default function NCAAIndividual() {
           <div><strong>{(liveMeta?.season || data?.season || 2026) - 1}–{String(liveMeta?.season || data?.season || 2026).slice(-2)}</strong><span>Final statistics season</span></div>
           <div><strong>{data?.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "D1"}</strong><span>Source snapshot</span></div>
         </div>
-        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError || "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game and total assists may be derived supplements from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for those fields. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError ? <>{liveError} <button className="text-link" type="button" onClick={retryLiveLeaders}>Retry live record</button></> : "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game and total assists may be derived supplements from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for those fields. They are source leaderboards, not a complete census or a recruiting ranking.</p>
         {stat === "apg" && apgSupplement && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Assists per game uses an exact-ID Division I supplement.</strong>
