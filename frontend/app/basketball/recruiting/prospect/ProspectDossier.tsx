@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  RECRUITING_SHORTLIST_STORAGE_KEY,
+  recruitingShortlistKey,
+  readRecruitingShortlist,
+  toggleRecruitingShortlist,
+  type RecruitingShortlistEntry,
+} from "../../../_lib/recruiting-shortlist";
 
 type Prospect = {
   athlete_id: string;
@@ -52,7 +59,12 @@ export default function ProspectPage() {
   const [prospect, setProspect] = useState<Prospect | null>(null);
   const [history, setHistory] = useState<RankHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
+  const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an ESPN athlete ID.");
+
+  useEffect(() => {
+    setShortlist(readRecruitingShortlist(window.localStorage.getItem(RECRUITING_SHORTLIST_STORAGE_KEY)));
+  }, []);
 
   useEffect(() => {
     if (!athleteId) return;
@@ -77,13 +89,39 @@ export default function ProspectPage() {
     return () => controller.abort();
   }, [athleteId, season]);
 
+  const shortlistKey = prospect ? recruitingShortlistKey(season, prospect.athlete_id) : "";
+  const isShortlisted = Boolean(shortlistKey && shortlist.some((entry) => entry.key === shortlistKey));
+  const toggleProspectShortlist = () => {
+    if (!prospect) return;
+    const entry: RecruitingShortlistEntry = {
+      key: recruitingShortlistKey(season, prospect.athlete_id),
+      season,
+      athlete_id: prospect.athlete_id,
+      name: prospect.name,
+      position: prospect.position,
+      rank: prospect.rank,
+      grade: prospect.grade,
+      committed_team_id: prospect.committed_team_id,
+      committed_team_name: prospect.committed_team_name,
+      high_school: prospect.high_school,
+      source_url: prospect.source_url,
+    };
+    const next = toggleRecruitingShortlist(shortlist, entry);
+    setShortlist(next);
+    try {
+      window.localStorage.setItem(RECRUITING_SHORTLIST_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // A private browsing context may reject local storage; keep the in-memory state visible.
+    }
+  };
+
   return (
     <>
       <div className="page-title">
         <div className="eyebrow">ESPN recruiting source dossier / {season} class</div>
         <h1>{prospect?.name || "Prospect dossier"}.</h1>
         <p>Exact ESPN athlete record for research handoff. Source rank, grade, commitment and biographical fields remain attributed evidence; they do not establish eligibility, roster status or future role.</p>
-        <div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?season=${season}`}>Back to recruiting board</Link>{prospect?.source_url && <a className="hero-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open ESPN prospect card ↗</a>}</div>
+        <div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?season=${season}`}>Back to recruiting board</Link>{prospect && <button className="button" type="button" onClick={toggleProspectShortlist} aria-pressed={isShortlisted}>{isShortlisted ? "Saved to shortlist" : "Save to shortlist"}</button>}{prospect?.source_url && <a className="hero-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open ESPN prospect card ↗</a>}</div>
       </div>
       {error ? <p className="status-error" role="alert">{error}</p> : !prospect ? <p className="empty" role="status">Loading exact ESPN prospect record…</p> : (
         <>
