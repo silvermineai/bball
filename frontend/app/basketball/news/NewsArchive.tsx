@@ -97,7 +97,7 @@ export default function NewsArchive({
       if (!needle) return true;
       return `${article.headline} ${article.description} ${article.categories.join(" ")}`.toLowerCase().includes(needle);
     });
-  }, [liveArticles, publisher, query]);
+  }, [division, liveArticles, publisher, query]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => {
