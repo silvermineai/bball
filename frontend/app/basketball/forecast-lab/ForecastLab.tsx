@@ -253,6 +253,8 @@ export default function ForecastLab({
   );
   const modelDeltaCount = rows.filter((row) => row.modelDelta).length;
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
+  const confirmedStartCount = modeledGames.filter((game) => !game.time_tbd).length;
+  const unconfirmedStartCount = modeledGames.length - confirmedStartCount;
   const activeMarkets = liveMarkets || markets;
   const verifiedMarketGames = modelSelection === "latest"
     ? modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length
@@ -328,18 +330,21 @@ export default function ForecastLab({
       <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
+        <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Starts confirmed by source</span></div>
+        <div><strong>{unconfirmedStartCount.toLocaleString()}</strong><span>Starts still marked TBD</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
         <div><strong>{modelDeltaCount.toLocaleString()}</strong><span>Edition deltas in view</span></div>
       </div>
       <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
-        <div className="paper-panel">
-          <div className="eyebrow">Release health / model clock</div>
-          <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
-          <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
-          <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
-        </div>
+          <div className="paper-panel">
+            <div className="eyebrow">Release health / model clock</div>
+            <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
+            <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
+            <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
+            <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} source-confirmed starts and {unconfirmedStartCount.toLocaleString()} still marked TBD. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
+          </div>
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
           <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
