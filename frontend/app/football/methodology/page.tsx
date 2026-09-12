@@ -173,7 +173,7 @@ export default function Page() {
         </p>
         <p>
           Earlier v1 forecasts remain in the{" "}
-          <a href="/research/">research ledger</a>. Publishing v2 does not
+          <a href="/research/scorecard/">research ledger</a>. Publishing v2 does not
           replace a game’s earliest eligible registration.
         </p>
       </section>
