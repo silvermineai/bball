@@ -46,6 +46,9 @@ function RecruitingPage() {
 
   const [myTeam, setMyTeam] = useState<TeamIndexEntry | null>(null);
   const [sort, setSort] = useState<"departing" | "rank">("departing");
+  const [boardQuery, setBoardQuery] = useState("");
+  const [boardPage, setBoardPage] = useState(0);
+  const [boardPageSize, setBoardPageSize] = useState(80);
   const [targets, setTargets] = useState<Target[]>([]);
 
   useEffect(() => {
@@ -66,11 +69,14 @@ function RecruitingPage() {
   const myRoom = myTeam ? allRecruiting.find((t) => t.id === myTeam.id) : null;
 
   const board = useMemo(() => {
-    const rows = [...allRecruiting];
+    const query = boardQuery.trim().toLocaleLowerCase();
+    const rows = allRecruiting.filter((team) => !query || `${team.name} ${team.shortName} ${team.conference ?? ""}`.toLocaleLowerCase().includes(query));
     if (sort === "departing") rows.sort((a, b) => b.departingShare - a.departingShare);
     else rows.sort((a, b) => (a.srsRank ?? 999) - (b.srsRank ?? 999));
     return rows;
-  }, [allRecruiting, sort]);
+  }, [allRecruiting, boardQuery, sort]);
+  const visibleBoard = board.slice(boardPage * boardPageSize, (boardPage + 1) * boardPageSize);
+  const boardPages = Math.max(1, Math.ceil(board.length / boardPageSize));
 
   const recruitingNews = (newsData?.articles ?? []).filter((a) =>
     /recruit|transfer|portal|commit|sign|class of|prospect/i.test(`${a.headline} ${a.description}`),
@@ -218,10 +224,22 @@ function RecruitingPage() {
           kicker="The Market"
           title="Roster turnover across the country"
           right={
-            <select className="rounded-md border-line bg-white text-sm" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-              <option value="departing">Most roster turnover</option>
-              <option value="rank">Best teams first</option>
-            </select>
+            <div className="flex flex-wrap justify-end gap-2">
+              <input
+                aria-label="Search recruiting programs"
+                className="w-48 rounded-md border-line bg-white text-sm"
+                placeholder="Search programs"
+                value={boardQuery}
+                onChange={(e) => { setBoardQuery(e.target.value); setBoardPage(0); }}
+              />
+              <select className="rounded-md border-line bg-white text-sm" value={sort} onChange={(e) => { setSort(e.target.value as typeof sort); setBoardPage(0); }}>
+                <option value="departing">Most roster turnover</option>
+                <option value="rank">Best teams first</option>
+              </select>
+              <select aria-label="Programs per page" className="rounded-md border-line bg-white text-sm" value={boardPageSize} onChange={(e) => { setBoardPageSize(Number(e.target.value)); setBoardPage(0); }}>
+                {[40, 80, 160].map((size) => <option key={size} value={size}>{size} per page</option>)}
+              </select>
+            </div>
           }
         />
         <div className="mt-3 overflow-x-auto rounded-lg border border-line bg-white shadow-panel">
@@ -238,13 +256,20 @@ function RecruitingPage() {
               </tr>
             </thead>
             <tbody>
-              {board.slice(0, 80).map((t) => (
+              {visibleBoard.map((t) => (
                 <BoardRow key={t.id} t={t} />
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[11px] text-graphite">Top 80 shown. Departures = seniors + graduates on the final roster; eligibility waivers not modeled.</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-graphite">
+          <span>{board.length.toLocaleString()} programs match · departures = seniors + graduates on the final roster; eligibility waivers not modeled.</span>
+          <div className="flex items-center gap-2">
+            <button type="button" className="rounded border border-line px-2 py-1 disabled:opacity-40" disabled={boardPage === 0} onClick={() => setBoardPage((page) => page - 1)}>← Previous</button>
+            <span>Page {boardPage + 1} of {boardPages}</span>
+            <button type="button" className="rounded border border-line px-2 py-1 disabled:opacity-40" disabled={boardPage + 1 >= boardPages} onClick={() => setBoardPage((page) => page + 1)}>Next →</button>
+          </div>
+        </div>
       </section>
 
       {/* player movement */}
