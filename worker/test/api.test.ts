@@ -1130,6 +1130,8 @@ describe("bball api", () => {
       "/api/basketball/research/boutique?season=2000",
       "/api/basketball/research/boutique?kind=players&playerId=not-an-id",
       "/api/basketball/research/boutique?kind=ratings&playerId=123",
+      "/api/basketball/research/boutique?kind=ratings&ids=150,not-an-id",
+      "/api/basketball/research/boutique?kind=players&ids=150",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
     }
@@ -1150,6 +1152,34 @@ describe("bball api", () => {
     await expect(response.json()).resolves.toMatchObject({
       source_receipts: [{ season: 2026, url: "https://example.test/ratings.parquet", sha256: "c".repeat(64) }],
     });
+  });
+
+  it("supports exact team-ID batches for matchup model comparisons", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total")) {
+        return { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 2, non_null: 2 }) }) };
+      }
+      return {
+        bind: (...args: unknown[]) => {
+          expect(args).toEqual([2026, "150", "248", 0]);
+          return { all: vi.fn().mockResolvedValue({ results: [
+            { id: "150", team: "Duke Blue Devils", value: 28.4 },
+            { id: "248", team: "North Carolina Tar Heels", value: 22.1 },
+          ] }) };
+        },
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=ratings&season=2026&metric=adj_em&ids=150,248",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 2,
+      rows: [{ id: "150" }, { id: "248" }],
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("p.team_id IN (?,?)"));
   });
 
   it("returns a retryable response when the boutique catalog is busy", async () => {

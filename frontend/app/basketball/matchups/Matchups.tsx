@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { BBGame, BBRosterScenario, BBRosterSummary, BBTeam } from "../../_lib/basketball-types";
@@ -22,6 +22,8 @@ import {
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
+
+type PublisherRating = { id: string; team: string; value: number | null };
 
 export default function Matchups({
   games,
@@ -65,8 +67,36 @@ export default function Matchups({
     [liveGames, setLiveGames] = useState<BBGame[] | null>(null),
     [liveGamesError, setLiveGamesError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, NonNullable<BBGame["market_comparisons"]>> | null>(null),
-    [liveMarketsError, setLiveMarketsError] = useState("");
+    [liveMarketsError, setLiveMarketsError] = useState(""),
+    [publisherRatings, setPublisherRatings] = useState<Record<string, PublisherRating>>({}),
+    [publisherRatingsError, setPublisherRatingsError] = useState("");
   const activeGames = liveGames || games;
+  const publisherTeamIds = useMemo(
+    () => [...new Set(activeGames.flatMap((game) => [game.home_id, game.away_id]))].filter((id) => /^\d+$/.test(id)).slice(0, 400),
+    [activeGames],
+  );
+
+  useEffect(() => {
+    if (!publisherTeamIds.length) return;
+    const controller = new AbortController();
+    const query = new URLSearchParams({ kind: "ratings", season: "2026", metric: "adj_em", ids: publisherTeamIds.join(",") });
+    fetch(`/api/basketball/research/boutique?${query}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Publisher model comparisons unavailable.");
+        return response.json() as Promise<{ rows?: PublisherRating[] }>;
+      })
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        setPublisherRatings(Object.fromEntries((payload.rows || []).map((row) => [row.id, row])));
+        setPublisherRatingsError("");
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setPublisherRatingsError(reason instanceof Error ? reason.message : "Publisher model comparisons unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [publisherTeamIds]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -311,6 +341,13 @@ export default function Matchups({
             ? `${liveGamesError} Showing the published static slate.`
             : "Checking live matchup rows…"}
       </p>
+      <p className="note" role="status">
+        {Object.keys(publisherRatings).length
+          ? `Publisher adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 source release.`
+          : publisherRatingsError
+            ? `${publisherRatingsError} Silvermine ratings remain available.`
+            : "Checking publisher model comparisons…"}
+      </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>
           {rows.length} games · partial schedule · times Eastern when confirmed
@@ -412,6 +449,8 @@ export default function Matchups({
               rosterScenario={rosterScenarioByGame.get(g.id)}
               homeRating={teamRatings[g.home_id]}
               awayRating={teamRatings[g.away_id]}
+              publisherHomeRating={publisherRatings[g.home_id]}
+              publisherAwayRating={publisherRatings[g.away_id]}
             />
             <button
               className="button secondary matchup-prep-toggle"

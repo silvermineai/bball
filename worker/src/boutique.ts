@@ -23,6 +23,9 @@ const querySchema = z.object({
   season: z.coerce.number().int().min(2006).max(2026).default(2026),
   metric: z.string().regex(/^[a-z_]{2,20}$/).optional(),
   q: z.string().trim().max(120).optional(),
+  // Exact source team IDs allow matchup cards to hydrate a compact comparison
+  // set without relying on a fuzzy program-name search.
+  ids: z.string().trim().max(2400).regex(/^\d+(,\d+){0,399}$/).optional(),
   playerId: z.string().regex(/^\d{1,15}$/).optional(),
   page: z.coerce.number().int().min(0).max(250).default(0),
   direction: z.enum(["desc", "asc"]).default("desc"),
@@ -48,8 +51,9 @@ function edgeCache() {
 }
 
 boutique.get("/", zValidator("query", querySchema), async (c) => {
-  const { kind, season, metric: requestedMetric, q, playerId, page, direction, meta } = c.req.valid("query");
+  const { kind, season, metric: requestedMetric, q, ids, playerId, page, direction, meta } = c.req.valid("query");
   if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
+  if (ids && kind !== "ratings") return c.json({ error: "ids is only valid for team rating rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
   const db = researchDb(c.env);
   const cache = edgeCache();
@@ -94,11 +98,15 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
   const table = kind === "ratings" ? "bb_publisher_ratings" : "bb_player_value";
   const path = `$.${metric.key}`;
   const search = q ? `%${q}%` : null;
+  const teamIds = ids ? ids.split(",") : [];
+  const teamIdClause = teamIds.length ? `p.team_id IN (${teamIds.map(() => "?").join(",")})` : null;
   const where = kind === "ratings"
-    ? search ? "p.season=? AND (COALESCE(t.team_name,p.team_id) LIKE ? OR p.team_id LIKE ?)" : "p.season=?"
+    ? teamIdClause ? `p.season=? AND ${teamIdClause}` : search ? "p.season=? AND (COALESCE(t.team_name,p.team_id) LIKE ? OR p.team_id LIKE ?)" : "p.season=?"
     : playerId ? "p.season=? AND p.player_id=?"
       : search ? "p.season=? AND (p.player_name LIKE ? OR COALESCE(t.team_name,p.team_id) LIKE ? OR p.player_id LIKE ?)" : "p.season=?";
-  const binds: Array<string | number> = kind === "players" && playerId
+  const binds: Array<string | number> = teamIds.length
+    ? [season, ...teamIds]
+    : kind === "players" && playerId
     ? [season, playerId]
     : search
       ? kind === "ratings" ? [season, search, search] : [season, search, search, search]

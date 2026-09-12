@@ -19,6 +19,8 @@ export default function BasketballCard({
   rosterScenario,
   homeRating,
   awayRating,
+  publisherHomeRating,
+  publisherAwayRating,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
@@ -26,6 +28,8 @@ export default function BasketballCard({
   rosterScenario?: BBRosterScenario;
   homeRating?: BBTeam;
   awayRating?: BBTeam;
+  publisherHomeRating?: { team: string; value: number | null };
+  publisherAwayRating?: { team: string; value: number | null };
 }) {
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
@@ -107,6 +111,12 @@ export default function BasketballCard({
                 <span>SOS · H / A</span>
                 <span>{fmt(homeRating?.sos, 1)} / {fmt(awayRating?.sos, 1)}</span>
               </div>
+              {(publisherHomeRating || publisherAwayRating) && (
+                <div className="match-detail muted">
+                  <span>Publisher adjusted EM · H / A</span>
+                  <span>{fmt(publisherHomeRating?.value, 1)} / {fmt(publisherAwayRating?.value, 1)}</span>
+                </div>
+              )}
               <div className="button-row" style={{ marginTop: 8 }}>
                 {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} publisher model ↗</Link>}
                 {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} publisher model ↗</Link>}
