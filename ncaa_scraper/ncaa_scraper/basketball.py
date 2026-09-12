@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import hashlib
 import json
 import os
@@ -21,6 +22,21 @@ from .football_sources import ROOT, utcnow
 
 DB = ROOT / ".local/basketball.sqlite3"
 OUT = ROOT / "frontend/public/data/basketball"
+
+# A failed source import can raise after the warehouse connection is opened.
+# Close it at interpreter exit so scheduled refreshes do not leave SQLite
+# handles open (or retain a journal file) after a partial build.
+_ACTIVE_CONNECTION: sqlite3.Connection | None = None
+
+
+def _close_active_connection() -> None:
+    global _ACTIVE_CONNECTION
+    if _ACTIVE_CONNECTION is not None:
+        _ACTIVE_CONNECTION.close()
+        _ACTIVE_CONNECTION = None
+
+
+atexit.register(_close_active_connection)
 STAT_FIELDS = [
     "minutes",
     "field_goals_made",
@@ -2258,6 +2274,7 @@ def source_refresh_enabled(refresh: bool, incremental: bool, year: int) -> bool:
 
 
 def main():
+    global _ACTIVE_CONNECTION
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--build-only", action="store_true")
@@ -2267,6 +2284,7 @@ def main():
 
     DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB)
+    _ACTIVE_CONNECTION = conn
     conn.row_factory = sqlite3.Row
     for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0028_basketball_ncaa_game_archive.sql", "0031_basketball_player_crosswalk.sql", "0032_basketball_game_context.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
@@ -2419,6 +2437,7 @@ def main():
         if not incremental:
             export_ncaa_game_context_sql(conn, context_path)
     conn.close()
+    _ACTIVE_CONNECTION = None
 
 
 if __name__ == "__main__":
