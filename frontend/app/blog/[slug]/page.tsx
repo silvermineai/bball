@@ -32,6 +32,23 @@ const titles: Record<string, string> = {
   "basketball-upcoming-games":
     "Turn the 2026–27 slate into a prep plan.",
 };
+const descriptions: Record<string, string> = {
+  "reading-the-forecast": "How to read a preseason college-sports forecast, its held-out error, uncertainty range and evidence limits.",
+  "understanding-player-epa": "How to compare player production with expected points added, meaningful workload thresholds and source context.",
+  "market-comparison": "Why model-versus-market comparisons require exact participants, provider clocks and a verified pregame observation.",
+  "basketball-four-factors": "A practical guide to Four Factors, pace, forecast ranges and roster evidence for 2026–27 college basketball.",
+  "basketball-impact": "How to use ORAPM, DRAPM, net RAPM and possession samples when comparing college basketball players.",
+  "basketball-recruiting-workload": "How to connect school statements, roster observations and prior college workload without inventing eligibility or a role.",
+  "basketball-player-rates": "How to read NCAA player efficiency and workload rates while keeping denominators, sample size and identity boundaries visible.",
+  "basketball-recruiting-fit": "How to use source-listed roster roles, prior workload and transparent fit percentiles to build a defensible recruiting shortlist.",
+  "basketball-ranking-playbook": "How to move from NCAA player rankings and impact screens to a reviewable scouting or recruiting question.",
+  "basketball-possession-style": "How to read source-recorded possessions, transition share and assisted share as team context without assigning player credit.",
+  "basketball-recruiting-evidence": "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
+  "basketball-availability-evidence": "How to read injury, redshirt and tournament-availability signals without turning a headline or roster row into a ruling.",
+  "basketball-player-game-logs": "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
+  "basketball-roster-transitions": "How to evaluate returning workload across dated NCAA roster transitions without turning a source listing into an eligibility claim.",
+  "basketball-upcoming-games": "A coach-facing workflow for moving from a 2026–27 forecast range to Four Factors, roster evidence, film questions and a documented market check.",
+};
 export function generateStaticParams() {
   return [
     ...Object.keys(titles).map((slug) => ({ slug })),
@@ -65,7 +82,7 @@ export async function generateMetadata({
       ? `Projected score, Four Factors and reporting questions for ${basketballGame.away_name} at ${basketballGame.home_name}, ${date(basketballGame.starts_at)}.`
       : g
         ? `Projected score, unit efficiency, historical player production and scouting questions for ${g.away_name} at ${g.home_name}, ${date(g.kickoff)}.`
-      : title,
+      : descriptions[slug] || title,
     alternates: { canonical: `/blog/${slug}/` },
   };
 }
@@ -88,7 +105,7 @@ export default async function Page({
     "@context": "https://schema.org",
     "@type": "Article",
     headline: titles[slug],
-    description: titles[slug],
+    description: descriptions[slug] || titles[slug],
     datePublished: d.generated_at,
     dateModified: d.generated_at,
     author: { "@type": "Organization", name: "Silvermine Research" },
