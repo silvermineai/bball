@@ -161,6 +161,19 @@ export default function ProspectPage() {
               <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>{source?.methodology || "ESPN rank, grade and commitment fields are source-reported."}</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or NCAA eligibility determination. Use the original ESPN card for the source context.</p><a className="text-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open source record ↗</a></article>
             </div>
           </section>
+          <section className="section paper-panel" aria-labelledby="prospect-research-handoffs">
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Research handoff / separate namespaces</div><h2 id="prospect-research-handoffs">Trace prior production carefully.</h2></div>
+              <span className="note">Searches are leads, not identity joins</span>
+            </div>
+            <p>Use the exact ESPN name as a starting point for the retained NCAA game archive, ESPN profile release and provider crosswalk. Confirm the school, season, source ID and biographical context before attaching prior production to this prospect.</p>
+            <div className="button-row">
+              <Link className="button secondary" href={`/basketball/ncaa-player-box/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search NCAA game archive →</Link>
+              <Link className="button secondary" href={`/basketball/player-profiles/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search ESPN profiles →</Link>
+              <Link className="button secondary" href={`/basketball/crosswalk/?q=${encodeURIComponent(prospect.name)}`}>Check provider crosswalk →</Link>
+            </div>
+            <p className="note" style={{ marginTop: 12 }}>A matching name alone does not establish that an NCAA player row, ESPN profile or cross-publisher identifier belongs to this prospect. The site keeps provider namespaces separate until an audited crosswalk exists.</p>
+          </section>
         </>
       )}
     </>
