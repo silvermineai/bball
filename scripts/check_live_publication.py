@@ -298,28 +298,33 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     release_coverage, recruiting_reviewed_age = validate_reviewed_recruiting_release(
         recruiting_release, checked_at, max_age_hours
     )
-    recruiting_rankings = get_json(
-        base_url,
-        "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1",
-    )
-    prospect_total = recruiting_rankings.get("total")
-    prospect_rows = recruiting_rankings.get("rows")
-    prospect_captured = recruiting_rankings.get("captured_at")
-    prospect_source = recruiting_rankings.get("source")
-    if (
-        recruiting_rankings.get("season") != 2027
-        or not isinstance(prospect_total, int)
-        or prospect_total <= 0
-        or not isinstance(prospect_rows, list)
-        or not prospect_rows
-        or not isinstance(prospect_captured, str)
-        or not isinstance(prospect_source, dict)
-        or prospect_source.get("provider") != "ESPN Recruiting"
-    ):
-        raise ValueError("ESPN recruiting rankings release is malformed or empty")
-    prospect_age = (checked_at - timestamp(prospect_captured)).total_seconds() / 3600
-    if prospect_age < -24 or prospect_age > max_age_hours:
-        raise ValueError(f"ESPN recruiting rankings release is {max(prospect_age, 0):.1f} hours old")
+    prospect_counts = {}
+    prospect_ages = {}
+    for prospect_season in (2026, 2027, 2028):
+        recruiting_rankings = get_json(
+            base_url,
+            f"/api/basketball/research/recruiting-rankings?season={prospect_season}&page=0&publication_check=1",
+        )
+        prospect_total = recruiting_rankings.get("total")
+        prospect_rows = recruiting_rankings.get("rows")
+        prospect_captured = recruiting_rankings.get("captured_at")
+        prospect_source = recruiting_rankings.get("source")
+        if (
+            recruiting_rankings.get("season") != prospect_season
+            or not isinstance(prospect_total, int)
+            or prospect_total <= 0
+            or not isinstance(prospect_rows, list)
+            or not prospect_rows
+            or not isinstance(prospect_captured, str)
+            or not isinstance(prospect_source, dict)
+            or prospect_source.get("provider") != "ESPN Recruiting"
+        ):
+            raise ValueError(f"ESPN recruiting rankings release {prospect_season} is malformed or empty")
+        prospect_age = (checked_at - timestamp(prospect_captured)).total_seconds() / 3600
+        if prospect_age < -24 or prospect_age > max_age_hours:
+            raise ValueError(f"ESPN recruiting rankings release {prospect_season} is {max(prospect_age, 0):.1f} hours old")
+        prospect_counts[str(prospect_season)] = prospect_total
+        prospect_ages[str(prospect_season)] = round(max(prospect_age, 0), 2)
     news = get_json(base_url, "/api/basketball/research/news?meta=1")
     news_summary = news.get("summary")
     news_releases = news.get("releases")
@@ -375,8 +380,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "recruiting_reviewed_events": release_coverage["events"],
         "recruiting_reviewed_sources": release_coverage["sources"],
         "recruiting_reviewed_age_hours": round(max(recruiting_reviewed_age, 0), 2),
-        "recruiting_prospect_rows": prospect_total,
-        "recruiting_prospect_age_hours": round(max(prospect_age, 0), 2),
+        "recruiting_prospect_rows": prospect_counts,
+        "recruiting_prospect_age_hours": prospect_ages,
         "news_archive_total": news_summary["total"],
         "news_latest_published": news_summary.get("latest_published"),
         "news_latest_seen_age_hours": round(max(news_age, 0), 2),
