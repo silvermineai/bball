@@ -38,7 +38,38 @@ def normalize_name(value):
 
 
 def schedules(sport):
-    conn = sqlite3.connect(f"file:{ROOT}/.local/{sport}.sqlite3?mode=ro", uri=True)
+    database = ROOT / ".local" / f"{sport}.sqlite3"
+    # Public collectors should remain usable when a local warehouse is being
+    # rebuilt or has been cleaned up after an interrupted import. The
+    # published basketball overview contains the exact upcoming schedule and
+    # participant IDs needed for strict odds matching; it is only a fallback
+    # and never fabricates aliases or historical rows.
+    if sport == "basketball" and not database.exists():
+        overview_path = ROOT / "frontend/public/data/basketball/overview.json"
+        try:
+            overview = json.loads(overview_path.read_text())
+            games = [
+                dict(game)
+                for game in overview.get("upcoming", [])
+                if isinstance(game, dict)
+            ]
+        except (OSError, TypeError, ValueError) as error:
+            raise sqlite3.OperationalError(
+                "basketball warehouse and published schedule fallback are unavailable"
+            ) from error
+        if not games:
+            raise sqlite3.OperationalError(
+                "basketball warehouse and published schedule fallback are empty"
+            )
+        for game in games:
+            game["starts_at"] = timestamp(game["starts_at"])
+            for side in ("home", "away"):
+                game[f"{side}_aliases"] = {
+                    normalize_name(game[f"{side}_name"])
+                }
+        return games
+
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     aliases = {}
     if sport == "football":

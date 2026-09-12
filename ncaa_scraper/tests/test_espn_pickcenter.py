@@ -1,8 +1,12 @@
 import json
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from ncaa_scraper.espn_pickcenter import BASE_URL, american_to_decimal, build_parser, ingest, parse_pickcenter
+from ncaa_scraper.odds_feed import schedules
 
 
 GAME = {
@@ -77,6 +81,28 @@ class EspnPickcenterTests(unittest.TestCase):
         partial["pickcenter"][0]["moneyline"]["away"]["close"]["odds"] = "OFF"
         rows = parse_pickcenter(partial, GAME, "2026-11-09T20:00:00Z", "receipt")
         self.assertEqual([row[1] for row in rows], ["spreads", "totals"])
+
+    def test_schedule_matching_can_use_published_overview_during_rebuild(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "frontend/public/data/basketball"
+            target.mkdir(parents=True)
+            (target / "overview.json").write_text(json.dumps({"upcoming": [
+                {
+                    "id": GAME["id"],
+                    "starts_at": GAME["starts_at"],
+                    "home_id": GAME["home_id"],
+                    "away_id": GAME["away_id"],
+                    "home_name": "Home University",
+                    "away_name": "Away University",
+                    "completed": 0,
+                    "time_tbd": 0,
+                }
+            ]}))
+            with patch("ncaa_scraper.odds_feed.ROOT", root):
+                games = schedules("basketball")
+            self.assertEqual(len(games), 1)
+            self.assertEqual(games[0]["home_aliases"], {"home university"})
 
     def test_ingest_writes_receipt_and_three_rows(self):
         self.conn = sqlite3.connect(":memory:")
