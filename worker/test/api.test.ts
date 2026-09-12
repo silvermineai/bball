@@ -267,8 +267,8 @@ describe("bball api", () => {
   });
 
   it("returns D1 coverage counts alongside source receipt timestamps", async () => {
-    const prepare = vi.fn().mockReturnValue({
-      all: vi.fn().mockResolvedValue({
+    const prepare = vi.fn((sql: string) => ({
+      all: vi.fn().mockResolvedValue(sql.includes("bb_sources") ? {
         results: [
           {
             dataset: "player_box",
@@ -276,14 +276,17 @@ describe("bball api", () => {
             latest_source_at: "2026-09-08T00:00:00Z",
           },
         ],
-      }),
-    });
+      } : { results: [] }),
+      first: vi.fn().mockResolvedValue(sql.includes("FROM scored")
+        ? { total: 6, paired_box_games: 5, missing_box_games: 1, missing_team_box_rows: 1, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 1, score_mismatch_games: 0, valid_estimate_games: 4 }
+        : sql.includes("FROM bb_games")
+          ? { total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }
+          : undefined),
+    }));
     const batch = vi
       .fn()
       .mockResolvedValue([
         ...Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })),
-        { results: [{ total: 7, neutral: 2, missing_venue: 1, unconfirmed_start: 3, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }] },
-        { results: [{ total: 6, paired_box_games: 5, missing_box_games: 1, missing_team_box_rows: 1, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 1, score_mismatch_games: 0, valid_estimate_games: 4 }] },
       ]);
     const response = await app.request(
       "/api/basketball/research/coverage",
@@ -992,16 +995,19 @@ describe("bball api", () => {
   });
 
   it("reads NCAA player-game coverage from the dedicated archive binding", async () => {
-    const prepare = vi.fn().mockReturnValue({
+    const prepare = vi.fn((sql: string) => ({
       all: vi.fn().mockResolvedValue({ results: [] }),
-    });
+      first: vi.fn().mockResolvedValue(sql.includes("FROM scored")
+        ? { total: 0, paired_box_games: 0, missing_box_games: 0, missing_team_box_rows: 0, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 0, score_mismatch_games: 0, valid_estimate_games: 0 }
+        : sql.includes("FROM bb_games")
+          ? { total: 7, neutral: 0, missing_venue: 0, unconfirmed_start: 0, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }
+          : undefined),
+    }));
     const gamePrepare = vi.fn().mockReturnValue({
       first: vi.fn().mockResolvedValue({ rows: 1771275 }),
     });
     const batch = vi.fn().mockResolvedValue([
-      ...Array.from({ length: 17 }, () => ({ results: [{ rows: 7 }] })),
-      { results: [{ total: 7, neutral: 0, missing_venue: 0, unconfirmed_start: 0, missing_participant: 0, same_participant: 0, invalid_periods: 0, completed_missing_score: 0, negative_score: 0, unfinished_with_score: 0, duplicate_contest_ids: 0, neutral_missing_venue: 0 }] },
-      { results: [{ total: 0, paired_box_games: 0, missing_box_games: 0, missing_team_box_rows: 0, duplicate_team_box_keys: 0, negative_field_games: 0, nonpositive_possession_games: 0, invalid_period_games: 0, outlier_pace_games: 0, score_mismatch_games: 0, valid_estimate_games: 0 }] },
+        ...Array.from({ length: 17 }, () => ({ results: [{ rows: 7 }] })),
     ]);
     const response = await app.request(
       "/api/basketball/research/coverage",
@@ -1013,6 +1019,25 @@ describe("bball api", () => {
     expect(body.coverage.find((entry) => entry.dataset === "ncaa_player_box")).toEqual({ dataset: "ncaa_player_box", rows: 1771275 });
     expect(gamePrepare).toHaveBeenCalledWith("SELECT count(*) AS rows FROM bb_ncaa_player_box");
     expect(batch).toHaveBeenCalledOnce();
+  });
+
+  it("returns a retryable status when the coverage warehouse is busy", async () => {
+    const response = await app.request(
+      "/api/basketball/research/coverage",
+      {},
+      {
+        DB: {
+          prepare: vi.fn(),
+          batch: vi.fn().mockRejectedValue(new Error("database busy")),
+        },
+      },
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Retry-After")).toBe("30");
+    await expect(response.json()).resolves.toEqual({
+      error: "The basketball coverage audit is temporarily unavailable; retry shortly.",
+    });
   });
 
   it("rejects unknown publisher stat fields before querying D1", async () => {

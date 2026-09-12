@@ -57,6 +57,16 @@ function parseObject(value: unknown): Record<string, unknown> {
   }
 }
 
+const COVERAGE_DB_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("coverage database query timed out")), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 type AppEnv = {
   Bindings: Bindings;
   Variables: {
@@ -563,11 +573,16 @@ app.get("/api/basketball/research/coverage", async (c) => {
   const tableNames = Object.keys(tables).filter(
     (dataset) => !dedicatedGameDb || dataset !== "ncaa_player_box",
   );
-  const counts = await db.batch<CoverageCount>([
+  try {
+  // Keep the inexpensive table counts in one batch. The two validation
+  // statements are intentionally separate: D1 can reject a batch containing
+  // a large nested CTE even when each statement succeeds on its own.
+  const counts = await withTimeout(db.batch<CoverageCount>([
     ...tableNames.map((dataset) =>
       db.prepare(`SELECT count(*) AS rows FROM ${tables[dataset as keyof typeof tables]}`),
     ),
-    db.prepare(`SELECT count(*) AS total,
+  ]), COVERAGE_DB_TIMEOUT_MS);
+  const locationValidation = await withTimeout(db.prepare(`SELECT count(*) AS total,
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
       sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
       sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
@@ -578,16 +593,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN completed=1 AND (home_score < 0 OR away_score < 0) THEN 1 ELSE 0 END) AS negative_score,
       sum(CASE WHEN completed=0 AND (home_score IS NOT NULL OR away_score IS NOT NULL) THEN 1 ELSE 0 END) AS unfinished_with_score,
       sum(CASE WHEN neutral=1 AND (venue IS NULL OR venue='') THEN 1 ELSE 0 END) AS neutral_missing_venue,
-      -- Duplicate source IDs are counted before the normalized primary-key
-      -- upsert and carried in the schedule receipt. Existing editions without
-      -- this receipt field report zero rather than querying the legacy schema.
       COALESCE((SELECT sum(COALESCE(CAST(json_extract(receipt_json, '$.integrity.duplicate_source_contest_ids') AS INTEGER), 0))
         FROM bb_sources WHERE dataset='schedule'), 0) AS duplicate_contest_ids
-      FROM bb_games`),
-    // Mirror the model's possession guards against the persisted team box rows.
-    // This is intentionally a read-only diagnostic: it never changes which rows
-    // are published or attributes a player identity.
-    db.prepare(`WITH raw AS (
+      FROM bb_games`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
+  const possessionValidation = await withTimeout(db.prepare(`WITH raw AS (
       SELECT g.id,g.periods,g.home_score,g.away_score,
         h.game_id AS h_box_game_id,
         a.game_id AS a_box_game_id,
@@ -661,22 +670,21 @@ app.get("/api/basketball/research/coverage", async (c) => {
                     AND h_poss > 0 AND a_poss > 0 AND pace BETWEEN 35 AND 100 THEN 1 ELSE 0 END) AS valid_estimate_games,
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
-      FROM scored`),
-  ]);
-  const gameCount = dedicatedGameDb
-    ? await gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>()
-    : null;
+      FROM scored`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
   const countByDataset = new Map(
     tableNames.map((dataset, index) => [dataset, counts[index].results[0].rows]),
   );
+  const gameCount = dedicatedGameDb
+    ? await withTimeout(gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS)
+    : null;
   if (dedicatedGameDb) countByDataset.set("ncaa_player_box", gameCount?.rows ?? 0);
-  const receipts = await db.prepare(
+  const receipts = await withTimeout(db.prepare(
     `SELECT dataset, count(*) AS source_count,
             MAX(json_extract(receipt_json, '$.fetched_at')) AS latest_source_at
        FROM bb_sources
       GROUP BY dataset
       ORDER BY dataset`,
-  ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>();
+  ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>(), COVERAGE_DB_TIMEOUT_MS);
   c.header("Cache-Control", "public, max-age=300");
   const response = c.json({
     coverage: Object.keys(tables).map((dataset) => ({
@@ -684,19 +692,20 @@ app.get("/api/basketball/research/coverage", async (c) => {
       rows: countByDataset.get(dataset) ?? 0,
     })),
     source_receipts: receipts.results,
-    location_validation: (() => {
-      const row = counts[tableNames.length]?.results[0];
-      return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
-    })(),
-    possession_validation: (() => {
-      const row = counts[tableNames.length + 1]?.results[0];
-      return row ? Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)])) : null;
-    })(),
+    location_validation: locationValidation
+      ? Object.fromEntries(Object.entries(locationValidation).map(([key, value]) => [key, Number(value || 0)]))
+      : null,
+    possession_validation: possessionValidation
+      ? Object.fromEntries(Object.entries(possessionValidation).map(([key, value]) => [key, Number(value || 0)]))
+      : null,
   });
   if (cache) {
     c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   }
   return response;
+  } catch {
+    return c.json({ error: "The basketball coverage audit is temporarily unavailable; retry shortly." }, 503, { "Cache-Control": "no-store", "Retry-After": "30" });
+  }
 });
 
 const unresolvedResearchQuery = z.object({
