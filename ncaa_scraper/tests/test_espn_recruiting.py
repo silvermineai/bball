@@ -1,7 +1,8 @@
 import sqlite3
 import unittest
+from unittest.mock import patch
 
-from ncaa_scraper.espn_recruiting import _team_name, sql_export
+from ncaa_scraper.espn_recruiting import _fetch, _team_name, sql_export
 
 
 def release(edition: str, captured_at: str):
@@ -33,6 +34,28 @@ def release(edition: str, captured_at: str):
 
 
 class EspnRecruitingTests(unittest.TestCase):
+    def test_fetch_retries_temporary_source_failures(self):
+        class Response:
+            def __init__(self, status_code, body=b""):
+                self.status_code = status_code
+                self.body = body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def iter_content(self, chunk_size=0):
+                del chunk_size
+                yield self.body
+
+        with patch("ncaa_scraper.espn_recruiting.requests.get", side_effect=[Response(503), Response(200, b'{"ok":true}')]) as get, patch("ncaa_scraper.espn_recruiting.time.sleep"):
+            value, body = _fetch("https://example.test/recruit")
+        self.assertEqual(value, {"ok": True})
+        self.assertEqual(body, b'{"ok":true}')
+        self.assertEqual(get.call_count, 2)
+
     def test_team_name_requires_exact_id_and_prefers_display_name(self):
         self.assertEqual(_team_name({"id": "84", "displayName": "Indiana Hoosiers", "name": "Hoosiers"}, "84"), "Indiana Hoosiers")
         self.assertIsNone(_team_name({"id": "84", "displayName": "Indiana Hoosiers"}, "153"))

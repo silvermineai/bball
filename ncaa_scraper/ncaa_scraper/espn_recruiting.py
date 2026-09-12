@@ -13,6 +13,7 @@ import hashlib
 import json
 import re
 import sqlite3
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -32,6 +33,8 @@ MIGRATION = ROOT / "worker/migrations/0033_espn_recruiting.sql"
 DEFAULT_SQL = ROOT / ".local/espn-recruiting.sql"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 USER_AGENT = "SilvermineResearch/1.0 (bball.silvermine.dev)"
+MAX_FETCH_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 0.4
 
 
 def compact(value: object) -> str:
@@ -43,19 +46,32 @@ def digest(value: object) -> str:
 
 
 def _fetch(url: str) -> tuple[dict, bytes]:
-    with requests.get(url, headers={"Accept": "application/json", "User-Agent": USER_AGENT}, timeout=(5, 20), stream=True, allow_redirects=False) as response:
-        if response.status_code != 200:
-            raise RuntimeError(f"ESPN recruiting source unavailable ({response.status_code})")
-        chunks: list[bytes] = []
-        size = 0
-        for chunk in response.iter_content(chunk_size=64 * 1024):
-            if not chunk:
-                continue
-            size += len(chunk)
-            if size > MAX_RESPONSE_BYTES:
-                raise RuntimeError("ESPN recruiting response exceeds the 2 MB bound")
-            chunks.append(chunk)
-        body = b"".join(chunks)
+    last_error: Exception | None = None
+    for attempt in range(MAX_FETCH_ATTEMPTS):
+        try:
+            with requests.get(url, headers={"Accept": "application/json", "User-Agent": USER_AGENT}, timeout=(5, 20), stream=True, allow_redirects=False) as response:
+                if response.status_code != 200:
+                    if response.status_code == 429 or response.status_code >= 500:
+                        raise requests.HTTPError(f"temporary ESPN response ({response.status_code})")
+                    raise RuntimeError(f"ESPN recruiting source unavailable ({response.status_code})")
+                chunks: list[bytes] = []
+                size = 0
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if not chunk:
+                        continue
+                    size += len(chunk)
+                    if size > MAX_RESPONSE_BYTES:
+                        raise RuntimeError("ESPN recruiting response exceeds the 2 MB bound")
+                    chunks.append(chunk)
+                body = b"".join(chunks)
+            break
+        except requests.RequestException as error:
+            last_error = error
+            if attempt + 1 >= MAX_FETCH_ATTEMPTS:
+                raise RuntimeError("ESPN recruiting source unavailable after bounded retries") from error
+            time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+    else:
+        raise RuntimeError("ESPN recruiting source unavailable after bounded retries") from last_error
     if len(body) > MAX_RESPONSE_BYTES:
         raise RuntimeError("ESPN recruiting response exceeds the 2 MB bound")
     try:
