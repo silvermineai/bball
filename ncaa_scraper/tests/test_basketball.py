@@ -289,6 +289,9 @@ class BasketballIngestTests(unittest.TestCase):
         self.conn.executescript(
             (ROOT / "worker/migrations/0031_basketball_player_crosswalk.sql").read_text()
         )
+        self.conn.executescript(
+            (ROOT / "worker/migrations/0023_basketball_ncaa_shooting.sql").read_text()
+        )
 
     def tearDown(self):
         self.conn.close()
@@ -335,6 +338,34 @@ class BasketballIngestTests(unittest.TestCase):
             ("5241312", "76284", "y-42", "exact_name", 1.0),
         )
 
+    def test_source_labeled_shots_stay_separate_from_ncaa_ids(self):
+        ingest(
+            self.conn,
+            "ncaa_shots",
+            2026,
+            [{
+                "shooter_id": "JaKing",
+                "team_id": "Saint Francis",
+                "shooter_clean_name": "Ja King",
+                "team": "Saint Francis Red Flash",
+                "made": "true",
+                "point_value": "2",
+                "shot_zone": "rim",
+                "shot_type": "unknown",
+                "dist_ft": "4.0",
+            }],
+            {},
+        )
+        row = self.conn.execute(
+            "SELECT player_id,team_id,player_name,team_name,stats_json FROM bb_ncaa_player_shooting"
+        ).fetchone()
+        self.assertEqual(row[0], "source:player:JaKing")
+        self.assertEqual(row[1], "source:team:Saint Francis")
+        self.assertEqual(row[2], "Ja King")
+        self.assertEqual(json.loads(row[4])["identity_basis"], "source_label_only")
+        self.assertEqual(
+            self.conn.execute("SELECT count(*) FROM bb_unresolved").fetchone()[0], 0
+        )
     def test_unknown_numeric_ncaa_source_stats_are_retained(self):
         self.conn.executescript(
             (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()

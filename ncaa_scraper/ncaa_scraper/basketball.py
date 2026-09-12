@@ -91,6 +91,21 @@ def identity(v):
     return str(v).removesuffix(".0")
 
 
+def source_label(v):
+    """Return a usable source label without treating placeholders as IDs."""
+    if v is None:
+        return None
+    value = str(v).strip()
+    if not value or value.casefold() in {".", "-", "na", "n/a", "nan", "none", "null"}:
+        return None
+    return value
+
+
+def source_identity(value, kind):
+    """Namespace a publisher label so it cannot collide with NCAA IDs."""
+    return f"source:{kind}:{source_label(value)}"
+
+
 def canonical_date(v):
     d = datetime.fromisoformat(v.replace("Z", "+00:00"))
     if d.tzinfo is None:
@@ -630,15 +645,33 @@ def ingest(conn, dataset, year, rows, receipt):
                 "types": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
             })
             for i, r in enumerate(rows):
-                if not r.get("shooter_player_id") or not r.get("ncaa_team_id"):
+                canonical_player = source_label(r.get("shooter_player_id"))
+                canonical_team = source_label(r.get("ncaa_team_id"))
+                source_player = source_label(r.get("shooter_id"))
+                source_team = source_label(r.get("team_id"))
+                # The feed uses a synthetic `Team` shooter for team-level
+                # attempts; keep those rows in the unresolved audit rather
+                # than presenting a team total as a player profile.
+                if source_player and source_player.casefold() in {"team", "unknown"}:
+                    source_player = None
+                if canonical_player and canonical_team:
+                    player_id = identity(canonical_player)
+                    team_id = identity(canonical_team)
+                elif source_player and source_team:
+                    # Some NCAA shot releases provide stable source labels but
+                    # no canonical numeric IDs. Keep their aggregates useful
+                    # while making the namespace and limitation explicit.
+                    player_id = source_identity(source_player, "player")
+                    team_id = source_identity(source_team, "team")
+                else:
                     conn.execute(
                         "INSERT INTO bb_unresolved VALUES (?,?,?,?,?)",
                         (dataset, year, i, "Missing NCAA shooter or team ID", json.dumps(r)),
                     )
                     continue
-                key = (identity(r["shooter_player_id"]), identity(r["ncaa_team_id"]))
+                key = (player_id, team_id)
                 entry = groups[key]
-                entry["player_name"] = r.get("shooter_clean_name") or r.get("shooter_id")
+                entry["player_name"] = r.get("shooter_clean_name") or source_player or player_id
                 entry["team_name"] = r.get("team") or r.get("team_id")
                 made_value = r.get("made")
                 made = made_value is True or made_value == 1 or str(made_value).lower() == "true"
@@ -664,6 +697,7 @@ def ingest(conn, dataset, year, rows, receipt):
                             "attempts": entry["attempts"], "makes": entry["makes"], "points": entry["points"],
                             "distance_sum": round(entry["distance_sum"], 4), "distance_count": entry["distance_count"],
                             "zones": entry["zones"], "types": entry["types"],
+                            "identity_basis": "source_label_only" if player_id.startswith("source:") else "ncaa_id",
                         }, separators=(",", ":")),
                     )
                     for (player_id, team_id), entry in groups.items()
