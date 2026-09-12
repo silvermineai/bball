@@ -103,10 +103,11 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     return total, pregame, len(capabilities), len(receipts)
 
 
-def schedule_clock_metadata(payload: dict) -> tuple[int, int]:
+def schedule_clock_metadata(payload: dict, checked_at: datetime, max_age_hours: float) -> tuple[int, int, float | None]:
     """Validate the exact-ID ESPN schedule-clock observation catalog."""
     total = payload.get("total")
     confirmed = payload.get("confirmed")
+    latest = payload.get("latest_observed_at")
     if (
         payload.get("season") != 2027
         or payload.get("provider") != "ESPN Scoreboard"
@@ -117,9 +118,15 @@ def schedule_clock_metadata(payload: dict) -> tuple[int, int]:
         or isinstance(confirmed, bool)
         or confirmed < 0
         or confirmed > total
+        or (total > 0 and not isinstance(latest, str))
     ):
         raise ValueError("basketball schedule-clock metadata is malformed")
-    return total, confirmed
+    if latest is None:
+        return total, confirmed, None
+    age = (checked_at - timestamp(latest)).total_seconds() / 3600
+    if age < -24 or age > max_age_hours:
+        raise ValueError(f"basketball schedule-clock evidence is {max(age, 0):.1f} hours old")
+    return total, confirmed, max(age, 0)
 
 
 def brief_archive_metadata(payload: dict) -> tuple[int, int]:
@@ -474,7 +481,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         base_url,
         "/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1",
     )
-    schedule_clock_total, schedule_clock_confirmed = schedule_clock_metadata(schedule_clock)
+    schedule_clock_total, schedule_clock_confirmed, schedule_clock_age = schedule_clock_metadata(schedule_clock, checked_at, max_age_hours)
 
     careers = get_json(base_url, "/api/basketball/research/careers/meta")
     leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
@@ -569,6 +576,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
         "schedule_clock_observed_games": schedule_clock_total,
         "schedule_clock_confirmed_games": schedule_clock_confirmed,
+        "schedule_clock_latest_age_hours": None if schedule_clock_age is None else round(schedule_clock_age, 2),
         "basketball_player_identified_rows": player_identified,
         "basketball_player_team_entries": player_entries,
         "ncaa_d1_apg_values": ncaa_d1_apg,

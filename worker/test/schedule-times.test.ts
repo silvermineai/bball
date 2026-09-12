@@ -3,7 +3,7 @@ import { scheduleTimes } from "../src/schedule-times";
 
 describe("basketball schedule clock observations", () => {
   it("reports confirmed and observed counts from the latest row per game", async () => {
-    const first = vi.fn().mockResolvedValue({ total: 4, confirmed: 2 });
+    const first = vi.fn().mockResolvedValue({ total: 4, confirmed: 2, latest_observed_at: "2026-09-12T00:00:00Z" });
     const prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first })) }));
     const response = await scheduleTimes.request(
       "/?season=2027&meta=1",
@@ -11,7 +11,7 @@ describe("basketball schedule clock observations", () => {
       { RESEARCH_DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ season: 2027, total: 4, confirmed: 2, provider: "ESPN Scoreboard" });
+    await expect(response.json()).resolves.toMatchObject({ season: 2027, total: 4, confirmed: 2, latest_observed_at: "2026-09-12T00:00:00Z", provider: "ESPN Scoreboard" });
     expect(String((prepare.mock.calls as unknown as Array<[string]>)[0]?.[0])).toContain("ROW_NUMBER");
   });
 

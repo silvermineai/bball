@@ -62,14 +62,16 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
     if (meta === "1") {
       const result = await withTimeout(db.prepare(`${LATEST}
         SELECT count(*) AS total,
-          sum(CASE WHEN ranked.source_time_valid=1 THEN 1 ELSE 0 END) AS confirmed
+          sum(CASE WHEN ranked.source_time_valid=1 THEN 1 ELSE 0 END) AS confirmed,
+          max(ranked.observed_at) AS latest_observed_at
         FROM ranked JOIN bb_games g ON g.id=ranked.game_id
         WHERE ranked.row_number=1 AND ${filter}`
-      ).bind(...binds).first<{ total: number; confirmed: number | null }>(), DB_TIMEOUT_MS);
+      ).bind(...binds).first<{ total: number; confirmed: number | null; latest_observed_at: string | null }>(), DB_TIMEOUT_MS);
       const response = c.json({
         season,
         total: Number(result?.total || 0),
         confirmed: Number(result?.confirmed || 0),
+        latest_observed_at: result?.latest_observed_at || null,
         provider: "ESPN Scoreboard",
         policy: "Exact ESPN event and participant IDs are required. Source timeValid is shown as an observation and never rewrites the canonical schedule or forecast registration.",
       });
