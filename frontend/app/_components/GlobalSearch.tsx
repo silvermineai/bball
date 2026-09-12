@@ -10,6 +10,7 @@ type RatingResponse = { board?: Array<{ id?: string | number; name?: string }> }
 type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team"; source?: "ncaa" | "football"; latest_season?: number };
 type LegacyResponse = { results?: LegacyRow[] };
 type RecruitingResponse = { people?: SearchRecruitingPerson[] };
+type ProspectResponse = { rows?: Array<{ athlete_id?: string; name?: string; position?: string | null; committed_team_name?: string | null }> };
 type RosterResponse = { players?: SearchRosterPerson[] };
 
 let programsPromise: Promise<SearchProgram[]> | null = null;
@@ -58,6 +59,9 @@ export default function GlobalSearch() {
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
         loadRecruiting(),
+        fetch(`/api/basketball/research/recruiting-rankings?season=2027&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<ProspectResponse> : { rows: [] })
+          .then((payload) => payload.rows || []),
         fetch(`/api/basketball/research/rosters?season=2027&q=${encodeURIComponent(needle)}&limit=5`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<RosterResponse> : { players: [] })
           .then((payload) => payload.players || []),
@@ -66,7 +70,7 @@ export default function GlobalSearch() {
         fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_fbl`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
       ])
-        .then(([players, programs, recruitingPeople, rosterPeople, basketballArchive, football]) => {
+        .then(([players, programs, recruitingPeople, prospects, rosterPeople, basketballArchive, football]) => {
           const playerResults: SearchResult[] = (players.rows || [])
             .filter((row): row is PlayerRow & { id: string; name: string } => !!row.id && !!row.name)
             .slice(0, 5)
@@ -101,6 +105,17 @@ export default function GlobalSearch() {
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}`,
             }));
           const recruitingResults = searchRecruitingPeople(recruitingPeople, needle, 3);
+          const prospectResults: SearchResult[] = prospects
+            .filter((row): row is { athlete_id: string; name: string; position?: string | null; committed_team_name?: string | null } => !!row.athlete_id && !!row.name)
+            .slice(0, 3)
+            .map((row) => ({
+              id: `espn-recruit-${row.athlete_id}`,
+              name: row.name,
+              type: "player",
+              sport: "basketball",
+              detail: `ESPN prospect${row.committed_team_name ? ` · ${row.committed_team_name}` : row.position ? ` · ${row.position}` : ""}`,
+              href: `/basketball/recruiting/?q=${encodeURIComponent(row.name)}`,
+            }));
           const rosterResults = searchRosterPeople(rosterPeople, needle, 3);
           const footballResults: SearchResult[] = (football.results || [])
             .filter((row): row is LegacyRow & { id: string; name: string; type: "player" | "team" } => !!row.id && !!row.name && !!row.type)
@@ -115,7 +130,7 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...rosterResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...prospectResults, ...rosterResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
           setOpen(true);
         })
         .catch((reason: unknown) => {
