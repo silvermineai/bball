@@ -152,6 +152,8 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         const response = c.json({
           seasons,
           total: Number((gameCount?.total || seasonCount?.total || 0)),
+          game_rows: Number(gameCount?.total || 0),
+          season_rows: Number(seasonCount?.total || 0),
           source: {
             url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
             fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
@@ -214,6 +216,8 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       const response = c.json({
         seasons,
         total: Number((gameCount?.total || seasonCount?.total || 0)),
+        game_rows: Number(gameCount?.total || 0),
+        season_rows: Number(seasonCount?.total || 0),
         source: {
           url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
           fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,

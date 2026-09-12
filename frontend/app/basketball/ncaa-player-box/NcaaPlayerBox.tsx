@@ -24,7 +24,7 @@ type ArchiveValidation = {
   invalid_minutes: number;
   zero_minutes_with_stats: number;
 };
-type Meta = { seasons: number[]; total: number; source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
+type Meta = { seasons: number[]; total: number; game_rows?: number; season_rows?: number; source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
 type FieldCoverage = {
   fields: string[];
   seasons: Array<{
@@ -196,8 +196,8 @@ export default function NcaaPlayerBox() {
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Rows in {season === "all" ? "archive" : "selected season"}</span></div>
       <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Source seasons</span></div>
-      <div><strong>50</strong><span>Rows per page</span></div>
-      <div><strong>NCAA</strong><span>Identity namespace</span></div>
+      <div><strong>{season === "all" ? meta?.game_rows?.toLocaleString() ?? "—" : "50"}</strong><span>{season === "all" ? "Game rows across archive" : "Rows per page"}</span></div>
+      <div><strong>{season === "all" ? meta?.season_rows?.toLocaleString() ?? "—" : "NCAA"}</strong><span>{season === "all" ? "Season summaries across archive" : "Identity namespace"}</span></div>
     </div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}><option value="all">All retained seasons</option>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>

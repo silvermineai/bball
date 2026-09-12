@@ -76,6 +76,8 @@ describe("NCAA player source archive", () => {
     await expect(response.json()).resolves.toMatchObject({
       seasons: [2026],
       total: 7,
+      game_rows: 7,
+      season_rows: 3,
       source: { url: "https://example.test/player-box.parquet", sha256: digest },
       validation: { total_rows: 7 },
     });
