@@ -7,6 +7,7 @@ describe("market archive metadata", () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2025 }] },
       { results: [{ total: 0, pregame: 0 }] },
+      { results: [] },
     ]);
     const response = await markets.request(
       "/?meta=1&sport=basketball",
@@ -16,12 +17,32 @@ describe("market archive metadata", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as {
       provider_capabilities: Array<{ provider: string; markets: string[]; provider_update_clock: boolean }>;
+      archive_receipts: Array<{ dataset: string; season: number; url: string; sha256: string }>;
     };
     expect(body.provider_capabilities).toEqual([
       expect.objectContaining({ provider: "The Odds API", markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
       expect.objectContaining({ provider: "CollegeBasketballData.com API", markets: ["h2h"], provider_update_clock: false }),
       expect.objectContaining({ provider: "ESPN Summary", markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
+    expect(body.archive_receipts).toEqual([]);
+  });
+
+  it("returns retained football betting release receipts", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2025 }] },
+      { results: [{ total: 12, pregame: 0 }] },
+      { results: [{ dataset: "betting", season: 2025, receipt_json: JSON.stringify({
+        url: "https://example.com/betting.csv",
+        fetched_at: "2026-09-12T00:00:00Z",
+        sha256: "a".repeat(64),
+        attribution: { name: "SportsDataverse", license: "CC BY 4.0" },
+      }) }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=football", {}, { DB: { prepare: vi.fn(), batch } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ archive_receipts: [
+      expect.objectContaining({ dataset: "betting", season: 2025, url: "https://example.com/betting.csv", sha256: "a".repeat(64), attribution: { name: "SportsDataverse", license: "CC BY 4.0" } }),
+    ] });
   });
 
   it("keeps football market reads on the football archive", async () => {

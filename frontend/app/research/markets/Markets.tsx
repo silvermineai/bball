@@ -18,6 +18,20 @@ type Meta = {
     docs_url: string;
     policy: string;
   }>;
+  archive_receipts?: Array<{
+    dataset: string;
+    season: number;
+    url: string;
+    fetched_at: string;
+    sha256: string;
+    attribution?: {
+      name?: string;
+      url?: string;
+      license?: string;
+      license_url?: string;
+      upstream?: string;
+    };
+  }>;
 };
 type Row = {
   game_id: string;
@@ -205,6 +219,22 @@ export default function Markets() {
             <strong>{capability.provider}</strong> · {capability.markets.join(", ")} · {capability.provider_update_clock ? "provider update clock required" : "capture clock only"} · <a href={capability.docs_url} target="_blank" rel="noreferrer">API reference ↗</a>
           </span>)}
         </div> : null}
+        {meta?.archive_receipts?.length ? <details className="note" style={{ marginTop: 14 }}>
+          <summary>Retained archive source receipts</summary>
+          <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="data-table">
+              <thead><tr><th>Dataset</th><th>Season</th><th>Fetched (UTC)</th><th>SHA-256</th><th>Attribution</th></tr></thead>
+              <tbody>{meta.archive_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}>
+                <th><a href={receipt.url} target="_blank" rel="noreferrer">{receipt.dataset.replaceAll("_", " ")} ↗</a></th>
+                <td>{receipt.season}</td>
+                <td>{clock(receipt.fetched_at)}</td>
+                <td><code>{receipt.sha256}</code></td>
+                <td>{receipt.attribution?.name || "Source publisher"}{receipt.attribution?.license ? ` · ${receipt.attribution.license}` : ""}{receipt.attribution?.upstream ? <small>{receipt.attribution.upstream}</small> : null}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p style={{ marginTop: 12 }}>Receipts identify the retained release behind the archive. Historical rows without a verified pregame capture clock remain reference evidence and do not enter prospective betting evaluation.</p>
+        </details> : null}
       </div>
       <div className="toolbar">
         <label className="control"><span>SPORT</span><select value={sport} onChange={(e) => { setSport(e.target.value as typeof sport); setPage(0); setSeason("2025"); }}><option value="football">College football</option><option value="basketball">Men&apos;s college basketball</option></select></label>

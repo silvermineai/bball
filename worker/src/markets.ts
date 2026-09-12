@@ -53,6 +53,48 @@ const providerCapabilities = [
   },
 ];
 
+type ArchiveReceipt = {
+  dataset: string;
+  season: number;
+  url: string;
+  fetched_at: string;
+  sha256: string;
+  attribution?: {
+    name?: string;
+    url?: string;
+    license?: string;
+    license_url?: string;
+    upstream?: string;
+  };
+};
+
+function parseArchiveReceipts(value: unknown): ArchiveReceipt[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const item = row as { dataset?: unknown; season?: unknown; receipt_json?: unknown };
+    if (typeof item.dataset !== "string" || typeof item.season !== "number" || !Number.isInteger(item.season) || typeof item.receipt_json !== "string") return [];
+    try {
+      const receipt = JSON.parse(item.receipt_json) as Record<string, unknown>;
+      if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
+      const rawAttribution = receipt.attribution;
+      const attribution = rawAttribution && typeof rawAttribution === "object" && !Array.isArray(rawAttribution)
+        ? rawAttribution as ArchiveReceipt["attribution"]
+        : undefined;
+      return [{
+        dataset: item.dataset,
+        season: item.season,
+        url: receipt.url,
+        fetched_at: receipt.fetched_at,
+        sha256: receipt.sha256,
+        ...(attribution ? { attribution } : {}),
+      } satisfies ArchiveReceipt];
+    } catch {
+      return [];
+    }
+  });
+}
+
 markets.get("/", zValidator("query", querySchema), async (c) => {
   const { sport, season, q, page, meta } = c.req.valid("query");
   const football = sport === "football";
@@ -78,16 +120,20 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     const archiveSql = football
       ? "SELECT count(*) AS total, sum(is_pregame) AS pregame FROM football_markets"
       : "SELECT count(*) AS total, count(*) AS pregame FROM audit_markets WHERE sport=?";
+    const receiptsSql = football
+      ? "SELECT dataset,season,receipt_json FROM football_sources WHERE dataset='betting' ORDER BY season DESC"
+      : "SELECT '' AS dataset,0 AS season,'' AS receipt_json WHERE 1=0";
     try {
-      const [seasons, archive] = football
-        ? await withTimeout(db.batch([db.prepare(seasonsSql), db.prepare(archiveSql)]), DB_TIMEOUT_MS)
-        : await withTimeout(db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport)]), DB_TIMEOUT_MS);
+      const [seasons, archive, receipts] = football
+        ? await withTimeout(db.batch([db.prepare(seasonsSql), db.prepare(archiveSql), db.prepare(receiptsSql)]), DB_TIMEOUT_MS)
+        : await withTimeout(db.batch([db.prepare(seasonsSql).bind(sport), db.prepare(archiveSql).bind(sport), db.prepare(receiptsSql).bind(sport)]), DB_TIMEOUT_MS);
       const response = c.json({
         sport,
         seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
         total: Number((archive.results[0] as { total: number }).total || 0),
         pregame: Number((archive.results[0] as { pregame: number | null }).pregame || 0),
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
+        archive_receipts: parseArchiveReceipts(receipts?.results),
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
