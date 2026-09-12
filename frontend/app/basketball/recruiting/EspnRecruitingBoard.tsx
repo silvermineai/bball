@@ -227,6 +227,12 @@ export default function EspnRecruitingBoard() {
   const movementEvidence = result?.rank_movement
     ? result.rank_movement.moved_up + result.rank_movement.moved_down + result.rank_movement.unchanged + result.rank_movement.rank_unavailable
     : 0;
+  const shortlistRanked = shortlist.filter((entry) => entry.rank != null);
+  const shortlistAverageRank = shortlistRanked.length
+    ? shortlistRanked.reduce((sum, entry) => sum + (entry.rank || 0), 0) / shortlistRanked.length
+    : null;
+  const shortlistCommitted = shortlist.filter((entry) => Boolean(entry.committed_team_name)).length;
+  const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   return (
     <section className="section">
       <div className="section-heading">
@@ -252,6 +258,13 @@ export default function EspnRecruitingBoard() {
           <span className="note">{shortlist.length} saved · available on this browser</span>
         </div>
         <p className="note">Shortlist entries preserve the ESPN class, exact athlete ID and source link. They stay in this browser and do not merge identities across providers.</p>
+        <div className="strip" aria-label="Shortlist summary" style={{ marginBottom: 16 }}>
+          <div><strong>{shortlist.length.toLocaleString()}</strong><span>Saved prospects</span></div>
+          <div><strong>{shortlistRanked.length.toLocaleString()}</strong><span>With source rank</span></div>
+          <div><strong>{shortlistAverageRank == null ? "—" : `#${shortlistAverageRank.toFixed(0)}`}</strong><span>Average rank</span></div>
+          <div><strong>{shortlistCommitted.toLocaleString()}</strong><span>Source-listed commitments</span></div>
+        </div>
+        {shortlistPositions && <p className="note" style={{ marginBottom: 12 }}>Position mix: {shortlistPositions}. Use the source links and prospect dossiers to verify each entry after a later release.</p>}
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Commitment</th><th>Source snapshot</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{grade(row.grade)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>)}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
       </section>}
