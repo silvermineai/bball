@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { downloadCsv, toCsv } from "../../_lib/csv";
 
 type Prospect = {
   athlete_id: string;
@@ -58,6 +59,8 @@ export default function EspnRecruitingBoard() {
   const [copied, setCopied] = useState("");
   const [classSnapshots, setClassSnapshots] = useState<ClassSnapshot[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("q");
@@ -94,6 +97,39 @@ export default function EspnRecruitingBoard() {
       setCopied("Recruiting board link copied.");
     } catch {
       setCopied("Copy the filtered URL from your address bar.");
+    }
+  };
+  const exportHeaders = ["season", "rank", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "status", "high_school", "hometown", "athlete_id", "source_url"];
+  const exportRow = (row: Prospect) => [season, row.rank, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url];
+  const downloadPage = () => {
+    if (!result) return;
+    downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
+    setExportMessage(`Downloaded ${result.rows.length.toLocaleString()} prospects from this page.`);
+  };
+  const downloadAll = async () => {
+    if (!result || exporting) return;
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} prospects…`);
+    try {
+      const all: Prospect[] = [];
+      const pages = Math.max(1, Math.ceil(result.total / result.page_size));
+      for (let requestedPage = 0; requestedPage < pages; requestedPage += 1) {
+        const params = new URLSearchParams({ season, page: String(requestedPage), committed });
+        if (query.trim()) params.set("q", query.trim());
+        if (position) params.set("position", position);
+        if (rankMax) params.set("rank_max", rankMax);
+        const response = await fetch(`/api/basketball/research/recruiting-rankings?${params}`);
+        if (!response.ok) throw new Error("The complete recruiting export could not be loaded.");
+        const payload = await response.json() as Result;
+        all.push(...payload.rows);
+        setExportMessage(`Preparing ${all.length.toLocaleString()} of ${result.total.toLocaleString()} prospects…`);
+      }
+      downloadCsv(`espn-recruiting-${season}-filtered.csv`, toCsv(exportHeaders, all.map(exportRow)));
+      setExportMessage(`Downloaded ${all.length.toLocaleString()} filtered prospects.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete recruiting export could not be loaded.");
+    } finally {
+      setExporting(false);
     }
   };
   useEffect(() => {
@@ -175,6 +211,11 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          <div className="button-row" style={{ marginBottom: 16 }}>
+            <button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button>
+            <button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>
+          </div>
+          {exportMessage && <p className="note" role="status">{exportMessage}</p>}
           {committed !== "no" && (result.commitment_destinations || []).length > 0 && <section className="paper-panel" aria-label="Recruiting commitment destinations" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Destination board / active cohort</div><h3>Where the commitments are landing.</h3></div>
