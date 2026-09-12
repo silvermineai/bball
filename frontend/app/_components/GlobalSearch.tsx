@@ -59,7 +59,7 @@ export default function GlobalSearch() {
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
         loadRecruiting(),
-        Promise.all([2026, 2027, 2028].map((season) =>
+        Promise.all([2026, 2027, 2028, 2029].map((season) =>
           fetch(`/api/basketball/research/recruiting-rankings?season=${season}&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
             .then((response) => response.ok ? response.json() as Promise<ProspectResponse> : { rows: [] })
             .then((payload) => (payload.rows || []).map((row) => ({ ...row, season })))
