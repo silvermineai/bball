@@ -4,12 +4,41 @@ from unittest.mock import patch
 
 from scripts.check_live_publication import (
     check_live,
+    player_box_field_metadata,
     validate_recruiting_destinations,
     validate_reviewed_recruiting_release,
 )
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_accepts_complete_player_box_field_coverage(self):
+        payload = {
+            "fields": ["pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"],
+            "seasons": [{
+                "season": 2026,
+                "rows": 10,
+                "fields": {
+                    field: {"observed": 10, "share": 1.0}
+                    for field in ("pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb")
+                },
+            }],
+        }
+        self.assertEqual(player_box_field_metadata(payload), (9, 10, 9))
+
+    def test_rejects_player_box_field_coverage_without_core_stat(self):
+        with self.assertRaisesRegex(ValueError, "missing core stats"):
+            player_box_field_metadata({
+                "fields": ["pts", "mins"],
+                "seasons": [{
+                    "season": 2026,
+                    "rows": 10,
+                    "fields": {
+                        "pts": {"observed": 10, "share": 1.0},
+                        "mins": {"observed": 10, "share": 1.0},
+                    },
+                }],
+            })
+
     def test_accepts_destination_mix_that_reconciles_to_total(self):
         validate_recruiting_destinations([
             {
@@ -120,6 +149,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                     },
                 },
             },
+            "/data/basketball/ncaa-player-box-fields.json": {
+                "fields": ["pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"],
+                "seasons": [{"season": 2026, "rows": 100, "fields": {field: {"observed": 100, "share": 1.0} for field in ("pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb")}}],
+            },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
@@ -174,6 +207,9 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["basketball_player_team_entries"], 9990)
         self.assertEqual(report["ncaa_d1_apg_values"], 1791)
         self.assertEqual(report["ncaa_d1_ast_values"], 1791)
+        self.assertEqual(report["ncaa_box_field_count"], 9)
+        self.assertEqual(report["ncaa_box_latest_rows"], 100)
+        self.assertEqual(report["ncaa_box_observed_fields"], 9)
         self.assertEqual(report["news_archive_total"], 83)
         self.assertEqual(report["news_latest_seen_age_hours"], 1.0)
         self.assertEqual(report["basketball_market_observations"], 0)
@@ -229,6 +265,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},
+            },
+            "/data/basketball/ncaa-player-box-fields.json": {
+                "fields": ["pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"],
+                "seasons": [{"season": 2026, "rows": 100, "fields": {field: {"observed": 100, "share": 1.0} for field in ("pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb")}}],
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
@@ -328,6 +368,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "2": {"players": 1020, "apg": 0},
                     "3": {"players": 1031, "apg": 0},
                 }},
+            },
+            "/data/basketball/ncaa-player-box-fields.json": {
+                "fields": ["pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"],
+                "seasons": [{"season": 2026, "rows": 100, "fields": {field: {"observed": 100, "share": 1.0} for field in ("pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb")}}],
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
             "/api/basketball/research/recruiting?season=2027&publication_check=1": {

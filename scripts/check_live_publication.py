@@ -154,6 +154,58 @@ def player_catalog_metadata(careers: dict, leaders: dict) -> tuple[int, int, int
     return identified, entries, d1_apg, d1_ast
 
 
+def player_box_field_metadata(payload: dict) -> tuple[int, int, int]:
+    """Validate the field-level NCAA box archive completeness artifact."""
+    fields = payload.get("fields")
+    seasons = payload.get("seasons")
+    if not isinstance(fields, list) or not fields or any(
+        not isinstance(field, str) or not field.strip() for field in fields
+    ):
+        raise ValueError("NCAA player box field coverage is malformed")
+    if len(set(fields)) != len(fields):
+        raise ValueError("NCAA player box field coverage has duplicate fields")
+    if not isinstance(seasons, list) or not seasons:
+        raise ValueError("NCAA player box field coverage has no seasons")
+    latest = max(
+        (row for row in seasons if isinstance(row, dict)),
+        key=lambda row: int(row.get("season", 0) or 0),
+        default=None,
+    )
+    if not latest or int(latest.get("season", 0) or 0) != 2026:
+        raise ValueError("NCAA player box field coverage has no 2025–26 season")
+    rows = latest.get("rows")
+    coverage = latest.get("fields")
+    if not isinstance(rows, int) or rows <= 0 or not isinstance(coverage, dict):
+        raise ValueError("NCAA player box field coverage is malformed")
+    for field in fields:
+        item = coverage.get(field)
+        if not isinstance(item, dict):
+            raise ValueError("NCAA player box field coverage is incomplete")
+        observed = item.get("observed")
+        share = item.get("share")
+        if (
+            not isinstance(observed, int)
+            or isinstance(observed, bool)
+            or observed < 0
+            or observed > rows
+            or not isinstance(share, (int, float))
+            or isinstance(share, bool)
+            or not 0 <= share <= 1
+        ):
+            raise ValueError("NCAA player box field coverage is malformed")
+    required = {"pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"}
+    if any(
+        field not in coverage or not isinstance(coverage[field].get("observed"), int)
+        or coverage[field]["observed"] <= 0
+        for field in required
+    ):
+        raise ValueError("NCAA player box field coverage is missing core stats")
+    return len(fields), rows, sum(
+        1 for item in coverage.values()
+        if isinstance(item, dict) and isinstance(item.get("observed"), int) and item["observed"] > 0
+    )
+
+
 def validate_reviewed_recruiting_release(
     payload: dict,
     checked_at: datetime,
@@ -371,6 +423,8 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     careers = get_json(base_url, "/api/basketball/research/careers/meta")
     leaders = get_json(base_url, "/api/basketball/research/ncaa-leaders?meta=1")
     player_identified, player_entries, ncaa_d1_apg, ncaa_d1_ast = player_catalog_metadata(careers, leaders)
+    player_box_fields = get_json(base_url, "/data/basketball/ncaa-player-box-fields.json")
+    ncaa_box_field_count, ncaa_box_latest_rows, ncaa_box_observed_fields = player_box_field_metadata(player_box_fields)
 
     recruiting = get_json(base_url, "/api/basketball/research/recruiting-intake?season=2027")
     if not isinstance(recruiting.get("total"), int) or not isinstance(recruiting.get("providers"), list):
@@ -457,6 +511,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "basketball_player_team_entries": player_entries,
         "ncaa_d1_apg_values": ncaa_d1_apg,
         "ncaa_d1_ast_values": ncaa_d1_ast,
+        "ncaa_box_field_count": ncaa_box_field_count,
+        "ncaa_box_latest_rows": ncaa_box_latest_rows,
+        "ncaa_box_observed_fields": ncaa_box_observed_fields,
         # Keep provider intake and reviewed school evidence separate. The
         # former can be zero when no licensed export is configured while the
         # latter remains the public recruiting release.
