@@ -155,15 +155,28 @@ export default function CoverageLive() {
   const [careerError, setCareerError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    const load = <T,>(url: string, onValue: (value: T) => void, onError: (value: string) => void) => fetch(url, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("The live D1 coverage check is unavailable.");
-        return response.json() as Promise<T>;
-      })
-      .then((value) => { if (!controller.signal.aborted) onValue(value); })
-      .catch((reason: unknown) => {
-        if ((reason as { name?: string })?.name !== "AbortError") onError(reason instanceof Error ? reason.message : "The live D1 coverage check is unavailable.");
-      });
+    const load = async <T,>(url: string, onValue: (value: T) => void, onError: (value: string) => void) => {
+      let failure: unknown;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const response = await fetch(url, { signal: controller.signal });
+          if (response.ok) {
+            const value = await response.json() as T;
+            if (!controller.signal.aborted) onValue(value);
+            return;
+          }
+          failure = new Error("The live D1 coverage check is unavailable.");
+          if (response.status !== 429 && response.status < 500) break;
+        } catch (reason: unknown) {
+          if ((reason as { name?: string })?.name === "AbortError") return;
+          failure = reason;
+        }
+        if (attempt === 0 && !controller.signal.aborted) {
+          await new Promise((resolve) => window.setTimeout(resolve, 350));
+        }
+      }
+      if (!controller.signal.aborted) onError(failure instanceof Error ? failure.message : "The live D1 coverage check is unavailable.");
+    };
     void load("/api/basketball/research/coverage", setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
