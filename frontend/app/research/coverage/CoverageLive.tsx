@@ -164,6 +164,7 @@ export default function CoverageLive() {
   const [error, setError] = useState("");
   const [footballError, setFootballError] = useState("");
   const [careerError, setCareerError] = useState("");
+  const [retryNonce, setRetryNonce] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     const load = async <T,>(url: string, onValue: (value: T) => void, onError: (value: string) => void) => {
@@ -208,7 +209,7 @@ export default function CoverageLive() {
         if ((reason as { name?: string })?.name !== "AbortError") setCareerError(reason instanceof Error ? reason.message : "The live career archive check is unavailable.");
       });
     return () => controller.abort();
-  }, []);
+  }, [retryNonce]);
 
   const rows = data?.coverage.filter((row) => labels[row.dataset]) || [];
   const footballRows = football?.coverage || [];
@@ -232,8 +233,8 @@ export default function CoverageLive() {
         <span className="note">{data && football ? "Football + basketball reads successful" : error || footballError ? "One D1 read unavailable" : "Checking D1…"}</span>
       </div>
       <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
-      {error && <p className="status-error" role="alert">Basketball: {error}</p>}
-      {footballError && <p className="status-error" role="alert">Football: {footballError}</p>}
+      {error && <p className="status-error" role="alert">Basketball: {error} <button className="button secondary" type="button" onClick={() => { setError(""); setRetryNonce((value) => value + 1); }}>Retry live checks</button></p>}
+      {footballError && <p className="status-error" role="alert">Football: {footballError} <button className="button secondary" type="button" onClick={() => { setFootballError(""); setRetryNonce((value) => value + 1); }}>Retry live checks</button></p>}
       {(basketballModel || footballModel || recruiting?.coverage || news?.summary || briefArchive || basketballMarkets || footballMarkets) && <div className="strip" style={{ marginTop: 20 }}>
         <div>
           <strong>{basketballModel?.forecasts?.toLocaleString() ?? "—"}</strong>
