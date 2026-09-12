@@ -1,7 +1,8 @@
-"""Register current forecasts, optionally capture licensed odds, publish the scorecard.
+"""Register current forecasts, optionally capture market quotes, publish the scorecard.
 
 Refresh either sport first to collect newer schedules/results. --odds performs
-at most one call per in-season sport through an already-configured account.
+at most one call per in-season sport through an already-configured account;
+--espn-lines captures bounded prospective public ESPN summaries for basketball.
 """
 
 import argparse
@@ -16,6 +17,7 @@ PY = sys.executable
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--odds", action="store_true")
 parser.add_argument("--cbbd-lines", action="store_true", help="capture authorized CBBD pregame moneylines")
+parser.add_argument("--espn-lines", action="store_true", help="capture prospective ESPN basketball pickcenter quotes")
 args = parser.parse_args()
 
 
@@ -58,6 +60,17 @@ if args.odds:
     )
 if args.cbbd_lines:
     run([PY, "-m", "ncaa_scraper.cbbd_lines", "--season", "2027"])
+    run(
+        [
+            PY,
+            "-m",
+            "ncaa_scraper.research_ledger",
+            "--sql",
+            str(ROOT / ".local/research-ledger.sql"),
+        ]
+    )
+if args.espn_lines:
+    run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027"])
     run(
         [
             PY,

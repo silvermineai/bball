@@ -43,6 +43,14 @@ const providerCapabilities = [
     docs_url: "https://api.collegebasketballdata.com/api/lines",
     policy: "The lines endpoint has a game start clock but no quote update clock; only captured pregame moneylines qualify.",
   },
+  {
+    provider: "ESPN Summary",
+    sports: ["basketball"],
+    markets: ["h2h", "spreads", "totals"],
+    provider_update_clock: false,
+    docs_url: "https://www.espn.com/mens-college-basketball/",
+    policy: "Public summary pickcenter values are captured prospectively with the observation clock; exact event, participant and start-time checks are required, and historical summaries are not replayed.",
+  },
 ];
 
 markets.get("/", zValidator("query", querySchema), async (c) => {

@@ -20,6 +20,7 @@ describe("market archive metadata", () => {
     expect(body.provider_capabilities).toEqual([
       expect.objectContaining({ provider: "The Odds API", markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
       expect.objectContaining({ provider: "CollegeBasketballData.com API", markets: ["h2h"], provider_update_clock: false }),
+      expect.objectContaining({ provider: "ESPN Summary", markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
   });
 
