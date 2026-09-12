@@ -2,10 +2,61 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from scripts.check_live_publication import check_live, validate_reviewed_recruiting_release
+from scripts.check_live_publication import (
+    check_live,
+    validate_recruiting_destinations,
+    validate_reviewed_recruiting_release,
+)
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_accepts_destination_mix_that_reconciles_to_total(self):
+        validate_recruiting_destinations([
+            {
+                "team_id": "248",
+                "team": "Houston Cougars",
+                "total": 3,
+                "ranked_total": 3,
+                "top100_total": 2,
+                "best_rank": 36,
+                "average_rank": 49.5,
+                "position_breakdown": [
+                    {"position": "PG", "total": 2},
+                    {"position": "C", "total": 1},
+                ],
+            },
+        ])
+
+    def test_rejects_destination_mix_that_does_not_reconcile(self):
+        with self.assertRaisesRegex(ValueError, "does not reconcile"):
+            validate_recruiting_destinations([
+                {
+                    "team_id": "248",
+                    "team": "Houston Cougars",
+                    "total": 3,
+                    "ranked_total": 3,
+                    "top100_total": 2,
+                    "best_rank": 36,
+                    "average_rank": 49.5,
+                    "position_breakdown": [{"position": "PG", "total": 1}],
+                },
+            ])
+
+    def test_rejects_non_numeric_destination_id(self):
+        with self.assertRaisesRegex(ValueError, "summary is malformed"):
+            validate_recruiting_destinations([
+                {
+                    "team_id": "houston",
+                    "team": "Houston Cougars",
+                    "total": 1,
+                    "ranked_total": 1,
+                    "top100_total": 1,
+                    "best_rank": 1,
+                    "average_rank": 1,
+                    "position_breakdown": [{"position": "PG", "total": 1}],
+                },
+            ])
+
     def test_rejects_empty_reviewed_recruiting_release(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
         with self.assertRaisesRegex(ValueError, "malformed or empty"):
@@ -70,9 +121,9 @@ class LivePublicationCheckTest(unittest.TestCase):
                 },
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
-            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
-            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
-            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
+            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
+            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",
@@ -180,9 +231,9 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }},
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
-            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
-            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
-            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1}]},
+            "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
+            "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
+            "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting?season=2027&publication_check=1": {
                 "season": 2027,
                 "reviewed_at": "2026-09-10T18:00:00Z",

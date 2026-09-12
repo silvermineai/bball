@@ -188,6 +188,89 @@ def validate_reviewed_recruiting_release(
     return release_coverage, age
 
 
+def validate_recruiting_destinations(destinations: object) -> None:
+    """Validate the destination summary and its position-mix accounting.
+
+    Destination cards are derived from the same filtered ESPN release as the
+    prospect rows. A broken join or a truncated position query must fail the
+    publication check instead of making a partial class look authoritative.
+    A source row can carry a team name without an ID, so ``team_id`` remains
+    nullable; when present it must be a numeric source ID suitable for the
+    program dossier link.
+    """
+    if not isinstance(destinations, list) or len(destinations) > 12:
+        raise ValueError("ESPN recruiting destination summary is malformed")
+    for destination in destinations:
+        if not isinstance(destination, dict):
+            raise ValueError("ESPN recruiting destination summary is malformed")
+        team = destination.get("team")
+        total = destination.get("total")
+        team_id = destination.get("team_id")
+        if (
+            not isinstance(team, str)
+            or not team.strip()
+            or not isinstance(total, int)
+            or isinstance(total, bool)
+            or total <= 0
+            or (
+                team_id is not None
+                and (
+                    not isinstance(team_id, str)
+                    or not re.fullmatch(r"\d{1,15}", team_id.strip())
+                )
+            )
+        ):
+            raise ValueError("ESPN recruiting destination summary is malformed")
+        for key in ("ranked_total", "top100_total"):
+            value = destination.get(key)
+            if (
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < 0
+                or value > total
+            ):
+                raise ValueError("ESPN recruiting destination summary is malformed")
+        best_rank = destination.get("best_rank")
+        average_rank = destination.get("average_rank")
+        if best_rank is not None and (
+            not isinstance(best_rank, int)
+            or isinstance(best_rank, bool)
+            or best_rank <= 0
+        ):
+            raise ValueError("ESPN recruiting destination summary is malformed")
+        if average_rank is not None and (
+            not isinstance(average_rank, (int, float))
+            or isinstance(average_rank, bool)
+            or not (0 < average_rank)
+        ):
+            raise ValueError("ESPN recruiting destination summary is malformed")
+        mix = destination.get("position_breakdown")
+        if not isinstance(mix, list):
+            raise ValueError("ESPN recruiting destination position mix is malformed")
+        if team_id is not None and not mix:
+            raise ValueError("ESPN recruiting destination position mix is malformed")
+        seen: set[str] = set()
+        mix_total = 0
+        for item in mix:
+            if not isinstance(item, dict):
+                raise ValueError("ESPN recruiting destination position mix is malformed")
+            position = item.get("position")
+            count = item.get("total")
+            if (
+                not isinstance(position, str)
+                or not position.strip()
+                or position in seen
+                or not isinstance(count, int)
+                or isinstance(count, bool)
+                or count <= 0
+            ):
+                raise ValueError("ESPN recruiting destination position mix is malformed")
+            seen.add(position)
+            mix_total += count
+        if mix_total != total:
+            raise ValueError("ESPN recruiting destination position mix does not reconcile")
+
+
 def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
@@ -311,23 +394,13 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         commitment_destinations = recruiting_rankings.get("commitment_destinations")
         prospect_captured = recruiting_rankings.get("captured_at")
         prospect_source = recruiting_rankings.get("source")
+        validate_recruiting_destinations(commitment_destinations)
         if (
             recruiting_rankings.get("season") != prospect_season
             or not isinstance(prospect_total, int)
             or prospect_total <= 0
             or not isinstance(prospect_rows, list)
             or not prospect_rows
-            or not isinstance(commitment_destinations, list)
-            or len(commitment_destinations) > 12
-            or any(
-                not isinstance(destination, dict)
-                or not isinstance(destination.get("team"), str)
-                or not destination["team"].strip()
-                or not isinstance(destination.get("total"), int)
-                or isinstance(destination["total"], bool)
-                or destination["total"] <= 0
-                for destination in commitment_destinations
-            )
             or not isinstance(prospect_captured, str)
             or not isinstance(prospect_source, dict)
             or prospect_source.get("provider") != "ESPN Recruiting"
