@@ -11,6 +11,7 @@ type Meta = {
   pregame: number;
   source?: string;
   unavailable_reason?: string;
+  unavailable_sources?: string[];
   provider_capabilities?: Array<{
     provider: string;
     markets: string[];
@@ -53,7 +54,7 @@ type Row = {
   bookmaker?: string | null;
   provider?: string | null;
 };
-type Result = { season: number | "all"; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string };
+type Result = { season: number | "all"; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string; unavailable_sources?: string[] };
 
 const clock = (value: string | null) =>
   value
@@ -88,6 +89,8 @@ export default function Markets() {
   const [exportMessage, setExportMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const archiveUnavailable = meta?.source === "unavailable" || data?.source === "unavailable";
+  const archivePartial = meta?.source === "partial" || data?.source === "partial";
+  const unavailableSources = Array.from(new Set([...(meta?.unavailable_sources || []), ...(data?.unavailable_sources || [])]));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -214,6 +217,7 @@ export default function Markets() {
             ? "The market archive read is temporarily unavailable; zero counts are not evidence that no lines exist."
             : meta ? `${meta.total.toLocaleString()} retained observations across ${meta.seasons.length} seasons. ${meta.pregame || 0} records currently carry the pregame flag.` : "Loading archive coverage…"} Rows are excluded from prospective odds evaluation until their timing evidence qualifies.
         </p>
+        {archivePartial ? <p className="note" role="status">This archive read is partial while {unavailableSources.length ? unavailableSources.join(", ") : "one binding"} is busy. Counts reflect only the source that answered; missing observations remain unavailable.</p> : null}
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market provider capabilities">
           {meta.provider_capabilities.map((capability) => <span key={capability.provider}>
             <strong>{capability.provider}</strong> · {capability.markets.join(", ")} · {capability.provider_update_clock ? "provider update clock required" : "capture clock only"} · <a href={capability.docs_url} target="_blank" rel="noreferrer">API reference ↗</a>
