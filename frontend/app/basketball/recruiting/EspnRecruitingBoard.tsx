@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import {
+  RECRUITING_SHORTLIST_STORAGE_KEY,
+  recruitingShortlistKey,
+  readRecruitingShortlist,
+  toggleRecruitingShortlist,
+  type RecruitingShortlistEntry,
+} from "../../_lib/recruiting-shortlist";
 
 type Prospect = {
   athlete_id: string;
@@ -70,6 +77,8 @@ export default function EspnRecruitingBoard() {
   const [hydrated, setHydrated] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
+  const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
+  const [shortlistHydrated, setShortlistHydrated] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("q");
@@ -89,6 +98,18 @@ export default function EspnRecruitingBoard() {
     if (Number.isInteger(requestedPage) && requestedPage >= 0) setPage(Math.min(requestedPage, 1000));
     setHydrated(true);
   }, []);
+  useEffect(() => {
+    setShortlist(readRecruitingShortlist(window.localStorage.getItem(RECRUITING_SHORTLIST_STORAGE_KEY)));
+    setShortlistHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!shortlistHydrated) return;
+    try {
+      window.localStorage.setItem(RECRUITING_SHORTLIST_STORAGE_KEY, JSON.stringify(shortlist));
+    } catch {
+      // A private browsing context may reject local storage; the in-memory board remains usable.
+    }
+  }, [shortlist, shortlistHydrated]);
   useEffect(() => {
     if (!hydrated) return;
     const params = new URLSearchParams();
@@ -144,6 +165,27 @@ export default function EspnRecruitingBoard() {
       setExporting(false);
     }
   };
+  const shortlistEntry = (row: Prospect): RecruitingShortlistEntry => ({
+    key: recruitingShortlistKey(season, row.athlete_id),
+    season,
+    athlete_id: row.athlete_id,
+    name: row.name,
+    position: row.position,
+    rank: row.rank,
+    grade: row.grade,
+    committed_team_id: row.committed_team_id,
+    committed_team_name: row.committed_team_name,
+    high_school: row.high_school,
+    source_url: row.source_url,
+  });
+  const toggleShortlist = (row: Prospect) => setShortlist((current) => toggleRecruitingShortlist(current, shortlistEntry(row)));
+  const removeShortlist = (key: string) => setShortlist((current) => current.filter((entry) => entry.key !== key));
+  const downloadShortlist = () => {
+    if (!shortlist.length) return;
+    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.source_url]);
+    downloadCsv("espn-recruiting-shortlist.csv", toCsv(exportHeaders, rows));
+    setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
+  };
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page), committed, movement });
@@ -198,8 +240,18 @@ export default function EspnRecruitingBoard() {
         <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All source ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
+        <button className="button secondary" type="button" onClick={downloadShortlist} disabled={!shortlist.length}>Download shortlist ({shortlist.length}) ↓</button>
         <button className="button secondary" type="button" onClick={share}>Copy board link</button>
       </div>
+      {shortlist.length > 0 && <section className="paper-panel recruiting-shortlist-panel" aria-label="Saved recruiting prospects" style={{ marginTop: 20, marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div><div className="eyebrow">Local staff board / browser saved</div><h3>Your prospect shortlist.</h3></div>
+          <span className="note">{shortlist.length} saved · available on this browser</span>
+        </div>
+        <p className="note">Shortlist entries preserve the ESPN class, exact athlete ID and source link. They stay in this browser and do not merge identities across providers.</p>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Commitment</th><th>Source</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{grade(row.grade)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>)}</tbody></table></div>
+        <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
+      </section>}
       {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">
         <div className="eyebrow">Class comparison / same ESPN release</div>
         <div className="recruiting-class-grid">
@@ -271,7 +323,7 @@ export default function EspnRecruitingBoard() {
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>
-              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th><th>Shortlist</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
                 <td>{!row.previous_captured_at ? <span className="note">New / —</span> : row.previous_rank == null || row.rank == null ? <span className="note">Rank unavailable<small>prior capture retained</small></span> : <span className={row.previous_rank - row.rank > 0 ? "movement-up" : row.previous_rank - row.rank < 0 ? "movement-down" : "note"}>{row.previous_rank - row.rank > 0 ? "▲" : row.previous_rank - row.rank < 0 ? "▼" : "="} {Math.abs(row.previous_rank - row.rank)} <small>from #{row.previous_rank}</small></span>}</td>
@@ -282,6 +334,7 @@ export default function EspnRecruitingBoard() {
                 <td>{row.committed_team_name ? row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link> : row.committed_team_name : row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td>
+                <td><button className="button secondary" type="button" onClick={() => toggleShortlist(row)} aria-pressed={shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id))}>{shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id)) ? "Saved" : "Save"}</button></td>
               </tr>)}</tbody>
             </table>
           </div>
