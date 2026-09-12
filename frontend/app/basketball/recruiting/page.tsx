@@ -7,6 +7,8 @@ import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
 import EspnRecruitingBoard from "./EspnRecruitingBoard";
+import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
+import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 export const metadata = {
   title: "Basketball recruiting: ESPN prospect rankings and transfer evidence",
   description:
@@ -60,6 +62,8 @@ export default function Page() {
           <Link className="hero-link" href="/basketball/ncaa-rankings/">Rank recorded production →</Link>
         </div>
       </div>
+      <LiveBasketballRecruitingStatus />
+      <LiveBasketballProspectStatus />
       <RecruitingWire articles={recruitingNews} />
       <MovementWatch />
       <EspnRecruitingBoard />
