@@ -28,6 +28,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/shooting/",
     "/basketball/pbp/",
     "/basketball/possession-style/",
+    "/basketball/game-context/",
+    "/basketball/identity-review/",
+    "/basketball/matchup-stints/",
     ...getScoutIndex().teams.map((t) => `/basketball/programs/${t.id}/`),
     "/basketball/players/",
     "/basketball/player-profiles/",
@@ -89,9 +92,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/basketball-recruiting-fit/",
     "/blog/basketball-ranking-playbook/",
     "/blog/basketball-possession-style/",
+    "/blog/basketball-recruiting-evidence/",
     "/blog/basketball-availability-evidence/",
     "/blog/basketball-player-game-logs/",
     "/blog/basketball-roster-transitions/",
+    "/blog/basketball-upcoming-games/",
     ...d.upcoming.filter((g) => g.prediction).map((g) => `/blog/game-${g.id}/`),
     ...basketball
       .upcoming.filter((g) => g.prediction || g.fallback_prediction)
