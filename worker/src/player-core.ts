@@ -6,7 +6,7 @@ import { zValidator } from "@hono/zod-validator";
 type Bindings = Env;
 
 const querySchema = z.object({
-  season: z.coerce.number().int().min(2003).max(2026).default(2026),
+  season: z.union([z.coerce.number().int().min(2003).max(2026), z.literal("all")]).default(2026),
   q: z.string().trim().max(120).optional(),
   position: z.string().trim().regex(/^[A-Za-z0-9 -]{0,40}$/).optional(),
   status: z.string().trim().regex(/^[A-Za-z0-9 _-]{0,40}$/).optional(),
@@ -62,10 +62,10 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
     try {
       const [seasons, positions, statuses, count, source] = await withTimeout(db.batch([
         db.prepare("SELECT DISTINCT season FROM bb_player_core ORDER BY season DESC"),
-        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-        db.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(season),
-        db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(season),
+        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.position_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(typeof season === "number" ? season : 2026),
+        db.prepare("SELECT DISTINCT json_extract(profile_json,'$.status_name') AS value FROM bb_player_core WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(typeof season === "number" ? season : 2026),
+        db.prepare("SELECT count(*) AS total FROM bb_player_core WHERE season=?").bind(typeof season === "number" ? season : 2026),
+        db.prepare("SELECT json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE dataset='player_core' AND season=?").bind(typeof season === "number" ? season : 2026),
       ]), DB_TIMEOUT_MS);
       const sourceRow = source.results[0] as { fetched_at?: unknown; sha256?: unknown } | undefined;
       const response = c.json({
@@ -85,8 +85,12 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
       return c.json({ error: "The ESPN profile catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
   }
-  const clauses = ["season=?"];
-  const binds: Array<string | number> = [season];
+  const clauses: string[] = [];
+  const binds: Array<string | number> = [];
+  if (typeof season === "number") {
+    clauses.push("season=?");
+    binds.push(season);
+  }
   if (q) {
     clauses.push("(json_extract(profile_json,'$.display_name') LIKE ? OR json_extract(profile_json,'$.full_name') LIKE ? OR json_extract(profile_json,'$.slug') LIKE ? OR athlete_id LIKE ?)");
     const search = `%${q}%`;
@@ -100,7 +104,7 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
     clauses.push("json_extract(profile_json,'$.status_name')=?");
     binds.push(status);
   }
-  const where = clauses.join(" AND ");
+  const where = clauses.length ? clauses.join(" AND ") : "1=1";
   try {
     const count = await withTimeout(db.prepare(`SELECT count(*) AS total FROM bb_player_core WHERE ${where}`).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
     const order = direction === "desc" ? "DESC" : "ASC";
@@ -123,11 +127,11 @@ playerCore.get("/", zValidator("query", querySchema), async (c) => {
      LEFT JOIN (
        SELECT season,athlete_id,
          MAX(json_extract(profile_json,'$.team_display_name')) AS team_name
-       FROM bb_rosters WHERE season=? GROUP BY season,athlete_id
+       FROM bb_rosters GROUP BY season,athlete_id
      ) r ON r.season=bb_player_core.season AND r.athlete_id=bb_player_core.athlete_id
      WHERE ${rowWhere}
-     ORDER BY name ${order}, id ASC LIMIT 40 OFFSET ?`,
-    ).bind(season, ...binds, page * 40).all(), DB_TIMEOUT_MS);
+     ORDER BY name ${order}, season DESC, id ASC LIMIT 40 OFFSET ?`,
+    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
     const response = c.json({
       season,
       page,

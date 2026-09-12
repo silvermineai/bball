@@ -1318,6 +1318,39 @@ describe("bball api", () => {
     expect(batch).toHaveBeenCalledOnce();
   });
 
+  it("searches the complete ESPN profile archive when season=all", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total")) {
+        return { bind: () => ({ first: async () => ({ total: 2 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({
+            results: [
+              { season: 2026, id: "10", name: "Example Player", position: "Guard", team: "Current U", profile_json: JSON.stringify({ display_name: "Example Player" }) },
+              { season: 2010, id: "10", name: "Example Player", position: "Guard", team: "Earlier U", profile_json: JSON.stringify({ display_name: "Example Player" }) },
+            ],
+          }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/player-core?season=all&q=Example%20Player&page=0",
+      {},
+      { RESEARCH_DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      season: "all",
+      total: 2,
+      rows: expect.arrayContaining([
+        expect.objectContaining({ season: 2026, id: "10" }),
+        expect.objectContaining({ season: 2010, id: "10" }),
+      ]),
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("FROM bb_player_core"));
+  });
+
   it("returns a retryable response when the ESPN profile catalog is busy", async () => {
     const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
     const response = await app.request(

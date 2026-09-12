@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { combineSearchResults, searchPrograms, searchRecruitingPeople, searchRosterPeople, type SearchProgram, type SearchResult, type SearchRecruitingPerson, type SearchRosterPerson } from "../_lib/global-search";
 
-type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null };
+type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null; season?: number };
 type PlayerResponse = { rows?: PlayerRow[] };
 type RatingResponse = { board?: Array<{ id?: string | number; name?: string }> };
 type LegacyRow = { id?: string; name?: string | null; type?: "player" | "team"; source?: "ncaa" | "football"; latest_season?: number };
@@ -55,7 +55,7 @@ export default function GlobalSearch() {
       setLoading(true);
       setError("");
       Promise.all([
-        fetch(`/api/basketball/research/player-core?season=2026&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
+        fetch(`/api/basketball/research/player-core?season=all&q=${encodeURIComponent(needle)}&page=0`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<PlayerResponse> : { rows: [] }),
         loadPrograms(),
         loadRecruiting(),
@@ -85,8 +85,8 @@ export default function GlobalSearch() {
               name: row.name,
               type: "player",
               sport: "basketball",
-              detail: [row.team, row.position, "Basketball"].filter(Boolean).join(" · ") || "Basketball source player",
-              href: `/basketball/player/?id=${encodeURIComponent(row.id)}&season=2026`,
+              detail: [row.team, row.position, row.season ? `${row.season - 1}–${String(row.season).slice(-2)}` : "Basketball"].filter(Boolean).join(" · ") || "Basketball source player",
+              href: `/basketball/player/?id=${encodeURIComponent(row.id)}&season=${row.season || 2026}`,
             }));
           const ncaaResults: SearchResult[] = (basketballArchive.results || [])
             .filter((row): row is LegacyRow & { id: string; name: string; type: "player"; source: "ncaa" } => !!row.id && !!row.name && row.type === "player" && row.source === "ncaa")
