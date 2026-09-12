@@ -83,8 +83,23 @@ export default async function Page({
   if (!titles[slug] && (!g || !p) && !basketballGame) notFound();
   if (basketballGame) return <BasketballNotebook game={basketballGame} generatedAt={basketball.generated_at} />;
   if (g && p) return <FootballBrief game={g} overview={d} />;
+  const canonicalUrl = `https://bball.silvermine.dev/blog/${slug}/`;
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: titles[slug],
+    description: titles[slug],
+    datePublished: d.generated_at,
+    dateModified: d.generated_at,
+    author: { "@type": "Organization", name: "Silvermine Research" },
+    publisher: { "@type": "Organization", name: "Silvermine Research", url: "https://bball.silvermine.dev" },
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
+    isAccessibleForFree: true,
+    about: { "@type": "Thing", name: "College basketball research" },
+  };
   return (
     <article className="article">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
       <div className="eyebrow">
         Field guide · Silvermine Research · {date(d.generated_at)}
       </div>

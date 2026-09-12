@@ -33,9 +33,24 @@ export default function BasketballNotebook({
       edge: game.matchup_factors?.edges?.[key as keyof NonNullable<BBGame["matchup_factors"]>["edges"]],
     }));
   const coldStart = !game.prediction && !!game.fallback_prediction;
+  const canonicalUrl = `https://bball.silvermine.dev/blog/basketball-game-${game.id}/`;
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: `${game.away_name} at ${game.home_name}: 2026–27 basketball notebook`,
+    description: `Projected score, Four Factors and reporting questions for ${game.away_name} at ${game.home_name}.`,
+    datePublished: generatedAt,
+    dateModified: generatedAt,
+    author: { "@type": "Organization", name: "Silvermine Research" },
+    publisher: { "@type": "Organization", name: "Silvermine Research", url: "https://bball.silvermine.dev" },
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
+    isAccessibleForFree: true,
+    about: { "@type": "Thing", name: "Men's college basketball" },
+  };
 
   return (
     <article className="article matchup-notebook">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
       <div className="eyebrow">
         Basketball matchup notebook · {date(generatedAt)} edition
       </div>
