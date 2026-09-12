@@ -108,6 +108,36 @@ describe("NCAA player source archive", () => {
     expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("FROM bb_ncaa_player_season"))).toBe(true);
   });
 
+  it("searches all retained seasons at season-total grain", async () => {
+    const researchPrepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: async () => ({ total: 2 }),
+        all: async () => sql.includes("FROM bb_ncaa_player_season")
+          ? { results: [
+            { season: 2026, contest_id: null, team_id: "7", player_id: "42", game_date: null, team_name: "Example U", opponent_name: null, player_name: "Example Veteran", stats_json: JSON.stringify({ mins: 900, pts: 400 }) },
+            { season: 2025, contest_id: null, team_id: "8", player_id: "43", game_date: null, team_name: "Example State", opponent_name: null, player_name: "Example Guard", stats_json: JSON.stringify({ mins: 800, pts: 350 }) },
+          ] }
+          : { results: [] },
+      })),
+    }));
+    const response = await ncaaPlayerBox.request(
+      "/?season=all&archive=season&q=Example",
+      {},
+      { DB: { prepare: researchPrepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      season: "all",
+      archive_mode: "season",
+      total: 2,
+      rows: [
+        { season: 2026, player_id: "42", stats: { mins: 900, pts: 400 } },
+        { season: 2025, player_id: "43", stats: { mins: 800, pts: 350 } },
+      ],
+    });
+    expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY season DESC"))).toBe(true);
+  });
+
   it("returns a bounded retryable error when the archive read does not settle", async () => {
     vi.useFakeTimers();
     try {
