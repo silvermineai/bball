@@ -27,7 +27,7 @@ type Result = {
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
   position_breakdown?: Array<{ position: string; total: number }>;
-  commitment_destinations?: Array<{ team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null }>;
+  commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; best_rank: number | null; average_rank: number | null }>;
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -223,11 +223,11 @@ export default function EspnRecruitingBoard() {
               <span className="note">Top 12 destinations</span>
             </div>
             <div className="article-grid">
-              {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={destination.team}>
+              {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={`${destination.team_id || "unknown"}-${destination.team}`}>
                 <div className="eyebrow">{destination.total === 1 ? "One commitment" : `${destination.total} commitments`}</div>
-                <h3>{destination.team}</h3>
+                <h3>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team} →</Link> : destination.team}</h3>
                 <p>{destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
-                <small>Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
+                <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this source row."} · Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>
             <p className="note" style={{ marginTop: 12 }}>Counts use ESPN&apos;s committed team field and the same season, rank, position, search and status filters as the table. Ranked, top-100, best-rank and average-rank values use source ranks; they are source-reported destinations, not confirmation of enrollment or eligibility.</p>

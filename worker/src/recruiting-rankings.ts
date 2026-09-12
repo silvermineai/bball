@@ -84,7 +84,8 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ORDER BY total DESC, position ASC`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
     const destinations = await withTimeout(db.prepare(
-      `SELECT TRIM(r.committed_team_name) AS team,
+      `SELECT CAST(r.committed_team_id AS TEXT) AS team_id,
+              TRIM(r.committed_team_name) AS team,
               count(*) AS total,
               sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
               sum(CASE WHEN r.rank IS NOT NULL AND r.rank<=100 THEN 1 ELSE 0 END) AS top100_total,
@@ -92,7 +93,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               avg(CASE WHEN r.rank IS NOT NULL THEN r.rank END) AS average_rank
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters} AND r.committed_team_name IS NOT NULL AND TRIM(r.committed_team_name) <> ''
-        GROUP BY TRIM(r.committed_team_name)
+        GROUP BY CAST(r.committed_team_id AS TEXT), TRIM(r.committed_team_name)
         ORDER BY ranked_total DESC, top100_total DESC, total DESC, team ASC
         LIMIT 12`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
@@ -114,6 +115,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         total: Number((row as { total?: number }).total || 0),
       })),
       commitment_destinations: destinations.results.map((row) => ({
+        team_id: row.team_id == null || String(row.team_id).trim() === "" ? null : String(row.team_id),
         team: String((row as { team?: string }).team || "Unknown"),
         total: Number((row as { total?: number }).total || 0),
         ranked_total: Number((row as { ranked_total?: number }).ranked_total || 0),
