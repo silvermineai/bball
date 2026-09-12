@@ -13,7 +13,10 @@ const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percentile = (rank: number, total: number) => total <= 1 ? 100 : Math.max(0, Math.min(100, 100 * (total - rank) / (total - 1)));
-const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "ppg";
+// The board is a scouting starting point, so an unqualified visit should open
+// the explainable all-around screen. Explicit metric links still select the
+// exact source measure the reader asked to study.
+const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "balanced_index";
 const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
 const coachLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
   { key: "all-around", label: "All-around", metric: "balanced_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Eight-component production screen with an audit trail." },
@@ -169,7 +172,7 @@ export default function NcaaRankings() {
     <div className="page-title">
       <div className="eyebrow">NCAA source archive / player rankings</div>
       <h1>Find the next<br /><em>difference maker.</em></h1>
-      <p>Rank NCAA-derived production and exact-ID impact with a coach&apos;s minimum sample. Every board shows the source identity, workload and the metric used to order the list.</p>
+      <p>Start with an explainable all-around screen, then rank NCAA-derived production and exact-ID impact with a coach&apos;s minimum sample. Every board shows the source identity, workload and the metric used to order the list.</p>
       <div className="hero-actions"><Link className="hero-link" href="/basketball/ncaa-compare/">Compare up to three NCAA players →</Link><Link className="hero-link" href="/basketball/ncaa-player-box/">Open the complete NCAA stat archive →</Link>{compareIds.length > 0 && <><Link className="button" href={`/basketball/ncaa-compare/?ids=${encodeURIComponent(compareIds.join(","))}&season=${encodeURIComponent(season)}`}>Compare selected ({compareIds.length}/3) →</Link><button className="button secondary" type="button" onClick={() => setCompareIds([])}>Clear shortlist</button></>}</div>
     </div>
     <div className="strip">
