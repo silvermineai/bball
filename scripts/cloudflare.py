@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -26,17 +27,66 @@ if not env["CLOUDFLARE_API_TOKEN"] or not env["CLOUDFLARE_ACCOUNT_ID"]:
     raise SystemExit(
         "Cloudflare account credentials are missing from the environment or ~/.env"
     )
-result = subprocess.run(
-    ["node", "node_modules/wrangler/bin/wrangler.js", *sys.argv[1:]],
-    cwd=root / "worker",
-    env=env,
-    check=False,
-)
+args = sys.argv[1:]
+
+
+def retryable_r2_upload(arguments: list[str]) -> bool:
+    """R2 puts are content-addressed and safe to retry after a network timeout."""
+    return arguments[:3] == ["r2", "object", "put"] and "--remote" in arguments
+
+
+def transient_failure(output: str) -> bool:
+    """Recognize transport/origin failures without retrying auth or input errors."""
+    lowered = output.lower()
+    return any(marker in lowered for marker in (
+        "error code 524",
+        " 524:",
+        " 502:",
+        " 503:",
+        " 504:",
+        "timed out",
+        "timeout",
+        "econnreset",
+        "fetch failed",
+    ))
+
+
+def run_wrangler(arguments: list[str]) -> subprocess.CompletedProcess[str]:
+    attempts = 4 if retryable_r2_upload(arguments) else 1
+    delays = (5, 15, 30)
+    for attempt in range(attempts):
+        result = subprocess.run(
+            ["node", "node_modules/wrangler/bin/wrangler.js", *arguments],
+            cwd=root / "worker",
+            env=env,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.returncode == 0:
+            return result
+        if attempt + 1 >= attempts or not transient_failure(result.stdout or ""):
+            return result
+        delay = delays[attempt]
+        print(
+            f"Cloudflare transient upload failure; retrying R2 object put in {delay}s "
+            f"(attempt {attempt + 2}/{attempts}).",
+            file=sys.stderr,
+            flush=True,
+        )
+        time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
+result = run_wrangler(args)
 if result.returncode:
     raise SystemExit(result.returncode)
 if (
-    sys.argv[1:2] == ["deploy"]
-    and not any(arg.startswith("--dry-run") for arg in sys.argv[2:])
+    args[:1] == ["deploy"]
+    and not any(arg.startswith("--dry-run") for arg in args[1:])
     and os.environ.get("SKIP_BRIEF_ARCHIVE") != "1"
 ):
     archive_python = root / ".venv/bin/python"
@@ -53,6 +103,6 @@ if (
             file=sys.stderr,
         )
         raise SystemExit(archived.returncode)
-elif sys.argv[1:2] == ["deploy"] and os.environ.get("SKIP_BRIEF_ARCHIVE") == "1":
+elif args[:1] == ["deploy"] and os.environ.get("SKIP_BRIEF_ARCHIVE") == "1":
     print("Skipped optional brief archive capture (SKIP_BRIEF_ARCHIVE=1).")
 raise SystemExit(0)
