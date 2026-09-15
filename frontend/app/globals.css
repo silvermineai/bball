@@ -5431,3 +5431,91 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Keep the depth of the archive available without turning the sport bar into a wall of links. */
+.sport-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  overflow: visible;
+  padding: 0 0 13px;
+  margin-bottom: 24px;
+  border-bottom-color: var(--line);
+  color: var(--ink);
+}
+.sport-nav-primary {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sport-nav-primary::-webkit-scrollbar { display: none; }
+.sport-nav-primary a,
+.sport-nav-explore > summary {
+  flex: 0 0 auto;
+  padding: 5px 0;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sport-nav-primary a:hover,
+.sport-nav-explore > summary:hover { color: var(--blue); }
+.sport-nav-home { color: var(--blue); }
+.sport-nav-explore { position: relative; flex: 0 0 auto; }
+.sport-nav-explore > summary {
+  list-style: none;
+  color: var(--muted);
+}
+.sport-nav-explore > summary::-webkit-details-marker { display: none; }
+.sport-nav-explore > summary::after {
+  content: "▾";
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  transition: transform .15s ease;
+}
+.sport-nav-explore[open] > summary::after { transform: rotate(180deg); }
+.sport-nav-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 22px;
+  width: min(1000px, calc(100vw - 64px));
+  padding: 22px;
+  border: 1px solid #b7c7da;
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: 0 16px 34px #10233f24;
+}
+.sport-nav-group { display: grid; align-content: start; gap: 9px; }
+.sport-nav-group .eyebrow { margin-bottom: 2px; color: var(--blue); font-size: 9px; }
+.sport-nav-group a { color: var(--ink); font-size: 11px; line-height: 1.3; }
+.sport-nav-group a:hover { color: var(--blue); }
+@media (max-width: 900px) {
+  .sport-nav-panel { grid-template-columns: repeat(3, minmax(145px, 1fr)); }
+}
+@media (max-width: 650px) {
+  .sport-nav { align-items: flex-start; gap: 14px; padding-bottom: 11px; }
+  .sport-nav-primary { gap: 17px; }
+  .sport-nav-panel {
+    position: fixed;
+    top: 130px;
+    left: 18px;
+    right: 18px;
+    width: auto;
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 16px;
+    padding: 18px;
+  }
+}
+@media (max-width: 430px) {
+  .sport-nav-panel { grid-template-columns: 1fr; }
+}
