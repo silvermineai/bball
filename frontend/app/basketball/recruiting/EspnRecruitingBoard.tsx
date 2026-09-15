@@ -37,6 +37,20 @@ type Result = {
   page: number;
   page_size: number;
   cohort?: { committed: number; ranked: number; graded: number };
+  field_coverage?: {
+    total: number;
+    position: number;
+    rank: number;
+    grade: number;
+    position_rank: number;
+    state_rank: number;
+    region_rank: number;
+    committed_team: number;
+    high_school: number;
+    hometown: number;
+    height: number;
+    weight: number;
+  };
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
@@ -59,6 +73,7 @@ const size = (height: number | null, weight: number | null) => {
   return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
 };
 const rate = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(0)}%` : "—";
+const coverageRate = (part: number | undefined, total: number | undefined) => total ? `${Math.round(((part || 0) / total) * 100)}%` : "—";
 const captureLabel = (value: string | null) => value
   ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
   : "capture date unavailable";
@@ -289,6 +304,23 @@ export default function EspnRecruitingBoard() {
             <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
             <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
           </div>
+          {result.field_coverage && <section className="paper-panel recruiting-field-coverage" aria-label="Recruiting source field coverage" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Source field audit / active cohort</div><h3>Know what the release actually supplies.</h3></div>
+              <span className="note">{result.field_coverage.total.toLocaleString()} rows checked</span>
+            </div>
+            <p className="note">Percentages use the current class, search, position, rank, commitment and movement filters. A missing source field stays unavailable; it is never treated as a negative scouting signal.</p>
+            <div className="raw-stat-grid">
+              <div><dt>Position</dt><dd>{coverageRate(result.field_coverage.position, result.field_coverage.total)}</dd></div>
+              <div><dt>Source rank</dt><dd>{coverageRate(result.field_coverage.rank, result.field_coverage.total)}</dd></div>
+              <div><dt>Source grade</dt><dd>{coverageRate(result.field_coverage.grade, result.field_coverage.total)}</dd></div>
+              <div><dt>Commitment destination</dt><dd>{coverageRate(result.field_coverage.committed_team, result.field_coverage.total)}</dd></div>
+              <div><dt>High school</dt><dd>{coverageRate(result.field_coverage.high_school, result.field_coverage.total)}</dd></div>
+              <div><dt>Hometown</dt><dd>{coverageRate(result.field_coverage.hometown, result.field_coverage.total)}</dd></div>
+              <div><dt>Listed size</dt><dd>{coverageRate(Math.min(result.field_coverage.height, result.field_coverage.weight), result.field_coverage.total)}</dd></div>
+              <div><dt>Position / state / region rank</dt><dd>{coverageRate(Math.min(result.field_coverage.position_rank, result.field_coverage.state_rank, result.field_coverage.region_rank), result.field_coverage.total)}</dd></div>
+            </div>
+          </section>}
           <p className="note" role="status">
             Active ESPN edition <span className="source-hash">{result.edition || "unavailable"}</span>
             {result.captured_at ? <> · captured {captureLabel(result.captured_at)} UTC</> : " · capture date unavailable"}.

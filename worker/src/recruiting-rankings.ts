@@ -83,6 +83,22 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}`,
     ).bind(...binds).first<{ total: number; committed_total: number | null; ranked_total: number | null; grade_total: number | null }>(), DB_TIMEOUT_MS);
+    const fieldCoverage = await withTimeout(db.prepare(
+      `SELECT count(*) AS total,
+              sum(CASE WHEN NULLIF(TRIM(r.position),'') IS NOT NULL THEN 1 ELSE 0 END) AS position,
+              sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS rank,
+              sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS grade,
+              sum(CASE WHEN r.position_rank IS NOT NULL THEN 1 ELSE 0 END) AS position_rank,
+              sum(CASE WHEN r.state_rank IS NOT NULL THEN 1 ELSE 0 END) AS state_rank,
+              sum(CASE WHEN r.region_rank IS NOT NULL THEN 1 ELSE 0 END) AS region_rank,
+              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_team,
+              sum(CASE WHEN NULLIF(TRIM(r.high_school),'') IS NOT NULL THEN 1 ELSE 0 END) AS high_school,
+              sum(CASE WHEN NULLIF(TRIM(r.hometown),'') IS NOT NULL THEN 1 ELSE 0 END) AS hometown,
+              sum(CASE WHEN r.height_inches IS NOT NULL THEN 1 ELSE 0 END) AS height,
+              sum(CASE WHEN r.weight_pounds IS NOT NULL THEN 1 ELSE 0 END) AS weight
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE ${filters}`,
+    ).bind(...binds).first<Record<string, number | null>>(), DB_TIMEOUT_MS);
     const rows = await withTimeout(db.prepare(
       `SELECT r.athlete_id,r.name,r.position,r.grade,r.rank,r.position_rank,r.state_rank,r.region_rank,
               r.status,r.committed_team_id,r.committed_team_name,r.school_ids_json,r.high_school,
@@ -209,6 +225,20 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         committed: Number(count?.committed_total || 0),
         ranked: Number(count?.ranked_total || 0),
         graded: Number(count?.grade_total || 0),
+      },
+      field_coverage: {
+        total: Number(fieldCoverage?.total || count?.total || 0),
+        position: Number(fieldCoverage?.position || 0),
+        rank: Number(fieldCoverage?.rank || 0),
+        grade: Number(fieldCoverage?.grade || 0),
+        position_rank: Number(fieldCoverage?.position_rank || 0),
+        state_rank: Number(fieldCoverage?.state_rank || 0),
+        region_rank: Number(fieldCoverage?.region_rank || 0),
+        committed_team: Number(fieldCoverage?.committed_team || 0),
+        high_school: Number(fieldCoverage?.high_school || 0),
+        hometown: Number(fieldCoverage?.hometown || 0),
+        height: Number(fieldCoverage?.height || 0),
+        weight: Number(fieldCoverage?.weight || 0),
       },
       position_breakdown: positions.results.map((row) => ({
         position: String((row as { position?: string }).position || "Unknown"),
