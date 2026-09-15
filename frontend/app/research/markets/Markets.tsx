@@ -11,6 +11,13 @@ type Meta = {
   pregame: number;
   research_receipts?: number;
   research_latest_capture_at?: string | null;
+  research_capture?: {
+    provider?: string;
+    captured_at?: string;
+    season?: number;
+    summary_count?: number;
+    summary_with_pickcenter?: number;
+  };
   source?: string;
   unavailable_reason?: string;
   unavailable_sources?: string[];
@@ -262,7 +269,9 @@ export default function Markets() {
               {archiveUnavailable
                 ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about provider coverage."
                 : <>{sport === "basketball" && meta?.research_receipts
-                  ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
+                  ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future ESPN summaries; ${(
+                    meta.research_capture.summary_with_pickcenter || 0
+                  ).toLocaleString()} included pickcenter markets` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
                   : <>The archive is empty for this sport because no authorized provider
               export has been ingested. This is unavailable evidence, not proof
               that a game had no line. The prospective scorecard stays clean

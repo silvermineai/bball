@@ -8,6 +8,7 @@ describe("market archive metadata", () => {
       { results: [{ season: 2025 }] },
       { results: [{ total: 0, pregame: 0 }] },
       { results: [] },
+      { results: [{ payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", season: 2027, summary_count: 20, summary_with_pickcenter: 0 }), captured_at: "2026-09-15T18:00:00Z" }] },
     ]);
     const response = await markets.request(
       "/?meta=1&sport=basketball",
@@ -18,6 +19,7 @@ describe("market archive metadata", () => {
     const body = await response.json() as {
       provider_capabilities: Array<{ provider: string; markets: string[]; provider_update_clock: boolean }>;
       archive_receipts: Array<{ dataset: string; season: number; url: string; sha256: string }>;
+      research_capture?: { summary_count?: number; summary_with_pickcenter?: number };
     };
     expect(body.provider_capabilities).toEqual([
       expect.objectContaining({ provider: "The Odds API", markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
@@ -25,6 +27,7 @@ describe("market archive metadata", () => {
       expect.objectContaining({ provider: "ESPN Summary", markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
     expect(body.archive_receipts).toEqual([]);
+    expect(body.research_capture).toEqual({ provider: "ESPN Summary", captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0 });
   });
 
   it("returns retained football betting release receipts", async () => {

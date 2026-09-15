@@ -198,6 +198,19 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
     ]
 
 
+def summary_capture_counts(summaries: list[dict]) -> tuple[int, int]:
+    """Return fetched summary and non-empty pickcenter counts for a receipt."""
+    with_pickcenter = sum(
+        1
+        for item in summaries
+        if isinstance(item, dict)
+        and isinstance(item.get("summary"), dict)
+        and isinstance(item["summary"].get("pickcenter"), list)
+        and bool(item["summary"].get("pickcenter"))
+    )
+    return len(summaries), with_pickcenter
+
+
 def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS, limit: int = 120) -> tuple[list[dict], dict]:
     now = datetime.now(timezone.utc)
     games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
@@ -236,7 +249,20 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
                 summaries.append({"event_id": event_id, "summary": summary, "url": url})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
             continue
-    receipt = {"provider": PROVIDER, "sport": SPORT, "season": season, "captured_at": captured, "horizon_days": horizon_days, "event_ids": [item["event_id"] for item in summaries], "urls": [item["url"] for item in summaries], "timing_basis": "summary_capture", "sha256": digest(summaries)}
+    summary_count, pickcenter_count = summary_capture_counts(summaries)
+    receipt = {
+        "provider": PROVIDER,
+        "sport": SPORT,
+        "season": season,
+        "captured_at": captured,
+        "horizon_days": horizon_days,
+        "event_ids": [item["event_id"] for item in summaries],
+        "urls": [item["url"] for item in summaries],
+        "summary_count": summary_count,
+        "summary_with_pickcenter": pickcenter_count,
+        "timing_basis": "summary_capture",
+        "sha256": digest(summaries),
+    }
     return summaries, receipt
 
 

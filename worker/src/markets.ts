@@ -78,6 +78,35 @@ type ArchiveReceipt = {
   };
 };
 
+type ResearchCapture = {
+  provider: string;
+  captured_at: string;
+  season?: number;
+  summary_count?: number;
+  summary_with_pickcenter?: number;
+};
+
+function parseResearchCapture(value: unknown): ResearchCapture | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { payload_json?: unknown; captured_at?: unknown };
+  if (typeof row.payload_json !== "string" || typeof row.captured_at !== "string") return null;
+  try {
+    const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+    if (payload.provider !== "ESPN Summary" || typeof payload.sport !== "string") return null;
+    const result: ResearchCapture = { provider: "ESPN Summary", captured_at: row.captured_at };
+    if (typeof payload.season === "number" && Number.isInteger(payload.season)) result.season = payload.season;
+    if (typeof payload.summary_count === "number" && Number.isInteger(payload.summary_count) && payload.summary_count >= 0) {
+      result.summary_count = payload.summary_count;
+    }
+    if (typeof payload.summary_with_pickcenter === "number" && Number.isInteger(payload.summary_with_pickcenter) && payload.summary_with_pickcenter >= 0) {
+      result.summary_with_pickcenter = payload.summary_with_pickcenter;
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 function parseArchiveReceipts(value: unknown): ArchiveReceipt[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((row) => {
@@ -147,6 +176,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=?").bind(sport),
+          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider')=? ORDER BY captured_at DESC LIMIT 1").bind(sport, "ESPN Summary"),
         ]), DB_TIMEOUT_MS)
         : Promise.resolve(null);
       const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);
@@ -171,6 +201,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       const legacyArchive = (legacy?.[1]?.results[0] || {}) as { total?: number; pregame?: number | null };
       const ledgerArchive = (ledger?.[1]?.results[0] || {}) as { total?: number };
       const ledgerReceipts = (ledger?.[2]?.results[0] || {}) as { receipts?: number; latest_captured_at?: string | null };
+      const latestCapture = parseResearchCapture(ledger?.[3]?.results[0]);
       const receipts = legacy?.[2]?.results || [];
       const response = c.json({
         sport,
@@ -179,6 +210,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         pregame: Number(legacyArchive.pregame || 0) + Number(ledgerArchive.total || 0),
         research_receipts: Number(ledgerReceipts.receipts || 0),
         research_latest_capture_at: ledgerReceipts.latest_captured_at || null,
+        ...(latestCapture ? { research_capture: latestCapture } : {}),
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
         archive_receipts: parseArchiveReceipts(receipts),
         ...(legacyFailed || ledgerFailed
