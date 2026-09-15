@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { BBGame, BBRosterScenario } from "../_lib/basketball-types";
-import { fetchLiveForecast, mergeLiveForecast } from "../_lib/live-basketball-forecasts";
+import { loadLiveBasketballForecasts, mergeLiveBasketballForecasts } from "../_lib/live-basketball-forecasts";
 import { date, fmt } from "../_lib/format";
 
 /**
- * Refreshes the coach desk using immutable game IDs, retaining its static
- * export as the first paint and as a fallback when the API is unavailable.
+ * Refreshes the coach desk from one bounded upcoming-slate request. The merge
+ * is keyed only by immutable game ID, retaining the static export as first
+ * paint and as a fallback when the API is unavailable.
  */
 export default function LiveCoachSlate({
   games,
@@ -23,12 +24,10 @@ export default function LiveCoachSlate({
     const controller = new AbortController();
     if (!games.length) return () => controller.abort();
 
-    Promise.allSettled(games.slice(0, 5).map((game) => fetchLiveForecast(game.id, controller.signal)))
-      .then((results) => {
+    loadLiveBasketballForecasts(controller.signal, { maxPages: 1 })
+      .then((rows) => {
         if (controller.signal.aborted) return;
-        const rows = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
-        const byGame = new Map(rows.filter((row) => row != null).map((row) => [row.game_id, row]));
-        setActiveGames(games.map((game) => mergeLiveForecast(game, byGame.get(game.id) || null)));
+        setActiveGames(mergeLiveBasketballForecasts(games, rows));
       })
       .catch(() => setActiveGames(games));
 
