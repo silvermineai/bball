@@ -24,7 +24,7 @@ type ArchiveValidation = {
   invalid_minutes: number;
   zero_minutes_with_stats: number;
 };
-type Meta = { seasons: number[]; total: number; game_rows?: number; season_rows?: number; source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null };
+type Meta = { seasons: number[]; total: number; game_rows?: number; season_rows?: number; source?: { url?: string | null; fetched_at?: string | null; sha256?: string | null }; validation?: ArchiveValidation | null; metadata_source?: "bundled_catalog" | "d1" };
 type FieldCoverage = {
   fields: string[];
   seasons: Array<{
@@ -252,6 +252,7 @@ export default function NcaaPlayerBox() {
       <div className="paper-panel" style={{ marginTop: 24 }}>
         <div className="eyebrow">Source receipt / {selectedSeasonLabel}</div>
         <p className="note">NCAA-derived player box release via SportsDataverse{meta?.source?.fetched_at ? ` · fetched ${new Date(meta.source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. The clock describes the retained source edition, not a live stat correction or eligibility update.</p>
+        {meta?.metadata_source === "bundled_catalog" && <p className="status-error" role="status">The archive warehouse was busy when this metadata loaded. Counts and the source receipt come from the bundled release catalog; live row integrity checks will return after the next retry.</p>}
         <p className="note">{meta?.source?.sha256 ? <><code>{meta.source.sha256}</code> · </> : ""}{meta?.source?.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open canonical source release ↗</a> : "Canonical source URL unavailable in this receipt."}{season !== "all" && <> · <a href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download the retained Parquet ↗</a></>}</p>
         <p className="note">This archive is descriptive and does not assert eligibility, roster status or a verified identity match to ESPN records.</p>
       </div>

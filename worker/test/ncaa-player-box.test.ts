@@ -85,6 +85,34 @@ describe("NCAA player source archive", () => {
     expect(researchPrepare).toHaveBeenCalled();
   });
 
+  it("serves receipt-backed catalog metadata when the archive database is busy", async () => {
+    const unavailablePrepare = vi.fn(() => ({
+      bind: vi.fn(() => ({ first: async () => { throw new Error("D1 busy"); } })),
+      all: async () => { throw new Error("D1 busy"); },
+    }));
+    const response = await ncaaPlayerBox.request(
+      "/?meta=1&season=2026",
+      {},
+      {
+        DB: { prepare: unavailablePrepare },
+        NCAA_BOX_DB: { prepare: unavailablePrepare },
+        ASSETS: { fetch: vi.fn(async () => new Response(JSON.stringify({
+          generated_at: "2026-09-12T12:53:26Z",
+          seasons: [{ season: 2026, rows: 120174, source_url: "https://source.test/2026.parquet", fetched_at: "2026-09-12T12:53:26Z", sha256: digest }],
+        }))) },
+      } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      seasons: [2026],
+      total: 120174,
+      game_rows: 120174,
+      metadata_source: "bundled_catalog",
+      source: { url: "https://source.test/2026.parquet", sha256: digest },
+      validation: null,
+    });
+  });
+
   it("allows an explicit season-total view when game rows also exist", async () => {
     const researchPrepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({

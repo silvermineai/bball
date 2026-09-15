@@ -18,6 +18,20 @@ type ArchiveValidation = {
   zero_minutes_with_stats: number;
 };
 
+type ArchiveCatalogEntry = {
+  season?: unknown;
+  rows?: unknown;
+  source_url?: unknown;
+  fetched_at?: unknown;
+  sha256?: unknown;
+};
+
+type ArchiveCatalog = {
+  generated_at?: unknown;
+  total_rows?: unknown;
+  seasons?: ArchiveCatalogEntry[];
+};
+
 const validationSql = `SELECT count(*) AS total_rows,
   sum(CASE WHEN trim(contest_id)='' OR trim(team_id)='' OR trim(player_id)='' THEN 1 ELSE 0 END) AS missing_ids,
   sum(CASE WHEN team_name IS NULL OR trim(team_name)='' OR opponent_name IS NULL OR trim(opponent_name)='' OR player_name IS NULL OR trim(player_name)='' THEN 1 ELSE 0 END) AS missing_names,
@@ -77,6 +91,47 @@ function edgeCache() {
   return typeof caches === "undefined"
     ? null
     : (caches as unknown as { default: Cache }).default;
+}
+
+/**
+ * The catalog is published with the static assets release. It is a safe
+ * metadata fallback when D1 is busy: it identifies the retained source rows
+ * without pretending that live integrity checks or row reads succeeded.
+ */
+async function catalogMetaFallback(c: { env: Bindings; req: { url: string } }, season: number | "all") {
+  try {
+    const response = await c.env.ASSETS.fetch(
+      new Request(new URL("/data/basketball/ncaa-player-box-catalog.json", c.req.url)),
+    );
+    if (!response.ok) return null;
+    const catalog = await response.json() as ArchiveCatalog;
+    const entries = (catalog.seasons || [])
+      .map((entry) => ({
+        season: Number(entry.season),
+        rows: Number(entry.rows),
+        source_url: typeof entry.source_url === "string" ? entry.source_url : null,
+        fetched_at: typeof entry.fetched_at === "string" ? entry.fetched_at : null,
+        sha256: typeof entry.sha256 === "string" ? entry.sha256 : null,
+      }))
+      .filter((entry) => Number.isInteger(entry.season) && entry.season >= 2010 && entry.season <= 2026 && Number.isFinite(entry.rows) && entry.rows >= 0)
+      .sort((a, b) => b.season - a.season);
+    if (!entries.length) return null;
+    const selected = season === "all" ? entries : entries.filter((entry) => entry.season === season);
+    if (!selected.length) return null;
+    const latest = selected[0];
+    const total = selected.reduce((sum, entry) => sum + entry.rows, 0);
+    return {
+      seasons: entries.map((entry) => entry.season),
+      total,
+      game_rows: total,
+      source: { url: latest.source_url, fetched_at: latest.fetched_at, sha256: latest.sha256 },
+      validation: null,
+      metadata_source: "bundled_catalog",
+      catalog_generated_at: typeof catalog.generated_at === "string" ? catalog.generated_at : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
@@ -165,6 +220,12 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
         return response;
       } catch {
+        const fallback = await catalogMetaFallback(c, season);
+        if (fallback) {
+          const response = c.json(fallback);
+          response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+          return response;
+        }
         return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
       }
     }
@@ -195,6 +256,12 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
         return response;
       } catch {
+        const fallback = await catalogMetaFallback(c, season);
+        if (fallback) {
+          const response = c.json(fallback);
+          response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+          return response;
+        }
         return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
       }
     }
@@ -229,6 +296,12 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
     } catch {
+      const fallback = await catalogMetaFallback(c, season);
+      if (fallback) {
+        const response = c.json(fallback);
+        response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+        return response;
+      }
       return c.json({ error: "The NCAA player archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
   }
