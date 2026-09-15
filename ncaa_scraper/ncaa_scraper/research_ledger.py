@@ -97,12 +97,30 @@ def source_connection(sport):
     """
     path = ROOT / f".local/{sport}.sqlite3"
     if path.exists():
-        source = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        source = None
+        candidate = None
         try:
-            yield source
-        finally:
-            source.close()
-        return
+            candidate = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            prefix = "football" if sport == "football" else "bb"
+            tables = {
+                row[0]
+                for row in candidate.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            if {f"{prefix}_sources", f"{prefix}_games"}.issubset(tables):
+                source = candidate
+            else:
+                candidate.close()
+        except sqlite3.DatabaseError:
+            if candidate is not None:
+                candidate.close()
+        if source is not None:
+            try:
+                yield source
+            finally:
+                source.close()
+            return
 
     sql_path = ROOT / f".local/{sport}.sql"
     if not sql_path.exists():

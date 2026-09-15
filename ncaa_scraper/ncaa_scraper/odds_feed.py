@@ -44,7 +44,7 @@ def schedules(sport):
     # published basketball overview contains the exact upcoming schedule and
     # participant IDs needed for strict odds matching; it is only a fallback
     # and never fabricates aliases or historical rows.
-    if sport == "basketball" and not database.exists():
+    def published_basketball_schedule():
         overview_path = ROOT / "frontend/public/data/basketball/overview.json"
         try:
             overview = json.loads(overview_path.read_text())
@@ -69,7 +69,27 @@ def schedules(sport):
                 }
         return games
 
-    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    if sport == "basketball" and not database.exists():
+        return published_basketball_schedule()
+
+    try:
+        conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+        if sport == "basketball":
+            tables = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            if not {"bb_rosters", "bb_games"}.issubset(tables):
+                conn.close()
+                return published_basketball_schedule()
+    except sqlite3.DatabaseError as error:
+        if sport == "basketball":
+            return published_basketball_schedule()
+        raise sqlite3.OperationalError(
+            f"{sport} warehouse is not a readable SQLite database"
+        ) from error
     conn.row_factory = sqlite3.Row
     aliases = {}
     if sport == "football":
