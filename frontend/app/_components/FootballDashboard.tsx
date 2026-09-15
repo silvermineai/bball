@@ -25,11 +25,34 @@ type Player = {
   production: Record<string, Production>;
 };
 
+type EventLeader = {
+  player_name: string;
+  team: string | null;
+  division: string;
+  records: number;
+  games: number;
+  value: number | null;
+};
+
+type EventEdition = {
+  season: number;
+  dataset: "defense" | "specialists";
+  leaders: Record<string, EventLeader[]>;
+  coverage: { records: number };
+};
+
 function getPlayers(season: number) {
   const file = path.join(process.cwd(), "public/data/football", `players-${season - 1}.json`);
   if (!fs.existsSync(file)) return [] as Player[];
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: Player[] };
   return data.players || [];
+}
+
+function getEventEditions(season: number) {
+  const file = path.join(process.cwd(), "public/data/football/events.json");
+  if (!fs.existsSync(file)) return [] as EventEdition[];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { editions?: EventEdition[] };
+  return (data.editions || []).filter((edition) => edition.season === season);
 }
 
 function latestKickoff(game: Game) {
@@ -95,11 +118,40 @@ function PlayerTable({ players, season }: { players: Player[]; season: number })
   </div>;
 }
 
+function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
+  const rows = editions.flatMap((edition) =>
+    [
+      ...(edition.dataset === "defense" ? ["sacks", "interceptions"] : []),
+      ...(edition.dataset === "specialists" ? ["field_goals", "punts"] : []),
+    ].flatMap((metric) =>
+      (edition.leaders[metric] || []).slice(0, 3).map((leader) => ({
+        ...leader,
+        metric,
+        label: metric === "field_goals" ? "field goals" : metric,
+      })),
+    ),
+  );
+  if (!rows.length) return <p className="empty">No current-season event leaders are available.</p>;
+  return <div className="dashboard-table-wrap">
+    <table className="data-table dashboard-table">
+      <thead><tr><th>Player</th><th>Team</th><th>Stat</th><th className="numeric">Value</th><th className="numeric">Games</th></tr></thead>
+      <tbody>{rows.map((row, index) => <tr key={`${row.metric}-${row.player_name}-${row.team || ""}-${index}`}>
+        <th scope="row">{row.player_name}</th>
+        <td>{row.team || "—"}</td>
+        <td>{row.label}</td>
+        <td className="numeric"><strong>{row.value == null ? "—" : fmt(row.value)}</strong></td>
+        <td className="numeric">{row.games.toLocaleString()}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
 export default function FootballDashboard() {
   const overview = getOverview();
   const players = getPlayers(overview.season);
   const forecasts = overview.upcoming.filter((game) => game.prediction);
   const completedPlayerSeason = overview.season - 1;
+  const eventEditions = getEventEditions(overview.season);
   return <div className="stats-dashboard football-dashboard">
     <div className="dashboard-kicker"><span>COLLEGE FOOTBALL</span><span>{overview.season} / LIVE BOARD</span></div>
     <section className="dashboard-hero">
@@ -141,8 +193,13 @@ export default function FootballDashboard() {
         <PlayerTable players={players} season={completedPlayerSeason} />
       </section>
     </div>
+    <section className="dashboard-section" aria-labelledby="football-events">
+      <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><Link href="/football/events/">Full event notebook →</Link></div>
+      <p className="dashboard-caption">Current {overview.season} source event leaders. The season is partial; records are kept as source-name/team observations and are not merged into identified player careers.</p>
+      <EventLeadersTable editions={eventEditions} />
+    </section>
     <section className="dashboard-section dashboard-links" aria-labelledby="football-drilldowns">
-      <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="football-drilldowns">More numbers</h2></div></div>
+      <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="football-drilldowns">More numbers</h2></div></div>
       <div className="dashboard-link-grid"><Link href="/football/events/"><strong>Defense &amp; specialists</strong><span>Sacks, takeaways, kicking, punting and return records</span><b>→</b></Link><Link href="/football/efficiency/"><strong>Efficiency</strong><span>Team rates, success and opponent production</span><b>→</b></Link><Link href="/football/recruiting/"><strong>Recruiting</strong><span>Classes, roster movement and returning production</span><b>→</b></Link><Link href="/football/evaluation/"><strong>Model record</strong><span>Holdout accuracy, calibration and forecast history</span><b>→</b></Link></div>
     </section>
     <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {overview.coverage.box_rows.toLocaleString()} player box-score records in the current football edition.</p>
