@@ -4,7 +4,9 @@ export type FetchJsonOptions = {
   delayMs?: number;
 };
 
-const retryable = (status: number) => status === 429 || status >= 500;
+// These responses are transient by definition at the edge: retry the request
+// while keeping permanent client errors (400/401/403/404) visible immediately.
+const retryable = (status: number) => status === 408 || status === 425 || status === 429 || status >= 500;
 
 function wait(milliseconds: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {

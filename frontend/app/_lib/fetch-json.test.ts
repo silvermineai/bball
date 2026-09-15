@@ -17,4 +17,12 @@ describe("fetchJson", () => {
     await expect(fetchJson("/api/test", { delayMs: 0 })).rejects.toThrow("404");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it.each([408, 425])("retries transient status %s", async (status) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("try again", { status }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } }));
+    await expect(fetchJson<{ ok: boolean }>("/api/test", { delayMs: 0 })).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
