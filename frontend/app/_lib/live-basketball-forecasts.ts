@@ -121,3 +121,41 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
     (a, b) => a.starts_at.localeCompare(b.starts_at) || a.id.localeCompare(b.id),
   );
 }
+
+/** Fetch one forecast by immutable game ID for small, auditable live slates. */
+export async function fetchLiveForecast(
+  gameId: string,
+  signal?: AbortSignal,
+): Promise<LiveForecastRow | null> {
+  const params = new URLSearchParams({
+    season: "2027",
+    gameId,
+    status: "all",
+    model: "latest",
+    limit: "1",
+  });
+  const response = await fetch(`/api/basketball/research/forecasts?${params}`, { signal });
+  if (!response.ok) throw new Error("Live basketball forecast unavailable.");
+  const payload = await response.json() as { rows?: LiveForecastRow[] };
+  return payload.rows?.find((row) => row.game_id === gameId) || null;
+}
+
+export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BBGame {
+  if (!row || row.game_id !== game.id || !row.home_name || !row.away_name) return game;
+  return {
+    ...game,
+    starts_at: row.starts_at,
+    home_id: row.home_id,
+    away_id: row.away_id,
+    home_name: row.home_name,
+    away_name: row.away_name,
+    neutral: row.neutral,
+    time_tbd: row.time_tbd,
+    venue: row.venue || game.venue,
+    broadcast: row.broadcast || game.broadcast,
+    source_start: row.source_start ?? game.source_start ?? null,
+    source_time_valid: row.source_time_valid ?? game.source_time_valid ?? null,
+    source_observed_at: row.source_observed_at ?? game.source_observed_at ?? null,
+    prediction: row.prediction,
+  } satisfies BBGame;
+}

@@ -12,6 +12,7 @@ import { seasonLabel } from "../../_lib/careers";
 import LiveBasketballForecastStatus from "../../_components/LiveBasketballForecastStatus";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballMarketStatus from "../../_components/LiveBasketballMarketStatus";
+import LiveCoachSlate from "../../_components/LiveCoachSlate";
 
 export const metadata = {
   title: "Basketball coach's desk",
@@ -47,7 +48,6 @@ export default function Page() {
   const upcoming = basketball.upcoming
     .filter((game) => game.prediction || game.fallback_prediction)
     .slice(0, 5);
-  const rosterScenarioByGame = new Map(rosterModel.scenarios.map((scenario) => [scenario.game_id, scenario]));
   const rosterSummaries = (rosters.team_summaries || []).filter((team) => team.prior_minutes > 0);
   const movementRadar = [...rosterSummaries]
     .sort((a, b) => (b.unrepresented_prior_minutes || 0) - (a.unrepresented_prior_minutes || 0) || a.team.localeCompare(b.team))
@@ -110,37 +110,7 @@ export default function Page() {
           </div>
           <Link href="/basketball/forecast-lab/">Compare scenarios →</Link>
         </div>
-        <div className="article-grid">
-          {upcoming.map((game) => {
-            const prediction = game.prediction || game.fallback_prediction;
-            const rosterScenario = rosterScenarioByGame.get(game.id);
-            const confidence = prediction?.home_win_probability == null
-              ? null
-              : Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability) * 100;
-            return (
-              <article className="article-card" key={game.id}>
-                <div className="eyebrow">{date(game.starts_at)} · {game.neutral ? "Neutral" : "Home court"}</div>
-                <h3>{game.away_name} at {game.home_name}</h3>
-                <p>
-                  Model projects {fmt(prediction?.home_score)}–{fmt(prediction?.away_score)}
-                  {prediction?.home_win_probability != null
-                    ? ` · ${fmt(prediction.home_win_probability * 100)}% home win probability`
-                    : ""}.
-                </p>
-                <p className="note">
-                  {prediction?.margin_low != null && prediction.margin_high != null
-                    ? `80% margin range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`
-                    : "Margin range unavailable"}
-                  {confidence == null ? "" : ` · ${fmt(confidence)}% model confidence`}
-                  {rosterScenario ? ` · roster lens ${rosterScenario.margin_delta > 0 ? "+" : ""}${fmt(rosterScenario.margin_delta)} pts` : ""}
-                </p>
-                {rosterScenario && <small>Roster lens is research-only and does not replace the primary forecast.</small>}
-                <Link href={`/basketball/briefs/${encodeURIComponent(game.id)}/`}>Open the game brief →</Link>
-              </article>
-            );
-          })}
-          {upcoming.length === 0 && <p className="note">No forecasted games are currently published. The matchup desk will fill as the schedule release arrives.</p>}
-        </div>
+        <LiveCoachSlate games={upcoming} rosterScenarios={rosterModel.scenarios} />
       </section>
 
       <section className="section two-col" aria-labelledby="decision-lanes-title">
