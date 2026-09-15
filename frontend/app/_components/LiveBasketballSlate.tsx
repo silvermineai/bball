@@ -26,19 +26,18 @@ export default function LiveBasketballSlate({
     const featured = games.slice(0, 3);
     if (!featured.length) return () => controller.abort();
 
-    Promise.all(
+    Promise.allSettled(
       featured.map(async (game) => {
         return fetchLiveForecast(game.id, controller.signal);
       }),
     )
-      .then((rows) => {
+      .then((results) => {
         if (controller.signal.aborted) return;
+        const rows = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
         const byGame = new Map(rows.filter((row) => row != null).map((row) => [row.game_id, row]));
         setActiveGames(games.map((game) => mergeLiveForecast(game, byGame.get(game.id) || null)));
       })
-      .catch((reason: unknown) => {
-        if ((reason as { name?: string })?.name !== "AbortError") setActiveGames(games);
-      });
+      .catch(() => setActiveGames(games));
 
     return () => controller.abort();
   }, [games]);
