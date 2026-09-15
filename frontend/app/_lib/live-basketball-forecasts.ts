@@ -31,6 +31,40 @@ type LiveScorecardResponse = {
   games: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
+const RETRY_DELAYS_MS = [150, 500] as const;
+
+function retryDelay(milliseconds: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onAbort = () => {
+      if (timer) clearTimeout(timer);
+      const error = new Error("The live request was aborted.");
+      error.name = "AbortError";
+      reject(error);
+    };
+    timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    if (signal?.aborted) onAbort();
+    else signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function fetchWithTransientRetry(url: string, signal?: AbortSignal) {
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    const requestUrl = attempt === 0
+      ? url
+      : `${url}${url.includes("?") ? "&" : "?"}retry=${attempt}`;
+    const response = await fetch(requestUrl, { signal });
+    if (response.ok) return response;
+    const retryable = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500;
+    if (!retryable || attempt === RETRY_DELAYS_MS.length) return response;
+    await retryDelay(RETRY_DELAYS_MS[attempt], signal);
+  }
+  throw new Error("Live request retry loop ended unexpectedly.");
+}
+
 export async function loadLiveBasketballForecasts(
   signal?: AbortSignal,
   options: { maxPages?: number; model?: string; query?: string } = {},
@@ -42,9 +76,9 @@ export async function loadLiveBasketballForecasts(
   const searchQuery = options.query?.trim()
     ? `&q=${encodeURIComponent(options.query.trim())}`
     : "";
-  const firstResponse = await fetch(
+  const firstResponse = await fetchWithTransientRetry(
     `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0${modelQuery}${searchQuery}`,
-    { signal },
+    signal,
   );
   if (!firstResponse.ok) throw new Error("Live matchup forecasts unavailable.");
   const first = await firstResponse.json() as LiveForecastPage;
@@ -54,9 +88,9 @@ export async function loadLiveBasketballForecasts(
     : Math.min(pageCount, Math.max(1, Math.floor(options.maxPages)));
   const additional = await Promise.all(
     Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
-      fetch(
+      fetchWithTransientRetry(
         `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}${modelQuery}${searchQuery}`,
-        { signal },
+        signal,
       ).then((response) => {
         if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
         return response.json() as Promise<LiveForecastPage>;
@@ -67,9 +101,9 @@ export async function loadLiveBasketballForecasts(
 }
 
 export async function loadLiveBasketballMarketComparisons(signal?: AbortSignal) {
-  const response = await fetch(
+  const response = await fetchWithTransientRetry(
     "/api/research/scorecard?sport=basketball&limit=5000",
-    { signal },
+    signal,
   );
   if (!response.ok) throw new Error("Live market comparisons unavailable.");
   const payload = await response.json() as LiveScorecardResponse;
@@ -134,7 +168,7 @@ export async function fetchLiveForecast(
     model: "latest",
     limit: "1",
   });
-  const response = await fetch(`/api/basketball/research/forecasts?${params}`, { signal });
+  const response = await fetchWithTransientRetry(`/api/basketball/research/forecasts?${params}`, signal);
   if (!response.ok) throw new Error("Live basketball forecast unavailable.");
   const payload = await response.json() as { rows?: LiveForecastRow[] };
   return payload.rows?.find((row) => row.game_id === gameId) || null;

@@ -59,6 +59,25 @@ describe("live basketball forecast merge", () => {
     vi.unstubAllGlobals();
   });
 
+  it("retries a transient forecast response with a bounded cache-busting query", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 0, page_size: 100, rows: [] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1 })).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0",
+      { signal: undefined },
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&retry=1",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes live scorecard comparisons by game ID", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,
