@@ -40,30 +40,51 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <GlobalSearch />
           </div>
           <nav className="main-nav" aria-label="Main navigation">
-            <Link href="/football/">Football desk</Link>
-            <Link href="/football/matchups/">Matchups</Link>
-            <Link href="/football/players/">Player index</Link>
-            <Link href="/football/ncaa-leaders/">NCAA leaders</Link>
-            <Link href="/football/source-stats/">Source stats</Link>
-            <Link href="/football/recruiting/">Recruiting & rosters</Link>
-            <Link href="/football/careers/">Player careers</Link>
-            <Link href="/football/events/">Defense & specialists</Link>
-            <Link href="/football/efficiency/">Team efficiency</Link>
-            <Link href="/football/ratings/">Power ratings</Link>
-            <Link href="/football/learn/">Football guide</Link>
-            <Link href="/blog/">The journal</Link>
-            <Link href="/research/scorecard/">Forecast record</Link>
-            <Link href="/research/markets/">Market archive</Link>
-            <a href="/basketball/">Basketball ↗</a>
-            <Link href="/basketball/coach/">Coach&apos;s desk</Link>
-            <Link href="/basketball/matchups/">Basketball matchups</Link>
-            <Link href="/basketball/forecast-lab/">Forecast lab</Link>
-            <Link href="/basketball/players/">Player archive</Link>
-            <Link href="/basketball/lineups/">Lineups</Link>
-            <Link href="/basketball/ncaa-rankings/">NCAA metrics</Link>
-            <Link href="/basketball/learn/">Basketball guide</Link>
-            <Link href="/basketball/recruiting/">Recruiting board</Link>
-            <Link href="/football/methodology/">Methodology</Link>
+            <div className="main-nav-primary">
+              <Link className="main-nav-home" href="/football/">Football desk</Link>
+              <Link href="/basketball/">Basketball desk</Link>
+              <Link href="/blog/">Journal</Link>
+              <Link href="/research/scorecard/">Forecast record</Link>
+              <Link href="/research/markets/">Market archive</Link>
+            </div>
+            <details className="main-nav-explore">
+              <summary>Explore</summary>
+              <div className="main-nav-panel">
+                <div className="main-nav-group">
+                  <div className="eyebrow">Football desk</div>
+                  <Link href="/football/matchups/">Matchups</Link>
+                  <Link href="/football/players/">Player index</Link>
+                  <Link href="/football/ncaa-leaders/">NCAA leaders</Link>
+                  <Link href="/football/source-stats/">Source stats</Link>
+                  <Link href="/football/recruiting/">Recruiting &amp; rosters</Link>
+                  <Link href="/football/careers/">Player careers</Link>
+                  <Link href="/football/events/">Defense &amp; specialists</Link>
+                  <Link href="/football/efficiency/">Team efficiency</Link>
+                  <Link href="/football/ratings/">Power ratings</Link>
+                  <Link href="/football/learn/">Football guide</Link>
+                  <Link href="/football/methodology/">Methodology</Link>
+                </div>
+                <div className="main-nav-group">
+                  <div className="eyebrow">Basketball desk</div>
+                  <Link href="/basketball/coach/">Coach&apos;s desk</Link>
+                  <Link href="/basketball/matchups/">Matchups</Link>
+                  <Link href="/basketball/forecast-lab/">Forecast lab</Link>
+                  <Link href="/basketball/players/">Player stats</Link>
+                  <Link href="/basketball/lineups/">Lineups</Link>
+                  <Link href="/basketball/ncaa-rankings/">NCAA metrics</Link>
+                  <Link href="/basketball/recruiting/">Recruiting board</Link>
+                  <Link href="/basketball/learn/">Basketball guide</Link>
+                </div>
+                <div className="main-nav-group">
+                  <div className="eyebrow">Research &amp; publishing</div>
+                  <Link href="/blog/">The journal</Link>
+                  <Link href="/research/coverage/">Sources &amp; coverage</Link>
+                  <Link href="/research/scorecard/">Forecast record</Link>
+                  <Link href="/research/markets/">Market archive</Link>
+                  <Link href="/feed.xml">Subscribe to RSS ↗</Link>
+                </div>
+              </div>
+            </details>
           </nav>
         </header>
         <main id="main" className="page-wrap">

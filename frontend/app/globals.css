@@ -5519,3 +5519,86 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (max-width: 430px) {
   .sport-nav-panel { grid-template-columns: 1fr; }
 }
+
+/* The global header follows the same compact hierarchy as the basketball desk. */
+.main-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  overflow: visible;
+  padding: 10px 32px;
+}
+.main-nav-primary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.main-nav-primary::-webkit-scrollbar { display: none; }
+.main-nav-primary a,
+.main-nav-explore > summary {
+  flex: 0 0 auto;
+  padding: 3px 0;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.main-nav-primary a:hover,
+.main-nav-explore > summary:hover { color: #7dc3ff; }
+.main-nav-home { color: #8dcbff; }
+.main-nav-explore { position: relative; flex: 0 0 auto; }
+.main-nav-explore > summary {
+  list-style: none;
+  color: #aec0d8;
+}
+.main-nav-explore > summary::-webkit-details-marker { display: none; }
+.main-nav-explore > summary::after {
+  content: "▾";
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  transition: transform .15s ease;
+}
+.main-nav-explore[open] > summary::after { transform: rotate(180deg); }
+.main-nav-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 24px;
+  width: min(760px, calc(100vw - 64px));
+  padding: 22px;
+  border: 1px solid #47688b;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 16px 34px #020d1c55;
+}
+.main-nav-group { display: grid; align-content: start; gap: 9px; }
+.main-nav-group .eyebrow { margin-bottom: 2px; color: #37699d; font-size: 9px; }
+.main-nav-group a { color: var(--ink); font-size: 11px; line-height: 1.3; }
+.main-nav-group a:hover { color: var(--blue); }
+@media (max-width: 650px) {
+  .main-nav { align-items: flex-start; gap: 14px; padding: 9px 18px; }
+  .main-nav-primary { gap: 18px; }
+  .main-nav-panel {
+    position: fixed;
+    top: 114px;
+    left: 18px;
+    right: 18px;
+    width: auto;
+    max-height: calc(100vh - 134px);
+    overflow-y: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 16px;
+    padding: 18px;
+  }
+}
+@media (max-width: 430px) {
+  .main-nav-panel { grid-template-columns: 1fr; }
+}
