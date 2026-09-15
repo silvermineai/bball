@@ -543,7 +543,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     prospect_destination_counts = {}
     prospect_rank_ties = {}
     prospect_ages = {}
-    for prospect_season in (2026, 2027, 2028, 2029, 2030):
+    for prospect_season in (2025, 2026, 2027, 2028, 2029, 2030):
         # The rankings endpoint runs several bounded D1 reads over a large
         # archive. A transient 5-second database timeout is represented as a
         # deliberate 200/source-unavailable payload; retry that semantic

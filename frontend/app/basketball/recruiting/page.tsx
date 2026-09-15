@@ -12,7 +12,7 @@ import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspe
 export const metadata = {
   title: "Basketball recruiting: ESPN prospect rankings and transfer evidence",
   description:
-    "Search live ESPN 2026–30 prospect rankings alongside dated school announcements, prior college stats, availability updates and all-program coverage labels.",
+    "Search live ESPN 2025–30 prospect rankings alongside dated school announcements, prior college stats, availability updates and all-program coverage labels.",
   alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {

@@ -56,6 +56,15 @@ class LivePublicationCheckTest(unittest.TestCase):
             for candidate in candidates:
                 if candidate in responses:
                     return responses[candidate]
+            # The publication audit uses the same shape for every ESPN class;
+            # older fixtures can reuse their 2026 response when the class set
+            # grows, while still exposing the requested season to the checker.
+            if "/api/basketball/research/recruiting-rankings?season=" in canonical:
+                fallback = re.sub(r"season=\d+", "season=2026", canonical)
+                if fallback in responses:
+                    value = dict(responses[fallback])
+                    value["season"] = int(re.search(r"season=(\d+)", canonical).group(1))
+                    return value
             return responses[canonical]
         return lookup
 
@@ -226,6 +235,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "seasons": [{"season": 2026, "rows": 100, "fields": {field: {"observed": 100, "share": 1.0} for field in ("pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb")}}],
             },
             "/api/basketball/research/recruiting-intake?season=2027": {"total": 0, "providers": []},
+            "/api/basketball/research/recruiting-rankings?season=2025&page=0&publication_check=1": {"season": 2025, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rank_quality": {"ranked_rows": 1, "tied_rank_values": 0, "tied_rows": 0}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting-rankings?season=2026&page=0&publication_check=1": {"season": 2026, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rank_quality": {"ranked_rows": 1, "tied_rank_values": 0, "tied_rows": 0}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting-rankings?season=2027&page=0&publication_check=1": {"season": 2027, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rank_quality": {"ranked_rows": 1, "tied_rank_values": 0, "tied_rows": 0}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
             "/api/basketball/research/recruiting-rankings?season=2028&page=0&publication_check=1": {"season": 2028, "total": 1, "captured_at": "2026-09-10T18:00:00Z", "source": {"provider": "ESPN Recruiting"}, "rank_quality": {"ranked_rows": 1, "tied_rank_values": 0, "tied_rows": 0}, "rows": [{"athlete_id": "1"}], "commitment_destinations": [{"team_id": "1", "team": "Example", "total": 1, "ranked_total": 1, "top100_total": 1, "best_rank": 1, "average_rank": 1, "position_breakdown": [{"position": "PG", "total": 1}]}]},
@@ -276,8 +286,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["recruiting_rows"], 2)
         self.assertEqual(report["recruiting_reviewed_players"], 96)
         self.assertEqual(report["recruiting_reviewed_age_hours"], 2.0)
-        self.assertEqual(report["recruiting_prospect_destination_groups"], {"2026": 1, "2027": 1, "2028": 1, "2029": 1, "2030": 1})
-        self.assertEqual(report["recruiting_prospect_rank_ties"], {str(season): {"tied_rank_values": 0, "tied_rows": 0} for season in (2026, 2027, 2028, 2029, 2030)})
+        self.assertEqual(report["recruiting_prospect_destination_groups"], {"2025": 1, "2026": 1, "2027": 1, "2028": 1, "2029": 1, "2030": 1})
+        self.assertEqual(report["recruiting_prospect_rank_ties"], {str(season): {"tied_rank_values": 0, "tied_rows": 0} for season in (2025, 2026, 2027, 2028, 2029, 2030)})
         self.assertEqual(report["football_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_personnel_rows"], 40)
         self.assertEqual(report["football_personnel_source_max_age_hours"], 2.0)
