@@ -2,6 +2,7 @@ import re
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from scripts.check_live_publication import (
     check_live,
@@ -9,10 +10,30 @@ from scripts.check_live_publication import (
     player_box_field_metadata,
     validate_recruiting_destinations,
     validate_reviewed_recruiting_release,
+    get_json,
 )
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_get_json_honors_retry_after_for_transient_http_errors(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            @staticmethod
+            def read():
+                return b'{"ok": true}'
+
+        transient = HTTPError("https://example.test/data", 503, "busy", {"Retry-After": "0"}, None)
+        with patch("scripts.check_live_publication.urlopen", side_effect=[transient, Response()]), patch(
+            "scripts.check_live_publication.time.sleep"
+        ) as sleep:
+            self.assertEqual(get_json("https://example.test", "/data"), {"ok": True})
+        sleep.assert_called_once_with(0.0)
+
     @staticmethod
     def response_for(responses):
         """Allow the production cache-busting probe key in fixture lookups."""

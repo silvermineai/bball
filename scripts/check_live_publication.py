@@ -19,7 +19,7 @@ def timestamp(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def get_json(base_url: str, path: str, attempts: int = 3) -> dict:
+def get_json(base_url: str, path: str, attempts: int = 4) -> dict:
     url = f"{base_url.rstrip('/')}{path}"
     last_error: Exception | None = None
     for attempt in range(attempts):
@@ -37,7 +37,17 @@ def get_json(base_url: str, path: str, attempts: int = 3) -> dict:
         except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt + 1 < attempts:
-                time.sleep(2**attempt)
+                delay = float(2**attempt)
+                if isinstance(exc, HTTPError):
+                    retry_after = exc.headers.get("Retry-After")
+                    try:
+                        # Cloudflare's bounded D1 fallback publishes a
+                        # Retry-After clock; honoring it avoids declaring a
+                        # transient warehouse read a failed release.
+                        delay = min(max(float(retry_after), 0.0), 30.0)
+                    except (TypeError, ValueError):
+                        pass
+                time.sleep(delay)
     raise RuntimeError(f"could not read {path}: {last_error}")
 
 
