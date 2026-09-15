@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type RecruitingEdition = {
   reviewed_at?: string;
@@ -25,11 +26,7 @@ export default function LiveBasketballRecruitingStatus() {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("live recruiting edition unavailable");
-        return response.json() as Promise<RecruitingEdition>;
-      })
+    fetchJson<RecruitingEdition>("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
       .then((payload) => {
         if (!controller.signal.aborted) {
           setEdition(payload);

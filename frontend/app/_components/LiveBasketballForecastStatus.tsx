@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type ForecastModel = {
   model_id?: string;
@@ -23,11 +24,7 @@ export default function LiveBasketballForecastStatus() {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("live forecast index unavailable");
-        return response.json() as Promise<ForecastMeta>;
-      })
+    fetchJson<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
       .then((payload) => {
         if (!controller.signal.aborted) {
           setModel(payload.models?.[0] || null);

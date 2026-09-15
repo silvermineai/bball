@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type ScorecardResponse = {
   generated_at?: string;
@@ -39,16 +40,9 @@ export default function LiveBasketballMarketStatus() {
     const controller = new AbortController();
     setStatus("checking");
     Promise.all([
-      fetch("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal }),
-      fetch("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal }),
+      fetchJson<ScorecardResponse>("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal }),
+      fetchJson<MarketMetadata>("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal }),
     ])
-      .then(async ([scorecardResponse, archiveResponse]) => {
-        if (!scorecardResponse.ok || !archiveResponse.ok) throw new Error("live market data unavailable");
-        return Promise.all([
-          scorecardResponse.json() as Promise<ScorecardResponse>,
-          archiveResponse.json() as Promise<MarketMetadata>,
-        ]);
-      })
       .then(([scorecardPayload, archivePayload]) => {
         if (!controller.signal.aborted) {
           setScorecard(scorecardPayload);

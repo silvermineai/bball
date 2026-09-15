@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { fetchJson } from "../_lib/fetch-json";
 
 type ScheduleClock = {
   season?: number;
@@ -19,11 +20,7 @@ export default function LiveBasketballScheduleStatus() {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/basketball/research/schedule-times?season=2027&meta=1", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("schedule clock unavailable");
-        return response.json() as Promise<ScheduleClock>;
-      })
+    fetchJson<ScheduleClock>("/api/basketball/research/schedule-times?season=2027&meta=1", { signal: controller.signal })
       .then((value) => {
         if (!controller.signal.aborted) {
           setPayload(value);

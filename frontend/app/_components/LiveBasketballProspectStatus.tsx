@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type ProspectSnapshot = {
   season: number;
@@ -26,12 +27,10 @@ export default function LiveBasketballProspectStatus() {
     const controller = new AbortController();
     setStatus("checking");
     Promise.allSettled([2025, 2026, 2027, 2028, 2029, 2030].map(async (season) => {
-      const response = await fetch(
+      const payload = await fetchJson<{ total?: number; captured_at?: string | null; rank_movement?: ProspectSnapshot["rank_movement"] }>(
         `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
         { signal: controller.signal },
       );
-      if (!response.ok) throw new Error("prospect release unavailable");
-      const payload = await response.json() as { total?: number; captured_at?: string | null; rank_movement?: ProspectSnapshot["rank_movement"] };
       return {
         season,
         total: Number(payload.total || 0),

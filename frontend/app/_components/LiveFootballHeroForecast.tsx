@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fmt } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type Forecast = {
   game_id: string;
@@ -37,11 +38,7 @@ export default function LiveFootballHeroForecast({ fallback }: Props) {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/football/research/forecasts?season=2026&status=upcoming&limit=1&page=0", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("live forecast unavailable");
-        return response.json() as Promise<ForecastResponse>;
-      })
+    fetchJson<ForecastResponse>("/api/football/research/forecasts?season=2026&status=upcoming&limit=1&page=0", { signal: controller.signal })
       .then((payload) => {
         if (!controller.signal.aborted) {
           setForecast(payload.rows?.[0] || null);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
 
 type NewsMeta = {
   source?: "bundled_release" | string;
@@ -21,11 +22,7 @@ export default function LiveBasketballNewsStatus() {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/basketball/research/news?sport=mens-college-basketball&meta=1", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("live publisher wire unavailable");
-        return response.json() as Promise<NewsMeta>;
-      })
+    fetchJson<NewsMeta>("/api/basketball/research/news?sport=mens-college-basketball&meta=1", { signal: controller.signal })
       .then((payload) => {
         if (!controller.signal.aborted) {
           setMeta(payload);

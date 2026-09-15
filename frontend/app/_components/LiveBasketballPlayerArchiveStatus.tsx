@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { fetchJson } from "../_lib/fetch-json";
 
 type ArchiveMeta = {
   seasons?: number[];
@@ -19,11 +20,7 @@ export default function LiveBasketballPlayerArchiveStatus() {
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetch("/api/basketball/research/ncaa-player-box?season=all&meta=1", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("NCAA player archive unavailable");
-        return response.json() as Promise<ArchiveMeta>;
-      })
+    fetchJson<ArchiveMeta>("/api/basketball/research/ncaa-player-box?season=all&meta=1", { signal: controller.signal })
       .then((payload) => {
         if (controller.signal.aborted) return;
         setArchive(payload);
