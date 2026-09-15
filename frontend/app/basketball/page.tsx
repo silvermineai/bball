@@ -6,7 +6,6 @@ import {
   getRosterModel,
 } from "../_lib/basketball-data";
 import { date, fmt } from "../_lib/format";
-import BasketballCard from "../_components/BasketballCard";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -23,6 +22,7 @@ import LiveBasketballMarketStatus from "../_components/LiveBasketballMarketStatu
 import LiveBasketballNewsStatus from "../_components/LiveBasketballNewsStatus";
 import LiveBasketballScheduleStatus from "../_components/LiveBasketballScheduleStatus";
 import LiveBasketballPlayerArchiveStatus from "../_components/LiveBasketballPlayerArchiveStatus";
+import LiveBasketballSlate from "../_components/LiveBasketballSlate";
 
 function getBasketballLeaders(season: number) {
   const file = path.join(
@@ -304,25 +304,11 @@ export default function Page() {
           labeled cold-start estimate because a program is outside the primary
           trained field. This is a partial schedule, not the complete season.
         </p>
-        <div className="match-grid">
-          {d.upcoming
-            .filter((g) => g.prediction || g.fallback_prediction)
-            .slice(0, 3)
-            .map((g) => {
-              const rosterScenario = rosterModel.scenarios.find(
-                (scenario) => scenario.game_id === g.id,
-              );
-              return (
-                <BasketballCard
-                  key={g.id}
-                  game={g}
-                  homeRoster={r.team_summaries?.find((summary) => summary.team_id === g.home_id)}
-                  awayRoster={r.team_summaries?.find((summary) => summary.team_id === g.away_id)}
-                  rosterScenario={rosterScenario}
-                />
-              );
-            })}
-        </div>
+        <LiveBasketballSlate
+          games={d.upcoming.filter((g) => g.prediction || g.fallback_prediction)}
+          rosterSummaries={r.team_summaries || []}
+          rosterScenarios={rosterModel.scenarios}
+        />
       </section>
       {leaders && (
         <section className="section">
