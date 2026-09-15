@@ -45,6 +45,9 @@ export default function LiveCoachSlate({
         const confidence = prediction?.home_win_probability == null
           ? null
           : Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability) * 100;
+        const rangeWidth = prediction?.margin_low != null && prediction.margin_high != null
+          ? prediction.margin_high - prediction.margin_low
+          : null;
         return (
           <article className="article-card" key={game.id}>
             <div className="eyebrow">{date(game.starts_at)} · {game.neutral ? "Neutral" : "Home court"}</div>
@@ -59,7 +62,8 @@ export default function LiveCoachSlate({
               {prediction?.margin_low != null && prediction.margin_high != null
                 ? `80% margin range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`
                 : "Margin range unavailable"}
-              {confidence == null ? "" : ` · ${fmt(confidence)}% model confidence`}
+              {rangeWidth == null ? "" : ` · ${fmt(rangeWidth, 1)}-point range width`}
+              {confidence == null ? "" : ` · ${fmt(confidence)}% strongest-side win probability`}
               {rosterScenario ? ` · roster lens ${rosterScenario.margin_delta > 0 ? "+" : ""}${fmt(rosterScenario.margin_delta)} pts` : ""}
             </p>
             {rosterScenario && <small>Roster lens is research-only and does not replace the primary forecast.</small>}
