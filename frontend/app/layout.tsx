@@ -5,11 +5,11 @@ import GlobalSearch from "./_components/GlobalSearch";
 export const metadata: Metadata = {
   metadataBase: new URL("https://bball.silvermine.dev"),
   title: {
-    default: "The Coaching Annual · College sports, understood",
-    template: "%s · The Coaching Annual",
+    default: "Silvermine · College basketball stats",
+    template: "%s · Silvermine",
   },
   description:
-    "College football forecasts, player production and transparent model research. Basketball scouting and recruiting tools from Silvermine.",
+    "College basketball team stats, player production, upcoming games and Silvermine model predictions.",
   alternates: {
     types: { "application/rss+xml": "/feed.xml" },
   },
@@ -28,12 +28,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 S<span>↗</span>
               </span>
               <span>
-                <small>SILVERMINE RESEARCH</small>
-                <strong>The Coaching Annual</strong>
+                <small>SILVERMINE</small>
+                <strong>College basketball stats</strong>
               </span>
             </Link>
             <div className="edition">
-              VOLUME 01
+              LIVE BOARD
               <br />
               2026–27 SEASON
             </div>
@@ -41,11 +41,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <nav className="main-nav" aria-label="Main navigation">
             <div className="main-nav-primary">
-              <Link className="main-nav-home" href="/football/">Football desk</Link>
-              <Link href="/basketball/">Basketball desk</Link>
+              <Link className="main-nav-home" href="/">Home</Link>
+              <Link href="/basketball/ratings/">Teams</Link>
+              <Link href="/basketball/players/">Players</Link>
+              <Link href="/basketball/matchups/">Games</Link>
+              <Link href="/basketball/forecast-lab/">Predictions</Link>
+              <Link href="/football/">Football</Link>
               <Link href="/blog/">Journal</Link>
-              <Link href="/research/scorecard/">Forecast record</Link>
-              <Link href="/research/markets/">Market archive</Link>
             </div>
             <details className="main-nav-explore">
               <summary>Explore</summary>
@@ -55,7 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/football/matchups/">Matchups</Link>
                   <Link href="/football/players/">Player index</Link>
                   <Link href="/football/ncaa-leaders/">NCAA leaders</Link>
-                  <Link href="/football/source-stats/">Source stats</Link>
+                  <Link href="/football/source-stats/">Stat archive</Link>
                   <Link href="/football/recruiting/">Recruiting &amp; rosters</Link>
                   <Link href="/football/careers/">Player careers</Link>
                   <Link href="/football/events/">Defense &amp; specialists</Link>
@@ -66,7 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="main-nav-group">
                   <div className="eyebrow">Basketball desk</div>
-                  <Link href="/basketball/coach/">Coach&apos;s desk</Link>
+                  <Link href="/basketball/coach/">Team tools</Link>
                   <Link href="/basketball/matchups/">Matchups</Link>
                   <Link href="/basketball/forecast-lab/">Forecast lab</Link>
                   <Link href="/basketball/players/">Player stats</Link>
@@ -76,9 +78,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/basketball/learn/">Basketball guide</Link>
                 </div>
                 <div className="main-nav-group">
-                  <div className="eyebrow">Research &amp; publishing</div>
+                  <div className="eyebrow">More data</div>
                   <Link href="/blog/">The journal</Link>
-                  <Link href="/research/coverage/">Sources &amp; coverage</Link>
+                  <Link href="/research/coverage/">Data coverage</Link>
                   <Link href="/research/scorecard/">Forecast record</Link>
                   <Link href="/research/markets/">Market archive</Link>
                   <Link href="/feed.xml">Subscribe to RSS ↗</Link>
@@ -92,24 +94,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="site-footer">
           <div>
-            <strong>The Coaching Annual</strong>
-            <p>Know the numbers. Ask better questions.</p>
+            <strong>Silvermine</strong>
+            <p>College basketball stats and model forecasts.</p>
           </div>
           <p>
-            Data:{" "}
-            <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-              SportsDataverse
-            </a>{" "}
-            ·{" "}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
-            <br />
-            Normalized statistics and independent Silvermine estimates.
-            <br />
-            <Link href="/research/coverage/">
-              Sources, coverage & limitations →
-            </Link>
-            <br />
-            <a href="/feed.xml">Subscribe to the journal RSS feed ↗</a>
           </p>
         </footer>
       </body>
