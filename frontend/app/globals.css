@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Libre+Caslon+Display&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -78,7 +78,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-weight: 400;
 }
 h1 {
@@ -155,7 +155,7 @@ th,
 }
 .brand strong {
   font:
-    28px "Libre Caslon Display",
+    28px "Barlow Condensed",
     Georgia,
     serif;
 }
@@ -202,7 +202,7 @@ th,
 .global-search-result:last-child { border-bottom: 0; }
 .global-search-result:hover { background: #e9eddf; }
 .global-search-result strong, .global-search-result small { display: block; }
-.global-search-result strong { font: 15px "Libre Caslon Display", Georgia, serif; }
+.global-search-result strong { font: 15px "Barlow Condensed", Georgia, serif; }
 .global-search-result small, .global-search-result em, .global-search-status { color: var(--muted); font: 9px "IBM Plex Mono", monospace; }
 .global-search-result em { font-style: normal; text-transform: uppercase; white-space: nowrap; }
 .global-search-status { display: block; padding: 14px; }
@@ -345,7 +345,7 @@ th,
 }
 .score-line strong {
   font:
-    38px "Libre Caslon Display",
+    38px "Barlow Condensed",
     Georgia;
 }
 .field-note {
@@ -372,7 +372,7 @@ th,
 .strip strong {
   display: block;
   font:
-    34px "Libre Caslon Display",
+    34px "Barlow Condensed",
     serif;
   margin-bottom: 6px;
 }
@@ -508,7 +508,7 @@ th,
 }
 .prediction-score {
   font:
-    38px "Libre Caslon Display",
+    38px "Barlow Condensed",
     Georgia;
   display: flex;
   justify-content: space-between;
@@ -844,7 +844,7 @@ th,
 }
 .metric-explorer-detail h3 {
   margin-top: 9px;
-  font: 400 clamp(24px, 2.8vw, 36px) "Libre Caslon Display", Georgia, serif;
+  font: 400 clamp(24px, 2.8vw, 36px) "Barlow Condensed", Georgia, serif;
 }
 .metric-explorer-detail p {
   margin-top: 13px;
@@ -917,7 +917,7 @@ th,
 .roster-intel-stats strong {
   display: block;
   font:
-    22px "Libre Caslon Display",
+    22px "Barlow Condensed",
     serif;
 }
 .roster-intel-stats small,
@@ -949,7 +949,7 @@ th,
   display: block;
   margin: 4px 0 2px;
   font:
-    22px "Libre Caslon Display",
+    22px "Barlow Condensed",
     serif;
 }
 .roster-intel-list {
@@ -1400,7 +1400,7 @@ th,
 }
 .market-import-preview h4 {
   margin: 6px 0 8px;
-  font: 400 24px/1.15 "Libre Caslon Display", Georgia, serif;
+  font: 400 24px/1.15 "Barlow Condensed", Georgia, serif;
 }
 .market-import-preview > .note {
   max-width: 760px;
@@ -1501,7 +1501,7 @@ th,
 }
 .site-footer strong {
   font:
-    24px "Libre Caslon Display",
+    24px "Barlow Condensed",
     serif;
   color: var(--ink);
 }
@@ -1847,7 +1847,7 @@ summary {
 }
 .ledger-stamp strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: clamp(60px, 7vw, 100px);
   font-weight: 400;
   line-height: 1.2;
@@ -1936,7 +1936,7 @@ summary {
 }
 .program-rank > strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 100px;
   line-height: 1.2;
   font-weight: 400;
@@ -1977,7 +1977,7 @@ summary {
 }
 .factor-card > strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 44px;
   font-weight: 400;
 }
@@ -2072,7 +2072,7 @@ summary {
 }
 .scenario-score strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-weight: 400;
   font-size: 65px;
   margin-top: 15px;
@@ -2240,7 +2240,7 @@ summary {
 }
 .shot-summary-grid strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: clamp(32px, 4vw, 52px);
   font-weight: 400;
   margin-top: 8px;
@@ -2518,7 +2518,7 @@ summary {
   gap: 3px;
 }
 .recruiting-watchlist-actions > strong {
-  font: 32px/1 "Libre Caslon Display", Georgia, serif;
+  font: 32px/1 "Barlow Condensed", Georgia, serif;
 }
 .recruiting-watchlist-actions > span {
   color: var(--muted);
@@ -2651,7 +2651,7 @@ summary {
 .recruiting-metrics strong {
   display: block;
   font:
-    32px/1.1 "Libre Caslon Display",
+    32px/1.1 "Barlow Condensed",
     Georgia,
     serif;
 }
@@ -2858,7 +2858,7 @@ summary {
 .career-bar strong {
   text-align: right;
   font:
-    26px/1 "Libre Caslon Display",
+    26px/1 "Barlow Condensed",
     Georgia,
     serif;
 }
@@ -3251,7 +3251,7 @@ summary {
 }
 .brief-scoreboard > div > strong {
   font:
-    58px "Libre Caslon Display",
+    58px "Barlow Condensed",
     Georgia,
     serif;
 }
@@ -3444,7 +3444,7 @@ summary {
 }
 .brief-pressure-values strong {
   font:
-    38px "Libre Caslon Display",
+    38px "Barlow Condensed",
     Georgia,
     serif;
 }
@@ -3763,7 +3763,7 @@ summary {
 }
 .event-coverage strong {
   display: block;
-  font-family: "Libre Caslon Display", serif;
+  font-family: "Barlow Condensed", serif;
   font-size: 38px;
   font-weight: 400;
 }
@@ -4092,7 +4092,7 @@ summary {
   min-width: 0;
 }
 .pc-card h2 {
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-weight: 400;
   font-size: clamp(28px, 2.5vw, 38px);
   line-height: 1.12;
@@ -4364,7 +4364,7 @@ summary {
 .feature-timeline strong {
   display: block;
   font:
-    30px "Libre Caslon Display",
+    30px "Barlow Condensed",
     Georgia,
     serif;
   margin-top: 16px;
@@ -4522,7 +4522,7 @@ summary {
 }
 .board-presets strong {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 26px;
   font-weight: 400;
   margin-bottom: 10px;
@@ -4589,7 +4589,7 @@ summary {
   display: block;
 }
 .board-sample strong {
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 32px;
   font-weight: 400;
 }
@@ -4606,7 +4606,7 @@ summary {
   text-align: left;
 }
 .board-results .board-score {
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 28px;
   font-weight: 400;
 }
@@ -4848,7 +4848,7 @@ summary {
 }
 .fit-role-number {
   display: block;
-  font-family: "Libre Caslon Display", Georgia, serif;
+  font-family: "Barlow Condensed", Georgia, serif;
   font-size: 48px;
   font-weight: 400;
   line-height: 1;
@@ -4925,7 +4925,7 @@ summary {
 }
 .football-unit h3 {
   font:
-    30px "Libre Caslon Display",
+    30px "Barlow Condensed",
     Georgia,
     serif;
   margin: 8px 0 24px;
@@ -5166,7 +5166,7 @@ summary {
 .film-search-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .film-search-card { display: grid; gap: 10px; margin: 0; transition: transform .2s ease, border-color .2s ease; }
 .film-search-card:hover { transform: translateY(-2px); border-color: var(--orange); }
-.film-search-card strong { font-family: "Libre Caslon Display", Georgia, serif; font-size: 1.45rem; font-weight: 400; }
+.film-search-card strong { font-family: "Barlow Condensed", Georgia, serif; font-size: 1.45rem; font-weight: 400; }
 .film-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .film-card { margin: 0; overflow: hidden; border: 1px solid var(--line); background: #fcfaf4; }
 .film-thumb, .film-frame { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
@@ -5190,7 +5190,7 @@ summary {
 .conference-card-header { display: flex; align-items: center; width: 100%; gap: 14px; padding: 18px; border: 0; border-bottom: 1px solid var(--line); background: white; color: var(--ink); text-align: left; cursor: pointer; }
 .conference-card-header:hover { background: #f9f7ef; }
 .conference-rank { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--orange); color: var(--orange); font: 600 14px "IBM Plex Mono", monospace; }
-.conference-card-header strong { display: block; font: 400 1.35rem "Libre Caslon Display", Georgia, serif; }
+.conference-card-header strong { display: block; font: 400 1.35rem "Barlow Condensed", Georgia, serif; }
 .conference-card-header small { display: block; margin-top: 4px; color: var(--muted); font: 10px "IBM Plex Mono", monospace; }
 .conference-toggle { margin-left: auto; color: var(--orange); font: 10px "IBM Plex Mono", monospace; text-transform: uppercase; white-space: nowrap; }
 .conference-table { margin: 0; }
@@ -5226,3 +5226,208 @@ summary {
 .prospect-rank-bar.is-unranked .prospect-rank-bar-track span { background: repeating-linear-gradient(135deg, #d7d1c5 0, #d7d1c5 3px, #f4f1e9 3px, #f4f1e9 6px); }
 .prospect-rank-chart figcaption { margin-top: 12px; color: var(--muted); font-size: 12px; }
 @media (max-width: 600px) { .prospect-rank-chart-bars { gap: 7px; } .prospect-rank-bar { min-width: 50px; } .prospect-rank-bar-track span { width: 28px; } }
+
+/* Sports broadcast refresh: NCAA statbook clarity with ESPN/CBS/DraftKings cues. */
+:root {
+  --paper: #f3f6fa;
+  --canvas: #f3f6fa;
+  --ink: #10233f;
+  --muted: #5f6f83;
+  --line: #d5deea;
+  --orange: #d5523b;
+  --green: #0a9b62;
+  --accent: #145dcc;
+  --wash: #eaf1fa;
+  --navy: #071a33;
+  --blue: #145dcc;
+  --surface: #ffffff;
+  --surface-muted: #eef3f8;
+}
+
+html { background: var(--canvas); }
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+}
+h1, h2, h3 {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+h1 { font-size: clamp(2.7rem, 5vw, 4.8rem); line-height: .98; }
+h2 { font-size: clamp(1.9rem, 3vw, 3rem); line-height: 1.02; }
+h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
+
+.masthead {
+  border-top: 4px solid var(--blue);
+  border-bottom: 0;
+  background: var(--navy);
+  color: #fff;
+}
+.header-inner {
+  max-width: 1400px;
+  padding: 18px 32px 16px;
+}
+.brand { gap: 12px; }
+.brand-monogram {
+  border: 1px solid #8da9cf;
+  background: #0d2d57;
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 32px;
+  height: 44px;
+  width: 42px;
+  line-height: 41px;
+}
+.brand-monogram span { background: var(--green); color: #fff; font-size: 10px; }
+.brand small { color: #9fb5d4; font-size: 8px; letter-spacing: .18em; }
+.brand strong { font: 600 29px/1 "Barlow Condensed", sans-serif; letter-spacing: .01em; }
+.edition { color: #a8bbd4; font-size: 9px; }
+.global-search { margin-right: 0; }
+.global-search input {
+  min-height: 36px;
+  border: 1px solid #496583;
+  background: #102b50;
+  color: #fff;
+  border-radius: 2px;
+}
+.global-search input::placeholder { color: #aec0d8; }
+.global-search input:focus { outline-color: #6eb9ff; }
+.global-search-results {
+  border: 1px solid #557799;
+  background: var(--surface);
+  box-shadow: 0 8px 24px #06172b55;
+  color: var(--ink);
+}
+.global-search-result:hover { background: var(--surface-muted); }
+.main-nav {
+  max-width: 1400px;
+  padding: 11px 32px;
+  gap: 24px;
+  border-top: 1px solid #264463;
+  color: #d5e1f0;
+  font-size: 11px;
+  overflow-x: auto;
+}
+.main-nav a { padding: 4px 0; }
+.main-nav a:hover { color: #7dc3ff; }
+.main-nav a:last-child { color: #aec0d8; }
+
+.page-wrap { max-width: 1400px; padding: 26px 32px 48px; }
+.dateline { color: var(--muted); padding-bottom: 14px; }
+.hero {
+  min-height: 360px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+  background: var(--navy);
+  border-radius: 3px;
+  box-shadow: 0 10px 28px #10233f18;
+}
+.hero-copy { padding: 42px 44px; }
+.hero .eyebrow { color: #72c8a6; margin-bottom: 20px; }
+.hero h1 { max-width: 600px; font-size: clamp(3.3rem, 6vw, 5.5rem); }
+.hero h1 em { color: #7dc3ff; font-style: normal; }
+.hero p { color: #c0d0e3; margin-top: 19px; line-height: 1.55; }
+.hero-actions { gap: 18px; margin-top: 25px; }
+.button {
+  min-height: 40px;
+  padding: 10px 16px;
+  border-radius: 2px;
+  background: var(--blue);
+  font-size: 11px;
+  letter-spacing: .01em;
+}
+.button:hover { background: #0e4da9; }
+.button.secondary { border-color: var(--line); background: var(--surface); color: var(--ink); }
+.hero-link { border-bottom-color: #6ea9e5; color: #e2edf9; }
+.field {
+  min-height: 360px;
+  border-left: 1px solid #294869;
+  background: #0b2343;
+}
+.field:before { inset: 30px; border-color: #6e91b533; }
+.field-card {
+  width: 82%;
+  padding: 24px;
+  border: 1px solid #47688b;
+  border-radius: 2px;
+  background: #102f57;
+  box-shadow: 0 8px 22px #030f1e66;
+  transform: none;
+}
+.field-card .eyebrow { margin-bottom: 18px; color: #9fc4ee; }
+.score-line { padding: 10px 0; font-size: 16px; border-bottom-color: #ffffff1f; }
+.score-line strong { font: 600 38px/1 "Barlow Condensed", sans-serif; }
+.field-note { color: #9ed9bf; margin-top: 16px; line-height: 1.5; }
+
+.strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-top: 0;
+  background: var(--surface);
+}
+.strip > div { padding: 18px 20px; border-right-color: var(--line); }
+.strip strong { font: 600 31px/1 "Barlow Condensed", sans-serif; color: var(--ink); margin-bottom: 5px; }
+.strip span { font-size: 10px; line-height: 1.35; }
+.section { margin-top: 38px; }
+.section-heading { padding-bottom: 13px; margin-bottom: 18px; border-bottom-color: var(--line); }
+.section-heading .eyebrow, .page-title .eyebrow { color: var(--blue); margin-bottom: 6px; }
+.section-heading > a, .article-card > a { color: var(--blue); }
+
+.paper-panel, .metric-explorer, .match-card, .source-receipt, .football-unit, .film-card, .conference-card {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px #10233f0a;
+}
+.paper-panel { padding: 22px; }
+.paper-panel p { line-height: 1.65; }
+.match-card { padding: 20px; }
+.match-card .meta { color: var(--muted); }
+.prediction-score { font: 600 38px/1 "Barlow Condensed", sans-serif; }
+.prob-bar { height: 6px; background: #dce6f1; margin: 17px 0 9px; }
+.prob-bar span { height: 6px; background: var(--blue); }
+
+.coach-path { border-top-color: var(--line); border-bottom-color: var(--line); background: var(--surface); }
+.coach-path .article-card { border-top-color: var(--blue); }
+.article-card { border-top: 2px solid var(--line); padding: 19px 0; }
+.article-card .eyebrow { color: var(--blue); }
+.article-card h3 { margin: 12px 0 8px; }
+.article-card p { line-height: 1.6; }
+.banner { background: #e7f0fb; border: 1px solid #c7d9ed; border-radius: 3px; padding: 21px; }
+
+.toolbar { gap: 12px; padding: 16px 0; border-top-color: var(--line); border-bottom-color: var(--line); }
+.control input, .control select { border: 1px solid #b8c7d8; border-radius: 2px; background: var(--surface); padding: 9px 11px; }
+.data-table { font-size: 11px; }
+.data-table th { padding: 11px 10px; background: #e7eef7; border-bottom-color: #aabdd3; color: #3e5875; }
+.data-table td { padding: 12px 10px; border-bottom-color: var(--line); }
+.data-table tbody tr:hover { background: #f0f6fc; }
+.data-table td a { color: var(--blue); text-decoration-color: #a8c6e8; }
+.rank-number { color: var(--blue); }
+.status-pill { border-radius: 999px; background: #e0f5eb; color: #087447; padding: 3px 8px; font: 600 9px "IBM Plex Mono", monospace; }
+.status-error { border-color: #d98678; background: #fff5f2; padding: 16px 18px; }
+.empty { background: #eaf1f8; padding: 32px; }
+.site-footer { max-width: 1340px; margin-top: 24px; border-top: 2px solid var(--navy); padding: 26px 0 36px; }
+.site-footer strong { font: 600 24px/1 "Barlow Condensed", sans-serif; color: var(--ink); }
+
+@media (max-width: 900px) {
+  .strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hero { grid-template-columns: 1fr; }
+  .field { min-height: 300px; border-left: 0; border-top: 1px solid #294869; }
+}
+@media (max-width: 650px) {
+  .header-inner { padding: 16px 18px; }
+  .main-nav { padding: 10px 18px; gap: 18px; }
+  .page-wrap { padding: 20px 18px 36px; }
+  .hero-copy { padding: 31px 25px; }
+  .hero h1 { font-size: 3.7rem; }
+  .field { min-height: 270px; }
+  .field-card { width: calc(100% - 40px); }
+  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .strip > div { padding: 16px; }
+  .strip > div:nth-child(odd) { border-right: 1px solid var(--line); }
+  .strip strong { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
