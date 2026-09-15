@@ -239,6 +239,13 @@ export default function EspnRecruitingBoard() {
   const shortlistAverageRank = shortlistRanked.length
     ? shortlistRanked.reduce((sum, entry) => sum + (entry.rank || 0), 0) / shortlistRanked.length
     : null;
+  const shortlistBestRank = shortlistRanked.length
+    ? Math.min(...shortlistRanked.map((entry) => entry.rank as number))
+    : null;
+  const shortlistGraded = shortlist.filter((entry) => entry.grade != null);
+  const shortlistBestGrade = shortlistGraded.length
+    ? Math.max(...shortlistGraded.map((entry) => entry.grade as number))
+    : null;
   const shortlistCommitted = shortlist.filter((entry) => Boolean(entry.committed_team_name)).length;
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   return (
@@ -273,7 +280,12 @@ export default function EspnRecruitingBoard() {
           <div><strong>{shortlistCommitted.toLocaleString()}</strong><span>Source-listed commitments</span></div>
         </div>
         {shortlistPositions && <p className="note" style={{ marginBottom: 12 }}>Position mix: {shortlistPositions}. Use the source links and prospect dossiers to verify each entry after a later release.</p>}
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Commitment</th><th>Source snapshot</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{grade(row.grade)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Source snapshot</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
+          const rankGap = row.rank != null && shortlistBestRank != null ? row.rank - shortlistBestRank : null;
+          const gradeGap = row.grade != null && shortlistBestGrade != null ? row.grade - shortlistBestGrade : null;
+          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
+        })}</tbody></table></div>
+        <p className="note" style={{ marginTop: 12 }}>Rank gap is measured from the best source rank in this shortlist; grade gap is measured from the highest source grade. These are comparison aids within the saved ESPN rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
       </section>}
       {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">
