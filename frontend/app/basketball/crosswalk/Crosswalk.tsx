@@ -37,7 +37,7 @@ type Row = {
 
 type Result = { page: number; page_size: number; total: number; rows: Row[] };
 
-const providerLabels = { all: "All providers", fox: "Fox Sports IDs", yahoo: "Yahoo IDs" } as const;
+const providerLabels = { all: "All identities", fox: "Alternate IDs", yahoo: "Secondary IDs" } as const;
 type Provider = keyof typeof providerLabels;
 
 export default function Crosswalk() {
@@ -93,7 +93,7 @@ export default function Crosswalk() {
   const exportPage = () => {
     if (!result) return;
     downloadCsv("basketball-player-crosswalk.csv", toCsv(
-      ["Season", "Team", "Player", "ESPN athlete ID", "Fox athlete ID", "Yahoo player ID", "Match method", "Match confidence", "ESPN position", "Fox position group"],
+      ["Season", "Team", "Player", "Primary athlete ID", "Alternate athlete ID", "Secondary player ID", "Match method", "Match confidence", "Primary position", "Alternate position group"],
       result.rows.map((row) => [row.season, row.team_abbreviation, row.player_name || row.espn_full_name, row.espn_athlete_id, row.fox_athlete_id, row.yahoo_player_id, row.match_method, row.match_confidence, row.espn_position, row.fox_position_group]),
     ));
   };
@@ -101,24 +101,24 @@ export default function Crosswalk() {
   return (
     <section className="section">
       <div className="strip">
-        <div><strong>{meta?.players.toLocaleString() || "—"}</strong><span>ESPN source players</span></div>
+        <div><strong>{meta?.players.toLocaleString() || "—"}</strong><span>Primary identity rows</span></div>
         <div><strong>{meta?.rows.toLocaleString() || "—"}</strong><span>Crosswalk rows</span></div>
-        <div><strong>{meta?.fox_ids.toLocaleString() || "—"}</strong><span>Fox IDs present</span></div>
-        <div><strong>{meta?.yahoo_ids.toLocaleString() || "—"}</strong><span>Yahoo IDs present</span></div>
+        <div><strong>{meta?.fox_ids.toLocaleString() || "—"}</strong><span>Alternate IDs present</span></div>
+        <div><strong>{meta?.yahoo_ids.toLocaleString() || "—"}</strong><span>Secondary IDs present</span></div>
       </div>
-      <p className="note">This release makes provider identifiers searchable beside the exact ESPN player file. Match method and confidence are retained from the publisher. {meta?.identity_note || "No NCAA ID join is asserted."}</p>
+      <p className="note">This release makes identity keys searchable beside the exact player file. Match method and confidence are retained in the archive. {meta?.identity_note || "No NCAA ID join is asserted."}</p>
       <div className="toolbar">
         <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search a player, program or identifier" /></label>
-        <label className="control"><span>PROVIDER COVERAGE</span><select value={provider} onChange={(event) => { setProvider(event.target.value as Provider); setPage(0); }}>{Object.entries(providerLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        <label className="control"><span>IDENTITY COVERAGE</span><select value={provider} onChange={(event) => { setProvider(event.target.value as Provider); setPage(0); }}>{Object.entries(providerLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={exportPage} disabled={!result?.rows.length}>Download page CSV ↓</button>
       </div>
       {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry crosswalk archive</button></div> : !result ? <p className="empty" role="status">Loading identifier evidence…</p> : <>
         <p className="note" role="status">{result.total.toLocaleString()} matching rows · page {page + 1} of {pages}</p>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Player / program</th><th>ESPN source ID</th><th>Fox Sports ID</th><th>Yahoo ID</th><th>Publisher match</th></tr></thead>
+            <thead><tr><th>Player / program</th><th>Primary ID</th><th>Alternate ID</th><th>Secondary ID</th><th>Match confidence</th></tr></thead>
             <tbody>{result.rows.map((row) => <tr key={`${row.season}-${row.espn_team_id}-${row.espn_athlete_id}`}>
-              <td><strong>{row.espn_full_name || row.player_name || "Unnamed source row"}</strong><small>{row.team_abbreviation || "Team unavailable"}{row.espn_position ? ` · ${row.espn_position}` : ""}</small></td>
+              <td><strong>{row.espn_full_name || row.player_name || "Unnamed record"}</strong><small>{row.team_abbreviation || "Team unavailable"}{row.espn_position ? ` · ${row.espn_position}` : ""}</small></td>
               <td><Link href={`/basketball/player/?id=${encodeURIComponent(row.espn_athlete_id)}&season=${row.season}`}>{row.espn_athlete_id} →</Link></td>
               <td>{row.fox_athlete_id || "—"}{row.fox_player && row.fox_player !== row.espn_full_name ? <small>{row.fox_player}</small> : null}</td>
               <td>{row.yahoo_player_id || "—"}{row.yahoo_player_name ? <small>{row.yahoo_player_name}</small> : null}</td>
@@ -129,8 +129,8 @@ export default function Crosswalk() {
         {!result.rows.length && <p className="empty">No crosswalk rows match this search.</p>}
         <div className="pagination"><button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>Next →</button></div>
       </>}
-      {meta?.source.url && <details className="note" style={{ marginTop: 24 }}><summary>Source receipt</summary><p style={{ marginTop: 12 }}>Retrieved {meta.source.fetched_at ? new Date(meta.source.fetched_at).toLocaleString("en-US", { timeZone: "UTC" }) : "date unavailable"} · SHA-256 <code>{meta.source.sha256 || "unavailable"}</code></p><a href={meta.source.url} target="_blank" rel="noreferrer">Open SportsDataverse release ↗</a></details>}
-      <p className="note" style={{ marginTop: 24 }}>Fox and Yahoo identifiers are shown as source evidence and are not used to merge NCAA records. A provider match does not establish eligibility, transfer status, roster availability or a unique person outside the source&apos;s own match.</p>
+      {meta?.source.url && <details className="note" style={{ marginTop: 24 }}><summary>Capture receipt</summary><p style={{ marginTop: 12 }}>Retrieved {meta.source.fetched_at ? new Date(meta.source.fetched_at).toLocaleString("en-US", { timeZone: "UTC" }) : "date unavailable"} · SHA-256 <code>{meta.source.sha256 || "unavailable"}</code></p><span>Retained archive record</span></details>}
+      <p className="note" style={{ marginTop: 24 }}>Alternate identifiers are shown as recorded evidence and are not used to merge NCAA records. An identity match does not establish eligibility, transfer status, roster availability or a unique person outside the source&apos;s own match.</p>
     </section>
   );
 }

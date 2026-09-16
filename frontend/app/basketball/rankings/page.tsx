@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Basketball team and player rankings",
   description:
-    "Compare team ratings and source-attributed player rankings across production, workload, impact and publisher models.",
+    "Compare team ratings and player rankings across production, workload, impact and comparison models.",
   alternates: { canonical: "/basketball/rankings/" },
 };
 
@@ -17,7 +17,7 @@ export default function Page() {
         <h1>Power ratings, with the reasons attached.</h1>
         <p>
           Start with the team board, then choose the player lens that matches
-          the question. Every player board keeps its source identity,
+          the question. Every player board keeps its player identity,
           qualification rules and missing values visible.
         </p>
       </div>
@@ -31,12 +31,12 @@ export default function Page() {
         </div>
         <p className="note">
           These boards answer different questions. They are not blended into a
-          synthetic overall grade, and an absent value means the source or
+          synthetic overall grade, and an absent value means the record or
           qualifying sample did not support that measure.
         </p>
         <div className="article-grid">
           <article className="article-card">
-            <div className="eyebrow">NCAA source rankings</div>
+            <div className="eyebrow">NCAA rankings</div>
             <h2>Counting stats and efficiency.</h2>
             <p>
               Rank points, rebounds, assists, steals, blocks, true shooting,
@@ -50,7 +50,7 @@ export default function Page() {
             <h2>Build a role-specific shortlist.</h2>
             <p>
               Weight same-season production percentiles across the historical
-              archive, then preserve the exact records and source ranks behind
+              archive, then preserve the exact records and recorded ranks behind
               a shareable shortlist.
             </p>
             <Link href="/basketball/scouting-board/">Open scouting board →</Link>
@@ -60,25 +60,25 @@ export default function Page() {
             <h2>Separate offense from defense.</h2>
             <p>
               Review league-wide and within-team RAPM with possession samples.
-              NCAA identity keys stay separate from ESPN player IDs.
+              Identity keys stay separate across stat files.
             </p>
             <Link href="/basketball/impact/">Open player impact →</Link>
           </article>
           <article className="article-card">
-            <div className="eyebrow">Publisher model archive</div>
-            <h2>Compare attributed Box Plus/Minus.</h2>
+            <div className="eyebrow">Additional model archive</div>
+            <h2>Compare Box Plus/Minus.</h2>
             <p>
-              Read publisher player value, offensive BPM and defensive BPM
-              beside the source season and minutes without feeding it into the
+              Read player value, offensive BPM and defensive BPM
+              beside the season and minutes without feeding it into the
               independent forecast.
             </p>
-            <Link href="/basketball/boutique/?kind=players">Open publisher models →</Link>
+            <Link href="/basketball/boutique/?kind=players">Open model archive →</Link>
           </article>
           <article className="article-card">
             <div className="eyebrow">Historical careers</div>
             <h2>Keep seasons and programs distinct.</h2>
             <p>
-              Compare source player-season production across the archive with
+              Compare player-season production across the archive with
               workload thresholds and identity-review warnings.
             </p>
             <Link href="/basketball/ncaa-careers/">Open career rankings →</Link>
@@ -87,7 +87,7 @@ export default function Page() {
             <div className="eyebrow">Recruiting context</div>
             <h2>Rank the workload behind a roster row.</h2>
             <p>
-              Sort source-listed 2026–27 players by prior minutes and recorded
+              Sort recorded 2026–27 players by prior minutes and recorded
               rates, while keeping roster observations separate from eligibility
               and future role claims.
             </p>
