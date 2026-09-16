@@ -18,6 +18,15 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "not currently importing anything",
     "connection closed",
     "no longer active",
+    # Wrangler surfaces edge/network transport failures without a D1-specific
+    # error code. The import is idempotent and safe to replay from its bounded
+    # statement chunk when these markers appear.
+    "fetch failed",
+    "fetch request failed",
+    "connectivity issue",
+    "network connectivity",
+    "timed out",
+    "timeout",
 )
 
 

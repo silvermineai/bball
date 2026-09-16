@@ -76,7 +76,42 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
     } catch {
-      return c.json({ error: "The football source catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+      // Counting the 4 GB football_stats table can exceed the edge read
+      // window. Keep the catalog usable from the tiny receipt table even when
+      // exact aggregate row counts are temporarily unavailable; the row
+      // browser still returns authoritative counts for the selected slice.
+      try {
+        const [seasons, datasets] = await withTimeout(Promise.all([
+          db.prepare("SELECT DISTINCT season FROM football_sources ORDER BY season DESC").all<{ season: number }>(),
+          db.prepare("SELECT DISTINCT dataset FROM football_sources WHERE dataset IN (" + DATASETS.map(() => "?").join(",") + ") ORDER BY dataset").bind(...DATASETS).all<{ dataset: Dataset }>(),
+        ]), DB_TIMEOUT_MS);
+        const response = c.json({
+          seasons: seasons.results.map((row) => row.season),
+          datasets: datasets.results.map((row) => ({ dataset: row.dataset, rows: null })),
+          dataset_labels: {
+            box: "Player box scores",
+            passing: "Passing aggregates",
+            rushing: "Rushing aggregates",
+            receiving: "Receiving aggregates",
+            defense: "Defensive events",
+            specialists: "Kicking, punting & returns",
+            team_advanced: "Advanced team rates",
+            teams: "Team directory",
+            betting: "Historical market archive",
+            ncaa_player_stats: "NCAA-derived player game stats",
+            rosters: "Season rosters",
+            recruits: "Recruiting commitments",
+            team_talent: "Team talent",
+            returning_production: "Returning production",
+          } satisfies Record<Dataset, string>,
+          counts_deferred: true,
+        });
+        response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+        if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+        return response;
+      } catch {
+        return c.json({ error: "The football source catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+      }
     }
   }
   const conditions = ["s.season=?"];
