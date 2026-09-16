@@ -53,14 +53,14 @@ export default function AuthorizedIntake() {
         <div className="section-heading">
           <div>
             <div className="eyebrow">Authorized evidence intake / 2026–27</div>
-            <h2>Keep verified provider records separate.</h2>
+            <h2>Keep licensed intake records separate.</h2>
           </div>
           <div className="button-row">
             <a className="button secondary" href="/data/recruiting-intake-template.csv" download>Download CSV template ↓</a>
           </div>
         </div>
         <p>
-          An approved transfer or eligibility feed can be imported with its license, capture clocks and stable record IDs. Optional licensed connectors can be enabled with a server-side key; their portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge imported records into school announcements, roster observations or forecast inputs.
+          An approved transfer or eligibility feed can be imported with its license, capture clocks and stable record IDs. Optional licensed feeds can be enabled with a server-side key; their portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge imported records into school announcements, roster observations or forecast inputs.
         </p>
         {error ? <p className="status-error" role="alert">{error}</p> : !coverage ? <p className="empty" role="status">Checking authorized intake coverage…</p> : (
           <div className="recruiting-intake-status">
@@ -70,7 +70,7 @@ export default function AuthorizedIntake() {
             </div>
             <div>
               <strong>{importedProviders.size.toLocaleString()}</strong>
-              <span>providers with retained rows</span>
+              <span>licensed feeds with retained rows</span>
             </div>
             <div>
               <strong>{clock(coverage.latest_captured_at)}</strong>
@@ -78,13 +78,13 @@ export default function AuthorizedIntake() {
             </div>
             <div className="recruiting-intake-detail">
               {coverage.total || providerFeeds.length ? <>
-                {coverage.providers.map((provider) => <span key={provider.provider}>{provider.provider} · {provider.rows.toLocaleString()} intake rows · {clock(provider.latest_captured_at)}</span>)}
-                {providerFeeds.map((feed) => <span key={`${feed.provider}-${feed.kind}`}>{feed.provider} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
-              </> : <span>No authorized provider export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
+                {coverage.providers.map((provider, index) => <span key={provider.provider}>Licensed feed {index + 1} · {provider.rows.toLocaleString()} intake rows · {clock(provider.latest_captured_at)}</span>)}
+                {providerFeeds.map((feed, index) => <span key={`${feed.provider}-${feed.kind}`}>Licensed feed {index + 1} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
+              </> : <span>No licensed feed export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
             </div>
             {providerCapabilities.length > 0 && <div className="recruiting-intake-detail">
-              {providerCapabilities.map((capability) => <span key={capability.provider}>
-                <strong>Authorized connector</strong> · {capability.kinds.join(", ")} · {capability.event_date_available ? "event dates available" : "season-level dates only"}
+              {providerCapabilities.map((capability, index) => <span key={capability.provider}>
+                <strong>Authorized feed {index + 1}</strong> · {capability.kinds.join(", ")} · {capability.event_date_available ? "event dates available" : "season-level dates only"}
               </span>)}
             </div>}
           </div>
@@ -94,10 +94,10 @@ export default function AuthorizedIntake() {
           <div>
             <div className="eyebrow">Operator preflight / stays in this browser</div>
             <h3>Check an authorized CSV before import.</h3>
-            <p>Select the provider export to validate its shape, chronology, HTTPS source links and row IDs locally. The file is never uploaded here; a clean preflight still needs the server importer and license URL described above.</p>
+            <p>Select a licensed feed export to validate its shape, chronology, HTTPS record links and row IDs locally. The file is never uploaded here; a clean preflight still needs the server importer and license details described above.</p>
           </div>
           <label className="button secondary recruiting-intake-file">
-            {fileName ? `Check ${fileName}` : "Choose authorized CSV"}
+            {fileName ? `Check ${fileName}` : "Choose licensed CSV"}
             <input name="authorized-recruiting-csv" type="file" accept=".csv,text/csv" onChange={(event) => {
               const file = event.target.files?.[0];
               if (!file) return;
