@@ -419,7 +419,7 @@ export default function Compare({
                   <Link href="/basketball/possession-style/">Open the full archive →</Link>
                 </div>
                 <p className="note">
-                  2025–26 NCAA source aggregates. These rates describe team
+                  2025–26 source aggregates. These rates describe team
                   possession context, not individual player credit or a new
                   forecast input.
                 </p>
@@ -447,7 +447,7 @@ export default function Compare({
                   <Link href={`/basketball/shooting/?team=${encodeURIComponent(a)}`}>Open the shot lab →</Link>
                 </div>
                 <p className="note">
-                  2025–26 NCAA source shot records. eFG gives made threes their
+                  2025–26 source shot records. eFG gives made threes their
                   extra value; three-point share describes volume. Location
                   coverage is shown separately, and source shots are descriptive
                   evidence rather than optical tracking or a forecast input.

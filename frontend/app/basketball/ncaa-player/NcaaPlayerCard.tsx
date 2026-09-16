@@ -100,7 +100,7 @@ export default function NcaaPlayerCard() {
     () => buildNcaaPlayerTrajectory(card?.seasons || []),
     [card?.seasons],
   );
-  const name = selectedRow?.player_name || roster?.player_name || card?.seasons[0]?.player_name || `NCAA player ${id}`;
+  const name = selectedRow?.player_name || roster?.player_name || card?.seasons[0]?.player_name || `Player ${id}`;
   const team = selectedRow?.team_name || roster?.team_name || card?.seasons[0]?.team_name || "Source team unavailable";
   const points = value(selectedStats, "pts"), games = selected?.reduce((total, row) => total + (Number.isFinite(row.games) ? row.games : 0), 0) || 0, minutes = value(selectedStats, "mins"), fga = value(selectedStats, "fga"), fgm = value(selectedStats, "fgm"), fta = value(selectedStats, "fta"), ftm = value(selectedStats, "ftm"), ast = value(selectedStats, "ast"), turnovers = value(selectedStats, "tov"), fouls = value(selectedStats, "pf"), orb = value(selectedStats, "orb"), drb = value(selectedStats, "drb");
   const ts = trueShooting({ pts: points, fga, fta });

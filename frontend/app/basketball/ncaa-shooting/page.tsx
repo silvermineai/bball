@@ -1,8 +1,8 @@
 import NcaaShooting from "./NcaaShooting";
 
 export const metadata = {
-  title: "NCAA player shooting profiles",
-  description: "Compare NCAA-derived player shot volume, zone efficiency and distance across historical seasons.",
+  title: "Player shooting profiles",
+  description: "Compare player shot volume, zone efficiency and distance across historical seasons.",
 };
 
 export default function Page() {

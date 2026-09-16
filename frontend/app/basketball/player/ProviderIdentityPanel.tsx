@@ -52,7 +52,7 @@ export default function ProviderIdentityPanel({ id }: { id: string }) {
           <div><strong>{row.yahoo_player_id || "—"}</strong><span>Secondary player ID</span></div>
           <div><strong>{row.match_confidence == null ? "—" : `${(row.match_confidence * 100).toFixed(0)}%`}</strong><span>Match confidence</span></div>
         </div>
-        <p className="note">Match method: {row.match_method.replaceAll("_", " ")}. Alternate labels are retained as recorded{row.fox_player || row.yahoo_player_name ? ` (${[row.fox_player, row.yahoo_player_name].filter(Boolean).join(" · ")})` : ""}; they are navigation evidence, not an NCAA ID join or eligibility determination.</p>
+        <p className="note">Match method: {row.match_method.replaceAll("_", " ")}. Alternate labels are retained as recorded{row.fox_player || row.yahoo_player_name ? ` (${[row.fox_player, row.yahoo_player_name].filter(Boolean).join(" · ")})` : ""}; they are navigation evidence, not an identity join or eligibility determination.</p>
       </>}
     </section>
   );

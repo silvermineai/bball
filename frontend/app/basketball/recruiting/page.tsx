@@ -55,7 +55,7 @@ export default function Page() {
           identity and coverage status attached.
         </p>
         <div className="hero-actions">
-          <Link className="button" href="/basketball/ncaa-rosters/">Search NCAA roster intel ↗</Link>
+          <Link className="button" href="/basketball/ncaa-rosters/">Search roster intel ↗</Link>
           <Link className="button secondary" href="/basketball/roster-lab/">Compare roster workload ↗</Link>
           <Link className="button secondary" href="/basketball/roster-board/">Rank roster workload ↗</Link>
           <Link className="button secondary" href="/basketball/recruiting/fit/">Build a role shortlist ↗</Link>

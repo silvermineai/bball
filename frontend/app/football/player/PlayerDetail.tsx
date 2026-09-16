@@ -72,7 +72,7 @@ const sourceLabels: Record<string, string> = {
   receiving: "Receiving aggregates",
   schedule: "Schedule",
   teams: "Team metadata",
-  ncaa_player_stats: "NCAA leader archive",
+  ncaa_player_stats: "National leader archive",
 };
 export default function PlayerDetail() {
   const search = useSearchParams(),

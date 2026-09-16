@@ -46,7 +46,7 @@ const guides = [
   [
     "basketball-player-rates",
     "A rate is only as useful as its denominator.",
-    "How to read NCAA player efficiency, workload and impact rankings while keeping volume, sample size and identity boundaries visible.",
+    "How to read player efficiency, workload and impact rankings while keeping volume, sample size and identity boundaries visible.",
   ],
   [
     "basketball-recruiting-fit",
@@ -56,7 +56,7 @@ const guides = [
   [
     "basketball-ranking-playbook",
     "A ranking is a question, not a verdict.",
-    "How to move from NCAA player rankings and impact screens to a reviewable matchup or recruiting decision.",
+    "How to move from player rankings and impact screens to a reviewable matchup or recruiting decision.",
   ],
   [
     "basketball-possession-style",
@@ -76,7 +76,7 @@ const guides = [
   [
     "basketball-player-game-logs",
     "Read the game log before you rank the player.",
-    "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
+    "How to use player-game rows, possession context, denominators and source identity in a recruiting review.",
   ],
   [
     "basketball-roster-transitions",
@@ -154,7 +154,7 @@ export default function Page() {
             <div className="eyebrow">Basketball / Player evaluation</div>
             <h2>A ranking is a question, not a verdict.</h2>
             <p>
-              Move from an NCAA production or impact screen to a reviewable
+              Move from a production or impact screen to a reviewable
               scouting question. Keep the sample, source identity and next
               piece of evidence attached to the name.
             </p>
@@ -281,7 +281,7 @@ export default function Page() {
             <div className="eyebrow">{rosters.players.length.toLocaleString()} observed players</div>
             <h2>Roster intel</h2>
             <p>
-              Search the NCAA-derived roster archive and keep identity,
+              Search the roster archive and keep identity,
               position and availability questions attached to the source row.
             </p>
             <Link href="/basketball/ncaa-rosters/">Search roster intel →</Link>

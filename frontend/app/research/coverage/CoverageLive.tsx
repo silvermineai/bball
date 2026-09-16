@@ -142,8 +142,8 @@ function freshness(receipts: CoverageResponse["source_receipts"]): Freshness {
 const labels: Record<string, string> = {
   games: "Games",
   player_box: "Player box rows",
-  ncaa_player_box: "NCAA player-game rows",
-  ncaa_player_shooting: "NCAA shooting profiles",
+  ncaa_player_box: "Player-game rows",
+  ncaa_player_shooting: "Shooting profiles",
   forecasts: "Forecast registrations",
   unresolved: "Identity-review rows",
 };
@@ -306,7 +306,7 @@ export default function CoverageLive() {
             </div>
             {news.releases?.[0]?.feeds?.length ? <details className="note" style={{ marginTop: 14 }}><summary>Open feed scope</summary><ul>{news.releases[0].feeds.map((feed) => <li key={`${feed.url || feed.name}-${feed.division || "all"}`}>{feed.name || feed.url || "Publisher feed"}{feed.division ? ` · ${feed.division}` : " · division-neutral"}</li>)}</ul></details> : null}
           </div>}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
-            <summary><strong>NCAA national leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
+            <summary><strong>National leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
             <p className="note" style={{ marginTop: 12 }}>Live D1 counts of finite values in the retained final national-ranking snapshot. The player total is the row count; a lower measure count means that the publisher did not supply that field for every row. Missing source values remain unavailable.</p>
             <div className="table-scroll" style={{ marginTop: 12 }}>
               <table className="data-table">
@@ -320,7 +320,7 @@ export default function CoverageLive() {
               </table>
             </div>
             <p className="note" style={{ marginTop: 12 }}><Link href="/basketball/ncaa/">Open the national leaderboards →</Link> · {ncaaLeaders.coverage.players.toLocaleString()} total source rows checked.</p>
-          </details>}{ncaaLeadersError && <p className="note">NCAA national leader coverage: {ncaaLeadersError} The bundled coverage inventory remains available.</p>}{career && <div className="paper-panel" style={{ marginTop: 20 }}>
+          </details>}{ncaaLeadersError && <p className="note" >National leader coverage: {ncaaLeadersError} The bundled coverage inventory remains available.</p>}{career && <div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Historical player archive / D1</div>
             <h3>{career.seasons?.length?.toLocaleString() ?? "—"} source seasons connected.</h3>
             <div className="raw-stat-grid">

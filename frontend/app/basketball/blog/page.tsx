@@ -64,7 +64,7 @@ export default function Page() {
         <article className="paper-panel">
           <div className="eyebrow">Keep the evidence open</div>
           <h2>Who could change the matchup?</h2>
-          <p>Pair the matchup with NCAA player logs, roster observations, recruiting records and published news. Missing evidence stays visible instead of becoming an assumption.</p>
+          <p>Pair the matchup with player logs, roster observations, recruiting records and published news. Missing evidence stays visible instead of becoming an assumption.</p>
           <div className="button-row"><Link href="/basketball/recruiting/">Recruiting evidence →</Link><Link href="/basketball/ncaa-rankings/">Player rankings →</Link></div>
         </article>
       </section>

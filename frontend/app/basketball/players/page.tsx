@@ -5,7 +5,7 @@ import Players from "./Players";
 export const metadata = {
   title: "College basketball player statistics, rankings and impact",
   description:
-    "Search historical player production, rank an explainable all-around profile, browse NCAA national leaderboards and inspect separate RAPM impact records.",
+    "Search historical player production, rank an explainable all-around profile, browse national leaderboards and inspect separate RAPM impact records.",
 };
 export default function Page() {
   return (
@@ -41,7 +41,7 @@ export default function Page() {
             <div className="eyebrow">National leaderboards</div>
             <h3>Who leads the national stat tables?</h3>
             <p>
-              Browse NCAA player IDs across Divisions I, II and III,
+              Browse player IDs across Divisions I, II and III,
               with the measure and coverage visible.
             </p>
             <span>Browse national leaderboards →</span>
@@ -50,8 +50,8 @@ export default function Page() {
             <div className="eyebrow">Separate impact model</div>
             <h3>Who changed possessions with context?</h3>
             <p>
-              Read NCAA RAPM estimates for offensive, defensive and net impact;
-              these NCAA IDs remain separate from the production archive.
+              Read RAPM estimates for offensive, defensive and net impact;
+              identity keys remain separate from the production archive.
             </p>
             <span>Open RAPM impact rankings →</span>
           </Link>

@@ -185,7 +185,7 @@ export default function Dossier({
           <section className="paper-panel" style={{ marginTop: 24 }}>
             <div className="section-heading" style={{ marginBottom: 8 }}>
               <div>
-                <div className="eyebrow">NCAA source context / {possessionStyle.season - 1}–{String(possessionStyle.season).slice(-2)}</div>
+                <div className="eyebrow">Possession context / {possessionStyle.season - 1}–{String(possessionStyle.season).slice(-2)}</div>
                 <h3>What did the possessions look like?</h3>
               </div>
               <Link href="/basketball/possession-style/">Compare possession style →</Link>
@@ -198,7 +198,7 @@ export default function Dossier({
               <div><dt>{possessionStyle.garbage_time_share == null ? "—" : `${fmt(possessionStyle.garbage_time_share * 100, 1)}%`}</dt><dd>Garbage-time share</dd></div>
             </div>
             <p className="note" style={{ marginTop: 12 }}>
-              {possessionStyle.possessions.toLocaleString()} source possession rows across {possessionStyle.games.toLocaleString()} recorded team-games. These are descriptive NCAA source aggregates: they do not assign individual credit or enter the forecast.
+              {possessionStyle.possessions.toLocaleString()} possession rows across {possessionStyle.games.toLocaleString()} recorded team-games. These are descriptive aggregates: they do not assign individual credit or enter the forecast.
             </p>
           </section>
         )}

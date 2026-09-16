@@ -53,7 +53,7 @@ const metrics = [
   },
   {
     name: "Fouls per game",
-    value: "Recorded personal fouls divided by games played in the NCAA player-box release.",
+    value: "Recorded personal fouls divided by games played in the player-box archive.",
     use: "Use it as a contact and availability signal alongside minutes, role and game log context. It is descriptive, not a discipline grade or forecast input.",
   },
   {
@@ -68,12 +68,12 @@ const metrics = [
   },
   {
     name: "Minutes per game",
-    value: "Recorded minutes divided by games played in the NCAA player-box release.",
+    value: "Recorded minutes divided by games played in the player-box archive.",
     use: "Use it to describe workload alongside total minutes and starts. It does not establish a future rotation role or availability.",
   },
   {
     name: "Turnovers per game",
-    value: "Recorded turnovers divided by games played in the NCAA player-box release.",
+    value: "Recorded turnovers divided by games played in the player-box archive.",
     use: "Read it with possessions and turnover rate because raw per-game totals rise with workload. It is descriptive context, not a forecast input.",
   },
   {
@@ -89,7 +89,7 @@ const metrics = [
   {
     name: "True shooting (TS%)",
     value: "Points ÷ [2 × (FGA + 0.475 × FTA)].",
-    use: "A useful scoring-efficiency estimate that includes free throws. The coefficient is disclosed and is not a claim about an official NCAA formula.",
+    use: "A useful scoring-efficiency estimate that includes free throws. The coefficient is disclosed and is not a claim about an official formula.",
   },
   {
     name: "RAPM",
@@ -103,7 +103,7 @@ const metrics = [
   },
   {
     name: "ORAPM and DRAPM",
-    value: "The offensive and defensive components of the NCAA lineup estimate, each reported in points per 100 possessions.",
+    value: "The offensive and defensive components of the lineup estimate, each reported in points per 100 possessions.",
     use: "Separate scoring influence from defensive influence, then check the offensive and defensive possession thresholds before comparing players.",
   },
   {
@@ -123,12 +123,12 @@ const metrics = [
   },
   {
     name: "Possession share",
-    value: "A player’s recorded offensive possessions divided by the recorded player possessions for that NCAA team-season.",
+    value: "A player’s recorded offensive possessions divided by the recorded player possessions for that team-season.",
     use: "Use it as a workload context signal. It is not a usage projection and does not establish a future role.",
   },
   {
     name: "Rim attempt rate",
-    value: "Recorded rim attempts divided by field-goal attempts in the NCAA player-box release.",
+    value: "Recorded rim attempts divided by field-goal attempts in the player-box archive.",
     use: "Use it to see who pressures the paint or who may change a team’s shot profile. Pair it with rim conversion and total attempts.",
   },
   {
@@ -248,7 +248,7 @@ const paths = [
   ["Find a player", "/basketball/players/", "Rates, workload, shooting and game evidence across the archive."],
   ["Compare programs", "/basketball/compare/", "Turn ratings and four factors into a venue-aware matchup question."],
   ["Read the next slate", "/basketball/matchups/", "See every published 2026–27 forecast, interval and model timestamp."],
-  ["Open NCAA leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
+  ["Open national leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
   ["Inspect player impact", "/basketball/impact/", "Review retained RAPM with offensive and defensive samples."],
   ["Read within-team RAPM", "/basketball/impact/within-team/", "Compare source-published player impact relative to teammates across 17 seasons."],
   ["Study team box history", "/basketball/ncaa-team-box/", "Compare retained efficiency, tempo and Four Factor profiles across 17 seasons."],
@@ -558,7 +558,7 @@ export default function Page() {
               <tr>
                 <th scope="row">Dated school statement</th>
                 <td>What a program publicly announced and when it published the statement.</td>
-                <td>NCAA eligibility, playing-time guarantees or an unreported transaction.</td>
+                <td>eligibility, playing-time guarantees or an unreported transaction.</td>
               </tr>
               <tr>
                 <th scope="row">Prior production</th>
@@ -566,7 +566,7 @@ export default function Page() {
                 <td>Future health, role, availability or production at a new program.</td>
               </tr>
               <tr>
-                <th scope="row">NCAA rule or availability source</th>
+                <th scope="row">eligibility or availability record</th>
                 <td>The governing context or an official availability record when the source publishes one.</td>
                 <td>A conclusion inferred from a roster listing or a news headline alone.</td>
               </tr>

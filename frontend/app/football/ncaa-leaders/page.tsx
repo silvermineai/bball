@@ -3,9 +3,9 @@ import path from "node:path";
 import NCAALeaders, { type Release } from "./NCAALeaders";
 
 export const metadata = {
-  title: "NCAA football player leaders",
+  title: "Football player leaders",
   description:
-    "Source-native NCAA football player and unit leaderboards built from game-level player statistics.",
+    "Football player and unit leaderboards built from game-level player statistics.",
   alternates: { canonical: "/football/ncaa-leaders/" },
 };
 

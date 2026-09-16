@@ -122,7 +122,7 @@ export default function Page() {
             </div>
           </div>
           <div className="article-grid">
-            <article className="article-card"><div className="eyebrow">Player file</div><h3>Who is driving the result?</h3><p>Rank production, shooting and NCAA impact with games, minutes and exact source IDs attached.</p><Link href="/basketball/ncaa-rankings/">Open player rankings →</Link></article>
+            <article className="article-card"><div className="eyebrow">Player file</div><h3>Who is driving the result?</h3><p>Rank production, shooting and lineup impact with games, minutes and exact identity keys attached.</p><Link href="/basketball/ncaa-rankings/">Open player rankings →</Link></article>
             <article className="article-card"><div className="eyebrow">Roster file</div><h3>What changed since last season?</h3><p>Separate returning workload, incoming prior production and unknown availability before changing a rotation assumption.</p><Link href="/basketball/roster-board/">Open roster workload →</Link></article>
             <article className="article-card"><div className="eyebrow">Matchup file</div><h3>Where is the pressure point?</h3><p>Read Four Factors, pace, lineup stints and game context together instead of treating one split as a game plan.</p><Link href="/basketball/matchup-stints/">Open matchup stints →</Link></article>
             <article className="article-card"><div className="eyebrow">Recruiting file</div><h3>Does the role fit the need?</h3><p>Connect dated school announcements to prior college production and transparent fit signals.</p><Link href="/basketball/recruiting/fit/">Open recruiting fit →</Link></article>

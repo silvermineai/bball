@@ -348,7 +348,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "All-around profile index",
                         "Profile components",
                         "Player",
-                        "NCAA ID",
+                        "Player ID",
                         "Program",
                         "Position",
                         "Games",

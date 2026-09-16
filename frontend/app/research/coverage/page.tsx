@@ -232,7 +232,7 @@ export default function Page() {
     },
     {
       key: "ncaa-player-box",
-      label: "NCAA player-game warehouse",
+      label: "Player-game warehouse",
       rows: ncaaPlayerBox.total_rows,
       seasons: ncaaPlayerBox.seasons.map((season) => season.season),
       latest: ncaaPlayerBox.generated_at,
@@ -255,16 +255,16 @@ export default function Page() {
       seasons: matchupStints.seasons.map((season) => season.season),
       latest: matchupStints.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
       url: matchupStints.seasons[0]?.source.url ?? null,
-      note: "NCAA source matchup rows; names remain in the NCAA identity namespace.",
+      note: "Player matchup rows; names remain tied to their recorded identity namespace.",
     },
     {
       key: "ncaa-team-box",
-      label: "NCAA team-game archive",
+      label: "Team-game archive",
       rows: ncaaTeamBox.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0),
       seasons: ncaaTeamBox.seasons.map((season) => season.season),
       latest: ncaaTeamBox.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
       url: null,
-      note: "NCAA-derived team rows with descriptive Four Factors and tempo.",
+      note: "Team rows with descriptive Four Factors and tempo.",
     },
     {
       key: "within-team-impact",
@@ -377,7 +377,7 @@ export default function Page() {
                 <strong>{count(footballArchiveRows)}</strong>
               </div>
               <div>
-                <span>NCAA player-game evidence · 2013–25</span>
+                <span>Player-game evidence · 2013–25</span>
                 <strong>{count(football.coverage.ncaa_player_stats_rows)}</strong>
               </div>
               <div>
@@ -424,7 +424,7 @@ export default function Page() {
             <p className="note">
               Historical player logs span 24 published seasons. The independent
               ratings use opponent-adjusted efficiency, tempo and pooled Four
-              Factors; NCAA RAPM stays in its own source identity namespace.
+              Factors; lineup impact stays in its own identity namespace.
             </p>
             <p>
               <Link href="/basketball/model/">Open basketball methods →</Link>
@@ -448,7 +448,7 @@ export default function Page() {
           rows use source athlete IDs and support player profiles; defensive and
           specialist releases carry names and game context without stable
           athlete IDs, so they remain separate and are never name-joined. The
-          NCAA-derived player-game release is listed separately because it
+          Player-game release is listed separately because it
           carries contest context but no stable athlete ID.
         </p>
         <div className="table-scroll">
@@ -483,7 +483,7 @@ export default function Page() {
               </tr>
               <tr>
                 <td>
-                  <strong>NCAA-derived player-game archive</strong>
+                  <strong>Player-game archive</strong>
                   <small>{footballNcaaReceipts.length} source editions; names and contest context retained</small>
                 </td>
                 <td className="numeric">{football.coverage.ncaa_player_stats_rows.toLocaleString()}</td>
@@ -602,8 +602,8 @@ export default function Page() {
         </div>
         <p className="note">
           These archives power the historical player, shooting, lineup, team-box
-          and impact desks. Their rows are not interchangeable identities: NCAA
-          records stay in the NCAA namespace, and derived profiles retain their
+          and impact desks. Their rows are not interchangeable identities: records
+          stay in their own namespace, and derived profiles retain their
           source season and edition.
         </p>
         <div className="table-scroll">
@@ -827,13 +827,13 @@ export default function Page() {
             <Link href="/basketball/leaders/">Open national leaders →</Link>
           </article>
           <article className="paper-panel">
-            <div className="eyebrow">NCAA snapshot</div>
+            <div className="eyebrow">National snapshot</div>
             <h3>{count(ncaa.coverage.players)} national records</h3>
             <p>
               Final individual tables across {Object.keys(ncaa.coverage.divisions).length}{" "}
               divisions, with publisher ranks and missing-field coverage visible.
             </p>
-            <Link href="/basketball/ncaa/">Open NCAA leaderboards →</Link>
+            <Link href="/basketball/ncaa/">Open national leaderboards →</Link>
           </article>
           <article className="paper-panel">
             <div className="eyebrow">Boutique context</div>

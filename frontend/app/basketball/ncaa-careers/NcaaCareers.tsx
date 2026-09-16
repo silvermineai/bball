@@ -80,7 +80,7 @@ export default function NcaaCareers() {
 
   useEffect(() => {
     fetch("/api/basketball/research/ncaa-careers?meta=1")
-      .then((r) => { if (!r.ok) throw Error("The NCAA career catalog could not be loaded."); return r.json() as Promise<Meta>; })
+      .then((r) => { if (!r.ok) throw Error("The career catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
   }, [retryNonce]);
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function NcaaCareers() {
     if (position) params.set("position", position);
     setResult(null);
     fetch(`/api/basketball/research/ncaa-careers?${params}`, { signal: controller.signal })
-      .then((r) => { if (!r.ok) throw Error("The NCAA career leaderboard could not be loaded."); return r.json() as Promise<Result>; })
+      .then((r) => { if (!r.ok) throw Error("The career leaderboard could not be loaded."); return r.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
@@ -167,7 +167,7 @@ export default function NcaaCareers() {
   const positionOptions = meta?.positions || [];
   return <>
     <div className="page-title"><div className="eyebrow">Historical player seasons</div><h1>Put the season<br /><em>in context.</em></h1><p>Search the retained player-season archive across a historical window. Each row stays tied to its season, player ID and program, so eras and workloads can be compared without inventing a cross-season identity join.</p></div>
-    <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player-seasons</span></div><div><strong>{result ? `${result.from_season}–${result.to_season}` : "—"}</strong><span>Season window</span></div><div><strong>{result?.min_games ?? minGames}</strong><span>Minimum games</span></div><div><strong>NCAA</strong><span>Identity namespace</span></div></div>
+    <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player-seasons</span></div><div><strong>{result ? `${result.from_season}–${result.to_season}` : "—"}</strong><span>Season window</span></div><div><strong>{result?.min_games ?? minGames}</strong><span>Minimum games</span></div><div><strong>IDs</strong><span>Identity namespace</span></div></div>
     <div className="toolbar">
       <label className="control"><span>FROM</span><select value={fromSeason} onChange={(e) => changeFromSeason(e.target.value)}>{seasons.slice().sort((a, b) => a - b).map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
       <label className="control"><span>THROUGH</span><select value={toSeason} onChange={(e) => changeToSeason(e.target.value)}>{seasons.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>

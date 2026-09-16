@@ -41,7 +41,7 @@ function FilmRoom() {
           <div className="font-stat text-[11px] uppercase tracking-[0.22em] text-court">The Projector</div>
           <h1 className="font-display text-4xl font-semibold">Film Room</h1>
           <p className="mt-2 max-w-xl text-sm text-graphite">
-            Latest film from official channels — NCAA March Madness, Big Ten Network, ACC, Big East, Big 12 — matched to teams
+            Latest film from official channels — March Madness, Big Ten Network, ACC, Big East, Big 12 — matched to teams
             automatically. Pick a team to focus the projector.
           </p>
         </div>

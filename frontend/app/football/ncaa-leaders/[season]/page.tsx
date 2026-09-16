@@ -11,8 +11,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ season: string }> }) {
   const { season } = await params;
   return {
-    title: `${season} NCAA football player leaders`,
-    description: `Source-native NCAA football player and unit leaderboards for the ${season} season.`,
+    title: `${season} Football player leaders`,
+    description: `Football player and unit leaderboards for the ${season} season.`,
     alternates: { canonical: `/football/ncaa-leaders/${season}/` },
   };
 }

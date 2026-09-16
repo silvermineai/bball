@@ -36,14 +36,14 @@ export default function Page() {
         </p>
         <div className="article-grid">
           <article className="article-card">
-            <div className="eyebrow">NCAA rankings</div>
+            <div className="eyebrow">Player rankings</div>
             <h2>Counting stats and efficiency.</h2>
             <p>
               Rank points, rebounds, assists, steals, blocks, true shooting,
               effective field goal percentage and points per 40 with explicit
               game, minute, position and class filters.
             </p>
-            <Link href="/basketball/ncaa-rankings/">Open NCAA rankings →</Link>
+            <Link href="/basketball/ncaa-rankings/">Open player rankings →</Link>
           </article>
           <article className="article-card">
             <div className="eyebrow">Scouting board</div>

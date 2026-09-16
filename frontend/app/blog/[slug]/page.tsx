@@ -39,13 +39,13 @@ const descriptions: Record<string, string> = {
   "basketball-four-factors": "A practical guide to Four Factors, pace, forecast ranges and roster evidence for 2026–27 college basketball.",
   "basketball-impact": "How to use ORAPM, DRAPM, net RAPM and possession samples when comparing college basketball players.",
   "basketball-recruiting-workload": "How to connect school statements, roster observations and prior college workload without inventing eligibility or a role.",
-  "basketball-player-rates": "How to read NCAA player efficiency and workload rates while keeping denominators, sample size and identity boundaries visible.",
+  "basketball-player-rates": "How to read player efficiency and workload rates while keeping denominators, sample size and identity boundaries visible.",
   "basketball-recruiting-fit": "How to use source-listed roster roles, prior workload and transparent fit percentiles to build a defensible recruiting shortlist.",
-  "basketball-ranking-playbook": "How to move from NCAA player rankings and impact screens to a reviewable scouting or recruiting question.",
+  "basketball-ranking-playbook": "How to move from player rankings and impact screens to a reviewable scouting or recruiting question.",
   "basketball-possession-style": "How to read source-recorded possessions, transition share and assisted share as team context without assigning player credit.",
   "basketball-recruiting-evidence": "A practical workflow for connecting archive rows, dated school statements, prior production and the next staff question.",
   "basketball-availability-evidence": "How to read injury, redshirt and tournament-availability signals without turning a headline or roster row into a ruling.",
-  "basketball-player-game-logs": "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
+  "basketball-player-game-logs": "How to use player-game rows, possession context, denominators and source identity in a recruiting review.",
   "basketball-roster-transitions": "How to evaluate returning workload across dated roster transitions without turning a source listing into an eligibility claim.",
   "basketball-upcoming-games": "A coach-facing workflow for moving from a 2026–27 forecast range to Four Factors, roster evidence, film questions and a documented market check.",
 };
@@ -412,7 +412,7 @@ function BasketballPlayerGameLogs() {
         context and missingness that make the summary worth trusting.
       </p>
       <p>
-        The <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
+        The <Link href="/basketball/ncaa-player-box/">player box archive</Link>{" "}
         keeps game-level releases from 2010–11 through 2025–26, with source
         player, team and contest IDs beside every usable row. The 2010–11
         edition is a sparse historical retained edition and is labeled as such
@@ -452,7 +452,7 @@ function BasketballPlayerGameLogs() {
         Each game-level season reports missing IDs or matchup labels, date
         problems, impossible made/attempt totals, negative possessions,
         out-of-range minutes and zero-minute rows that carry production. The
-        NCAA release does not include venue or home/away fields, so location
+        player release does not include venue or home/away fields, so location
         questions belong to the schedule and team-box archives. This separation
         keeps a player row from pretending to contain context it never carried.
       </p>
@@ -508,7 +508,7 @@ function BasketballRosterTransitions() {
         <>
           <h2>Read the historical replay honestly</h2>
           <p>
-            A separate NCAA-source replay adds dated workload evidence. It uses
+            A separate source replay adds dated workload evidence. It uses
             the {historical.transition_rows["2024"]?.toLocaleString() ?? "—"}, {historical.transition_rows["2025"]?.toLocaleString() ?? "—"} and {historical.transition_rows["2026"]?.toLocaleString() ?? "—"} mapped transition rows and keeps Box BPM out because that retained edition does not carry the publisher identity. The model is evaluated on the following season after fitting only earlier transitions.
           </p>
           <div className="table-scroll">
@@ -760,7 +760,7 @@ function BasketballPlayerRates() {
         sits behind the rate.
       </p>
       <p>
-        The <Link href="/basketball/ncaa-rankings/">NCAA player rankings</Link>
+        The <Link href="/basketball/ncaa-rankings/">player rankings</Link>
         keep the source player and team IDs visible while offering counting
         totals, shooting rates, assist-to-turnover ratio, defensive events,
         RAPM components and recorded possession share. These are descriptive
@@ -798,8 +798,8 @@ function BasketballPlayerRates() {
       </p>
       <h2>Keep impact in its own lane</h2>
       <p>
-        ORAPM and DRAPM come from a separate NCAA lineup-impact release. The
-        board requires exact NCAA player IDs and shows offensive and defensive
+        ORAPM and DRAPM come from a separate lineup-impact release. The
+        board requires exact player IDs and shows offensive and defensive
         possession samples. A player can be efficient in the box score and
         unavailable in RAPM, or the reverse, because the releases measure
         different things. Missing impact is not zero impact.
@@ -889,10 +889,10 @@ function BasketballRankingPlaybook() {
         the evidence behind a shortlist easy to inspect, compare and challenge.
       </p>
       <p>
-        The <Link href="/basketball/ncaa-rankings/">NCAA rankings board</Link>
+        The <Link href="/basketball/ncaa-rankings/">rankings board</Link>
         offers {b.coverage.player_box_rows.toLocaleString()} source-linked player
         rows across counting stats, rates, possession context and lineup
-        impact. Every row keeps its NCAA player and team IDs, season, games and
+        impact. Every row keeps its player and team IDs, season, games and
         minutes visible. Those fields establish what the release recorded; they
         do not establish a current roster spot, eligibility or a future role.
       </p>
@@ -985,7 +985,7 @@ function BasketballPossessionStyle() {
         A possession row belongs to a team in this archive. It does not say
         which player created, assisted or defended the trip, and lineup
         membership is not used to invent that attribution. Use the separate{" "}
-        <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
+        <Link href="/basketball/ncaa-player-box/">player box archive</Link>{" "}
         and <Link href="/basketball/lineups/">lineup lab</Link> when the question
         is about personnel.
       </p>
@@ -1015,8 +1015,8 @@ function BasketballRecruitingEvidence() {
         The <Link href="/basketball/recruiting/">recruiting file</Link> keeps
         school announcements, later availability statements and source-listed
         roster observations in separate layers. The{" "}
-        <Link href="/basketball/ncaa-player/">NCAA player card</Link> keeps
-        season production, shooting, roster fields and impact in the NCAA
+        <Link href="/basketball/ncaa-player/">player card</Link> keeps
+        season production, shooting, roster fields and impact in the archive
         source-ID namespace. Those layers can inform one another without
         turning a name match into a verified transfer or eligibility record.
       </p>
@@ -1029,7 +1029,7 @@ function BasketballRecruitingEvidence() {
         equally limited: it does not prove departure.
       </p>
       <p>
-        NCAA rows and retained rows use different identity systems. The
+        archive rows and retained rows use different identity systems. The
         site keeps them separate and links between them as search handoffs when
         useful. Do not merge two people because their names look similar, and
         do not treat a shared school label as a crosswalk.
@@ -1098,7 +1098,7 @@ function BasketballAvailabilityEvidence() {
       <h2>Use the strongest source for the question</h2>
       <p>
         A school statement is the right place to verify what the program
-        announced. An NCAA availability page or archive is the authority for
+        announced. An availability page or archive is the authority for
         the tournament reporting context it covers. A roster release shows who
         appeared in that source edition. A prior box-score row shows recorded
         participation in a past game. None of those records should be silently
@@ -1134,7 +1134,7 @@ function BasketballAvailabilityEvidence() {
         Open the wire and filter for availability language. Read the linked
         publisher record. Match the player to an exact source ID where one is
         available, then check the current roster observation and the official
-        NCAA page when the question concerns tournament reporting. Finish the
+        tournament page when the question concerns tournament reporting. Finish the
         game brief with the unresolved question—available for this tip,
         eligible for this competition or simply listed in an older release—so
         the next staff member knows what still needs confirmation.

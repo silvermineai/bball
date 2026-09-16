@@ -52,7 +52,7 @@ export default function FilmRoom({ videos, teams }: Props) {
         <div className="eyebrow">Basketball / Film assignment</div>
         <h1>Put the numbers<br /><em>on screen.</em></h1>
         <p>
-          Review recent clips from official conference and NCAA channels, then use the
+          Review recent clips from official conference channels, then use the
           stat file to decide what to ask of the film. A clip is a starting point for
           coaching judgment, not proof of a trend.
         </p>
@@ -140,7 +140,7 @@ export default function FilmRoom({ videos, teams }: Props) {
       </section>
 
       <p className="note section film-source-note">
-        Source: public videos from official NCAA and conference channels. Silvermine matches a clip to a program only when the source metadata contains that program’s identifier; an unlinked clip remains searchable but is not treated as team evidence.
+        Source: public videos from official conference channels. Silvermine matches a clip to a program only when the source metadata contains that program’s identifier; an unlinked clip remains searchable but is not treated as team evidence.
       </p>
     </>
   );

@@ -175,7 +175,7 @@ function CommandCenter() {
                   <div className="text-sm font-semibold leading-snug">{a.headline}</div>
                   <div className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-graphite">{a.description}</div>
                   <div className="mt-2 font-stat text-[10px] uppercase tracking-wider text-court">
-                    ESPN · {a.published ? new Date(a.published).toLocaleDateString() : ""}
+                    Schedule · {a.published ? new Date(a.published).toLocaleDateString() : ""}
                   </div>
                 </a>
               ))}

@@ -121,7 +121,7 @@ export default function NCAAIndividual() {
     return value == null ? "—" : fmt(value, percentStats.has(stat) ? 1 : stat === "ast_to" ? 2 : 1);
   };
   const download = () => downloadCsv(`ncaa-leaders-${division}-${stat}.csv`, toCsv(
-    ["View order", "Publisher rank", "Player", "NCAA ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat], "Retained source rows JSON"],
+    ["View order", "Publisher rank", "Player", "Player ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat], "Retained source rows JSON"],
     rows.map((p, i) => [i + 1, publisherRank(p, stat), p.name, p.player_id, p.team_name, p.division, p.conference, p.class_year, p.position, p.games, p[stat], p.source_stats ? JSON.stringify(p.source_stats) : null]),
   ));
   const sourceCoverage = liveMeta?.coverage || data?.coverage;
@@ -166,7 +166,7 @@ export default function NCAAIndividual() {
         <button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button>
       </div>
       {copied && <p role="status">{copied}</p>}
-      {error ? <p role="alert" className="status-error">{error}</p> : !data && !live ? <p role="status" className="empty">Loading NCAA national records…</p> : <>
+      {error ? <p role="alert" className="status-error">{error}</p> : !data && !live ? <p role="status" className="empty">Loading national records…</p> : <>
         <div className="strip" style={{ borderTop: "1px solid var(--ink)", marginBottom: 25 }}>
           <div><strong>{(sourceCoverage?.players || 0).toLocaleString()}</strong><span>Published player records</span></div>
           <div><strong>{divisionCount.toLocaleString()}</strong><span>{division === "all" ? "All division records" : `Division ${division} records`}</span></div>

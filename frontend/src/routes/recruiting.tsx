@@ -376,8 +376,8 @@ function RecruitingPage() {
               />
               <select aria-label="Recruiting news source" className="rounded-md border-line bg-white text-sm" value={newsPublisher} onChange={(e) => { setNewsPublisher(e.target.value as typeof newsPublisher); setNewsPage(0); }}>
                 <option value="all">All sources</option>
-                <option value="ESPN">ESPN</option>
-                <option value="NCAA.com">NCAA.com</option>
+                <option value="ESPN">Live feed</option>
+                <option value="NCAA.com">Roster feed</option>
               </select>
             </div>
           }

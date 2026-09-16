@@ -38,7 +38,7 @@ const questions: Question[] = [
   },
   {
     prompt: "What can a dated school announcement establish on a recruiting board?",
-    choices: ["What the program publicly reported and when it reported it.", "NCAA eligibility and a guaranteed future role.", "That a missing roster row proves a player left."],
+    choices: ["What the program publicly reported and when it reported it.", "eligibility and a guaranteed future role.", "That a missing roster row proves a player left."],
     answer: 0,
     explanation: "Recruiting evidence has boundaries. Keep the announcement, roster observation and prior production as separate layers until an authoritative source joins them.",
     href: "/basketball/recruiting/",

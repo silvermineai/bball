@@ -47,7 +47,7 @@ export default function PlayerRankingSnapshot({
         </Link>
       </div>
       <p className="note">
-        Exact NCAA player ID match, refreshed from the ranking API. Percentiles use each board&apos;s full qualified cohort; a missing row means the player did not clear that board&apos;s stated sample, not that the source recorded zero.
+        Exact player ID match, refreshed from the ranking API. Percentiles use each board&apos;s full qualified cohort; a missing row means the player did not clear that board&apos;s stated sample, not that the source recorded zero.
       </p>
       {!rows ? (
         <p className="empty" role="status">Loading ranking snapshot…</p>

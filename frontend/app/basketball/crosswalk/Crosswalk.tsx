@@ -106,7 +106,7 @@ export default function Crosswalk() {
         <div><strong>{meta?.fox_ids.toLocaleString() || "—"}</strong><span>Alternate IDs present</span></div>
         <div><strong>{meta?.yahoo_ids.toLocaleString() || "—"}</strong><span>Secondary IDs present</span></div>
       </div>
-      <p className="note">This release makes identity keys searchable beside the exact player file. Match method and confidence are retained in the archive. {meta?.identity_note || "No NCAA ID join is asserted."}</p>
+      <p className="note">This release makes identity keys searchable beside the exact player file. Match method and confidence are retained in the archive. {meta?.identity_note || "No identity join is asserted."}</p>
       <div className="toolbar">
         <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search a player, program or identifier" /></label>
         <label className="control"><span>IDENTITY COVERAGE</span><select value={provider} onChange={(event) => { setProvider(event.target.value as Provider); setPage(0); }}>{Object.entries(providerLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
@@ -130,7 +130,7 @@ export default function Crosswalk() {
         <div className="pagination"><button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>Next →</button></div>
       </>}
       {meta?.source.url && <details className="note" style={{ marginTop: 24 }}><summary>Capture receipt</summary><p style={{ marginTop: 12 }}>Retrieved {meta.source.fetched_at ? new Date(meta.source.fetched_at).toLocaleString("en-US", { timeZone: "UTC" }) : "date unavailable"} · SHA-256 <code>{meta.source.sha256 || "unavailable"}</code></p><span>Retained archive record</span></details>}
-      <p className="note" style={{ marginTop: 24 }}>Alternate identifiers are shown as recorded evidence and are not used to merge NCAA records. An identity match does not establish eligibility, transfer status, roster availability or a unique person outside the source&apos;s own match.</p>
+      <p className="note" style={{ marginTop: 24 }}>Alternate identifiers are shown as recorded evidence and are not used to merge records. An identity match does not establish eligibility, transfer status, roster availability or a unique person outside the source&apos;s own match.</p>
     </section>
   );
 }

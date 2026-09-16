@@ -130,7 +130,7 @@ function RankingsPage() {
         </table>
       </div>
       <p className="text-[11px] text-graphite">
-        Ratings computed from {data ? new Date(data.updated).toLocaleDateString() : ""} data · {data?.season} season · scores via ESPN
+        Ratings computed from {data ? new Date(data.updated).toLocaleDateString() : ""} data · {data?.season} season · scores via the schedule archive
         public APIs, ratings methodology: iterative SRS with {`±28`}-point margin cap and 3.2-point home-court adjustment.
       </p>
     </div>

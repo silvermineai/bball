@@ -33,7 +33,7 @@ export default function NcaaHighSchools() {
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-high-schools?meta=1&season=${season}`)
-      .then((r) => { if (!r.ok) throw Error("The NCAA high-school catalog could not be loaded."); return r.json() as Promise<Meta>; })
+      .then((r) => { if (!r.ok) throw Error("The high-school catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
   }, [retryNonce, season]);
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function NcaaHighSchools() {
     if (query.trim()) params.set("q", query.trim());
     setResult(null);
     fetch(`/api/basketball/research/ncaa-high-schools?${params}`, { signal: controller.signal })
-      .then((r) => { if (!r.ok) throw Error("The NCAA high-school pipeline could not be loaded."); return r.json() as Promise<Result>; })
+      .then((r) => { if (!r.ok) throw Error("The high-school pipeline could not be loaded."); return r.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
@@ -100,7 +100,7 @@ export default function NcaaHighSchools() {
   const seasons = meta?.seasons || Array.from({ length: 17 }, (_, i) => 2026 - i);
   return <>
     <div className="page-title"><div className="eyebrow">archive archive / high-school pipeline</div><h1>Follow the<br /><em>pipeline.</em></h1><p>See which source-labeled high schools appear in rosters, how many programs they represent and how much recorded college production sits behind the roster rows. This is descriptive coverage, not a recruiting ranking.</p></div>
-    <div className="strip"><div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>High schools in view</span></div><div><strong>{result?.min_players ?? minPlayers}</strong><span>Minimum rostered players</span></div><div><strong>{meta?.seasons.length ?? "—"}</strong><span>Source seasons</span></div><div><strong>NCAA</strong><span>Identity namespace</span></div></div>
+    <div className="strip"><div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>High schools in view</span></div><div><strong>{result?.min_players ?? minPlayers}</strong><span>Minimum rostered players</span></div><div><strong>{meta?.seasons.length ?? "—"}</strong><span>Seasons in archive</span></div><div><strong>IDs</strong><span>Identity namespace</span></div></div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{seasons.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}</select></label>
       <label className="control"><span>RANK BY</span><select value={metric} onChange={(e) => reset(() => setMetric(e.target.value as Metric))}>{(meta?.metrics || Object.keys(labels) as Metric[]).map((m) => <option key={m} value={m}>{labels[m]}</option>)}</select></label>

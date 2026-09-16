@@ -5,8 +5,8 @@ import Style from "./Style";
 import type { PossessionStyleCatalog } from "../../_lib/possession-style";
 
 export const metadata = {
-  title: "NCAA possession style archive",
-  description: "Source-attributed NCAA team possession context: tempo, transition, assisted and garbage-time shares.",
+  title: "Possession style archive",
+  description: "Team possession context: tempo, transition, assisted and garbage-time shares.",
   alternates: { canonical: "/basketball/possession-style/" },
 };
 
@@ -23,4 +23,3 @@ export default function Page() {
     <Style catalog={catalog} />
   </>;
 }
-

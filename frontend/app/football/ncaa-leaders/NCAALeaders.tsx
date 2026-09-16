@@ -64,14 +64,14 @@ export default function NCAALeaders({ release }: { release: Release }) {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">NCAA source archive / {release.season}</div>
+        <div className="eyebrow">Player archive / {release.season}</div>
         <h1>
           The names behind
           <br />
           <em>the box score.</em>
         </h1>
         <p>
-          Source-native leaderboards built from the complete {release.season} NCAA
+          Leaderboards built from the complete {release.season} player
           player-game release. Each table aggregates one source name, team ID
           and category within the season, so the board is useful for triage
           without pretending the release provides a verified athlete identity.
@@ -81,7 +81,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
             Open identified player rankings ↗
           </Link>
           <Link className="button secondary" href={"/football/source-stats/?dataset=ncaa_player_stats&season=" + release.season}>
-            Search raw NCAA rows ↗
+            Search raw player rows ↗
           </Link>
         </div>
         {release.available_seasons && release.available_seasons.length > 1 && (
@@ -171,7 +171,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
         <div className="eyebrow">Source boundary</div>
         <h2>Use the name as a lead, then open the rows.</h2>
         <p>
-          The NCAA-derived release has contest and team context but no stable
+          The Player release has contest and team context but no stable
           athlete ID. Repeated names are not merged across teams or seasons,
           and these aggregates do not alter the identified player rankings or
           forecast model. Verify a personnel question in the raw source rows

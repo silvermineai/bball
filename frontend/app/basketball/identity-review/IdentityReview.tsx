@@ -24,8 +24,8 @@ type Result = {
 const datasetLabels: Record<Dataset, string> = {
   all: "All withheld rows",
   player_box: "Retained player box",
-  ncaa_player_box: "NCAA player box",
-  ncaa_shots: "NCAA shooting events",
+  ncaa_player_box: "Player box",
+  ncaa_shots: "Shooting events",
   publisher_player_value: "Publisher player value",
 };
 const seasons = Array.from({ length: 17 }, (_, index) => 2010 + index);

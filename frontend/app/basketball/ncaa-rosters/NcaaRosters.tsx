@@ -52,7 +52,7 @@ export default function NcaaRosters() {
     const controller = new AbortController();
     const params = new URLSearchParams({ fromSeason: String(toSeason - 1), toSeason: String(toSeason) });
     fetch(`/api/basketball/research/ncaa-rosters/transitions?${params}`, { signal: controller.signal })
-      .then((r) => { if (!r.ok) throw Error("The NCAA continuity view could not be loaded."); return r.json() as Promise<TransitionResult>; })
+      .then((r) => { if (!r.ok) throw Error("The continuity view could not be loaded."); return r.json() as Promise<TransitionResult>; })
       .then((value) => { if (!controller.signal.aborted) setTransitions(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
@@ -60,7 +60,7 @@ export default function NcaaRosters() {
 
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-rosters?meta=1&season=${season}`)
-      .then((r) => { if (!r.ok) throw Error("The NCAA roster catalog could not be loaded."); return r.json() as Promise<Meta>; })
+      .then((r) => { if (!r.ok) throw Error("The roster catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
   }, [retryNonce, season]);
   useEffect(() => {
@@ -132,13 +132,13 @@ export default function NcaaRosters() {
     <div className="page-title">
       <div className="eyebrow">Roster archive / recruiting context</div>
       <h1>Know the<br /><em>roster story.</em></h1>
-      <p>Search the attributed NCAA roster release for class year, position, size, hometown and high school. These are source records that help frame recruiting research; they do not establish eligibility, commitment or transfer status. NCAA roster IDs are kept within their source season and are not treated as a cross-season person key.</p>
+      <p>Search the roster archive for class year, position, size, hometown and high school. These are source records that help frame recruiting research; they do not establish eligibility, commitment or transfer status. Roster IDs are kept within their source season and are not treated as a cross-season person key.</p>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Roster rows in view</span></div>
       <div><strong>{meta?.classes.length ?? "—"}</strong><span>Class labels</span></div>
       <div><strong>{meta?.positions.length ?? "—"}</strong><span>Position labels</span></div>
-      <div><strong>NCAA</strong><span>Identity namespace</span></div>
+      <div><strong>IDs</strong><span>Identity namespace</span></div>
     </div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => { setSeason(e.target.value); setClassYear(""); setPosition(""); })}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
