@@ -14,7 +14,7 @@ export default function Page() {
         <div className="eyebrow">Player production / Historical archive</div>
         <h1>Follow the production.</h1>
         <p>
-          Search players across 24 source seasons, from 2002–03 to 2025–26.
+          Search players across 24 stat seasons, from 2002–03 to 2025–26.
           Compare per-game production, shooting efficiency and workload, then
           open the complete game log. Team labels describe the stat season, not
           current recruiting availability. <Link href="/blog/basketball-player-game-logs/">Read the game-log field guide →</Link>
@@ -38,11 +38,11 @@ export default function Page() {
             <span>Open the weighted scouting board →</span>
           </Link>
           <Link className="paper-panel" href="/basketball/ncaa/">
-            <div className="eyebrow">Source leaderboards</div>
-            <h3>Who leads the NCAA’s published tables?</h3>
+            <div className="eyebrow">National leaderboards</div>
+            <h3>Who leads the national stat tables?</h3>
             <p>
-              Browse NCAA source identities across Divisions I, II and III,
-              with the published measure and coverage visible.
+              Browse NCAA player IDs across Divisions I, II and III,
+              with the measure and coverage visible.
             </p>
             <span>Browse national leaderboards →</span>
           </Link>
@@ -50,7 +50,7 @@ export default function Page() {
             <div className="eyebrow">Separate impact model</div>
             <h3>Who changed possessions with context?</h3>
             <p>
-              Read publisher NCAA RAPM for offensive, defensive and net impact;
+              Read NCAA RAPM estimates for offensive, defensive and net impact;
               these NCAA IDs remain separate from the production archive.
             </p>
             <span>Open RAPM impact rankings →</span>
@@ -65,18 +65,18 @@ export default function Page() {
             <span>Read recruiting evidence →</span>
           </Link>
           <Link className="paper-panel" href="/basketball/source-stats/">
-            <div className="eyebrow">Publisher archive</div>
-            <h3>Which source field do you want to inspect?</h3>
+            <div className="eyebrow">Stat archive</div>
+            <h3>Which stat field do you want to inspect?</h3>
             <p>
-              Search all retained publisher-defined averages, totals and
+              Search all retained averages, totals and
               miscellaneous fields across the player-season release.
             </p>
-            <span>Open the source stat browser →</span>
+            <span>Open the stat browser →</span>
           </Link>
           <Link className="paper-panel" href="/basketball/boutique/">
             <div className="eyebrow">Boutique player value</div>
             <h3>Which players add value in another model?</h3>
-            <p>Browse attributed offensive, defensive and total Box Plus/Minus across recent seasons.</p>
+            <p>Browse offensive, defensive and total Box Plus/Minus across recent seasons.</p>
             <span>Open player value archive →</span>
           </Link>
         </div>

@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import TeamStats from "./TeamStats";
 
 export const metadata = {
-  title: "Publisher team-season statistics browser",
-  description: "Search attributed ESPN team-season statistics across the college basketball archive.",
+  title: "Team-season statistics browser",
+  description: "Search team-season statistics across the college basketball archive.",
   alternates: { canonical: "/basketball/team-stats/" },
 };
 
