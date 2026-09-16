@@ -92,6 +92,8 @@ const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; descri
   { metric: "ppg", label: "Scoring", description: "points per game" },
   { metric: "rpg", label: "Rebounding", description: "rebounds per game" },
   { metric: "apg", label: "Playmaking", description: "assists per game" },
+  { metric: "spg", label: "Steals", description: "steals per game" },
+  { metric: "bpg", label: "Rim protection", description: "blocks per game" },
   { metric: "ts", label: "True shooting", description: "scoring efficiency", percent: true },
 ];
 
