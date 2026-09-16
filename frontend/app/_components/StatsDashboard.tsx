@@ -429,7 +429,7 @@ export default function StatsDashboard() {
       </section>
       <div className="dashboard-strip">
         <div><strong>{overview.ratings.length}</strong><span>Rated teams</span></div>
-        <div><strong>{players.length.toLocaleString()}</strong><span>Player stat rows</span></div>
+        <div><strong>{players.length.toLocaleString()}</strong><span>Player profiles</span></div>
         <div><strong>{overview.coverage.upcoming_games.toLocaleString()}</strong><span>Upcoming games</span></div>
         <div><strong>{overview.coverage.player_box_rows.toLocaleString()}</strong><span>Player box records</span></div>
       </div>
