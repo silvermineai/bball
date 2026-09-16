@@ -125,7 +125,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     const controller = new AbortController();
     fetch("/data/basketball/rosters.json", { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("The source roster release could not be loaded. Please reload.");
+        if (!response.ok) throw new Error("The roster archive could not be loaded. Please reload.");
         return response.json() as Promise<BBRosters>;
       })
       .then((value) => {
@@ -155,7 +155,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     return <p className="status-error" role="alert">{rosterError}</p>;
   }
   if (!rosters) {
-    return <p className="empty" role="status">Loading the source roster release…</p>;
+    return <p className="empty" role="status">Loading the roster archive…</p>;
   }
   const release = liveData || data;
   const allRows = recruitingRows(release);
@@ -247,7 +247,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const downloadWatchlist = () => downloadCsv(
     "basketball-recruiting-watchlist.csv",
     toCsv(
-      ["Player", "Source key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Publisher", "Source URL", "Source metadata SHA-256", "Roster name check", "Reviewed at"],
+      ["Player", "Record key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Recorded", "Record URL", "Record metadata SHA-256", "Roster name check", "Reviewed at"],
       watchlistRows.map((p) => [
         p.name,
         p.key,
@@ -291,7 +291,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
       </div>
       <p className="note" role="status">
         {liveData
-          ? "Cloudflare D1 reviewed recruiting edition connected; showing the latest retained source file."
+          ? "Cloudflare D1 reviewed recruiting edition connected; showing the latest retained roster file."
           : releaseError
             ? `${releaseError} Showing the bundled reviewed release.`
             : "Checking the live reviewed recruiting edition…"}
@@ -310,7 +310,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 {release.coverage.programs}/
                 {(rosters.team_summaries || []).length.toLocaleString()}
               </strong>
-              <span>Reviewed / source-listed programs</span>
+              <span>Reviewed / recorded programs</span>
             </div>
             <div>
               <strong>{release.coverage.historical_links}</strong>
@@ -324,7 +324,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
           <section className="paper-panel recruiting-pulse" aria-labelledby="recruiting-pulse-title">
             <div className="section-heading">
               <div>
-                <div className="eyebrow">Recruiting pulse / dated source events</div>
+                <div className="eyebrow">Recruiting pulse / dated recruiting events</div>
                 <h2 id="recruiting-pulse-title">See the calendar behind the class.</h2>
               </div>
               <div className="button-row">
@@ -336,7 +336,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     downloadCsv(
                       "basketball-recruiting-activity.csv",
                       toCsv(
-                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Publisher", "Source title", "Source URL", "Checked at"],
+                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Recorded", "Record title", "Record URL", "Checked at"],
                         activity.events.map((event) => [
                           event.source.published_on,
                           eventLabels[event.kind],
@@ -377,7 +377,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </div>
               <div>
                 <strong>{latestPublication ? publicationDate(latestPublication) : "—"}</strong>
-                <span>Latest publisher date</span>
+                <span>Latest recorded date</span>
               </div>
             </div>
             <div className="recruiting-pulse-grid">
@@ -401,7 +401,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                 {activity.months.length > 8 && <small className="note">Showing the eight latest publication months; the player board retains every event.</small>}
               </div>
               <div className="recruiting-pulse-feed">
-                <div className="eyebrow">Latest source events</div>
+                <div className="eyebrow">Latest recorded events</div>
                 {latestActivity.map((event) => (
                   <article className="recruiting-pulse-event" key={event.id}>
                     <div>
@@ -409,9 +409,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                       <span>{event.program_name} · {eventLabels[event.kind]}</span>
                     </div>
                     <p>{event.summary}</p>
-                    <a href={event.source.url} target="_blank" rel="noreferrer">
-                      {publicationDate(event.source.published_on)} · {event.source.publisher} ↗
-                    </a>
+                    <span>{publicationDate(event.source.published_on)} · Recorded update</span>
                   </article>
                 ))}
               </div>
@@ -428,21 +426,21 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   Search roster archive ↗
                 </Link>
                 <a className="button secondary" href={`/api/basketball/research/ncaa-rosters/source?season=${sourceSeason}`}>
-                  Download source parquet ↓
+                  Download roster archive ↓
                 </a>
               </div>
             </div>
             <p>
               The announcement file is a reviewed sample. The attributed NCAA
-              roster release gives the broader source frame for the same target
+              roster release gives the broader roster frame for the same target
               season, while keeping roster records separate from commitments,
               eligibility and transfer claims.
             </p>
             <div className="raw-stat-grid">
-              <div><dt>{rosters.players_observed.toLocaleString()}</dt><dd>Source roster records</dd></div>
+              <div><dt>{rosters.players_observed.toLocaleString()}</dt><dd>Roster records</dd></div>
               <div><dt>{rosters.teams_observed.toLocaleString()}</dt><dd>Programs represented</dd></div>
-              <div><dt>{rosters.prior_players_not_observed.toLocaleString()}</dt><dd>Rows without prior source profile</dd></div>
-              <div><dt>{rosters.unusable_rows?.toLocaleString() ?? "0"}</dt><dd>Unusable source rows</dd></div>
+              <div><dt>{rosters.prior_players_not_observed.toLocaleString()}</dt><dd>Rows without prior profile</dd></div>
+              <div><dt>{rosters.unusable_rows?.toLocaleString() ?? "0"}</dt><dd>Unusable rows</dd></div>
             </div>
             <p className="note">
               Retained roster edition: {rosters.previous_season}–{String(rosters.season).slice(-2)}. The exact download is archived with a SHA-256 receipt.
@@ -470,9 +468,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               record here. Additions are not a count of available players.
             </p>
             <small>
-              Source review: {publicationDate(release.reviewed_at)} · These
+              Record review: {publicationDate(release.reviewed_at)} · These
               announcements do not adjust the forecast model. Exact normalized
-              name matches in the current roster source: {exactRosterMatches} of {allRows.length}; a missing match is not evidence of absence.
+              name matches in the current roster record: {exactRosterMatches} of {allRows.length}; a missing match is not evidence of absence.
             </small>
           </div>
           <section className="paper-panel recruiting-program-summary">
@@ -584,7 +582,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </button>
             </div>
             <p className="note">
-              Every source-listed program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move. Review clock: {publicationDate(release.reviewed_at)}.
+              Every recorded program appears here. “Reviewed school announcements” means this edition has dated statements in the selected review file; “Roster observation only” means no reviewed transaction record is present. Absence is not evidence that a program made no move. Review clock: {publicationDate(release.reviewed_at)}.
             </p>
             <div className="toolbar recruiting-filters">
               <label className="control">
@@ -604,22 +602,22 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <label className="control">
                 <span>EVIDENCE STATUS</span>
                 <select value={coverageStatus} onChange={(event) => setCoverageStatus(event.target.value as typeof coverageStatus)}>
-                  <option value="all">All source-listed programs</option>
+                  <option value="all">All recorded programs</option>
                   <option value="reviewed">Reviewed announcements</option>
                   <option value="unreviewed">Roster observation only</option>
                 </select>
               </label>
             </div>
             <p className="note" role="status">
-              {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} source-listed programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this filtered view
+              {coverageRows.length.toLocaleString()} of {(rosters.team_summaries || []).length.toLocaleString()} recorded programs shown · {coverageRows.filter((row) => row.reviewed).length} reviewed in this filtered view
             </p>
             {!!reviewQueueRows.length && (
-              <div className="recruiting-review-queue" aria-label="Programs needing source review">
+              <div className="recruiting-review-queue" aria-label="Programs needing record review">
                 <div>
                   <div className="eyebrow">Coach review queue</div>
                   <h3>Start where the roster evidence is largest.</h3>
                   <p>
-                    These source-listed programs have no dated school announcement in this edition. The order uses prior minutes that are not represented by a reviewed addition, so it is a research queue rather than a recruiting grade.
+                    These recorded programs have no dated school announcement in this edition. The order uses prior minutes that are not represented by a reviewed addition, so it is a research queue rather than a recruiting grade.
                   </p>
                   <button
                     className="button secondary"
@@ -728,7 +726,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             <div>
               <div className="eyebrow">Private study list / this browser</div>
               <h2 id="recruiting-watchlist-title">Keep the next call in view.</h2>
-              <p>Save an announced player while you work through the evidence. The list stores source keys only in this browser and never changes rankings, forecasts or recruiting status.</p>
+              <p>Save an announced player while you work through the evidence. The list stores record keys only in this browser and never changes rankings, forecasts or recruiting status.</p>
             </div>
             <div className="recruiting-watchlist-actions">
               <strong>{watchlistRows.length}</strong>
@@ -770,7 +768,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         "Announcing program",
                         "Prior program",
                         "Latest status",
-                        "Current roster source-name match",
+                        "Current roster-name match",
                         "Latest publication",
                         "Prior stat team",
                         "Games",
@@ -785,9 +783,9 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         "Free throw rate",
                         "3PA rate",
                         "Turnover rate",
-                        "Source title",
-                        "Source URL",
-                        "Source metadata SHA-256",
+                        "Record title",
+                        "Record URL",
+                        "Record metadata SHA-256",
                         "Reviewed at",
                       ],
                       rows.map((p) => [
@@ -862,24 +860,16 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     {publicationDate(p.latest.source.published_on)}
                   </time>
                 </div>
-                <a
-                  className="recruiting-source"
-                  href={p.latest.source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Read publisher source ↗
-                </a>
+                <span className="recruiting-source">Record details retained</span>
                 <p className="recruiting-eligibility">{p.latest.summary}</p>
                 <p className="recruiting-eligibility">
-                  Current roster source check: {rosterMatch(p.name, p.team_id) === "exact" ? "exact normalized name appears in the 2026–27 listing" : rosterMatch(p.name, p.team_id) === "multiple" ? "multiple normalized name matches; review manually" : "no exact normalized name match in the 2026–27 listing"}. This check is descriptive and does not establish identity, eligibility or availability.
+                  Current roster-record check: {rosterMatch(p.name, p.team_id) === "exact" ? "exact normalized name appears in the 2026–27 listing" : rosterMatch(p.name, p.team_id) === "multiple" ? "multiple normalized name matches; review manually" : "no exact normalized name match in the 2026–27 listing"}. This check is descriptive and does not establish identity, eligibility or availability.
                 </p>
                 {exactRoster(p.name, p.team_id) && (
                   <p className="recruiting-eligibility">
                     <Link href={`/basketball/player/?id=${encodeURIComponent(exactRoster(p.name, p.team_id)!.id)}&season=${sourceSeason}`}>
-                      Open the matched source player file →
+                      Open the matched player file →
                     </Link>
-                    {exactRoster(p.name, p.team_id)!.source_url && <a href={exactRoster(p.name, p.team_id)!.source_url!} target="_blank" rel="noreferrer"> · publisher roster source ↗</a>}
                     <br /><small>This is an exact normalized name-and-program handoff for review, not a verified identity or eligibility determination.</small>
                   </p>
                 )}
@@ -986,16 +976,14 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         </time>
                         <strong>{eventLabels[e.kind]}</strong>
                         <p>{e.summary}</p>
-                        <a href={e.source.url} target="_blank" rel="noreferrer">
-                          {e.source.title} ↗
-                        </a>
+                        <span>{e.source.title}</span>
                         <small>
-                          {e.source.publisher} · Reviewed{" "}
+                          Recorded update · Reviewed{" "}
                           {publicationDate(e.source.checked_at)}
                         </small>
                         {e.source.source_sha256 && (
                           <small className="recruiting-receipt">
-                            Source metadata receipt: <code>{e.source.source_sha256}</code>
+                            Record metadata receipt: <code>{e.source.source_sha256}</code>
                           </small>
                         )}
                         {e.source.review_note && (
@@ -1032,23 +1020,19 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             <h2>Every record has a paper trail.</h2>
             <p>{release.methodology}</p>
             <p>
-              Dates above are the publisher’s calendar dates, not when a player
+              Dates above are the recorded calendar dates, not when a player
               signed or entered the portal. Our review timestamps show when we
-              checked the sources; older articles were collected
+              checked the records; older articles were collected
               retrospectively. Later school statements remain alongside the
               original addition. A planned redshirt is a school statement, not
               an eligibility ruling.
             </p>
             <p>
-              Historical stats come from{" "}
-              <a href={release.stats_source.url}>
-                retained bulk releases
-              </a>{" "}
-              ({release.stats_source.license}). Links require a reviewed match of
+              Historical stats come from retained archive rows. Matches require a reviewed match of
               the full player name and the school-announced prior program.
               College production describes past appearances; it does not project
               a player’s role at a new school. Announcement records contain our
-              brief factual summaries and links to the school’s reporting.
+              brief factual summaries and summaries of the school reporting.
             </p>
             <p>
               <Link href="/basketball/model/">

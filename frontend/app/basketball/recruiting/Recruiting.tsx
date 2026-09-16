@@ -56,7 +56,7 @@ function PriorProductionDetails({ production }: { production: PriorProduction })
         <div><dt>Qualified profile</dt><dd>{production.qualified == null ? "—" : production.qualified ? "Yes" : "No"}</dd></div>
       </dl>
       <p className="note">
-        Source-recorded prior production for {production.teams.join(", ") || "the observed program"}. A dash means the source denominator or exact player/team row was unavailable; no value is imputed.
+        Recorded prior production for {production.teams.join(", ") || "the observed program"}. A dash means the archive denominator or exact player/team row was unavailable; no value is imputed.
       </p>
     </details>
   );
@@ -154,7 +154,7 @@ export default function Recruiting() {
     ? {
         ...liveRoster,
         // Prior production is a derived historical view; preserve the richer
-        // bundled profile while replacing only the current source listing.
+        // bundled profile while replacing only the current roster listing.
         players: liveRoster.players.map((player) => ({
           ...player,
           prior_production: data?.players.find((candidate) => candidate.id === player.id && candidate.team_id === player.team_id)?.prior_production ?? null,
@@ -219,13 +219,13 @@ export default function Recruiting() {
               setPage(0);
             }}
           >
-            <option value="2027">2026–27 · Unconfirmed source listings</option>
-            <option value="2026">2025–26 · Source roster snapshot</option>
-            <option value="2025">2024–25 · Source roster snapshot</option>
+            <option value="2027">2026–27 · Unconfirmed roster listings</option>
+            <option value="2026">2025–26 · Roster snapshot</option>
+            <option value="2025">2024–25 · Roster snapshot</option>
           </select>
         </label>
         <label className="control">
-          <span>SOURCE POSITION</span>
+          <span>POSITION</span>
           <select
             value={position}
             onChange={(e) => {
@@ -243,7 +243,7 @@ export default function Recruiting() {
           </select>
         </label>
         <label className="control">
-          <span>SOURCE CLASS</span>
+          <span>CLASS</span>
           <select
             value={classYear}
             onChange={(e) => {
@@ -313,7 +313,7 @@ export default function Recruiting() {
             <option value="prior_ft_rate">Prior free-throw rate</option>
             <option value="prior_three_rate">Prior three-point attempt rate</option>
             <option value="prior_tov_rate">Prior turnover rate</option>
-            <option value="prior_bpm">Prior publisher Box BPM</option>
+            <option value="prior_bpm">Prior Box BPM</option>
             <option value="prior_index">Multi-stat prior production index</option>
             <option value="program">Current program</option>
             <option value="name">Player name</option>
@@ -345,47 +345,47 @@ export default function Recruiting() {
       </div>
       {teamId && (
         <p className="note" role="status" style={{ marginTop: 12, marginBottom: 8 }}>
-          Program handoff: <strong>{rosterData?.players.find((player) => player.team_id === teamId)?.team || teamId}</strong> · exact source team ID {teamId}.{" "}
+          Program handoff: <strong>{rosterData?.players.find((player) => player.team_id === teamId)?.team || teamId}</strong> · exact team ID {teamId}.{" "}
           <button className="text-link" type="button" onClick={() => { setTeamId(""); setPage(0); }}>Clear program filter</button>
         </p>
       )}
       <p className="note" role="status" style={{ marginBottom: 8 }}>
         {liveRoster
-          ? "Live Cloudflare D1 roster edition connected; current source listings and workload continuity are refreshed from the research warehouse."
+          ? "Live Cloudflare D1 roster edition connected; current roster listings and workload continuity are refreshed from the research warehouse."
           : liveRosterError
             ? <>{liveRosterError} Showing the bundled roster release. <button className="button secondary" type="button" onClick={retryLiveRoster}>Retry live roster</button></>
             : "Checking the live roster observation edition…"}
       </p>
       {sourceReceipt && (sourceReceipt.url || sourceReceipt.sha256 || sourceReceipt.fetched_at) && (
         <details className="note" style={{ marginBottom: 20 }}>
-          <summary>Source receipt for {season === "2027" ? "2026–27" : `${Number(season) - 1}–${season.slice(-2)}`} roster observations</summary>
+          <summary>Capture receipt for {season === "2027" ? "2026–27" : `${Number(season) - 1}–${season.slice(-2)}`} roster observations</summary>
           <div className="table-scroll" style={{ marginTop: 12 }}>
             <table className="data-table">
-              <thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead>
+              <thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Status</th></tr></thead>
               <tbody><tr>
                 <td>{sourceReceipt.dataset.replaceAll("_", " ")}</td>
                 <td>{sourceReceipt.fetched_at ? new Date(sourceReceipt.fetched_at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" }) : "—"}</td>
                 <td><code>{sourceReceipt.sha256 || "—"}</code></td>
-                <td>{sourceReceipt.url ? <a href={sourceReceipt.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td>
+                <td>{sourceReceipt.url ? "Retained" : "—"}</td>
               </tr></tbody>
             </table>
           </div>
-          <p style={{ marginTop: 12 }}>This receipt identifies the source listing behind the observation view. It does not establish a commitment, transfer, eligibility or current availability decision.</p>
+          <p style={{ marginTop: 12 }}>This receipt identifies the roster listing behind the observation view. It does not establish a commitment, transfer, eligibility or current availability decision.</p>
         </details>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Production sorts use the exact prior source ID and recorded game
+        Production sorts use the exact prior player ID and recorded game
         averages. True shooting and effective field goal percentage stay
-        unavailable when their source denominator is missing; they are not
-        imputed. Box BPM is a separate source-attributed publisher value and
+        unavailable when their archive denominator is missing; they are not
+        imputed. Box BPM is a separate archived value and
         remains blank when that exact athlete/team release row is unavailable.
-        Workload thresholds apply to the preceding source season and exclude
+        Workload thresholds apply to the preceding season and exclude
         rows without enough recorded games or minutes. A starter-rate threshold
-        also excludes rows where the source did not report a start flag.
+        also excludes rows where the archive did not report a start flag.
       </p>
       {rosterData?.players_truncated && (
         <p className="career-coverage-warning" role="status">
-          The live source release is larger than the browser safety limit; showing {rosterData.players_returned?.toLocaleString() || rosterData.players.length.toLocaleString()} of {(rosterData.players_available ?? rosterData.players_observed).toLocaleString()} player rows in this filtered view. Use the exact parquet release above for the complete file.
+          The live archive is larger than the browser safety limit; showing {rosterData.players_returned?.toLocaleString() || rosterData.players.length.toLocaleString()} of {(rosterData.players_available ?? rosterData.players_observed).toLocaleString()} player rows in this filtered view. Use the complete archive export for the full file.
         </p>
       )}
       {error ? (
@@ -404,7 +404,7 @@ export default function Recruiting() {
           >
             <div>
               <strong>{rosterData.teams_observed}</strong>
-              <span>Programs in this source view</span>
+              <span>Programs in this archive</span>
             </div>
             <div>
               <strong>{rosterData.players_observed.toLocaleString()}</strong>
@@ -426,9 +426,9 @@ export default function Recruiting() {
           <p className="note" style={{ marginBottom: 22 }}>
             {season === "2027"
               ? "Listings can carry over from earlier seasons; no school-confirmed current transfer status is supplied. Missing players may reflect incomplete rosters, not departures."
-              : "This source roster snapshot is compared with the preceding season's recorded participation. A different program record describes historical participation, not why or when a transfer happened."}{" "}
+              : "This roster snapshot is compared with the preceding season's recorded participation. A different program record describes historical participation, not why or when a transfer happened."}{" "}
             New to the dataset does not mean freshman. Prior production is
-            recorded workload from the preceding source season, not a
+            recorded workload from the preceding season, not a
             projected role at the listed program.
           </p>
           {sort === "prior_index" && (
@@ -449,7 +449,7 @@ export default function Recruiting() {
               <span className="note">{picks.length} / 12 saved</span>
             </div>
             <p className="note">
-              Save source IDs while reviewing this edition. The list is stored in the shareable URL; it is a research shortlist, not a commitment or transfer ledger.
+              Save player IDs while reviewing this edition. The list is stored in the shareable URL; it is a research shortlist, not a commitment or transfer ledger.
             </p>
             {pickedRows.length ? (
               <div className="recruiting-watchlist-items">
@@ -466,7 +466,7 @@ export default function Recruiting() {
             {pickedRows.length > 1 && (
               <div className="table-scroll" style={{ marginTop: 18 }}>
                 <div className="section-heading" style={{ marginBottom: 10 }}>
-                  <p className="note">Side-by-side prior production · source IDs remain separate</p>
+                  <p className="note">Side-by-side prior production · player IDs remain separate</p>
                   <button
                     className="button secondary"
                     type="button"
@@ -474,7 +474,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Source ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior ORB/G", "Prior DRB/G", "Prior APG", "Prior PF/G", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Source URL", "Roster source dataset", "Roster release URL", "Roster retrieved (UTC)", "Roster SHA-256"],
+                          ["Player", "Player ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior ORB/G", "Prior DRB/G", "Prior APG", "Prior PF/G", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Record URL", "Roster dataset", "Roster archive URL", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -550,7 +550,7 @@ export default function Recruiting() {
           </section>
           {rosterData.unusable_rows != null && rosterData.unusable_rows > 0 && (
             <p className="career-coverage-warning">
-              {rosterData.unusable_rows.toLocaleString()} source roster rows were
+              {rosterData.unusable_rows.toLocaleString()} roster rows were
               excluded as team-attributed placeholders; raw records remain in
               the research warehouse.
             </p>
@@ -559,15 +559,15 @@ export default function Recruiting() {
             <details className="career-coverage-details" style={{ marginBottom: 24 }}>
               <summary>{season === "2027" ? "Team workload continuity" : "Recorded workload movement"} ({rosterData.team_summaries.length} programs)</summary>
               <p className="note">
-                Prior minutes are summed from the preceding source season. The
+                Prior minutes are summed from the preceding season. The
                 {season === "2027"
                   ? " listed view is an unconfirmed observation; this table is a workload context signal, not a depth chart or eligibility claim."
                   : " recorded appearance view uses playing time on both sides; this table is a workload context signal, not a transfer ledger or explanation of movement."}
               </p>
               <p className="note">
                 Unrepresented prior minutes are the prior-season team total minus
-                minutes represented by the listed source IDs. Use that column to
-                prioritize film and source review; it is not a departure count,
+                minutes represented by the listed player IDs. Use that column to
+                prioritize film and record review; it is not a departure count,
                 an eligibility signal or a forecast adjustment.
               </p>
               <div className="toolbar">
@@ -608,7 +608,7 @@ export default function Recruiting() {
                 </button>
               </div>
               <p className="note" role="status">
-                {teamRows.length.toLocaleString()} of {rosterData.team_summaries.length.toLocaleString()} observed programs shown. {season === "2027" ? "The denominator is the source roster listing, not confirmed Division I membership." : "The denominator is the recorded appearance sample, which includes programs outside the primary forecast field."}
+                {teamRows.length.toLocaleString()} of {rosterData.team_summaries.length.toLocaleString()} observed programs shown. {season === "2027" ? "The denominator is the roster listing, not confirmed Division I membership." : "The denominator is the recorded appearance sample, which includes programs outside the primary forecast field."}
               </p>
               <div className="table-scroll">
                 <table className="data-table">
@@ -648,13 +648,13 @@ export default function Recruiting() {
                     toCsv(
                     [
                       "Player",
-                      "Source ID",
+                      "Player ID",
                       "Current program",
                       "Current program ID",
                       "Prior observed programs",
                       "Observation",
                       "Position",
-                      "Source-listed class",
+                      "Recorded class",
                       "Prior recorded games",
                       "Prior recorded minutes",
                       "Prior starts",
@@ -681,9 +681,9 @@ export default function Recruiting() {
                       "Prior recorded programs",
                       "Height",
                       "Weight",
-                      "Source URL",
-                      "Roster source dataset",
-                      "Roster release URL",
+                      "Record URL",
+                      "Roster dataset",
+                      "Roster archive URL",
                       "Roster retrieved (UTC)",
                       "Roster SHA-256",
                     ],
@@ -747,12 +747,12 @@ export default function Recruiting() {
                   <th>Player</th>
                   <th>
                     {season === "2027"
-                      ? "Source-listed program"
+                      ? "Recorded program"
                       : "Observed program"}
                   </th>
                   <th>Prior appearances</th>
                       <th>Observation</th>
-                      <th>Source-listed class</th>
+                      <th>Recorded class</th>
                       {sort === "prior_index" && <th className="numeric">Prior index</th>}
                       <th>Prior recorded production</th>
                 </tr>
@@ -767,16 +767,9 @@ export default function Recruiting() {
                       <small>
                         {[p.position, p.height].filter(Boolean).join(" · ")}
                       </small>
-                      {p.source_url && (
-                        <small>
-                          <a href={p.source_url} target="_blank" rel="noreferrer">
-                            Publisher profile ↗
-                          </a>
-                        </small>
-                      )}
                       <small>
                         <Link href={`/basketball/ncaa-rankings/?season=${Number(season) - 1}&q=${encodeURIComponent(p.name)}`}>
-                          Search NCAA source board →
+                          Search national player board →
                         </Link>
                       </small>
                       <button
@@ -820,7 +813,7 @@ export default function Recruiting() {
                             {p.prior_production.starts == null ? "—" : p.prior_production.starts.toLocaleString()} starts / {p.prior_production.starter_reported_records == null ? "—" : p.prior_production.starter_reported_records.toLocaleString()} reported · {statPercent(p.prior_production.starter_rate)} starter rate
                           </small>
                           <small>
-                            {p.prior_production.box_bpm == null ? "—" : p.prior_production.box_bpm.toFixed(1)} Box BPM · publisher-attributed
+                            {p.prior_production.box_bpm == null ? "—" : p.prior_production.box_bpm.toFixed(1)} Box BPM · archived
                           </small>
                           <PriorProductionDetails production={p.prior_production} />
                         </>

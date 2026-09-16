@@ -81,7 +81,7 @@ export default function MovementWatch() {
     <section className="section paper-panel movement-watch" aria-labelledby="movement-watch-title">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Player movement / exact source IDs</div>
+          <div className="eyebrow">Player movement / exact player IDs</div>
           <h2 id="movement-watch-title">A short list for the first call.</h2>
         </div>
         <div className="button-row">
@@ -103,12 +103,12 @@ export default function MovementWatch() {
       </div>
       <p className="note">
         {data
-          ? `${count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full source view.`
+          ? `${count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full archive.`
           : error ? <>{error} <button className="button secondary" type="button" onClick={retryLiveRoster}>Retry movement archive</button></> : "Checking the live roster observation edition…"}
       </p>
       {data?.source && (
         <p className="note" style={{ marginTop: 8 }}>
-          Live {data.source.dataset || "roster"} release
+          Live {data.source.dataset || "roster"} archive
           {data.source.fetched_at ? ` · retrieved ${new Date(data.source.fetched_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC` : " · retrieval clock unavailable"}
           {data.source.sha256 ? ` · SHA-256 ${data.source.sha256.slice(0, 16)}…` : " · digest unavailable"}
         </p>
@@ -122,7 +122,7 @@ export default function MovementWatch() {
             <tbody>
               {players.map((player) => (
                 <tr key={`${player.id}-${player.team_id}`}>
-                  <td><strong><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${data?.season ? data.season - 1 : 2025}`}>{player.name}</Link></strong><small>Source ID {player.id}</small><small><Link href={`/basketball/crosswalk/?q=${encodeURIComponent(player.id)}`}>Search provider IDs →</Link></small></td>
+                  <td><strong><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${data?.season ? data.season - 1 : 2025}`}>{player.name}</Link></strong><small>Player ID {player.id}</small><small><Link href={`/basketball/crosswalk/?q=${encodeURIComponent(player.id)}`}>Search identity records →</Link></small></td>
                   <td>{player.team}</td>
                   <td>{player.previous_teams.length ? player.previous_teams.join(", ") : "Not recorded"}</td>
                   <td>{player.position || "—"}</td>
@@ -134,7 +134,7 @@ export default function MovementWatch() {
                   <td className="numeric">{player.prior_production?.fpg == null ? "—" : player.prior_production.fpg.toFixed(1)}</td>
                   <td className="numeric">{player.prior_production?.ts == null ? "—" : `${(player.prior_production.ts * 100).toFixed(1)}%`}</td>
                   <td className="numeric">{player.prior_production?.box_bpm == null ? "—" : player.prior_production.box_bpm.toFixed(1)}</td>
-                  <td>{player.source_url ? <a href={player.source_url} target="_blank" rel="noreferrer" aria-label={`Open ${player.name} source`}>Source ↗</a> : null}</td>
+                  <td>Recorded</td>
                 </tr>
               ))}
             </tbody>
@@ -145,10 +145,10 @@ export default function MovementWatch() {
         <Link className="button secondary" href={`/basketball/recruiting/?view=observations&rosterSeason=${season}&rosterStatus=${status}`}>
           Open full observation lab ↗
         </Link>
-        {data?.source?.url ? <a className="text-link" href={data.source.url} target="_blank" rel="noreferrer">Open source release ↗</a> : null}
+
       </div>
       <p className="section-note">
-        Observed different-program rows describe exact-ID participation changes; listed 2026–27 rows are unconfirmed source listings. Neither establishes a portal transaction, commitment, eligibility or availability decision.
+        Observed different-program rows describe exact-ID participation changes; listed 2026–27 rows are unconfirmed roster listings. Neither establishes a portal transaction, commitment, eligibility or availability decision.
       </p>
     </section>
   );
