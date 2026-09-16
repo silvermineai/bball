@@ -199,7 +199,7 @@ function ForecastTable({ games }: { games: BBGame[] }) {
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
@@ -212,6 +212,7 @@ function ForecastTable({ games }: { games: BBGame[] }) {
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
+                <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
               </tr>
             );
