@@ -76,6 +76,22 @@ type ValueLeader = {
   rank?: number | null;
 };
 
+type NationalPlayer = {
+  player_id: number;
+  division: number;
+  name: string;
+  team_name: string | null;
+  conference: string | null;
+  games: number | null;
+  ppg: number | null;
+  rpg: number | null;
+  apg: number | null;
+  fg_pct: number | null;
+  three_pct: number | null;
+  ft_pct: number | null;
+  ppg_rank: number | null;
+};
+
 function getImpact(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball", `impact-${season - 1}.json`);
   if (!fs.existsSync(file)) return [] as ImpactPlayer[];
@@ -92,6 +108,17 @@ function getValueLeaders(season: number) {
   };
   if (data.season !== season) return [] as ValueLeader[];
   return data.metrics?.find((metric) => metric.key === "box_bpm")?.leaders || [];
+}
+
+function getNationalPlayers(season: number) {
+  const file = path.join(process.cwd(), "public/data/basketball/ncaa-individual.json");
+  if (!fs.existsSync(file)) return [] as NationalPlayer[];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { season?: number; players?: NationalPlayer[] };
+  if (data.season !== season) return [] as NationalPlayer[];
+  return (data.players || [])
+    .filter((player) => player.division === 1 && player.ppg != null)
+    .sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1) || a.name.localeCompare(b.name))
+    .slice(0, 10);
 }
 
 const latestTip = (game: BBGame) =>
@@ -314,6 +341,31 @@ function ValueTable({ players, season }: { players: ValueLeader[]; season: numbe
   );
 }
 
+function NationalTable({ players, season }: { players: NationalPlayer[]; season: number }) {
+  const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
+  return (
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead><tr><th>PPG rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
+        <tbody>{players.map((player) => (
+          <tr key={player.player_id}>
+            <td className="rank-number">{player.ppg_rank ?? "—"}</td>
+            <th scope="row"><Link href={`/basketball/ncaa-player/?id=${player.player_id}&season=${season}`}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
+            <td>{player.team_name || "—"}</td>
+            <td className="numeric">{player.games ?? "—"}</td>
+            <td className="numeric"><strong>{fmt(player.ppg)}</strong></td>
+            <td className="numeric">{fmt(player.rpg)}</td>
+            <td className="numeric">{fmt(player.apg)}</td>
+            <td className="numeric">{pct(player.fg_pct)}</td>
+            <td className="numeric">{pct(player.three_pct)}</td>
+            <td className="numeric">{pct(player.ft_pct)}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
 function ForecastTable({ games }: { games: BBGame[] }) {
   const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
   return (
@@ -382,6 +434,7 @@ export default function StatsDashboard() {
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
   const valueLeaders = getValueLeaders(latestSeason);
+  const nationalPlayers = getNationalPlayers(latestSeason);
   const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
   const leaderCounts = metrics.map((metric) => ({ metric, count: topBasketballLeaders(players, metric, 100000).length }));
   return (
@@ -440,26 +493,33 @@ export default function StatsDashboard() {
         <p className="dashboard-caption">The same qualified player file, grouped by six quick ways to find a standout: scoring, rebounding, playmaking, steals, rim protection and true shooting.</p>
         <LeaderCards players={players} season={latestSeason} />
       </section>
+      {nationalPlayers.length ? (
+        <section className="dashboard-section" aria-labelledby="dashboard-national-records">
+          <div className="dashboard-section-heading"><div><span className="eyebrow">05 / NATIONAL RECORDS</span><h2 id="dashboard-national-records">Division I scoring leaders</h2></div><Link href="/basketball/ncaa/?division=1&amp;stat=ppg">Full national table →</Link></div>
+          <p className="dashboard-caption">Final Division I records with the supplied national rank, shooting splits and games played. This archive remains separate from the production and impact model layers.</p>
+          <NationalTable players={nationalPlayers} season={latestSeason} />
+        </section>
+      ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-impact">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / PLAYER IMPACT</span><h2 id="dashboard-impact">Who moves the margin?</h2></div><Link href="/basketball/impact/">Full impact table →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / PLAYER IMPACT</span><h2 id="dashboard-impact">Who moves the margin?</h2></div><Link href="/basketball/impact/">Full impact table →</Link></div>
         <p className="dashboard-caption">Qualified regularized adjusted plus-minus from the latest completed season, with offensive and defensive components and the possession sample behind each row.</p>
         <ImpactTable players={impact} />
       </section>
       {valueLeaders.length ? (
         <section className="dashboard-section" aria-labelledby="dashboard-value">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">06 / BOX VALUE</span><h2 id="dashboard-value">Box-score value leaders</h2></div><Link href="/basketball/boutique/?kind=players&amp;metric=box_bpm&amp;season=2026">Full value table →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">07 / BOX VALUE</span><h2 id="dashboard-value">Box-score value leaders</h2></div><Link href="/basketball/boutique/?kind=players&amp;metric=box_bpm&amp;season=2026">Full value table →</Link></div>
           <p className="dashboard-caption">A separate box-score value estimate gives a second view of player contribution. Keep it beside RAPM; the two models answer different questions.</p>
           <ValueTable players={valueLeaders} season={latestSeason} />
         </section>
       ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">07 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       {recruiting ? (
         <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">07 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">09 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
           <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
           <RecruitingSnapshot release={recruiting} />
         </section>
