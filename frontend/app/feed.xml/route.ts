@@ -93,6 +93,6 @@ export function GET() {
       )),
   ];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>The Coaching Annual · Silvermine Research</title><link>${base}/blog/</link><description>College football and basketball forecasts, player production and recruiting research.</description><language>en-us</language><lastBuildDate>${escapeXml(new Date(generated).toUTCString())}</lastBuildDate>${entries.join("")}</channel></rss>`;
+<rss version="2.0"><channel><title>Silvermine basketball and football research</title><link>${base}/blog/</link><description>College football and basketball forecasts, player production and recruiting research.</description><language>en-us</language><lastBuildDate>${escapeXml(new Date(generated).toUTCString())}</lastBuildDate>${entries.join("")}</channel></rss>`;
   return new Response(xml, { headers: { "Content-Type": "application/rss+xml; charset=utf-8", "Cache-Control": "public, max-age=300" } });
 }

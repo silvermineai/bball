@@ -114,7 +114,7 @@ export default function Page() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">The Coaching Annual / The journal</div>
+        <div className="eyebrow">Research journal / live game notes</div>
         <h1>
           Notes from
           <br />

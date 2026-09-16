@@ -10,9 +10,9 @@ import EspnRecruitingBoard from "./EspnRecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 export const metadata = {
-  title: "Basketball recruiting: ESPN prospect rankings and transfer evidence",
+  title: "Basketball recruiting: rankings, movement and player production",
   description:
-    "Search live ESPN 2025–30 prospect rankings alongside dated school announcements, prior college stats, availability updates and all-program coverage labels.",
+    "Search prospect rankings alongside player production, roster movement, dated additions and coverage labels.",
   alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {
@@ -42,17 +42,17 @@ export default function Page() {
     <>
       <div className="page-title">
         <div className="eyebrow">
-          Roster construction / 2026–27 research file
+          Recruiting board / 2026–27
         </div>
         <h1>
-          Follow the player.
+          Find the signal.
           <br />
-          Keep the evidence.
+          Keep the numbers.
         </h1>
         <p>
-          Who a school announced. Where they played. What the next statement
-          changed. Build your recruiting picture from dated sources and recorded
-          college production.
+          Rankings, prior college production, roster movement and class
+          destinations in one filterable board. Every row keeps its season,
+          identity and coverage status attached.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/basketball/ncaa-rosters/">Search NCAA roster intel ↗</Link>
@@ -62,6 +62,12 @@ export default function Page() {
           <Link className="hero-link" href="/basketball/ncaa-rankings/">Rank recorded production →</Link>
         </div>
       </div>
+      <section className="stat-strip" aria-label="Recruiting coverage">
+        <div><strong>{data.coverage.players.toLocaleString()}</strong><span>Recorded people</span></div>
+        <div><strong>{data.coverage.programs.toLocaleString()}</strong><span>Programs reviewed</span></div>
+        <div><strong>{data.coverage.events.toLocaleString()}</strong><span>Dated events</span></div>
+        <div><strong>{data.coverage.historical_links.toLocaleString()}</strong><span>Prior stat links</span></div>
+      </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
       <RecruitingWire articles={recruitingNews} />
@@ -71,68 +77,38 @@ export default function Page() {
       <section className="section recruiting-context">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Eligibility / official context</div>
-            <h2>Keep the transfer clock at the source.</h2>
+            <div className="eyebrow">Data notes / coverage</div>
+            <h2>Read the board with its limits.</h2>
           </div>
           <p>
-            Portal language, eligibility and a school roster observation are
-            different evidence. Start with the NCAA rule and research pages,
-            then return to the dated source records below.
+            Movement and availability labels describe recorded observations.
+            They do not infer eligibility, a commitment or a future role.
           </p>
         </div>
         <div className="two-col">
           <article className="paper-panel">
-            <div className="eyebrow">Rules and eligibility</div>
-            <h3>NCAA transfer rules and eligibility</h3>
+            <div className="eyebrow">Coverage</div>
+            <h3>What is on the board?</h3>
             <p>
-              The NCAA describes its Transfer Portal as a centralized database
-              for student-athlete transfer information. The official rules page
-              is the reference point for eligibility questions; Silvermine does
-              not infer a ruling from an announcement or roster row.
+              This edition includes {data.coverage.players.toLocaleString()} people,
+              {" "}{data.coverage.events.toLocaleString()} dated events and
+              {" "}{data.coverage.historical_links.toLocaleString()} links to prior
+              college production across {data.coverage.programs.toLocaleString()} programs.
             </p>
-            <a
-              className="text-link"
-              href="https://www.ncaa.org/eligibility-center/transfer-rules-and-eligibility/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open NCAA transfer rules ↗
-            </a>
           </article>
           <article className="paper-panel">
-            <div className="eyebrow">Aggregate research</div>
-            <h3>NCAA transfer research</h3>
+            <div className="eyebrow">Interpretation</div>
+            <h3>Production stays attached.</h3>
             <p>
-              NCAA research dashboards provide aggregate portal and transfer
-              composition context. They are useful for the national picture,
-              but they are not player-level transaction records for this board.
-            </p>
-            <a
-              className="text-link"
-              href="https://www.ncaa.org/what-we-do/research/student-athlete-transfer-research/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open NCAA transfer research ↗
-            </a>
-            <p className="note" style={{ marginTop: 16 }}>
-              Direct dashboards: {" "}
-              <a className="text-link" href="https://public.tableau.com/views/RES_Transfer_Dash_Final/Transfer_Dash_1" target="_blank" rel="noreferrer">DI composition ↗</a>{" · "}
-              <a className="text-link" href="https://public.tableau.com/views/DI_Transfer_Portal_2024/2026DIupdate" target="_blank" rel="noreferrer">DI portal ↗</a>{" · "}
-              <a className="text-link" href="https://public.tableau.com/views/DII_Transfer_Portal_2024/2026DIIupdate" target="_blank" rel="noreferrer">DII portal ↗</a>
-            </p>
-            <p className="note" style={{ marginTop: 12 }}>
-              For tournament availability, verify the NCAA&apos;s official{" "}
-              <a className="text-link" href="https://www.ncaa.com/di-mens-basketball-player-availability" target="_blank" rel="noreferrer">men&apos;s availability portal ↗</a>{" "}
-              and its <a className="text-link" href="https://www.ncaa.com/di-mens-basketball-player-archive" target="_blank" rel="noreferrer">published archive ↗</a>. Silvermine links to the source rather than mirroring a protected application or turning a roster row into an availability ruling.
+              Prior games, minutes, scoring, rebounding, playmaking and
+              shooting rates stay beside the player row so recruiting views
+              remain measurable instead of editorial.
             </p>
           </article>
         </div>
         <p className="section-note">
-          This edition keeps source-ranked prospect fields separate from
-          school announcements, roster observations and portal evidence. A
-          missing announcement or portal record does not imply no transfer
-          activity.
+          A missing event or stat link means the board has no retained record
+          for that field; it does not imply that no movement occurred.
         </p>
       </section>
       <Announcements data={data} />
