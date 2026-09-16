@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "season": 2027,
-  "reviewed_at": "2026-09-08T10:30:00.000000+00:00",
+  "reviewed_at": "2026-09-16T06:56:40.313742Z",
   "coverage": {
     "programs": 14,
     "players": 96,
@@ -113,9 +113,9 @@
       "publisher": "UConn Athletics",
       "published_on": "2026-04-29",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "8dbf9cf44f13076fb42010965df3f16418633cacd1e871716fc36179249bce0c"
+      "source_sha256": "976e4420400c0c2786849762fee86f7d6f7ad6a58c6331ff017acd8ae94dfbad"
     },
     {
       "id": "uconn-nash-shaw",
@@ -125,9 +125,9 @@
       "publisher": "UConn Athletics",
       "published_on": "2026-05-27",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "8c06c0fa67f6bef60afea6c9cd6a547f9b66e508d5d85124c20ec21160235f34"
+      "source_sha256": "437272afbdac927e134392abd070bd1e2732287b6c25a6e06ce4cff6ed2e2e7f"
     },
     {
       "id": "uconn-dzafic",
@@ -137,9 +137,9 @@
       "publisher": "UConn Athletics",
       "published_on": "2026-06-02",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "ab51db7383788264fbef9336fe88388f0afc99901314a6984011169c120de020"
+      "source_sha256": "ea059276c08558d787b9d5d390f6deca1ebac61eda7f4fe72465b6d19c7b30f8"
     },
     {
       "id": "uconn-amosov",
@@ -149,9 +149,9 @@
       "publisher": "UConn Athletics",
       "published_on": "2026-07-06",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "923ae1d6acfc10e925fe913d233e5eaea6801d4934ef8e5daac670ec0191b2c6"
+      "source_sha256": "db2a6af73f686f4ae1f63fa44194b20952ad5cd8fda6cda6ac5eac258342d6b0"
     },
     {
       "id": "houston-1",
@@ -161,9 +161,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-08-10",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "5ff37a656f0ee9cf7a604680c782d965fd66bed285a3b81e1effcc68d657f154"
+      "source_sha256": "ac207bfaf23d53c84b0b184475d016cd4fb4143ca8260dd670afc0d0dab55056"
     },
     {
       "id": "houston-2",
@@ -173,9 +173,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-05-07",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "5153eb41e3aef48c9a46955cc8e1c848c5ad80dae633bc68e0e6dc6d38c337c7"
+      "source_sha256": "ee3f9add4c0fdc0f6b91255a55b52d1807713e7386251daa527305bf40c3ef58"
     },
     {
       "id": "houston-3",
@@ -185,9 +185,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-05-05",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "1e95a4b44e4e70b895adbb3309c59f9d2ae3729bb6a4e43c8db2de3096ab1e73"
+      "source_sha256": "1f8560e956b9858c00f1e6078111f3b1d89ca96ea1dcc481ac8cf6d1072d9788"
     },
     {
       "id": "houston-4",
@@ -197,9 +197,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-04-24",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "fdd0cddb05f01ea57d03f6f3a7f55f148bddf409fc72adf89ed0ecef737c81f3"
+      "source_sha256": "206aa2f1866879a3de29e64e3d0faab0f840475a8f1d48f48de958cc96b23ed1"
     },
     {
       "id": "houston-5",
@@ -209,9 +209,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-04-24",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "ac9e94ba2c9cbd7dc20659ff3721a2249d6ce9b062887e882c37c54e04b79658"
+      "source_sha256": "3ef8464f2154399dcb96b695e61319b61278b02dff46fac3d32a9f5d5fc897f8"
     },
     {
       "id": "houston-6",
@@ -221,9 +221,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-04-23",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "1b42b5b59de16d89720ed1483fe8c7cdc80e67c870b0b1158feb56a552ac3d03"
+      "source_sha256": "ff37b7f9bb6ccdf4e2cf5c7cb7100d003af29c303871b18d14b012eab64d3fb5"
     },
     {
       "id": "houston-7",
@@ -233,9 +233,9 @@
       "publisher": "Houston Athletics",
       "published_on": "2026-04-22",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "cf1775c420bf292195912c0ad953aaddd8db75b927c01fa8df020f897ff0dbf3"
+      "source_sha256": "2aa8f8f546f331f9442b27942814629f7484a3b2c6bf1425d859565996d21e7a"
     },
     {
       "id": "michigan-early",
@@ -245,9 +245,9 @@
       "publisher": "Michigan Athletics",
       "published_on": "2025-11-14",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "7f5ba38900c864a84bf656d3ec92520d24583c76a9d26e3a60d1159fba341ebd"
+      "source_sha256": "17e5b74315ac74574740675463bee4fc5d1ef325c85ca0c15fede9df86034538"
     },
     {
       "id": "michigan-mccoy-cosby",
@@ -257,9 +257,9 @@
       "publisher": "Michigan Athletics",
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "948e322c7252585610cfd536480af2319ebbd8a0101eb49a29f64d8aea1e6d6e"
+      "source_sha256": "b704ca5a9e1430de0d35f3b1fe32a2cacb9b763f55d76fc24246e1a544774300"
     },
     {
       "id": "michigan-mccoy-unavailable",
@@ -281,9 +281,9 @@
       "publisher": "Michigan Athletics",
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": "Article display and announcement text say April 28; URL path says April 26.",
-      "source_sha256": "a0fe26f15ad24a0dc4f6bb5a525b18705cab5a7d50f44f741914935e9f8644bc"
+      "source_sha256": "6835e4a5cd8b6f4c66c9fe4b9d34d17ada0bf50bf56558584bf8fab67793a11f"
     },
     {
       "id": "michigan-reed",
@@ -293,9 +293,9 @@
       "publisher": "Michigan Athletics",
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "60602f7256564d3454d62d947fa29ad346db85cef1706595ef98c3b2fbfd6d13"
+      "source_sha256": "d06a0d44afed2f648371881bc6148c7cd2b1e7a1ff44a0ea11af4e344230024c"
     },
     {
       "id": "michigan-thiam",
@@ -305,9 +305,9 @@
       "publisher": "Michigan Athletics",
       "published_on": "2026-04-28",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "7ecd7caf945d807ad24d71fdb91ed78e4b5adc9f1075f4c7e087d24085d9e472"
+      "source_sha256": "f6f600e54fed0d704fdf63835d7fbf813e1e93197030af8c177fd567ea03990a"
     },
     {
       "id": "kentucky-momcilovic",
@@ -317,9 +317,9 @@
       "publisher": "UK Athletics",
       "published_on": "2026-06-05",
       "date_basis": "article:published_time metadata: 2026-06-05T13:00:26-04:00",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": "The closing paragraph labels the roster 2025–26. Kentucky’s June 15, 2026 schedule announcement explicitly places Momcilovic in its 2026–27 transfer class: https://ukathletics.com/news/2026/06/15/kentucky-announces-seven-home-nonconference-games/",
-      "source_sha256": "4db4753d6e8377f8079ee035b4a42787224065600f930a82eef8057c057c5c62"
+      "source_sha256": "6c9acdd9934436e6fd68dc43e882d917f0b2ecced733289e45942255215dbb0b"
     },
     {
       "id": "kentucky-ndiaye",
@@ -329,9 +329,9 @@
       "publisher": "UK Athletics",
       "published_on": "2026-05-07",
       "date_basis": "article:published_time metadata: 2026-05-07T13:08:32-04:00",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "b76cf768092e8ecb119abfceff4f65d152f45ff2133c9fdb0b95d2b9f489c60d"
+      "source_sha256": "3d8ebcbf73198edc9243fd10a51d6802301a7fc52ab589e67ebf867c8ff61f6c"
     },
     {
       "id": "kentucky-mcbride",
@@ -341,9 +341,9 @@
       "publisher": "UK Athletics",
       "published_on": "2026-04-30",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-08T10:22:08.000000+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "e02df11ab14d2692b77ffcda17b13c6fd46ca38320b387669af5b832b9eb7ddf"
+      "source_sha256": "9ac6c49dd24261ee1d902698939153666a88045803d4607ae70b2a24ed8415ec"
     },
     {
       "id": "arizona-dixon",
@@ -353,9 +353,9 @@
       "publisher": "Arizona Athletics",
       "published_on": "2026-04-16",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T06:47:40.047960+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "b79936dc589e4330535711613ce17254fd139c12439c8746e8c72940a86d617e"
+      "source_sha256": "356ee507fd88717a94c237a3b699bd3001fdad2155de67b542a313ac1efae1a0"
     },
     {
       "id": "hawaii-june-additions",
@@ -365,9 +365,9 @@
       "publisher": "Hawaiʻi Athletics",
       "published_on": "2026-06-09",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": "This is a June roster-addition update; its publication date is not the original commitment date for every player. Historical box totals remain a separate source.",
-      "source_sha256": "697635969005337fb15c3515bd4d889a3bf70e0015c741ea3f02f4212c5e7c3b"
+      "source_sha256": "e87a68e5e3fcae839c02b4a160b5c2427edd20f05e9b95363bb2bcacf517e0a9"
     },
     {
       "id": "purdue-pierce",
@@ -377,9 +377,9 @@
       "publisher": "Purdue Athletics",
       "published_on": "2026-04-07",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "f7f0de76b275a0e239efd84e65fcf924df1342c1e0f8a35b28757ece59c80c78"
+      "source_sha256": "5f585e50d48482a5386b9c3c10d66aafc9dcbdb1610d452bc062c6bd1b63fb28"
     },
     {
       "id": "purdue-three-prep",
@@ -389,9 +389,9 @@
       "publisher": "Purdue Athletics",
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "97841ed8ed36b8bac27d0e79fa28a4600c7a9b449e7263e05ced5bb605be289d"
+      "source_sha256": "c183bc4ba4164d39107d4e00e27f2773a6e375abca6f14c75e07200710156074"
     },
     {
       "id": "purdue-huan",
@@ -401,9 +401,9 @@
       "publisher": "Purdue Athletics",
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "f518ff2e7a89d63783f98a804445107411e655019a84f008bed24f5abebacc13"
+      "source_sha256": "1888c798edcda646a2ed7f74cbc129f85adfcab9a7e3ae3f0b27835e502bb837"
     },
     {
       "id": "kansas-dawes",
@@ -413,9 +413,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-04-21",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "a2c68ae537733dd70dc29571bd58c7869d01fc8565d09a581ef6c56a42feb0b1"
+      "source_sha256": "6bdf681e24ba70fc6e049373683e7dbc97fc5137152ab8d954b41b00ecebd0ae"
     },
     {
       "id": "kansas-blyden",
@@ -425,9 +425,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-04-22",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "10f252dcb817249a1913d3959bbf292d10b8b5a6db7be10502fcc2bfc696d061"
+      "source_sha256": "9da3ed9c26b8015c24c5f254992e7f104878e7fd663165a887e064035339e63a"
     },
     {
       "id": "kansas-stokes",
@@ -437,9 +437,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-04-29",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "98cfca710fe6a7409218ae125269a3e1af197b3d83254ff64fb135ddc610f474"
+      "source_sha256": "3f223d1e60e9837a15c8227e2e7b5b859ded31d068631796f27fa0544c57ed96"
     },
     {
       "id": "kansas-reeves",
@@ -449,9 +449,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "f358b7fc4d8efd3aef797039ef54130dea12b3d7659e6cb6b73bfb59c1339d14"
+      "source_sha256": "6bd841722914d41771117e8364914a832d6e75e186fd6969d4181ee7d3357f15"
     },
     {
       "id": "kansas-parker",
@@ -461,9 +461,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-05-11",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "b5ef040b3f50bf8141f8417a9d729044c932dedb609af41839e27eec465de25b"
+      "source_sha256": "425dea74ec9d00266fc8c7265d9516258f0899fb6392f5738127339746f0be3c"
     },
     {
       "id": "kansas-richmond",
@@ -473,9 +473,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-05-12",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "7ec7425e55f3a6e21d3de94aa2d4a5cc21e0267d1b308fc6fdc3c60709e01169"
+      "source_sha256": "b72308f62dfa2097f926c4ba6f667c9cc608cd4be2a7cd5bbb093c6b4bbbdace"
     },
     {
       "id": "kansas-grant-mordini",
@@ -485,9 +485,9 @@
       "publisher": "Kansas Athletics",
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T08:29:47.820523+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": "This article also identifies previously signed freshmen; their listed event date is this update, not an inferred original signing date.",
-      "source_sha256": "9e080f69d9c6d198c3a0ea703cb2186e0cd53591dbda78f96dd340d9661892b3"
+      "source_sha256": "55b19f004ceea263c33280261eba39c12c5c27d49c79e0a48300a8c58d73834f"
     },
     {
       "id": "unc-august-roster",
@@ -497,9 +497,9 @@
       "publisher": "North Carolina Athletics",
       "published_on": "2026-08-21",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": "Events use the roster-update date, not an inferred signing date. Neo Avdalas is unlinked because the archive uses Neoklis Avdalas; no name alias is assumed. Cade Bennerman has no matching 2025–26 box profile. Sayon Keita is grouped by his international club pathway, although the school lists him as a freshman.",
-      "source_sha256": "8ae1c4cc0bf2c92d6d6715bfe06b970149e0e0f00bc07b904dc654a179b5e628"
+      "source_sha256": "f51b3dfc397baa062b6ea7042c639460decc22e97ad75a25ee2c87210926c384"
     },
     {
       "id": "illinois-ethan-brown",
@@ -509,9 +509,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2025-11-15",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "e17cdac116ffe55f7e42ef70511fd2a94482fda2eafc372973ef3823854953ab"
+      "source_sha256": "d4ebc7ba9a9ffbe5e311fe724ef3727f99e47ba548e051bb9552e8395d51c7a1"
     },
     {
       "id": "illinois-landon-davis",
@@ -521,9 +521,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2025-11-12",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "a9e990cd0ae093bb43a282ef5b001b1a3a21823de4f504e4fbec839e75d9460e"
+      "source_sha256": "c77c99f950abb2bf97959814e5e11176feeb70df922e65cdfea8a9f677d1ebac"
     },
     {
       "id": "illinois-lucas-morillo",
@@ -533,9 +533,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2025-11-20",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "9ea3beec8b58224a10d5b941add3b119497cae91bb2b5f861ab9623a7390d1df"
+      "source_sha256": "72ea25cf18550b38a4f670ebadd18202ad07b94036f5ff039dafc14c0d0c4dc6"
     },
     {
       "id": "illinois-zavier-zens",
@@ -545,9 +545,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2026-04-17",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "6ed125b0686ebca618ddc14e0da487db7c97dafc2677bb06b5c9aef3296dfdc2"
+      "source_sha256": "8a3af431401b44d8498b2522d3db546466256f5e5e7ed872d69dc6b7a58dfda7"
     },
     {
       "id": "illinois-quentin-coleman",
@@ -557,9 +557,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2026-04-19",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "7deae990b3b7585071ae6af98674e922f40a0b4178f867f73411734579c594fc"
+      "source_sha256": "e9b72ee7c0dba18239cbac8ed573bb5016c046c057da5acd0dc9c13b938287d7"
     },
     {
       "id": "illinois-lincoln-williams",
@@ -569,9 +569,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2026-06-08",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "16ac1d790e9ba3098df7ece0681a75570ed8fff288a72e1908a5bd23ed27ad02"
+      "source_sha256": "44decac2d5b1d747fa8c6cfc457d0f94a4eaa813940cf814fbbbdea3e98cd587"
     },
     {
       "id": "illinois-stefan-vaaks",
@@ -581,9 +581,9 @@
       "publisher": "Illinois Athletics",
       "published_on": "2026-05-01",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-05T10:09:41.078188+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "01e605f686dfc41d4ae15d1fc01411c977ac11d4886fa609b2616c3e0df5337e"
+      "source_sha256": "ce06ca14a7d6a66da85a51b06c39bee5f02c61f41ed7dd4eec7a605d8aca9149"
     },
     {
       "id": "duke-three-signees",
@@ -593,9 +593,9 @@
       "publisher": "Duke Athletics",
       "published_on": "2025-11-20",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-08T10:22:08.000000+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "53c54f41c74449fad4a1b8f0757c4c5b948dd09c1763e2df08c124ced2f616e0"
+      "source_sha256": "e7a5573a90893ad2f29f141db35e082d8489c3a45fe52f0ea62328b925207ecb"
     },
     {
       "id": "alabama-seven-additions",
@@ -605,9 +605,9 @@
       "publisher": "Alabama Athletics",
       "published_on": "2026-06-03",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "bf33685810b97b1ce43368e4bbb6b193e7474d38e87100e99a766c6c87f5055c"
+      "source_sha256": "f4a464e95967c8a31836f25d3f0fd3215583d5699ea958ba8a9514e161fc18d7"
     },
     {
       "id": "oregon-portal-additions",
@@ -617,9 +617,9 @@
       "publisher": "Oregon Athletics",
       "published_on": "2026-06-01",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "f526d9a90631acfdd3c8d6855e8df5e206797e8d7480870c68d6df6304ff2828"
+      "source_sha256": "088ceceaae871aca4ec219330f31e5db835725170cff7b83075b18605d45722d"
     },
     {
       "id": "arkansas-four-freshmen",
@@ -629,9 +629,9 @@
       "publisher": "Arkansas Athletics",
       "published_on": "2026-07-21",
       "date_basis": "Displayed publication date",
-      "checked_at": "2026-09-08T10:30:00.000000+00:00",
+      "checked_at": "2026-09-16T06:56:40.313742Z",
       "review_note": null,
-      "source_sha256": "bd2593e56c605dd60ec83b7537cda2beeb30ff0c9fdde5f8c9d40e9d7a4ed618"
+      "source_sha256": "cf8f02841d6a30e010d479d2227c811e8249b1239c42f64c67af8cc03af75447"
     }
   ],
   "people": [
@@ -3082,5 +3082,5 @@
       "summary": "Illinois announced the signing of Stefan Vaaks for its 2026–27 additions."
     }
   ],
-  "edition": "52d7e7b3221fb7c3d71be516386e2303db51bb13fe2a836784d0b08335b89cc0"
+  "edition": "9f17a0a9719c8824692c74e7861063bb47fb969cfe8e47d42254fb5614f9f61b"
 }

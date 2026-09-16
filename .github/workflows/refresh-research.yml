@@ -141,6 +141,14 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
         run: python scripts/refresh-news-rss.py
 
+      - name: Revalidate curated basketball recruiting evidence
+        # Recheck only the exact HTTPS school announcements already reviewed
+        # in the curated file. The bounded job obeys robots.txt, rate-limits
+        # requests, stores no page content and moves review clocks only when
+        # the retained headline still matches the live page title.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: python scripts/refresh_recruiting_evidence.py --write
+
       - name: Refresh public ESPN basketball recruiting rankings
         # The source exposes a bounded class ranking release. Keep it
         # separate from school-announcement review and portal evidence.
