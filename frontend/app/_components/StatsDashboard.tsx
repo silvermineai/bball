@@ -52,6 +52,26 @@ function getRecruiting() {
   return JSON.parse(fs.readFileSync(file, "utf8")) as RecruitingRelease;
 }
 
+type ImpactPlayer = {
+  player_id: string;
+  player: string;
+  team: string;
+  orapm: number | null;
+  drapm: number | null;
+  rapm_net: number | null;
+  off_poss: number | null;
+  def_poss: number | null;
+  qualified?: boolean;
+  rank?: number | null;
+};
+
+function getImpact(season: number) {
+  const file = path.join(process.cwd(), "public/data/basketball", `impact-${season - 1}.json`);
+  if (!fs.existsSync(file)) return [] as ImpactPlayer[];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: ImpactPlayer[] };
+  return data.players || [];
+}
+
 const latestTip = (game: BBGame) =>
   game.source_time_valid && game.source_start ? kick(game.source_start) : game.time_tbd ? "Time TBD" : kick(game.starts_at);
 
@@ -228,6 +248,31 @@ function RecruitingSnapshot({ release }: { release: RecruitingRelease }) {
   );
 }
 
+function ImpactTable({ players }: { players: ImpactPlayer[] }) {
+  const rows = players
+    .filter((player) => player.qualified && player.rapm_net != null)
+    .sort((a, b) => (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER))
+    .slice(0, 10);
+  return (
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">ORAPM</th><th className="numeric">DRAPM</th><th className="numeric">NET</th><th className="numeric">Possessions</th></tr></thead>
+        <tbody>{rows.map((player) => (
+          <tr key={`${player.player_id}-${player.team}`}>
+            <td className="rank-number">{player.rank ?? "—"}</td>
+            <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(player.player_id)}&season=2026`}>{player.player}</Link></th>
+            <td>{player.team}</td>
+            <td className="numeric">{fmt(player.orapm, 2)}</td>
+            <td className="numeric">{fmt(player.drapm, 2)}</td>
+            <td className="numeric"><strong>{fmt(player.rapm_net, 2)}</strong></td>
+            <td className="numeric">{fmt(player.off_poss, 0)} / {fmt(player.def_poss, 0)}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
 function ForecastTable({ games }: { games: BBGame[] }) {
   const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
   return (
@@ -292,6 +337,7 @@ export default function StatsDashboard() {
   const overview = getBasketball();
   const players = getPlayers(overview.season);
   const recruiting = getRecruiting();
+  const impact = getImpact(overview.season);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
   const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
@@ -351,14 +397,19 @@ export default function StatsDashboard() {
         <p className="dashboard-caption">The same qualified player file, grouped by six quick ways to find a standout: scoring, rebounding, playmaking, steals, rim protection and true shooting.</p>
         <LeaderCards players={players} season={latestSeason} />
       </section>
+      <section className="dashboard-section" aria-labelledby="dashboard-impact">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / PLAYER IMPACT</span><h2 id="dashboard-impact">Who moves the margin?</h2></div><Link href="/basketball/impact/">Full impact table →</Link></div>
+        <p className="dashboard-caption">Qualified regularized adjusted plus-minus from the latest completed season, with offensive and defensive components and the possession sample behind each row.</p>
+        <ImpactTable players={impact} />
+      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       {recruiting ? (
         <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">06 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">07 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
           <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
           <RecruitingSnapshot release={recruiting} />
         </section>
