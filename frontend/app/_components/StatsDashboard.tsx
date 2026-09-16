@@ -8,11 +8,12 @@ import {
   type BasketballLeaderPlayer,
 } from "../_lib/basketball-leaders";
 import type { BBGame, BBTeam } from "../_lib/basketball-types";
-import { date, fmt, kick } from "../_lib/format";
+import { date, fmt } from "../_lib/format";
 import { rankPlayerProfiles } from "../_lib/player-index-view";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
+import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 
 function getPlayers(season: number) {
   // The overview edition already contains the latest complete player file in
@@ -121,14 +122,7 @@ function getNationalPlayers(season: number) {
     .slice(0, 10);
 }
 
-const latestTip = (game: BBGame) =>
-  game.source_time_valid && game.source_start ? kick(game.source_start) : game.time_tbd ? "Time TBD" : kick(game.starts_at);
-
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
-
-function modelLabel(game: BBGame) {
-  return game.prediction ? "SILVERMINE MODEL" : "SILVERMINE COLD START";
-}
 
 function TeamTable({ teams }: { teams: BBTeam[] }) {
   const pct = (value: number | null | undefined) => value == null ? "—" : `${fmt(value * 100)}%`;
@@ -366,36 +360,6 @@ function NationalTable({ players, season }: { players: NationalPlayer[]; season:
   );
 }
 
-function ForecastTable({ games }: { games: BBGame[] }) {
-  const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table forecast-table">
-        <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((game) => {
-            const prediction = predictionFor(game)!;
-            return (
-              <tr key={game.id}>
-                <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
-                <td>{date(game.starts_at)}<small>{latestTip(game)}</small></td>
-                <td><span className={`model-tag ${game.prediction ? "primary" : "baseline"}`}>{modelLabel(game)}</span></td>
-                <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
-                <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
-                <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
-                <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
-                <td className="numeric">{fmt(prediction.total)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasketball> }) {
   const rows = (overview.coverage.datasets || [])
     .filter((dataset) => ["player_box", "ncaa_player_box", "player_season", "ncaa_player_season", "rosters", "schedule", "team_box", "publisher_ratings"].includes(dataset.key))
@@ -474,7 +438,7 @@ export default function StatsDashboard() {
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
         <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. Cold-start rows use our shrunk team priors when a program falls outside the trained field.</p>
-        <ForecastTable games={forecasts} />
+        <LiveDashboardForecastTable initialGames={forecasts} />
       </section>
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">
