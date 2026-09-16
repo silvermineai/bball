@@ -2,8 +2,6 @@ import Link from "next/link";
 import type { BBGame } from "../_lib/basketball-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
-import { espnGameUrl } from "../_lib/basketball-data";
-import LiveGamePublisherWire from "./LiveGamePublisherWire";
 
 const factorLabels: Record<string, string> = {
   efg: "Shot quality",
@@ -60,7 +58,7 @@ export default function BasketballNotebook({
       </h1>
       <p className="deck">
         A pregame research note built from the stored 2026–27 forecast, its
-        source factors and the questions still waiting for film or roster
+        stored factors and the questions still waiting for film or roster
         confirmation.
       </p>
 
@@ -99,7 +97,7 @@ export default function BasketballNotebook({
         <section className="section">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">Source factor context</div>
+              <div className="eyebrow">Factor context</div>
               <h2>Why the baseline leans.</h2>
             </div>
             <Link href={`/basketball/briefs/${game.id}/`}>Open the full brief →</Link>
@@ -121,26 +119,24 @@ export default function BasketballNotebook({
         </section>
       )}
 
-      <LiveGamePublisherWire away={game.away_name} home={game.home_name} />
 
       <section className="section two-col">
         <div className="paper-panel">
           <div className="eyebrow">What still needs checking</div>
           <h2>Keep the evidence chain open.</h2>
           <ul>
-            <li>Confirm current availability and the expected rotation from a dated source.</li>
+            <li>Confirm current availability and the expected rotation from a dated update.</li>
             <li>Use the roster and player archives to identify the personnel behind each factor.</li>
             <li>Read the interval before treating a close projection as a decisive edge.</li>
           </ul>
           <p><Link href="/basketball/recruiting/">Open recruiting evidence →</Link></p>
         </div>
         <div className="paper-panel">
-          <div className="eyebrow">Source trail</div>
+          <div className="eyebrow">Record trail</div>
           <h2>Follow the record.</h2>
           <p className="note">The schedule ID, model edition and captured forecast remain attached to this notebook. A missing market observation is unavailable evidence, not a zero.</p>
           <p><Link href={`/basketball/briefs/${game.id}/`}>Read matchup evidence →</Link></p>
           <p><Link href={`/basketball/forecast-lab/?game=${encodeURIComponent(game.id)}`}>Open in forecast lab →</Link></p>
-          <p><a href={espnGameUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN source game ↗</a></p>
           {game.market_comparisons?.length ? <p className="note">{game.market_comparisons.length} verified pregame market observation{game.market_comparisons.length === 1 ? "" : "s"} attached to this edition.</p> : <p className="note">No verified pregame market line is attached to this edition.</p>}
         </div>
       </section>

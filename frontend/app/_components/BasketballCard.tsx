@@ -10,8 +10,6 @@ import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 
-const sourceGameUrl = (id: string) =>
-  `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 export default function BasketballCard({
   game: g,
   homeRoster,
@@ -40,7 +38,7 @@ export default function BasketballCard({
         <span>{g.neutral ? "NEUTRAL FLOOR" : "ON THE SCHEDULE"}</span>
         <span>
           {g.source_time_valid && g.source_start
-            ? `ESPN ${kick(g.source_start)}`
+            ? `schedule ${kick(g.source_start)}`
             : g.time_tbd
               ? `${date(g.starts_at)} · TIME TBD`
               : kick(g.starts_at)}
@@ -117,13 +115,13 @@ export default function BasketballCard({
               </div>
               {(publisherHomeRating || publisherAwayRating) && (
                 <div className="match-detail muted">
-                  <span>Publisher adjusted EM · H / A</span>
+                  <span>Reference adjusted EM · H / A</span>
                   <span>{fmt(publisherHomeRating?.value, 1)} / {fmt(publisherAwayRating?.value, 1)}</span>
                 </div>
               )}
               <div className="button-row" style={{ marginTop: 8 }}>
-                {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} publisher model ↗</Link>}
-                {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} publisher model ↗</Link>}
+                {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} reference model ↗</Link>}
+                {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} reference model ↗</Link>}
               </div>
               <small>
                 Prior opponent-adjusted team strength and schedule context. It is descriptive history; roster changes, injuries and the forecast model remain separate.
@@ -145,7 +143,7 @@ export default function BasketballCard({
                 <span>{rosterScenario.margin_delta > 0 ? "+" : ""}{fmt(rosterScenario.margin_delta, 1)} pts</span>
               </div>
               <small>
-                Uses prior net efficiency and exact-ID source-listed continuity. It does not change the primary probability, range or ledger registration.
+                Uses prior net efficiency and exact-ID recorded continuity. It does not change the primary probability, range or ledger registration.
               </small>
             </div>
           )}
@@ -173,7 +171,7 @@ export default function BasketballCard({
               <small>
                 Observed listings only; this workload context is not an
                 eligibility, availability or forecast input. The review-minute
-                measure is a source queue, not a departure count.
+                measure is a review queue, not a departure count.
               </small>
             </div>
           )}
@@ -185,7 +183,7 @@ export default function BasketballCard({
             <div className="market-quotes">
               <div className="match-detail">
                 <strong>Verified pregame lines</strong>
-                <span className="muted">licensed feed</span>
+                <span className="muted">verified line feed</span>
               </div>
               {g.market_comparisons.slice(0, 3).map((quote) => (
                 <div className="market-quote" key={`${quote.provider}-${quote.bookmaker}-${quote.market}`}>
@@ -207,7 +205,7 @@ export default function BasketballCard({
                   </strong>
                 </div>
               ))}
-              <small className="factor-source">Pregame quotes are displayed only when the ledger matched the exact source game and captured them before tip. They are market observations, not recommendations.</small>
+              <small className="factor-source">Pregame quotes are displayed only when the ledger matched the exact game record and captured them before tip. They are market observations, not recommendations.</small>
             </div>
           ) : null}
         </>
@@ -233,9 +231,6 @@ export default function BasketballCard({
           Read the matchup brief →
         </Link>
       )}
-      <a className="note" href={sourceGameUrl(g.id)} target="_blank" rel="noreferrer">
-        Open ESPN source game ↗
-      </a>
     </article>
   );
 }

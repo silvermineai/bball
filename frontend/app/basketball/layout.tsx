@@ -22,7 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link href="/basketball/briefs/">Game briefs</Link>
               <Link href="/basketball/forecast-lab/">Forecast lab</Link>
               <Link href="/basketball/pressroom/">Press room</Link>
-              <Link href="/basketball/news/">Publisher news</Link>
+              <Link href="/basketball/news/">News archive</Link>
               <Link href="/basketball/blog/">Game notebooks</Link>
             </div>
             <div className="sport-nav-group">
@@ -62,7 +62,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="sport-nav-group">
               <div className="eyebrow">Research archive</div>
-              <Link href="/basketball/source-stats/">Source stat browser</Link>
+              <Link href="/basketball/source-stats/">Stat browser</Link>
               <Link href="/basketball/game-context/">Game context</Link>
               <Link href="/basketball/ncaa-shooting/">NCAA shooting profiles</Link>
               <Link href="/basketball/team-stats/">Team stat browser</Link>

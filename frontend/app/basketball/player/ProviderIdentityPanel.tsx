@@ -25,34 +25,34 @@ export default function ProviderIdentityPanel({ id }: { id: string }) {
     setError("");
     fetch(`/api/basketball/research/player-crosswalk?espnId=${encodeURIComponent(id)}`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("Provider identifiers are unavailable.");
+        if (!response.ok) throw new Error("Identity details are unavailable.");
         return response.json() as Promise<Result>;
       })
       .then((payload) => { if (!controller.signal.aborted) setResult(payload); })
-      .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Provider identifiers are unavailable."); });
+      .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Identity details are unavailable."); });
     return () => controller.abort();
   }, [id]);
 
   if (error) return <p className="note">{error} <Link href="/basketball/crosswalk/">Open the crosswalk desk →</Link></p>;
-  if (!result) return <p className="note" role="status">Checking provider identifier evidence…</p>;
+  if (!result) return <p className="note" role="status">Checking identity evidence…</p>;
   const row = result.rows[0];
   return (
-    <section className="section paper-panel" aria-label="Cross-publisher player identifiers">
+    <section className="section paper-panel" aria-label="Player identity records">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Provider identity / 2025–26 source release</div>
-          <h2>Carry the exact key across provider files.</h2>
+          <div className="eyebrow">Player identity / 2025–26 archive</div>
+          <h2>Carry the exact key across player records.</h2>
         </div>
         <Link className="hero-link" href={`/basketball/crosswalk/?q=${encodeURIComponent(id)}`}>Open crosswalk desk →</Link>
       </div>
-      {!row ? <p className="note">No provider crosswalk row is published for ESPN source ID <code>{id}</code> in this season&apos;s release. Historical absence is not an identity or availability claim.</p> : <>
+      {!row ? <p className="note">No identity crosswalk row is recorded for player ID <code>{id}</code> in this season&apos;s release. Historical absence is not an identity or availability claim.</p> : <>
         <div className="strip">
-          <div><strong>{row.espn_athlete_id}</strong><span>ESPN athlete ID</span></div>
-          <div><strong>{row.fox_athlete_id || "—"}</strong><span>Fox Sports athlete ID</span></div>
-          <div><strong>{row.yahoo_player_id || "—"}</strong><span>Yahoo player ID</span></div>
-          <div><strong>{row.match_confidence == null ? "—" : `${(row.match_confidence * 100).toFixed(0)}%`}</strong><span>Publisher match confidence</span></div>
+          <div><strong>{row.espn_athlete_id}</strong><span>Primary athlete ID</span></div>
+          <div><strong>{row.fox_athlete_id || "—"}</strong><span>Alternate athlete ID</span></div>
+          <div><strong>{row.yahoo_player_id || "—"}</strong><span>Secondary player ID</span></div>
+          <div><strong>{row.match_confidence == null ? "—" : `${(row.match_confidence * 100).toFixed(0)}%`}</strong><span>Match confidence</span></div>
         </div>
-        <p className="note">Publisher method: {row.match_method.replaceAll("_", " ")}. Provider names are retained as reported{row.fox_player || row.yahoo_player_name ? ` (${[row.fox_player, row.yahoo_player_name].filter(Boolean).join(" · ")})` : ""}; they are navigation evidence, not an NCAA ID join or eligibility determination.</p>
+        <p className="note">Match method: {row.match_method.replaceAll("_", " ")}. Alternate labels are retained as recorded{row.fox_player || row.yahoo_player_name ? ` (${[row.fox_player, row.yahoo_player_name].filter(Boolean).join(" · ")})` : ""}; they are navigation evidence, not an NCAA ID join or eligibility determination.</p>
       </>}
     </section>
   );
