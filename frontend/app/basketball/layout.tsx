@@ -7,7 +7,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="sport-nav-primary">
           <Link className="sport-nav-home" href="/basketball/">Basketball desk</Link>
           <Link href="/basketball/matchups/">Matchups</Link>
-          <Link href="/basketball/gameplan/">Game plan</Link>
+          <Link href="/basketball/team-stats/">Team stats</Link>
           <Link href="/basketball/players/">Player stats</Link>
           <Link href="/basketball/ncaa-rankings/">Rankings</Link>
           <Link href="/basketball/recruiting/">Recruiting</Link>
@@ -18,7 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="sport-nav-panel">
             <div className="sport-nav-group">
               <div className="eyebrow">Prepare</div>
-              <Link href="/basketball/coach/">Coach&apos;s desk</Link>
+              <Link href="/basketball/coach/">Team tools</Link>
               <Link href="/basketball/briefs/">Game briefs</Link>
               <Link href="/basketball/forecast-lab/">Forecast lab</Link>
               <Link href="/basketball/pressroom/">Press room</Link>

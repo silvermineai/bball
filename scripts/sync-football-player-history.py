@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,19 +92,60 @@ def run(args):
 
 
 def query(sql):
-    return json.loads(
-        run(
-            [
-                "d1",
-                "execute",
-                FOOTBALL_D1_DATABASE,
-                "--remote",
-                "--json",
-                "--command",
-                sql,
-            ]
+    """Run a remote read with bounded retries for transient D1/API failures.
+
+    The history verifier fans out large, read-only pages. A single edge
+    timeout or 5xx response should not invalidate an otherwise unchanged
+    release, so retry only transport/service failures and preserve the
+    original error for syntax or data problems.
+    """
+    args = [
+        "d1",
+        "execute",
+        FOOTBALL_D1_DATABASE,
+        "--remote",
+        "--json",
+        "--command",
+        sql,
+    ]
+    delays = (2, 5, 12)
+    for attempt in range(len(delays) + 1):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/cloudflare.py"), *args],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
         )
-    )[0]["results"]
+        if result.returncode == 0:
+            return json.loads(result.stdout)[0]["results"]
+        output = result.stdout or ""
+        transient = any(
+            marker in output.lower()
+            for marker in (
+                "error code 524",
+                " 524:",
+                " 502:",
+                " 503:",
+                " 504:",
+                "timed out",
+                "timeout",
+                "econnreset",
+                "fetch failed",
+                "rate limit",
+                "too many requests",
+            )
+        )
+        if not transient or attempt >= len(delays):
+            raise subprocess.CalledProcessError(result.returncode, result.args, output=output)
+        print(
+            f"Transient D1 read failure; retrying in {delays[attempt]}s "
+            f"(attempt {attempt + 2}/{len(delays) + 1}).",
+            file=sys.stderr,
+            flush=True,
+        )
+        time.sleep(delays[attempt])
 
 
 for receipt in manifest["dependencies"]:
@@ -185,9 +227,10 @@ print("Historical player source archive verified in private R2", flush=True)
 
 
 def fetch_pages(sql, size):
-    # Bound response size and allow only independent read queries to overlap.
+    # Bound response size and keep fan-out below the D1 edge's concurrent read
+    # limit. Each query has its own transient retry budget above.
     offsets = range(0, size, 3000)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         pages = list(
             pool.map(
                 lambda offset: query(sql + f" LIMIT 3000 OFFSET {offset}"), offsets
