@@ -12,6 +12,7 @@ import { date, fmt, kick } from "../_lib/format";
 import { rankPlayerProfiles } from "../_lib/player-index-view";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
+import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
 
 function getPlayers(season: number) {
   // The overview edition already contains the latest complete player file in
@@ -362,8 +363,9 @@ export default function StatsDashboard() {
           <RecruitingSnapshot release={recruiting} />
         </section>
       ) : null}
+      <LiveBasketballProspectLeaders />
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">07 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
