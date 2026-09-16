@@ -303,6 +303,12 @@ jobs:
               raise SystemExit('forecast response has an unexpected season or status')
           if not isinstance(forecasts.get('total'), int) or forecasts['total'] <= 0:
               raise SystemExit('forecast response has no upcoming rows')
+          overview = json.loads(Path('frontend/public/data/basketball/overview.json').read_text())
+          expected_upcoming = int(overview.get('coverage', {}).get('upcoming_games', 0))
+          if expected_upcoming <= 0 or forecasts['total'] < expected_upcoming:
+              raise SystemExit(
+                  f"live forecast catalog covers {forecasts.get('total', 0)} of {expected_upcoming} upcoming games"
+              )
           if not isinstance(forecasts.get('rows'), list) or len(forecasts['rows']) > 1:
               raise SystemExit('forecast response has an invalid bounded row page')
           for row in forecasts['rows']:
