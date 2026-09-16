@@ -659,7 +659,7 @@ export default function Page() {
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Dataset</th><th>Reason withheld</th><th className="numeric">Rows</th><th className="numeric">Rows with source observations</th></tr></thead>
-            <tbody>{unresolvedBreakdown.map((row) => <tr key={`${row.dataset}-${row.reason}`}><td><strong>{row.dataset}</strong></td><td>{row.reason}</td><td className="numeric">{count(row.rows)}</td><td className="numeric">{count(row.rows_with_observed_stats)}</td></tr>)}</tbody>
+            <tbody>{unresolvedBreakdown.map((row) => <tr key={`${row.dataset}-${row.reason}`}><td><strong>{neutralText(row.dataset)}</strong></td><td>{neutralText(row.reason)}</td><td className="numeric">{count(row.rows)}</td><td className="numeric">{count(row.rows_with_observed_stats)}</td></tr>)}</tbody>
           </table>
         </div>
         <p className="note">

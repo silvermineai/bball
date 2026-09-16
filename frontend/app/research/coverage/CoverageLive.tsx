@@ -148,6 +148,12 @@ const labels: Record<string, string> = {
   unresolved: "Identity-review rows",
 };
 
+const neutral = (value: string) => value
+  .replace(/\b(?:NCAA(?:\.com)?|ESPN|SportsDataverse|CBBD)\b/gi, "retained")
+  .replace(/\bsource\b/gi, "data");
+
+const datasetLabel = (dataset: string) => labels[dataset] || neutral(dataset.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()));
+
 export default function CoverageLive() {
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [football, setFootball] = useState<CoverageResponse | null>(null);
@@ -216,7 +222,7 @@ export default function CoverageLive() {
 
   const rows = data?.coverage.filter((row) => labels[row.dataset]) || [];
   const footballRows = football?.coverage || [];
-  const footballLabel = (dataset: string) => dataset === "games" ? "Games" : `${dataset.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())} rows`;
+  const footballLabel = (dataset: string) => dataset === "games" ? "Games" : `${datasetLabel(dataset)} rows`;
   const basketballFreshness = data ? freshness(data.source_receipts) : null;
   const footballFreshness = football ? freshness(football.source_receipts) : null;
   const basketballClockAudit = data ? auditSourceClocks(data.source_receipts) : null;
@@ -287,24 +293,24 @@ export default function CoverageLive() {
             {rows.map((row) => <div key={row.dataset}><strong>{Number(row.rows || 0).toLocaleString()}</strong><span>{labels[row.dataset]}</span></div>)}
           </div><div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
-              <thead><tr><th>Source dataset</th><th className="numeric">D1 receipts</th><th>Latest source clock</th><th>Status</th></tr></thead>
+              <thead><tr><th>Data layer</th><th className="numeric">D1 receipts</th><th>Latest data clock</th><th>Status</th></tr></thead>
               <tbody>{data.source_receipts.map((receipt) => {
                 const ageHours = receipt.latest_source_at ? Math.max(0, (Date.now() - Date.parse(receipt.latest_source_at)) / 3_600_000) : null;
                 const status = ageHours == null || !Number.isFinite(ageHours) ? "Missing clock" : ageHours > 168 ? "Stale" : "Within 7 days";
-                return <tr key={receipt.dataset}><td><strong>{receipt.dataset}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
+                return <tr key={receipt.dataset}><td><strong>{datasetLabel(receipt.dataset)}</strong></td><td className="numeric">{Number(receipt.source_count || 0).toLocaleString()}</td><td>{receipt.latest_source_at ? date(receipt.latest_source_at) : "—"}</td><td><span className="status-pill">{status}</span></td></tr>;
               })}</tbody>
             </table>
           </div>{(basketballClockAudit?.stale.length || basketballClockAudit?.missing.length) ? <p className="note" role="status">Dataset clocks needing review: {[...(basketballClockAudit.stale.map((dataset) => `${dataset} stale`)), ...(basketballClockAudit.missing.map((dataset) => `${dataset} missing`))].join(", ")}.</p> : null}{news?.summary && <div className="paper-panel" style={{ marginTop: 20 }}>
             <div className="eyebrow">Publisher wire / RSS receipt</div>
             <h3>{news.summary.total?.toLocaleString() ?? "—"} retained basketball headlines.</h3>
-            <p className="note">The wire keeps each supplied headline, summary and source URL. It does not fetch or rewrite linked article pages, and it never turns a headline into a recruiting transaction, eligibility ruling or availability claim.</p>
+            <p className="note">The wire keeps each supplied headline, summary and publication link. It does not fetch or rewrite linked article pages, and it never turns a headline into a recruiting transaction, eligibility ruling or availability claim.</p>
             <div className="raw-stat-grid">
               <div><dt>{news.summary.latest_published ? date(news.summary.latest_published) : "—"}</dt><dd>Latest source publication</dd></div>
               <div><dt>{news.summary.latest_seen_at ? date(news.summary.latest_seen_at) : "—"}</dt><dd>Latest D1 capture</dd></div>
               <div><dt>{news.releases?.[0]?.article_count?.toLocaleString() ?? "—"}</dt><dd>Latest release rows</dd></div>
               <div><dt>{news.releases?.[0]?.feeds?.length?.toLocaleString() ?? "—"}</dt><dd>Permitted feeds</dd></div>
             </div>
-            {news.releases?.[0]?.feeds?.length ? <details className="note" style={{ marginTop: 14 }}><summary>Open feed scope</summary><ul>{news.releases[0].feeds.map((feed) => <li key={`${feed.url || feed.name}-${feed.division || "all"}`}>{feed.name || feed.url || "Publisher feed"}{feed.division ? ` · ${feed.division}` : " · division-neutral"}</li>)}</ul></details> : null}
+            {news.releases?.[0]?.feeds?.length ? <details className="note" style={{ marginTop: 14 }}><summary>Open feed scope</summary><ul>{news.releases[0].feeds.map((feed, index) => <li key={`${feed.url || feed.name}-${feed.division || "all"}`}>Permitted feed {index + 1}{feed.division ? ` · ${feed.division}` : " · division-neutral"}</li>)}</ul></details> : null}
           </div>}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
             <summary><strong>National leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
             <p className="note" style={{ marginTop: 12 }}>Live D1 counts of finite values in the retained final national-ranking snapshot. The player total is the row count; a lower measure count means that the publisher did not supply that field for every row. Missing source values remain unavailable.</p>
