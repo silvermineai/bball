@@ -65,11 +65,33 @@ type ImpactPlayer = {
   rank?: number | null;
 };
 
+type ValueLeader = {
+  id: string;
+  name: string;
+  team_id: string;
+  team: string;
+  minutes: number;
+  value: number | null;
+  display?: string;
+  rank?: number | null;
+};
+
 function getImpact(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball", `impact-${season - 1}.json`);
   if (!fs.existsSync(file)) return [] as ImpactPlayer[];
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: ImpactPlayer[] };
   return data.players || [];
+}
+
+function getValueLeaders(season: number) {
+  const file = path.join(process.cwd(), "public/data/basketball/publisher-value-leaders.json");
+  if (!fs.existsSync(file)) return [] as ValueLeader[];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    season?: number;
+    metrics?: Array<{ key: string; leaders?: ValueLeader[] }>;
+  };
+  if (data.season !== season) return [] as ValueLeader[];
+  return data.metrics?.find((metric) => metric.key === "box_bpm")?.leaders || [];
 }
 
 const latestTip = (game: BBGame) =>
@@ -273,6 +295,25 @@ function ImpactTable({ players }: { players: ImpactPlayer[] }) {
   );
 }
 
+function ValueTable({ players, season }: { players: ValueLeader[]; season: number }) {
+  return (
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">MIN</th><th className="numeric">BOX BPM</th></tr></thead>
+        <tbody>{players.slice(0, 10).map((player) => (
+          <tr key={`${player.id}-${player.team_id}`}>
+            <td className="rank-number">{player.rank ?? "—"}</td>
+            <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link></th>
+            <td>{player.team}</td>
+            <td className="numeric">{fmt(player.minutes, 0)}</td>
+            <td className="numeric"><strong>{fmt(player.value, 2)}</strong></td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
 function ForecastTable({ games }: { games: BBGame[] }) {
   const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
   return (
@@ -340,6 +381,7 @@ export default function StatsDashboard() {
   const impact = getImpact(overview.season);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
+  const valueLeaders = getValueLeaders(latestSeason);
   const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
   const leaderCounts = metrics.map((metric) => ({ metric, count: topBasketballLeaders(players, metric, 100000).length }));
   return (
@@ -403,8 +445,15 @@ export default function StatsDashboard() {
         <p className="dashboard-caption">Qualified regularized adjusted plus-minus from the latest completed season, with offensive and defensive components and the possession sample behind each row.</p>
         <ImpactTable players={impact} />
       </section>
+      {valueLeaders.length ? (
+        <section className="dashboard-section" aria-labelledby="dashboard-value">
+          <div className="dashboard-section-heading"><div><span className="eyebrow">06 / BOX VALUE</span><h2 id="dashboard-value">Box-score value leaders</h2></div><Link href="/basketball/boutique/?kind=players&amp;metric=box_bpm&amp;season=2026">Full value table →</Link></div>
+          <p className="dashboard-caption">A separate box-score value estimate gives a second view of player contribution. Keep it beside RAPM; the two models answer different questions.</p>
+          <ValueTable players={valueLeaders} season={latestSeason} />
+        </section>
+      ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">07 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
@@ -417,7 +466,7 @@ export default function StatsDashboard() {
       ) : null}
       <LiveBasketballProspectLeaders />
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">09 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
