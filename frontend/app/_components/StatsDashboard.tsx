@@ -361,6 +361,20 @@ function NationalTable({ players, season }: { players: NationalPlayer[]; season:
 }
 
 function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasketball> }) {
+  const displayLabel = (dataset: { key: string; label: string }) => {
+    const labels: Record<string, string> = {
+      ncaa_player_box: "Archived player game boxes",
+      ncaa_player_season: "Archived player-season aggregates",
+      ncaa_lineups: "Lineup stints",
+      ncaa_rapm: "Lineup impact estimates",
+      ncaa_team_rosters: "Roster and school context",
+      ncaa_shots: "Attributed shooting profiles",
+      ncaa_possessions: "Possession-style profiles",
+      ncaa_game_rosters: "Game-day rosters",
+      ncaa_officials: "Game officiating assignments",
+    };
+    return labels[dataset.key] || dataset.label.replace(/\b(?:NCAA|ESPN)\b/gi, "Archived");
+  };
   const rows = (overview.coverage.datasets || [])
     .filter((dataset) => ["player_box", "ncaa_player_box", "player_season", "ncaa_player_season", "rosters", "schedule", "team_box", "publisher_ratings"].includes(dataset.key))
     .sort((a, b) => b.rows - a.rows)
@@ -377,7 +391,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
         <tbody>
           {rows.map((dataset) => (
             <tr key={dataset.key}>
-              <th scope="row">{dataset.label}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Published team ratings" : "Retained dataset"}</small></th>
+              <th scope="row">{displayLabel(dataset)}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Published team ratings" : "Retained dataset"}</small></th>
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
               <td className="numeric">{captured(dataset.latest_source_at)}</td>

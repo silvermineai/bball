@@ -66,7 +66,7 @@ const guides = [
   [
     "basketball-recruiting-evidence",
     "Build the recruiting brief from the evidence outward.",
-    "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
+    "A practical workflow for connecting college stat rows, dated school statements, prior production and the next staff question.",
   ],
   [
     "basketball-availability-evidence",
@@ -81,7 +81,7 @@ const guides = [
   [
     "basketball-roster-transitions",
     "Roster continuity is a clue, not a depth chart.",
-    "How to evaluate returning workload across dated NCAA roster transitions without turning a source listing into an eligibility or forecast claim.",
+    "How to evaluate returning workload across dated college roster transitions without turning a roster listing into an eligibility or forecast claim.",
   ],
   [
     "basketball-upcoming-games",
