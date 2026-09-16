@@ -206,9 +206,7 @@ def build(season=2023):
         "model_id": model["id"],
         "season": season,
         "batches": [path.name for path in batches],
-        "forecast_rows": sum(
-            len(forecast_rows)
-        ),
+        "forecast_rows": len(forecast_rows),
     }
     OUT.with_name("basketball-core-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n"
