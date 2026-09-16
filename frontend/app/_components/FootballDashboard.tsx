@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Game, Overview } from "../_lib/data";
 import { getOverview } from "../_lib/data";
 import { date, fmt, kick } from "../_lib/format";
+import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 
 type Production = {
   games?: number | null;
@@ -170,6 +171,7 @@ export default function FootballDashboard() {
         <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
       </div>
     </section>
+    <LiveFootballMarketStatus />
     <div className="dashboard-strip">
       <div><strong>{overview.ratings.length}</strong><span>Rated teams</span></div>
       <div><strong>{players.length.toLocaleString()}</strong><span>Player stat rows</span></div>

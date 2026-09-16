@@ -1,0 +1,80 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { date } from "../_lib/format";
+import { fetchJson } from "../_lib/fetch-json";
+
+type MarketMetadata = {
+  total?: number;
+  pregame?: number;
+  research_latest_capture_at?: string | null;
+  source?: "partial" | "unavailable";
+  unavailable_reason?: string;
+};
+
+type ScorecardSummary = {
+  games?: number;
+  games_with_comparisons?: number;
+  metrics?: {
+    games?: number;
+    winner_accuracy?: number | null;
+    margin_mae?: number | null;
+  };
+};
+
+type ScorecardResponse = {
+  generated_at?: string;
+  market_observations?: number;
+  unmatched_events?: number;
+  sports?: { football?: ScorecardSummary };
+};
+
+export default function LiveFootballMarketStatus() {
+  const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
+  const [archive, setArchive] = useState<MarketMetadata | null>(null);
+  const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setStatus("checking");
+    Promise.all([
+      fetchJson<ScorecardResponse>("/api/research/scorecard?sport=football&limit=1", { signal: controller.signal }),
+      fetchJson<MarketMetadata>("/api/research/markets?meta=1&sport=football", { signal: controller.signal }),
+    ])
+      .then(([scorecardPayload, archivePayload]) => {
+        if (!controller.signal.aborted) {
+          setScorecard(scorecardPayload);
+          setArchive(archivePayload);
+          setStatus(archivePayload.source === "unavailable" ? "fallback" : "live");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setStatus("fallback");
+        }
+      });
+    return () => controller.abort();
+  }, [retryNonce]);
+
+  const summary = scorecard?.sports?.football;
+  const metrics = summary?.metrics;
+  const caveat = archive?.source === "partial"
+    ? "The market archive is partially available."
+    : archive?.source === "unavailable"
+      ? archive.unavailable_reason || "The market archive is temporarily unavailable."
+      : "";
+
+  return (
+    <p className="note" role="status">
+      {status === "live" && scorecard && summary
+        ? <>
+            Live model-versus-market record: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations · {(summary.games_with_comparisons || 0).toLocaleString()} games with matched lines · {(metrics?.games || 0).toLocaleString()} settled forecasts. {metrics?.winner_accuracy != null ? `${(metrics.winner_accuracy * 100).toFixed(1)}% winner accuracy` : "Winner accuracy pending"}{metrics?.margin_mae != null ? ` · ${metrics.margin_mae.toFixed(1)}-point margin MAE` : ""}. {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
+          </>
+        : status === "fallback"
+          ? <>Live market record unavailable; the retained archive remains available. <Link href="/research/scorecard/?sport=football">Open the scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
+          : "Checking the live football market record…"}
+    </p>
+  );
+}
