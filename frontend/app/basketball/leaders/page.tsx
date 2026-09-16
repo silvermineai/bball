@@ -64,6 +64,11 @@ const specs: { key: Metric; label: string; description: string; percent?: boolea
   { key: "efg", label: "Shot efficiency", description: "Effective field-goal percentage", percent: true },
 ];
 
+const neutralArchiveNote = (value: string) => value
+  .replace(/\bESPN\b/gi, "another archive")
+  .replace(/\bNCAA RAPM\b/gi, "lineup impact archive")
+  .replace(/\bpublisher\b/gi, "archive");
+
 function leaders(players: BBPlayer[], key: Metric) {
   const rows = players
     .filter((p) => p.qualified && p[key] != null)
@@ -205,16 +210,16 @@ export default function Page() {
         <div className="section-heading">
           <div>
             <div className="eyebrow">
-              Published source metrics / {publisher.season - 1}–{String(publisher.season).slice(-2)}
+              Additional stat metrics / {publisher.season - 1}–{String(publisher.season).slice(-2)}
             </div>
             <h2>More of the stat sheet.</h2>
           </div>
         </div>
         <p className="note">
-          These boards preserve numeric fields from the attributed publisher
-          season release. They use at least {publisher.minimum_games} source
-          games; the display value and definition remain the publisher’s. They
-          are descriptive rankings, not Silvermine model inputs.
+          These boards preserve additional numeric fields from the retained
+          season release. They use at least {publisher.minimum_games} recorded
+          games; the display value and definition remain attached to each row.
+          They are descriptive rankings, not Silvermine model inputs.
         </p>
         <div className="leader-grid">
           {publisher.metrics.map((metric) => (
@@ -228,7 +233,7 @@ export default function Page() {
                     <tr>
                       <th>Rank</th>
                       <th>Player</th>
-                      <th className="numeric">Source value</th>
+                      <th className="numeric">Value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -256,15 +261,15 @@ export default function Page() {
           ))}
         </div>
         <p className="note">
-          Source: {publisher.source}. Silvermine retains the original category,
-          label, description and display string in the player record.
+          The archive retains the original category, label, description and
+          display string in each player record.
         </p>
       </section>
       <section className="section">
         <div className="section-heading">
           <div>
             <div className="eyebrow">
-              Publisher value / {publisherValue.season - 1}–{String(publisherValue.season).slice(-2)}
+              Box value / {publisherValue.season - 1}–{String(publisherValue.season).slice(-2)}
             </div>
             <h2>Value with the minutes visible.</h2>
           </div>
@@ -274,7 +279,7 @@ export default function Page() {
         </div>
         <p className="note">
           Box Plus/Minus, Offensive BPM and Defensive BPM are preserved from
-          the publisher&apos;s value release. This board requires at least {publisherValue.minimum_minutes.toLocaleString()} recorded minutes so short samples do not lead the list. The player and team IDs remain in the publisher namespace; these values are descriptive context, not Silvermine forecasts or NCAA RAPM joins.
+          the retained value release. This board requires at least {publisherValue.minimum_minutes.toLocaleString()} recorded minutes so short samples do not lead the list. The player and team IDs remain in their archive namespace; these values are descriptive context, not Silvermine forecasts or NCAA RAPM joins.
         </p>
         <div className="leader-grid">
           {publisherValue.metrics.map((metric) => (
@@ -299,7 +304,7 @@ export default function Page() {
                           <Link href={`/basketball/player/?id=${leader.id}&season=${publisherValue.season}`}>
                             {leader.name}
                           </Link>
-                          <small>{leader.team} · {leader.minutes.toLocaleString()} min · publisher {leader.id}</small>
+                          <small>{leader.team} · {leader.minutes.toLocaleString()} min · archive ID {leader.id}</small>
                         </td>
                         <td className="numeric">{leader.display}</td>
                       </tr>
@@ -311,7 +316,7 @@ export default function Page() {
           ))}
         </div>
         <p className="note">
-          Source: {publisherValue.source}. {publisherValue.identity_note}
+          {neutralArchiveNote(publisherValue.identity_note)}
         </p>
       </section>
       <p className="note">

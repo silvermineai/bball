@@ -431,7 +431,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               </div>
             </div>
             <p>
-              The announcement file is a reviewed sample. The attributed NCAA
+              The announcement file is a reviewed sample. The retained national
               roster release gives the broader roster frame for the same target
               season, while keeping roster records separate from commitments,
               eligibility and transfer claims.

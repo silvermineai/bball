@@ -19,7 +19,13 @@ export default function Page() {
       season_weight: 0.6,
     },
     rosterModel = getRosterModel(),
-    historicalRoster = rosterModel.historical_evaluation,
+    historicalRoster = rosterModel.historical_evaluation
+      ? {
+          ...rosterModel.historical_evaluation,
+          source: displayModelNote(rosterModel.historical_evaluation.source),
+          limitations: rosterModel.historical_evaluation.limitations.map(displayModelNote),
+        }
+      : null,
     roster = getRosters(),
     recruiting = getRecruiting(),
     rosterSummary = roster.team_summaries ?? [],
