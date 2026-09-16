@@ -10,6 +10,7 @@ import {
 import type { BBGame, BBTeam } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
+import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 
 function getPlayers(season: number) {
   // The overview edition already contains the latest complete player file in
@@ -180,6 +181,7 @@ export default function StatsDashboard() {
         <div><strong>{overview.coverage.player_box_rows.toLocaleString()}</strong><span>Player box records</span></div>
       </div>
       <LiveBasketballForecastStatus />
+      <LiveBasketballMarketStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
         <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin and total. Baseline rows are labeled when a team falls outside the trained field.</p>
