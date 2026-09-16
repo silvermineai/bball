@@ -21,6 +21,35 @@ function getPlayers(season: number) {
   return data.players || [];
 }
 
+type RecruitingPerson = {
+  key: string;
+  name: string;
+  team_id: string;
+  category: string;
+  previous_program?: string | null;
+  stats?: {
+    games?: number | null;
+    ppg?: number | null;
+    rpg?: number | null;
+    apg?: number | null;
+    ts?: number | null;
+  } | null;
+};
+
+type RecruitingRelease = {
+  season: number;
+  reviewed_at: string;
+  coverage: { programs: number; players: number; events: number; historical_links: number };
+  programs: Array<{ id: string; name: string }>;
+  people: RecruitingPerson[];
+};
+
+function getRecruiting() {
+  const file = path.join(process.cwd(), "public/data/basketball/recruiting.json");
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, "utf8")) as RecruitingRelease;
+}
+
 const latestTip = (game: BBGame) =>
   game.source_time_valid && game.source_start ? kick(game.source_start) : game.time_tbd ? "Time TBD" : kick(game.starts_at);
 
@@ -126,6 +155,44 @@ function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; s
   );
 }
 
+function RecruitingSnapshot({ release }: { release: RecruitingRelease }) {
+  const programs = new Map(release.programs.map((program) => [program.id, program.name]));
+  const ranked = release.people
+    .filter((person) => person.stats?.ppg != null)
+    .sort((a, b) => (b.stats?.ppg ?? -1) - (a.stats?.ppg ?? -1) || a.name.localeCompare(b.name))
+    .slice(0, 8);
+  return (
+    <>
+      <div className="dashboard-strip dashboard-recruiting-strip">
+        <div><strong>{release.coverage.players.toLocaleString()}</strong><span>Recorded additions</span></div>
+        <div><strong>{release.coverage.programs.toLocaleString()}</strong><span>Destination programs</span></div>
+        <div><strong>{release.coverage.events.toLocaleString()}</strong><span>Dated recruiting events</span></div>
+        <div><strong>{release.coverage.historical_links.toLocaleString()}</strong><span>Prior stat links</span></div>
+      </div>
+      <div className="dashboard-table-wrap">
+        <table className="data-table dashboard-table">
+          <thead><tr><th>Player</th><th>Destination</th><th>Type</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead>
+          <tbody>
+            {ranked.map((person) => (
+              <tr key={person.key}>
+                <th scope="row">{person.name}</th>
+                <td>{programs.get(person.team_id) || "—"}</td>
+                <td>{person.category}</td>
+                <td>{person.previous_program || "—"}</td>
+                <td className="numeric">{person.stats?.games ?? "—"}</td>
+                <td className="numeric"><strong>{fmt(person.stats?.ppg)}</strong></td>
+                <td className="numeric">{fmt(person.stats?.rpg)}</td>
+                <td className="numeric">{fmt(person.stats?.apg)}</td>
+                <td className="numeric">{person.stats?.ts == null ? "—" : `${fmt(person.stats.ts * 100)}%`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 function ForecastTable({ games }: { games: BBGame[] }) {
   const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
   return (
@@ -188,6 +255,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
 export default function StatsDashboard() {
   const overview = getBasketball();
   const players = getPlayers(overview.season);
+  const recruiting = getRecruiting();
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
   const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
@@ -247,8 +315,15 @@ export default function StatsDashboard() {
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
+      {recruiting ? (
+        <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
+          <div className="dashboard-section-heading"><div><span className="eyebrow">06 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
+          <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
+          <RecruitingSnapshot release={recruiting} />
+        </section>
+      ) : null}
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">07 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
