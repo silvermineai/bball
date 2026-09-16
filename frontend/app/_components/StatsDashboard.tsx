@@ -116,6 +116,36 @@ function ForecastTable({ games }: { games: BBGame[] }) {
   );
 }
 
+function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasketball> }) {
+  const rows = (overview.coverage.datasets || [])
+    .filter((dataset) => ["player_box", "ncaa_player_box", "player_season", "ncaa_player_season", "rosters", "schedule", "team_box", "publisher_ratings"].includes(dataset.key))
+    .sort((a, b) => b.rows - a.rows)
+    .slice(0, 8);
+  const captured = (value: string | null) => value
+    ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+    : "—";
+  return (
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead>
+          <tr><th>Dataset</th><th className="numeric">Rows</th><th className="numeric">Seasons</th><th className="numeric">Data through</th><th className="numeric">Source files</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((dataset) => (
+            <tr key={dataset.key}>
+              <th scope="row">{dataset.label}<small>{dataset.identity_note}</small></th>
+              <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
+              <td className="numeric">{dataset.seasons.length}</td>
+              <td className="numeric">{captured(dataset.latest_source_at)}</td>
+              <td className="numeric">{dataset.source_count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function StatsDashboard() {
   const overview = getBasketball();
   const players = getPlayers(overview.season);
@@ -167,8 +197,13 @@ export default function StatsDashboard() {
           <PlayerTable players={players} season={latestSeason} />
         </section>
       </div>
+      <section className="dashboard-section" aria-labelledby="dashboard-coverage">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+        <p className="dashboard-caption">Player boxes, NCAA archives, rosters, schedules and ratings retained for analysis. “Data through” is the latest captured source edition for each dataset.</p>
+        <DataCoverageTable overview={overview} />
+      </section>
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
