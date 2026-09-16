@@ -246,13 +246,12 @@ export default function Scorecard() {
         <p>
           {data.market_observations
             ? data.unmatched_events.toLocaleString() + " provider events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
-            : "The scorecard does not invent a line from an archival reference. Add a licensed The Odds API key to the server environment, then run the bounded capture command; the provider timestamp and source hash will be retained with each accepted quote."}
+            : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the provider timestamp and source hash will be retained with each accepted quote."}
         </p>
         {!data.market_observations && (
           <p className="note">
-            <code>THE_ODDS_API_KEY=…</code> in <code>~/.env</code>, then{" "}
-            <code>python -m ncaa_scraper.odds_feed --sport both</code>. Keys
-            never enter frontend code or logs. Read the{" "}
+            A licensed odds feed must be configured by an operator; keys never
+            enter frontend code or logs. Read the{" "}
             <Link href="/research/markets/#market-policy">capture policy →</Link>{" "}
             · <Link href="/research/markets/#csv-import">licensed CSV import →</Link>
           </p>
