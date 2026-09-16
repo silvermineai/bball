@@ -56,7 +56,7 @@ const latestTip = (game: BBGame) =>
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 
 function modelLabel(game: BBGame) {
-  return game.prediction ? "SILVERMINE MODEL" : "BASELINE MODEL";
+  return game.prediction ? "SILVERMINE MODEL" : "SILVERMINE COLD START";
 }
 
 function TeamTable({ teams }: { teams: BBTeam[] }) {
@@ -280,7 +280,7 @@ export default function StatsDashboard() {
           <span className="model-tag primary">SILVERMINE MODEL</span>
           <strong>{overview.coverage.forecast_games.toLocaleString()}</strong>
           <span>primary game forecasts</span>
-          {overview.coverage.baseline_estimate_games ? <small>{overview.coverage.baseline_estimate_games.toLocaleString()} baseline rows are labeled in the table.</small> : null}
+          {overview.coverage.baseline_estimate_games ? <small>{overview.coverage.baseline_estimate_games.toLocaleString()} cold-start rows are labeled in the table.</small> : null}
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
@@ -301,7 +301,7 @@ export default function StatsDashboard() {
       <LiveBasketballMarketStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
-        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin and total. Baseline rows are labeled when a team falls outside the trained field.</p>
+        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. Cold-start rows use our shrunk team priors when a program falls outside the trained field.</p>
         <ForecastTable games={forecasts} />
       </section>
       <div className="dashboard-two-col">
