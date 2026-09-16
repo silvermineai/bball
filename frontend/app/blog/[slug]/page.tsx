@@ -43,10 +43,10 @@ const descriptions: Record<string, string> = {
   "basketball-recruiting-fit": "How to use source-listed roster roles, prior workload and transparent fit percentiles to build a defensible recruiting shortlist.",
   "basketball-ranking-playbook": "How to move from NCAA player rankings and impact screens to a reviewable scouting or recruiting question.",
   "basketball-possession-style": "How to read source-recorded possessions, transition share and assisted share as team context without assigning player credit.",
-  "basketball-recruiting-evidence": "A practical workflow for connecting NCAA source rows, dated school statements, prior production and the next staff question.",
+  "basketball-recruiting-evidence": "A practical workflow for connecting archive rows, dated school statements, prior production and the next staff question.",
   "basketball-availability-evidence": "How to read injury, redshirt and tournament-availability signals without turning a headline or roster row into a ruling.",
   "basketball-player-game-logs": "How to use NCAA player-game rows, possession context, denominators and source identity in a recruiting review.",
-  "basketball-roster-transitions": "How to evaluate returning workload across dated NCAA roster transitions without turning a source listing into an eligibility claim.",
+  "basketball-roster-transitions": "How to evaluate returning workload across dated roster transitions without turning a source listing into an eligibility claim.",
   "basketball-upcoming-games": "A coach-facing workflow for moving from a 2026–27 forecast range to Four Factors, roster evidence, film questions and a documented market check.",
 };
 export function generateStaticParams() {
@@ -181,7 +181,7 @@ export default async function Page({
           <p>
             EPA compares the expected scoring value before and after a play,
             accounting for the resulting game state. The football player index
-            uses the EPA values published by SportsDataverse. We rank qualified
+            uses the EPA values published by the retained archive. We rank qualified
             FBS players by total EPA within passing, rushing or receiving,
             preserving the publisher’s figures rather than pretending they are
             our own player model.
@@ -299,11 +299,7 @@ export default async function Page({
         </>
       )}
       <p>
-        Data attribution:{" "}
-        <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-          SportsDataverse
-        </a>
-        , CC BY 4.0. See the{" "}
+        Data attribution remains in the site footer. See the{" "}
         <Link href="/football/methodology/">
           source receipts and model notebook
         </Link>
@@ -419,10 +415,10 @@ function BasketballPlayerGameLogs() {
         The <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>{" "}
         keeps game-level releases from 2010–11 through 2025–26, with source
         player, team and contest IDs beside every usable row. The 2010–11
-        edition is a sparse historical source release and is labeled as such
+        edition is a sparse historical retained edition and is labeled as such
         in the archive. The archive also retains older player-season summaries.
         It is a source
-        record, not an identity bridge to ESPN, and a row does not establish a
+        record, not an identity bridge to another archive, and a row does not establish a
         current roster spot or eligibility.
       </p>
       <h2>Start with minutes and games</h2>
@@ -467,7 +463,7 @@ function BasketballPlayerGameLogs() {
         availability or that the same player will receive the same role. Pair
         the log with the dated{" "}
         <Link href="/basketball/recruiting/">recruiting evidence board</Link>,{" "}
-        the <Link href="/basketball/ncaa-rosters/">NCAA roster archive</Link>
+        the <Link href="/basketball/ncaa-rosters/">roster archive</Link>
         and the program&apos;s film questions. If those layers disagree, keep
         the disagreement visible for staff review.
       </p>
@@ -513,7 +509,7 @@ function BasketballRosterTransitions() {
           <h2>Read the historical replay honestly</h2>
           <p>
             A separate NCAA-source replay adds dated workload evidence. It uses
-            the {historical.transition_rows["2024"]?.toLocaleString() ?? "—"}, {historical.transition_rows["2025"]?.toLocaleString() ?? "—"} and {historical.transition_rows["2026"]?.toLocaleString() ?? "—"} mapped transition rows and keeps Box BPM out because that source release does not carry the publisher identity. The model is evaluated on the following season after fitting only earlier transitions.
+            the {historical.transition_rows["2024"]?.toLocaleString() ?? "—"}, {historical.transition_rows["2025"]?.toLocaleString() ?? "—"} and {historical.transition_rows["2026"]?.toLocaleString() ?? "—"} mapped transition rows and keeps Box BPM out because that retained edition does not carry the publisher identity. The model is evaluated on the following season after fitting only earlier transitions.
           </p>
           <div className="table-scroll">
             <table className="data-table">
@@ -546,7 +542,7 @@ function BasketballRosterTransitions() {
         evidence supports that conclusion. If represented minutes are high, ask
         whether the returning player’s prior shot profile and defensive work
         fit the new opponent. Open the <Link href="/basketball/ncaa-player-box/">game log</Link>,
-        <Link href="/basketball/ncaa-rosters/"> NCAA roster record</Link> and
+        <Link href="/basketball/ncaa-rosters/"> roster record</Link> and
         <Link href="/basketball/recruiting/"> dated announcement</Link> together.
         When the sources disagree, preserve the disagreement for film and
         eligibility review.
@@ -707,7 +703,7 @@ function BasketballFourFactors() {
         scores and publishes {b.coverage.forecast_games.toLocaleString()}{" "}
         2026–27 forecasts in this edition. The model estimates efficiency and
         tempo from historical team performance. It does not copy a proprietary
-        KenPom rating or claim to know a player&apos;s current health or role.
+        independent rating rating or claim to know a player&apos;s current health or role.
       </p>
       <h2>Four questions for every possession</h2>
       <p>
@@ -833,8 +829,8 @@ function BasketballImpact() {
       </p>
       <p>
         The <Link href="/basketball/impact/">impact board</Link> publishes
-        NCAA-derived regularized adjusted plus-minus (RAPM) from the attributed
-        SportsDataverse release. ORAPM describes the offensive component,
+        retained regularized adjusted plus-minus (RAPM) from the attributed
+        the retained archive release. ORAPM describes the offensive component,
         DRAPM the defensive component, and net RAPM is their sum. The publisher
         fits a ridge model across Division I stints, which helps keep a player
         with a small or highly unusual lineup sample from dominating the fit.
@@ -863,8 +859,8 @@ function BasketballImpact() {
       <p>
         RAPM describes recorded stints in a source season. It does not establish
         a player’s current team, health, eligibility or expected role next
-        season. NCAA source IDs remain in their own identity namespace; they are
-        not joined to ESPN identities by name alone. For 2026–27 preparation,
+        season. archive IDs remain in their own identity namespace; they are
+        not joined to player identities by name alone. For 2026–27 preparation,
         put the estimate beside the dated{" "}
         <Link href="/basketball/recruiting/">recruiting evidence</Link> and
         current roster observations, then confirm availability with the school.
@@ -944,7 +940,7 @@ function BasketballRankingPlaybook() {
       </p>
       <h2>Keep the denominator in the report</h2>
       <p>
-        A shortlist should name the season, source release, sample thresholds,
+        A shortlist should name the season, retained edition, sample thresholds,
         metric and missing fields alongside each player. Compare similar roles
         and competition where possible. If a player ranks highly on a rate but
         has a small attempt or possession sample, write that limitation into
@@ -971,7 +967,7 @@ function BasketballPossessionStyle() {
       <p>
         The <Link href="/basketball/possession-style/">possession-style archive</Link>{" "}
         contains {layer?.rows.toLocaleString() || "2,836"} team-season profiles
-        across the 2019–26 NCAA source editions. The underlying releases contain
+        across the 2019–26 archive editions. The underlying releases contain
         millions of possession rows; Silvermine aggregates them by team and
         season while retaining the source receipt and team identity.
       </p>
@@ -1033,7 +1029,7 @@ function BasketballRecruitingEvidence() {
         equally limited: it does not prove departure.
       </p>
       <p>
-        NCAA rows and ESPN-derived rows use different identity systems. The
+        NCAA rows and retained rows use different identity systems. The
         site keeps them separate and links between them as search handoffs when
         useful. Do not merge two people because their names look similar, and
         do not treat a shared school label as a crosswalk.
@@ -1058,10 +1054,9 @@ function BasketballRecruitingEvidence() {
         A school announcement and a later availability statement answer
         different questions. Keep both events, with their publisher and
         publication date, so a later statement updates the timeline without
-        erasing the original report. The official{" "}
-        <a href="https://www.ncaa.org/eligibility-center/transfer-rules-and-eligibility/" target="_blank" rel="noreferrer">NCAA transfer rules</a>
-        {" "}remain the reference for eligibility; a school post or roster
-        listing cannot substitute for an official ruling.
+        erasing the original report. Official transfer rules remain the
+        reference for eligibility; a school post or roster listing cannot
+        substitute for an official ruling.
       </p>
       <h2>Finish with a staff question</h2>
       <p>
@@ -1110,12 +1105,9 @@ function BasketballAvailabilityEvidence() {
         promoted into a universal health, eligibility or next-game status.
       </p>
       <p>
-        Silvermine links to the NCAA&apos;s{" "}
-        <a href="https://www.ncaa.com/di-mens-basketball-player-availability" target="_blank" rel="noreferrer">men&apos;s player-availability portal ↗</a>
-        {" "}and its{" "}
-        <a href="https://www.ncaa.com/di-mens-basketball-player-archive" target="_blank" rel="noreferrer">published archive ↗</a>
-        {" "}for source verification. It does not mirror a protected
-        application or infer a ruling from an absent roster row.
+        Silvermine keeps the availability timeline in the recruiting archive
+        for verification. It does not mirror a protected application or infer
+        a ruling from an absent roster row.
       </p>
       <h2>Keep the clock attached</h2>
       <p>

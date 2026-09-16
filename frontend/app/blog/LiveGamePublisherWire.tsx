@@ -62,25 +62,24 @@ export default function LiveGamePublisherWire({
   return (
     <section className="section paper-panel" aria-labelledby="game-publisher-wire">
       <div className="section-heading" style={{ marginBottom: 12 }}>
-        <div><div className="eyebrow">Publisher wire / literal team search</div><h2 id="game-publisher-wire">Keep the reporting context close.</h2></div>
-        <span className="note">ESPN + NCAA.com RSS</span>
+        <div><div className="eyebrow">Reporting context / team search</div><h2 id="game-publisher-wire">Keep the reporting context close.</h2></div>
+        <span className="note">Retained reporting feed</span>
       </div>
-      <p className="note">A literal search of the two program names surfaces recent permitted headlines for the notebook. These mentions are reporting context; they are not availability, roster, transaction or forecast inputs.</p>
-      {status === "loading" && <p className="empty" role="status">Checking the permitted publisher wire…</p>}
-      {status === "unavailable" && <p className="empty" role="status">The publisher wire is temporarily unavailable. Search the full news archive instead.</p>}
+      <p className="note">A literal search of the two program names surfaces recent retained headlines for the notebook. These mentions are context; they are not availability, roster, transaction or forecast inputs.</p>
+      {status === "loading" && <p className="empty" role="status">Checking the reporting archive…</p>}
+      {status === "unavailable" && <p className="empty" role="status">The reporting archive is temporarily unavailable. Search the full news archive instead.</p>}
       {status === "none" && <p className="empty" role="status">No retained headline matched either program.</p>}
       {mentions.length > 0 && <>
         <p className="note" role="status">Showing {mentions.length} retained headline{mentions.length === 1 ? "" : "s"} for “{query}”.</p>
         <div className="article-grid">
           {mentions.map((mention) => <article className="article-card" key={mention.id}>
-            <div className="eyebrow">{mention.publisher}{mention.division ? ` · ${mention.division}` : ""} · {mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
+            <div className="eyebrow">{mention.division ? `${mention.division} · ` : ""}retained report · {mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
             <h3>{mention.headline}</h3>
             {mention.description && <p>{mention.description}</p>}
-            <a href={mention.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
           </article>)}
         </div>
       </>}
-      <p style={{ marginTop: 12 }}><a href={`/basketball/news/?q=${encodeURIComponent(query || away)}`}>Search the complete publisher archive →</a></p>
+      <p style={{ marginTop: 12 }}><a href={`/basketball/news/?q=${encodeURIComponent(query || away)}`}>Search the complete reporting archive →</a></p>
     </section>
   );
 }

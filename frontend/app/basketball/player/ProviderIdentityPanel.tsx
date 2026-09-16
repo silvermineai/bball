@@ -47,7 +47,7 @@ export default function ProviderIdentityPanel({ id }: { id: string }) {
       </div>
       {!row ? <p className="note">No identity crosswalk row is recorded for player ID <code>{id}</code> in this season&apos;s release. Historical absence is not an identity or availability claim.</p> : <>
         <div className="strip">
-          <div><strong>{row.espn_athlete_id}</strong><span>Primary athlete ID</span></div>
+          <div><strong>{row.espn_athlete_id}</strong><span>Archive athlete ID</span></div>
           <div><strong>{row.fox_athlete_id || "—"}</strong><span>Alternate athlete ID</span></div>
           <div><strong>{row.yahoo_player_id || "—"}</strong><span>Secondary player ID</span></div>
           <div><strong>{row.match_confidence == null ? "—" : `${(row.match_confidence * 100).toFixed(0)}%`}</strong><span>Match confidence</span></div>

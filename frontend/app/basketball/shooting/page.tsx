@@ -120,16 +120,8 @@ export default function Page() {
           outside the 366-team rating field.
         </p>
         <p>
-          Source:{" "}
-          <a href={current.source.url}>
-            SportsDataverse’s bulk play-by-play release
-          </a>
-          , CC BY 4.0. Normalization, coordinate checks and reconciliation by
-          Silvermine.{" "}
-          <a href="https://github.com/sportsdataverse/hoopR/blob/main/R/espn_mbb_data.R">
-            Publisher coordinate transformation
-          </a>
-          . <Link href="/basketball/model/">Model and source notebook →</Link>
+          Recorded play-by-play edition. Normalization, coordinate checks and
+          reconciliation by Silvermine. <Link href="/basketball/model/">Model notebook →</Link>
         </p>
         <details>
           <summary>Source receipt and calculation limits</summary>

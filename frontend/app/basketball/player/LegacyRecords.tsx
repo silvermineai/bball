@@ -51,8 +51,8 @@ type Data = {
 };
 
 const sourceLabels: Record<string, string> = {
-  player_box: "ESPN-derived game boxes",
-  player_season: "Publisher season aggregates",
+  player_box: "retained game boxes",
+  player_season: "Reporting season aggregates",
   rosters: "Roster profiles",
 };
 export default function LegacyRecords() {
@@ -98,7 +98,7 @@ export default function LegacyRecords() {
   }, [id, page, season]);
   return (
     <>
-      <h2>{data?.player.name || "Publisher stats and roster observations."}</h2>
+      <h2>{data?.player.name || "Reporting stats and roster observations."}</h2>
       <div className="toolbar">
         <label className="control">
           <span>PUBLISHER STAT SEASON</span>
@@ -204,7 +204,7 @@ export default function LegacyRecords() {
                   <thead><tr><th>Dataset</th><th>Season</th><th>Fetched</th><th>Receipt hash</th></tr></thead>
                   <tbody>{sourceReceipts.map((receipt) => (
                     <tr key={`${receipt.dataset}-${receipt.season}`}>
-                      <td><a href={receipt.url} target="_blank" rel="noreferrer">{sourceLabels[receipt.dataset] || receipt.dataset} ↗</a></td>
+                      <td>{sourceLabels[receipt.dataset] || receipt.dataset} · retained</td>
                       <td>{receipt.season - 1}–{String(receipt.season).slice(-2)}</td>
                       <td>{receipt.fetched_at}</td>
                       <td><code>{receipt.sha256}</code></td>
@@ -215,7 +215,7 @@ export default function LegacyRecords() {
             ) : <p className="empty">No source receipt is available for this imported player view.</p>}
           </section>
           <p className="note">
-            Source: SportsDataverse bulk releases (CC BY 4.0). NBA-style,
+            Source: the retained archive bulk releases (CC BY 4.0). NBA-style,
             publisher-computed metrics in the season table retain their source
             labels; they may use formulas that differ from our displayed college
             estimates.

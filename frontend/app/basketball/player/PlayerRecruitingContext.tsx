@@ -89,7 +89,7 @@ export default function PlayerRecruitingContext({
                     <small>{categoryLabels[row.category]}{row.previous_program ? ` · from ${row.previous_program}` : ""}</small>
                   </td>
                   <td>
-                    {row.latest ? <a href={row.latest.source.url} target="_blank" rel="noreferrer">{publicationDate(row.latest.source.published_on)} · {row.latest.source.title} ↗</a> : "No dated source statement"}
+                    {row.latest ? <span>{publicationDate(row.latest.source.published_on)} · {row.latest.source.title}</span> : "No dated statement"}
                     <small>{row.latest?.summary || ""}</small>
                   </td>
                   <td className="numeric">
@@ -119,7 +119,7 @@ export default function PlayerRecruitingContext({
                   <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{rosterSeason - 1}–{String(rosterSeason).slice(-2)} · {row.previous_teams.length ? `previous: ${row.previous_teams.join(", ")}` : "no prior program listed"}</small></td>
                   <td>{row.status || "Status unavailable"}<small>{[row.position, row.class_year, row.height, row.weight].filter(Boolean).join(" · ") || "Role fields unavailable"}</small></td>
                   <td className="numeric">{row.prior_production?.mpg == null ? "—" : `${row.prior_production.mpg.toFixed(1)} MPG`}<small>{row.prior_production?.ppg == null ? "Prior points unavailable" : `${row.prior_production.ppg.toFixed(1)} PPG`}</small></td>
-                  <td>{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">Roster source ↗</a> : "No source URL"}</td>
+                  <td>{row.source_url ? "Roster row retained" : "No roster receipt"}</td>
                 </tr>
               ))}
             </tbody>

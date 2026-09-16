@@ -658,16 +658,16 @@ export default function EfficiencyDesk({ data, model }: { data: EfficiencyIndex;
           rate; line yards are not player grades. Special-teams production is
           separate from offensive EPA. College seasons use their starting year.
         </p>
-        <a href={data.definitions_url}>Publisher field documentation ↗</a>
+        <span>Field documentation</span>
         <details>
           <summary>Source receipts and downloads</summary>
           {data.sources
             .filter((s) => s.season === season)
             .map((s) => (
               <p key={s.dataset}>
-                <a href={s.url}>
+                <span>
                   {s.dataset} / {s.season} ↗
-                </a>
+                </span>
                 <br />
                 Downloaded {s.fetched_at}
                 <br />

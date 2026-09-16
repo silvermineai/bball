@@ -174,9 +174,9 @@ export default function ProgramRecruiting({
                       <small>{categoryLabels[row.category]}</small>
                     </th>
                     <td>
-                      <a href={row.latest.source.url} target="_blank" rel="noreferrer">
+                      <span>
                         {eventLabels[row.latest.kind]} ↗
-                      </a>
+                      </span>
                       <small>{row.latest.summary}</small>
                     </td>
                     <td>
@@ -203,7 +203,7 @@ export default function ProgramRecruiting({
       <div className="section-heading" style={{ marginTop: 28 }}>
         <div>
           <div className="eyebrow">Roster observation</div>
-          <h3>Who is listed in the source release?</h3>
+          <h3>Who is listed in the retained edition?</h3>
         </div>
         <Link href={`/basketball/roster-board/?q=${encodeURIComponent(programName)}`}>
           Rank this roster’s workload →

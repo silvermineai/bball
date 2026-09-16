@@ -29,7 +29,7 @@ const metrics = [
   {
     name: "Opponent-adjusted four factors",
     value: "Ridge estimates of eFG%, turnover rate, offensive-rebound rate and free-throw attempt rate after opponent, venue and season-recency adjustment.",
-    use: "Read offensive and defensive directions together to find a matchup lever. Missing components stay unavailable; these are independent Silvermine estimates, not KenPom ratings.",
+    use: "Read offensive and defensive directions together to find a matchup lever. Missing components stay unavailable; these are independent Silvermine estimates, not independent rating ratings.",
   },
   {
     name: "Strength of schedule (SOS)",
@@ -93,11 +93,11 @@ const metrics = [
   },
   {
     name: "RAPM",
-    value: "Regularized adjusted plus-minus from the attributed NCAA-derived lineup release.",
+    value: "Regularized adjusted plus-minus from the attributed retained lineup release.",
     use: "Read net, offensive and defensive values with their possession samples. It describes recorded stints, not a guarantee about a future role.",
   },
   {
-    name: "Publisher Box Plus/Minus (BPM)",
+    name: "Reporting Box Plus/Minus (BPM)",
     value: "A source-published player value estimate expressed as points per 100 possessions, with offensive and defensive components when available.",
     use: "Use Box BPM as a second, source-attributed lens on prior player value. It is not a Silvermine forecast, recruiting grade, eligibility ruling or identity crosswalk; missing source rows stay unavailable.",
   },
@@ -185,7 +185,7 @@ const metricTopics: Record<string, LearningTopic> = {
   "Offensive-rebound rate": "team",
   "True shooting (TS%)": "player",
   RAPM: "impact",
-  "Publisher Box Plus/Minus (BPM)": "impact",
+  "Reporting Box Plus/Minus (BPM)": "impact",
   "ORAPM and DRAPM": "impact",
   ORAPM: "impact",
   "Points per 40 minutes": "player",
@@ -219,7 +219,7 @@ const metricLinks: Record<string, string> = {
   "Offensive-rebound rate": "/basketball/ratings/",
   "True shooting (TS%)": "/basketball/ncaa-rankings/?metric=ts",
   RAPM: "/basketball/impact/",
-  "Publisher Box Plus/Minus (BPM)": "/basketball/leaders/",
+  "Reporting Box Plus/Minus (BPM)": "/basketball/leaders/",
   "ORAPM and DRAPM": "/basketball/impact/",
   ORAPM: "/basketball/impact/",
   "Points per 40 minutes": "/basketball/ncaa-rankings/?metric=per40",
@@ -249,14 +249,14 @@ const paths = [
   ["Compare programs", "/basketball/compare/", "Turn ratings and four factors into a venue-aware matchup question."],
   ["Read the next slate", "/basketball/matchups/", "See every published 2026–27 forecast, interval and model timestamp."],
   ["Open NCAA leaders", "/basketball/ncaa/", "Browse source-native Division I, II and III national leaderboards."],
-  ["Inspect player impact", "/basketball/impact/", "Review NCAA-derived RAPM with offensive and defensive samples."],
+  ["Inspect player impact", "/basketball/impact/", "Review retained RAPM with offensive and defensive samples."],
   ["Read within-team RAPM", "/basketball/impact/within-team/", "Compare source-published player impact relative to teammates across 17 seasons."],
-  ["Study team box history", "/basketball/ncaa-team-box/", "Compare NCAA-derived efficiency, tempo and Four Factor profiles across 17 seasons."],
+  ["Study team box history", "/basketball/ncaa-team-box/", "Compare retained efficiency, tempo and Four Factor profiles across 17 seasons."],
   ["Compare published models", "/basketball/boutique/", "Read attributed team ratings and Box Plus/Minus beside Silvermine's independent model."],
   ["Study lineups", "/basketball/lineups/", "Use possession thresholds and lineup net ratings to ask which combinations actually worked."],
   ["Rank player production", "/basketball/ncaa-rankings/", "Apply game and minute thresholds before comparing scoring, playmaking or shooting efficiency."],
   ["Compare historical seasons", "/basketball/ncaa-careers/", "Set a season window, keep source identities visible and apply workload thresholds before comparing player production."],
-  ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the NCAA source identity namespace."],
+  ["Read shot profiles", "/basketball/ncaa-shooting/", "Compare shot volume, zone conversion and recorded distance within the archive identity namespace."],
   ["Read possession style", "/basketball/possession-style/", "Learn how team-season possession context is summarized without assigning individual credit."],
   ["Compare market evidence", "/research/markets/?sport=basketball", "Inspect retained lines, capture clocks and the rules that keep unverified odds out of the forecast record."],
 ];
@@ -454,7 +454,7 @@ export default function Page() {
         </div>
         <MetricExplorer metrics={metricDefinitions} />
         <p className="note">
-          Silvermine calculations are independent estimates. Publisher metrics
+          Silvermine calculations are independent estimates. Reporting metrics
           retain their source labels and source identities. A missing value is
           evidence that the required field or qualifying sample was unavailable.
         </p>

@@ -114,7 +114,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
         </div>
       </div>
       <p className="note">
-        {release.identity_note} Team names come from the source release when
+        {release.identity_note} Team names come from the retained edition when
         available; otherwise the team ID stays visible. Values are summed
         counting fields from the source rows, and records/games show the
         denominator behind each total.
@@ -179,9 +179,9 @@ export default function NCAALeaders({ release }: { release: Release }) {
         </p>
         {release.source.url && (
           <p>
-            <a href={release.source.url} target="_blank" rel="noreferrer">
-              Open the attributed source release ↗
-            </a>
+            <span>
+              Retained edition
+            </span>
             {release.source.fetched_at ? " · retrieved " + release.source.fetched_at : ""}
           </p>
         )}

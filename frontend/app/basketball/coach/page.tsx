@@ -185,16 +185,16 @@ export default function Page() {
             </div>
           </div>
         </div>
-        <p className="section-note">Source frame: {rosters.players_observed.toLocaleString()} listed players across {rosters.teams_observed.toLocaleString()} programs. Use the exact player rows and source links before treating a radar entry as a recruiting lead.</p>
+        <p className="section-note">Roster frame: {rosters.players_observed.toLocaleString()} listed players across {rosters.teams_observed.toLocaleString()} programs. Use the exact player rows before treating a radar entry as a recruiting lead.</p>
       </section>
 
       {news.length > 0 && <section className="section" aria-labelledby="coach-wire-title">
         <div className="section-heading">
           <div><div className="eyebrow">05 / Context</div><h2 id="coach-wire-title">Keep the current story close.</h2></div>
-          <Link href="/basketball/news/">Open the publisher wire →</Link>
+          <Link href="/basketball/news/">Open the reporting archive →</Link>
         </div>
         <div className="article-grid">
-          {news.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"}</div><h3>{article.headline}</h3><p>{article.description}</p><a href={article.link} target="_blank" rel="noreferrer">Read the source article ↗</a></article>)}
+          {news.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · retained report</div><h3>{article.headline}</h3><p>{article.description}</p></article>)}
         </div>
       </section>}
 

@@ -207,7 +207,7 @@ export default function PlayerDetail() {
                   <thead><tr><th>Dataset</th><th>Fetched</th><th>Receipt hash</th></tr></thead>
                   <tbody>{data.source_receipts.map((receipt) => (
                     <tr key={`${receipt.dataset}-${receipt.season}`}>
-                      <td><a href={receipt.url} target="_blank" rel="noreferrer">{sourceLabels[receipt.dataset] || receipt.dataset} ↗</a></td>
+                      <td>{sourceLabels[receipt.dataset] || receipt.dataset} · retained</td>
                       <td>{receipt.fetched_at}</td>
                       <td><code>{receipt.sha256}</code></td>
                     </tr>
@@ -217,7 +217,7 @@ export default function PlayerDetail() {
             ) : <p className="empty">No source receipts are available for this season.</p>}
           </section>
           <p className="note">
-            {data.total} records · SportsDataverse release imports ·{" "}
+            {data.total} records · the retained archive release imports ·{" "}
             {data.season}
           </p>
           {data.rows.map((row, i) => (

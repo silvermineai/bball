@@ -144,7 +144,7 @@ export default function Scorecard() {
           </select>
         </label>
         <p className="note">
-          {source === "live" ? "Live D1 ledger · refreshed just now." : `Edition snapshot · ${date(data.generated_at)}.`} Prospective tracking is separate from historical backtests.
+          {source === "live" ? "Live ledger · refreshed just now." : `Edition snapshot · ${date(data.generated_at)}.`} Prospective tracking is separate from historical backtests.
         </p>
         <button className="button secondary" type="button" onClick={refresh} disabled={refreshing}>
           {refreshing ? "Refreshing…" : "Refresh ledger"}
@@ -245,8 +245,8 @@ export default function Scorecard() {
         </h3>
         <p>
           {data.market_observations
-            ? data.unmatched_events.toLocaleString() + " provider events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
-            : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the provider timestamp and source hash will be retained with each accepted quote."}
+            ? data.unmatched_events.toLocaleString() + " feed events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
+            : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
         </p>
         {!data.market_observations && (
           <p className="note">
@@ -285,7 +285,7 @@ export default function Scorecard() {
               ? "No settled games have qualifying quotes for this sport yet."
               : "No timestamped odds-feed observations have been collected. Historical lines without a reliable pregame clock are excluded."}{" "}
             Model-versus-market errors will appear here once matched games
-            settle. Open the <Link href="/research/markets/">market archive</Link> for retained source observations and its <Link href="/research/markets/#market-policy">capture policy</Link> for the licensed feed workflow.
+            settle. Open the <Link href="/research/markets/">market archive</Link> for retained observations and its <Link href="/research/markets/#market-policy">capture policy</Link> for the licensed feed workflow.
           </p>
         </div>
       ) : (
@@ -293,7 +293,7 @@ export default function Scorecard() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Provider / bookmaker</th>
+                <th>Feed / bookmaker</th>
                 <th>Market</th>
                 <th>Matched games</th>
                 <th>Model MAE</th>
@@ -307,7 +307,7 @@ export default function Scorecard() {
                 <tr key={r.provider + r.bookmaker + r.market}>
                   <td>
                     {r.bookmaker}
-                    <small>{r.provider}</small>
+                    <small>Licensed feed</small>
                   </td>
                   <td>{r.market}</td>
                   <td>{r.games}</td>

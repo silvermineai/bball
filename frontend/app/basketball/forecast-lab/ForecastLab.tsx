@@ -314,7 +314,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "ESPN source start", "ESPN time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -369,7 +369,7 @@ export default function ForecastLab({
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>
         <div><strong>{unconfirmedStartCount.toLocaleString()}</strong><span>Starts still marked TBD</span></div>
-        <div><strong>{(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()}</strong><span>ESPN source clocks confirmed</span></div>
+        <div><strong>{(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()}</strong><span>Recorded source clocks confirmed</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
@@ -381,7 +381,7 @@ export default function ForecastLab({
             <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
             <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
             <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
-            <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate ESPN clock layer currently has {(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
+            <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate recorded clock layer currently has {(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
           </div>
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
@@ -453,7 +453,7 @@ export default function ForecastLab({
             const p = row.prediction;
             const confidence = Math.max(p.home_win_probability, 1 - p.home_win_probability);
             return <tr key={row.game.id}>
-              <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>ESPN confirmed: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}{row.game.prediction && <small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small>}</td>
+              <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}{row.game.prediction && <small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small>}</td>
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary</small><small>prior net + exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>

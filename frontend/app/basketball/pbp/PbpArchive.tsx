@@ -6,10 +6,6 @@ import { date, fmt } from "../../_lib/format";
 
 const PAGE_SIZE = 40;
 
-function sourceUrl(id: string) {
-  return "https://www.espn.com/mens-college-basketball/game/_/gameId/" + encodeURIComponent(id);
-}
-
 export default function PbpArchive({
   catalogUrl,
   initial,
@@ -65,20 +61,20 @@ export default function PbpArchive({
   return (
     <section className="section">
       <div className="section-heading">
-        <div><div className="eyebrow">Find a source game</div><h2>Every indexed possession trail.</h2></div>
+        <div><div className="eyebrow">Find a game</div><h2>Every indexed possession trail.</h2></div>
         <span className="note">{active ? fmt(active.coverage.pbp_events || 0, 0) : "—"} events in view</span>
       </div>
       <div className="toolbar">
         <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setSeason(Number(event.target.value)); setPage(0); }}>{catalog.seasons.slice().sort((a, b) => b.season - a.season).map((entry) => <option key={entry.season} value={entry.season}>{entry.season - 1}–{String(entry.season).slice(-2)} · {fmt(entry.games.length, 0)} games</option>)}</select></label>
-        <label className="control"><span>TEAM, MATCHUP OR GAME ID</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search source games" /></label>
+        <label className="control"><span>TEAM, MATCHUP OR GAME ID</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search games" /></label>
         <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
-        <a className="button secondary" href={`/api/basketball/research/pbp/source?season=${encodeURIComponent(String(active?.season ?? season))}`}>Download source parquet ↓</a>
+        <a className="button secondary" href={`/api/basketball/research/pbp/source?season=${encodeURIComponent(String(active?.season ?? season))}`}>Download play-by-play archive ↓</a>
       </div>
       {copied && <p role="status">{copied}</p>}
       {error && <p role="status" className="note">{error} Showing the embedded release snapshot.</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Matchup</th><th className="numeric">Events</th><th className="numeric">Scoring</th><th className="numeric">Shots</th><th>Source</th></tr></thead><tbody>{visible.map((game: PbpGame) => <tr key={(active?.season || "") + "-" + game.id}><td>{game.date ? date(game.date) : "—"}</td><td><strong>{game.away || "Away"} at {game.home || "Home"}</strong><small>ESPN game {game.id}</small></td><td className="numeric">{fmt(game.events, 0)}</td><td className="numeric">{fmt(game.scoring_plays, 0)}</td><td className="numeric">{fmt(game.shooting_plays, 0)}<small>{game.shot_attempts == null ? "Shot reconciliation unavailable" : `${fmt(game.shot_attempts, 0)} accepted shot attempts`}</small></td><td><a href={sourceUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN ↗</a></td></tr>)}</tbody></table></div>
-      {!visible.length && <p className="empty">No source games match this search.</p>}
-      <div className="pagination"><span>{fmt(filtered.length, 0)} matching source games · page {page + 1} of {pages}</span><div><button className="button secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Matchup</th><th className="numeric">Events</th><th className="numeric">Scoring</th><th className="numeric">Shots</th><th>Archive</th></tr></thead><tbody>{visible.map((game: PbpGame) => <tr key={(active?.season || "") + "-" + game.id}><td>{game.date ? date(game.date) : "—"}</td><td><strong>{game.away || "Away"} at {game.home || "Home"}</strong><small>Game ID {game.id}</small></td><td className="numeric">{fmt(game.events, 0)}</td><td className="numeric">{fmt(game.scoring_plays, 0)}</td><td className="numeric">{fmt(game.shooting_plays, 0)}<small>{game.shot_attempts == null ? "Shot reconciliation unavailable" : `${fmt(game.shot_attempts, 0)} accepted shot attempts`}</small></td><td>Retained</td></tr>)}</tbody></table></div>
+      {!visible.length && <p className="empty">No games match this search.</p>}
+      <div className="pagination"><span>{fmt(filtered.length, 0)} matching games · page {page + 1} of {pages}</span><div><button className="button secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
     </section>
   );
 }

@@ -10,7 +10,7 @@ import {
   type ImpactSortKey,
 } from "../../_lib/basketball-impact";
 const sortLabels: Record<ImpactSortKey, string> = {
-  rank: "Publisher net rank",
+  rank: "Net impact rank",
   rapm_net: "Net RAPM · higher first",
   orapm: "ORAPM · higher first",
   drapm: "DRAPM · higher first",
@@ -51,7 +51,7 @@ export default function Impact() {
             ))}
           </select>
         </label>
-        <a className="button secondary" href={`/api/basketball/research/impact/source?season=${season}`}>Download source parquet ↓</a>
+        <a className="button secondary" href={`/api/basketball/research/impact/source?season=${season}`}>Download impact archive ↓</a>
         <label className="control">
           <span>PLAYER OR TEAM</span>
           <input
@@ -111,7 +111,7 @@ export default function Impact() {
                 downloadCsv(
                   "basketball-impact.csv",
                   toCsv(
-                    ["Net rank", "Player", "NCAA ID", "Program", "ORAPM", "DRAPM", "Net RAPM", "Offensive possessions", "Defensive possessions"],
+                    ["Net rank", "Player", "Archive ID", "Program", "ORAPM", "DRAPM", "Net RAPM", "Offensive possessions", "Defensive possessions"],
                     rows.map((p) => [p.rank, p.player.replaceAll(".", " "), p.player_id, p.team, p.orapm, p.drapm, p.rapm_net, p.off_poss, p.def_poss]),
                   ),
                 )
@@ -125,7 +125,7 @@ export default function Impact() {
               <thead>
                 <tr>
                   <th>Net rank</th>
-                  <th>Player / NCAA identity</th>
+                  <th>Player / archive identity</th>
                   <th>Program</th>
                   {["ORAPM", "DRAPM", "Net", "Off. poss.", "Def. poss."].map(
                     (k) => (
@@ -144,8 +144,7 @@ export default function Impact() {
                       <Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(p.player_id)}&season=${p.season}`}>
                         {p.player.replaceAll(".", " ")} →
                       </Link>
-                      <small>NCAA {p.player_id}</small>
-                      <small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(p.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small>
+                      <small>Archive ID {p.player_id}</small>
                     </td>
                     <td>{p.team}</td>
                     {[p.orapm, p.drapm, p.rapm_net, p.off_poss, p.def_poss].map(

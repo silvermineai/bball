@@ -53,7 +53,7 @@ const prettySourceField = (key: string) => key
 
 function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
   return <details className="ncaa-source-fields">
-    <summary>Open retained source fields</summary>
+    <summary>Open retained stat fields</summary>
     <div className="ncaa-source-field-grid">
       {sourceFieldGroups.map((group) => <div key={group.label}>
         <strong>{group.label}</strong>
@@ -64,7 +64,7 @@ function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
         })}</dl>
       </div>)}
     </div>
-    <small>Fields remain source-reported; an unavailable value is not treated as zero.</small>
+    <small>Fields remain recorded; an unavailable value is not treated as zero.</small>
     <details className="ncaa-source-all-fields">
       <summary>Inspect all {Object.keys(stats).length} retained fields</summary>
       <dl className="raw-stat-grid">
@@ -74,7 +74,7 @@ function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
       </dl>
     </details>
     <details className="ncaa-source-json">
-      <summary>View full source JSON</summary>
+      <summary>View full recorded JSON</summary>
       <pre>{JSON.stringify(stats, null, 2)}</pre>
     </details>
   </details>;
@@ -109,7 +109,7 @@ export default function NcaaPlayerBox() {
   useEffect(() => {
     fetch("/data/basketball/ncaa-player-box-fields.json")
       .then((r) => {
-        if (!r.ok) throw Error("The NCAA field coverage report could not be loaded.");
+        if (!r.ok) throw Error("The field coverage report could not be loaded.");
         return r.json() as Promise<FieldCoverage>;
       })
       .then(setFieldCoverage)
@@ -117,7 +117,7 @@ export default function NcaaPlayerBox() {
   }, []);
   useEffect(() => {
     fetch(`/api/basketball/research/ncaa-player-box?meta=1&season=${season}`)
-      .then((r) => { if (!r.ok) throw Error("The NCAA player archive could not be loaded."); return r.json() as Promise<Meta>; })
+      .then((r) => { if (!r.ok) throw Error("The player archive could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
   }, [retryNonce, season]);
   useEffect(() => {
@@ -126,7 +126,7 @@ export default function NcaaPlayerBox() {
     if (query.trim()) params.set("q", query.trim());
     setResult(null);
     fetch(`/api/basketball/research/ncaa-player-box?${params}`, { signal: controller.signal })
-      .then((r) => { if (!r.ok) throw Error("The NCAA player archive could not be loaded."); return r.json() as Promise<Result>; })
+      .then((r) => { if (!r.ok) throw Error("The player archive could not be loaded."); return r.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
@@ -163,22 +163,22 @@ export default function NcaaPlayerBox() {
       return;
     }
     setExporting(true);
-    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} NCAA rows…`);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
     try {
       const rows: Row[] = [];
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ season, page: String(requestedPage), archive });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/basketball/research/ncaa-player-box?${params}`);
-        if (!response.ok) throw new Error("The complete NCAA player export could not be loaded.");
+        if (!response.ok) throw new Error("The complete player export could not be loaded.");
         const payload = await response.json() as Result;
         rows.push(...payload.rows);
-        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} NCAA rows…`);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
       }
       downloadCsv(`ncaa-player-box-${season}-${result.archive_mode}-all.csv`, toCsv(csvHeaders, rows.map(exportRow)));
-      setExportMessage(`Downloaded ${rows.length.toLocaleString()} NCAA rows.`);
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} rows.`);
     } catch (reason) {
-      setExportMessage(reason instanceof Error ? reason.message : "The complete NCAA player export could not be loaded.");
+      setExportMessage(reason instanceof Error ? reason.message : "The complete player export could not be loaded.");
     } finally {
       setExporting(false);
     }
@@ -189,32 +189,32 @@ export default function NcaaPlayerBox() {
   };
   return <>
     <div className="page-title">
-      <div className="eyebrow">NCAA source archive / player box scores</div>
+      <div className="eyebrow">Player box archive</div>
       <h1>See the whole<br /><em>stat line.</em></h1>
-      <p>Game-level NCAA-derived player production across 2010–11 through 2025–26, with shooting zones, transition splits and playmaking context. Source IDs stay separate from ESPN identities until an audited crosswalk exists. <Link href="/blog/basketball-player-game-logs/">Read the game-log field guide →</Link></p>
+      <p>Game-level player production across 2010–11 through 2025–26, with shooting zones, transition splits and playmaking context. Archive IDs stay separate until an audited crosswalk exists. <Link href="/blog/basketball-player-game-logs/">Read the game-log field guide →</Link></p>
     </div>
     <div className="strip">
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Rows in {season === "all" ? "archive" : "selected season"}</span></div>
-      <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Source seasons</span></div>
+      <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Available seasons</span></div>
       <div><strong>{season === "all" ? meta?.game_rows?.toLocaleString() ?? "—" : "50"}</strong><span>{season === "all" ? "Game rows across archive" : "Rows per page"}</span></div>
-      <div><strong>{season === "all" ? meta?.season_rows?.toLocaleString() ?? "—" : "NCAA"}</strong><span>{season === "all" ? "Season summaries across archive" : "Identity namespace"}</span></div>
+      <div><strong>{season === "all" ? meta?.season_rows?.toLocaleString() ?? "—" : "—"}</strong><span>{season === "all" ? "Season summaries across archive" : "Identity namespace"}</span></div>
     </div>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}><option value="all">All retained seasons</option>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label className="control"><span>ARCHIVE GRAIN</span><select value={archive} onChange={(e) => { setArchive(e.target.value as typeof archive); setPage(0); }}><option value="auto">Automatic (game rows when available)</option><option value="games">Game logs</option><option value="season">Season totals</option></select></label>
-      <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} placeholder="Search a player, team or source ID" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
+      <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} placeholder="Search a player, team or archive ID" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {selectedCoverage && <section className="paper-panel" style={{ marginBottom: 24 }}>
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Source field audit / {label(selectedCoverage.season)}</div>
+          <div className="eyebrow">Archive field audit / {label(selectedCoverage.season)}</div>
           <h2>Know which stats the release actually carries.</h2>
         </div>
-        <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} source keys</span>
+        <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} archive keys</span>
       </div>
-      <p className="note">Observed counts include source-reported zeroes. A blank or null source value is unavailable and is never converted into zero.</p>
-      {sparseEdition && <p className="status-error" role="status">This retained source edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the source receipt before comparing it with later seasons.</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th className="numeric">Observed</th><th className="numeric">Coverage</th></tr></thead><tbody>{fieldCoverage?.fields.map((field) => {
+      <p className="note">Observed counts include recorded zeroes. A blank or null value is unavailable and is never converted into zero.</p>
+      {sparseEdition && <p className="status-error" role="status">This retained edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the archive receipt before comparing it with later seasons.</p>}
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th className="numeric">Observed</th><th className="numeric">Coverage</th></tr></thead><tbody>{fieldCoverage?.fields.map((field) => {
         const value = selectedCoverage.fields[field];
         return <tr key={field}><td><code>{field}</code></td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{value ? (value.share * 100).toFixed(1) + "%" : "0.0%"}</td></tr>;
       })}</tbody></table></div>
@@ -223,12 +223,12 @@ export default function NcaaPlayerBox() {
       <div className="section-heading">
         <div>
           <div className="eyebrow">Game-row integrity / {selectedSeasonLabel}</div>
-          <h2>Know which source rows are safe to use.</h2>
+          <h2>Know which recorded rows are safe to use.</h2>
         </div>
         <span className="note">{meta.validation.total_rows.toLocaleString()} rows checked</span>
       </div>
       <div className="raw-stat-grid">
-        <div><dt>{meta.validation.missing_ids.toLocaleString()}</dt><dd>Missing source IDs</dd></div>
+        <div><dt>{meta.validation.missing_ids.toLocaleString()}</dt><dd>Missing archive IDs</dd></div>
         <div><dt>{meta.validation.missing_names.toLocaleString()}</dt><dd>Missing player/team context</dd></div>
         <div><dt>{meta.validation.missing_game_dates.toLocaleString()}</dt><dd>Missing game dates</dd></div>
         <div><dt>{meta.validation.malformed_game_dates.toLocaleString()}</dt><dd>Malformed game dates</dd></div>
@@ -239,22 +239,22 @@ export default function NcaaPlayerBox() {
         <div><dt>{meta.validation.zero_minutes_with_stats.toLocaleString()}</dt><dd>Zero-minute rows with stats</dd></div>
         <div><dt>{meta.validation.malformed_stats_json.toLocaleString()}</dt><dd>Malformed stat payloads</dd></div>
       </div>
-      <p className="note">The source release carries team/opponent labels and dates, but no venue or home/away field. Location-dependent analysis therefore stays on the schedule archive; these checks flag unusable matchup context and impossible player totals before a row is used for ranking or coaching review.</p>
+      <p className="note">The retained edition carries team/opponent labels and dates, but no venue or home/away field. Location-dependent analysis therefore stays on the schedule archive; these checks flag unusable matchup context and impossible player totals before a row is used for ranking or coaching review.</p>
     </section>}
-    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live archive</button></div> : !result ? <p className="empty" role="status">Loading NCAA player rows…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the source release.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>{season !== "all" && <a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download source parquet ↓</a>}<button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
+    {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live archive</button></div> : !result ? <p className="empty" role="status">Loading player rows…</p> : <>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the retained edition.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>{season !== "all" && <a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download player archive ↓</a>}<button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {copied && <p role="status">{copied}</p>}
-      <p className="note">CSV exports include the compact audit columns plus every source field listed above as a separate <code>Source …</code> column; the original JSON payload remains attached for exact replay.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} NCAA player {row.player_id}</small><small><a href={`https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`} target="_blank" rel="noreferrer">NCAA source ↗</a></small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `NCAA team ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n(safeSum(s.orb, s.drb), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? trueShooting(s))}</td></tr>; })}</tbody></table></div>
-      {!result.rows.length && <p className="empty">No NCAA player rows match this search.</p>}
+      <p className="note">CSV exports include the compact audit columns plus every source field listed above as a separate <code>Archive …</code> column; the original JSON payload remains attached for exact replay.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} Archive ID {row.player_id}</small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `Team ID ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n(safeSum(s.orb, s.drb), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? trueShooting(s))}</td></tr>; })}</tbody></table></div>
+      {!result.rows.length && <p className="empty">No player rows match this search.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
       <div className="paper-panel" style={{ marginTop: 24 }}>
-        <div className="eyebrow">Source receipt / {selectedSeasonLabel}</div>
-        <p className="note">NCAA-derived player box release via SportsDataverse{meta?.source?.fetched_at ? ` · fetched ${new Date(meta.source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. The clock describes the retained source edition, not a live stat correction or eligibility update.</p>
-        {meta?.metadata_source === "bundled_catalog" && <p className="status-error" role="status">The archive warehouse was busy when this metadata loaded. Counts and the source receipt come from the bundled release catalog; live row integrity checks will return after the next retry.</p>}
-        <p className="note">{meta?.source?.sha256 ? <><code>{meta.source.sha256}</code> · </> : ""}{meta?.source?.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open canonical source release ↗</a> : "Canonical source URL unavailable in this receipt."}{season !== "all" && <> · <a href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download the retained Parquet ↗</a></>}</p>
-        <p className="note">This archive is descriptive and does not assert eligibility, roster status or a verified identity match to ESPN records.</p>
+        <div className="eyebrow">Archive receipt / {selectedSeasonLabel}</div>
+        <p className="note">Retained player box edition{meta?.source?.fetched_at ? ` · fetched ${new Date(meta.source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. The clock describes the retained edition, not a live stat correction or eligibility update.</p>
+        {meta?.metadata_source === "bundled_catalog" && <p className="status-error" role="status">The archive warehouse was busy when this metadata loaded. Counts and the archive receipt come from the bundled release catalog; live row integrity checks will return after the next retry.</p>}
+        <p className="note">{meta?.source?.sha256 ? <><code>{meta.source.sha256}</code> · </> : ""}{meta?.source?.url ? "Canonical retained edition recorded" : "Canonical edition URL unavailable in this receipt."}{season !== "all" && <> · <a href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download retained archive ↗</a></>}</p>
+        <p className="note">This archive is descriptive and does not assert eligibility, roster status or a verified identity match.</p>
       </div>
     </>}
   </>;

@@ -35,7 +35,7 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
       <div>
         <div className="eyebrow">Operator preflight / stays in this browser</div>
         <h3>Check an authorized line export before import.</h3>
-        <p>Select a licensed provider CSV to validate its exact-match columns, timing clocks, market type and paired prices locally. The file is never uploaded; a clean preflight still requires the server importer, provider identity and license URL.</p>
+        <p>Select a licensed feed CSV to validate its exact-match columns, timing clocks, market type and paired prices locally. The file is never uploaded; a clean preflight still requires the server importer, feed identity and license URL.</p>
       </div>
       <label className="button secondary market-import-file">
         {fileName ? `Check ${fileName}` : "Choose authorized market CSV"}

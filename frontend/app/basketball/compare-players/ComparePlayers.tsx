@@ -709,9 +709,9 @@ export default function ComparePlayers({
                   <p className="source-hash">Archive edition {r.edition}</p>
                   {r.sources.map((s) => (
                     <p key={`${s.dataset}-${s.sha256}`}>
-                      <a className="hero-link" href={s.url}>
+                      <span className="hero-link">
                         {s.dataset} · {s.season} ↗
-                      </a>
+                      </span>
                       <br />
                       <small>Retrieved {s.fetched_at}</small>
                       <br />
@@ -722,7 +722,7 @@ export default function ComparePlayers({
               ))}
             </div>
             <p>
-              Source: SportsDataverse bulk releases, labeled CC BY 4.0 by the
+              Source: the retained archive bulk releases, labeled CC BY 4.0 by the
               publisher. Silvermine normalizes the observations and calculates
               the summaries. Current forecasts and prospective model records do
               not use these comparison selections.

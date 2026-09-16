@@ -8,7 +8,7 @@ import { date } from "../../_lib/format";
 export const metadata = {
   title: "Forecast scorecard and market comparisons",
   description:
-    "Follow registered college football and basketball predictions, prospective results, source timestamps and model-versus-market comparisons.",
+    "Follow registered college football and basketball predictions, prospective results, capture timestamps and model-versus-market comparisons.",
 };
 export default function Page() {
   const data: Ledger = JSON.parse(
@@ -94,12 +94,12 @@ export default function Page() {
             <h3>How market comparisons qualify</h3>
             <p>
               The quote must be captured after forecast registration and before
-              the confirmed start, with a provider update time no later than
+              the confirmed start, with a feed update time no later than
               capture. Quotes older than 24 hours when captured are excluded.
               Participant identities and scheduled start must match exactly.
             </p>
             <p>
-              We use the last qualifying observation per provider, bookmaker and
+              We use the last qualifying observation per feed, bookmaker and
               market. It is not a verified closing line. Matched-game errors are
               reported separately for each bookmaker; they are not compared with
               model errors from a different set of games.
@@ -119,20 +119,9 @@ export default function Page() {
           ))}
           <p>
             Live odds collection uses a separately configured licensed feed. The
-            existing SportsDataverse betting archive lacks the timestamps needed
-            for this scorecard and is excluded. Zero observed comparisons means
+            existing historical betting archive lacks the timestamps needed for
+            this scorecard and is excluded. Zero observed comparisons means
             unavailable evidence, not a zero model edge.
-          </p>
-          <p>
-            Feed documentation:{" "}
-            <a href="https://the-odds-api.com/liveapi/guides/v4/">
-              The Odds API v4
-            </a>{" "}
-            ·{" "}
-            <a href="https://the-odds-api.com/terms-and-conditions.html">
-              Data-use terms
-            </a>
-            .
           </p>
           <p>
             <Link href="/research/markets/">Browse the historical market archive →</Link>

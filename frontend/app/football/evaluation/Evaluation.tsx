@@ -779,20 +779,8 @@ export default function Evaluation({
           ))}
         </div>
         <p className="note">
-          Temporal evaluation and calibration references:{" "}
-          <a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split">
-            scikit-learn’s time-series evaluation guidance
-          </a>{" "}
-          and{" "}
-          <a href="https://scikit-learn.org/stable/modules/calibration.html">
-            probability calibration documentation
-          </a>
-          . Source data:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , labeled CC BY 4.0 by its publisher. Source receipts and download
-          URLs are in the summary.{" "}
+          Temporal evaluation uses ordered time splits and probability
+          calibration. Archive receipts and download URLs are in the summary.{" "}
           <Link href="/football/methodology/">
             Read the production model notebook →
           </Link>

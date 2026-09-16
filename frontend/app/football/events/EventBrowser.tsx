@@ -637,9 +637,9 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
           </div>
           <p className="note">
             Definitions checked against{" "}
-            <a href={edition.evidence.definitions_url}>
-              cfbfastR’s published loader documentation ↗
-            </a>
+            <span>
+              Field definitions
+            </span>
             . Field-goal attempts do not establish makes or accuracy; gross punt
             yards do not establish net punting.
           </p>
@@ -652,7 +652,7 @@ export default function EventBrowser({ index }: { index: EventIndex }) {
             </p>
             {edition.evidence.sources.map((s) => (
               <div key={s.dataset} className="event-receipt">
-                <a href={s.url}>{s.dataset} · source download ↗</a>
+                <span>{s.dataset} · retained download</span>
                 <p>Retrieved {s.fetched_at}</p>
                 <p className="event-hash">SHA-256 {s.sha256}</p>
               </div>

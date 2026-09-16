@@ -301,8 +301,8 @@ export default function FootballMatchupEvidence({
       <details className="football-definitions football-provenance">
         <summary>Source receipts and linked data editions</summary>
         <p>
-          SportsDataverse bulk releases, publisher-stated CC BY 4.0. Silvermine
-          aggregates the team rates and selects historical player leaders.
+          Retained editions with CC BY 4.0 coverage. Silvermine aggregates the
+          team rates and selects historical player leaders.
           Neither collection time nor this brief’s publication is backdated to
           the games described.
         </p>
@@ -321,9 +321,7 @@ export default function FootballMatchupEvidence({
         <ul>
           {data.sources.map((s, i) => (
             <li key={`${s.dataset}:${s.season}:${i}`}>
-              <a href={s.url}>
-                {s.season} / {s.dataset}
-              </a>{" "}
+              <span>{s.season} / {s.dataset}</span>{" "}
               · Retrieved {s.fetched_at}
               <br />
               <code>{s.sha256}</code>

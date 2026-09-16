@@ -442,16 +442,10 @@ export default function Page() {
           </div>
         </div>
         <p className="note">
-          Bulk datasets:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , whose README labels data CC BY 4.0. Original providers include ESPN
-          and CollegeFootballData. We normalize rows, derive rankings and train
-          our own score model. No direct NCAA or ESPN crawling is enabled in the
-          football pipeline. NCAA robots.txt disallows crawling; ESPN terms
-          restrict automated extraction. Publisher licenses do not independently
-          establish every upstream right.
+          The football archive preserves licensed edition receipts and hashes.
+          We normalize rows, derive rankings and train our own score model.
+          Automated crawling remains disabled when robots policy or licensing
+          does not permit it.
         </p>
         <div className="table-scroll" style={{ marginTop: 20 }}>
           <table className="data-table">
@@ -472,7 +466,7 @@ export default function Page() {
                   <td>{date(s.fetched_at)}</td>
                   <td className="mono">{s.sha256.slice(0, 12)}</td>
                   <td>
-                    <a href={s.url}>Source download ↗</a>
+                    <span>Retained download</span>
                   </td>
                 </tr>
               ))}

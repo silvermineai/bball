@@ -3,15 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { BBGame } from "../../_lib/basketball-types";
-import { date, fmt, kick, signed } from "../../_lib/format";
+import { date, fmt, signed } from "../../_lib/format";
 import {
   loadLiveBasketballForecasts,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import { basketballEditorialLens } from "../../_lib/basketball-editorial";
-
-const sourceGameUrl = (id: string) =>
-  `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 
 function signal(game: BBGame) {
   const margin = Math.abs(game.prediction!.home_margin);
@@ -24,10 +21,9 @@ function signal(game: BBGame) {
 function GameCard({ game }: { game: BBGame }) {
   const prediction = game.prediction!;
   const lens = basketballEditorialLens(game);
-  const sourceClock = game.source_time_valid && game.source_start ? ` · ESPN ${kick(game.source_start)}` : "";
   return (
     <article className="article-card">
-      <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}{sourceClock}</div>
+      <div className="eyebrow">{date(game.starts_at)} · {game.time_tbd ? "Start time unconfirmed" : "Scheduled"}</div>
       <h2>{game.away_name} <span className="brief-versus">at</span> {game.home_name}</h2>
       <p>{signal(game)}</p>
       {lens && (
@@ -50,7 +46,6 @@ function GameCard({ game }: { game: BBGame }) {
       <div className="brief-archive-links">
         <Link href={`/basketball/briefs/${game.id}/`}>Open scouting brief →</Link>
         <Link href={`/basketball/compare/?a=${game.away_id}&b=${game.home_id}`}>Compare programs</Link>
-        <a href={sourceGameUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN source game ↗</a>
       </div>
     </article>
   );

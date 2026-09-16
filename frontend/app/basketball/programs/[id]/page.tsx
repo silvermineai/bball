@@ -176,19 +176,9 @@ export default async function Page({
           Minutes and usage samples can differ.
         </p>
         <p>
-          Source statistics:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse bulk releases
-          </a>
-          , CC BY 4.0. Calculations and model: Silvermine. Definitions draw on
-          publicly documented{" "}
-          <a href="https://kenpom.com/blog/stats-explained/">Four Factors</a>{" "}
-          and{" "}
-          <a href="https://www.basketball-reference.com/about/glossary.html">
-            basketball rate statistics
-          </a>
-          ; these are not another publisher’s proprietary ratings.{" "}
-          <Link href="/basketball/model/">Model notebook →</Link>
+          Recorded statistics, calculations and model: Silvermine. Definitions
+          for Four Factors and rate statistics are included in the model
+          notebook. <Link href="/basketball/model/">Model notebook →</Link>
         </p>
       </section>
     </>

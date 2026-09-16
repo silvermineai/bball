@@ -377,14 +377,14 @@ export default function Matchups({
       </p>
       <p className="note" role="status">
         {scheduleClocks
-          ? `ESPN schedule clocks: ${confirmedScheduleCount.toLocaleString()} of ${(scheduleClocks.total || 0).toLocaleString()} observed games have source-confirmed starts; canonical TBD rows remain labeled until confirmed.`
+          ? `Recorded schedule clocks: ${confirmedScheduleCount.toLocaleString()} of ${(scheduleClocks.total || 0).toLocaleString()} observed games have source-confirmed starts; canonical TBD rows remain labeled until confirmed.`
           : scheduleClockError
             ? `${scheduleClockError} Showing canonical schedule clocks.`
-            : "Checking ESPN schedule-clock evidence…"}
+            : "Checking schedule-clock evidence…"}
       </p>
       <p className="note" role="status">
         {Object.keys(publisherRatings).length
-          ? `Publisher adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 source release.`
+          ? `Adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 source release.`
           : publisherRatingsError
             ? `${publisherRatingsError} Silvermine ratings remain available.`
             : "Checking publisher model comparisons…"}
@@ -402,8 +402,8 @@ export default function Matchups({
               toCsv(
                 [
                   "Scheduled start",
-                  "ESPN source start",
-                  "ESPN time valid",
+                  "Recorded source start",
+                  "Recorded time valid",
                   "Away program",
                   "Home program",
                   "Venue",
@@ -421,8 +421,8 @@ export default function Matchups({
                   "Silvermine adjusted net home",
                   "Publisher adjusted EM away",
                   "Publisher adjusted EM home",
-                  "Publisher source team ID away",
-                  "Publisher source team ID home",
+                  "Source team ID away",
+                  "Source team ID home",
                   "Qualifying market quote count",
                   "Market quote snapshots",
                 ],
@@ -485,7 +485,7 @@ export default function Matchups({
               <div className="matchup-prep-item" key={game.id}>
                 <div>
                   <strong>{game.away_name} at {game.home_name}</strong>
-                    <small>{game.source_time_valid && game.source_start ? `ESPN ${kick(game.source_start)}` : game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
+                    <small>{game.source_time_valid && game.source_start ? `Recorded ${kick(game.source_start)}` : game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
                 </div>
                 <div className="button-row">
                   {(game.prediction || game.fallback_prediction) && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}

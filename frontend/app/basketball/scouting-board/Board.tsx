@@ -693,7 +693,7 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
         <details className="board-source">
           <summary>Source coverage and edition</summary>
           <p>
-            SportsDataverse bulk releases; publisher-stated CC BY 4.0.
+            the retained archive bulk releases; publisher-stated CC BY 4.0.
             Silvermine normalizes box scores, aggregates program-season
             production and calculates these scouting priorities.
           </p>
@@ -710,7 +710,7 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
           )}
           <p>
             Archive generated {catalog.generated_at}. The coverage counts
-            describe retained source releases, not verified national
+            describe retained retained editions, not verified national
             completeness.
           </p>
           {catalog.sources
@@ -718,9 +718,9 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
             .filter((s) => s.season === season)
             .map((s) => (
               <p key={s.dataset}>
-                <a href={s.url}>
+                <span>
                   {s.dataset} / {s.season} ↗
-                </a>
+                </span>
                 <br />
                 <small>Retrieved {s.fetched_at}</small>
                 <br />

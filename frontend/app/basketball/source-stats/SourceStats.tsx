@@ -84,7 +84,7 @@ export default function SourceStats() {
     const controller = new AbortController();
     fetch("/api/basketball/research/publisher-stats?meta=1", { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("The source-field catalog is unavailable.");
+        if (!response.ok) throw new Error("The player-field catalog is unavailable.");
         return response.json() as Promise<{ seasons: number[]; fields: Field[] }>;
       })
       .then((payload) => {
@@ -136,7 +136,7 @@ export default function SourceStats() {
     if (minGames !== "0") params.set("min_games", minGames);
     fetch(`/api/basketball/research/publisher-stats?${params}`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("The source statistics could not be loaded. Please reload.");
+        if (!response.ok) throw new Error("The player statistics could not be loaded. Please reload.");
         return response.json() as Promise<Result>;
       })
       .then(setResult)
@@ -161,7 +161,7 @@ export default function SourceStats() {
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setCopied("Source stat link copied.");
+      setCopied("Stat link copied.");
     } catch {
       setCopied("Copy the filtered URL from your address bar.");
     }
@@ -183,7 +183,7 @@ export default function SourceStats() {
         if (query.trim()) params.set("q", query.trim());
         if (minGames !== "0") params.set("min_games", minGames);
         const response = await fetch(`/api/basketball/research/publisher-stats?${params}`);
-        if (!response.ok) throw new Error("The complete source export could not be loaded.");
+        if (!response.ok) throw new Error("The complete player export could not be loaded.");
         const payload = await response.json() as Result;
         rows.push(...payload.rows);
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
@@ -195,7 +195,7 @@ export default function SourceStats() {
       );
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} matching rows.`);
     } catch (reason) {
-      setExportMessage(reason instanceof Error ? reason.message : "The complete source export could not be loaded.");
+      setExportMessage(reason instanceof Error ? reason.message : "The complete player export could not be loaded.");
     } finally {
       setExporting(false);
     }
@@ -203,32 +203,32 @@ export default function SourceStats() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">Source archive / attributed player-season release</div>
+        <div className="eyebrow">Player archive / season statistics</div>
         <h1>
           Read the whole
           <br />
           <em>stat sheet.</em>
         </h1>
         <p>
-          Search every player-season record and every numeric or publisher-formatted field retained from the source release. The browser keeps the source labels, display strings and definitions intact.
+          Search every player-season record and every numeric field retained in the archive. Display strings and definitions stay intact.
         </p>
       </div>
       <div className="strip">
         <div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Player/program records in view</span></div>
-        <div><strong>{result?.non_null.toLocaleString() ?? "—"}</strong><span>Records with this source field</span></div>
-        <div><strong>{fields.length || "—"}</strong><span>Retained source fields</span></div>
-        <div><strong>{seasons.length || "—"}</strong><span>Available source seasons</span></div>
+        <div><strong>{result?.non_null.toLocaleString() ?? "—"}</strong><span>Records with this field</span></div>
+        <div><strong>{fields.length || "—"}</strong><span>Retained stat fields</span></div>
+        <div><strong>{seasons.length || "—"}</strong><span>Available seasons</span></div>
       </div>
       <div className="toolbar">
         <label className="control">
-          <span>SOURCE SEASON</span>
+          <span>SEASON</span>
           <select value={season} onChange={(event) => reset(() => setSeason(event.target.value))}>
             {!seasons.length && <option value={season}>{season}</option>}
             {seasons.map((value) => <option key={value} value={value}>{value - 1}–{String(value).slice(-2)}</option>)}
           </select>
         </label>
         <label className="control">
-          <span>SOURCE FIELD</span>
+          <span>STAT FIELD</span>
           <select value={fieldKey} onChange={(event) => reset(() => setFieldKey(event.target.value))}>
             {Object.entries(grouped).map(([category, candidates]) => (
               <optgroup key={category} label={categoryLabels[category as Field["category"]]}>
@@ -262,10 +262,10 @@ export default function SourceStats() {
         <button className="button secondary" type="button" onClick={share}>Copy stat link</button>
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
-      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. The value and definition come from the attributed publisher; source percentages are shown in the publisher’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing source records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
-      {error ? <div role="alert" className="status-error"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry source archive</button></div> : !result ? <p role="status" className="empty">Loading source statistics…</p> : (
+      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. Percentages use the archive’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
+      {error ? <div role="alert" className="status-error"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry player archive</button></div> : !result ? <p role="status" className="empty">Loading player statistics…</p> : (
         <>
-          {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Source receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Publisher player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td><a href={receipt.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div></details>}
+          {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Archive receipt for the {result.season} edition</strong> · {result.source_receipts.length} edition{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td></tr>)}</tbody></table></div></details>}
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p>
             <div className="button-row"><button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value])))}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={exportAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div>
@@ -275,7 +275,7 @@ export default function SourceStats() {
             <table className="data-table">
               <thead><tr><th>Player</th><th>Program</th><th>Pos.</th><th className="numeric">Games</th><th className="numeric">{result.field.label}</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={`${row.id}-${row.team_id}`}>
-                <td><Link href={`/basketball/player/?id=${row.id}&season=${season}`}>{row.name || row.id}</Link><small>Source ID {row.id}</small><small><a href={`https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(row.id)}`} target="_blank" rel="noreferrer">ESPN source ↗</a></small></td>
+                <td><Link href={`/basketball/player/?id=${row.id}&season=${season}`}>{row.name || row.id}</Link><small>Archive ID {row.id}</small></td>
                 <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small></td>
                 <td>{row.position || "—"}</td>
                 <td className="numeric">{row.games == null ? "—" : fmt(row.games, 0)}</td>
@@ -283,11 +283,11 @@ export default function SourceStats() {
               </tr>)}</tbody>
             </table>
           </div>
-          {!result.rows.length && <p className="empty">No source records match these filters.</p>}
-          <div className="pagination"><span>{result.total.toLocaleString()} records · source field values remain auditable on each player page</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div></div>
+          {!result.rows.length && <p className="empty">No player records match these filters.</p>}
+          <div className="pagination"><span>{result.total.toLocaleString()} records · stat values remain auditable on each player page</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div></div>
         </>
       )}
-      <p className="note" style={{ marginTop: 24 }}>Source: SportsDataverse attributed player-season statistics, published under CC BY 4.0. A source identity is not a verified unique person, current roster, eligibility ruling or recruiting rating. <Link href="/basketball/leaders/">See national leaderboards →</Link></p>
+      <p className="note" style={{ marginTop: 24 }}>A recorded identity is not a verified unique person, current roster, eligibility ruling or recruiting rating. <Link href="/basketball/leaders/">See national leaderboards →</Link></p>
     </>
   );
 }

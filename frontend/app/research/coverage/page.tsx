@@ -213,7 +213,7 @@ export default function Page() {
       seasons: history.seasons.map((season) => season.season),
       latest: history.generated_at,
       url: history.sources[0]?.[0]?.url ?? null,
-      note: "SportsDataverse box rows; source IDs and incomplete fields stay explicit.",
+      note: "Retained box rows; source IDs and incomplete fields stay explicit.",
     },
     {
       key: "roster-snapshots",
@@ -276,7 +276,7 @@ export default function Page() {
       seasons: standings.seasons.map((season) => season.season),
       latest: standings.generated_at,
       url: standings.seasons.at(-1)?.source_url ?? null,
-      note: "Team-season records compacted from ESPN-derived SportsDataverse standings; source labels and display values are retained.",
+      note: "Team-season records compacted from retained standings; source labels and display values are retained.",
     },
     {
       key: "possession-style",
@@ -486,12 +486,12 @@ export default function Page() {
                 </td>
                 <td className="numeric">—</td>
                 <td>
-                  <small>No stable athlete ID; never joined to the ESPN career archive by name.</small>
-                  <Link href="/football/source-stats/?dataset=ncaa_player_stats&season=2025">Open NCAA source rows →</Link>
+                  <small>No stable athlete ID; never joined to another player archive by name.</small>
+                  <Link href="/football/source-stats/?dataset=ncaa_player_stats&season=2025">Open retained player rows →</Link>
                   {footballNcaaLatest?.url && (
-                    <a href={footballNcaaLatest.url} target="_blank" rel="noreferrer">
+                    <span>
                       Latest release receipt ↗
-                    </a>
+                    </span>
                   )}
                 </td>
               </tr>
@@ -539,7 +539,7 @@ export default function Page() {
         <p className="note">
           Row counts are table-local source records. They are not deduplicated
           person counts, and identities from NCAA releases are kept separate
-          from ESPN-derived records unless an exact source key is available.
+          from retained records unless an exact source key is available.
         </p>
         <div className="table-scroll">
           <table className="data-table">
@@ -569,9 +569,7 @@ export default function Page() {
                     {dataset.latest_source_at ? date(dataset.latest_source_at) : "—"}
                     {dataset.source_url && (
                       <small>
-                        <a href={dataset.source_url} target="_blank" rel="noreferrer">
-                          Source release ↗
-                        </a>
+                        <span>Edition receipt recorded</span>
                       </small>
                     )}
                   </td>
@@ -620,9 +618,7 @@ export default function Page() {
                     <strong>{archive.label}</strong>
                     {archive.url && (
                       <small>
-                        <a href={archive.url} target="_blank" rel="noreferrer">
-                          Source release ↗
-                        </a>
+                        <span>Edition receipt recorded</span>
                       </small>
                     )}
                   </td>
@@ -667,7 +663,7 @@ export default function Page() {
         </p>
         <p className="note">
           <Link href="/basketball/identity-review/">Open the retained source rows →</Link>
-          {" "}Search and download a bounded page when auditing a source release.
+          {" "}Search and download a bounded page when auditing a retained edition.
         </p>
       </section>
 
@@ -776,7 +772,7 @@ export default function Page() {
           <p className="note">
             The archive currently retains {count(marketBySport.football.observations)}
             football observations across {count(marketBySport.football.games)} games
-            from the prospective ESPN Summary capture. Basketball has {count(marketBySport.basketball.observations)}
+            from the prospective schedule capture. Basketball has {count(marketBySport.basketball.observations)}
             qualifying observations in this edition. Historical imported lines
             without a publisher clock remain outside market evaluation, and
             retained reading snapshots stay separate from the scorecard.
@@ -879,8 +875,8 @@ export default function Page() {
           <div className="eyebrow">09 / Source boundary</div>
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
-            Current releases come from the attributed SportsDataverse bulk
-            store. Direct ESPN extraction is disabled under source terms, and
+            Current releases come from the retained bulk
+            store. Direct provider extraction is disabled when terms or licensing prohibit it, and
             NCAA requests stop when robots policy disallows crawling. Missing
             values remain missing; names are never used to invent identities.
           </p>

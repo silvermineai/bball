@@ -25,8 +25,7 @@ export default function Page() {
         opponent/venue design with recency weighting; lower defensive eFG, TO,
         ORB and FT rate are better. SOS averages rated opponents’ adjusted net
         strength; “rated opp.” reports that sample. The unadjusted factor
-        columns use pooled box-score totals; FT rate is FTA/FGA. These are
-        independent Silvermine estimates, not KenPom ratings.
+        columns use pooled box-score totals; FT rate is FTA/FGA. These are independent Silvermine estimates built from the retained game archive.
       </p>
     </>
   );

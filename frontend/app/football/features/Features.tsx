@@ -554,12 +554,7 @@ export default function Features({ summary }: { summary: FeatureSummary }) {
           <Link className="hero-link" href="/football/matchups/">
             Current football forecasts →
           </Link>
-          <a
-            className="hero-link"
-            href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split"
-          >
-            Temporal evaluation guidance ↗
-          </a>
+          <span className="note">Temporal evaluation uses ordered, pregame cutoffs.</span>
         </div>
       </section>
       <section className="section">
@@ -601,9 +596,7 @@ export default function Features({ summary }: { summary: FeatureSummary }) {
           <summary>Advanced source receipts</summary>
           {summary.sources.map((s) => (
             <p key={s.season}>
-              <a className="hero-link" href={s.url}>
-                SportsDataverse · {s.dataset} / {s.season} ↗
-              </a>
+              <span className="hero-link">Retained edition · {s.dataset} / {s.season}</span>
               <br />
               <small>Retrieved {s.fetched_at}</small>
               <br />

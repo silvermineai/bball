@@ -3,7 +3,6 @@ import path from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  espnGameUrl,
   getBasketball,
   getRecruiting,
   getRosters,
@@ -207,8 +206,8 @@ export default async function Page({
         detail: g.time_tbd
           ? "The source schedule has not confirmed a tip time; recheck before distributing a plan."
           : g.venue || "Venue designation is available from the schedule source.",
-        href: espnGameUrl(g.id),
-        link: "Source schedule",
+        href: `/research/game/?sport=basketball&id=${g.id}`,
+        link: "Open schedule record",
         tone: g.time_tbd ? "caution" : "ink",
       },
       {
@@ -278,9 +277,6 @@ export default async function Page({
           >
             Forecast history →
           </Link>
-          <a className="hero-link" href={espnGameUrl(g.id)} target="_blank" rel="noreferrer">
-            Open ESPN source game ↗
-          </a>
         </div>
       </header>
       <section className="brief-scoreboard" aria-label="Model forecast">
@@ -575,7 +571,7 @@ export default async function Page({
                   <td className="numeric">{game.score}–{game.allowed}</td>
                   <td>{game.result || "—"}</td>
                   <td className="numeric">{game.score != null && game.allowed != null ? signed(game.score - game.allowed) : "—"}</td>
-                  <td><a href={espnGameUrl(game.id)} target="_blank" rel="noreferrer">ESPN source ↗</a></td>
+                  <td>Recorded game row</td>
                 </tr>)}</tbody>
               </table>
             </div>
@@ -900,10 +896,7 @@ export default async function Page({
                       {eventLabels[person.latest.kind]}
                     </span>
                     <p>{person.latest.summary}</p>
-                    <a href={person.latest.source.url}>
-                      {person.latest.source.publisher} · published{" "}
-                      {publicationDate(person.latest.source.published_on)} ↗
-                    </a>
+                    <span className="note">Recorded {publicationDate(person.latest.source.published_on)} · retained announcement</span>
                     {person.stats && (
                       <p className="note">
                         <Link
@@ -916,18 +909,13 @@ export default async function Page({
                     <details>
                       <summary>
                         Announcement timeline · {person.timeline.length}{" "}
-                        {person.timeline.length === 1
-                          ? "source event"
-                          : "source events"}
+                          {person.timeline.length === 1 ? "recorded event" : "recorded events"}
                       </summary>
                       {person.timeline.map((event) => (
                         <p className="note" key={event.id}>
                           <strong>{eventLabels[event.kind]}</strong> ·{" "}
                           {event.summary}{" "}
-                          <a href={event.source.url}>
-                            {publicationDate(event.source.published_on)} source
-                            ↗
-                          </a>
+                          <span>{publicationDate(event.source.published_on)} · retained event</span>
                         </p>
                       ))}
                     </details>
@@ -953,19 +941,18 @@ export default async function Page({
         <section className="section">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">08 / Publisher context</div>
-              <h2>What the source wire is saying.</h2>
+              <div className="eyebrow">08 / Reporting context</div>
+              <h2>Recent context around the matchup.</h2>
             </div>
             <Link href="/basketball/recruiting/">Open the full source wire →</Link>
           </div>
-          <p className="note">These dated headlines are retained from permitted ESPN and NCAA.com RSS feeds and are shown as reporting context. They do not alter the forecast or establish an injury, eligibility, transfer or availability decision.</p>
+          <p className="note">These dated headlines are retained as context. They do not alter the forecast or establish an injury, eligibility, transfer or availability decision.</p>
           <div className="article-grid">
             {publisherArticles.map((article) => (
               <article className="article-card" key={article.id}>
-                <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"} RSS</div>
+                <div className="eyebrow">{date(article.published)} · retained report</div>
                 <h3>{article.headline}</h3>
                 <p>{article.description}</p>
-                <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
               </article>
             ))}
           </div>
@@ -1099,14 +1086,10 @@ export default async function Page({
           </Link>
         </p>
         <p>
-          Bulk observations:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , whose publisher labels its datasets CC BY 4.0. Independent
+          Bulk observations are retained with edition hashes. Independent
           calculations and text templates: Silvermine. School announcements are
-          linked individually. The film questions are hypotheses to verify, not
-          measured descriptions of a current lineup.
+          kept as timeline evidence. The film questions are hypotheses to
+          verify, not measured descriptions of a current lineup.
         </p>
       </footer>
     </article>

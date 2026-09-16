@@ -171,7 +171,7 @@ export default function Game() {
                         Source file SHA-256: {r.payload.source_sha256}
                       </p>
                       {r.payload.source_url && (
-                        <a href={r.payload.source_url}>Source release ↗</a>
+                        <span>Retained game record</span>
                       )}
                     </>
                   ) : (

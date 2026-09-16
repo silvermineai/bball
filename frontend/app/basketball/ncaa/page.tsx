@@ -1,35 +1,34 @@
 import NCAAIndividual from "./NCAAIndividual";
 import { Suspense } from "react";
 
-export const metadata = { title: "NCAA national basketball player leaders" };
+export const metadata = { title: "National college basketball player leaders" };
 
 export default function Page() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">NCAA Statistics / 2025–26 final rankings</div>
+        <div className="eyebrow">National statistics / 2025–26 final rankings</div>
         <h1>Every national leaderboard in one place.</h1>
         <p>
-          Browse the NCAA’s published men’s basketball individual leaderboards
-          across Divisions I, II and III. Search a player, compare programs and
+          Browse published men’s basketball individual leaderboards across
+          Divisions I, II and III. Search a player, compare programs and
           switch from rates to published totals for scoring, rebounding,
-          shooting, minutes, defensive events, possession context and attempt totals while keeping the source
-          identity intact. When the NCAA ranking snapshot omits assists per
-          game, the board fills that field from the exact-ID NCAA player-box
-          release and labels it as a derived supplement.
+          shooting, minutes, defensive events, possession context and attempt
+          totals while keeping the archive identity intact. When a ranking
+          snapshot omits assists per game, the board fills that field from the
+          exact-ID player-box archive and labels it as a derived supplement.
         </p>
       </div>
-      <Suspense fallback={<p role="status">Loading NCAA national records…</p>}>
+      <Suspense fallback={<p role="status">Loading national records…</p>}>
         <NCAAIndividual />
       </Suspense>
       <p className="note">
-        Source snapshots were collected with a rate-limited fetcher that checks
-        robots.txt and stores only the structured derivative. NCAA IDs are kept
-        separate from ESPN and SportsDataverse identities; no name-only join is
-        performed. Publisher rank is shown only when the source supplies it;
-        “Search archive by name” is a research lead only: verify the
-        program, season and source identity before treating records as the same
-        player. <a href="https://stats.ncaa.org/rankings/national_ranking">NCAA Statistics ↗</a>
+        Snapshots are collected with a rate-limited fetcher and stored as a
+        structured derivative. Archive IDs stay separate until an audited
+        crosswalk exists; no name-only join is performed. A rank appears only
+        when the archive supplies it. Search results are research leads, so
+        verify the program, season and identity before treating records as the
+        same player.
       </p>
     </>
   );

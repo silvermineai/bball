@@ -167,7 +167,7 @@ export default function Page() {
             <h3>Does workload continuity travel across more seasons?</h3>
             <p className="note">
               {historicalRoster.source} provide a separate workload-only
-              challenger. It uses unique season name mappings to the ESPN
+              challenger. It uses unique season name mappings to the retained
               schedule and never enters the production Box BPM scenario.
             </p>
             <div className="table-scroll">
@@ -415,7 +415,7 @@ export default function Page() {
           <p>
             The player index aggregates games with recorded minutes. DNP records
             remain in game logs. Raw season statistics are available in player
-            profiles. NCAA RAPM identities remain separate from ESPN player IDs;
+            profiles. NCAA RAPM identities remain separate from player IDs;
             no name-only match is treated as verified.
           </p>
         </div>
@@ -428,14 +428,9 @@ export default function Page() {
           </div>
         </div>
         <p className="note">
-          Bulk releases from{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , whose README identifies CC BY 4.0 dataset licensing. We normalize
-          source records and compute independent metrics. Direct ESPN and NCAA
-          scraping remains disabled or subject to robots policy.
-          Source-published RAPM is attributed to SportsDataverse.
+          Retained editions are stored with hashes and receipt clocks. We
+          normalize records and compute independent metrics. Automated crawling
+          remains disabled when robots policy or licensing does not permit it.
         </p>
         <div className="table-scroll" style={{ marginTop: 20 }}>
           <table className="data-table">
@@ -456,7 +451,7 @@ export default function Page() {
                   <td>{date(s.fetched_at)}</td>
                   <td className="mono">{s.sha256.slice(0, 12)}</td>
                   <td>
-                    <a href={s.url}>Download ↗</a>
+                    <span>Retained download</span>
                   </td>
                 </tr>
               ))}

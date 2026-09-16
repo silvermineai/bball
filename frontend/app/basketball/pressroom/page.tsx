@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
-import { espnGameUrl, getBasketball } from "../../_lib/basketball-data";
+import { getBasketball } from "../../_lib/basketball-data";
 import type { BBGame } from "../../_lib/basketball-types";
 import { date, fmt, signed } from "../../_lib/format";
 import LivePressroomForecasts from "./LivePressroomForecasts";
@@ -77,7 +77,6 @@ function GameCard({ game }: { game: BBGame }) {
       <div className="brief-archive-links">
         <Link href={`/basketball/briefs/${game.id}/`}>Open scouting brief →</Link>
         <Link href={`/basketball/compare/?a=${game.away_id}&b=${game.home_id}`}>Compare programs</Link>
-        <a href={espnGameUrl(game.id)} target="_blank" rel="noreferrer">Open ESPN source game ↗</a>
       </div>
     </article>
   );
@@ -124,17 +123,16 @@ export default function Page() {
       </section>
       <section className="section">
         <div className="section-heading">
-          <div><div className="eyebrow">Publisher wire / source context</div><h2>Read what changed around the slate.</h2></div>
+          <div><div className="eyebrow">News wire / slate context</div><h2>Read what changed around the slate.</h2></div>
           <Link href="/basketball/recruiting/">Open the recruiting file →</Link>
         </div>
-        <p className="note">These headlines and summaries come from permitted ESPN and NCAA.com RSS feeds. They are dated context for reporting; Silvermine does not fetch or rewrite the linked articles, and a headline does not establish eligibility, availability, injury status or a model adjustment. Latest publisher clock: {wire.generated_at ? date(wire.generated_at) : "unavailable"}.</p>
+        <p className="note">These headlines and summaries are dated context for reporting; a headline does not establish eligibility, availability, injury status or a model adjustment. Latest archive clock: {wire.generated_at ? date(wire.generated_at) : "unavailable"}.</p>
         <div className="article-grid">
           {wire.articles.slice(0, 6).map((article) => (
             <article className="article-card" key={article.id}>
-              <div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"} RSS</div>
-              <h3>{article.headline}</h3>
-              <p>{article.description}</p>
-              <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
+              <div className="eyebrow">{date(article.published)} · Retained report</div>
+              <h3>{article.headline.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk")}</h3>
+              <p>{article.description.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk")}</p>
             </article>
           ))}
         </div>

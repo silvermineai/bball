@@ -23,7 +23,7 @@ type Result = {
 
 const datasetLabels: Record<Dataset, string> = {
   all: "All withheld rows",
-  player_box: "ESPN-derived player box",
+  player_box: "Retained player box",
   ncaa_player_box: "NCAA player box",
   ncaa_shots: "NCAA shooting events",
   publisher_player_value: "Publisher player value",

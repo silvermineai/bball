@@ -54,8 +54,7 @@ export default function Page() {
       </div>
       <p className="note">
         Program identities are matched to the latest imported team directory.
-        This is our independent baseline, not ESPN FPI, SP+, or another
-        publisher’s rating.
+        This is our independent baseline, built from the retained game archive.
       </p>
     </>
   );

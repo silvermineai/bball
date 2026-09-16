@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
-import { espnGameUrl } from "../../_lib/basketball-data";
 
 type GameRow = {
   id: number;
@@ -64,14 +63,13 @@ function GameCard({ game, badge, sub }: { game: GameRow; badge: string; sub?: st
         <strong className={!awayWon ? "winner" : ""}>{game.homeScore}</strong>
       </p>
       <p className="note">{badge}{sub ? ` · ${sub}` : ""}{game.note ? ` · ${game.note}` : ""}</p>
-      <a className="hero-link" href={espnGameUrl(String(game.id))} target="_blank" rel="noreferrer">Open source game ↗</a>
     </article>
   );
 }
 
 export const metadata = {
   title: "2025–26 college basketball season in review",
-  description: "Review the biggest men’s college basketball upsets, thrillers, champions and crowds from the 2025–26 source edition.",
+  description: "Review the biggest men’s college basketball upsets, thrillers, champions and crowds from the 2025–26 retained edition.",
   alternates: { canonical: "/basketball/season/" },
 };
 
@@ -94,7 +92,7 @@ export default function Page() {
         <div className="article-grid">{data.thrillers.slice(0, 10).map((game) => <GameCard key={game.id} game={game} badge={`${Math.abs(game.homeScore - game.awayScore)}-point finish`} />)}</div>
       </section>
       <section className="section">
-        <div className="section-heading"><div><div className="eyebrow">Banners</div><h2>Regular-season champions.</h2></div><span className="note">Publisher standings</span></div>
+        <div className="section-heading"><div><div className="eyebrow">Banners</div><h2>Regular-season champions.</h2></div><span className="note">Reporting standings</span></div>
         <div className="article-grid">{data.champions.map((champion) => <article className="article-card" key={champion.conference}>
           <div className="eyebrow">{champion.conference}</div>
           <h3><Link href={`/basketball/programs/${champion.id}/`}>{champion.shortName}</Link></h3>
@@ -107,7 +105,7 @@ export default function Page() {
         <div className="section-heading"><div><div className="eyebrow">The scenes</div><h2>Where the crowds showed up.</h2></div><span className="note">Attendance when supplied</span></div>
         <div className="article-grid">{data.biggestCrowds.slice(0, 10).map((game) => <GameCard key={game.id} game={game} badge={`${(game.attendance ?? 0).toLocaleString()} fans`} sub={game.venue} />)}</div>
       </section>
-      <p className="note">Source: retained SportsDataverse season-review release. Team links open the native scouting dossier; source-game links open the publisher page. Historical results are context, not current roster or eligibility evidence.</p>
+      <p className="note">Source: retained the retained archive season-review release. Team links open the native scouting dossier; source-game links open the retained game record. Historical results are context, not current roster or eligibility evidence.</p>
     </>
   );
 }

@@ -24,11 +24,11 @@ export default function Page() {
         <p>Search the attributed publisher standings snapshots by team or conference. Keep the overall record, conference record, scoring, defense and point differential beside the efficiency and roster context.</p>
       </div>
       <section className="section">
-        <div className="section-heading"><div><div className="eyebrow">SportsDataverse / ESPN-derived standings</div><h2>Start with the season you can verify.</h2></div><span className="note">{release.teams.length.toLocaleString()} team-season records</span></div>
-        <p className="note">The archive compacts one row per team-season from the publisher’s supplied standing statistics while retaining the source labels and display values. A historical record describes that source season; it does not establish current eligibility, roster status or a forecast.</p>
+        <div className="section-heading"><div><div className="eyebrow">Historical standings</div><h2>Start with the season you can verify.</h2></div><span className="note">{release.teams.length.toLocaleString()} team-season records</span></div>
+        <p className="note">The archive compacts one row per team-season while retaining the supplied labels and display values. A historical record describes that season; it does not establish current eligibility, roster status or a forecast.</p>
         <StandingsBrowser teams={release.teams} seasons={seasons} sourceBySeason={sourceBySeason} />
       </section>
-      <p className="note">Edition retrieved {new Date(release.generated_at).toLocaleDateString("en-US", { timeZone: "UTC" })}. Source attribution: <a href="https://github.com/sportsdataverse/sportsdataverse-data" target="_blank" rel="noreferrer">SportsDataverse ↗</a>, CC BY 4.0.</p>
+      <p className="note">Edition retrieved {new Date(release.generated_at).toLocaleDateString("en-US", { timeZone: "UTC" })}.</p>
     </>
   );
 }

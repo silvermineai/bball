@@ -437,7 +437,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </>
       )}
       <p className="note">
-        EPA values are published by SportsDataverse. Passing, rushing and
+        Passing, rushing and
         receiving EPA can credit overlapping plays and must not be added
         together. Defensive and special-teams box scores are available in player
         records; no composite rank is assigned to those roles.
@@ -490,9 +490,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           </p>
           {coverage?.sources.map((s) => (
             <p key={s.dataset}>
-              <a className="hero-link" href={s.url}>
+              <span className="hero-link">
                 {s.dataset} · {s.season} ↗
-              </a>
+              </span>
               <br />
               <small>Retrieved {s.fetched_at}</small>
               <br />
@@ -500,7 +500,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             </p>
           ))}
           <p className="note">
-            SportsDataverse bulk releases, publisher-stated CC BY 4.0.
+            Retained editions with CC BY 4.0 coverage.
             Silvermine retains raw fields, excludes team placeholders from
             athlete lists and ranks eligible offensive production. Source IDs
             are not independently verified person-level identities.

@@ -22,8 +22,6 @@ const monthLabel = (value: string) =>
   });
 const percent = (value: number | null) =>
   value === null ? "—" : fmt(value * 100) + "%";
-const sourceGameUrl = (id: string) =>
-  `https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(id)}`;
 
 type RosterTransition = {
   test_season: number;
@@ -374,7 +372,7 @@ export default function Evaluation({
           </table>
         </div>
         <p className="note" style={{ marginTop: 16 }}>
-          Historical transitions use the NCAA roster release and have no publisher Box BPM, so their scores are not directly comparable with the current ESPN-derived production challenger. {rosterModel.coverage.current_predicted_teams.toLocaleString()} teams have current roster features; the 2026–27 scenario is a research prompt and does not change win probabilities, uncertainty or ledger registrations.
+          Historical transitions use the roster release and have no publisher Box BPM, so their scores are not directly comparable with the current retained production challenger. {rosterModel.coverage.current_predicted_teams.toLocaleString()} teams have current roster features; the 2026–27 scenario is a research prompt and does not change win probabilities, uncertainty or ledger registrations.
         </p>
         <p className="note">{rosterModel.limitations.join(" ")}</p>
         <p><Link href="/basketball/gameplan/">Open roster-aware game planning ↗</Link></p>
@@ -404,7 +402,7 @@ export default function Evaluation({
                     <strong>{row.game.away_name} at {row.game.home_name}</strong>
                     <small>{date(row.game.starts_at)} · final {row.game.away_score}–{row.game.home_score} · predicted margin {fmt(row.game.weekly.home_margin)} · actual {fmt(actual)}</small>
                     <span>{fmt(row.absoluteError, 1)}-point absolute margin error{row.outsideRange ? " · outside the published 80% range" : " · inside the published 80% range"}</span>
-                    <a href={sourceGameUrl(row.game.id)} target="_blank" rel="noreferrer">Open source game ↗</a>
+                    <span className="note">Recorded game row</span>
                   </div>
                 );
               })}
@@ -418,7 +416,7 @@ export default function Evaluation({
                   <strong>{row.game.away_name} at {row.game.home_name}</strong>
                   <small>{date(row.game.starts_at)} · weekly error {fmt(row.absoluteError, 1)} points · final {row.game.away_score}–{row.game.home_score}</small>
                   <span>Weekly fit reduced absolute margin error by {fmt(row.improvement, 1)} points versus preseason</span>
-                  <a href={sourceGameUrl(row.game.id)} target="_blank" rel="noreferrer">Open source game ↗</a>
+                  <span className="note">Recorded game row</span>
                 </div>
               ))}
               {!highlights.improvements.length && <p className="empty">No weekly improvement in this selection.</p>}
@@ -955,20 +953,8 @@ export default function Evaluation({
           ))}
         </div>
         <p className="note">
-          Temporal evaluation and calibration references:{" "}
-          <a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split">
-            scikit-learn’s time-series evaluation guidance
-          </a>{" "}
-          and{" "}
-          <a href="https://scikit-learn.org/stable/modules/calibration.html">
-            probability calibration documentation
-          </a>
-          . Source data:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , labeled CC BY 4.0 by its publisher. Source receipts and download
-          URLs are in the summary.{" "}
+          Temporal evaluation uses ordered time splits and probability
+          calibration. Archive receipts and download URLs are in the summary.{" "}
           <Link href="/basketball/model/">
             Read the production model notebook →
           </Link>

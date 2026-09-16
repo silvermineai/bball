@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
 import { fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
@@ -54,7 +55,7 @@ export default function NCAAIndividual() {
     const controller = new AbortController();
     fetch("/api/basketball/research/ncaa-leaders?meta=1", { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("Live NCAA leaderboard coverage unavailable.");
+        if (!response.ok) throw new Error("Live leaderboard coverage unavailable.");
         return response.json() as Promise<LiveLeaderMeta>;
       })
       .then((value) => {
@@ -97,7 +98,7 @@ export default function NCAAIndividual() {
     setLiveError("");
     fetch(`/api/basketball/research/ncaa-leaders?${params}`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("Live NCAA leaderboard unavailable; showing the checked-in release.");
+        if (!response.ok) throw new Error("Live leaderboard unavailable; showing the checked-in edition.");
         return response.json() as Promise<LiveLeaderResponse>;
       })
       .then((value) => {
@@ -107,7 +108,7 @@ export default function NCAAIndividual() {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
           setFallbackRequested(true);
           setLive(null);
-          setLiveError(reason instanceof Error ? reason.message : "Live NCAA leaderboard unavailable; showing the checked-in release.");
+          setLiveError(reason instanceof Error ? reason.message : "Live leaderboard unavailable; showing the checked-in edition.");
         }
       });
     return () => controller.abort();
@@ -170,42 +171,42 @@ export default function NCAAIndividual() {
           <div><strong>{(sourceCoverage?.players || 0).toLocaleString()}</strong><span>Published player records</span></div>
           <div><strong>{divisionCount.toLocaleString()}</strong><span>{division === "all" ? "All division records" : `Division ${division} records`}</span></div>
           <div><strong>{(liveMeta?.season || data?.season || 2026) - 1}–{String(liveMeta?.season || data?.season || 2026).slice(-2)}</strong><span>Final statistics season</span></div>
-          <div><strong>{data?.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "D1"}</strong><span>Source snapshot</span></div>
+          <div><strong>{data?.generated_at ? new Date(data.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "D1"}</strong><span>Archive snapshot</span></div>
         </div>
-        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live D1 record: ${live.provenance?.dataset || "NCAA source archive"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · publisher rank retained when supplied"}.` : liveError ? <>{liveError} <button className="text-link" type="button" onClick={retryLiveLeaders}>Retry live record</button></> : "Using the checked-in source release while the live D1 record loads."} These are qualifying rows from NCAA Statistics final national-ranking pages. Counts vary by statistic and division; a missing value means that snapshot did not publish a matching row. Assists per game and total assists may be derived supplements from the exact-ID NCAA player-box release when the ranking page is unavailable; the board never creates a publisher rank for those fields. They are source leaderboards, not a complete census or a recruiting ranking.</p>
+        <p className="note" style={{ marginBottom: 20 }}>{live ? `Live record: ${live.provenance?.dataset || "archive edition"}${live.provenance?.publisher_rank === false ? " · this measure is exact-ID derived" : " · retained rank when supplied"}.` : liveError ? <>{liveError} <button className="text-link" type="button" onClick={retryLiveLeaders}>Retry live record</button></> : "Using the checked-in edition while the live record loads."} These are qualifying rows from the final national-ranking archive. Counts vary by statistic and division; a missing value means that edition did not publish a matching row. Assists per game and total assists may be derived supplements from the exact-ID player-box archive when the ranking page is unavailable; the board never creates a rank for those fields. They are leaderboards, not a complete census or a recruiting ranking.</p>
         {stat === "apg" && apgSupplement && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Assists per game uses an exact-ID Division I supplement.</strong>
-            <p>{apgSupplement.values.toLocaleString()} Division I values for {apgSupplement.season - 1}–{String(apgSupplement.season).slice(-2)} are derived from <em>{apgSupplement.dataset}</em>: {apgSupplement.basis}. {apgSupplement.publisher_rank}. <a href={apgSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+            <p>{apgSupplement.values.toLocaleString()} Division I values for {apgSupplement.season - 1}–{String(apgSupplement.season).slice(-2)} are derived from <em>{apgSupplement.dataset}</em>: {apgSupplement.basis}. {apgSupplement.publisher_rank}. Retained in the archive receipt.</p>
           </div>
         )}
         {stat === "ast" && astSupplement && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>Total assists uses an exact-ID Division I supplement.</strong>
-            <p>{astSupplement.values.toLocaleString()} Division I values for {astSupplement.season - 1}–{String(astSupplement.season).slice(-2)} are derived from <em>{astSupplement.dataset}</em>: {astSupplement.basis}. {astSupplement.publisher_rank}. <a href={astSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+            <p>{astSupplement.values.toLocaleString()} Division I values for {astSupplement.season - 1}–{String(astSupplement.season).slice(-2)} are derived from <em>{astSupplement.dataset}</em>: {astSupplement.basis}. {astSupplement.publisher_rank}. Retained in the archive receipt.</p>
           </div>
         )}
         {stat !== "apg" && stat !== "ast" && boxDerivedSupplement && boxDerivedCount && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>{ncaaStatLabels[stat]} includes an exact-ID Division I supplement.</strong>
-            <p>{boxDerivedCount.toLocaleString()} missing source values for {boxDerivedSupplement.season - 1}–{String(boxDerivedSupplement.season).slice(-2)} are filled from <em>{boxDerivedSupplement.dataset}</em>: {boxDerivedSupplement.basis}. {boxDerivedSupplement.publisher_rank}. <a href={boxDerivedSupplement.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+            <p>{boxDerivedCount.toLocaleString()} missing values for {boxDerivedSupplement.season - 1}–{String(boxDerivedSupplement.season).slice(-2)} are filled from <em>{boxDerivedSupplement.dataset}</em>: {boxDerivedSupplement.basis}. {boxDerivedSupplement.publisher_rank}. Retained in the archive receipt.</p>
           </div>
         )}
         {live && liveDerived && live.provenance?.source_url && (
           <div className="paper-panel" role="status" style={{ marginBottom: 24 }}>
             <strong>{ncaaStatLabels[stat]} live source provenance.</strong>
-            <p>{live.provenance.note || "This live measure includes values derived from the exact-ID NCAA player-box release."} <a href={live.provenance.source_url} target="_blank" rel="noreferrer">Open the source release ↗</a></p>
+            <p>{live.provenance.note || "This live measure includes values derived from the exact-ID player-box archive."} Retained in the archive receipt.</p>
           </div>
         )}
         {coverage.find((row) => row.stat === stat && Object.values(row.divisions).every((value) => value === 0)) && (
           <div className="paper-panel source-gap" role="status">
-            <strong>{ncaaStatLabels[stat]} is unavailable in this NCAA snapshot.</strong>
-            <p>The source page did not publish qualifying rows for this measure in the cached final edition. Nothing is being converted to zero. For an NCAA-derived assists ranking built from the source box release, open the <a href="/basketball/ncaa-rankings/?metric=apg">player rankings archive →</a></p>
+            <strong>{ncaaStatLabels[stat]} is unavailable in this archive snapshot.</strong>
+            <p>The edition did not publish qualifying rows for this measure. Nothing is being converted to zero. For an assists ranking built from the player-box archive, open the <a href="/basketball/ncaa-rankings/?metric=apg">player rankings archive →</a></p>
           </div>
         )}
         <details className="career-coverage-details" style={{ marginBottom: 24 }}>
           <summary>Published values by division and measure</summary>
-          <p className="note">The matrix counts non-null values in this release. A blank source field is left blank; it is never converted to zero.</p>
+          <p className="note">The matrix counts non-null values in this edition. A blank field is left blank; it is never converted to zero.</p>
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr><th>Measure</th><th className="numeric">Division I</th><th className="numeric">Division II</th><th className="numeric">Division III</th></tr></thead>
@@ -214,8 +215,8 @@ export default function NCAAIndividual() {
           </div>
         </details>
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{totalRows.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} values on this page · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
-        <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Publisher rank is shown only when that NCAA page supplied a rank for the selected measure.</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Publisher rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Source row evidence</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><a href={`https://stats.ncaa.org/players/${p.player_id}`} target="_blank" rel="noreferrer">{p.name} ↗</a><small>NCAA {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${liveMeta?.season || data?.season || 2026}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_ncaa_id ? <a href={`https://stats.ncaa.org/teams/${p.team_ncaa_id}`} target="_blank" rel="noreferrer">{p.team_name || "NCAA team"} ↗</a> : (p.team_name || "—")}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Publisher headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
+        <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Retained rank is shown only when the edition supplied a rank for the selected measure.</p>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Retained measures</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><Link href={`/basketball/ncaa-player/?id=${p.player_id}&season=${liveMeta?.season || data?.season || 2026}`}>{p.name} →</Link><small>Archive ID {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${liveMeta?.season || data?.season || 2026}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_name || "—"}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Archive headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}
         <div className="pagination"><span>{totalRows.toLocaleString()} records · page {page + 1} of {Math.max(1, Math.ceil(totalRows / 40))}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * 40 >= totalRows} onClick={() => setPage(page + 1)}>Next →</button></div></div>
       </>}

@@ -3,8 +3,8 @@ import path from "node:path";
 import NewsArchive, { type FeedError, type PublisherArticle } from "./NewsArchive";
 
 export const metadata = {
-  title: "College basketball publisher news archive",
-  description: "Searchable ESPN and NCAA.com men’s college basketball publisher headlines with source links, dates and attribution.",
+  title: "College basketball news archive",
+  description: "Searchable men’s college basketball headlines with dates and retained summaries.",
   alternates: { canonical: "/basketball/news/" },
 };
 
@@ -18,9 +18,9 @@ export default function Page() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">Source desk / publisher reporting</div>
+        <div className="eyebrow">News archive / reporting context</div>
         <h1>Read the news.<br /><em>Keep the clock.</em></h1>
-        <p>Search the retained men’s college basketball headlines that inform the coaching desk. Every row keeps its publisher, publication time and source URL attached so reporting context stays distinct from Silvermine’s statistics, forecasts and recruiting evidence.</p>
+        <p>Search retained men’s college basketball headlines that add context to the stats desk. Publication times stay attached so reporting remains distinct from Silvermine’s statistics, forecasts and recruiting evidence.</p>
         <div className="hero-actions"><a className="button" href="/basketball/pressroom/">Open the press room ↗</a><a className="hero-link" href="/basketball/recruiting/">Open recruiting evidence →</a></div>
       </div>
       <NewsArchive generatedAt={release.generated_at} articles={(release.articles || []).filter((article) => article.sport === "mens-college-basketball")} feeds={release.feeds || []} termsUrl={release.attribution?.terms} feedErrors={release.attribution?.feed_errors} />

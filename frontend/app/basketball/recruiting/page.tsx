@@ -6,7 +6,7 @@ import { getRecruiting } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
-import EspnRecruitingBoard from "./EspnRecruitingBoard";
+import RecruitingBoard from "./EspnRecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 export const metadata = {
@@ -72,7 +72,7 @@ export default function Page() {
       <LiveBasketballProspectStatus />
       <RecruitingWire articles={recruitingNews} />
       <MovementWatch />
-      <EspnRecruitingBoard />
+      <RecruitingBoard />
       <AuthorizedIntake />
       <section className="section recruiting-context">
         <div className="section-heading">

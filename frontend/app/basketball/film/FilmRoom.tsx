@@ -97,11 +97,11 @@ export default function FilmRoom({ videos, teams }: Props) {
           </div>
           <div className="film-search-grid">
             {searchLinks(team).map((link) => (
-              <a className="paper-panel film-search-card" key={link.label} href={`https://www.youtube.com/results?search_query=${encodeURIComponent(link.query)}`} target="_blank" rel="noreferrer">
-                <span className="eyebrow">YouTube search ↗</span>
+              <div className="paper-panel film-search-card" key={link.label}>
+                <span className="eyebrow">Search prompt</span>
                 <strong>{link.label}</strong>
                 <span className="note">{link.query}</span>
-              </a>
+              </div>
             ))}
           </div>
         </section>
@@ -113,16 +113,16 @@ export default function FilmRoom({ videos, teams }: Props) {
             <div className="eyebrow">{team ? `Matched to ${team.shortName}` : "Latest published clips"}</div>
             <h2>{filtered.length ? "Watch, pause, ask better questions." : "No clips in this queue."}</h2>
           </div>
-          <span className="note">Feeds refresh with each data pull.</span>
+          <span className="note">Retained clips refresh with each data pull.</span>
         </div>
         {filtered.length === 0 ? (
-          <p className="note">The current official feeds have no linked film for this selection. Use the search prompts above to find more footage.</p>
+          <p className="note">The current retained feeds have no linked film for this selection. Use the search prompts above to find more footage.</p>
         ) : (
           <div className="film-grid">
             {filtered.map((video) => (
               <figure className="film-card" key={video.videoId}>
                 {playing === video.videoId ? (
-                  <iframe className="film-frame" src={`https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1`} title={video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  <div className="film-frame" role="status">Clip selected · use the retained video record to review playback.</div>
                 ) : (
                   <button className="film-thumb" type="button" onClick={() => setPlaying(video.videoId)} aria-label={`Play ${video.title}`}>
                     {video.thumbnail ? <img src={video.thumbnail} alt="" loading="lazy" /> : <span />}

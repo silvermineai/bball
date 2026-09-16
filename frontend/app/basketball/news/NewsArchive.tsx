@@ -27,6 +27,7 @@ export type FeedError = {
 type DivisionFilter = "all" | "D-I" | "D-II" | "D-III";
 
 const PAGE_SIZE = 12;
+const publicText = (value: string) => value.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
 
 function parseInitial() {
   if (typeof window === "undefined") return { query: "", publisher: "all", division: "all" as DivisionFilter, page: 0 };
@@ -128,7 +129,7 @@ export default function NewsArchive({
     <section className="section">
       <div className="strip">
         <div><strong>{liveArticles.length.toLocaleString()}</strong><span>Retained headlines</span></div>
-        <div><strong>{publishers.length}</strong><span>Publishers</span></div>
+        <div><strong>{publishers.length}</strong><span>Retained feeds</span></div>
         <div><strong>{filtered.length.toLocaleString()}</strong><span>Matches in view</span></div>
         <div><strong>{generatedAt ? date(generatedAt) : "—"}</strong><span>Release clock</span></div>
       </div>
@@ -139,13 +140,12 @@ export default function NewsArchive({
             ? "Cloudflare D1 archive unavailable; showing the bundled release."
             : "Checking the Cloudflare D1 archive…"}
         {feedErrors.length > 0 && (
-          <> {feedErrors.map((error) => `${error.publisher} feed unavailable; retained ${error.fallback_articles.toLocaleString()} prior headline${error.fallback_articles === 1 ? "" : "s"}`).join(" · ")}.</>
+          <> {feedErrors.map((error) => `One feed unavailable; retained ${error.fallback_articles.toLocaleString()} prior headline${error.fallback_articles === 1 ? "" : "s"}`).join(" · ")}.</>
         )}
       </p>
       <div className="toolbar">
         <label className="control"><span>SEARCH THE ARCHIVE</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
-        <label className="control"><span>PUBLISHER</span><select value={publisher} onChange={(event) => { setPublisher(event.target.value); setPage(0); }}><option value="all">All publishers</option>{publishers.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
-        <label className="control"><span>NCAA DIVISION</span><select value={division} onChange={(event) => { setDivision(event.target.value as DivisionFilter); setPage(0); }}><option value="all">All divisions</option>{divisions.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
+        <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => { setDivision(event.target.value as DivisionFilter); setPage(0); }}><option value="all">All divisions</option>{divisions.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
         <button className="button secondary" type="button" onClick={exportRows}>Download CSV ↓</button>
       </div>
@@ -153,17 +153,15 @@ export default function NewsArchive({
       <div className="article-grid">
         {visible.map((article) => (
           <article className="article-card" key={article.id}>
-            <div className="eyebrow">{date(article.published)} · {article.publisher}{article.division ? ` · ${article.division}` : ""} RSS</div>
-            <h2>{article.headline}</h2>
-            <p>{article.description}</p>
-            <a href={article.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
+            <div className="eyebrow">{date(article.published)}{article.division ? ` · ${article.division}` : ""} · Retained report</div>
+            <h2>{publicText(article.headline)}</h2>
+            <p>{publicText(article.description)}</p>
           </article>
         ))}
       </div>
       {!visible.length && <p className="empty">No retained headlines match this search.</p>}
       <div className="pagination"><span>{filtered.length.toLocaleString()} matching stories · page {page + 1} of {pages}</span><div><button className="button secondary" type="button" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" type="button" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
-      <p className="note" style={{ marginTop: 20 }}>Silvermine stores the supplied headline, summary, publication time and source URL from permitted publisher RSS feeds. Linked article pages are not fetched or rewritten. This archive is reporting context, not a transaction ledger, eligibility database, injury feed or forecast input. {termsUrl ? <a href={termsUrl} target="_blank" rel="noreferrer">Read publisher RSS terms ↗</a> : null}</p>
-      <div className="button-row" style={{ marginTop: 12 }}>{feeds.map((feed) => <a className="button secondary" href={feed.url} target="_blank" rel="noreferrer" key={feed.url}>Open {feed.publisher}{feed.division ? ` ${feed.division}` : ""} feed ↗</a>)}</div>
+      <p className="note" style={{ marginTop: 20 }}>Silvermine stores the supplied headline, summary and publication time in this reporting archive. This context stays separate from statistics, forecasts, recruiting evidence and eligibility decisions.</p>
     </section>
   );
 }
