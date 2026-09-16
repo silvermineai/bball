@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -9,7 +10,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / ".local/basketball"
 
-for season in range(2010, 2027):
+# Historical player-box objects are immutable and already retained in R2.
+# Incremental daily runs only need to publish the current season; bootstrap
+# and repair runs continue to archive the complete history.
+seasons = [2026] if os.getenv("BASKETBALL_D1_INCREMENTAL") == "1" else list(range(2010, 2027))
+for season in seasons:
     source = LOCAL / f"ncaa_mbb_player_box_{season}.parquet"
     receipt_path = source.with_name(source.name + ".receipt.json")
     if not source.exists() or not receipt_path.exists():

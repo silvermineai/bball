@@ -2,15 +2,30 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+from collections.abc import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / ".local/basketball"
 
+INCREMENTAL = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
 
-def archive(dataset: str, stem: str, seasons: range, prefix: str) -> None:
+
+def publish_seasons(seasons: Iterable[int]) -> list[int]:
+    """Return only the live season during scheduled maintenance.
+
+    Source objects are content-addressed, so re-uploading unchanged historical
+    partitions adds latency without changing the publication. Full rebuilds
+    retain the original all-season archive behavior.
+    """
+    values = list(seasons)
+    return [max(values)] if INCREMENTAL and values else values
+
+
+def archive(dataset: str, stem: str, seasons: Iterable[int], prefix: str) -> None:
     for season in seasons:
         source = LOCAL / f"{stem}_{season}.parquet"
         receipt_path = source.with_name(source.name + ".receipt.json")
@@ -45,8 +60,7 @@ def archive(dataset: str, stem: str, seasons: range, prefix: str) -> None:
         print(f"Archived NCAA {dataset} {season}", flush=True)
 
 
-archive("roster", "ncaa_mbb_team_rosters", range(2010, 2027), "ncaa-rosters")
-archive("shot", "ncaa_mbb_shots", range(2019, 2027), "ncaa-shots")
-archive("league RAPM", "ncaa_mbb_rapm", range(2011, 2027), "ncaa-rapm")
-archive("standings", "standings", range(2003, 2027), "standings")
-archive("standings", "standings", range(2003, 2027), "standings")
+archive("roster", "ncaa_mbb_team_rosters", publish_seasons(range(2010, 2027)), "ncaa-rosters")
+archive("shot", "ncaa_mbb_shots", publish_seasons(range(2019, 2027)), "ncaa-shots")
+archive("league RAPM", "ncaa_mbb_rapm", publish_seasons(range(2011, 2027)), "ncaa-rapm")
+archive("standings", "standings", publish_seasons(range(2003, 2027)), "standings")
