@@ -149,4 +149,25 @@ describe("live basketball forecast merge", () => {
     expect(merged.map((item) => item.id)).toEqual(["new", "old"]);
     expect(merged[0].home_name).toBe("New home");
   });
+
+  it("keeps a live cold-start row labeled as a fallback estimate", () => {
+    const cold = { ...prediction(-3), estimate_type: "cold_start" as const };
+    const rows = [{
+      game_id: "cold",
+      season: 2027,
+      starts_at: "2026-11-04T05:00:00Z",
+      home_id: "cold-home",
+      away_id: "cold-away",
+      home_name: "Cold home",
+      away_name: "Cold away",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: cold,
+    }] satisfies LiveForecastRow[];
+    const merged = mergeLiveBasketballForecasts([game("cold", "2026-11-04T05:00:00Z", null)], rows);
+    expect(merged[0].prediction).toBeNull();
+    expect(merged[0].fallback_prediction?.estimate_type).toBe("cold_start");
+  });
 });

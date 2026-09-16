@@ -124,6 +124,7 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
         : null;
     if (!names) return [];
     liveIds.add(row.game_id);
+    const coldStart = row.prediction?.estimate_type === "cold_start";
     return [{
       ...(base || {
         id: row.game_id,
@@ -148,7 +149,11 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
       source_start: row.source_start ?? base?.source_start ?? null,
       source_time_valid: row.source_time_valid ?? base?.source_time_valid ?? null,
       source_observed_at: row.source_observed_at ?? base?.source_observed_at ?? null,
-      prediction: row.prediction,
+      // The API stores one row per game, including cold-start estimates. Keep
+      // the distinction used by the static release so cards and filters do
+      // not promote an exploratory estimate to the primary model field.
+      prediction: coldStart ? base?.prediction ?? null : row.prediction,
+      fallback_prediction: coldStart ? row.prediction : base?.fallback_prediction ?? null,
     } satisfies BBGame];
   });
   return [...merged, ...games.filter((game) => !liveIds.has(game.id))].sort(
@@ -176,6 +181,7 @@ export async function fetchLiveForecast(
 
 export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BBGame {
   if (!row || row.game_id !== game.id || !row.home_name || !row.away_name) return game;
+  const coldStart = row.prediction?.estimate_type === "cold_start";
   return {
     ...game,
     starts_at: row.starts_at,
@@ -190,6 +196,7 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
     source_start: row.source_start ?? game.source_start ?? null,
     source_time_valid: row.source_time_valid ?? game.source_time_valid ?? null,
     source_observed_at: row.source_observed_at ?? game.source_observed_at ?? null,
-    prediction: row.prediction,
+    prediction: coldStart ? game.prediction : row.prediction,
+    fallback_prediction: coldStart ? row.prediction : game.fallback_prediction ?? null,
   } satisfies BBGame;
 }

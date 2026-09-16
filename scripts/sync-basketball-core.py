@@ -78,6 +78,14 @@ def split_sql(statements, path, max_bytes=7_500_000):
     return batches
 
 
+def forecast_records(overview):
+    """Yield every available model estimate, including cold-start rows."""
+    for game in overview["upcoming"]:
+        prediction = game.get("prediction") or game.get("fallback_prediction")
+        if prediction is not None:
+            yield game, prediction
+
+
 def build(season=2023):
     overview = json.loads(
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
@@ -117,10 +125,12 @@ def build(season=2023):
         )
         + ");\n"
     )
-    for game in overview["upcoming"]:
-        prediction = game.get("prediction")
-        if prediction is None:
-            continue
+    forecast_rows = []
+    for game, prediction in forecast_records(overview):
+        # Primary and cold-start estimates are both Silvermine model outputs.
+        # Keep the fallback rows in D1 too, so the live forecast catalog covers
+        # every scheduled game instead of silently dropping unmodeled teams.
+        forecast_rows.append(game)
         statements.append(
             "INSERT OR REPLACE INTO bb_forecasts (game_id,model_id,created_at,prediction_json) VALUES ("
             + ",".join(
@@ -197,7 +207,7 @@ def build(season=2023):
         "season": season,
         "batches": [path.name for path in batches],
         "forecast_rows": sum(
-            1 for game in overview["upcoming"] if game.get("prediction") is not None
+            len(forecast_rows)
         ),
     }
     OUT.with_name("basketball-core-manifest.json").write_text(

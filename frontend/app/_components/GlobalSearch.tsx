@@ -85,7 +85,7 @@ export default function GlobalSearch() {
               name: row.name,
               type: "player",
               sport: "basketball",
-              detail: [row.team, row.position, row.season ? `${row.season - 1}–${String(row.season).slice(-2)}` : "Basketball"].filter(Boolean).join(" · ") || "Basketball source player",
+              detail: [row.team, row.position, row.season ? `${row.season - 1}–${String(row.season).slice(-2)}` : "Basketball"].filter(Boolean).join(" · ") || "Basketball player archive",
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}&season=${row.season || 2026}`,
             }));
           const ncaaResults: SearchResult[] = (basketballArchive.results || [])
@@ -96,7 +96,7 @@ export default function GlobalSearch() {
               name: row.name,
               type: "player",
               sport: "basketball",
-              detail: `NCAA source player · ${row.latest_season ? `${row.latest_season - 1}–${String(row.latest_season).slice(-2)}` : "historical archive"}`,
+              detail: `National archive player · ${row.latest_season ? `${row.latest_season - 1}–${String(row.latest_season).slice(-2)}` : "historical archive"}`,
               href: `/basketball/ncaa-player/?id=${encodeURIComponent(row.id)}${row.latest_season ? `&season=${encodeURIComponent(row.latest_season)}` : ""}`,
             }));
           const legacyBasketballResults: SearchResult[] = (basketballArchive.results || [])
@@ -107,7 +107,7 @@ export default function GlobalSearch() {
               name: row.name,
               type: "player",
               sport: "basketball",
-              detail: "Basketball source player",
+              detail: "Basketball player archive",
               href: `/basketball/player/?id=${encodeURIComponent(row.id)}`,
             }));
           const recruitingResults = searchRecruitingPeople(recruitingPeople, needle, 3);
@@ -119,7 +119,7 @@ export default function GlobalSearch() {
               name: row.name,
               type: "player",
               sport: "basketball",
-              detail: `ESPN ${row.season} prospect${row.committed_team_name ? ` · ${row.committed_team_name}` : row.position ? ` · ${row.position}` : ""}`,
+              detail: `Recorded ${row.season} prospect${row.committed_team_name ? ` · ${row.committed_team_name}` : row.position ? ` · ${row.position}` : ""}`,
               href: `/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`,
             }));
           const rosterResults = searchRosterPeople(rosterPeople, needle, 3);
