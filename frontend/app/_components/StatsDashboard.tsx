@@ -307,7 +307,7 @@ export default function StatsDashboard() {
       </div>
       <section className="dashboard-section" aria-labelledby="dashboard-leaders">
         <div className="dashboard-section-heading"><div><span className="eyebrow">04 / NATIONAL LEADERS</span><h2 id="dashboard-leaders">More player production</h2></div><Link href="/basketball/leaders/">Full leaders table →</Link></div>
-        <p className="dashboard-caption">The same qualified player file, grouped by the four fastest ways to find a standout: scoring, rebounding, playmaking and true shooting.</p>
+        <p className="dashboard-caption">The same qualified player file, grouped by six quick ways to find a standout: scoring, rebounding, playmaking, steals, rim protection and true shooting.</p>
         <LeaderCards players={players} season={latestSeason} />
       </section>
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">

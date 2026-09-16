@@ -1,4 +1,4 @@
-# The Coaching Annual
+# Silvermine Basketball Data Desk
 
 College sports statistics, scouting and recruiting research from Silvermine.
 
