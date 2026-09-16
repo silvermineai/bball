@@ -5,6 +5,10 @@ import ModelIntegrity from "./ModelIntegrity";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
+const displayModelNote = (value: string) => value
+  .replaceAll("NCAA and ESPN team IDs", "National and production team IDs")
+  .replaceAll("NCAA RAPM identities", "Lineup RAPM identities")
+  .replaceAll("NCAA roster release", "Roster release");
 export default function Page() {
   const d = getBasketball(),
     e = d.model.evaluation,
@@ -159,7 +163,7 @@ export default function Page() {
           <p>
             Held-out transition {rosterModel.evaluation.held_out_transition} improved on the prior-net baseline by {fmt(rosterModel.evaluation.improvement_vs_prior_net, 2)} points per 100 possessions in this edition. The result is one chronological season comparison, not a guarantee of future accuracy.
           </p>
-          {rosterModel.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+          {rosterModel.limitations.map((limitation) => <p key={limitation}>{displayModelNote(limitation)}</p>)}
         </div>
         {historicalRoster && (
           <div className="paper-panel" style={{ marginTop: 22 }}>
@@ -187,7 +191,7 @@ export default function Page() {
                 </tbody>
               </table>
             </div>
-            {historicalRoster.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+            {historicalRoster.limitations.map((limitation) => <p key={limitation}>{displayModelNote(limitation)}</p>)}
           </div>
         )}
         <div className="paper-panel" style={{ marginTop: 22 }}>
@@ -415,7 +419,7 @@ export default function Page() {
           <p>
             The player index aggregates games with recorded minutes. DNP records
             remain in game logs. Raw season statistics are available in player
-            profiles. NCAA RAPM identities remain separate from player IDs;
+            profiles. Lineup RAPM identities remain separate from player IDs;
             no name-only match is treated as verified.
           </p>
         </div>
