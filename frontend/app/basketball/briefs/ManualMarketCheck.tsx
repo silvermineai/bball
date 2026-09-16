@@ -359,7 +359,7 @@ export default function ManualMarketCheck({
               <button className="button secondary" type="button" onClick={clearHistory}>Clear local notes</button>
             </div>
           </div>
-          <p className="note">Saved in this browser with the model values and edition clock shown above. These notes are user-entered observations, not provider-verified market records.</p>
+          <p className="note">Saved in this browser with the model values and edition clock shown above. These notes are user-entered observations, not verified market records.</p>
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr><th>Saved / source</th><th className="numeric">Spread</th><th className="numeric">Total</th><th className="numeric">Moneyline</th><th className="numeric">Edges</th></tr></thead>

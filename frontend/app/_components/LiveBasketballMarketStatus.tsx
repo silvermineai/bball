@@ -59,7 +59,7 @@ export default function LiveBasketballMarketStatus() {
   }, [retryNonce]);
 
   const archiveNote = archive?.source === "partial"
-      ? `One market archive is busy (${(archive.unavailable_sources || []).join(", ") || "unknown archive"}); the counts below are partial.`
+      ? "One market archive is busy; the counts below are partial."
     : archive?.source === "unavailable"
       ? archive.unavailable_reason || "The market archive warehouse is temporarily unavailable."
       : "";

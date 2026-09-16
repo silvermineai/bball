@@ -386,7 +386,7 @@ export default function ForecastLab({
         <div className="paper-panel">
           <div className="eyebrow">Market evidence / availability</div>
           <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
-          <p>{verifiedMarketGames ? "These rows passed the provider, participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : liveMarketsError ? `${liveMarketsError} No licensed odds snapshot is available in the bundled edition.` : "No licensed odds snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a source you observed."}</p>
+          <p>{verifiedMarketGames ? "These rows passed the participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : liveMarketsError ? `${liveMarketsError} No market snapshot is available in the bundled edition.` : "No market snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a line you observed."}</p>
           <p><Link href="/research/markets/">Open market archive →</Link> · <Link href="/research/scorecard/?sport=basketball">Open forecast record →</Link></p>
         </div>
       </section>
