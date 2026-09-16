@@ -30,7 +30,10 @@ on:
         description: Capture prospective public ESPN football and basketball pickcenter quotes after the refresh
         required: true
         type: boolean
-        default: false
+        # Public pickcenter capture is safe to run without a licensed odds
+        # credential. Default it on for manual refreshes so a new slate is
+        # checked whenever the operator refreshes the research release.
+        default: true
       capture_cbbd_recruiting:
         description: Capture authorized CBBD recruiting and portal records after the refresh
         required: true
