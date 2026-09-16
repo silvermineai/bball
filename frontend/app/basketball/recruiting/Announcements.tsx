@@ -445,7 +445,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
               <div><dt>{rosters.unusable_rows?.toLocaleString() ?? "0"}</dt><dd>Unusable source rows</dd></div>
             </div>
             <p className="note">
-              Source edition: {rosters.previous_season}–{String(rosters.season).slice(-2)} roster release via SportsDataverse. The source download is the exact parquet release archived with a SHA-256 receipt.
+              Retained roster edition: {rosters.previous_season}–{String(rosters.season).slice(-2)}. The exact download is archived with a SHA-256 receipt.
             </p>
             {liveRosterMeta && (
               <p className="note" role="status">
@@ -1042,7 +1042,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             <p>
               Historical stats come from{" "}
               <a href={release.stats_source.url}>
-                SportsDataverse’s attributed bulk releases
+                retained bulk releases
               </a>{" "}
               ({release.stats_source.license}). Links require a reviewed match of
               the full player name and the school-announced prior program.

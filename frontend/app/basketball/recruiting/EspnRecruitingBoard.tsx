@@ -281,7 +281,7 @@ export default function EspnRecruitingBoard() {
         <p className="note">Shortlist entries preserve the class, exact athlete ID and record link. They stay in this browser and do not merge identities across providers.</p>
         <div className="strip" aria-label="Shortlist summary" style={{ marginBottom: 16 }}>
           <div><strong>{shortlist.length.toLocaleString()}</strong><span>Saved prospects</span></div>
-          <div><strong>{shortlistRanked.length.toLocaleString()}</strong><span>With source rank</span></div>
+          <div><strong>{shortlistRanked.length.toLocaleString()}</strong><span>With recorded rank</span></div>
           <div><strong>{shortlistAverageRank == null ? "—" : `#${shortlistAverageRank.toFixed(0)}`}</strong><span>Average rank</span></div>
           <div><strong>{shortlistCommitted.toLocaleString()}</strong><span>Source-listed commitments</span></div>
         </div>
@@ -291,11 +291,11 @@ export default function EspnRecruitingBoard() {
           const gradeGap = row.grade != null && shortlistBestGradeBySeason.has(row.season) ? row.grade - shortlistBestGradeBySeason.get(row.season)! : null;
           return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">Open record ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
         })}</tbody></table></div>
-        <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved ESPN rows, not Silvermine evaluations.</p>
+        <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved class rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
       </section>}
       {classSnapshots.length > 0 && <div className="recruiting-class-strip" aria-label="Recruiting class comparison">
-        <div className="eyebrow">Class comparison / same ESPN release</div>
+        <div className="eyebrow">Class comparison / same release</div>
         <div className="recruiting-class-grid">
           {classSnapshots.map((snapshot) => <button
             className={`recruiting-class-card${snapshot.season === season ? " is-active" : ""}`}
@@ -308,19 +308,19 @@ export default function EspnRecruitingBoard() {
             <span>{snapshot.total.toLocaleString()} prospects · {(snapshot.cohort?.committed ?? 0).toLocaleString()} committed ({rate(snapshot.cohort?.committed ?? 0, snapshot.total)})</span>
             <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
             <small>{(snapshot.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position unavailable"}</small>
-            <small>{(snapshot.commitment_destinations || []).slice(0, 3).map((item) => `${item.team} ${item.total}`).join(" · ") || "No source-listed destinations"}</small>
-            <small>{snapshot.captured_at ? `Source captured ${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small>
+            <small>{(snapshot.commitment_destinations || []).slice(0, 3).map((item) => `${item.team} ${item.total}`).join(" · ") || "No recorded destinations"}</small>
+            <small>{snapshot.captured_at ? `Captured ${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small>
           </button>)}
         </div>
       </div>}
       {copied && <p className="note" role="status">{copied}</p>}
-      {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading source-ranked prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
+      {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading recorded prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
         <>
           <div className="strip" style={{ marginBottom: 24 }}>
             <div><strong>{result.total.toLocaleString()}</strong><span>Matching prospects</span></div>
             <div><strong>{(result.cohort?.committed ?? 0).toLocaleString()}</strong><span>Committed in cohort</span></div>
-            <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With source rank</span></div>
-            <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With source grade</span></div>
+            <div><strong>{(result.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With recorded rank</span></div>
+            <div><strong>{(result.cohort?.graded ?? 0).toLocaleString()}</strong><span>With recorded grade</span></div>
           </div>
           {result.field_coverage && <section className="paper-panel recruiting-field-coverage" aria-label="Recruiting source field coverage" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 10 }}>
@@ -340,13 +340,13 @@ export default function EspnRecruitingBoard() {
             </div>
           </section>}
           <p className="note" role="status">
-            Active ESPN edition <span className="source-hash">{result.edition || "unavailable"}</span>
+            Active class edition <span className="source-hash">{result.edition || "unavailable"}</span>
             {result.captured_at ? <> · captured {captureLabel(result.captured_at)} UTC</> : " · capture date unavailable"}.
-            {result.source?.url && <> · <a className="text-link" href={result.source.url} target="_blank" rel="noreferrer">Open ESPN release ↗</a></>}
-            {" "}The edition identifier lets a staff member reproduce this exact source board after a later refresh.
+            {result.source?.url && <> · <a className="text-link" href={result.source.url} target="_blank" rel="noreferrer">Open record ↗</a></>}
+            {" "}The edition identifier lets a staff member reproduce this exact board after a later refresh.
           </p>
-          {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} source rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain ESPN&apos;s source rank and the board&apos;s name ordering.</p>}
-          {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="ESPN rank movement">
+          {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.</p>}
+          {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="Rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">{movementEvidence ? "Release-to-release movement" : "Baseline release"}</div><h3>{movementEvidence ? "See what changed in the source board." : "Establish the source board before tracking change."}</h3></div><span className="note">{movementEvidence ? "Compared with the latest earlier capture for each athlete" : "No earlier capture is retained for these exact athlete IDs"}</span>
             </div>
@@ -356,7 +356,7 @@ export default function EspnRecruitingBoard() {
               <div><strong>{result.rank_movement.unchanged.toLocaleString()}</strong><span>Unchanged</span></div>
               <div><strong>{result.rank_movement.new_to_release.toLocaleString()}</strong><span>New to archive</span></div>
             </div>
-            <p className="note">A positive change means the national rank number improved (for example, 80 to 55). “New to archive” means no earlier ESPN release is retained for that exact athlete ID. {result.rank_movement.new_to_release === result.rank_movement.total ? "This is the first retained release for the current cohort, so movement is not yet measurable." : "Missing ranks stay unavailable."}</p>
+            <p className="note">A positive change means the national rank number improved (for example, 80 to 55). “New to archive” means no earlier release is retained for that exact athlete ID. {result.rank_movement.new_to_release === result.rank_movement.total ? "This is the first retained release for the current cohort, so movement is not yet measurable." : "Missing ranks stay unavailable."}</p>
           </section>}
           <div className="button-row" style={{ marginBottom: 16 }}>
             <button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button>
@@ -372,16 +372,16 @@ export default function EspnRecruitingBoard() {
               {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={`${destination.team_id || "unknown"}-${destination.team}`}>
                 <div className="eyebrow">{destination.total === 1 ? "One commitment" : `${destination.total} commitments`}</div>
                 <h3>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team} →</Link> : destination.team}</h3>
-                <p>{destination.source_rank_points.toLocaleString()} source-rank points · {destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
+                <p>{destination.source_rank_points.toLocaleString()} rank points · {destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
                 <small>{(destination.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position mix unavailable"}</small>
-                <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this source row."} · Source-listed {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
+                <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this row."} · Recorded {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>
-            <p className="note" style={{ marginTop: 12 }}>Counts use ESPN&apos;s committed team field and the same season, rank, position, search and status filters as the table. Source-rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official ESPN class ranking or confirmation of enrollment or eligibility.</p>
+            <p className="note" style={{ marginTop: 12 }}>Counts use the recorded committed-team field and the same season, rank, position, search and status filters as the table. Rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official class ranking or confirmation of enrollment or eligibility.</p>
           </section>}
           <div className="table-wrap">
             <table className="data-table">
-              <caption className="sr-only">ESPN {season} basketball recruiting prospects</caption>
+              <caption className="sr-only">{season} basketball recruiting prospects</caption>
               <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Source</th><th>Shortlist</th></tr></thead>
               <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
@@ -392,7 +392,7 @@ export default function EspnRecruitingBoard() {
                 <td>{size(row.height_inches, row.weight_pounds)}</td>
                 <td>{row.committed_team_name ? row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link> : row.committed_team_name : row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
-                <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a></td>
+                <td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">Open record ↗</a></td>
                 <td><button className="button secondary" type="button" onClick={() => toggleShortlist(row)} aria-pressed={shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id))}>{shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id)) ? "Saved" : "Save"}</button></td>
               </tr>)}</tbody>
             </table>
@@ -402,7 +402,7 @@ export default function EspnRecruitingBoard() {
             <button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button>
             <button className="button secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Next</button>
           </div>
-          <p className="section-note">Source edition captured {result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "—"}. ESPN rank, grade and status remain attributed source evidence; they do not establish a roster spot, transfer date or NCAA eligibility.</p>
+          <p className="section-note">Class edition captured {result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "—"}. Rank, grade and status remain recorded evidence; they do not establish a roster spot, transfer date or eligibility.</p>
         </>
       )}
     </section>

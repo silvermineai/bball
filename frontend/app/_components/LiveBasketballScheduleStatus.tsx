@@ -36,10 +36,10 @@ export default function LiveBasketballScheduleStatus() {
   return (
     <p className="note" role="status">
       {status === "live" && payload
-        ? <>ESPN schedule-clock check: {(payload.confirmed || 0).toLocaleString()} of {(payload.total || 0).toLocaleString()} observed games have a source-confirmed start{payload.latest_observed_at ? ` · last checked ${new Date(payload.latest_observed_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC` : ""}. Date-only and conflicting observations stay labeled TBD; this evidence never rewrites the forecast schedule. <Link href="/basketball/forecast-lab/">Open the forecast lab →</Link></>
+        ? <>Schedule-clock check: {(payload.confirmed || 0).toLocaleString()} of {(payload.total || 0).toLocaleString()} observed games have a confirmed start{payload.latest_observed_at ? ` · last checked ${new Date(payload.latest_observed_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC` : ""}. Date-only and conflicting observations stay labeled TBD; this evidence never rewrites the forecast schedule. <Link href="/basketball/forecast-lab/">Open the forecast lab →</Link></>
         : status === "fallback"
           ? <>Live schedule-clock evidence unavailable; the published game slate remains available. <Link href="/basketball/games/">Open the game slate →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
-          : "Checking ESPN schedule-clock evidence…"}
+          : "Checking schedule-clock evidence…"}
     </p>
   );
 }

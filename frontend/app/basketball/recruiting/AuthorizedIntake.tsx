@@ -56,13 +56,11 @@ export default function AuthorizedIntake() {
             <h2>Keep verified provider records separate.</h2>
           </div>
           <div className="button-row">
-            <a className="button secondary" href="https://github.com/silvermineai/bball/blob/main/docs/RECRUITING_INTAKE.md" target="_blank" rel="noreferrer">Read import protocol ↗</a>
             <a className="button secondary" href="/data/recruiting-intake-template.csv" download>Download CSV template ↓</a>
-            <a className="hero-link" href="https://collegebasketballdata.com/terms" target="_blank" rel="noreferrer">CBBD terms ↗</a>
           </div>
         </div>
         <p>
-          An approved transfer or eligibility feed can be imported with its license, source clocks and stable provider IDs. The optional CollegeBasketballData connector is ready for a server-side <code>CBBD_API_KEY</code>; its portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge provider records into school announcements, roster observations or forecast inputs.
+          An approved transfer or eligibility feed can be imported with its license, capture clocks and stable record IDs. Optional licensed connectors can be enabled with a server-side key; their portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge imported records into school announcements, roster observations or forecast inputs.
         </p>
         {error ? <p className="status-error" role="alert">{error}</p> : !coverage ? <p className="empty" role="status">Checking authorized intake coverage…</p> : (
           <div className="recruiting-intake-status">
@@ -86,7 +84,7 @@ export default function AuthorizedIntake() {
             </div>
             {providerCapabilities.length > 0 && <div className="recruiting-intake-detail">
               {providerCapabilities.map((capability) => <span key={capability.provider}>
-                <strong>{capability.provider}</strong> · {capability.kinds.join(", ")} · {capability.event_date_available ? "event dates available" : "season-level dates only"} · <a href={capability.docs_url} target="_blank" rel="noreferrer">API reference ↗</a>
+                <strong>Authorized connector</strong> · {capability.kinds.join(", ")} · {capability.event_date_available ? "event dates available" : "season-level dates only"}
               </span>)}
             </div>}
           </div>

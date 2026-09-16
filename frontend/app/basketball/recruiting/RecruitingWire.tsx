@@ -60,7 +60,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
       <button className="button secondary" type="button" onClick={() => downloadCsv("basketball-recruiting-wire.csv", toCsv(["Published", "Headline", "Description", "Categories", "Publisher URL"], filtered.map((article) => [article.published, article.headline, article.description, article.categories.join(" | "), article.link])))}>Download CSV ↓</button>
     </div>
     {copied && <p role="status">{copied}</p>}
-    <div className="article-grid">{visible.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · {article.publisher || "Publisher"} wire</div><h2>{article.headline}</h2><p>{article.description}</p><a href={article.link} target="_blank" rel="noreferrer">Read article ↗</a></article>)}</div>
+    <div className="article-grid">{visible.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · Retained wire</div><h2>{article.headline}</h2><p>{article.description.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk")}</p></article>)}</div>
     {!visible.length && <p className="empty">No linked stories match this search.</p>}
     <div className="pagination"><span>{filtered.length} matching stories · page {page + 1} of {pages}</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
   </section>;
