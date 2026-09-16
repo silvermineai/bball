@@ -9,6 +9,8 @@ type ForecastModel = {
   forecasts?: number;
   last_created_at?: string | null;
   target_season?: number | null;
+  training_games?: number | null;
+  training_seasons?: number[];
   evaluation_winner_accuracy?: number | null;
   evaluation_margin_mae?: number | null;
   evaluation_baseline_margin_mae?: number | null;
@@ -41,7 +43,7 @@ export default function LiveBasketballForecastStatus() {
   return (
     <p className="note" role="status">
       {status === "live" && model
-        ? `Live D1 forecast index: ${(model.forecasts || 0).toLocaleString()} rows · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
+        ? `Live D1 forecast index: ${(model.forecasts || 0).toLocaleString()} rows · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
             (model.evaluation_winner_accuracy * 100).toFixed(1)
           }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${model.evaluation_baseline_margin_mae != null ? ` / ${(model.evaluation_baseline_margin_mae - model.evaluation_margin_mae).toFixed(1)} points better than baseline` : ""}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
         : status === "fallback"
