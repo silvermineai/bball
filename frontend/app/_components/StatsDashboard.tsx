@@ -88,6 +88,42 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
   );
 }
 
+const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; description: string; percent?: boolean }> = [
+  { metric: "ppg", label: "Scoring", description: "points per game" },
+  { metric: "rpg", label: "Rebounding", description: "rebounds per game" },
+  { metric: "apg", label: "Playmaking", description: "assists per game" },
+  { metric: "ts", label: "True shooting", description: "scoring efficiency", percent: true },
+];
+
+function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
+  return (
+    <div className="basketball-leader-grid">
+      {leaderCards.map((card) => (
+        <section className="paper-panel" key={card.metric}>
+          <div className="eyebrow">{card.description}</div>
+          <h3>{card.label}</h3>
+          <div className="basketball-leader-list">
+            {topBasketballLeaders(players, card.metric, 5).map((leader) => (
+              <div className="basketball-leader-row" key={`${card.metric}-${leader.id}-${leader.team}`}>
+                <span className="rank-number">{leader.rank}</span>
+                <span>
+                  <strong>
+                    <Link href={`/basketball/player/?id=${encodeURIComponent(leader.id)}&season=${season}`}>{leader.name}</Link>
+                  </strong>
+                  <small>{leader.team}</small>
+                </span>
+                <strong className="numeric">
+                  {fmt(leader.value * (card.percent ? 100 : 1))}{card.percent ? "%" : ""}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function ForecastTable({ games }: { games: BBGame[] }) {
   const rows = games.filter((game) => predictionFor(game)).slice(0, 12);
   return (
@@ -199,13 +235,18 @@ export default function StatsDashboard() {
           <PlayerTable players={players} season={latestSeason} />
         </section>
       </div>
+      <section className="dashboard-section" aria-labelledby="dashboard-leaders">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / NATIONAL LEADERS</span><h2 id="dashboard-leaders">More player production</h2></div><Link href="/basketball/leaders/">Full leaders table →</Link></div>
+        <p className="dashboard-caption">The same qualified player file, grouped by the four fastest ways to find a standout: scoring, rebounding, playmaking and true shooting.</p>
+        <LeaderCards players={players} season={latestSeason} />
+      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="dashboard-drilldowns">More numbers</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
