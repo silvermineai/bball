@@ -577,7 +577,17 @@ app.get("/api/basketball/research/coverage", async (c) => {
   };
   const tableNames = Object.keys(tables).filter(
     (dataset) => !dedicatedGameDb || dataset !== "ncaa_player_box",
-  );
+  ).filter((dataset) => audit || [
+    // The summary view powers the first paint of the coverage desk. Keep it
+    // to the compact operational tables; the large archive counts remain in
+    // the bundled catalog and are included by the explicit audit pass.
+    "games",
+    "player_box",
+    "rosters",
+    "forecasts",
+    "unresolved",
+    "player_season",
+  ].includes(dataset));
   try {
   // Keep the inexpensive table counts in one batch. The two validation
   // statements are intentionally separate: D1 can reject a batch containing
@@ -683,7 +693,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
   const countByDataset = new Map(
     tableNames.map((dataset, index) => [dataset, counts[index].results[0].rows]),
   );
-  const gameCount = dedicatedGameDb
+  const gameCount = dedicatedGameDb && audit
     ? await withTimeout(gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS)
     : null;
   if (dedicatedGameDb) countByDataset.set("ncaa_player_box", gameCount?.rows ?? 0);
