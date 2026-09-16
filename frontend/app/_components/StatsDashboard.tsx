@@ -190,7 +190,7 @@ export default function StatsDashboard() {
   const players = getPlayers(overview.season);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
-  const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "ts"];
+  const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
   const leaderCounts = metrics.map((metric) => ({ metric, count: topBasketballLeaders(players, metric, 100000).length }));
   return (
     <div className="stats-dashboard">
