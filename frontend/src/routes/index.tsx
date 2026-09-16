@@ -69,7 +69,7 @@ function CommandCenter() {
           {meta?.season ?? "2025-26"}
         </div>
         <div className="relative">
-          <div className="font-stat text-[11px] uppercase tracking-[0.3em] text-brass">The Coaching Annual · Men's College Basketball</div>
+          <div className="font-stat text-[11px] uppercase tracking-[0.3em] text-brass">Silvermine Basketball · Men's College Basketball</div>
           <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-[1.05] sm:text-5xl">
             Every team. Every tendency. <span className="italic text-brass">One binder.</span>
           </h1>
@@ -78,10 +78,10 @@ function CommandCenter() {
               <>
                 Built from <span className="font-stat text-paper">{meta.completedGames.toLocaleString()}</span> real games across{" "}
                 <span className="font-stat text-paper">{meta.teamsTracked}</span> Division I teams — scores, rosters, season statistics,
-                rankings, and film from public sources.
+                rankings, and film from the Silvermine data warehouse.
               </>
             ) : (
-              "Scores, rosters, season statistics, rankings, and film — all from public sources."
+              "Scores, rosters, season statistics, rankings, and film — all in one stat-first workspace."
             )}
           </p>
           {champion ? (

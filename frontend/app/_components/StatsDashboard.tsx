@@ -128,12 +128,12 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>Dataset</th><th className="numeric">Rows</th><th className="numeric">Seasons</th><th className="numeric">Data through</th><th className="numeric">Source files</th></tr>
+          <tr><th>Dataset</th><th className="numeric">Rows</th><th className="numeric">Seasons</th><th className="numeric">Latest data</th><th className="numeric">Captures</th></tr>
         </thead>
         <tbody>
           {rows.map((dataset) => (
             <tr key={dataset.key}>
-              <th scope="row">{dataset.label}<small>{dataset.identity_note}</small></th>
+              <th scope="row">{dataset.label}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Published team ratings" : "Retained dataset"}</small></th>
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
               <td className="numeric">{captured(dataset.latest_source_at)}</td>
@@ -199,7 +199,7 @@ export default function StatsDashboard() {
       </div>
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
         <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
-        <p className="dashboard-caption">Player boxes, NCAA archives, rosters, schedules and ratings retained for analysis. “Data through” is the latest captured source edition for each dataset.</p>
+        <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">

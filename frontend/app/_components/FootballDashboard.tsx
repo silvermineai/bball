@@ -197,7 +197,7 @@ export default function FootballDashboard() {
     </div>
     <section className="dashboard-section" aria-labelledby="football-events">
       <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><Link href="/football/events/">Full event notebook →</Link></div>
-      <p className="dashboard-caption">Current {overview.season} source event leaders. The season is partial; records are kept as source-name/team observations and are not merged into identified player careers.</p>
+      <p className="dashboard-caption">Current {overview.season} event leaders. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
       <EventLeadersTable editions={eventEditions} />
     </section>
     <section className="dashboard-section dashboard-links" aria-labelledby="football-drilldowns">

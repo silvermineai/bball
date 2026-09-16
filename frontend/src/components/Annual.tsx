@@ -1,4 +1,4 @@
-// Shared editorial primitives for the analytics pages ("The Coaching Annual").
+// Shared primitives for the analytics pages.
 import { Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";

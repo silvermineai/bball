@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="font-stat text-[10px] font-semibold uppercase tracking-[0.22em] text-court">Silvermine</div>
-              <div className="font-display text-lg font-semibold leading-tight">The Coaching Annual</div>
+              <div className="font-display text-lg font-semibold leading-tight">Silvermine Basketball</div>
             </div>
           </a>
           <nav className="ml-auto hidden items-center gap-1 md:flex">
