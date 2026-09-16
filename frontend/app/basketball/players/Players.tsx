@@ -134,11 +134,11 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
       <div className="strip">
         <div>
           <strong>{catalog.seasons.length}</strong>
-          <span>Source seasons · coverage varies</span>
+          <span>Seasons · coverage varies</span>
         </div>
         <div>
           <strong>{catalog.player_ids.toLocaleString()}</strong>
-          <span>Distinct archived source identities</span>
+          <span>Distinct archived players</span>
         </div>
         <div>
           <strong>{coverage?.appearance_games.toLocaleString() ?? "—"}</strong>
@@ -153,12 +153,12 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
       </div>
       <p className="note" role="status">
         {liveArchiveStatus === "live" && liveArchive
-          ? `Cloudflare D1 career archive connected · ${(liveArchive.seasons || []).length} seasons${liveArchive.latest_receipt ? ` · latest receipt ${new Date(liveArchive.latest_receipt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}.`
+          ? `Cloudflare D1 career archive connected · ${(liveArchive.seasons || []).length} seasons${liveArchive.latest_receipt ? ` · latest capture ${new Date(liveArchive.latest_receipt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}.`
           : liveArchiveStatus === "fallback"
-            ? "Cloudflare D1 career archive unavailable; showing the verified bundled release."
+            ? "Cloudflare D1 career archive unavailable; showing the verified bundled edition."
             : "Checking the Cloudflare D1 career archive…"}
       </p>
-      {sourceReceipts.length > 0 && <details className="note" style={{ marginTop: 16 }}><summary>Source receipts for {seasonLabel(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{sourceReceipts.map((source) => <tr key={`${source.dataset}-${source.season}`}><th>{source.dataset.replaceAll("_", " ")}</th><td>{new Date(source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td><td><code>{source.sha256}</code></td><td><a href={source.url} target="_blank" rel="noreferrer">Open release ↗</a></td></tr>)}</tbody></table></div><p style={{ marginTop: 12 }}>The receipt identifies the retained source release behind these season rows. It does not establish a live roster, eligibility or availability update.</p></details>}
+      {sourceReceipts.length > 0 && <details className="note" style={{ marginTop: 16 }}><summary>Capture receipts for {seasonLabel(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Captured (UTC)</th><th>SHA-256</th><th>Edition</th></tr></thead><tbody>{sourceReceipts.map((source) => <tr key={`${source.dataset}-${source.season}`}><th>{source.dataset.replaceAll("_", " ")}</th><td>{new Date(source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td><td><code>{source.sha256}</code></td><td>Retained</td></tr>)}</tbody></table></div><p style={{ marginTop: 12 }}>The receipt identifies the retained edition behind these season rows. It does not establish a live roster, eligibility or availability update.</p></details>}
       <div className="toolbar">
         <label className="control">
           <span>STAT SEASON</span>
@@ -236,7 +236,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
       </label>
       <div className="button-row" style={{ marginTop: 12 }}>
         <Link className="button secondary" href={`/basketball/crosswalk/?q=${encodeURIComponent(q)}`}>
-          Open provider ID crosswalk →
+          Open identity crosswalk →
         </Link>
         <button
           className="button secondary"
@@ -261,7 +261,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         FGA, 3PA rate is 3PA / FGA, and TO rate is TOV / (FGA + 0.475 FTA +
         TOV). Incomplete totals remain unavailable. Stat ranks use
         this season and qualification setting before search filters; ties share
-        rank. The source includes some opponents outside Division I.
+        rank. The archive includes some opponents outside Division I.
       </p>
       {sort === "profile" && (
         <p className="note" style={{ marginBottom: 20 }}>
@@ -310,10 +310,10 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
           </table>
         </div>
         {data?.coverage?.field_coverage && data.season === Number(season) && <>
-          <p className="note" style={{ marginTop: 18 }}>Field completeness uses every identified source row, then shows the subset of rows with a recorded playing appearance. A blank or null source field remains unavailable; a recorded zero counts as observed.</p>
+          <p className="note" style={{ marginTop: 18 }}>Field completeness uses every identified row, then shows the subset of rows with a recorded playing appearance. A blank or null field remains unavailable; a recorded zero counts as observed.</p>
           <div className="table-scroll">
             <table className="data-table">
-              <thead><tr><th>Field</th><th className="numeric">Source observed</th><th className="numeric">Source share</th><th className="numeric">Appearance observed</th><th className="numeric">Appearance share</th></tr></thead>
+              <thead><tr><th>Field</th><th className="numeric">Rows observed</th><th className="numeric">Row share</th><th className="numeric">Appearance observed</th><th className="numeric">Appearance share</th></tr></thead>
               <tbody>{Object.entries(data.coverage.field_coverage).map(([field, value]) => <tr key={field}><th>{field}</th><td className="numeric">{value.source_observed.toLocaleString()} / {value.source_rows.toLocaleString()}</td><td className="numeric">{value.source_share == null ? "—" : `${(value.source_share * 100).toFixed(1)}%`}</td><td className="numeric">{value.appearance_observed.toLocaleString()} / {value.appearance_rows.toLocaleString()}</td><td className="numeric">{value.appearance_share == null ? "—" : `${(value.appearance_share * 100).toFixed(1)}%`}</td></tr>)}</tbody>
             </table>
           </div>
@@ -352,15 +352,15 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Program",
                         "Position",
                         "Games",
-                        "Source records",
+                        "Recorded rows",
                         "Starts",
                         "Starter reports",
                         "Starter rate",
                         "DNP records",
                         "Excluded records",
-                        "Source release URLs",
-                        "Source retrieved clocks",
-                        "Source SHA-256 digests",
+                        "Edition URLs",
+                        "Edition capture clocks",
+                        "Edition SHA-256 digests",
                         "Minutes per game",
                         "Points per game",
                         "Rebounds per game",
@@ -422,7 +422,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                   className="button secondary"
                   href={`/api/basketball/research/careers/source?season=${encodeURIComponent(season)}`}
                 >
-                  Download source parquet ↓
+                  Download complete parquet ↓
                 </a>
               )}
             </div>
@@ -476,20 +476,11 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         {p.name}
                       </Link>
                       <small>{p.team}</small>
-                      <small>{p.source_records ?? p.games} source rows · {p.starts ?? "—"} starts / {p.starter_reported_records ?? "—"} reported · {p.dnp_records ?? 0} DNP · {p.excluded_records ?? 0} excluded</small>
+                      <small>{p.source_records ?? p.games} recorded rows · {p.starts ?? "—"} starts / {p.starter_reported_records ?? "—"} reported · {p.dnp_records ?? 0} DNP · {p.excluded_records ?? 0} excluded</small>
                       <small>
                         <Link href={comparisonHref(p)}>
                           Compare this season →
                         </Link>
-                      </small>
-                      <small>
-                        <a
-                          href={`https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(p.id)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          ESPN source ↗
-                        </a>
                       </small>
                     </td>
                     <td>{p.position || "—"}</td>
