@@ -15,6 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument(
+    "--sport",
+    choices=("basketball", "football", "both"),
+    default="both",
+    help="limit source capture to the warehouse refreshed by this run",
+)
 parser.add_argument("--odds", action="store_true")
 parser.add_argument("--cbbd-lines", action="store_true", help="capture authorized CBBD pregame moneylines")
 parser.add_argument("--espn-lines", action="store_true", help="capture prospective ESPN pickcenter quotes for basketball and football")
@@ -49,7 +55,7 @@ run(
     ]
 )
 if args.odds:
-    run([PY, "-m", "ncaa_scraper.odds_feed", "--sport", "both"])
+    run([PY, "-m", "ncaa_scraper.odds_feed", "--sport", args.sport])
     run(
         [
             PY,
@@ -70,7 +76,7 @@ if args.cbbd_lines:
             str(ROOT / ".local/research-ledger.sql"),
         ]
     )
-if args.espn_schedule or args.espn_lines:
+if (args.espn_schedule or args.espn_lines) and args.sport in ("basketball", "both"):
     # Capture the source clock in the same bounded run as pickcenter quotes.
     # Observations remain separate from canonical games and registrations.
     run([PY, "-m", "ncaa_scraper.espn_schedule", "--season", "2027"])
@@ -84,26 +90,28 @@ if args.espn_schedule or args.espn_lines:
         ]
     )
 if args.espn_lines:
-    run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027"])
-    run(
-        [
-            PY,
-            "-m",
-            "ncaa_scraper.research_ledger",
-            "--sql",
-            str(ROOT / ".local/research-ledger.sql"),
-        ]
-    )
-    run([PY, "-m", "ncaa_scraper.espn_football_pickcenter", "--season", "2026"])
-    run(
-        [
-            PY,
-            "-m",
-            "ncaa_scraper.research_ledger",
-            "--sql",
-            str(ROOT / ".local/research-ledger.sql"),
-        ]
-    )
+    if args.sport in ("basketball", "both"):
+        run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027"])
+        run(
+            [
+                PY,
+                "-m",
+                "ncaa_scraper.research_ledger",
+                "--sql",
+                str(ROOT / ".local/research-ledger.sql"),
+            ]
+        )
+    if args.sport in ("football", "both"):
+        run([PY, "-m", "ncaa_scraper.espn_football_pickcenter", "--season", "2026"])
+        run(
+            [
+                PY,
+                "-m",
+                "ncaa_scraper.research_ledger",
+                "--sql",
+                str(ROOT / ".local/research-ledger.sql"),
+            ]
+        )
 run(["npm", "test"], ROOT / "frontend")
 run(["npm", "run", "build"], ROOT / "frontend")
 run(["npm", "run", "typecheck"], ROOT / "worker")

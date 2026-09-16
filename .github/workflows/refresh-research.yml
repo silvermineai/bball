@@ -203,6 +203,8 @@ jobs:
         # Manual dispatch remains explicit; scheduled runs opt in only when
         # the repository has supplied the licensed provider secret.
         if: ${{ inputs.capture_odds == true || inputs.capture_cbbd_lines == true || inputs.capture_espn_lines == true || github.event_name == 'schedule' }}
+        env:
+          REFRESH_SPORT: ${{ inputs.sport || 'both' }}
         run: |
           ARGS=""
           if [ "${{ inputs.capture_odds }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ] && [ -n "$THE_ODDS_API_KEY" ]; then
@@ -216,7 +218,7 @@ jobs:
           if [ "${{ inputs.capture_espn_lines }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             ARGS="$ARGS --espn-lines"
           fi
-          python scripts/publish-research.py $ARGS
+          python scripts/publish-research.py --sport "$REFRESH_SPORT" $ARGS
 
       - name: Capture authorized CBBD recruiting evidence
         if: ${{ inputs.capture_cbbd_recruiting == true || (github.event_name == 'schedule' && env.CBBD_API_KEY != '') }}
