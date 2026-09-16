@@ -105,7 +105,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
     tov_rate: number | null;
   };
   const profileRows = rankPlayerProfiles<DashboardProfilePlayer>(
-    players.map((player) => ({
+    players.filter((player) => player.qualified).map((player) => ({
       ...player,
       team_id: `${player.id}:${player.team}`,
       spg: player.spg ?? null,
