@@ -429,6 +429,7 @@ export default function StatsDashboard() {
           <span className="model-tag primary">SILVERMINE MODEL</span>
           <strong>{overview.coverage.forecast_games.toLocaleString()}</strong>
           <span>primary game forecasts</span>
+          <small>Model edition · {overview.model.version}</small>
           {overview.coverage.baseline_estimate_games ? <small>{overview.coverage.baseline_estimate_games.toLocaleString()} cold-start rows are labeled in the table.</small> : null}
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>

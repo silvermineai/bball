@@ -110,7 +110,7 @@ export default function Matchups({
     const query = new URLSearchParams({ kind: "ratings", season: "2026", metric: "adj_em", ids: publisherTeamIds.join(",") });
     fetch(`/api/basketball/research/boutique?${query}`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("Publisher model comparisons unavailable.");
+        if (!response.ok) throw new Error("Archived comparison ratings unavailable.");
         return response.json() as Promise<{ rows?: PublisherRating[] }>;
       })
       .then((payload) => {
@@ -120,7 +120,7 @@ export default function Matchups({
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
-          setPublisherRatingsError(reason instanceof Error ? reason.message : "Publisher model comparisons unavailable.");
+          setPublisherRatingsError(reason instanceof Error ? reason.message : "Archived comparison ratings unavailable.");
         }
       });
     return () => controller.abort();
@@ -384,10 +384,10 @@ export default function Matchups({
       </p>
       <p className="note" role="status">
         {Object.keys(publisherRatings).length
-          ? `Adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 source release.`
+          ? `Adjusted-efficiency context: ${Object.keys(publisherRatings).length.toLocaleString()} exact team IDs matched to the 2025–26 archived rating edition.`
           : publisherRatingsError
             ? `${publisherRatingsError} Silvermine ratings remain available.`
-            : "Checking publisher model comparisons…"}
+            : "Checking archived comparison ratings…"}
       </p>
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>
@@ -402,7 +402,7 @@ export default function Matchups({
               toCsv(
                 [
                   "Scheduled start",
-                  "Recorded source start",
+                  "Recorded schedule start",
                   "Recorded time valid",
                   "Away program",
                   "Home program",
@@ -419,10 +419,10 @@ export default function Matchups({
                   "Estimate type",
                   "Silvermine adjusted net away",
                   "Silvermine adjusted net home",
-                  "Publisher adjusted EM away",
-                  "Publisher adjusted EM home",
-                  "Source team ID away",
-                  "Source team ID home",
+                  "Archived adjusted EM away",
+                  "Archived adjusted EM home",
+                  "Archive team ID away",
+                  "Archive team ID home",
                   "Qualifying market quote count",
                   "Market quote snapshots",
                 ],

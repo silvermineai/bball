@@ -115,13 +115,13 @@ export default function BasketballCard({
               </div>
               {(publisherHomeRating || publisherAwayRating) && (
                 <div className="match-detail muted">
-                  <span>Reference adjusted EM · H / A</span>
+                  <span>Archived adjusted EM · H / A</span>
                   <span>{fmt(publisherHomeRating?.value, 1)} / {fmt(publisherAwayRating?.value, 1)}</span>
                 </div>
               )}
               <div className="button-row" style={{ marginTop: 8 }}>
-                {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} reference model ↗</Link>}
-                {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} reference model ↗</Link>}
+                {homeRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(homeRating.name)}`}>Compare {homeRating.name} archived rating ↗</Link>}
+                {awayRating && <Link className="text-link" href={`/basketball/boutique/?kind=ratings&season=2026&metric=adj_em&q=${encodeURIComponent(awayRating.name)}`}>Compare {awayRating.name} archived rating ↗</Link>}
               </div>
               <small>
                 Prior opponent-adjusted team strength and schedule context. It is descriptive history; roster changes, injuries and the forecast model remain separate.

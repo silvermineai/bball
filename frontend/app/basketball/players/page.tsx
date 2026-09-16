@@ -59,7 +59,7 @@ export default function Page() {
             <div className="eyebrow">Roster context</div>
             <h3>Where has a player been observed?</h3>
             <p>
-              Compare source-listed program movement with prior recorded
+              Compare recorded program movement with prior recorded
               workload, keeping eligibility and availability unconfirmed.
             </p>
             <span>Read recruiting evidence →</span>
