@@ -125,6 +125,12 @@ def build(season=2023):
         )
         + ");\n"
     )
+    # A repeated publication can reuse the same model ID when only source
+    # metadata changed. Remove that edition's old slate before rebuilding it so
+    # D1 cannot retain a forecast for a game that left the current schedule.
+    statements.append(
+        "DELETE FROM bb_forecasts WHERE model_id=" + quote(model["id"]) + ";\n"
+    )
     forecast_rows = []
     for game, prediction in forecast_records(overview):
         # Primary and cold-start estimates are both Silvermine model outputs.
