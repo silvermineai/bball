@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import ProspectDossier from "./ProspectDossier";
 
 export const metadata = {
-  title: "ESPN prospect dossier | Silvermine basketball recruiting",
-  description: "Exact-ID, source-attributed ESPN recruiting prospect research dossier.",
+  title: "Prospect dossier | Silvermine basketball recruiting",
+  description: "Exact-ID basketball recruiting prospect research dossier with rank history and recorded biographical fields.",
 };
 
 export default function Page() {

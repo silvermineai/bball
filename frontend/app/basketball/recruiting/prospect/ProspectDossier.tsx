@@ -73,7 +73,7 @@ export default function ProspectPage() {
   const [mentions, setMentions] = useState<PublisherMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStatus, setMentionStatus] = useState<"idle" | "loading" | "live" | "none" | "unavailable">("idle");
-  const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an ESPN athlete ID.");
+  const [error, setError] = useState(athleteId ? "" : "This prospect link is missing an athlete ID.");
 
   useEffect(() => {
     setShortlist(readRecruitingShortlist(window.localStorage.getItem(RECRUITING_SHORTLIST_STORAGE_KEY)));
@@ -85,7 +85,7 @@ export default function ProspectPage() {
     setError("");
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error("The ESPN prospect release is unavailable.");
+        if (!response.ok) throw new Error("The prospect record is unavailable.");
         return response.json() as Promise<Response>;
       })
       .then((value) => {
@@ -94,11 +94,11 @@ export default function ProspectPage() {
         setEdition(value.edition || null);
         setHistory(value.history || []);
         if (value.unavailable_reason) setError(value.unavailable_reason);
-        else if (!value.rows.length) setError("That ESPN prospect is not in the selected class release.");
+        else if (!value.rows.length) setError("That prospect is not in the selected class edition.");
         else setProspect(value.rows[0]);
       })
       .catch((reason: unknown) => {
-        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setError(reason instanceof Error ? reason.message : "The ESPN prospect release is unavailable.");
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setError(reason instanceof Error ? reason.message : "The prospect record is unavailable.");
       });
     return () => controller.abort();
   }, [athleteId, season]);
@@ -165,31 +165,31 @@ export default function ProspectPage() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">ESPN recruiting source dossier / {season} class</div>
+        <div className="eyebrow">Prospect dossier / {season} class</div>
         <h1>{prospect?.name || "Prospect dossier"}.</h1>
-        <p>Exact ESPN athlete record for research handoff. Source rank, grade, commitment and biographical fields remain attributed evidence; they do not establish eligibility, roster status or future role.</p>
-        <div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?season=${season}`}>Back to recruiting board</Link>{prospect && <button className="button" type="button" onClick={toggleProspectShortlist} aria-pressed={isShortlisted}>{isShortlisted ? "Saved to shortlist" : "Save to shortlist"}</button>}{prospect?.source_url && <a className="hero-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open ESPN prospect card ↗</a>}</div>
+        <p>Exact athlete record for research handoff. Recorded rank, grade, commitment and biographical fields are descriptive evidence; they do not establish eligibility, roster status or future role.</p>
+        <div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?season=${season}`}>Back to recruiting board</Link>{prospect && <button className="button" type="button" onClick={toggleProspectShortlist} aria-pressed={isShortlisted}>{isShortlisted ? "Saved to shortlist" : "Save to shortlist"}</button>}</div>
       </div>
-      {error ? <p className="status-error" role="alert">{error}</p> : !prospect ? <p className="empty" role="status">Loading exact ESPN prospect record…</p> : (
+      {error ? <p className="status-error" role="alert">{error}</p> : !prospect ? <p className="empty" role="status">Loading exact prospect record…</p> : (
         <>
           {(() => {
             const rankMovement = movement(prospect.rank, prospect.previous_rank ?? null, prospect.previous_captured_at);
             return <section className="paper-panel" aria-label="Prospect rank movement" style={{ marginBottom: 24 }}>
-              <div className="eyebrow">Release-to-release movement</div>
-              <h2 style={{ marginTop: 12 }}>{rankMovement ? <span className={rankMovement.change == null ? "" : rankMovement.change > 0 ? "movement-up" : rankMovement.change < 0 ? "movement-down" : ""}>{rankMovement.label}{rankMovement.change == null ? "" : " national rank"}</span> : "First retained ESPN release"}</h2>
-              <p className="note">{rankMovement ? `Previous source rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier ESPN edition for this exact athlete ID is retained yet. Future source releases will establish the comparison baseline."}</p>
+              <div className="eyebrow">Edition-to-edition movement</div>
+              <h2 style={{ marginTop: 12 }}>{rankMovement ? <span className={rankMovement.change == null ? "" : rankMovement.change > 0 ? "movement-up" : rankMovement.change < 0 ? "movement-down" : ""}>{rankMovement.label}{rankMovement.change == null ? "" : " national rank"}</span> : "First retained edition"}</h2>
+              <p className="note">{rankMovement ? `Previous national rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier edition for this exact athlete ID is retained yet. Future captures will establish the comparison baseline."}</p>
             </section>;
           })()}
           {history.length > 1 && <section className="paper-panel" aria-label="Prospect rank history" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
-              <div><div className="eyebrow">Retained ESPN editions</div><h2>See the rank over time.</h2></div>
-              <span className="note">{history.length} source captures</span>
+              <div><div className="eyebrow">Retained editions</div><h2>See the rank over time.</h2></div>
+              <span className="note">{history.length} captures</span>
             </div>
-            <p className="note">This timeline uses every retained source edition for the exact ESPN athlete ID. A blank rank means ESPN did not supply a rank in that capture; it is not a zero or a demotion.</p>
+            <p className="note">This timeline uses every retained edition for the exact athlete ID. A blank rank means no rank was recorded in that capture; it is not a zero or a demotion.</p>
             {(() => {
               const ranked = history.map((entry) => entry.rank).filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
               const ceiling = Math.max(...ranked, 25);
-              return <figure className="prospect-rank-chart" aria-label="Visual timeline of ESPN national rank">
+              return <figure className="prospect-rank-chart" aria-label="Visual timeline of national rank">
                 <div className="prospect-rank-chart-bars">
                   {history.map((entry) => {
                     const height = entry.rank == null ? 8 : Math.max(10, Math.round(((ceiling - entry.rank + 1) / ceiling) * 100));
@@ -200,61 +200,60 @@ export default function ProspectPage() {
                     </div>;
                   })}
                 </div>
-                <figcaption>Higher bars represent a better source rank within this retained history. Unranked captures remain visible at the baseline.</figcaption>
+                <figcaption>Higher bars represent a better national rank within this retained history. Unranked captures remain visible at the baseline.</figcaption>
               </figure>;
             })()}
-            <div className="table-scroll"><table className="data-table"><thead><tr><th>Captured</th><th className="numeric">National rank</th><th className="numeric">Change</th><th className="numeric">Grade</th><th>Commitment / status</th><th>Source</th></tr></thead><tbody>{history.map((entry, index) => {
+            <div className="table-scroll"><table className="data-table"><thead><tr><th>Captured</th><th className="numeric">National rank</th><th className="numeric">Change</th><th className="numeric">Grade</th><th>Commitment / status</th><th>Capture</th></tr></thead><tbody>{history.map((entry, index) => {
               const prior = history[index - 1];
               const change = prior?.rank != null && entry.rank != null ? prior.rank - entry.rank : null;
-              return <tr key={`${entry.edition}-${entry.captured_at}`}><td>{entry.captured_at ? new Date(entry.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}<small>{entry.edition}</small></td><td className="numeric"><strong>{rank(entry.rank)}</strong></td><td className={`numeric${change == null ? "" : change > 0 ? " movement-up" : change < 0 ? " movement-down" : ""}`}>{change == null ? "—" : change > 0 ? `▲ ${change}` : change < 0 ? `▼ ${Math.abs(change)}` : "= 0"}</td><td className="numeric">{entry.grade == null || entry.grade <= 0 ? "—" : number(entry.grade, 1)}</td><td>{entry.committed_team_name || entry.status || "—"}</td><td>{entry.source_url ? <a className="text-link" href={entry.source_url} target="_blank" rel="noreferrer">ESPN ↗</a> : "—"}</td></tr>;
+              return <tr key={`${entry.edition}-${entry.captured_at}`}><td>{entry.captured_at ? new Date(entry.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}<small>{entry.edition}</small></td><td className="numeric"><strong>{rank(entry.rank)}</strong></td><td className={`numeric${change == null ? "" : change > 0 ? " movement-up" : change < 0 ? " movement-down" : ""}`}>{change == null ? "—" : change > 0 ? `▲ ${change}` : change < 0 ? `▼ ${Math.abs(change)}` : "= 0"}</td><td className="numeric">{entry.grade == null || entry.grade <= 0 ? "—" : number(entry.grade, 1)}</td><td>{entry.committed_team_name || entry.status || "—"}</td><td><small>{entry.captured_at ? new Date(entry.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Capture date unavailable"}</small><small className="source-hash">{entry.edition}</small></td></tr>;
             })}</tbody></table></div>
           </section>}
           <div className="strip">
-            <div><strong>{rank(prospect.rank)}</strong><span>National source rank</span></div>
-            <div><strong>{prospect.grade == null || prospect.grade <= 0 ? "—" : number(prospect.grade, 1)}</strong><span>ESPN source grade</span></div>
+            <div><strong>{rank(prospect.rank)}</strong><span>National rank</span></div>
+            <div><strong>{prospect.grade == null || prospect.grade <= 0 ? "—" : number(prospect.grade, 1)}</strong><span>Recorded grade</span></div>
             <div><strong>{rank(prospect.position_rank)}</strong><span>{prospect.position || "Position"} rank</span></div>
             <div><strong>{prospect.committed_team_name ? prospect.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(prospect.committed_team_id)}/`}>{prospect.committed_team_name} →</Link> : prospect.committed_team_name : "—"}</strong><span>Committed team</span></div>
           </div>
           <section className="section">
             <div className="two-col">
-              <article className="paper-panel"><div className="eyebrow">Source profile</div><h2>{prospect.position || "Position not listed"}</h2><dl className="roster-stat-grid"><div><dt>High school</dt><dd>{prospect.high_school || "—"}</dd></div><div><dt>Hometown</dt><dd>{prospect.hometown || "—"}</dd></div><div><dt>Status</dt><dd>{prospect.status || "—"}</dd></div><div><dt>State rank</dt><dd>{rank(prospect.state_rank)}</dd></div><div><dt>Region rank</dt><dd>{rank(prospect.region_rank)}</dd></div><div><dt>Height</dt><dd>{prospect.height_inches == null ? "—" : `${number(prospect.height_inches / 12, 1)} ft`}</dd></div><div><dt>Weight</dt><dd>{prospect.weight_pounds == null ? "—" : `${number(prospect.weight_pounds)} lb`}</dd></div><div><dt>ESPN athlete ID</dt><dd>{prospect.athlete_id}</dd></div></dl></article>
-              <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>{source?.methodology || "ESPN rank, grade and commitment fields are source-reported."}</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or NCAA eligibility determination. Use the original ESPN card for the source context.</p><a className="text-link" href={prospect.source_url} target="_blank" rel="noreferrer">Open source record ↗</a></article>
+              <article className="paper-panel"><div className="eyebrow">Player profile</div><h2>{prospect.position || "Position not listed"}</h2><dl className="roster-stat-grid"><div><dt>High school</dt><dd>{prospect.high_school || "—"}</dd></div><div><dt>Hometown</dt><dd>{prospect.hometown || "—"}</dd></div><div><dt>Status</dt><dd>{prospect.status || "—"}</dd></div><div><dt>State rank</dt><dd>{rank(prospect.state_rank)}</dd></div><div><dt>Region rank</dt><dd>{rank(prospect.region_rank)}</dd></div><div><dt>Height</dt><dd>{prospect.height_inches == null ? "—" : `${number(prospect.height_inches / 12, 1)} ft`}</dd></div><div><dt>Weight</dt><dd>{prospect.weight_pounds == null ? "—" : `${number(prospect.weight_pounds)} lb`}</dd></div><div><dt>Athlete ID</dt><dd>{prospect.athlete_id}</dd></div></dl></article>
+              <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>Rank, grade and commitment fields are recorded values.</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or eligibility determination.</p><small className="note">Edition {edition || "unavailable"} · Athlete ID {prospect.athlete_id}</small></article>
             </div>
           </section>
           <section className="section paper-panel" aria-labelledby="prospect-publisher-mentions">
             <div className="section-heading" style={{ marginBottom: 12 }}>
-              <div><div className="eyebrow">Publisher wire / literal search</div><h2 id="prospect-publisher-mentions">Keep the reporting context close.</h2></div>
-              <span className="note">ESPN + NCAA.com RSS</span>
+              <div><div className="eyebrow">Context mentions / literal search</div><h2 id="prospect-publisher-mentions">Keep the reporting context close.</h2></div>
+              <span className="note">Retained headlines</span>
             </div>
-            <p className="note">This is a literal headline search for the prospect name, then the source-listed destination when needed. A mention is reporting context; it is not an identity match, transaction record, availability ruling or eligibility evidence.</p>
-            {mentionStatus === "loading" && <p className="empty" role="status">Checking the permitted publisher wire…</p>}
-            {mentionStatus === "unavailable" && <p className="empty" role="status">The publisher wire is temporarily unavailable. Open the news archive to search again.</p>}
-            {mentionStatus === "none" && <p className="empty" role="status">No retained headline matched this prospect or source-listed destination.</p>}
+            <p className="note">This is a literal headline search for the prospect name, then the recorded destination when needed. A mention is context; it is not an identity match, transaction record, availability ruling or eligibility evidence.</p>
+            {mentionStatus === "loading" && <p className="empty" role="status">Checking retained headlines…</p>}
+            {mentionStatus === "unavailable" && <p className="empty" role="status">Headline search is temporarily unavailable. Open the news archive to search again.</p>}
+            {mentionStatus === "none" && <p className="empty" role="status">No retained headline matched this prospect or recorded destination.</p>}
             {mentions.length > 0 && <>
               <p className="note" role="status">Showing {mentions.length} retained headline{mentions.length === 1 ? "" : "s"} for “{mentionQuery}”.</p>
               <div className="article-grid">
                 {mentions.map((mention) => <article className="article-card" key={mention.id}>
-                  <div className="eyebrow">{mention.publisher}{mention.division ? ` · ${mention.division}` : ""} · {mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
+                  <div className="eyebrow">{mention.division ? `${mention.division} · ` : ""}{mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
                   <h3>{mention.headline}</h3>
                   {mention.description && <p>{mention.description}</p>}
-                  <a href={mention.link} target="_blank" rel="noreferrer">Read publisher source ↗</a>
                 </article>)}
               </div>
             </>}
-            <p style={{ marginTop: 12 }}><Link href={`/basketball/news/?q=${encodeURIComponent(prospect.name)}`}>Search the complete publisher archive →</Link></p>
+            <p style={{ marginTop: 12 }}><Link href={`/basketball/news/?q=${encodeURIComponent(prospect.name)}`}>Search the complete news archive →</Link></p>
           </section>
           <section className="section paper-panel" aria-labelledby="prospect-research-handoffs">
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Research handoff / separate namespaces</div><h2 id="prospect-research-handoffs">Trace prior production carefully.</h2></div>
               <span className="note">Searches are leads, not identity joins</span>
             </div>
-            <p>Use the exact ESPN name as a starting point for the retained NCAA game archive, ESPN profile release and provider crosswalk. Confirm the school, season, source ID and biographical context before attaching prior production to this prospect.</p>
+            <p>Use the exact prospect name as a starting point for the retained game archive, player profile records and identity crosswalk. Confirm the school, season, record ID and biographical context before attaching prior production to this prospect.</p>
             <div className="button-row">
-              <Link className="button secondary" href={`/basketball/ncaa-player-box/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search NCAA game archive →</Link>
-              <Link className="button secondary" href={`/basketball/player-profiles/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search ESPN profiles →</Link>
-              <Link className="button secondary" href={`/basketball/crosswalk/?q=${encodeURIComponent(prospect.name)}`}>Check provider crosswalk →</Link>
+              <Link className="button secondary" href={`/basketball/ncaa-player-box/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search game archive →</Link>
+              <Link className="button secondary" href={`/basketball/player-profiles/?season=all&q=${encodeURIComponent(prospect.name)}`}>Search player profiles →</Link>
+              <Link className="button secondary" href={`/basketball/crosswalk/?q=${encodeURIComponent(prospect.name)}`}>Check identity crosswalk →</Link>
             </div>
-            <p className="note" style={{ marginTop: 12 }}>A matching name alone does not establish that an NCAA player row, ESPN profile or cross-publisher identifier belongs to this prospect. The site keeps provider namespaces separate until an audited crosswalk exists.</p>
+            <p className="note" style={{ marginTop: 12 }}>A matching name alone does not establish that a player row or cross-dataset identifier belongs to this prospect. The site keeps identity namespaces separate until an audited crosswalk exists.</p>
           </section>
         </>
       )}
