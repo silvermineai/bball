@@ -73,7 +73,7 @@ export default function GameContext() {
 
   return <>
     <div className="page-title">
-      <div className="eyebrow">ESPN source archive / game context</div>
+      <div className="eyebrow">Game context archive</div>
       <h1>Know who<br /><em>actually played.</em></h1>
       <p>Search game-day roster and officiating releases for the context a box score cannot provide: who was active, who started, who sat, and which officials worked the game. Every row keeps its source payload for audit.</p>
     </div>
@@ -81,7 +81,7 @@ export default function GameContext() {
       <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>{view === "rosters" ? "Matching roster rows" : "Matching assignments"}</span></div>
       <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Retained seasons</span></div>
       <div><strong>{seasonLabel(Number(season))}</strong><span>Selected edition</span></div>
-      <div><strong>ESPN</strong><span>Via SportsDataverse</span></div>
+      <div><strong>Game data</strong><span>Retained archive</span></div>
     </div>
     <div className="button-row" style={{ marginTop: 24 }}>
       <button className={`button ${view === "rosters" ? "" : "secondary"}`} onClick={() => reset(() => { setView("rosters"); setTeamId(""); })}>Game rosters</button>
@@ -94,7 +94,7 @@ export default function GameContext() {
       <label className="control"><span>GAME ID</span><input inputMode="numeric" maxLength={40} placeholder="Exact game ID" value={gameId} onChange={(event) => { setGameId(event.target.value); setPage(0); }} /></label>
       {view === "rosters" ? <label className="control"><span>TEAM ID</span><input inputMode="numeric" maxLength={40} placeholder="Exact team ID" value={teamId} onChange={(event) => { setTeamId(event.target.value); setPage(0); }} /></label> : null}
     </div>
-    {meta?.source ? <details className="note" style={{ marginTop: 16 }}><summary>{view === "rosters" ? "Game roster" : "Officials"} source receipt for {seasonLabel(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th><th>Release</th></tr></thead><tbody><tr><td>{sourceDate(meta.source.fetched_at)}</td><td><code>{meta.source.sha256 || "—"}</code></td><td>{meta.source.url ? <a href={meta.source.url} target="_blank" rel="noreferrer">Open release ↗</a> : "—"}</td></tr></tbody></table></div><p style={{ marginTop: 12 }}>The receipt identifies the immutable SportsDataverse release used for this view. Raw publisher fields remain available in each row and CSV.</p></details> : null}
+    {meta?.source ? <details className="note" style={{ marginTop: 16 }}><summary>Archive coverage for {seasonLabel(Number(season))}</summary><div className="table-scroll" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Retrieved (UTC)</th><th>SHA-256</th></tr></thead><tbody><tr><td>{sourceDate(meta.source.fetched_at)}</td><td><code>{meta.source.sha256 || "—"}</code></td></tr></tbody></table></div><p style={{ marginTop: 12 }}>Retained rows and raw fields remain available in each row and CSV.</p></details> : null}
     {copied ? <p role="status" style={{ marginTop: 16 }}>{copied}</p> : null}
     {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>Retry archive</button></div> : !result ? <p className="empty" role="status">Loading source rows…</p> : <section className="note" style={{ marginTop: 24 }}>
       <div className="section-heading"><div><div className="eyebrow">{seasonLabel(result.season)} retained rows</div><h2>{result.total.toLocaleString()} matching records</h2></div><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button></div>
@@ -103,7 +103,7 @@ export default function GameContext() {
       </tr>)}</tbody></table></div>
       {!result.rows.length ? <p className="empty">No source rows match these filters.</p> : null}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
-      <p className="note" style={{ marginTop: 24 }}>Source release retrieved {sourceDate(meta?.source?.fetched_at)}. These rows describe the published game context; they do not establish eligibility, a recruiting commitment, or a future availability decision.</p>
+      <p className="note" style={{ marginTop: 24 }}>Archive snapshot retrieved {sourceDate(meta?.source?.fetched_at)}. These rows describe game context; they do not establish eligibility, a recruiting commitment, or a future availability decision.</p>
     </section>}
   </>;
 }

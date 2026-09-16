@@ -68,7 +68,7 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
 
   return <>
     <div className="page-title">
-      <div className="eyebrow">NCAA source archive / possession context</div>
+      <div className="eyebrow">Possession context archive</div>
       <h1>See how a team<br /><em>uses each trip.</em></h1>
       <p>Possession-level source records make tempo and shot-creation context easier to inspect: how many trips a team plays, how often possessions are marked transition or assisted, and how much of the sample is tagged garbage time.</p>
       <div className="hero-actions"><Link className="button" href="/basketball/learn/">Learn the denominators →</Link><Link className="hero-link" href="/basketball/lineups/">Open lineup lab →</Link></div>
@@ -98,6 +98,6 @@ export default function Style({ catalog }: { catalog: PossessionStyleCatalog }) 
       {!rows.length && <p className="empty">No teams match this view.</p>}
       <div className="pagination"><span>{total.toLocaleString()} rows · source IDs remain attributable</span><div><button className="button secondary" type="button" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" type="button" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button></div></div>
     </>}
-    <p className="note" style={{ marginTop: 20 }}>Source: SportsDataverse <a href="https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/ncaa_mbb_possessions" target="_blank" rel="noreferrer">NCAA men&apos;s basketball possession release ↗</a>. Silvermine stores the source receipt and derived team-season aggregates; raw player identities are not inferred from lineup membership.</p>
+    <p className="note" style={{ marginTop: 20 }}>Silvermine stores the retained possession rows and derived team-season aggregates; raw player identities are not inferred from lineup membership.</p>
   </>;
 }

@@ -160,12 +160,8 @@ export default function FootballBrief({
         </p>
         <p>
           Model: <code>{d.model.id}</code> · Forecast cutoff: {d.model.cutoff}.
-          Schedule and source statistics:{" "}
-          <a href="https://github.com/sportsdataverse/sportsdataverse-data">
-            SportsDataverse
-          </a>
-          , CC BY 4.0. Silvermine supplies the independent model, aggregations
-          and generated commentary.
+          Silvermine supplies the independent model, aggregations and generated
+          commentary.
         </p>
         <p>
           <Link href="/football/methodology/">Model methodology</Link> ·{" "}

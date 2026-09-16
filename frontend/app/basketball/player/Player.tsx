@@ -169,13 +169,13 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               className="hero-link"
               href={`/basketball/ncaa-rankings/?q=${encodeURIComponent(selected?.name || data.profiles[0].name)}`}
             >
-              Search NCAA source records →
+              Search archived records →
             </Link>
             <Link
               className="hero-link"
               href={`/basketball/source-stats/?q=${encodeURIComponent(selected?.name || data.profiles[0].name)}`}
             >
-              Search publisher stat fields →
+              Search additional stat fields →
             </Link>
           </div>
         )}
@@ -232,7 +232,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
             <section className="section paper-panel" aria-label="Source-reported availability profile">
               <div className="section-heading">
                 <div>
-                  <div className="eyebrow">Role sample / source-reported participation</div>
+                  <div className="eyebrow">Role sample / recorded participation</div>
                   <h2>Separate playing time from availability claims.</h2>
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
             <section className="section paper-panel">
               <div className="section-heading">
                 <div>
-                  <div className="eyebrow">ESPN-derived source profile</div>
+                  <div className="eyebrow">Player profile</div>
                   <h2>Identity and roster context.</h2>
                 </div>
               </div>
@@ -533,14 +533,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                         </small>
                         {r.score_for != null && r.score_against != null && (
                           <small>
-                            Final {r.score_for}–{r.score_against} · game {r.id}{" "}
-                            <a
-                              href={`https://www.espn.com/mens-college-basketball/game/_/gameId/${encodeURIComponent(r.id)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              ESPN source ↗
-                            </a>
+                            Final {r.score_for}–{r.score_against} · game {r.id}
                           </small>
                         )}
                       </td>
@@ -704,12 +697,10 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               college career.
             </p>
             <details>
-              <summary>Source receipts and coverage</summary>
+              <summary>Archive coverage</summary>
               {data.sources.map((s) => (
                 <p key={s.dataset}>
-                  <a href={s.url}>
-                    {s.dataset} / {s.season} · SportsDataverse ↗
-                  </a>
+                  <strong>{s.dataset} / {s.season}</strong>
                   <br />
                   <small>Retrieved {date(s.fetched_at)}</small>
                   <br />
@@ -717,8 +708,7 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                 </p>
               ))}
               <p>
-                CC BY 4.0, as stated by the publisher. Silvermine normalizes
-                fields and calculates the displayed summaries.
+                Silvermine normalizes fields and calculates the displayed summaries.
               </p>
             </details>
           </section>

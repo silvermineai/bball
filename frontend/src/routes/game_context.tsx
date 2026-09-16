@@ -41,7 +41,7 @@ function GameContextDesk() {
         <div className="font-stat text-[11px] uppercase tracking-[0.22em] text-court">Game context</div>
         <h1 className="font-display text-4xl font-semibold">Who dressed, who started, who called it</h1>
         <p className="mt-2 max-w-3xl text-sm text-graphite">
-          Source-native ESPN game rosters and officiating assignments. Use this desk to verify availability and preserve the context around every matchup before trusting a box score.
+          Game rosters and officiating assignments. Use this desk to verify availability and preserve the context around every matchup before trusting a box score.
         </p>
       </div>
 
@@ -70,7 +70,6 @@ function GameContextDesk() {
             </tbody>
           </table>
         </div>
-        {data?.source?.url ? <div className="border-t border-line px-4 py-3 font-stat text-[10px] text-graphite">Source receipt: {new Date(data.source.fetched_at ?? "").toLocaleString()} · <a href={data.source.url} className="underline" target="_blank" rel="noreferrer">SportsDataverse release</a></div> : null}
       </section>
     </div>
   );

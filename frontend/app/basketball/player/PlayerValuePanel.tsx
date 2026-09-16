@@ -71,13 +71,13 @@ export default function PlayerValuePanel({ id, season }: { id: string; season: n
     <section className="section paper-panel player-value-panel">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Attributed publisher model / {season - 1}–{String(season).slice(-2)}</div>
+          <div className="eyebrow">Player value model / {season - 1}–{String(season).slice(-2)}</div>
           <h2>Put the box score beside BPM.</h2>
         </div>
         <span className="note">Source ID {id}</span>
       </div>
       <p className="note">
-        {name || "This source identity"}{team ? ` · ${team}` : ""} appears in the retained SportsDataverse player-value release. These are publisher estimates, not Silvermine forecasts, eligibility findings or a join to the separate NCAA identity namespace.
+        {name || "This player"}{team ? ` · ${team}` : ""} appears in the retained player-value archive. These are model estimates, not Silvermine forecasts, eligibility findings or a join to another identity namespace.
       </p>
       <div className="strip">
         {(Object.keys(labels) as Metric[]).map((metric) => (
@@ -87,12 +87,7 @@ export default function PlayerValuePanel({ id, season }: { id: string; season: n
           </div>
         ))}
       </div>
-      <p className="note" style={{ marginTop: 18 }}>
-        <a href="https://github.com/sportsdataverse/sportsdataverse-data/releases" target="_blank" rel="noreferrer">
-          Open the attributed publisher release ↗
-        </a>
-        {" · "}Use the player-value archive for other seasons and qualification filters.
-      </p>
+      <p className="note" style={{ marginTop: 18 }}>Use the player-value archive for other seasons and qualification filters.</p>
     </section>
   );
 }
