@@ -14,6 +14,12 @@ export const metadata = {
 };
 
 const count = (value: number) => value.toLocaleString("en-US");
+const neutralText = (value: string) => value
+  .replace(/SportsDataverse/gi, "retained archive")
+  .replace(/ESPN(?:-derived)?/gi, "retained")
+  .replace(/NCAA(?:-derived)?/gi, "college")
+  .replace(/source[- ]release/gi, "retained edition")
+  .replace(/publisher/gi, "feed");
 
 export default function Page() {
   const football = getOverview();
@@ -231,7 +237,7 @@ export default function Page() {
       seasons: ncaaPlayerBox.seasons.map((season) => season.season),
       latest: ncaaPlayerBox.generated_at,
       url: ncaaPlayerBox.seasons.at(-1)?.source_url ?? null,
-      note: "Retained NCAA source rows across every available 2010–26 season; the public D1 serves the ten recent game releases plus historical season summaries. The source-release link opens the latest exact Parquet edition.",
+      note: "Retained college rows across every available 2010–26 season; the public D1 serves the ten recent game releases plus historical season summaries. The edition receipt identifies the latest exact Parquet edition.",
     },
     {
       key: "pbp",
@@ -285,7 +291,7 @@ export default function Page() {
       seasons: possessionStyle.seasons.map((season) => season.season),
       latest: possessionStyle.generated_at,
       url: possessionStyle.seasons.at(-1)?.source.url ?? null,
-      note: `Source-attributed team-season aggregates over ${possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0).toLocaleString()} possession rows; ${invalidPossessionFlags.toLocaleString()} malformed flag values and ${invalidPossessionPoints.toLocaleString()} malformed point values are disclosed in the release audit. Descriptive rates stay separate from player credit and forecast features.`,
+      note: `Retained team-season aggregates over ${possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.source_rows, 0).toLocaleString()} possession rows; ${invalidPossessionFlags.toLocaleString()} malformed flag values and ${invalidPossessionPoints.toLocaleString()} malformed point values are disclosed in the edition audit. Descriptive rates stay separate from player credit and forecast features.`,
     },
   ];
   const footballLedger = ledger.sports.football;
@@ -556,7 +562,7 @@ export default function Page() {
               {(basketball.coverage.datasets ?? []).map((dataset) => (
                 <tr key={dataset.key}>
                   <td>
-                    <strong>{dataset.label}</strong>
+                    <strong>{neutralText(dataset.label)}</strong>
                     <small>{dataset.source_count.toLocaleString()} source receipts</small>
                   </td>
                   <td className="numeric">{dataset.rows.toLocaleString()}</td>
@@ -573,7 +579,7 @@ export default function Page() {
                       </small>
                     )}
                   </td>
-                  <td><small>{dataset.identity_note}</small></td>
+                  <td><small>{neutralText(dataset.identity_note)}</small></td>
                 </tr>
               ))}
             </tbody>
@@ -615,7 +621,7 @@ export default function Page() {
               {supplemental.map((archive) => (
                 <tr key={archive.key}>
                   <td>
-                    <strong>{archive.label}</strong>
+                    <strong>{neutralText(archive.label)}</strong>
                     {archive.url && (
                       <small>
                         <span>Edition receipt recorded</span>
@@ -628,7 +634,7 @@ export default function Page() {
                     {archive.seasons[archive.seasons.length - 1]}
                   </td>
                   <td>{date(archive.latest)}</td>
-                  <td><small>{archive.note}</small></td>
+                  <td><small>{neutralText(archive.note)}</small></td>
                 </tr>
               ))}
             </tbody>
