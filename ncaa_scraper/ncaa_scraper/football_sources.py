@@ -91,17 +91,22 @@ class ReleaseClient:
                 if path.exists() and receipt.get("etag")
                 else {}
             )
-            for attempt in range(3):
+            # Release assets occasionally return a short-lived 5xx while the
+            # CDN is materializing a large historical file. Keep retries
+            # bounded and single-threaded, but give the publisher enough time
+            # to recover before failing an otherwise complete publication.
+            retry_delays = (2, 4, 8, 16)
+            for attempt in range(len(retry_delays) + 1):
                 time.sleep(max(0, 1.0 - (time.monotonic() - self.last_request)))
                 self.last_request = time.monotonic()
                 try:
                     response = self.session.get(url, headers=headers, timeout=(15, 90))
                 except requests.RequestException as exc:
-                    if attempt == 2:
+                    if attempt == len(retry_delays):
                         raise SourceUnavailable(
                             f"Download failed: {dataset}/{year}"
                         ) from exc
-                    time.sleep(2**attempt)
+                    time.sleep(retry_delays[attempt])
                     continue
                 if response.status_code == 304:
                     break
@@ -110,7 +115,7 @@ class ReleaseClient:
                         f"Source unavailable ({response.status_code}): {url}"
                     )
                 if response.status_code == 429 or response.status_code >= 500:
-                    if attempt == 2:
+                    if attempt == len(retry_delays):
                         raise SourceUnavailable(
                             f"Source busy: {dataset}/{year}; retry on next run"
                         )
@@ -119,7 +124,7 @@ class ReleaseClient:
                         raise SourceUnavailable(
                             "Source requested a longer pause; retry later"
                         )
-                    time.sleep(int(retry) if retry.isdigit() else 2 ** (attempt + 1))
+                    time.sleep(int(retry) if retry.isdigit() else retry_delays[attempt])
                     continue
                 response.raise_for_status()
                 payload = response.content
