@@ -372,6 +372,8 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
       ncaa_possessions: "Possession-style profiles",
       ncaa_game_rosters: "Game-day rosters",
       ncaa_officials: "Game officiating assignments",
+      player_season: "Season player stats",
+      publisher_ratings: "Archived team ratings",
     };
     return labels[dataset.key] || dataset.label.replace(/\b(?:NCAA|ESPN)\b/gi, "Archived");
   };
