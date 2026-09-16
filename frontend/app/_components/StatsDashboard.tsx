@@ -60,11 +60,12 @@ function modelLabel(game: BBGame) {
 }
 
 function TeamTable({ teams }: { teams: BBTeam[] }) {
+  const pct = (value: number | null | undefined) => value == null ? "—" : `${fmt(value * 100)}%`;
   return (
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>#</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">Adj O</th><th className="numeric">Adj D</th><th className="numeric">NET</th><th className="numeric">PACE</th><th className="numeric">SOS</th></tr>
+          <tr><th>#</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">Adj O</th><th className="numeric">Adj D</th><th className="numeric">NET</th><th className="numeric">PACE</th><th className="numeric">SOS</th><th className="numeric">eFG%</th><th className="numeric">TO%</th><th className="numeric">ORB%</th><th className="numeric">FTR</th></tr>
         </thead>
         <tbody>
           {teams.slice(0, 12).map((team) => (
@@ -77,6 +78,10 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
               <td className="numeric"><strong>{fmt(team.adj_net)}</strong></td>
               <td className="numeric">{fmt(team.adj_tempo)}</td>
               <td className="numeric">{team.sos == null ? "—" : fmt(team.sos)}</td>
+              <td className="numeric">{pct(team.efg)}</td>
+              <td className="numeric">{pct(team.tov_rate)}</td>
+              <td className="numeric">{pct(team.orb_rate)}</td>
+              <td className="numeric">{pct(team.ft_rate)}</td>
             </tr>
           ))}
         </tbody>
@@ -302,7 +307,7 @@ export default function StatsDashboard() {
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">
           <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><Link href="/basketball/ratings/">Full team table →</Link></div>
-          <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, adjusted defense, net rating, pace and schedule strength.</p>
+          <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
         </section>
         <section className="dashboard-section" aria-labelledby="dashboard-players">
