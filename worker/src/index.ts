@@ -706,7 +706,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
   ).all<{ dataset: string; source_count: number; latest_source_at: string | null }>(), COVERAGE_DB_TIMEOUT_MS);
   c.header("Cache-Control", "public, max-age=300");
   const response = c.json({
-    coverage: Object.keys(tables).map((dataset) => ({
+    // Summary requests intentionally query a bounded subset; do not turn the
+    // unqueried archive tables into misleading zero counts. Full audit
+    // requests include every table and the dedicated NCAA game count.
+    coverage: (audit ? Object.keys(tables) : tableNames).map((dataset) => ({
       dataset,
       rows: countByDataset.get(dataset) ?? 0,
     })),
