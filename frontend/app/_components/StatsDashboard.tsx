@@ -278,6 +278,11 @@ export default function StatsDashboard() {
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
+          {overview.model.evaluation.baseline_margin_mae != null && (
+            <small>
+              {fmt(Math.max(0, overview.model.evaluation.baseline_margin_mae - overview.model.evaluation.margin_mae))} pts lower margin error than the baseline on holdout games.
+            </small>
+          )}
         </div>
       </section>
       <div className="dashboard-strip">
