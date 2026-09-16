@@ -64,7 +64,7 @@ function ForecastTable({ games }: { games: Game[] }) {
   return (
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
-        <thead><tr><th>Game</th><th>Tip</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Total</th></tr></thead>
+        <thead><tr><th>Game</th><th>Tip</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr></thead>
         <tbody>{games.filter((game) => game.prediction).slice(0, 12).map((game) => {
           const prediction = game.prediction!;
           return <tr key={game.id}>
@@ -73,6 +73,7 @@ function ForecastTable({ games }: { games: Game[] }) {
             <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
             <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
             <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
+            <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
             <td className="numeric">{fmt(prediction.total)}</td>
           </tr>;
         })}</tbody>
@@ -169,6 +170,7 @@ export default function FootballDashboard() {
         <div className="dashboard-model-rule" />
         <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
         <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
+        <small>{fmt(Math.max(0, overview.model.evaluation.baseline_margin_mae - overview.model.evaluation.margin_mae))} pts lower margin error than the baseline on holdout games.</small>
       </div>
     </section>
     <LiveFootballMarketStatus />
@@ -180,7 +182,7 @@ export default function FootballDashboard() {
     </div>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
-      <p className="dashboard-caption">Every row has a Silvermine score projection, win probability, margin and total. Historical market comparisons stay on the matchup desk when an eligible quote is available.</p>
+      <p className="dashboard-caption">Every row has a Silvermine score projection, win probability, margin, calibrated range and total. Historical market comparisons stay on the matchup desk when an eligible quote is available.</p>
       <ForecastTable games={forecasts} />
     </section>
     <div className="dashboard-two-col">
