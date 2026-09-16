@@ -267,11 +267,11 @@ export default function Page() {
       seasons: withinImpact.seasons.map((season) => season.season),
       latest: withinImpact.seasons.reduce((latest, season) => latest > season.generated_at ? latest : season.generated_at, ""),
       url: null,
-      note: "Source impact rows; qualification and possession samples remain visible.",
+      note: "Impact rows; qualification and possession samples remain visible.",
     },
     {
       key: "standings",
-      label: "Historical publisher standings",
+      label: "Historical standings",
       rows: standings.teams.length,
       seasons: standings.seasons.map((season) => season.season),
       latest: standings.generated_at,
@@ -280,7 +280,7 @@ export default function Page() {
     },
     {
       key: "possession-style",
-      label: "NCAA possession-style archive",
+      label: "Possession-style archive",
       rows: possessionStyle.seasons.reduce((sum, season) => sum + season.coverage.teams, 0),
       seasons: possessionStyle.seasons.map((season) => season.season),
       latest: possessionStyle.generated_at,
@@ -538,7 +538,7 @@ export default function Page() {
         </div>
         <p className="note">
           Row counts are table-local source records. They are not deduplicated
-          person counts, and identities from NCAA releases are kept separate
+          person counts, and identities from retained editions are kept separate
           from retained records unless an exact source key is available.
         </p>
         <div className="table-scroll">
@@ -772,9 +772,9 @@ export default function Page() {
           <p className="note">
             The archive currently retains {count(marketBySport.football.observations)}
             football observations across {count(marketBySport.football.games)} games
-            from the prospective schedule capture. Basketball has {count(marketBySport.basketball.observations)}
+            from the prospective schedule. Basketball has {count(marketBySport.basketball.observations)}
             qualifying observations in this edition. Historical imported lines
-            without a publisher clock remain outside market evaluation, and
+            without a verified clock remain outside market evaluation, and
             retained reading snapshots stay separate from the scorecard.
           </p>
           <p>
@@ -876,8 +876,8 @@ export default function Page() {
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
             Current releases come from the retained bulk
-            store. Direct provider extraction is disabled when terms or licensing prohibit it, and
-            NCAA requests stop when robots policy disallows crawling. Missing
+            store. Direct extraction is disabled when terms or licensing prohibit it, and
+            requests stop when robots policy disallows crawling. Missing
             values remain missing; names are never used to invent identities.
           </p>
         </div>
