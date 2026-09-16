@@ -87,7 +87,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
     }).filter((game): game is SavedGame => Boolean(game?.prediction));
     if (!rows.length) return;
     downloadCsv("basketball-prep-list.csv", toCsv(
-      ["Game ID", "Start (UTC)", "ESPN source start (UTC)", "ESPN time valid", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
+      ["Game ID", "Start (UTC)", "Recorded start (UTC)", "Time valid", "Away", "Home", "Model home margin", "Model total", "Home win probability", "Margin low", "Margin high", "Model edition", "Verified market context"],
       rows.map((game) => {
         const p = game.prediction!;
         return [game.id, game.starts_at, game.source_start || null, game.source_time_valid == null ? null : game.source_time_valid ? "yes" : "no", game.away_name, game.home_name, p.home_margin, p.total, p.home_win_probability * 100, p.margin_low, p.margin_high, edition?.modelId || null, game.marketContext || null];
@@ -146,7 +146,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
             const p = g.prediction;
             if (!p) return null;
             const lens = basketballEditorialLens(g);
-            const sourceClock = g.source_time_valid && g.source_start ? ` · ESPN ${kick(g.source_start)}` : "";
+            const sourceClock = g.source_time_valid && g.source_start ? ` · schedule clock ${kick(g.source_start)}` : "";
             return <article className="article-card" key={g.id}>
               <div className="eyebrow">{date(g.starts_at)} · Model brief{sourceClock}</div>
               <h2>

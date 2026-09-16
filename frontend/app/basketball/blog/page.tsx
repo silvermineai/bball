@@ -6,7 +6,7 @@ import { date } from "../../_lib/format";
 export const metadata = {
   title: "Upcoming basketball game notebooks",
   description:
-    "Read forecast-backed 2026–27 men’s college basketball game notebooks with Four Factors, uncertainty and source questions.",
+    "Read forecast-backed 2026–27 men’s college basketball game notebooks with Four Factors, uncertainty and preparation questions.",
   alternates: { canonical: "/basketball/blog/" },
 };
 
@@ -24,7 +24,7 @@ export default function Page() {
         <p>
           Forecast-backed notebooks turn the 2026–27 slate into a research
           queue: read the range, identify the Four Factors, then take the next
-          question to the roster, film and source archives.
+          question to the roster, film and stat archives.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/basketball/matchups/">Open the full matchup desk ↗</Link>
@@ -36,7 +36,7 @@ export default function Page() {
         <div><strong>{games.length.toLocaleString()}</strong><span>Notebook previews in this edition</span></div>
         <div><strong>{basketball.coverage.forecast_games.toLocaleString()}</strong><span>Published 2026–27 forecasts</span></div>
         <div><strong>{basketball.model.evaluation.games.toLocaleString()}</strong><span>Held-out games behind the test</span></div>
-        <div><strong>{nextGame ? date(nextGame.starts_at) : "—"}</strong><span>Next scheduled source date</span></div>
+        <div><strong>{nextGame ? date(nextGame.starts_at) : "—"}</strong><span>Next scheduled date</span></div>
       </div>
       <section className="section">
         <div className="section-heading">
@@ -48,7 +48,7 @@ export default function Page() {
         </div>
         <p className="note">
           The queue refreshes from the latest retained D1 forecast edition when
-          available. Each notebook keeps the model range and source caveats
+          available. Each notebook keeps the model range and data caveats
           attached; a generated preview is a starting point for reporting, not
           a claim about availability or a betting edge.
         </p>
@@ -64,7 +64,7 @@ export default function Page() {
         <article className="paper-panel">
           <div className="eyebrow">Keep the evidence open</div>
           <h2>Who could change the matchup?</h2>
-          <p>Pair the matchup with NCAA player logs, roster observations, recruiting records and publisher news. Missing evidence stays visible instead of becoming an assumption.</p>
+          <p>Pair the matchup with NCAA player logs, roster observations, recruiting records and published news. Missing evidence stays visible instead of becoming an assumption.</p>
           <div className="button-row"><Link href="/basketball/recruiting/">Recruiting evidence →</Link><Link href="/basketball/ncaa-rankings/">Player rankings →</Link></div>
         </article>
       </section>
