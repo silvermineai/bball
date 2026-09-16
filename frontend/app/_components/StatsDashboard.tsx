@@ -9,6 +9,7 @@ import {
 } from "../_lib/basketball-leaders";
 import type { BBGame, BBTeam } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
+import { rankPlayerProfiles } from "../_lib/player-index-view";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 
@@ -92,14 +93,40 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
 
 function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
   const rows = topBasketballLeaders(players, "ppg", 12);
+  // The landing table stays ordered by scoring, while this second score makes
+  // the all-around player ranking visible without forcing a separate page.
+  // Use a deterministic display key because the compact dashboard release
+  // does not need to expose the underlying provider team identifier.
+  type DashboardProfilePlayer = BasketballLeaderPlayer & {
+    team_id: string;
+    spg: number | null;
+    bpg: number | null;
+    efg: number | null;
+    tov_rate: number | null;
+  };
+  const profileRows = rankPlayerProfiles<DashboardProfilePlayer>(
+    players.map((player) => ({
+      ...player,
+      team_id: `${player.id}:${player.team}`,
+      spg: player.spg ?? null,
+      bpg: player.bpg ?? null,
+      efg: player.efg ?? null,
+      tov_rate: player.tov_rate ?? null,
+    })),
+  );
+  const profileByPlayer = new Map(
+    profileRows.map((player) => [`${player.id}::${player.team}`, player]),
+  );
   return (
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">eFG%</th><th className="numeric">TS%</th><th className="numeric">TO%</th></tr>
+          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">eFG%</th><th className="numeric">TS%</th><th className="numeric">TO%</th><th className="numeric">Index</th></tr>
         </thead>
         <tbody>
-          {rows.map((player) => (
+          {rows.map((player) => {
+            const profile = profileByPlayer.get(`${player.id}::${player.team}`);
+            return (
             <tr key={`${player.id}-${player.team}`}>
               <td className="rank-number">{player.rank}</td>
               <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link><small>{player.position || "—"}</small></th>
@@ -114,8 +141,10 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
               <td className="numeric">{player.efg == null ? "—" : `${fmt(player.efg * 100)}%`}</td>
               <td className="numeric">{player.ts == null ? "—" : `${fmt(player.ts * 100)}%`}</td>
               <td className="numeric">{player.tov_rate == null ? "—" : `${fmt(player.tov_rate * 100)}%`}</td>
+              <td className="numeric">{profile?.profileScore == null ? "—" : fmt(profile.profileScore)}<small>{profile?.profileRank ? `#${profile.profileRank} all-around` : "Insufficient fields"}</small></td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
