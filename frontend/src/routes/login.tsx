@@ -33,7 +33,7 @@ function LoginPage() {
           </div>
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.18em] text-court">Silvermine</div>
-            <div className="text-lg font-semibold leading-tight">NCAA Analytics</div>
+            <div className="text-lg font-semibold leading-tight">Basketball Analytics</div>
           </div>
         </Link>
 

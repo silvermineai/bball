@@ -179,7 +179,7 @@ export default function FootballDashboard() {
       <div><strong>{overview.ratings.length}</strong><span>Rated teams</span></div>
       <div><strong>{players.length.toLocaleString()}</strong><span>Player stat rows</span></div>
       <div><strong>{overview.coverage.upcoming_games.toLocaleString()}</strong><span>Upcoming games</span></div>
-      <div><strong>{overview.coverage.ncaa_player_stats_rows.toLocaleString()}</strong><span>NCAA player stat rows</span></div>
+      <div><strong>{overview.coverage.ncaa_player_stats_rows.toLocaleString()}</strong><span>Player stat rows</span></div>
     </div>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>

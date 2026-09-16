@@ -41,13 +41,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="sport-nav-group">
               <div className="eyebrow">Players</div>
               <Link href="/basketball/player-profiles/">Player profiles</Link>
-              <Link href="/basketball/ncaa-player-box/">NCAA player box archive</Link>
-              <Link href="/basketball/ncaa-compare/">Compare NCAA players</Link>
-              <Link href="/basketball/ncaa-player/">NCAA player cards</Link>
-              <Link href="/basketball/ncaa-careers/">NCAA historical leaderboard</Link>
-              <Link href="/basketball/ncaa-rosters/">NCAA roster intel</Link>
+              <Link href="/basketball/ncaa-player-box/">Player box archive</Link>
+              <Link href="/basketball/ncaa-compare/">Compare players</Link>
+              <Link href="/basketball/ncaa-player/">Player cards</Link>
+              <Link href="/basketball/ncaa-careers/">Historical leaderboard</Link>
+              <Link href="/basketball/ncaa-rosters/">Roster intel</Link>
               <Link href="/basketball/leaders/">National leaders</Link>
-              <Link href="/basketball/ncaa/">NCAA leaderboards</Link>
+              <Link href="/basketball/ncaa/">National leaderboards</Link>
               <Link href="/basketball/scouting-board/">Build a player board</Link>
               <Link href="/basketball/compare-players/">Compare players</Link>
             </div>
@@ -64,9 +64,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="eyebrow">Research archive</div>
               <Link href="/basketball/source-stats/">Stat browser</Link>
               <Link href="/basketball/game-context/">Game context</Link>
-              <Link href="/basketball/ncaa-shooting/">NCAA shooting profiles</Link>
+              <Link href="/basketball/ncaa-shooting/">Shooting profiles</Link>
               <Link href="/basketball/team-stats/">Team stat browser</Link>
-              <Link href="/basketball/ncaa-team-box/">NCAA team box archive</Link>
+              <Link href="/basketball/ncaa-team-box/">Team box archive</Link>
               <Link href="/basketball/film/">Film room</Link>
               <Link href="/basketball/shooting/">Shooting lab</Link>
               <Link href="/basketball/pbp/">Play-by-play archive</Link>

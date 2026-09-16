@@ -56,7 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <div className="eyebrow">Football desk</div>
                   <Link href="/football/matchups/">Matchups</Link>
                   <Link href="/football/players/">Player index</Link>
-                  <Link href="/football/ncaa-leaders/">NCAA leaders</Link>
+                  <Link href="/football/ncaa-leaders/">National leaders</Link>
                   <Link href="/football/source-stats/">Stat archive</Link>
                   <Link href="/football/recruiting/">Recruiting &amp; rosters</Link>
                   <Link href="/football/careers/">Player careers</Link>
@@ -73,7 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/basketball/forecast-lab/">Forecast lab</Link>
                   <Link href="/basketball/players/">Player stats</Link>
                   <Link href="/basketball/lineups/">Lineups</Link>
-                  <Link href="/basketball/ncaa-rankings/">NCAA metrics</Link>
+                  <Link href="/basketball/ncaa-rankings/">Efficiency metrics</Link>
                   <Link href="/basketball/recruiting/">Recruiting board</Link>
                   <Link href="/basketball/learn/">Basketball guide</Link>
                 </div>

@@ -35,11 +35,11 @@ export default function LiveBasketballPlayerArchiveStatus() {
   return (
     <p className="note" role="status">
       {status === "live" && archive
-        ? <>Live NCAA player archive: {(archive.game_rows || archive.total || 0).toLocaleString()} game rows and {(archive.season_rows || 0).toLocaleString()} season summaries across {(archive.seasons || []).length.toLocaleString()} retained seasons{archive.source?.fetched_at ? ` · source receipt ${new Date(archive.source.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. Source fields remain in the NCAA identity namespace; unavailable values stay unavailable. <Link href="/basketball/ncaa-player-box/">Open the full player archive →</Link>
+        ? <>Live player archive: {(archive.game_rows || archive.total || 0).toLocaleString()} game rows and {(archive.season_rows || 0).toLocaleString()} season summaries across {(archive.seasons || []).length.toLocaleString()} retained seasons. Source fields stay tied to their recorded identities; unavailable values stay unavailable. <Link href="/basketball/ncaa-player-box/">Open the full player archive →</Link>
           </>
         : status === "fallback"
-          ? <>The live NCAA player archive is temporarily unavailable; the published player release remains available. <Link href="/basketball/ncaa-player-box/">Open the player archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
-          : "Checking the live NCAA player archive…"}
+          ? <>The live player archive is temporarily unavailable; the published player release remains available. <Link href="/basketball/ncaa-player-box/">Open the player archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
+          : "Checking the live player archive…"}
     </p>
   );
 }

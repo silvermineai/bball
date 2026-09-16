@@ -12,10 +12,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Silvermine NCAA Analytics" },
+      { title: "Silvermine Basketball Analytics" },
       {
         name: "description",
-        content: "Coach-first NCAA analytics with game, team, player, and event data.",
+        content: "Basketball analytics with game, team, player, and event data.",
       },
     ],
   }),
