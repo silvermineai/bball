@@ -214,7 +214,7 @@ export default function EspnRecruitingBoard() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
-          setError(reason instanceof Error ? reason.message : "The ESPN prospect release is unavailable.");
+          setError(reason instanceof Error ? reason.message : "The prospect release is unavailable.");
         }
       });
     return () => controller.abort();
@@ -258,16 +258,16 @@ export default function EspnRecruitingBoard() {
     <section className="section">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">National prospect board / ESPN source</div>
+          <div className="eyebrow">National prospect board / recorded class</div>
           <h2>{season} recruiting rankings.</h2>
         </div>
-        <p>Search the source-ranked class, inspect commitment status and open the original ESPN prospect card. Ranking and grade are source fields, not eligibility or a Silvermine scouting grade.</p>
+        <p>Search the recorded class, inspect commitment status and open the prospect record. Ranking and grade are retained fields, not eligibility or a Silvermine scouting grade.</p>
       </div>
       <div className="toolbar">
         <label className="control"><span>CLASS</span><select value={season} onChange={(event) => { setSeason(event.target.value); setPage(0); }}><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option></select></label>
         <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Prospect, school or hometown" /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
-        <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All source ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
+        <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All recorded ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
         <button className="button secondary" type="button" onClick={downloadShortlist} disabled={!shortlist.length}>Download shortlist ({shortlist.length}) ↓</button>
@@ -278,7 +278,7 @@ export default function EspnRecruitingBoard() {
           <div><div className="eyebrow">Local staff board / browser saved</div><h3>Your prospect shortlist.</h3></div>
           <span className="note">{shortlist.length} saved · available on this browser</span>
         </div>
-        <p className="note">Shortlist entries preserve the ESPN class, exact athlete ID and source link. They stay in this browser and do not merge identities across providers.</p>
+        <p className="note">Shortlist entries preserve the class, exact athlete ID and record link. They stay in this browser and do not merge identities across providers.</p>
         <div className="strip" aria-label="Shortlist summary" style={{ marginBottom: 16 }}>
           <div><strong>{shortlist.length.toLocaleString()}</strong><span>Saved prospects</span></div>
           <div><strong>{shortlistRanked.length.toLocaleString()}</strong><span>With source rank</span></div>
@@ -289,7 +289,7 @@ export default function EspnRecruitingBoard() {
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Source snapshot</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
           const rankGap = row.rank != null && shortlistBestRankBySeason.has(row.season) ? row.rank - shortlistBestRankBySeason.get(row.season)! : null;
           const gradeGap = row.grade != null && shortlistBestGradeBySeason.has(row.season) ? row.grade - shortlistBestGradeBySeason.get(row.season)! : null;
-          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not source-listed"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">ESPN ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
+          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}</td><td><a className="text-link" href={row.source_url} target="_blank" rel="noreferrer">Open record ↗</a><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
         })}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved ESPN rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
