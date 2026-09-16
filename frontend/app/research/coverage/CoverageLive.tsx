@@ -189,7 +189,10 @@ export default function CoverageLive() {
       }
       if (!controller.signal.aborted) onError(failure instanceof Error ? failure.message : "The live D1 coverage check is unavailable.");
     };
-    void load("/api/basketball/research/coverage", setData, setError);
+    // Counts and receipt clocks are enough for the coverage page's first
+    // paint. The scheduled publication monitor requests audit=1 separately
+    // when it needs the slower possession and location validation pass.
+    void load("/api/basketball/research/coverage?audit=0", setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);

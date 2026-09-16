@@ -523,6 +523,11 @@ app.get("/api/basketball/research/coverage", async (c) => {
   const db = researchDb(c.env);
   const gameDb = ncaaBoxDb(c.env);
   const dedicatedGameDb = Boolean((c.env as Env & { NCAA_BOX_DB?: D1Database }).NCAA_BOX_DB);
+  // The public coverage desk only needs current row counts and receipt clocks
+  // for its first paint. The monitor opts into the deeper game and possession
+  // validation with `audit=1`; keeping that pass explicit prevents a slow
+  // warehouse scan from taking down the ordinary coverage view.
+  const audit = new URL(c.req.url).searchParams.get("audit") !== "0";
   // D1 limits compound SELECT terms; count each dataset in one batch.
   const tables = {
     games: "bb_games",
@@ -582,7 +587,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
       db.prepare(`SELECT count(*) AS rows FROM ${tables[dataset as keyof typeof tables]}`),
     ),
   ]), COVERAGE_DB_TIMEOUT_MS);
-  const locationValidation = await withTimeout(db.prepare(`SELECT count(*) AS total,
+  let locationValidation: CoverageCount | null = null;
+  let possessionValidation: CoverageCount | null = null;
+  if (audit) {
+    locationValidation = await withTimeout(db.prepare(`SELECT count(*) AS total,
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
       sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
       sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
@@ -596,7 +604,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
       COALESCE((SELECT sum(COALESCE(CAST(json_extract(receipt_json, '$.integrity.duplicate_source_contest_ids') AS INTEGER), 0))
         FROM bb_sources WHERE dataset='schedule'), 0) AS duplicate_contest_ids
       FROM bb_games`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
-  const possessionValidation = await withTimeout(db.prepare(`WITH raw AS (
+    possessionValidation = await withTimeout(db.prepare(`WITH raw AS (
       SELECT g.id,g.periods,g.home_score,g.away_score,
         h.game_id AS h_box_game_id,
         a.game_id AS a_box_game_id,
@@ -671,6 +679,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
       FROM scored`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
+  }
   const countByDataset = new Map(
     tableNames.map((dataset, index) => [dataset, counts[index].results[0].rows]),
   );
