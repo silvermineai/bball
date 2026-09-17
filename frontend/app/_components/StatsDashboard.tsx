@@ -14,7 +14,7 @@ import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import LiveNationalPlayerTable, { type NationalPlayerRow } from "./LiveNationalPlayerTable";
+import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
@@ -443,15 +443,9 @@ export default function StatsDashboard() {
   const rosterModel = getRosterModel();
   const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
-  const recruiting = getRecruiting();
-  const impact = getImpact(overview.season);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const latestSeason = overview.season - 1;
-  const valueLeaders = getValueLeaders(latestSeason);
-  const nationalPlayers = getNationalPlayers(latestSeason) as NationalPlayerRow[];
-  const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
-  const leaderCounts = metrics.map((metric) => ({ metric, count: topBasketballLeaders(players, metric, 100000).length }));
   return (
     <div className="stats-dashboard">
       <div className="dashboard-kicker"><span>MEN&apos;S COLLEGE BASKETBALL</span><span>{overview.label} / LIVE BOARD</span></div>
@@ -510,63 +504,22 @@ export default function StatsDashboard() {
           <LiveNcaaPlayerTable season={latestSeason} />
         </section>
       </div>
-      <section className="dashboard-section" aria-labelledby="dashboard-leaders">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / NATIONAL LEADERS</span><h2 id="dashboard-leaders">More player production</h2></div><Link href="/basketball/leaders/">Full leaders table →</Link></div>
-        <p className="dashboard-caption">The same qualified player file, grouped by six quick ways to find a standout: scoring, rebounding, playmaking, steals, rim protection and true shooting.</p>
-        <LeaderCards players={players} season={latestSeason} />
-      </section>
-      {nationalPlayers.length ? (
-        <section className="dashboard-section" aria-labelledby="dashboard-national-records">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">05 / NATIONAL RECORDS</span><h2 id="dashboard-national-records">Division I scoring leaders</h2></div><Link href="/basketball/ncaa/?division=1&amp;stat=ppg">Full national table →</Link></div>
-          <p className="dashboard-caption">Final Division I records with the supplied national rank, shooting splits and games played. This archive remains separate from the production and impact model layers.</p>
-          <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
-        </section>
-      ) : null}
-      <section className="dashboard-section" aria-labelledby="dashboard-impact">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / PLAYER IMPACT</span><h2 id="dashboard-impact">Who moves the margin?</h2></div><Link href="/basketball/impact/">Full impact table →</Link></div>
-        <p className="dashboard-caption">Qualified regularized adjusted plus-minus from the latest completed season, with offensive and defensive components and the possession sample behind each row.</p>
-        <ImpactTable players={impact} />
-      </section>
-      {valueLeaders.length ? (
-        <section className="dashboard-section" aria-labelledby="dashboard-value">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">07 / BOX VALUE</span><h2 id="dashboard-value">Box-score value leaders</h2></div><Link href="/basketball/boutique/?kind=players&amp;metric=box_bpm&amp;season=2026">Full value table →</Link></div>
-          <p className="dashboard-caption">A separate box-score value estimate gives a second view of player contribution. Keep it beside RAPM; the two models answer different questions.</p>
-          <ValueTable players={valueLeaders} season={latestSeason} />
-        </section>
-      ) : null}
-      <section className="dashboard-section" aria-labelledby="dashboard-roster-production">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / ROSTER PRODUCTION</span><h2 id="dashboard-roster-production">2026–27 roster workload leaders</h2></div><Link href="/basketball/roster-board/">Full roster board →</Link></div>
-        <p className="dashboard-caption">Players listed for the next season, ordered by a transparent prior-production index across scoring, rebounding, playmaking, defensive events and shooting. The row keeps prior workload beside the player so recruiting context stays measurable.</p>
-        <RosterProductionTable rows={rosterLeaders} />
-      </section>
-      <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">10 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
-        <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
-        <DataCoverageTable overview={overview} />
-      </section>
-      {recruiting ? (
-        <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">11 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
-          <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
-          <RecruitingSnapshot release={recruiting} />
-        </section>
-      ) : null}
-      <LiveBasketballProspectLeaders />
-      <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">12 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
+      <section className="dashboard-section" aria-labelledby="dashboard-secondary">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need impact, recruiting movement, source rows or model details.</p>
         <div className="dashboard-link-grid">
-          <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
-          <Link href="/basketball/source-stats/"><strong>Player stat browser</strong><span>Search the complete season line, totals and rate fields</span><b>→</b></Link>
-          <Link href="/basketball/blog/"><strong>Game notebooks</strong><span>Read the model, factors and next checks for every forecast</span><b>→</b></Link>
-          <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
+          <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
+          <Link href="/basketball/impact/"><strong>Player impact</strong><span>RAPM components, possession samples and lineup context</span><b>→</b></Link>
+          <Link href="/basketball/recruiting/"><strong>Recruiting board</strong><span>Prospects, transfers, roster changes and fit</span><b>→</b></Link>
+          <Link href="/basketball/roster-board/"><strong>Roster production</strong><span>Prior workload and 2026–27 continuity signals</span><b>→</b></Link>
+          <Link href="/research/coverage/"><strong>Data coverage</strong><span>Rows, seasons, capture clocks and integrity checks</span><b>→</b></Link>
+          <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Zones, attempts, rates and player shot profiles</span><b>→</b></Link>
           <Link href="/basketball/lineups/"><strong>Lineups</strong><span>Five-player stints and net performance</span><b>→</b></Link>
-          <Link href="/basketball/recruiting/"><strong>Recruiting</strong><span>Rankings, roster movement and fit</span><b>→</b></Link>
-          <Link href="/basketball/learn/#team-metrics"><strong>Team metrics</strong><span>Learn pace, SOS, four factors and adjusted ratings</span><b>→</b></Link>
-          <Link href="/basketball/learn/#forecasting"><strong>Forecasts</strong><span>See how the Silvermine game model turns team data into a projection</span><b>→</b></Link>
-          <Link href="/basketball/learn/#recruiting"><strong>Recruiting evidence</strong><span>Read rankings, production and roster observations with their boundaries</span><b>→</b></Link>
+          <Link href="/basketball/model/"><strong>Model notebook</strong><span>Training windows, calibration and held-out error</span><b>→</b></Link>
         </div>
       </section>
-      <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {leaderCounts.reduce((sum, item) => sum + item.count, 0).toLocaleString()} qualified metric records available in the player file.</p>
+      <LiveBasketballProspectLeaders />
+      <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {players.length.toLocaleString()} player rows available in the current release.</p>
     </div>
   );
 }
