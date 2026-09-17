@@ -226,6 +226,15 @@ def build(source, target, out=OUT):
             "sources": receipts,
             "definitions_url": DEFINITIONS,
         }
+        # The edition identity is content-addressed, so its timestamp must be
+        # stable across rebuilds as well. Using the newest retained source
+        # receipt keeps a fresh local build byte-for-byte compatible with the
+        # edition already staged in D1; a wall-clock timestamp would make the
+        # verifier report metadata drift on every refresh.
+        generated_at = max(
+            (str(receipt["fetched_at"]) for receipt in receipts if receipt.get("fetched_at")),
+            default=utcnow(),
+        )
         edition = (
             "football-events-"
             + hashlib.sha256(encoded([evidence, rows]).encode()).hexdigest()[:20]
@@ -249,8 +258,8 @@ def build(source, target, out=OUT):
         }
         with target:
             target.execute(
-                "INSERT OR IGNORE INTO football_event_editions VALUES (?,?,?,?,?,?)",
-                (edition, ds, season, utcnow(), encoded(evidence), encoded(coverage)),
+                "INSERT OR REPLACE INTO football_event_editions VALUES (?,?,?,?,?,?)",
+                (edition, ds, season, generated_at, encoded(evidence), encoded(coverage)),
             )
             target.executemany(
                 "INSERT OR IGNORE INTO football_events VALUES (?,?,?,?,?,?,?,?)",
@@ -314,7 +323,9 @@ def build(source, target, out=OUT):
 
 def export_sql(conn, path):
     with path.open("w") as f:
-        # Records/receipts are immutable. Activate only after all referenced rows exist.
+        # Records/receipts are immutable. Edition metadata is replaced so a
+        # deterministic receipt timestamp repairs older wall-clock rows while
+        # preserving the content-addressed edition identity.
         for table in [
             "football_event_editions",
             "football_events",
@@ -322,7 +333,7 @@ def export_sql(conn, path):
         ]:
             verb = (
                 "INSERT OR REPLACE"
-                if table == "football_event_active"
+                if table in {"football_event_editions", "football_event_active"}
                 else "INSERT OR IGNORE"
             )
             for row in conn.execute("SELECT * FROM " + table):
