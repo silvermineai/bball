@@ -15,6 +15,10 @@ type Prospect = {
   committed_team_name?: string | null;
   committed_team_id?: string | null;
   status?: string | null;
+  high_school?: string | null;
+  hometown?: string | null;
+  height_inches?: number | null;
+  weight_pounds?: number | null;
 };
 
 type ProspectResponse = {
@@ -28,6 +32,16 @@ const movement = (row: Prospect) => {
   if (row.rank == null || row.previous_rank == null) return "—";
   const delta = row.previous_rank - row.rank;
   return delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : "—";
+};
+
+export const formatProspectSize = (row: Prospect) => {
+  const height = row.height_inches;
+  const weight = row.weight_pounds;
+  const heightLabel = typeof height === "number" && height > 0
+    ? `${Math.floor(height / 12)}'${height % 12}\"`
+    : null;
+  const weightLabel = typeof weight === "number" && weight > 0 ? `${weight} lb` : null;
+  return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
 };
 
 export default function LiveBasketballProspectLeaders() {
@@ -63,7 +77,7 @@ export default function LiveBasketballProspectLeaders() {
         <>
           <div className="dashboard-table-wrap">
             <table className="data-table dashboard-table">
-              <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Destination</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Size</th><th>Hometown</th><th>Destination</th></tr></thead>
               <tbody>{data.rows.slice(0, 10).map((row) => (
                 <tr key={row.athlete_id}>
                   <td className="rank-number">{row.rank ?? "—"}</td>
@@ -71,6 +85,8 @@ export default function LiveBasketballProspectLeaders() {
                   <td>{row.position || "—"}</td>
                   <td className={`numeric${row.previous_rank != null && row.rank != null && row.rank < row.previous_rank ? " movement-up" : row.previous_rank != null && row.rank != null && row.rank > row.previous_rank ? " movement-down" : ""}`}>{movement(row)}</td>
                   <td className="numeric">{row.grade == null || row.grade <= 0 ? "—" : fmt(row.grade, 1)}</td>
+                  <td>{formatProspectSize(row)}</td>
+                  <td>{row.hometown || row.high_school || "—"}</td>
                   <td>{row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name || "Recorded destination"}</Link> : row.committed_team_name || row.status || "Undecided"}</td>
                 </tr>
               ))}</tbody>
