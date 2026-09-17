@@ -444,7 +444,7 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" id="team-metrics">
         <div className="section-heading">
           <div>
             <div className="eyebrow">03 / Metric dictionary</div>
@@ -480,7 +480,7 @@ export default function Page() {
         <LearningCheckpoint />
       </section>
 
-      <section className="section two-col">
+      <section className="section two-col" id="forecasting">
         <article className="paper-panel">
           <div className="eyebrow">04 / Read a forecast</div>
           <h2>Probability is a starting point.</h2>
@@ -505,7 +505,7 @@ export default function Page() {
             <Link href="/basketball/evaluation/">Review the independent test →</Link>
           </p>
         </article>
-        <article className="paper-panel">
+        <article className="paper-panel" id="recruiting">
           <div className="eyebrow">05 / Read recruiting evidence</div>
           <h2>Keep announcements and production separate.</h2>
           <p>
