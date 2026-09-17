@@ -83,6 +83,9 @@ class FootballEventTests(unittest.TestCase):
             before = target.execute("SELECT * FROM football_events").fetchall()
             self.assertEqual(first["editions"][0]["coverage"]["records"], 2)
             self.assertEqual(first["editions"][0]["coverage"]["name_only_records"], 2)
+            fresh_target = sqlite3.connect(":memory:")
+            fresh = build(source, fresh_target, Path(folder) / "fresh-index.json")
+            self.assertEqual(first["editions"], fresh["editions"])
             self.assertEqual(first, build(source, target, path))
             rows[0]["sacks"] = "4"
             store_rows(source, "defense", 2025, rows, {**receipt, "sha256": "b" * 64})
