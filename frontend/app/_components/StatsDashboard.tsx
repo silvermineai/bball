@@ -25,12 +25,20 @@ import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
 
 function getPlayers(season: number) {
-  // The overview edition already contains the latest complete player file in
-  // the static release. Keep the dashboard server-rendered and deterministic.
-  const file = path.join(process.cwd(), "public/data/basketball/history", `players-${season - 1}.json`);
-  if (!fs.existsSync(file)) return [] as BasketballLeaderPlayer[];
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: BasketballLeaderPlayer[] };
-  return data.players || [];
+  // Prefer the current player release because it retains the complete basic
+  // shooting trio (eFG%, 3P% and FT%). Fall back to the career edition for
+  // older seasons or during a partial publication.
+  const files = [
+    path.join(process.cwd(), "public/data/basketball/players.json"),
+    path.join(process.cwd(), "public/data/basketball/history", `players-${season - 1}.json`),
+  ];
+  for (const file of files) {
+    if (!fs.existsSync(file)) continue;
+    const data = JSON.parse(fs.readFileSync(file, "utf8")) as { season?: number; players?: BasketballLeaderPlayer[] };
+    if (data.season != null && data.season !== season - 1) continue;
+    if (data.players?.length) return data.players;
+  }
+  return [] as BasketballLeaderPlayer[];
 }
 
 type RecruitingPerson = {
@@ -289,12 +297,13 @@ const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; descri
   { metric: "ts", label: "True shooting", description: "scoring efficiency", percent: true },
   { metric: "efg", label: "Effective FG", description: "shot efficiency", percent: true },
   { metric: "three_pct", label: "3-point accuracy", description: "3P%", percent: true },
+  { metric: "ft_pct", label: "Free-throw accuracy", description: "FT%", percent: true },
 ];
 
 function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
   return (
     <div className="basketball-leader-grid">
-      {leaderCards.map((card) => (
+      {leaderCards.filter((card) => players.some((player) => player.qualified && player[card.metric] != null)).map((card) => (
         <section className="paper-panel" key={card.metric}>
           <div className="eyebrow">{card.description}</div>
           <h3>{card.label}</h3>

@@ -386,6 +386,7 @@ def ingest_season(conn, season, box_rows, schedule_rows, receipts):
                                     "efg",
                                     "ts",
                                     "three_pct",
+                                    "ft_pct",
                                     "ft_rate",
                                     "three_rate",
                                     "tov_rate",

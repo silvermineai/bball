@@ -64,6 +64,7 @@ class CareerTests(unittest.TestCase):
         self.assertEqual(result["samples"]["ast"], 1)
         self.assertIsNone(result["totals"]["ast"])
         self.assertEqual(result["efg"], 0.625)
+        self.assertIsNone(result["ft_pct"])
         self.assertEqual(result["ft_rate"], 0)
         self.assertEqual(result["tov_rate"], 0)
 
@@ -121,6 +122,7 @@ class CareerTests(unittest.TestCase):
         self.assertEqual(result["coverage"]["field_coverage"]["pts"]["appearance_observed"], 1)
         self.assertEqual(result["players"][0]["games"], 1)
         self.assertEqual(result["players"][0]["source_records"], 1)
+        self.assertIn("ft_pct", result["players"][0])
         self.assertEqual(result["players"][0]["dnp_records"], 0)
         self.assertEqual(result["players"][0]["excluded_records"], 0)
         with self.assertRaisesRegex(ValueError, "Conflicting player"):
