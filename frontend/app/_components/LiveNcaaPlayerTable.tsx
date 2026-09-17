@@ -136,7 +136,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   return (
     <section className="dashboard-subsection" aria-labelledby="live-ncaa-player-stats">
       <div className="dashboard-section-heading">
-        <div><span className="eyebrow">LIVE PLAYER DATA</span><h3 id="live-ncaa-player-stats">NCAA player production</h3></div>
+        <div><span className="eyebrow">LIVE PLAYER DATA</span><h3 id="live-ncaa-player-stats">Division I player production</h3></div>
         <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open full ranking table →</Link>
       </div>
       <p className="dashboard-caption">Current archive rows with a five-game and 200-minute floor. The selected field orders the table; the surrounding production columns stay attached for context.</p>
