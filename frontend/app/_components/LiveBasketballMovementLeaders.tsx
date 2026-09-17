@@ -59,10 +59,10 @@ export default function LiveBasketballMovementLeaders() {
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-movement">
       <div className="dashboard-section-heading">
-        <div><span className="eyebrow">05 / RECRUITING MOVEMENT</span><h2 id="dashboard-movement">Prior production on the move</h2></div>
+        <div><span className="eyebrow">05 / MOVEMENT · 2025–26</span><h2 id="dashboard-movement">Prior production on the move</h2></div>
         <Link href="/basketball/recruiting/?view=observations&amp;rosterSeason=2026&amp;rosterStatus=different_program">Full movement lab →</Link>
       </div>
-      <p className="dashboard-caption">The leading exact-ID program changes in the latest roster edition, with prior minutes and production kept beside the new listing. A roster observation is not a transaction or availability decision.</p>
+      <p className="dashboard-caption">The leading exact-ID program changes observed in the 2026 roster edition, with 2025–26 minutes and production kept beside the new listing. A roster observation is not a transaction or availability decision.</p>
       {status === "checking" ? <p className="empty" role="status">Loading roster movement…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live movement snapshot is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
           <div className="dashboard-table-wrap">
