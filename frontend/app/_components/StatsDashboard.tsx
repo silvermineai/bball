@@ -448,11 +448,14 @@ export default function StatsDashboard() {
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
           <div><b>{overview.coverage.upcoming_games ? fmt((forecastRows / overview.coverage.upcoming_games) * 100) : "—"}%</b><span>upcoming slate covered</span></div>
+          <div><b>{fmt(overview.model.evaluation.brier, 3)}</b><span>held-out probability Brier</span></div>
+          <div><b>{fmt(overview.model.evaluation.interval_coverage * 100)}%</b><span>margin band coverage</span></div>
           {overview.model.evaluation.baseline_margin_mae != null && (
             <small>
               {fmt(Math.max(0, overview.model.evaluation.baseline_margin_mae - overview.model.evaluation.margin_mae))} pts lower margin error than the baseline on holdout games.
             </small>
           )}
+          <small>Fit on {overview.model.training_games.toLocaleString()} completed games across {overview.model.training_seasons.length} seasons · holdout {overview.model.evaluation.season - 1}–{String(overview.model.evaluation.season).slice(-2)} · calibrated {date(overview.model.cutoff)}.</small>
         </div>
       </section>
       <div className="dashboard-strip">
