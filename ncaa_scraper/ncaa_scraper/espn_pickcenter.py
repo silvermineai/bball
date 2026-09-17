@@ -181,6 +181,13 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
                 accepted += 1
         except (KeyError, TypeError, ValueError):
             rejected += 1
+    # Keep the bounded capture diagnostics with the receipt. This lets the
+    # public market status explain an empty capture without exposing raw
+    # summaries or treating rejected rows as missing data.
+    conn.execute(
+        "UPDATE audit_receipts SET payload_json=? WHERE id=?",
+        (encoded({**receipt, "accepted_markets": accepted, "rejected_records": rejected}), receipt_id),
+    )
     conn.commit()
     return {"accepted_markets": accepted, "rejected_records": rejected}
 

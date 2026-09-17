@@ -129,6 +129,9 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual(result, {"accepted_markets": 3, "rejected_records": 0})
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 1)
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 3)
+        receipt_payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(receipt_payload["accepted_markets"], 3)
+        self.assertEqual(receipt_payload["rejected_records"], 0)
         payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_markets WHERE market='spreads'").fetchone()[0])
         self.assertEqual(payload["event_id"], GAME["id"])
 

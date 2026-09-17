@@ -23,6 +23,8 @@ type MarketMetadata = {
     season?: number;
     summary_count?: number;
     summary_with_pickcenter?: number;
+    accepted_markets?: number;
+    rejected_records?: number;
   };
   provider_capabilities?: Array<{ provider?: string }>;
   source?: "partial" | "unavailable";
@@ -69,9 +71,7 @@ export default function LiveBasketballMarketStatus() {
       : " A connector capture has run."
       : " No line capture is recorded yet.";
   const captureDiagnostic = archive?.research_capture?.summary_count != null
-    ? ` The latest public capture checked ${archive.research_capture.summary_count.toLocaleString()} future summaries; ${(
-        archive.research_capture.summary_with_pickcenter || 0
-      ).toLocaleString()} included pickcenter markets.`
+    ? ` The latest public capture checked ${archive.research_capture.summary_count.toLocaleString()} future summaries; ${(archive.research_capture.summary_with_pickcenter || 0).toLocaleString()} included pickcenter markets${archive.research_capture.accepted_markets != null ? ` and ${archive.research_capture.accepted_markets.toLocaleString()} markets passed validation` : ""}${archive.research_capture.rejected_records != null ? `; ${archive.research_capture.rejected_records.toLocaleString()} summaries were rejected` : ""}.`
     : "";
 
   return (

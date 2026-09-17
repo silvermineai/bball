@@ -84,6 +84,8 @@ type ResearchCapture = {
   season?: number;
   summary_count?: number;
   summary_with_pickcenter?: number;
+  accepted_markets?: number;
+  rejected_records?: number;
 };
 
 function parseResearchCapture(value: unknown): ResearchCapture | null {
@@ -100,6 +102,12 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.summary_with_pickcenter === "number" && Number.isInteger(payload.summary_with_pickcenter) && payload.summary_with_pickcenter >= 0) {
       result.summary_with_pickcenter = payload.summary_with_pickcenter;
+    }
+    if (typeof payload.accepted_markets === "number" && Number.isInteger(payload.accepted_markets) && payload.accepted_markets >= 0) {
+      result.accepted_markets = payload.accepted_markets;
+    }
+    if (typeof payload.rejected_records === "number" && Number.isInteger(payload.rejected_records) && payload.rejected_records >= 0) {
+      result.rejected_records = payload.rejected_records;
     }
     return result;
   } catch {
