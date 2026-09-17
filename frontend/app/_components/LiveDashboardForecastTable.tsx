@@ -98,6 +98,10 @@ export default function LiveDashboardForecastTable({
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
   const rows = sortForecastBoard(signalGames, sort).slice(0, 12);
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const marketGames = signalGames.filter((game) => {
+    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    return market.spread != null || market.total != null;
+  }).length;
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -119,7 +123,7 @@ export default function LiveDashboardForecastTable({
           </select>
         </label>
         <p className="note" role="status">
-          Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"}.
+          Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
         </p>
       </div>
       <div className="dashboard-table-wrap">

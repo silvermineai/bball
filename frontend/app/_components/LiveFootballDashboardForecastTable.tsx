@@ -72,6 +72,10 @@ export default function LiveFootballDashboardForecastTable({
   const forecastedGames = games.filter((game) => game.prediction);
   const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
   const rows = sortFootballMatchups(signalGames, sort).slice(0, 12);
+  const marketGames = signalGames.filter((game) => {
+    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    return market.spread != null || market.total != null;
+  }).length;
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -94,7 +98,7 @@ export default function LiveFootballDashboardForecastTable({
             <option value="strong">Strong leans · 75%+</option>
           </select>
         </label>
-        <p className="note" role="status">Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sortLabels[sort]}.</p>
+        <p className="note" role="status">Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sortLabels[sort]} · {marketGames} with qualifying market lines.</p>
       </div>
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table forecast-table">
