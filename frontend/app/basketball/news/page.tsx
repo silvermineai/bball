@@ -8,6 +8,10 @@ export const metadata = {
   alternates: { canonical: "/basketball/news/" },
 };
 
+const publicArchiveText = (value: string) => value
+  .replace(/<img\b[^>]*>/gi, "")
+  .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media");
+
 export default function Page() {
   const release = JSON.parse(fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8")) as {
     generated_at?: string;
@@ -17,7 +21,11 @@ export default function Page() {
   };
   const articles = (release.articles || [])
     .filter((article) => article.sport === "mens-college-basketball")
-    .map(({ link: _link, publisher: _publisher, ...article }) => article);
+    .map(({ link: _link, publisher: _publisher, ...article }) => ({
+      ...article,
+      headline: publicArchiveText(article.headline),
+      description: publicArchiveText(article.description),
+    }));
   return (
     <>
       <div className="page-title">
