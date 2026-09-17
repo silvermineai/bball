@@ -287,6 +287,8 @@ const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; descri
   { metric: "spg", label: "Steals", description: "steals per game" },
   { metric: "bpg", label: "Rim protection", description: "blocks per game" },
   { metric: "ts", label: "True shooting", description: "scoring efficiency", percent: true },
+  { metric: "efg", label: "Effective FG", description: "shot efficiency", percent: true },
+  { metric: "three_pct", label: "3-point accuracy", description: "3P%", percent: true },
 ];
 
 function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {

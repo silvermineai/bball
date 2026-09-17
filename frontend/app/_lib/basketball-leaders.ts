@@ -1,4 +1,4 @@
-export type BasketballLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts";
+export type BasketballLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "ts" | "efg" | "three_pct";
 
 export type BasketballLeaderPlayer = {
   id: string;
@@ -17,6 +17,7 @@ export type BasketballLeaderPlayer = {
   topg?: number | null;
   efg?: number | null;
   three_pct?: number | null;
+  ft_pct?: number | null;
   ft_rate?: number | null;
   tov_rate?: number | null;
   ts: number | null;
