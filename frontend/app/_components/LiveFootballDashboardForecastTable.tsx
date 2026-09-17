@@ -12,6 +12,10 @@ import {
   sortFootballMatchups,
   type FootballMatchupSort,
 } from "../_lib/football-matchup-view";
+import {
+  matchesFootballMatchupSignal,
+  type FootballMatchupSignal,
+} from "../_lib/football-matchup-view";
 
 const sortLabels: Record<FootballMatchupSort, string> = {
   date: "earliest kickoffs first",
@@ -19,6 +23,12 @@ const sortLabels: Record<FootballMatchupSort, string> = {
   close: "closest projected margins first",
   margin: "largest projected edges first",
   uncertainty: "widest calibrated ranges first",
+};
+const signalLabels: Record<FootballMatchupSignal, string> = {
+  all: "all model signals",
+  "toss-up": "toss-ups under 60%",
+  lean: "leans from 60–74.9%",
+  strong: "strong leans at 75%+",
 };
 
 function latestTip(game: Game) {
@@ -33,6 +43,7 @@ export default function LiveFootballDashboardForecastTable({
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<FootballMatchupSort>("date");
+  const [signal, setSignal] = useState<FootballMatchupSignal>("all");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,7 +61,8 @@ export default function LiveFootballDashboardForecastTable({
   }, [initialGames]);
 
   const forecastedGames = games.filter((game) => game.prediction);
-  const rows = sortFootballMatchups(forecastedGames, sort).slice(0, 12);
+  const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
+  const rows = sortFootballMatchups(signalGames, sort).slice(0, 12);
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -64,7 +76,16 @@ export default function LiveFootballDashboardForecastTable({
             <option value="uncertainty">Forecast range</option>
           </select>
         </label>
-        <p className="note" role="status">Showing {rows.length} of {forecastedGames.length} forecast rows · {sortLabels[sort]}.</p>
+        <label className="control">
+          <span>MODEL SIGNAL</span>
+          <select value={signal} onChange={(event) => setSignal(event.target.value as FootballMatchupSignal)}>
+            <option value="all">All forecast signals</option>
+            <option value="toss-up">Toss-ups · under 60%</option>
+            <option value="lean">Leans · 60–74.9%</option>
+            <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <p className="note" role="status">Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sortLabels[sort]}.</p>
       </div>
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table forecast-table">

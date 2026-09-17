@@ -8,6 +8,10 @@ import {
   loadLiveBasketballForecasts,
   mergeLiveBasketballForecasts,
 } from "../_lib/live-basketball-forecasts";
+import {
+  matchesMatchupSignal,
+  type MatchupSignal,
+} from "../_lib/basketball-matchups";
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 const latestTip = (game: BBGame) =>
@@ -28,6 +32,12 @@ function modelLabel(game: BBGame) {
 }
 
 export type ForecastBoardSort = "start" | "confidence" | "margin";
+const signalLabels: Record<MatchupSignal, string> = {
+  all: "all model signals",
+  "toss-up": "toss-ups under 60%",
+  lean: "leans from 60–74.9%",
+  strong: "strong leans at 75%+",
+};
 
 const startValue = (game: BBGame) => {
   const value = Date.parse(game.starts_at);
@@ -62,6 +72,7 @@ export default function LiveDashboardForecastTable({
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
+  const [signal, setSignal] = useState<MatchupSignal>("all");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +89,9 @@ export default function LiveDashboardForecastTable({
     return () => controller.abort();
   }, [initialGames]);
 
-  const rows = sortForecastBoard(games.filter((game) => predictionFor(game)), sort).slice(0, 12);
+  const forecastedGames = games.filter((game) => predictionFor(game));
+  const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
+  const rows = sortForecastBoard(signalGames, sort).slice(0, 12);
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -90,8 +103,17 @@ export default function LiveDashboardForecastTable({
             <option value="margin">Projected margin</option>
           </select>
         </label>
+        <label className="control">
+          <span>MODEL SIGNAL</span>
+          <select value={signal} onChange={(event) => setSignal(event.target.value as MatchupSignal)}>
+            <option value="all">All forecast signals</option>
+            <option value="toss-up">Toss-ups · under 60%</option>
+            <option value="lean">Leans · 60–74.9%</option>
+            <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
         <p className="note" role="status">
-          Showing {rows.length} of {games.filter((game) => predictionFor(game)).length} forecast rows · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"}.
+          Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"}.
         </p>
       </div>
       <div className="dashboard-table-wrap">
