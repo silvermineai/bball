@@ -1,5 +1,5 @@
 import { researchDb } from "./research-db";
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -15,6 +15,7 @@ const querySchema = z.object({
     z.literal("all"),
     z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/),
   ]).default("latest"),
+  roster: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   meta: z.enum(["0", "1"]).default("0"),
@@ -40,8 +41,68 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
+type RosterLens = {
+  game_id: string;
+  home_id: string;
+  away_id: string;
+  base_margin: number;
+  roster_margin: number;
+  margin_delta: number;
+  home_predicted_net: number;
+  away_predicted_net: number;
+};
+
+type RosterModelArtifact = {
+  version?: unknown;
+  generated_at?: unknown;
+  coverage?: { scenario_games?: unknown; current_predicted_teams?: unknown };
+  evaluation?: { held_out_transition?: unknown; improvement_vs_prior_net?: unknown; mae?: unknown };
+  scenarios?: unknown;
+};
+
+async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
+  if (!c.env.ASSETS) return { lenses: new Map<string, RosterLens>(), model: null };
+  try {
+    const response = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/basketball/roster-model.json", c.req.url))),
+      2000,
+    );
+    if (!response.ok) return { lenses: new Map<string, RosterLens>(), model: null };
+    const artifact = await response.json() as RosterModelArtifact;
+    const rows = Array.isArray(artifact.scenarios) ? artifact.scenarios : [];
+    const lenses = new Map<string, RosterLens>();
+    for (const value of rows) {
+      if (!value || typeof value !== "object") continue;
+      const row = value as Record<string, unknown>;
+      const fields = ["game_id", "home_id", "away_id"];
+      if (fields.some((field) => typeof row[field] !== "string")) continue;
+      const numbers = ["base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net"];
+      if (numbers.some((field) => typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) continue;
+      const lens = row as unknown as RosterLens;
+      lenses.set(lens.game_id, lens);
+    }
+    const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+    const coverage = artifact.coverage || {};
+    const evaluation = artifact.evaluation || {};
+    return {
+      lenses,
+      model: {
+        version: typeof artifact.version === "string" ? artifact.version : null,
+        generated_at: typeof artifact.generated_at === "string" ? artifact.generated_at : null,
+        scenario_games: number(coverage.scenario_games),
+        current_predicted_teams: number(coverage.current_predicted_teams),
+        held_out_transition: number(evaluation.held_out_transition),
+        improvement_vs_prior_net: number(evaluation.improvement_vs_prior_net),
+        mae: number(evaluation.mae),
+      },
+    };
+  } catch {
+    return { lenses: new Map<string, RosterLens>(), model: null };
+  }
+}
+
 basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, gameId, status, q, model, page, limit, meta } = c.req.valid("query");
+  const { season, gameId, status, q, model, roster, page, limit, meta } = c.req.valid("query");
   const cache = typeof caches === "undefined"
     ? null
     : (caches as unknown as { default: Cache }).default;
@@ -202,6 +263,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     source_time_valid: number | null;
     source_observed_at: string | null;
   }>(), DB_TIMEOUT_MS);
+  const rosterArtifact = roster === "1" ? await readRosterLenses(c) : { lenses: new Map<string, RosterLens>(), model: null };
   const response = c.json({
     season,
     status,
@@ -210,6 +272,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     page,
     page_size: limit,
     total: Number(count?.total || 0),
+    roster_model: roster === "1" ? rosterArtifact.model : undefined,
     rows: rows.results.map(({ prediction_json, ...row }) => {
       let prediction: Record<string, unknown> | null = null;
       try {
@@ -224,6 +287,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         ...row,
         source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
         prediction,
+        ...(roster === "1" ? { roster_lens: rosterArtifact.lenses.get(row.game_id) || null } : {}),
       };
     }),
   });

@@ -617,6 +617,7 @@ describe("bball api", () => {
       "/api/basketball/research/forecasts?status=settled",
       "/api/basketball/research/forecasts?limit=101",
       "/api/basketball/research/forecasts?model=unsafe%20model",
+      "/api/basketball/research/forecasts?roster=2",
       "/api/basketball/research/forecasts?page=-1",
       "/api/basketball/research/forecasts?gameId=not-a-game-id",
     ]) {
