@@ -5679,6 +5679,9 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .dashboard-section-heading h2 { margin-top: 4px; color: var(--dashboard-blue-dark); font-size: clamp(1.9rem, 3vw, 2.8rem); }
 .dashboard-section-heading > a { flex: 0 0 auto; color: var(--dashboard-blue); font: 600 11px "IBM Plex Mono", monospace; text-decoration: underline; text-underline-offset: 4px; }
 .dashboard-caption { max-width: 760px; margin-bottom: 14px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.dashboard-subsection { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--dashboard-line); }
+.dashboard-subsection .dashboard-section-heading { border-bottom-width: 1px; }
+.dashboard-subsection .dashboard-section-heading h3 { margin-top: 4px; color: var(--dashboard-blue-dark); font-size: clamp(1.45rem, 2vw, 2rem); }
 .dashboard-table-wrap { overflow-x: auto; border: 1px solid var(--dashboard-line); background: #fff; }
 .dashboard-table { min-width: 720px; margin: 0; font-size: 12px; }
 .dashboard-table th, .dashboard-table td { padding: 12px 11px; border-bottom: 1px solid #dce4ea; }
