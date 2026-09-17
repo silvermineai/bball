@@ -29,6 +29,8 @@ describe("live national player normalization", () => {
       ppg: 21.5,
       rpg: 7.2,
       apg: 4.1,
+      spg: null,
+      bpg: null,
       fg_pct: 52,
       three_pct: 39,
       ft_pct: 81,

@@ -14,17 +14,39 @@ export type NationalPlayerRow = {
   ppg: number | null;
   rpg: number | null;
   apg: number | null;
+  spg?: number | null;
+  bpg?: number | null;
   fg_pct: number | null;
   three_pct: number | null;
   ft_pct: number | null;
   ppg_rank: number | null;
 };
 
+export type NationalLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fg_pct" | "three_pct" | "ft_pct";
+
+const leaderMetrics: Array<{ key: NationalLeaderMetric; label: string; rankLabel: string }> = [
+  { key: "ppg", label: "Points per game", rankLabel: "PPG" },
+  { key: "rpg", label: "Rebounds per game", rankLabel: "RPG" },
+  { key: "apg", label: "Assists per game", rankLabel: "APG" },
+  { key: "spg", label: "Steals per game", rankLabel: "SPG" },
+  { key: "bpg", label: "Blocks per game", rankLabel: "BPG" },
+  { key: "fg_pct", label: "Field-goal percentage", rankLabel: "FG%" },
+  { key: "three_pct", label: "3-point percentage", rankLabel: "3P%" },
+  { key: "ft_pct", label: "Free-throw percentage", rankLabel: "FT%" },
+];
+
 type LiveLeader = {
   player_id?: number | string;
   name?: string | null;
   team_name?: string | null;
   ppg?: number | null;
+  rpg?: number | null;
+  apg?: number | null;
+  spg?: number | null;
+  bpg?: number | null;
+  fg_pct?: number | null;
+  three_pct?: number | null;
+  ft_pct?: number | null;
   publisher_rank?: number | null;
   payload?: Partial<NationalPlayerRow> | null;
 };
@@ -40,14 +62,27 @@ export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | nu
     conference: payload.conference ?? null,
     games: payload.games ?? null,
     ppg: row.ppg ?? payload.ppg ?? null,
-    rpg: payload.rpg ?? null,
-    apg: payload.apg ?? null,
-    fg_pct: payload.fg_pct ?? null,
-    three_pct: payload.three_pct ?? null,
-    ft_pct: payload.ft_pct ?? null,
+    rpg: row.rpg ?? payload.rpg ?? null,
+    apg: row.apg ?? payload.apg ?? null,
+    spg: row.spg ?? payload.spg ?? null,
+    bpg: row.bpg ?? payload.bpg ?? null,
+    fg_pct: row.fg_pct ?? payload.fg_pct ?? null,
+    three_pct: row.three_pct ?? payload.three_pct ?? null,
+    ft_pct: row.ft_pct ?? payload.ft_pct ?? null,
     ppg_rank: row.publisher_rank ?? payload.ppg_rank ?? null,
   };
 }
+
+export function metricValue(row: NationalPlayerRow, metric: NationalLeaderMetric) {
+  return row[metric] ?? null;
+}
+
+const metricRank = (row: LiveLeader, metric: NationalLeaderMetric) => {
+  const payload = row.payload || {};
+  if (row.publisher_rank != null) return row.publisher_rank;
+  const rank = payload[`${metric}_rank` as keyof NationalPlayerRow];
+  return typeof rank === "number" ? rank : null;
+};
 
 export default function LiveNationalPlayerTable({
   initialPlayers,
@@ -56,46 +91,71 @@ export default function LiveNationalPlayerTable({
   initialPlayers: NationalPlayerRow[];
   season: number;
 }) {
-  const [players, setPlayers] = useState(initialPlayers);
+  type RankedPlayer = NationalPlayerRow & { leader_rank: number | null };
+  const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
+  const [players, setPlayers] = useState<RankedPlayer[]>(() => initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })));
+  const [loading, setLoading] = useState(false);
+  const selectedMetric = leaderMetrics.find((candidate) => candidate.key === metric)!;
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/ncaa-leaders?division=1&stat=ppg&page=0", { signal: controller.signal })
+    setLoading(true);
+    setPlayers(metric === "ppg" ? initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })) : []);
+    fetch(`/api/basketball/research/ncaa-leaders?division=1&stat=${metric}&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live player leaders unavailable");
         return response.json() as Promise<{ rows?: LiveLeader[] }>;
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        const rows = (payload.rows || []).map(normalizeNationalLeader).filter((row): row is NationalPlayerRow => !!row).slice(0, 10);
+        const rows = (payload.rows || []).flatMap((raw) => {
+          const row = normalizeNationalLeader(raw);
+          return row ? [{ ...row, leader_rank: metricRank(raw, metric) }] : [];
+        }).slice(0, 10);
         if (rows.length) setPlayers(rows);
       })
       .catch(() => {
         // Keep the server-rendered leaderboard visible if D1 is unavailable.
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [initialPlayers]);
+  }, [initialPlayers, metric]);
 
   const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
   return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table">
-        <thead><tr><th>PPG rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
-        <tbody>{players.map((player) => (
+    <>
+      <div className="toolbar" style={{ marginBottom: 16 }}>
+        <label className="control">
+          <span>LEADERBOARD FIELD</span>
+          <select value={metric} onChange={(event) => setMetric(event.target.value as NationalLeaderMetric)}>
+            {leaderMetrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label}</option>)}
+          </select>
+        </label>
+        <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Sorted by ${selectedMetric.label.toLowerCase()}. The other columns stay attached for context.`}</p>
+      </div>
+      <div className="dashboard-table-wrap" aria-busy={loading}>
+        <table className="data-table dashboard-table">
+          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
+          <tbody>{players.map((player) => (
           <tr key={player.player_id}>
-            <td className="rank-number">{player.ppg_rank ?? "—"}</td>
+            <td className="rank-number">{player.leader_rank ?? "—"}</td>
             <th scope="row"><Link href={`/basketball/ncaa-player/?id=${player.player_id}&season=${season}`}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
             <td>{player.team_name || "—"}</td>
             <td className="numeric">{player.games ?? "—"}</td>
-            <td className="numeric"><strong>{fmt(player.ppg)}</strong></td>
-            <td className="numeric">{fmt(player.rpg)}</td>
-            <td className="numeric">{fmt(player.apg)}</td>
-            <td className="numeric">{pct(player.fg_pct)}</td>
-            <td className="numeric">{pct(player.three_pct)}</td>
-            <td className="numeric">{pct(player.ft_pct)}</td>
+            <td className="numeric">{metric === "ppg" ? <strong>{fmt(metricValue(player, "ppg"))}</strong> : fmt(metricValue(player, "ppg"))}</td>
+            <td className="numeric">{metric === "rpg" ? <strong>{fmt(metricValue(player, "rpg"))}</strong> : fmt(metricValue(player, "rpg"))}</td>
+            <td className="numeric">{metric === "apg" ? <strong>{fmt(metricValue(player, "apg"))}</strong> : fmt(metricValue(player, "apg"))}</td>
+            <td className="numeric">{metric === "spg" ? <strong>{fmt(metricValue(player, "spg"))}</strong> : fmt(metricValue(player, "spg"))}</td>
+            <td className="numeric">{metric === "bpg" ? <strong>{fmt(metricValue(player, "bpg"))}</strong> : fmt(metricValue(player, "bpg"))}</td>
+            <td className="numeric">{metric === "fg_pct" ? <strong>{pct(metricValue(player, "fg_pct"))}</strong> : pct(metricValue(player, "fg_pct"))}</td>
+            <td className="numeric">{metric === "three_pct" ? <strong>{pct(metricValue(player, "three_pct"))}</strong> : pct(metricValue(player, "three_pct"))}</td>
+            <td className="numeric">{metric === "ft_pct" ? <strong>{pct(metricValue(player, "ft_pct"))}</strong> : pct(metricValue(player, "ft_pct"))}</td>
           </tr>
         ))}</tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </>
   );
 }
