@@ -77,6 +77,9 @@ const coverageRate = (part: number | undefined, total: number | undefined) => to
 const captureLabel = (value: string | null) => value
   ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
   : "capture date unavailable";
+const fitHref = (teamId: string | null | undefined) => teamId
+  ? `/basketball/recruiting/fit/?team=${encodeURIComponent(teamId)}`
+  : null;
 
 export default function EspnRecruitingBoard() {
   const [season, setSeason] = useState("2027");
@@ -289,7 +292,8 @@ export default function EspnRecruitingBoard() {
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Capture</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
           const rankGap = row.rank != null && shortlistBestRankBySeason.has(row.season) ? row.rank - shortlistBestRankBySeason.get(row.season)! : null;
           const gradeGap = row.grade != null && shortlistBestGradeBySeason.has(row.season) ? row.grade - shortlistBestGradeBySeason.get(row.season)! : null;
-          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
+          const destinationFit = fitHref(row.committed_team_id);
+          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}{destinationFit && <small><Link href={destinationFit}>Open destination fit →</Link></small>}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
         })}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved class rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
@@ -373,7 +377,7 @@ export default function EspnRecruitingBoard() {
                 <h3>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team} →</Link> : destination.team}</h3>
                 <p>{destination.source_rank_points.toLocaleString()} rank points · {destination.ranked_total} ranked · {destination.top100_total} top 100{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}{destination.average_rank == null ? "" : ` · avg #${destination.average_rank.toFixed(0)}`}</p>
                 <small>{(destination.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position mix unavailable"}</small>
-                <small>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link> : "Program dossier unavailable for this row."} · Recorded {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
+                <small>{destination.team_id ? <><Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link>{fitHref(destination.team_id) && <> · <Link href={fitHref(destination.team_id)!}>Open roster fit →</Link></>}</> : "Program dossier unavailable for this row."} · Recorded {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>
             <p className="note" style={{ marginTop: 12 }}>Counts use the recorded committed-team field and the same season, rank, position, search and status filters as the table. Rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official class ranking or confirmation of enrollment or eligibility.</p>
@@ -389,7 +393,7 @@ export default function EspnRecruitingBoard() {
                 <td>{row.position || "—"}<br /><span className="note">Pos #{number(row.position_rank)}</span><br /><span className="note">State #{number(row.state_rank)} · Region #{number(row.region_rank)}</span></td>
                 <td>{grade(row.grade)}</td>
                 <td>{size(row.height_inches, row.weight_pounds)}</td>
-                <td>{row.committed_team_name ? row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link> : row.committed_team_name : row.status || "—"}</td>
+                <td>{row.committed_team_name ? row.committed_team_id ? <><Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link>{fitHref(row.committed_team_id) && <small><Link href={fitHref(row.committed_team_id)!}>Open roster fit →</Link></small>}</> : row.committed_team_name : row.status || "—"}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><small>{result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{result.edition || "Edition unavailable"}</small></td>
                 <td><button className="button secondary" type="button" onClick={() => toggleShortlist(row)} aria-pressed={shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id))}>{shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id)) ? "Saved" : "Save"}</button></td>
