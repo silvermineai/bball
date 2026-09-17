@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
 
 type ArchiveMeta = {
@@ -35,7 +36,7 @@ export default function LiveBasketballPlayerArchiveStatus() {
   return (
     <p className="note" role="status">
       {status === "live" && archive
-        ? <>Live player archive: {(archive.game_rows || archive.total || 0).toLocaleString()} game rows and {(archive.season_rows || 0).toLocaleString()} season summaries across {(archive.seasons || []).length.toLocaleString()} retained seasons. Recorded identities stay attached to each row; unavailable values stay unavailable. <Link href="/basketball/ncaa-player-box/">Open the full player archive →</Link>
+        ? <>Live player archive: {(archive.game_rows || archive.total || 0).toLocaleString()} game rows and {(archive.season_rows || 0).toLocaleString()} season summaries across {(archive.seasons || []).length.toLocaleString()} retained seasons{archive.source?.fetched_at ? ` · latest edition captured ${date(archive.source.fetched_at)}` : ""}. Recorded identities stay attached to each row; unavailable values stay unavailable. <Link href="/basketball/ncaa-player-box/">Open the full player archive →</Link>
           </>
         : status === "fallback"
           ? <>The live player archive is temporarily unavailable; the published player release remains available. <Link href="/basketball/ncaa-player-box/">Open the player archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
