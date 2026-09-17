@@ -239,7 +239,7 @@ export default async function Page({
         value: quotes.length ? `${quotes.length} timestamped comparison${quotes.length === 1 ? "" : "s"}` : "No licensed quote",
         detail: quotes.length
           ? "The comparison is matched to this model edition and game snapshot."
-          : "No qualifying bookmaker observation is published; an edge cannot be reported.",
+          : "No qualifying market observation is published; an edge cannot be reported.",
         href: "#market-trail",
         link: quotes.length ? "Market trail" : "Record a manual check",
         tone: quotes.length ? "ink" : "muted",
@@ -997,7 +997,7 @@ export default async function Page({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Bookmaker / provider</th>
+                  <th>Market quote</th>
                   <th>Market</th>
                   <th>Observed line / home probability</th>
                   <th>Model difference</th>
@@ -1007,10 +1007,7 @@ export default async function Page({
               <tbody>
                 {quotes.map((q) => (
                   <tr key={`${q.provider}-${q.bookmaker}-${q.market}`}>
-                    <td>
-                      {q.bookmaker}
-                      <small>{q.provider}</small>
-                    </td>
+                    <td><strong>Verified line</strong><small>Captured market quote</small></td>
                     <td>{q.market}</td>
                     <td>
                       {q.market === "h2h"
@@ -1026,7 +1023,7 @@ export default async function Page({
                       <small>
                         {q.market_overround == null
                           ? "Bookmaker overround unavailable"
-                          : `${fmt(q.market_overround * 100, 2)}% bookmaker overround`}
+                          : `${fmt(q.market_overround * 100, 2)}% market margin`}
                       </small>
                     </td>
                     <td>

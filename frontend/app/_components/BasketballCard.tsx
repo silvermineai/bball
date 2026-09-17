@@ -188,7 +188,7 @@ export default function BasketballCard({
               {g.market_comparisons.slice(0, 3).map((quote) => (
                 <div className="market-quote" key={`${quote.provider}-${quote.bookmaker}-${quote.market}`}>
                   <span>
-                    {quote.bookmaker} · {quote.market}
+                    Verified line · {quote.market}
                     <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
                     {comparisonGapLabel(quote) && <small className={`market-gap-${comparisonGapDirection(quote)}`}>Model gap · {comparisonGapLabel(quote)}</small>}
                   </span>

@@ -293,7 +293,7 @@ export default function Scorecard() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Feed / bookmaker</th>
+                <th>Market quote</th>
                 <th>Market</th>
                 <th>Matched games</th>
                 <th>Model MAE</th>
@@ -305,10 +305,7 @@ export default function Scorecard() {
             <tbody>
               {summary.market_metrics.map((r) => (
                 <tr key={r.provider + r.bookmaker + r.market}>
-                  <td>
-                    {r.bookmaker}
-                    <small>Licensed feed</small>
-                  </td>
+                  <td><strong>Verified line</strong><small>Captured market quote</small></td>
                   <td>{r.market}</td>
                   <td>{r.games}</td>
                   <td>{fmt(r.model_mae)}</td>
@@ -443,15 +440,15 @@ export default function Scorecard() {
                             className="note"
                             key={c.provider + c.bookmaker + c.market}
                           >
-                            {c.bookmaker} · {c.market}
+                            Verified line · {c.market}
                             <br />
                             {c.market === "h2h"
                               ? `Market home win ${fmt((c.market_home_probability || 0) * 100)}%`
                               : `Line ${signed(c.line!)} · model difference ${signed(c.model_difference)}`}
                             <br />
                             {c.market_overround == null
-                              ? "Bookmaker overround unavailable"
-                              : `Bookmaker overround ${fmt(c.market_overround * 100, 2)}%`}
+                              ? "Market margin unavailable"
+                              : `Market margin ${fmt(c.market_overround * 100, 2)}%`}
                             <br />
                             Captured {kick(c.captured_at)}
                             <br />
