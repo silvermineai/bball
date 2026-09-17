@@ -423,7 +423,7 @@ export default function StatsDashboard() {
           <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><Link href="/basketball/ratings/">Full team table →</Link></div>
           <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
-          <LiveTeamProductionTable />
+          <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
         </section>
         <section className="dashboard-section" aria-labelledby="dashboard-players">
           <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Scoring leaders</h2></div><Link href="/basketball/players/">Full player table →</Link></div>

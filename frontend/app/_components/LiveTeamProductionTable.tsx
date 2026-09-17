@@ -18,35 +18,42 @@ type TeamStatsResponse = {
   rows?: TeamRow[];
 };
 
-export default function LiveTeamProductionTable() {
+export function filterDivisionOneTeams(rows: TeamRow[], teamIds: ReadonlySet<string>) {
+  return rows.filter((row) => teamIds.has(String(row.id)));
+}
+
+export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[] }) {
   const [data, setData] = useState<TeamStatsResponse | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
+  const teamIdKey = teamIds.join(",");
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints&page=0", { signal: controller.signal })
+    const pages = [0, 1, 2].map((page) => fetch(`/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints&page=${page}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live team production unavailable");
         return response.json() as Promise<TeamStatsResponse>;
-      })
-      .then((payload) => {
+      }));
+    Promise.all(pages).then((payloads) => {
         if (controller.signal.aborted) return;
-        setData(payload);
-        setStatus(payload.rows?.length ? "ready" : "unavailable");
+        const divisionOneIds = new Set(teamIdKey.split(",").filter(Boolean));
+        const rows = filterDivisionOneTeams(payloads.flatMap((payload) => payload.rows || []), divisionOneIds);
+        setData({ ...(payloads[0] || {}), rows, total: rows.length });
+        setStatus(rows.length ? "ready" : "unavailable");
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("unavailable");
       });
     return () => controller.abort();
-  }, []);
+  }, [teamIdKey]);
 
   return (
     <section className="dashboard-subsection" aria-labelledby="live-team-production">
       <div className="dashboard-section-heading">
-        <div><span className="eyebrow">LIVE RAW TEAM DATA</span><h3 id="live-team-production">Scoring leaders</h3></div>
+        <div><span className="eyebrow">LIVE RAW TEAM DATA</span><h3 id="live-team-production">D1 scoring leaders</h3></div>
         <Link href="/basketball/team-stats/?season=2026&category=offensive&stat=avgPoints">Full team stat browser →</Link>
       </div>
-      <p className="dashboard-caption">Current team-season points per game from the live archive. These are descriptive totals beside the adjusted ratings above.</p>
+      <p className="dashboard-caption">Current Division I team-season points per game from the live archive. These are descriptive totals beside the adjusted ratings above.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current team production…</p> : status === "unavailable" || !data ? <p className="empty" role="status">Live team production is temporarily unavailable. <Link href="/basketball/team-stats/">Open the team stat browser →</Link></p> : (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
