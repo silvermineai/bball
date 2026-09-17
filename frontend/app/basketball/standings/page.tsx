@@ -11,11 +11,10 @@ export const metadata = {
 export default function Page() {
   const release = JSON.parse(fs.readFileSync(path.join(process.cwd(), "public/data/basketball/standings.json"), "utf8")) as {
     generated_at: string;
-    seasons: { season: number; source_url: string | null }[];
+    seasons: { season: number }[];
     teams: StandingTeam[];
   };
   const seasons = release.seasons.map((row) => row.season).sort((a, b) => b - a);
-  const sourceBySeason = Object.fromEntries(release.seasons.map((row) => [row.season, row.source_url]));
   return (
     <>
       <div className="page-title">
@@ -26,7 +25,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading"><div><div className="eyebrow">Historical standings</div><h2>Start with the season you can verify.</h2></div><span className="note">{release.teams.length.toLocaleString()} team-season records</span></div>
         <p className="note">The archive compacts one row per team-season while retaining the supplied labels and display values. A historical record describes that season; it does not establish current eligibility, roster status or a forecast.</p>
-        <StandingsBrowser teams={release.teams} seasons={seasons} sourceBySeason={sourceBySeason} />
+        <StandingsBrowser teams={release.teams} seasons={seasons} />
       </section>
       <p className="note">Edition retrieved {new Date(release.generated_at).toLocaleDateString("en-US", { timeZone: "UTC" })}.</p>
     </>

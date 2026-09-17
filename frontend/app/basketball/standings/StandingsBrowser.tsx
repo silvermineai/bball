@@ -39,11 +39,9 @@ const numberValue = (row: StandingTeam, key: string) => {
 export default function StandingsBrowser({
   teams,
   seasons,
-  sourceBySeason,
 }: {
   teams: StandingTeam[];
   seasons: number[];
-  sourceBySeason: Record<number, string | null>;
 }) {
   const latest = seasons[0] ?? 2026;
   const params = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -87,7 +85,6 @@ export default function StandingsBrowser({
     window.history.replaceState(window.history.state, "", url);
   }, [conference, query, season, sort]);
   const stat = (row: StandingTeam, key: string) => row.stats[key]?.display || "—";
-  const source = sourceBySeason[season];
   return (
     <>
       <div className="toolbar">
@@ -97,7 +94,7 @@ export default function StandingsBrowser({
         <label className="control"><span>ORDER BY</span><select value={sort} onChange={(event) => { setSort(event.target.value as SortKey); setPage(0); }}>{Object.entries(sortLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={() => downloadCsv(`basketball-standings-${season}.csv`, toCsv(["Season", "Conference", "Team", "Overall record", "Conference record", "Win %", "Conference win %", "PPG", "Opp PPG", "Point differential"], filtered.map((row) => [season, row.group_name, row.team_name, stat(row, "overall"), stat(row, "vs. Conf."), stat(row, "winPercent"), stat(row, "leagueWinPercent"), stat(row, "avgPointsFor"), stat(row, "avgPointsAgainst"), stat(row, "pointDifferential")])))}>Download CSV ↓</button>
       </div>
-      <p className="note">{filtered.length.toLocaleString()} retained team records · page {page + 1} of {pageCount}. These standings snapshots are separate from Silvermine forecast inputs. {source ? "Edition receipt recorded." : "Edition receipt unavailable."}</p>
+      <p className="note">{filtered.length.toLocaleString()} retained team records · page {page + 1} of {pageCount}. These standings snapshots are separate from Silvermine forecast inputs. Edition receipt recorded.</p>
       <div className="table-scroll">
         <table className="data-table">
           <thead><tr><th>Rank</th><th>Team</th><th>Conference</th><th>Overall</th><th>Conf.</th><th className="numeric">Win %</th><th className="numeric">Conf. Win %</th><th className="numeric">PPG</th><th className="numeric">Opp PPG</th><th className="numeric">Diff.</th></tr></thead>

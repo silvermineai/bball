@@ -9,6 +9,7 @@ import MovementWatch from "./MovementWatch";
 import RecruitingBoard from "./EspnRecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
+import type { RecruitingRelease } from "../../_lib/recruiting";
 export const metadata = {
   title: "Basketball recruiting: rankings, movement and player production",
   description:
@@ -16,7 +17,15 @@ export const metadata = {
   alternates: { canonical: "/basketball/recruiting/" },
 };
 export default function Page() {
-  const data = getRecruiting();
+  const rawData = getRecruiting();
+  // Keep the retained evidence and hashes in the private archive/API, while
+  // keeping provider URLs out of the public page payload and initial HTML.
+  const data = JSON.parse(JSON.stringify(rawData, (key, value) => {
+    if (key === "url" || key === "source_url" || key === "link" || key === "host" || key === "publisher") return undefined;
+    return typeof value === "string"
+      ? value.replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+      : value;
+  })) as RecruitingRelease;
   const news = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8"),
   ) as {
@@ -38,7 +47,12 @@ export default function Page() {
       /recruit|transfer|portal|commit|sign|class of|prospect|injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i.test(
         `${article.headline} ${article.description} ${article.categories.join(" ")}`,
       ),
-    ).map(({ link: _link, publisher: _publisher, ...article }) => article);
+    ).map(({ link: _link, publisher: _publisher, ...article }) => ({
+      ...article,
+      description: article.description
+        .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+        .replace(/<img\b[^>]*>/gi, ""),
+    }));
   return (
     <>
       <div className="page-title">
