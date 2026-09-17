@@ -9,7 +9,8 @@ import MovementWatch from "./MovementWatch";
 import RecruitingBoard from "./EspnRecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
-import type { RecruitingRelease } from "../../_lib/recruiting";
+import { categoryLabels, recruitingRows, type RecruitingRelease } from "../../_lib/recruiting";
+import { fmt } from "../../_lib/format";
 export const metadata = {
   title: "Basketball recruiting: rankings, movement and player production",
   description:
@@ -53,6 +54,10 @@ export default function Page() {
         .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
         .replace(/<img\b[^>]*>/gi, ""),
     }));
+  const productionRows = recruitingRows(data)
+    .filter((row) => row.stats)
+    .sort((a, b) => (b.stats?.mpg ?? -1) - (a.stats?.mpg ?? -1) || (b.stats?.ppg ?? -1) - (a.stats?.ppg ?? -1) || a.name.localeCompare(b.name))
+    .slice(0, 16);
   return (
     <>
       <div className="page-title">
@@ -85,6 +90,36 @@ export default function Page() {
       </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
+      <section className="section" aria-labelledby="recruiting-production">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recruiting / linked production</div>
+            <h2 id="recruiting-production">Prior workload stays attached.</h2>
+          </div>
+          <Link href="/basketball/roster-board/">Open the full workload board →</Link>
+        </div>
+        <p className="note">Top reviewed additions with a linked prior college stat file, ordered by recorded minutes per game. These rows describe the prior season; they do not establish eligibility, availability or a future role.</p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Player</th><th>Destination</th><th>Type</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead>
+            <tbody>{productionRows.map((row) => {
+              const stats = row.stats!;
+              return <tr key={row.key}>
+                <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(stats.id)}&season=${stats.season}`}>{row.name}</Link><small>{row.latest.source.published_on}</small></th>
+                <td><Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.program.name}</Link></td>
+                <td>{categoryLabels[row.category]}</td>
+                <td>{row.previous_program || "—"}</td>
+                <td className="numeric">{stats.games}</td>
+                <td className="numeric"><strong>{fmt(stats.mpg)}</strong></td>
+                <td className="numeric">{fmt(stats.ppg)}</td>
+                <td className="numeric">{fmt(stats.rpg)}</td>
+                <td className="numeric">{fmt(stats.apg)}</td>
+                <td className="numeric">{stats.ts == null ? "—" : `${fmt(stats.ts * 100)}%`}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </section>
       <RecruitingWire articles={recruitingNews} />
       <MovementWatch />
       <RecruitingBoard />
