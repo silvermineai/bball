@@ -379,15 +379,18 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
       ncaa_possessions: "Possession-style profiles",
       ncaa_game_rosters: "Game-day rosters",
       ncaa_officials: "Game officiating assignments",
+      player_crosswalk: "Player identity crosswalk",
+      player_core: "Archived player profiles",
+      team_season: "Team-season aggregates",
+      publisher_player_value: "Archived player value",
       player_season: "Season player stats",
       publisher_ratings: "Archived team ratings",
     };
     return labels[dataset.key] || dataset.label.replace(/\b(?:NCAA|ESPN)\b/gi, "Archived");
   };
   const rows = (overview.coverage.datasets || [])
-    .filter((dataset) => ["player_box", "ncaa_player_box", "player_season", "ncaa_player_season", "rosters", "schedule", "team_box", "publisher_ratings"].includes(dataset.key))
-    .sort((a, b) => b.rows - a.rows)
-    .slice(0, 8);
+    .filter((dataset) => dataset.rows > 0)
+    .sort((a, b) => b.rows - a.rows || a.label.localeCompare(b.label));
   const captured = (value: string | null) => value
     ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
     : "—";
@@ -400,7 +403,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
         <tbody>
           {rows.map((dataset) => (
             <tr key={dataset.key === "publisher_ratings" ? "archived_ratings" : dataset.key}>
-              <th scope="row">{displayLabel(dataset)}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Archived team ratings" : "Retained dataset"}</small></th>
+              <th scope="row">{displayLabel(dataset)}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Archived team ratings" : dataset.key === "ncaa_lineups" ? "Five-player lineup stints" : dataset.key === "ncaa_rapm" ? "Regularized lineup impact" : dataset.key === "ncaa_shots" ? "Attributed shot profiles" : dataset.key === "ncaa_possessions" ? "Team possession-style rows" : dataset.key === "ncaa_game_rosters" ? "Game-day player listings" : dataset.key === "ncaa_officials" ? "Game officiating rows" : dataset.key === "player_core" ? "Player identity and profile rows" : dataset.key === "player_crosswalk" ? "Cross-source identity links" : dataset.key === "publisher_player_value" ? "Archived player value rows" : dataset.key === "team_season" ? "Team-season aggregates" : "Retained dataset"}</small></th>
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
               <td className="numeric">{captured(dataset.latest_source_at)}</td>
