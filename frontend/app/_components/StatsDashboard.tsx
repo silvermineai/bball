@@ -142,9 +142,8 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
 }
 
 function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
-  const rows = topBasketballLeaders(players, "ppg", 12);
-  // The landing table stays ordered by scoring, while this second score makes
-  // the all-around player ranking visible without forcing a separate page.
+  // Keep the landing table ordered by the explainable all-around index.
+  // National leader cards below preserve single-stat leaderboards.
   // Use a deterministic display key because the compact dashboard release
   // does not need to expose the underlying provider team identifier.
   type DashboardProfilePlayer = BasketballLeaderPlayer & {
@@ -167,6 +166,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
   const profileByPlayer = new Map(
     profileRows.map((player) => [`${player.id}::${player.team}`, player]),
   );
+  const rows = profileRows.filter((player) => player.profileScore != null).slice(0, 12);
   return (
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
@@ -178,7 +178,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
             const profile = profileByPlayer.get(`${player.id}::${player.team}`);
             return (
             <tr key={`${player.id}-${player.team}`}>
-              <td className="rank-number">{player.rank}</td>
+              <td className="rank-number">{player.profileRank ?? "—"}</td>
               <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link><small>{player.position || "—"}</small></th>
               <td>{player.team}</td>
               <td className="numeric">{player.games}</td>
@@ -427,8 +427,8 @@ export default function StatsDashboard() {
           <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
         </section>
         <section className="dashboard-section" aria-labelledby="dashboard-players">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Scoring leaders</h2></div><Link href="/basketball/players/">Full player table →</Link></div>
-          <p className="dashboard-caption">Qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} production with the core box-score line, defensive events and shooting efficiency.</p>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">All-around player index</h2></div><Link href="/basketball/players/">Full player table →</Link></div>
+          <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by an eight-field percentile index: scoring, rebounding, playmaking, defensive events, true shooting, effective shooting and turnover control.</p>
           <PlayerTable players={players} season={latestSeason} />
         </section>
       </div>
