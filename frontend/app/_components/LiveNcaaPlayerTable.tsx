@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
 
-type Metric = "ppg" | "rpg" | "apg" | "ts" | "efg" | "three_pct" | "ft_pct" | "balanced_index";
+type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "balanced_index";
 
 type PlayerRow = {
   player_id: string;
@@ -21,6 +21,7 @@ type PlayerRow = {
   assists: number | null;
   steals: number | null;
   blocks: number | null;
+  turnovers: number | null;
   fga: number | null;
   fgm: number | null;
   tpa: number | null;
@@ -42,6 +43,9 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "ppg", label: "Scoring", description: "points per game", volume: 0 },
   { key: "rpg", label: "Rebounding", description: "rebounds per game", volume: 0 },
   { key: "apg", label: "Playmaking", description: "assists per game", volume: 0 },
+  { key: "spg", label: "Steals", description: "steals per game", volume: 0 },
+  { key: "bpg", label: "Blocks", description: "blocks per game", volume: 0 },
+  { key: "topg", label: "Ball security", description: "turnovers per game", volume: 0 },
   { key: "ts", label: "True shooting", description: "scoring efficiency", volume: 100 },
   { key: "efg", label: "Effective FG", description: "shot efficiency", volume: 100 },
   { key: "three_pct", label: "3-point accuracy", description: "3P%", volume: 50 },
@@ -110,7 +114,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       {status === "ready" && result ? (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
-            <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
             <tbody>{result.rows.slice(0, 10).map((row) => (
               <tr key={`${row.player_id}-${row.team_name || ""}`}>
                 <td className="rank-number">{row.rank}</td>
@@ -118,11 +122,15 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
                 <td>{row.team_name || "—"}</td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>
+                <td className="numeric">{fmt(perGame(row.minutes, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.points, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.rebounds, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.offensive_rebounds, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.defensive_rebounds, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.assists, row.games))}</td>
+                <td className="numeric">{fmt(perGame(row.steals, row.games))}</td>
+                <td className="numeric">{fmt(perGame(row.blocks, row.games))}</td>
+                <td className="numeric">{fmt(perGame(row.turnovers, row.games))}</td>
                 <td className="numeric">{percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null) == null ? "—" : `${fmt(percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null), 1)}%`}</td>
                 <td className="numeric">{percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga) == null ? "—" : `${fmt(percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga), 1)}%`}</td>
                 <td className="numeric">{percentage(row.tpm, row.tpa) == null ? "—" : `${fmt(percentage(row.tpm, row.tpa), 1)}%`}</td>
