@@ -464,20 +464,20 @@ export default function StatsDashboard() {
         </section>
       ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">09 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       {recruiting ? (
         <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">09 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">10 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
           <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
           <RecruitingSnapshot release={recruiting} />
         </section>
       ) : null}
       <LiveBasketballProspectLeaders />
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">10 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">11 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/source-stats/"><strong>Player stat browser</strong><span>Search the complete season line, totals and rate fields</span><b>→</b></Link>
