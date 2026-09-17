@@ -449,6 +449,7 @@ export default function StatsDashboard() {
   const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
   const nationalPlayers = getNationalPlayers(overview.season - 1);
+  const recruiting = getRecruiting();
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const latestSeason = overview.season - 1;
@@ -514,8 +515,18 @@ export default function StatsDashboard() {
           <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
         </section>
       </div>
+      {recruiting ? (
+        <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
+          <div className="dashboard-section-heading">
+            <div><span className="eyebrow">04 / RECRUITING BOARD</span><h2 id="dashboard-recruiting">Roster movement with prior production</h2></div>
+            <Link href="/basketball/recruiting/">Open the recruiting desk →</Link>
+          </div>
+          <p className="dashboard-caption">A compact view of the retained 2027 recruiting edition. Prior production is shown only when the player identity and previous program resolve to a recorded season line.</p>
+          <RecruitingSnapshot release={recruiting} />
+        </section>
+      ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
         <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need impact, recruiting movement, source rows or model details.</p>
         <div className="dashboard-link-grid">
           <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
