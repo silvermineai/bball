@@ -9,10 +9,15 @@ export type BasketballLeaderPlayer = {
   minutes: number;
   ppg: number | null;
   rpg: number | null;
+  orpg?: number | null;
+  drpg?: number | null;
   apg: number | null;
   spg?: number | null;
   bpg?: number | null;
+  topg?: number | null;
   efg?: number | null;
+  three_pct?: number | null;
+  ft_rate?: number | null;
   tov_rate?: number | null;
   ts: number | null;
   qualified: boolean;
