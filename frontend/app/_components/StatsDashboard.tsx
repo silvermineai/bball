@@ -19,6 +19,7 @@ import LiveBasketballScheduleStatus from "./LiveBasketballScheduleStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
 import LiveBasketballMovementLeaders from "./LiveBasketballMovementLeaders";
 import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
+import LiveNationalPlayerTable from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
@@ -447,6 +448,7 @@ export default function StatsDashboard() {
   const rosterModel = getRosterModel();
   const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
+  const nationalPlayers = getNationalPlayers(overview.season - 1);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const latestSeason = overview.season - 1;
@@ -509,6 +511,7 @@ export default function StatsDashboard() {
           <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by an eight-field percentile index: scoring, rebounding, playmaking, defensive events, true shooting, effective shooting and turnover control.</p>
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
+          <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
         </section>
       </div>
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
