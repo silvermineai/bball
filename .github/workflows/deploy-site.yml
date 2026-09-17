@@ -76,6 +76,8 @@ jobs:
       - name: Smoke test production
         run: |
           curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/football/recruiting/ \
+            | grep -q 'Roster rows, already in the page'
           curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/api/health >/dev/null
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             'https://bball.silvermine.dev/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&workflow_smoke=1' \
