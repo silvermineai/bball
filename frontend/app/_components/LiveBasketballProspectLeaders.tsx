@@ -28,6 +28,9 @@ type ProspectResponse = {
   rows: Prospect[];
 };
 
+const prospectSeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
+export type ProspectSeason = (typeof prospectSeasons)[number];
+
 const movement = (row: Prospect) => {
   if (row.rank == null || row.previous_rank == null) return "—";
   const delta = row.previous_rank - row.rank;
@@ -47,11 +50,14 @@ export const formatProspectSize = (row: Prospect) => {
 export default function LiveBasketballProspectLeaders() {
   const [data, setData] = useState<ProspectResponse | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
+  const [season, setSeason] = useState<ProspectSeason>(2027);
 
   useEffect(() => {
     const controller = new AbortController();
+    setStatus("checking");
+    setData(null);
     fetchJson<ProspectResponse>(
-      "/api/basketball/research/recruiting-rankings?season=2027&page=0&committed=all",
+      `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
       { signal: controller.signal },
     )
       .then((payload) => {
@@ -64,15 +70,23 @@ export default function LiveBasketballProspectLeaders() {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("unavailable");
       });
     return () => controller.abort();
-  }, []);
+  }, [season]);
 
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
       <div className="dashboard-section-heading">
-        <div><span className="eyebrow">07 / PROSPECT BOARD</span><h2 id="dashboard-prospects">Top 2027 prospects</h2></div>
-        <Link href="/basketball/recruiting/">Full recruiting board →</Link>
+        <div><span className="eyebrow">07 / PROSPECT BOARD</span><h2 id="dashboard-prospects">Top {season} prospects</h2></div>
+        <div className="button-row">
+          <label className="control">
+            <span>CLASS</span>
+            <select value={season} onChange={(event) => setSeason(Number(event.target.value) as ProspectSeason)}>
+              {prospectSeasons.map((value) => <option key={value} value={value}>{value} class</option>)}
+            </select>
+          </label>
+          <Link href="/basketball/recruiting/">Full recruiting board →</Link>
+        </div>
       </div>
-      <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact recruiting view. The full board supports every tracked class, position and commitment filter.</p>
+      <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact {season} class view. The full board supports every tracked class, position and commitment filter.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
           <div className="dashboard-table-wrap">
