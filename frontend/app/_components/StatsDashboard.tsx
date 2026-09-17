@@ -472,6 +472,7 @@ export default function StatsDashboard() {
         <div className="dashboard-section-heading"><div><span className="eyebrow">10 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
+          <Link href="/basketball/source-stats/"><strong>Player stat browser</strong><span>Search the complete season line, totals and rate fields</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
           <Link href="/basketball/lineups/"><strong>Lineups</strong><span>Five-player stints and net performance</span><b>→</b></Link>
           <Link href="/basketball/recruiting/"><strong>Recruiting</strong><span>Rankings, roster movement and fit</span><b>→</b></Link>
