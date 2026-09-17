@@ -12,6 +12,7 @@ import { ncaaStatLabels, type NCAAStatKey } from "../../_lib/ncaa-individual";
 
 type CoverageResponse = {
   coverage: Array<{ dataset: string; rows: number }>;
+  audit_status?: "not_requested" | "complete" | "partial";
   source_receipts: SourceReceipt[];
   location_validation?: {
     total: number;
@@ -171,6 +172,7 @@ export default function CoverageLive() {
   const [footballError, setFootballError] = useState("");
   const [careerError, setCareerError] = useState("");
   const [retryNonce, setRetryNonce] = useState(0);
+  const [deepAudit, setDeepAudit] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     const load = async <T,>(url: string, onValue: (value: T) => void, onError: (value: string) => void) => {
@@ -198,7 +200,8 @@ export default function CoverageLive() {
     // Counts and receipt clocks are enough for the coverage page's first
     // paint. The scheduled publication monitor requests audit=1 separately
     // when it needs the slower possession and location validation pass.
-    void load("/api/basketball/research/coverage?audit=0", setData, setError);
+    setData(null);
+    void load(`/api/basketball/research/coverage?audit=${deepAudit ? "1" : "0"}`, setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);
@@ -218,7 +221,7 @@ export default function CoverageLive() {
         if ((reason as { name?: string })?.name !== "AbortError") setCareerError(reason instanceof Error ? reason.message : "The live career archive check is unavailable.");
       });
     return () => controller.abort();
-  }, [retryNonce]);
+  }, [deepAudit, retryNonce]);
 
   const rows = data?.coverage.filter((row) => labels[row.dataset]) || [];
   const footballRows = football?.coverage || [];
@@ -239,9 +242,12 @@ export default function CoverageLive() {
           <div className="eyebrow">Live Cloudflare check</div>
           <h2>Confirm the warehouse behind the page.</h2>
         </div>
-        <span className="note">{data && football ? "Football + basketball reads successful" : error || footballError ? "One D1 read unavailable" : "Checking D1…"}</span>
+        <span className="note">{data && football ? data.audit_status === "partial" ? "Counts live · integrity audit partial" : "Football + basketball reads successful" : error || footballError ? "One D1 read unavailable" : "Checking D1…"}</span>
       </div>
-      <p className="note">This read-only check queries the deployed Cloudflare D1 database, rather than the bundled static files. It gives the current remote row counts and the latest source receipt clocks used by the research publisher.</p>
+      <div className="section-heading" style={{ alignItems: "center", marginTop: 12 }}>
+        <p className="note" style={{ margin: 0 }}>{deepAudit ? "Integrity mode checks schedule fields, paired team boxes and possession readiness. Large scans can finish partially while row counts remain available." : "Summary mode reads current row counts and receipt clocks quickly; use integrity mode when you want the deeper game checks."}</p>
+        <button className="button secondary" type="button" onClick={() => { setError(""); setDeepAudit((value) => !value); }}>{deepAudit ? "Use fast summary" : "Run integrity audit"}</button>
+      </div>
       {error && <p className="status-error" role="alert">Basketball: {error} <button className="button secondary" type="button" onClick={() => { setError(""); setRetryNonce((value) => value + 1); }}>Retry live checks</button></p>}
       {footballError && <p className="status-error" role="alert">Football: {footballError} <button className="button secondary" type="button" onClick={() => { setFootballError(""); setRetryNonce((value) => value + 1); }}>Retry live checks</button></p>}
       {(basketballModel || footballModel || recruiting?.coverage || news?.summary || briefArchive || basketballMarkets || footballMarkets) && <div className="strip" style={{ marginTop: 20 }}>
