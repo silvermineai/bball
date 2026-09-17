@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortForecastBoard } from "./LiveDashboardForecastTable";
+import { sortForecastBoard, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -26,12 +26,13 @@ const game = (id: string, starts_at: string, home_margin: number, home_win_proba
   },
 });
 
+const games = [
+  game("late", "2026-11-10T04:00:00Z", 3, 0.58),
+  game("early", "2026-11-01T04:00:00Z", 12, 0.91),
+  game("middle", "2026-11-05T04:00:00Z", -8, 0.75),
+];
+
 describe("sortForecastBoard", () => {
-  const games = [
-    game("late", "2026-11-10T04:00:00Z", 3, 0.58),
-    game("early", "2026-11-01T04:00:00Z", 12, 0.91),
-    game("middle", "2026-11-05T04:00:00Z", -8, 0.75),
-  ];
 
   it("orders by tip time by default", () => {
     expect(sortForecastBoard(games, "start").map((row) => row.id)).toEqual(["early", "middle", "late"]);
@@ -40,5 +41,13 @@ describe("sortForecastBoard", () => {
   it("orders confidence and absolute margin from highest to lowest", () => {
     expect(sortForecastBoard(games, "confidence").map((row) => row.id)).toEqual(["early", "middle", "late"]);
     expect(sortForecastBoard(games, "margin").map((row) => row.id)).toEqual(["early", "middle", "late"]);
+  });
+});
+
+describe("tipStatus", () => {
+  it("distinguishes confirmed, scheduled and TBD clocks", () => {
+    expect(tipStatus(games[0])).toBe("Scheduled time");
+    expect(tipStatus({ ...games[0], time_tbd: 1 })).toBe("Time TBD");
+    expect(tipStatus({ ...games[0], source_time_valid: true, source_start: "2026-11-10T04:00:00Z" })).toBe("Source-confirmed start");
   });
 });

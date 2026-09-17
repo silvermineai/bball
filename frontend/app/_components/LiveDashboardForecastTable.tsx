@@ -17,6 +17,12 @@ const latestTip = (game: BBGame) =>
       ? "Time TBD"
       : kick(game.starts_at);
 
+export function tipStatus(game: BBGame) {
+  if (game.source_time_valid && game.source_start) return "Source-confirmed start";
+  if (game.time_tbd) return "Time TBD";
+  return "Scheduled time";
+}
+
 function modelLabel(game: BBGame) {
   return game.prediction ? "SILVERMINE MODEL" : "SILVERMINE COLD START";
 }
@@ -99,7 +105,7 @@ export default function LiveDashboardForecastTable({
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
-                <td>{date(game.starts_at)}<small>{latestTip(game)}</small></td>
+                <td>{date(game.starts_at)}<small>{latestTip(game)}</small><small>{tipStatus(game)}</small></td>
                 <td><span className={`model-tag ${game.prediction ? "primary" : "baseline"}`}>{modelLabel(game)}</span></td>
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
