@@ -528,7 +528,7 @@ describe("bball api", () => {
     const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2027 }] },
-      { results: [{ model_id: "basketball-efficiency-v1-test", forecasts: 12, first_created_at: "2026-09-08T00:00:00Z", last_created_at: "2026-09-08T01:00:00Z" }] },
+      { results: [{ model_id: "basketball-efficiency-v1-test", forecasts: 12, primary_forecasts: 10, cold_start_forecasts: 2, first_created_at: "2026-09-08T00:00:00Z", last_created_at: "2026-09-08T01:00:00Z" }] },
       { results: [{
         model_id: "basketball-efficiency-v1-test",
         model_created_at: "2026-09-08T00:00:00Z",
@@ -557,6 +557,8 @@ describe("bball api", () => {
     const body = await response.json() as { models: Array<Record<string, unknown>> };
     expect(body.models[0]).toMatchObject({
       model_id: "basketball-efficiency-v1-test",
+      primary_forecasts: 10,
+      cold_start_forecasts: 2,
       target_season: 2027,
       training_games: 22932,
       training_seasons: [2023, 2024, 2025, 2026],

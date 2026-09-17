@@ -58,7 +58,13 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
       researchDb(c.env).prepare(
-        "SELECT model_id, count(*) AS forecasts, MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at FROM bb_forecasts GROUP BY model_id ORDER BY last_created_at DESC, model_id",
+        `SELECT model_id, count(*) AS forecasts,
+                SUM(CASE WHEN json_extract(prediction_json,'$.estimate_type')='cold_start' THEN 1 ELSE 0 END) AS cold_start_forecasts,
+                SUM(CASE WHEN json_extract(prediction_json,'$.estimate_type')='cold_start' THEN 0 ELSE 1 END) AS primary_forecasts,
+                MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at
+           FROM bb_forecasts
+          GROUP BY model_id
+          ORDER BY last_created_at DESC, model_id`,
       ),
       researchDb(c.env).prepare(
         `SELECT id AS model_id, created_at AS model_created_at,
