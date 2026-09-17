@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Game, Overview } from "../_lib/data";
 import { getOverview } from "../_lib/data";
 import { date, fmt, kick } from "../_lib/format";
+import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 
 type Production = {
@@ -174,6 +175,7 @@ export default function FootballDashboard() {
         <small>{fmt(Math.max(0, overview.model.evaluation.baseline_margin_mae - overview.model.evaluation.margin_mae))} pts lower margin error than the baseline on holdout games.</small>
       </div>
     </section>
+    <LiveFootballForecastStatus />
     <LiveFootballMarketStatus />
     <div className="dashboard-strip">
       <div><strong>{overview.ratings.length}</strong><span>Rated teams</span></div>
