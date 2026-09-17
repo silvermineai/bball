@@ -180,7 +180,7 @@ export default function GlobalSearch() {
       </label>
       {open && query.trim().length >= 2 && (
         <div className="global-search-results" role="listbox" aria-label="Search results">
-          {loading && <span className="global-search-status">Searching the source catalog…</span>}
+          {loading && <span className="global-search-status">Searching player and program records…</span>}
           {!loading && error && <span className="global-search-status">{error}</span>}
           {!loading && !error && results.map((result) => (
             <Link href={result.href} role="option" className="global-search-result" key={`${result.type}-${result.id}`} onClick={() => setOpen(false)}>
@@ -188,7 +188,7 @@ export default function GlobalSearch() {
               <em>{result.sport ? `${result.sport} · ` : ""}{result.type === "player" ? "Player" : "Program"}</em>
             </Link>
           ))}
-          {!loading && !error && !results.length && <span className="global-search-status">No source records found.</span>}
+          {!loading && !error && !results.length && <span className="global-search-status">No matching records found.</span>}
         </div>
       )}
     </div>

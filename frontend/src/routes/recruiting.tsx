@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ExternalLink, GraduationCap, Plus, Trash2, UserRoundSearch } from "lucide-react";
+import { GraduationCap, Plus, Trash2, UserRoundSearch } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTitle, TeamMark, TeamPicker } from "@/components/Annual";
 import { insights } from "@/lib/insights";
@@ -315,13 +315,8 @@ function RecruitingPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper px-4 py-3 text-[12px] text-graphite">
             <span>
               {movementLoading ? "Loading roster observations…" : `${movementPlayers.length} player observations shown`}
-              {movementData ? ` · ${movementData.players_observed.toLocaleString()} total in the source view` : ""}
+              {movementData ? ` · ${movementData.players_observed.toLocaleString()} total records in view` : ""}
             </span>
-            {movementData?.source?.url ? (
-              <a className="inline-flex items-center gap-1 font-stat text-[10px] uppercase tracking-wider text-court hover:text-ink" href={movementData.source.url} target="_blank" rel="noreferrer">
-                Source release <ExternalLink size={12} />
-              </a>
-            ) : null}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-[12.5px]">
@@ -333,7 +328,6 @@ function RecruitingPage() {
                   <th className="px-4 py-2 text-center">Pos.</th>
                   <th className="px-4 py-2 text-right">Prior minutes</th>
                   <th className="px-4 py-2 text-right">Prior games</th>
-                  <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -345,9 +339,6 @@ function RecruitingPage() {
                     <td className="px-4 py-2 text-center font-stat">{player.position ?? "—"}</td>
                     <td className="px-4 py-2 text-right font-stat">{player.previous_minutes == null ? "—" : player.previous_minutes.toLocaleString()}</td>
                     <td className="px-4 py-2 text-right font-stat">{player.previous_games == null ? "—" : player.previous_games.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">
-                      {player.source_url ? <a href={player.source_url} target="_blank" rel="noreferrer" aria-label={`Open ${player.name} source`} className="inline-flex text-court hover:text-ink"><ExternalLink size={14} /></a> : null}
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -356,7 +347,7 @@ function RecruitingPage() {
           {!movementLoading && movementPlayers.length === 0 ? <p className="px-4 py-8 text-sm text-graphite">No player rows match this filter in the current release.</p> : null}
         </div>
         <p className="mt-2 text-[11px] text-graphite">
-          2025–26 rows compare recorded participation across seasons. 2026–27 rows are source roster listings and do not establish a transfer, commitment, or eligibility decision. Minutes and games are prior-season observations.
+          2025–26 rows compare recorded participation across seasons. 2026–27 rows are roster observations and do not establish a transfer, commitment, or eligibility decision. Minutes and games are prior-season observations.
         </p>
       </section>
 

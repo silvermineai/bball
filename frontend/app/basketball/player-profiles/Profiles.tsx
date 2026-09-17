@@ -91,11 +91,9 @@ export default function Profiles() {
     }
   };
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
-  const exportHeaders = ["Season", "Player", "Source ID", "ESPN profile URL", "Program", "Team ID", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Raw profile JSON"];
+  const exportHeaders = ["Season", "Player", "Archive ID", "Program", "Team ID", "Position", "Height", "Weight", "Jersey", "Experience", "Status", "Raw profile JSON"];
   const exportRow = (row: Row) => {
-    const slug = row.profile.slug || "";
-    const sourceUrl = `https://www.espn.com/mens-college-basketball/player/_/id/${encodeURIComponent(row.id)}${slug ? `/${encodeURIComponent(slug)}` : ""}`;
-    return [label(row.season), row.name, row.id, sourceUrl, row.team, row.team_id, row.position, row.height, row.weight, row.jersey, row.experience, row.status, JSON.stringify(row.profile)];
+    return [label(row.season), row.name, row.id, row.team, row.team_id, row.position, row.height, row.weight, row.jersey, row.experience, row.status, JSON.stringify(row.profile)];
   };
   const download = () => {
     if (!result) return;
@@ -134,28 +132,28 @@ export default function Profiles() {
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">Source archive / player identity</div>
+        <div className="eyebrow">Player archive / identity</div>
         <h1>Know the<br /><em>player file.</em></h1>
-        <p>Browse the publisher&apos;s historical identity records before you evaluate production, roster movement or a matchup. These fields orient the source archive; they do not prove eligibility or a current roster place.</p>
+        <p>Browse retained historical identity records before you evaluate production, roster movement or a matchup. These fields describe the archive; they do not prove eligibility or a current roster place.</p>
       </div>
       <div className="strip">
         <div><strong>{result?.total.toLocaleString() ?? meta?.total.toLocaleString() ?? "—"}</strong><span>Profiles in {season === "all" ? "archive" : "selected season"}</span></div>
         <div><strong>{meta?.positions.length ?? "—"}</strong><span>Position labels</span></div>
         <div><strong>{meta?.statuses.length ?? "—"}</strong><span>Status labels</span></div>
-        <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Source seasons</span></div>
+        <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Archived seasons</span></div>
       </div>
       <div className="toolbar">
         <label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => { setSeason(e.target.value); setPosition(""); setStatus(""); })}><option value="all">All retained seasons</option>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
-        <label className="control"><span>PLAYER OR ID</span><input type="search" maxLength={120} placeholder="Search a player or source ID" value={query} onChange={(e) => reset(() => setQuery(e.target.value))} /></label>
+        <label className="control"><span>PLAYER OR ID</span><input type="search" maxLength={120} placeholder="Search a player or archive ID" value={query} onChange={(e) => reset(() => setQuery(e.target.value))} /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(e) => reset(() => setPosition(e.target.value))}><option value="">All positions</option>{(meta?.positions || []).map((v) => <option key={v}>{v}</option>)}</select></label>
         <label className="control"><span>STATUS</span><select value={status} onChange={(e) => reset(() => setStatus(e.target.value))}><option value="">All statuses</option>{(meta?.statuses || []).map((v) => <option key={v}>{v}</option>)}</select></label>
       </div>
-      {meta?.source ? <p className="note" style={{ marginTop: 16 }}>Profile edition receipt for {season === "all" ? "all retained seasons" : label(Number(season))}: latest fetch {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
-      {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry source profiles</button></div> : !result ? <p className="empty" role="status">Loading source profiles…</p> : <>
+      {meta?.source ? <p className="note" style={{ marginTop: 16 }}>Profile edition receipt for {season === "all" ? "all retained seasons" : label(Number(season))}: latest capture {sourceDate(meta.source.fetched_at)}. This clock describes the retained identity release, not a live roster or eligibility update.</p> : null}
+      {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry player archive</button></div> : !result ? <p className="empty" role="status">Loading player archive…</p> : <>
         <div className="section-heading" style={{ marginTop: 20 }}><p>{result.total.toLocaleString()} matching profiles · page {page + 1} of {pages}</p><div className="button-row"><button className="button secondary" type="button" disabled={!result.rows.length} onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button><button className="button secondary" type="button" onClick={share}>Copy profile link</button></div></div>
         {(copied || exportMessage) && <p role="status">{copied || exportMessage}</p>}
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Season</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Source ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={`${r.season}-${r.id}`}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${r.season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{label(r.season)}</td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team source ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
-        {!result.rows.length && <p className="empty">No source profiles match these filters.</p>}
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Season</th><th>Program</th><th>Position</th><th>Size</th><th>Jersey</th><th>Experience</th><th>Status</th><th>Archive ID</th></tr></thead><tbody>{result.rows.map((r) => <tr key={`${r.season}-${r.id}`}><td><Link href={`/basketball/player/?id=${encodeURIComponent(r.id)}&season=${r.season}`}>{r.name || r.id} →</Link><small><Link href={`/basketball/recruiting/?q=${encodeURIComponent(r.name || r.id)}`}>Search dated evidence →</Link></small></td><td>{label(r.season)}</td><td>{r.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(r.team_id)}/`}>{r.team || r.team_id}</Link> : (r.team || "—")}<small>{r.team_id ? `Team archive ID ${r.team_id}` : "Team unavailable"}</small></td><td>{r.position || "—"}</td><td>{[r.height, r.weight].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{r.jersey || "—"}</td><td className="numeric">{r.experience || "—"}</td><td>{r.status || "—"}</td><td><small>{r.id}</small></td></tr>)}</tbody></table></div>
+        {!result.rows.length && <p className="empty">No player profiles match these filters.</p>}
         <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 40 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
         <p className="note" style={{ marginTop: 24 }}>Data note: personal birth-date, age and birth-location fields are omitted. A profile row is not a verified roster, eligibility or transfer record.</p>
       </>}
