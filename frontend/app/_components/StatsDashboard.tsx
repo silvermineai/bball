@@ -148,6 +148,40 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
   );
 }
 
+function AdjustedFourFactorsTable({ teams }: { teams: BBTeam[] }) {
+  const pct = (value: number | null | undefined) => value == null ? "—" : `${fmt(value * 100, 1)}%`;
+  const rows = teams.filter((team) => team.adj_off_efg != null || team.adj_def_efg != null).slice(0, 12);
+  return (
+    <section className="dashboard-subsection" aria-labelledby="dashboard-four-factors">
+      <div className="dashboard-section-heading">
+        <div><span className="eyebrow">ADJUSTED FOUR FACTORS</span><h3 id="dashboard-four-factors">Where teams win possessions</h3></div>
+        <Link href="/basketball/learn/#four-factors">Read the factor guide →</Link>
+      </div>
+      <p className="dashboard-caption">Opponent-adjusted offense and defense rates from the latest completed season. Lower turnover and free-throw rates are better on defense; higher shooting and offensive rebounding rates are better on offense.</p>
+      <div className="dashboard-table-wrap">
+        <table className="data-table dashboard-table">
+          <thead>
+            <tr><th>Team</th><th className="numeric">O eFG%</th><th className="numeric">D eFG%</th><th className="numeric">O TO%</th><th className="numeric">D TO%</th><th className="numeric">O ORB%</th><th className="numeric">D ORB%</th><th className="numeric">O FTR</th><th className="numeric">D FTR</th></tr>
+          </thead>
+          <tbody>{rows.map((team) => (
+            <tr key={team.id}>
+              <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(team.id)}/`}>{team.name}</Link><small>#{team.rank} net rating</small></th>
+              <td className="numeric"><strong>{pct(team.adj_off_efg)}</strong></td>
+              <td className="numeric">{pct(team.adj_def_efg)}</td>
+              <td className="numeric">{pct(team.adj_off_tov)}</td>
+              <td className="numeric">{pct(team.adj_def_tov)}</td>
+              <td className="numeric">{pct(team.adj_off_orb)}</td>
+              <td className="numeric">{pct(team.adj_def_orb)}</td>
+              <td className="numeric">{pct(team.adj_off_ftr)}</td>
+              <td className="numeric">{pct(team.adj_def_ftr)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
   // Keep the landing table ordered by the explainable all-around index.
   // National leader cards below preserve single-stat leaderboards.
@@ -507,6 +541,7 @@ export default function StatsDashboard() {
           <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><Link href="/basketball/ratings/">Full team table →</Link></div>
           <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
+          <AdjustedFourFactorsTable teams={overview.ratings} />
           <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
         </section>
         <section className="dashboard-section" aria-labelledby="dashboard-players">
