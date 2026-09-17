@@ -17,7 +17,13 @@ export default function Page() {
   const data = getScoutIndex(),
     m = getBasketball().model,
     rosterModel = getRosterModel(),
-    rosters = buildRosterSummary(getRosters().players);
+    rosters = buildRosterSummary(getRosters().players).map((summary) => ({
+      ...summary,
+      movement: summary.movement.map(({ source_url: _sourceUrl, ...player }) => ({
+        ...player,
+        source_url: null,
+      })),
+    }));
   let possessionStyles: PossessionStyleCatalog["seasons"][number]["teams"] = [];
   try {
     const catalog = JSON.parse(

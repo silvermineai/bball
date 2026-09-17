@@ -13,5 +13,11 @@ export default function Page() {
   const data = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/conferences.json"), "utf8"),
   ) as ConferenceRelease;
-  return <Conferences data={data} />;
+  return <Conferences data={{
+    ...data,
+    conferences: data.conferences.map((conference) => ({
+      ...conference,
+      teams: conference.teams.map((team) => ({ ...team, logo: null })),
+    })),
+  }} />;
 }

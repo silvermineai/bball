@@ -36,6 +36,11 @@ export default function Page() {
     ...catalog,
     seasons: catalog.seasons.map((season) => ({
       ...season,
+      source: {
+        fetched_at: season.source.fetched_at,
+        url: "",
+        sha256: season.source.sha256,
+      },
       games:
         season.season === current.season ? season.games.slice(0, 40) : [],
     })),

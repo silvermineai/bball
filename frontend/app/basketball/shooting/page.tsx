@@ -25,10 +25,37 @@ export default function Page() {
       "utf8",
     ),
   ) as ShotCatalog;
+  const catalogSource =
+    catalog.source ??
+    catalog.seasons?.[0]?.source ?? {
+      fetched_at: "",
+      url: "",
+      sha256: "",
+    };
+  const publicCatalog: ShotCatalog = {
+    ...catalog,
+    source: {
+      fetched_at: catalogSource.fetched_at,
+      url: "",
+      sha256: catalogSource.sha256,
+    },
+    ...(catalog.seasons
+      ? {
+          seasons: catalog.seasons.map((season) => ({
+            ...season,
+            source: {
+              fetched_at: season.source.fetched_at,
+              url: "",
+              sha256: season.source.sha256,
+            },
+          })),
+        }
+      : {}),
+  };
   const current =
-    catalog.seasons?.find(
-      (season) => season.season === (catalog.default_season ?? catalog.season),
-    ) ?? catalog;
+    publicCatalog.seasons?.find(
+      (season) => season.season === (publicCatalog.default_season ?? publicCatalog.season),
+    ) ?? publicCatalog;
   const c = current.coverage;
   return (
     <>
@@ -80,7 +107,7 @@ export default function Page() {
       </div>
       <Suspense fallback={<p>Loading the shooting lab…</p>}>
         <Shooting
-          catalog={catalog}
+            catalog={publicCatalog}
           ratedTeamIds={getScoutIndex().teams.map((t) => t.id)}
         />
       </Suspense>

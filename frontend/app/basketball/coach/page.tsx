@@ -37,7 +37,14 @@ function getNews() {
   return (payload.articles || [])
     .filter((article) => article.sport === "mens-college-basketball")
     .sort((a, b) => b.published.localeCompare(a.published))
-    .slice(0, 3);
+    .slice(0, 3)
+    .map(({ link: _link, publisher: _publisher, ...article }) => ({
+      ...article,
+      headline: article.headline.replace(/https?:\/\/[^\s"'<>]+/gi, "archived media"),
+      description: article.description
+        .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+        .replace(/<img\b[^>]*>/gi, ""),
+    }));
 }
 
 export default function Page() {

@@ -18,6 +18,20 @@ export default function Page() {
   } catch {
     // Keep the route buildable while the next verified source release is prepared.
   }
+  const { attribution: _attribution, ...catalogWithoutAttribution } = catalog as PossessionStyleCatalog & {
+    attribution?: unknown;
+  };
+  catalog = {
+    ...catalogWithoutAttribution,
+    seasons: catalog.seasons.map((season) => ({
+      ...season,
+      source: {
+        fetched_at: season.source?.fetched_at,
+        url: "",
+        sha256: season.source?.sha256,
+      },
+    })),
+  };
   return <>
     <Link className="eyebrow" href="/basketball/">← Basketball desk</Link>
     <Style catalog={catalog} />
