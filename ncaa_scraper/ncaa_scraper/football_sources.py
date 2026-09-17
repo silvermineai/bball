@@ -109,6 +109,19 @@ class ReleaseClient:
                     time.sleep(retry_delays[attempt])
                     continue
                 if response.status_code == 304:
+                    # The bytes are unchanged, but the conditional request
+                    # successfully revalidated the release. Advance the
+                    # retrieval clock without changing its hash or ETag.
+                    receipt = {
+                        **receipt,
+                        "dataset": dataset,
+                        "season": year,
+                        "url": url,
+                        "fetched_at": utcnow(),
+                        "etag": response.headers.get("ETag") or receipt.get("etag"),
+                        "last_modified": response.headers.get("Last-Modified") or receipt.get("last_modified"),
+                    }
+                    receipt_path.write_text(json.dumps(receipt, indent=2))
                     break
                 if response.status_code in (401, 403, 404):
                     raise SourceUnavailable(

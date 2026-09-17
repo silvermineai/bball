@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -130,6 +131,59 @@ class CacheTests(unittest.TestCase):
             receipt.write_text(json.dumps({"sha256": "changed"}))
             with self.assertRaises(SourceUnavailable):
                 parquet_file(c, "pbp", 2026)
+
+    def test_conditional_revalidation_advances_parquet_receipt_clock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "test_2026.parquet"
+            pq.write_table(pa.table({"game": [1]}), path)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            receipt = root / "test_2026.parquet.receipt.json"
+            receipt.write_text(
+                json.dumps(
+                    {
+                        "sha256": digest,
+                        "etag": "old",
+                        "fetched_at": "2026-01-01T00:00:00Z",
+                    }
+                )
+            )
+            response = Mock(status_code=304, headers={"ETag": "new"})
+            response.__enter__ = Mock(return_value=response)
+            response.__exit__ = Mock(return_value=False)
+            c = ReleaseClient(root, {"pbp": ("test", "test_{year}.parquet")})
+            c.session.get = Mock(return_value=response)
+            _, updated = parquet_file(c, "pbp", 2026, refresh=True)
+            self.assertNotEqual(updated["fetched_at"], "2026-01-01T00:00:00Z")
+            self.assertEqual(updated["sha256"], digest)
+            self.assertEqual(json.loads(receipt.read_text())["etag"], "new")
+
+    def test_conditional_revalidation_advances_tabular_receipt_clock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "test_2026.csv"
+            path.write_text("id,value\n1,ok\n")
+            receipt = root / "test_2026.csv.receipt.json"
+            receipt.write_text(
+                json.dumps(
+                    {
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                        "etag": "old",
+                        "fetched_at": "2026-01-01T00:00:00Z",
+                    }
+                )
+            )
+            response = Mock(status_code=304, headers={"ETag": "new"})
+            response.content = b""
+            response.raise_for_status = Mock()
+            response.__enter__ = Mock(return_value=response)
+            response.__exit__ = Mock(return_value=False)
+            c = ReleaseClient(root, {"pbp": ("test", "test_{year}.csv")})
+            c.session.get = Mock(return_value=response)
+            _, updated = c.load("pbp", 2026, refresh=True)
+            self.assertNotEqual(updated["fetched_at"], "2026-01-01T00:00:00Z")
+            self.assertEqual(updated["sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertEqual(updated["etag"], "new")
 
     def test_multi_season_export_manifest_keeps_editions_separate(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -43,7 +43,18 @@ def parquet_file(client, dataset, year, refresh=False, max_bytes=256 * 1024 * 10
                     url, headers=headers, stream=True, timeout=(15, 90)
                 ) as response:
                     if response.status_code == 304:
-                        return parquet_file(client, dataset, year, False, max_bytes)
+                        # A conditional check is still a successful source
+                        # revalidation. Keep the immutable content receipt,
+                        # but advance the clock used by publication-health
+                        # monitors so unchanged releases do not look stale.
+                        receipt = {
+                            **receipt,
+                            "fetched_at": utcnow(),
+                            "etag": response.headers.get("ETag") or receipt.get("etag"),
+                            "last_modified": response.headers.get("Last-Modified") or receipt.get("last_modified"),
+                        }
+                        receipt_path.write_text(json.dumps(receipt, indent=2))
+                        return path, receipt
                     if response.status_code in (401, 403, 404):
                         raise SourceUnavailable(
                             f"Source unavailable ({response.status_code}): {dataset}/{year}"
