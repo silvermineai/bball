@@ -392,7 +392,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
         </thead>
         <tbody>
           {rows.map((dataset) => (
-            <tr key={dataset.key}>
+            <tr key={dataset.key === "publisher_ratings" ? "archived_ratings" : dataset.key}>
               <th scope="row">{displayLabel(dataset)}<small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Archived team ratings" : "Retained dataset"}</small></th>
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
