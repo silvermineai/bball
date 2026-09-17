@@ -75,5 +75,5 @@ export function comparisonQuoteSummary(comparison: Comparison): string {
         ? `O/U ${comparison.line.toFixed(1)}`
         : `home ${comparison.line > 0 ? "+" : ""}${comparison.line.toFixed(1)}`;
   const gap = comparisonGapLabel(comparison);
-  return `${comparison.bookmaker} ${comparison.market} ${line}${gap ? ` · model ${gap}` : ""} · captured ${comparison.captured_at}`;
+  return `Verified line ${comparison.market} ${line}${gap ? ` · model ${gap}` : ""} · captured ${comparison.captured_at}`;
 }
