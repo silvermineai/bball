@@ -38,9 +38,10 @@ describe("market comparison display", () => {
   });
 
   it("summarizes only observed spread and total lines", () => {
+    const staleSpread = { ...comparison("spreads", 11.1), line: 4.5, updated_at: "2026-09-12T15:30:00Z" };
     const spread = { ...comparison("spreads", 12.64), line: 5.5, updated_at: "2026-09-12T15:32:51Z" };
     const total = { ...comparison("totals", 5.85), line: 43.5, updated_at: "2026-09-12T15:32:52Z" };
-    const summary = summarizeMarketLines([spread, total, comparison("h2h", 0.04)]);
+    const summary = summarizeMarketLines([staleSpread, spread, total, comparison("h2h", 0.04)]);
     expect(summary).toEqual({ spread: 5.5, total: 43.5, spreadGap: 12.64, totalGap: 5.85, capturedAt: "2026-09-12T15:32:52Z" });
     expect(summarizeMarketLines([])).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, capturedAt: null });
   });
