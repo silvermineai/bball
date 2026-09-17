@@ -5625,32 +5625,32 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 }
 .dashboard-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
-  gap: 28px;
-  margin-top: 18px;
-  padding: 40px 42px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  margin-top: 14px;
+  padding: 28px 30px;
   background: var(--dashboard-blue-dark);
   color: #f7fbff;
   border: 1px solid #0d2644;
-  box-shadow: 0 14px 28px #102d521c;
+  box-shadow: 0 8px 18px #102d521c;
 }
 .dashboard-hero .eyebrow { color: #89c7ec; }
-.dashboard-hero h1 { margin-top: 14px; max-width: 700px; font-size: clamp(3.2rem, 7vw, 6.4rem); }
+.dashboard-hero h1 { margin-top: 10px; max-width: 700px; font-size: clamp(2.8rem, 5.2vw, 4.8rem); line-height: .95; letter-spacing: -.02em; }
 .dashboard-hero h1 em { color: #74d2d0; font-style: normal; }
-.dashboard-hero p { max-width: 610px; margin-top: 18px; color: #d4e4f3; font-size: 16px; line-height: 1.5; }
-.dashboard-hero .hero-actions { margin-top: 28px; }
+.dashboard-hero p { max-width: 610px; margin-top: 14px; color: #d4e4f3; font-size: 14px; line-height: 1.5; }
+.dashboard-hero .hero-actions { margin-top: 20px; }
 .dashboard-hero .button { background: #f4c54d; border-color: #f4c54d; color: #102d52; }
 .dashboard-hero .hero-link { color: #d7ecff; border-bottom-color: #72c8e5; }
 .dashboard-model-card {
   display: grid;
   align-content: start;
   gap: 7px;
-  padding: 22px;
+  padding: 18px;
   background: #174372;
   border: 1px solid #356894;
   color: #edf7ff;
 }
-.dashboard-model-card > strong { font: 700 52px/.95 "Barlow Condensed", sans-serif; color: #fff; margin-top: 8px; }
+.dashboard-model-card > strong { font: 700 46px/.95 "Barlow Condensed", sans-serif; color: #fff; margin-top: 6px; }
 .dashboard-model-card > span:not(.model-tag) { color: #bad3e7; font: 11px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .08em; }
 .dashboard-model-card > small { max-width: 230px; color: #9fc0d8; font-size: 11px; line-height: 1.4; }
 .dashboard-model-card > div:not(.dashboard-model-rule) { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 4px; }
@@ -5664,7 +5664,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .dashboard-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   border: 1px solid var(--dashboard-line);
   background: #f7fafc;
 }

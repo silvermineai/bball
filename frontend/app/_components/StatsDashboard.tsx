@@ -455,10 +455,10 @@ export default function StatsDashboard() {
       <div className="dashboard-kicker"><span>MEN&apos;S COLLEGE BASKETBALL</span><span>{overview.label} / LIVE BOARD</span></div>
       <section className="dashboard-hero">
         <div>
-          <div className="eyebrow">Stats, ratings, games, predictions</div>
-          <h1>The numbers<br /><em>on the board.</em></h1>
-          <p>Team strength, player production and every available 2026–27 game forecast in one fast view.</p>
-          <div className="hero-actions"><Link className="button" href="/basketball/matchups/">All upcoming games ↗</Link><Link className="hero-link" href="/basketball/ncaa-rankings/">Player rankings →</Link><Link className="hero-link" href="/basketball/ratings/">Team ratings →</Link></div>
+          <div className="eyebrow">2026–27 data center</div>
+          <h1>Games. Teams.<br /><em>Players.</em></h1>
+          <p>Upcoming matchups, adjusted team strength, player production and Silvermine forecasts in one live board.</p>
+          <div className="hero-actions"><Link className="button" href="/basketball/matchups/">View the slate ↗</Link><Link className="hero-link" href="/basketball/ncaa-rankings/">Player rankings →</Link><Link className="hero-link" href="/basketball/ratings/">Team ratings →</Link></div>
         </div>
         <div className="dashboard-model-card">
           <span className="model-tag primary">SILVERMINE MODEL</span>
