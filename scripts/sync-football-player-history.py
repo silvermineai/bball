@@ -121,7 +121,11 @@ def query(sql):
         if result.returncode == 0:
             return json.loads(result.stdout)[0]["results"]
         output = result.stdout or ""
-        transient = any(
+        # Wrangler can occasionally exit nonzero after a remote D1 read
+        # without emitting the upstream 5xx/timeout text. This command is
+        # read-only and the release is already locally hashed, so a silent
+        # response is safe to retry before preserving it as a real failure.
+        transient = not output.strip() or any(
             marker in output.lower()
             for marker in (
                 "error code 524",
