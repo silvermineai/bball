@@ -17,6 +17,7 @@ import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
 import LiveNationalPlayerTable, { type NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
+import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
 
 function getPlayers(season: number) {
   // The overview edition already contains the latest complete player file in
@@ -506,6 +507,7 @@ export default function StatsDashboard() {
           <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">All-around player index</h2></div><Link href="/basketball/players/">Full player table →</Link></div>
           <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by an eight-field percentile index: scoring, rebounding, playmaking, defensive events, true shooting, effective shooting and turnover control.</p>
           <PlayerTable players={players} season={latestSeason} />
+          <LiveNcaaPlayerTable season={latestSeason} />
         </section>
       </div>
       <section className="dashboard-section" aria-labelledby="dashboard-leaders">
