@@ -84,6 +84,14 @@ def schedules(sport):
             if not {"bb_rosters", "bb_games"}.issubset(tables):
                 conn.close()
                 return published_basketball_schedule()
+            # Scheduled publication keeps a compact local model/forecast DB
+            # after the source warehouse is cleaned up. It still contains the
+            # table names, but no canonical game rows. Use the checked-in
+            # upcoming release in that state so prospective line capture can
+            # continue matching exact participants and start times.
+            if conn.execute("SELECT count(*) FROM bb_games").fetchone()[0] == 0:
+                conn.close()
+                return published_basketball_schedule()
     except sqlite3.DatabaseError as error:
         if sport == "basketball":
             return published_basketball_schedule()

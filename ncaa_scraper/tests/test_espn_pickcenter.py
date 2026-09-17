@@ -111,6 +111,33 @@ class EspnPickcenterTests(unittest.TestCase):
             self.assertEqual(len(games), 1)
             self.assertEqual(games[0]["home_aliases"], {"home university"})
 
+    def test_schedule_matching_uses_overview_when_compact_db_has_no_games(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local = root / ".local"
+            local.mkdir()
+            database = sqlite3.connect(local / "basketball.sqlite3")
+            database.executescript("CREATE TABLE bb_rosters (team_id TEXT); CREATE TABLE bb_games (id TEXT);")
+            database.close()
+            target = root / "frontend/public/data/basketball"
+            target.mkdir(parents=True)
+            (target / "overview.json").write_text(json.dumps({"upcoming": [
+                {
+                    "id": GAME["id"],
+                    "starts_at": GAME["starts_at"],
+                    "home_id": GAME["home_id"],
+                    "away_id": GAME["away_id"],
+                    "home_name": "Home University",
+                    "away_name": "Away University",
+                    "completed": 0,
+                    "time_tbd": 0,
+                }
+            ]}))
+            with patch("ncaa_scraper.odds_feed.ROOT", root):
+                games = schedules("basketball")
+            self.assertEqual(len(games), 1)
+            self.assertEqual(games[0]["away_aliases"], {"away university"})
+
     def test_ingest_writes_receipt_and_three_rows(self):
         self.conn = sqlite3.connect(":memory:")
         self.conn.executescript("""
