@@ -108,8 +108,20 @@ def source_connection(sport):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-            if {f"{prefix}_sources", f"{prefix}_games"}.issubset(tables):
-                source = candidate
+            required = {f"{prefix}_sources", f"{prefix}_games"}
+            if required.issubset(tables):
+                # A compact model-only SQLite file can carry the table names
+                # without any schedule or source rows. Treat that as absent
+                # so the checked SQL release is replayed instead of silently
+                # producing a ledger where every game is missing_schedule.
+                counts = candidate.execute(
+                    f"SELECT (SELECT count(*) FROM {prefix}_sources), "
+                    f"(SELECT count(*) FROM {prefix}_games)"
+                ).fetchone()
+                if counts[0] > 0 and counts[1] > 0:
+                    source = candidate
+                else:
+                    candidate.close()
             else:
                 candidate.close()
         except sqlite3.DatabaseError:

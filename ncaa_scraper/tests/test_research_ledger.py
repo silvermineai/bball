@@ -346,6 +346,26 @@ class LedgerTests(unittest.TestCase):
                     )
             self.assertFalse((root / ".local/football.sqlite3").exists())
 
+    def test_empty_source_sqlite_falls_back_to_checked_release(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".local").mkdir()
+            (root / "worker/migrations").mkdir(parents=True)
+            migration = (ROOT / "worker/migrations/0008_football.sql").read_text()
+            (root / "worker/migrations/0008_football.sql").write_text(migration)
+            empty = sqlite3.connect(root / ".local/football.sqlite3")
+            empty.executescript(migration)
+            empty.close()
+            (root / ".local/football.sql").write_text(
+                "INSERT INTO football_sources VALUES ('schedule',2026,'{}');"
+            )
+            with patch("ncaa_scraper.research_ledger.ROOT", root):
+                with source_connection("football") as source:
+                    self.assertEqual(
+                        source.execute("SELECT count(*) FROM football_sources").fetchone()[0],
+                        1,
+                    )
+
     def test_single_sport_refresh_preserves_other_static_ledger_rows(self):
         prior = {
             "games": [
