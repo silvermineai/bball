@@ -289,7 +289,7 @@ describe("bball api", () => {
         ...Array.from({ length: 18 }, () => ({ results: [{ rows: 7 }] })),
       ]);
     const response = await app.request(
-      "/api/basketball/research/coverage",
+      "/api/basketball/research/coverage?audit=1",
       {},
       { DB: { prepare, batch } },
     );
@@ -1012,7 +1012,7 @@ describe("bball api", () => {
         ...Array.from({ length: 17 }, () => ({ results: [{ rows: 7 }] })),
     ]);
     const response = await app.request(
-      "/api/basketball/research/coverage",
+      "/api/basketball/research/coverage?audit=1",
       {},
       { DB: { prepare, batch }, NCAA_BOX_DB: { prepare: gamePrepare } },
     );
@@ -1025,7 +1025,7 @@ describe("bball api", () => {
 
   it("returns a retryable status when the coverage warehouse is busy", async () => {
     const response = await app.request(
-      "/api/basketball/research/coverage",
+      "/api/basketball/research/coverage?audit=1",
       {},
       {
         DB: {

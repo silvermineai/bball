@@ -527,7 +527,11 @@ app.get("/api/basketball/research/coverage", async (c) => {
   // for its first paint. The monitor opts into the deeper game and possession
   // validation with `audit=1`; keeping that pass explicit prevents a slow
   // warehouse scan from taking down the ordinary coverage view.
-  const audit = new URL(c.req.url).searchParams.get("audit") !== "0";
+  // The default request is the fast row-count/receipt summary used by the
+  // coverage desk. Opt into the heavier validation pass explicitly with
+  // `audit=1`; this keeps an omitted query parameter safe for monitors and
+  // direct readers while preserving the deep audit for deliberate checks.
+  const audit = new URL(c.req.url).searchParams.get("audit") === "1";
   // D1 limits compound SELECT terms; count each dataset in one batch.
   const tables = {
     games: "bb_games",

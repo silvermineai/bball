@@ -243,7 +243,7 @@ jobs:
           curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             -H 'Cache-Control: no-cache' \
-            'https://bball.silvermine.dev/api/basketball/research/coverage?workflow_smoke=1' \
+            'https://bball.silvermine.dev/api/basketball/research/coverage?audit=0&workflow_smoke=1' \
             -o /tmp/basketball-coverage.json
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             -H 'Cache-Control: no-cache' \
