@@ -450,9 +450,11 @@ export default function StatsDashboard() {
   const players = getPlayers(overview.season);
   const nationalPlayers = getNationalPlayers(overview.season - 1);
   const recruiting = getRecruiting();
+  const latestSeason = overview.season - 1;
+  const impactPlayers = getImpact(latestSeason);
+  const valueLeaders = getValueLeaders(latestSeason);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
-  const latestSeason = overview.season - 1;
   return (
     <div className="stats-dashboard">
       <div className="dashboard-kicker"><span>MEN&apos;S COLLEGE BASKETBALL</span><span>{overview.label} / LIVE BOARD</span></div>
@@ -525,8 +527,25 @@ export default function StatsDashboard() {
           <RecruitingSnapshot release={recruiting} />
         </section>
       ) : null}
+      <section className="dashboard-section" aria-labelledby="dashboard-impact">
+        <div className="dashboard-section-heading">
+          <div><span className="eyebrow">05 / PLAYER IMPACT</span><h2 id="dashboard-impact">Impact and value leaders</h2></div>
+          <Link href="/basketball/impact/">Full impact table →</Link>
+        </div>
+        <p className="dashboard-caption">Two complementary player measures from the latest completed season: lineup-based impact with possession samples, beside the retained box-score value estimate. They are descriptive research measures, not forecast inputs.</p>
+        <div className="dashboard-two-col">
+          <section className="dashboard-subsection" aria-labelledby="dashboard-rapm">
+            <div className="dashboard-section-heading"><div><span className="eyebrow">LINEUP IMPACT</span><h3 id="dashboard-rapm">Net RAPM leaders</h3></div></div>
+            <ImpactTable players={impactPlayers} />
+          </section>
+          <section className="dashboard-subsection" aria-labelledby="dashboard-bpm">
+            <div className="dashboard-section-heading"><div><span className="eyebrow">BOX VALUE</span><h3 id="dashboard-bpm">Box BPM leaders</h3></div><Link href="/basketball/boutique/?kind=players">Value archive →</Link></div>
+            <ValueTable players={valueLeaders} season={latestSeason} />
+          </section>
+        </div>
+      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
         <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need impact, recruiting movement, source rows or model details.</p>
         <div className="dashboard-link-grid">
           <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
