@@ -83,7 +83,6 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const sourceReceipts = catalog.sources
     .flat()
     .filter((source) => source.season === Number(season));
-  const sourceReleaseUrls = sourceReceipts.map((source) => source.url).join(" | ");
   const sourceRetrieved = sourceReceipts.map((source) => source.fetched_at).join(" | ");
   const sourceDigests = sourceReceipts.map((source) => source.sha256).join(" | ");
   const { data, error } = useBasketballRelease<{
@@ -358,7 +357,6 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Starter rate",
                         "DNP records",
                         "Excluded records",
-                        "Edition URLs",
                         "Edition capture clocks",
                         "Edition SHA-256 digests",
                         "Minutes per game",
@@ -392,7 +390,6 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.starter_rate == null ? null : p.starter_rate * 100,
                         p.dnp_records,
                         p.excluded_records,
-                        sourceReleaseUrls,
                         sourceRetrieved,
                         sourceDigests,
                         p.mpg,

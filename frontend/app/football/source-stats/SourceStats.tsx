@@ -30,10 +30,10 @@ const fallbackLabels: Record<Exclude<Dataset, "all">, string> = {
 };
 const pretty = (key: string) => key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const display = (value: unknown) => value == null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
-const exportHeaders = ["Dataset", "Season", "Record key", "Athlete ID", "Team ID", "Game ID", "Category", "Kickoff", "Source stats", "Source receipt URL", "Source retrieved", "Source SHA-256"];
+const exportHeaders = ["Dataset", "Season", "Record key", "Athlete ID", "Team ID", "Game ID", "Category", "Kickoff", "Source stats", "Source retrieved", "Source SHA-256"];
 const exportRow = (result: Result, row: Row) => {
   const receipt = result.source_receipts.find((item) => item.dataset === row.dataset && item.season === row.season);
-  return [row.dataset, row.season, row.record_key, row.athlete_id, row.team_id, row.game_id, row.category, row.kickoff, JSON.stringify(row.stats), receipt?.url, receipt?.fetched_at, receipt?.sha256];
+  return [row.dataset, row.season, row.record_key, row.athlete_id, row.team_id, row.game_id, row.category, row.kickoff, JSON.stringify(row.stats), receipt?.fetched_at, receipt?.sha256];
 };
 
 export default function SourceStats() {
