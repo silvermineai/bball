@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { BBGame } from "../_lib/basketball-types";
+import type { BBGame, BBRosterScenario } from "../_lib/basketball-types";
 import { fmt, kick, date } from "../_lib/format";
 import {
   loadLiveBasketballForecasts,
@@ -68,8 +68,10 @@ export function sortForecastBoard(games: BBGame[], sort: ForecastBoardSort) {
 
 export default function LiveDashboardForecastTable({
   initialGames,
+  rosterScenarios = [],
 }: {
   initialGames: BBGame[];
+  rosterScenarios?: BBRosterScenario[];
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
@@ -93,6 +95,7 @@ export default function LiveDashboardForecastTable({
   const forecastedGames = games.filter((game) => predictionFor(game));
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
   const rows = sortForecastBoard(signalGames, sort).slice(0, 12);
+  const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -120,11 +123,12 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Roster lens</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = predictionFor(game)!;
+            const rosterScenario = rosterByGame.get(game.id);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
@@ -133,6 +137,7 @@ export default function LiveDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
+                <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
               </tr>

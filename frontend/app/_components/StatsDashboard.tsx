@@ -1,7 +1,7 @@
 import Link from "next/link";
 import fs from "node:fs";
 import path from "node:path";
-import { getBasketball } from "../_lib/basketball-data";
+import { getBasketball, getRosterModel } from "../_lib/basketball-data";
 import {
   topBasketballLeaders,
   type BasketballLeaderMetric,
@@ -369,6 +369,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
 
 export default function StatsDashboard() {
   const overview = getBasketball();
+  const rosterModel = getRosterModel();
   const players = getPlayers(overview.season);
   const recruiting = getRecruiting();
   const impact = getImpact(overview.season);
@@ -395,6 +396,7 @@ export default function StatsDashboard() {
           <span>upcoming matchup forecasts</span>
           <small>Model edition · {overview.model.version}</small>
           {overview.coverage.forecast_games ? <small>{overview.coverage.forecast_games.toLocaleString()} primary{overview.coverage.baseline_estimate_games ? ` + ${overview.coverage.baseline_estimate_games.toLocaleString()} cold-start` : ""} rows are labeled in the table.</small> : null}
+          <small>Roster lens · {rosterModel.coverage.scenario_games.toLocaleString()} game scenarios · {rosterModel.evaluation.improvement_vs_prior_net == null ? "evaluation pending" : `${fmt(rosterModel.evaluation.improvement_vs_prior_net, 1)} pts better than prior net in holdout`}</small>
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
@@ -416,8 +418,8 @@ export default function StatsDashboard() {
       <LiveBasketballMarketStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
-        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. Cold-start rows use our shrunk team priors when a program falls outside the trained field.</p>
-        <LiveDashboardForecastTable initialGames={forecasts} />
+        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
+        <LiveDashboardForecastTable initialGames={forecasts} rosterScenarios={rosterModel.scenarios} />
       </section>
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">
