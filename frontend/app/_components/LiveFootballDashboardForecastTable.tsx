@@ -8,6 +8,18 @@ import {
   loadLiveFootballForecasts,
   mergeLiveFootballForecasts,
 } from "../_lib/live-football-forecasts";
+import {
+  sortFootballMatchups,
+  type FootballMatchupSort,
+} from "../_lib/football-matchup-view";
+
+const sortLabels: Record<FootballMatchupSort, string> = {
+  date: "earliest kickoffs first",
+  confidence: "most certain outcomes first",
+  close: "closest projected margins first",
+  margin: "largest projected edges first",
+  uncertainty: "widest calibrated ranges first",
+};
 
 function latestTip(game: Game) {
   return game.time_tbd ? "Time TBD" : kick(game.kickoff);
@@ -20,6 +32,7 @@ export default function LiveFootballDashboardForecastTable({
   initialGames: Game[];
 }) {
   const [games, setGames] = useState(initialGames);
+  const [sort, setSort] = useState<FootballMatchupSort>("date");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -36,10 +49,25 @@ export default function LiveFootballDashboardForecastTable({
     return () => controller.abort();
   }, [initialGames]);
 
-  const rows = games.filter((game) => game.prediction).slice(0, 12);
+  const forecastedGames = games.filter((game) => game.prediction);
+  const rows = sortFootballMatchups(forecastedGames, sort).slice(0, 12);
   return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table forecast-table">
+    <>
+      <div className="toolbar" style={{ marginBottom: 16 }}>
+        <label className="control">
+          <span>ORDER SLATE BY</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as FootballMatchupSort)}>
+            <option value="date">Kickoff time</option>
+            <option value="confidence">Model confidence</option>
+            <option value="close">Closest projected margin</option>
+            <option value="margin">Projected margin</option>
+            <option value="uncertainty">Forecast range</option>
+          </select>
+        </label>
+        <p className="note" role="status">Showing {rows.length} of {forecastedGames.length} forecast rows · {sortLabels[sort]}.</p>
+      </div>
+      <div className="dashboard-table-wrap">
+        <table className="data-table dashboard-table forecast-table">
         <thead>
           <tr><th>Game</th><th>Kickoff</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
@@ -59,7 +87,8 @@ export default function LiveFootballDashboardForecastTable({
             );
           })}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </>
   );
 }
