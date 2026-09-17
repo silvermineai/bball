@@ -346,6 +346,40 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("json_extract(h.stats_json"))).toBe(true);
   });
 
+  it("serves the fast coverage summary when the audit flag is omitted", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      all: vi.fn().mockResolvedValue(sql.includes("bb_sources") ? { results: [] } : { results: [] }),
+      first: vi.fn(),
+    }));
+    const batch = vi.fn().mockResolvedValue(
+      Array.from({ length: 6 }, () => ({ results: [{ rows: 12 }] })),
+    );
+    const response = await app.request(
+      "/api/basketball/research/coverage",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      coverage: Array<{ dataset: string; rows: number }>;
+      location_validation: unknown;
+      possession_validation: unknown;
+    };
+    expect(body.coverage).toHaveLength(6);
+    expect(body.coverage.map((entry) => entry.dataset)).toEqual([
+      "games",
+      "player_box",
+      "rosters",
+      "forecasts",
+      "unresolved",
+      "player_season",
+    ]);
+    expect(body.location_validation).toBeNull();
+    expect(body.possession_validation).toBeNull();
+    expect(batch).toHaveBeenCalledOnce();
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("FROM scored"))).toBe(false);
+  });
+
   it("returns football D1 coverage counts and source receipt timestamps", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("football_sources")) {
