@@ -272,7 +272,7 @@ export default function Markets() {
                 : <>{sport === "basketball" && meta?.research_receipts
                   ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future game summaries; ${(
                     meta.research_capture.summary_with_pickcenter || 0
-                  ).toLocaleString()} included pickcenter markets${meta.research_capture.accepted_markets != null ? ` and ${meta.research_capture.accepted_markets.toLocaleString()} passed validation` : ""}${meta.research_capture.rejected_records != null ? `; ${meta.research_capture.rejected_records.toLocaleString()} were rejected` : ""}` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
+                  ).toLocaleString()} included complete market quotes${meta.research_capture.accepted_markets != null ? ` and ${meta.research_capture.accepted_markets.toLocaleString()} passed validation` : ""}${meta.research_capture.rejected_records != null ? `; ${meta.research_capture.rejected_records.toLocaleString()} were rejected` : ""}` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
                     : <>The archive is empty for this sport because no authorized feed
               export has been ingested. This is unavailable evidence, not proof
               that a game had no line. The prospective scorecard stays clean
