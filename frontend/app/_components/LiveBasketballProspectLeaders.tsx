@@ -37,6 +37,9 @@ const movement = (row: Prospect) => {
   return delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : "—";
 };
 
+export const prospectCountLabel = (total: number, season: number) =>
+  `${total.toLocaleString()} prospects in the ${season} class`;
+
 export const formatProspectSize = (row: Prospect) => {
   const height = row.height_inches;
   const weight = row.weight_pounds;
@@ -106,7 +109,7 @@ export default function LiveBasketballProspectLeaders() {
               ))}</tbody>
             </table>
           </div>
-          <p className="dashboard-updated">{data.total.toLocaleString()} prospects in the 2027 class · captured {data.captured_at ? date(data.captured_at) : "time unavailable"}</p>
+          <p className="dashboard-updated">{prospectCountLabel(data.total, data.season)} · captured {data.captured_at ? date(data.captured_at) : "time unavailable"}</p>
         </>
       )}
     </section>
