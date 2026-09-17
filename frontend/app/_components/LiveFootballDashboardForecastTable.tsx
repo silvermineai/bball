@@ -35,6 +35,13 @@ function latestTip(game: Game) {
   return game.time_tbd ? "Time TBD" : kick(game.kickoff);
 }
 
+function forecastSignal(game: Game) {
+  const prediction = game.prediction;
+  if (!prediction) return "";
+  const confidence = Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability);
+  return confidence >= 0.75 ? "Strong lean" : confidence >= 0.6 ? "Lean" : "Toss-up";
+}
+
 /** Replace the first landing-page slice with the current forecast catalog. */
 export default function LiveFootballDashboardForecastTable({
   initialGames,
@@ -99,7 +106,7 @@ export default function LiveFootballDashboardForecastTable({
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
                 <td>{date(game.kickoff)}<small>{latestTip(game)}</small></td>
-                <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
+                <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner · {forecastSignal(game)}</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
