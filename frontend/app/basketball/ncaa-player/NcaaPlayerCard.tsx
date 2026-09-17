@@ -132,9 +132,9 @@ export default function NcaaPlayerCard() {
       downloadCsv(
         `ncaa-player-${id}-${season}-complete-game-log.csv`,
         toCsv(
-          ["Season", "Game date", "Contest ID", "Player", "NCAA player ID", "NCAA player source URL", "Team", "NCAA team ID", "Opponent", "NCAA contest source URL", ...statKeys, "Raw source stats JSON"],
+          ["Season", "Game date", "Contest ID", "Player", "Archive player ID", "Team", "Archive team ID", "Opponent", ...statKeys, "Raw recorded stats JSON"],
           rows.map((row) => [
-            season, row.game_date, row.contest_id, row.player_name, id, `https://stats.ncaa.org/players/${encodeURIComponent(id)}`, row.team_name, row.team_id, row.opponent_name, `https://stats.ncaa.org/game/index/${encodeURIComponent(row.contest_id)}`,
+            season, row.game_date, row.contest_id, row.player_name, id, row.team_name, row.team_id, row.opponent_name,
             ...statKeys.map((key) => row.stats[key]), JSON.stringify(row.stats),
           ]),
         ),

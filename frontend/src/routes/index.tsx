@@ -165,11 +165,8 @@ function CommandCenter() {
             <SectionTitle kicker="The Wire" title="Latest from the beat" />
             <div className="mt-3 space-y-3">
               {articles.map((a) => (
-                <a
+                <article
                   key={a.id}
-                  href={a.link ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
                   className="block rounded-lg border border-line bg-white p-4 shadow-panel transition hover:-translate-y-0.5"
                 >
                   <div className="text-sm font-semibold leading-snug">{a.headline}</div>
@@ -177,7 +174,7 @@ function CommandCenter() {
                   <div className="mt-2 font-stat text-[10px] uppercase tracking-wider text-court">
                     Schedule · {a.published ? new Date(a.published).toLocaleDateString() : ""}
                   </div>
-                </a>
+                </article>
               ))}
             </div>
           </div>

@@ -474,7 +474,7 @@ export default function Recruiting() {
                       downloadCsv(
                         `basketball-recruiting-watchlist-${season}.csv`,
                         toCsv(
-                          ["Player", "Player ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior ORB/G", "Prior DRB/G", "Prior APG", "Prior PF/G", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Record URL", "Roster dataset", "Roster archive URL", "Roster retrieved (UTC)", "Roster SHA-256"],
+                          ["Player", "Player ID", "Current program", "Observation", "Prior minutes", "Prior starts", "Starter reported", "Reported starter rate", "Prior MPG", "Prior PPG", "Prior RPG", "Prior ORB/G", "Prior DRB/G", "Prior APG", "Prior PF/G", "Prior TS%", "Prior eFG%", "Prior Box BPM", "Roster dataset", "Roster retrieved (UTC)", "Roster SHA-256"],
                           pickedRows.map((player) => [
                             player.name,
                             player.id,
@@ -494,9 +494,7 @@ export default function Recruiting() {
                             player.prior_production?.ts == null ? null : player.prior_production.ts * 100,
                             player.prior_production?.efg == null ? null : player.prior_production.efg * 100,
                             player.prior_production?.box_bpm,
-                            player.source_url,
                             sourceReceipt?.dataset,
-                            sourceReceipt?.url,
                             sourceReceipt?.fetched_at,
                             sourceReceipt?.sha256,
                           ]),
@@ -681,9 +679,7 @@ export default function Recruiting() {
                       "Prior recorded programs",
                       "Height",
                       "Weight",
-                      "Record URL",
                       "Roster dataset",
-                      "Roster archive URL",
                       "Roster retrieved (UTC)",
                       "Roster SHA-256",
                     ],
@@ -726,9 +722,7 @@ export default function Recruiting() {
                       p.prior_production?.teams?.join("; "),
                       p.height,
                       p.weight,
-                      p.source_url,
                       sourceReceipt?.dataset,
-                      sourceReceipt?.url,
                       sourceReceipt?.fetched_at,
                       sourceReceipt?.sha256,
                     ]),

@@ -69,7 +69,7 @@ export function GET() {
     ...guideItems.map(([slug, title, description]) => item(title, `${base}/blog/${slug}/`, description, generated)),
     ...currentPublisherWire().map((article) => item(
       `${article.division ? `${article.division} · ` : ""}${article.headline}`,
-      article.link,
+      `${base}/basketball/news/?q=${encodeURIComponent(article.headline)}`,
       `${article.description || "Publisher wire headline."} Silvermine reporting desk.`,
       article.published,
     )),

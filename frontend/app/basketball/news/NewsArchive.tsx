@@ -30,12 +30,11 @@ const PAGE_SIZE = 12;
 const publicText = (value: string) => value.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
 
 function parseInitial() {
-  if (typeof window === "undefined") return { query: "", publisher: "all", division: "all" as DivisionFilter, page: 0 };
+  if (typeof window === "undefined") return { query: "", division: "all" as DivisionFilter, page: 0 };
   const params = new URLSearchParams(window.location.search);
   const page = Number(params.get("page"));
   return {
     query: params.get("q") || "",
-    publisher: params.get("publisher") || "all",
     division: (params.get("division") as DivisionFilter) || "all",
     page: Number.isInteger(page) && page >= 0 ? page : 0,
   };
@@ -56,7 +55,6 @@ export default function NewsArchive({
 }) {
   const initial = parseInitial();
   const [query, setQuery] = useState(initial.query);
-  const [publisher, setPublisher] = useState(initial.publisher);
   const [division, setDivision] = useState<DivisionFilter>(initial.division);
   const [page, setPage] = useState(initial.page);
   const [copied, setCopied] = useState("");
@@ -79,10 +77,6 @@ export default function NewsArchive({
       });
     return () => controller.abort();
   }, [articles]);
-  const publishers = useMemo(
-    () => [...new Set(liveArticles.map((article) => article.publisher).filter(Boolean))].sort(),
-    [liveArticles],
-  );
   const divisions = useMemo(
     () => ["D-I", "D-II", "D-III"].filter((value) => liveArticles.some((article) => article.division === value)) as Array<Exclude<DivisionFilter, "all">>,
     [liveArticles],
@@ -90,12 +84,11 @@ export default function NewsArchive({
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return liveArticles.filter((article) => {
-      if (publisher !== "all" && article.publisher !== publisher) return false;
       if (division !== "all" && article.division !== division) return false;
       if (!needle) return true;
       return `${article.headline} ${article.description} ${article.categories.join(" ")}`.toLowerCase().includes(needle);
     });
-  }, [division, liveArticles, publisher, query]);
+  }, [division, liveArticles, query]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => {
@@ -104,12 +97,11 @@ export default function NewsArchive({
   useEffect(() => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (publisher !== "all") params.set("publisher", publisher);
     if (division !== "all") params.set("division", division);
     if (page) params.set("page", String(page));
     const value = params.toString();
     window.history.replaceState(window.history.state, "", value ? `${window.location.pathname}?${value}` : window.location.pathname);
-  }, [division, page, publisher, query]);
+  }, [division, page, query]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -121,15 +113,15 @@ export default function NewsArchive({
   const exportRows = () => downloadCsv(
     "basketball-publisher-news.csv",
     toCsv(
-      ["Published", "Publisher", "Division", "Headline", "Description", "Categories", "Source URL"],
-      filtered.map((article) => [article.published, article.publisher, article.division || "—", article.headline, article.description, article.categories.join(" | "), article.link]),
+      ["Published", "Division", "Headline", "Description", "Categories"],
+      filtered.map((article) => [article.published, article.division || "—", article.headline, article.description, article.categories.join(" | ")]),
     ),
   );
   return (
     <section className="section">
       <div className="strip">
         <div><strong>{liveArticles.length.toLocaleString()}</strong><span>Retained headlines</span></div>
-        <div><strong>{publishers.length}</strong><span>Retained feeds</span></div>
+        <div><strong>{feeds.length.toLocaleString()}</strong><span>Archive groups</span></div>
         <div><strong>{filtered.length.toLocaleString()}</strong><span>Matches in view</span></div>
         <div><strong>{generatedAt ? date(generatedAt) : "—"}</strong><span>Release clock</span></div>
       </div>

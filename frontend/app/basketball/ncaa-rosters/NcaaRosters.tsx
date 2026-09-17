@@ -88,11 +88,11 @@ export default function NcaaRosters() {
       setCopied("Copy the roster URL from your address bar.");
     }
   };
-  const exportHeaders = ["Season", "Player", "Archive ID ID", "Archive ID source URL", "Program", "Team ID ID", "Team ID source URL", "Class", "Position", "Height", "Hometown", "High school", "Roster GP", "Roster GS", "Recorded games", "Recorded minutes", "Recorded points", "Recorded rebounds", "Recorded assists", "Shot attempts", "Average distance", "Raw profile JSON", "Raw shooting JSON", "Roster source URL", "Roster retrieved (UTC)", "Roster SHA-256"];
+  const exportHeaders = ["Season", "Player", "Archive player ID", "Program", "Archive team ID", "Class", "Position", "Height", "Hometown", "High school", "Roster GP", "Roster GS", "Recorded games", "Recorded minutes", "Recorded points", "Recorded rebounds", "Recorded assists", "Shot attempts", "Average distance", "Raw profile JSON", "Raw shooting JSON", "Edition retrieved (UTC)", "Edition SHA-256"];
   const exportRow = (row: Row, activeSeason: number) => {
     const p = row.profile;
     const s = row.shooting;
-    return [activeSeason, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, p.class, p.position, p.height, p.hometown, p.high_school, p.gp, p.gs, row.recorded_games, row.recorded_minutes, row.recorded_points, row.recorded_rebounds, row.recorded_assists, s?.attempts, s?.distance_count ? s.distance_sum / s.distance_count : null, JSON.stringify(p), s ? JSON.stringify(s) : null, meta?.source?.url, meta?.source?.fetched_at, meta?.source?.sha256];
+    return [activeSeason, row.player_name, row.player_id, row.team_name, row.team_id, p.class, p.position, p.height, p.hometown, p.high_school, p.gp, p.gs, row.recorded_games, row.recorded_minutes, row.recorded_points, row.recorded_rebounds, row.recorded_assists, s?.attempts, s?.distance_count ? s.distance_sum / s.distance_count : null, JSON.stringify(p), s ? JSON.stringify(s) : null, meta?.source?.fetched_at, meta?.source?.sha256];
   };
   const download = () => {
     if (!result) return;

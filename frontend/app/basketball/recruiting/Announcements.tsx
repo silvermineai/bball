@@ -247,7 +247,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const downloadWatchlist = () => downloadCsv(
     "basketball-recruiting-watchlist.csv",
     toCsv(
-      ["Player", "Record key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Recorded", "Record URL", "Record metadata SHA-256", "Roster name check", "Reviewed at"],
+      ["Player", "Record key", "Category", "Announcing program", "Program ID", "Prior program", "Prior stat team", "Games", "Minutes per game", "Points per game", "Rebounds per game", "Assists per game", "eFG%", "TS%", "Latest status", "Latest publication", "Record metadata SHA-256", "Roster name check", "Reviewed at"],
       watchlistRows.map((p) => [
         p.name,
         p.key,
@@ -265,8 +265,6 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
         p.stats?.ts == null ? null : p.stats.ts * 100,
         eventLabels[p.latest.kind],
         p.latest.source.published_on,
-        p.latest.source.publisher,
-        p.latest.source.url,
         p.latest.source.source_sha256,
         rosterMatch(p.name, p.team_id),
         p.latest.source.checked_at,
@@ -336,7 +334,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     downloadCsv(
                       "basketball-recruiting-activity.csv",
                       toCsv(
-                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Recorded", "Record title", "Record URL", "Checked at"],
+                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Record title", "Checked at"],
                         activity.events.map((event) => [
                           event.source.published_on,
                           eventLabels[event.kind],
@@ -344,9 +342,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                           event.program_name,
                           event.team_id,
                           event.summary,
-                          event.source.publisher,
                           event.source.title,
-                          event.source.url,
                           event.source.checked_at,
                         ]),
                       ),
@@ -784,7 +780,6 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                         "3PA rate",
                         "Turnover rate",
                         "Record title",
-                        "Record URL",
                         "Record metadata SHA-256",
                         "Reviewed at",
                       ],
@@ -820,7 +815,6 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                           ? null
                           : p.stats.tov_rate * 100,
                         p.latest.source.title,
-                        p.latest.source.url,
                         p.latest.source.source_sha256,
                         p.latest.source.checked_at,
                       ]),

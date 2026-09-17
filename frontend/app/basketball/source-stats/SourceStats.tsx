@@ -191,7 +191,7 @@ export default function SourceStats() {
       const receipt = result.source_receipts[0];
       downloadCsv(
         `publisher-${result.field.key}-${season}-all.csv`,
-        toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Source release URL", "Source retrieved", "Source SHA-256"], rows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, receipt?.url, receipt?.fetched_at, receipt?.sha256])),
+        toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Edition retrieved", "Edition SHA-256"], rows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, receipt?.fetched_at, receipt?.sha256])),
       );
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} matching rows.`);
     } catch (reason) {

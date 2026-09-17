@@ -46,7 +46,7 @@ const sourceFieldGroups = [
   { label: "Half-court", fields: [["pts_half", "Points", "number"], ["orb_half", "Offensive rebounds", "number"], ["drb_half", "Defensive rebounds", "number"], ["ast_half", "Assists", "number"], ["tov_half", "Turnovers", "number"], ["ts_pct_half", "True shooting", "percent"], ["efg_pct_half", "Effective FG", "percent"]] },
   { label: "Playmaking", fields: [["pts_ast", "Assisted points", "number"], ["pts_unast", "Unassisted points", "number"], ["fgm_ast", "Assisted FGM", "number"], ["tpm_ast", "Assisted 3PM", "number"], ["rimm_ast", "Assisted rim makes", "number"], ["midm_ast", "Assisted mid makes", "number"]] },
 ] as const;
-const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "Player archive ID", "Player archive URL", "Team", "Team archive ID", "Opponent", "Contest archive URL", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw recorded stats JSON"];
+const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "Player archive ID", "Team", "Team archive ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw recorded stats JSON"];
 
 const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
@@ -150,7 +150,7 @@ export default function NcaaPlayerBox() {
   const exportRow = (row: Row) => {
     const s = row.stats;
     const computedTs = trueShooting(s);
-    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, row.opponent_name, row.contest_id ? `https://stats.ncaa.org/game/index/${encodeURIComponent(row.contest_id)}` : null, s.mins, s.pts, safeSum(s.orb, s.drb), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s), ...sourceFields.map((field) => s[field] ?? null)];
+    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, safeSum(s.orb, s.drb), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s), ...sourceFields.map((field) => s[field] ?? null)];
   };
   const download = () => {
     if (!result) return;

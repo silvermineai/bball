@@ -45,13 +45,12 @@ export default function NcaaShooting() {
       setCopied("Copy the shooting URL from your address bar.");
     }
   };
-  const exportHeaders = ["Season", "Metric", "Minimum attempts", "Player", "Archive ID ID", "Archive ID source URL", "Program", "Team ID ID", "Team ID source URL", "Attempts", "Makes", "Points", "Average distance", "FG%", "3P%", "Rim%", "Midrange%", "Raw source stats JSON"];
+  const exportHeaders = ["Season", "Metric", "Minimum attempts", "Player", "Archive player ID", "Program", "Archive team ID", "Attempts", "Makes", "Points", "Average distance", "FG%", "3P%", "Rim%", "Midrange%", "Raw recorded stats JSON"];
   const exportRow = (row: Row, active: Result) => {
     const z = row.stats.zones || {};
     const threeAttempts = safeSum(z.abovebreak3?.attempts, z.corner3?.attempts);
     const threeMakes = safeSum(z.abovebreak3?.makes, z.corner3?.makes);
-    const sourceOnly = sourceLabelRow(row);
-    return [active.season, labels[active.metric], active.min_attempts, row.player_name, row.player_id, sourceOnly ? null : `https://stats.ncaa.org/players/${encodeURIComponent(row.player_id)}`, row.team_name, row.team_id, sourceOnly ? null : `https://stats.ncaa.org/teams/${encodeURIComponent(row.team_id)}`, row.stats.attempts, row.stats.makes, row.stats.points, row.stats.distance_count ? row.stats.distance_sum / row.stats.distance_count : null, row.stats.attempts ? 100 * row.stats.makes / row.stats.attempts : null, threeAttempts != null && threeMakes != null && threeAttempts > 0 ? 100 * threeMakes / threeAttempts : null, z.rim?.attempts ? 100 * z.rim.makes / z.rim.attempts : null, z.mid?.attempts ? 100 * z.mid.makes / z.mid.attempts : null, JSON.stringify(row.stats)];
+    return [active.season, labels[active.metric], active.min_attempts, row.player_name, row.player_id, row.team_name, row.team_id, row.stats.attempts, row.stats.makes, row.stats.points, row.stats.distance_count ? row.stats.distance_sum / row.stats.distance_count : null, row.stats.attempts ? 100 * row.stats.makes / row.stats.attempts : null, threeAttempts != null && threeMakes != null && threeAttempts > 0 ? 100 * threeMakes / threeAttempts : null, z.rim?.attempts ? 100 * z.rim.makes / z.rim.attempts : null, z.mid?.attempts ? 100 * z.mid.makes / z.mid.attempts : null, JSON.stringify(row.stats)];
   };
   const download = () => {
     if (!result) return;

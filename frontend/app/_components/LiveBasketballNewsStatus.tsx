@@ -38,12 +38,12 @@ export default function LiveBasketballNewsStatus() {
   return (
     <p className="note" role="status">
       {status === "live" && meta
-        ? <>Live D1 publisher wire: {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest publisher date ${date(meta.summary.latest_published)}` : ""}{meta.summary?.latest_seen_at ? ` · archived ${date(meta.summary.latest_seen_at)}` : ""}. <Link href="/basketball/news/">Open the searchable news archive →</Link></>
+        ? <>Live news archive: {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest date ${date(meta.summary.latest_published)}` : ""}{meta.summary?.latest_seen_at ? ` · archived ${date(meta.summary.latest_seen_at)}` : ""}. <Link href="/basketball/news/">Open the searchable news archive →</Link></>
         : status === "bundled" && meta
-          ? <>D1 publisher wire is busy; the bundled release is serving {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest publisher date ${date(meta.summary.latest_published)}` : ""}. <Link href="/basketball/news/">Open the news archive →</Link></>
+          ? <>The live news archive is busy; the bundled release is serving {(meta.summary?.total || 0).toLocaleString()} retained headlines{meta.summary?.latest_published ? ` · latest date ${date(meta.summary.latest_published)}` : ""}. <Link href="/basketball/news/">Open the news archive →</Link></>
           : status === "fallback"
-          ? <>Live publisher wire unavailable; the bundled headline release remains visible. <Link href="/basketball/news/">Open the news archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
-          : "Checking the live publisher wire…"}
+          ? <>Live news archive unavailable; the bundled headline release remains visible. <Link href="/basketball/news/">Open the news archive →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
+          : "Checking the live news archive…"}
     </p>
   );
 }

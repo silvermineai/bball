@@ -148,9 +148,9 @@ export default function EspnRecruitingBoard() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_url", "source_edition", "source_captured_at"];
+  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
   const shortlistExportHeaders = exportHeaders;
-  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, row.source_url, result?.edition || null, result?.captured_at || null];
+  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, result?.edition || null, result?.captured_at || null];
   const downloadPage = () => {
     if (!result) return;
     downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
@@ -199,7 +199,7 @@ export default function EspnRecruitingBoard() {
   const removeShortlist = (key: string) => setShortlist((current) => current.filter((entry) => entry.key !== key));
   const downloadShortlist = () => {
     if (!shortlist.length) return;
-    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.source_url, row.edition, row.captured_at]);
+    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
     downloadCsv("espn-recruiting-shortlist.csv", toCsv(shortlistExportHeaders, rows));
     setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
   };

@@ -50,7 +50,6 @@ function RecruitingPage() {
   const [boardPage, setBoardPage] = useState(0);
   const [boardPageSize, setBoardPageSize] = useState(80);
   const [newsQuery, setNewsQuery] = useState("");
-  const [newsPublisher, setNewsPublisher] = useState<"all" | "ESPN" | "NCAA.com">("all");
   const [newsPage, setNewsPage] = useState(0);
   const [targets, setTargets] = useState<Target[]>([]);
 
@@ -85,10 +84,9 @@ function RecruitingPage() {
     const query = newsQuery.trim().toLocaleLowerCase();
     return (newsData?.articles ?? []).filter((a) =>
       /recruit|transfer|portal|commit|sign|class of|prospect/i.test(`${a.headline} ${a.description}`)
-      && (newsPublisher === "all" || a.publisher === newsPublisher)
-      && (!query || `${a.headline} ${a.description} ${a.publisher} ${a.division ?? ""}`.toLocaleLowerCase().includes(query)),
+      && (!query || `${a.headline} ${a.description} ${a.division ?? ""}`.toLocaleLowerCase().includes(query)),
     );
-  }, [newsData, newsPublisher, newsQuery]);
+  }, [newsData, newsQuery]);
   const newsPages = Math.max(1, Math.ceil(recruitingNews.length / 9));
   const visibleRecruitingNews = recruitingNews.slice(newsPage * 9, (newsPage + 1) * 9);
   const movementPlayers = useMemo(
@@ -365,29 +363,21 @@ function RecruitingPage() {
                 value={newsQuery}
                 onChange={(e) => { setNewsQuery(e.target.value); setNewsPage(0); }}
               />
-              <select aria-label="Recruiting news source" className="rounded-md border-line bg-white text-sm" value={newsPublisher} onChange={(e) => { setNewsPublisher(e.target.value as typeof newsPublisher); setNewsPage(0); }}>
-                <option value="all">All sources</option>
-                <option value="ESPN">Live feed</option>
-                <option value="NCAA.com">Roster feed</option>
-              </select>
             </div>
           }
         />
         <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {visibleRecruitingNews.map((a) => (
-            <a
+            <article
               key={a.id}
-              href={a.link ?? "#"}
-              target="_blank"
-              rel="noreferrer"
               className="block rounded-lg border border-line bg-white p-4 shadow-panel transition hover:-translate-y-0.5"
             >
               <div className="text-sm font-semibold leading-snug">{a.headline}</div>
               <div className="mt-1 line-clamp-2 text-[12px] text-graphite">{a.description}</div>
               <div className="mt-2 font-stat text-[10px] uppercase tracking-wider text-court">
-                {a.publisher}{a.division ? ` · ${a.division}` : ""} · {a.published ? new Date(a.published).toLocaleDateString() : ""}
+                {a.division ? `${a.division} · ` : ""}{a.published ? new Date(a.published).toLocaleDateString() : ""} · Retained report
               </div>
-            </a>
+            </article>
           ))}
           {recruitingNews.length === 0 ? <p className="text-sm text-graphite">No recruiting stories in the current feed.</p> : null}
         </div>
