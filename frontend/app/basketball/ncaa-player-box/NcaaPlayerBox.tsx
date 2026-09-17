@@ -38,6 +38,7 @@ const n = (value: number | null | undefined, digits = 1) => value == null ? "—
 const pct = (value: number | null | undefined) => n(value == null ? null : value * 100) + "%";
 const rate = safeRate;
 const sourceFieldGroups = [
+  { label: "Box score", fields: [["mins", "Minutes", "number"], ["pts", "Points", "number"], ["orb", "Offensive rebounds", "number"], ["drb", "Defensive rebounds", "number"], ["ast", "Assists", "number"], ["stl", "Steals", "number"], ["blk", "Blocks", "number"], ["fgm", "Field goals made", "number"], ["fga", "Field goals attempted", "number"], ["tpm", "3-pointers made", "number"], ["tpa", "3-pointers attempted", "number"], ["ftm", "Free throws made", "number"], ["fta", "Free throws attempted", "number"]] },
   { label: "Possession", fields: [["o_poss", "Offensive possessions", "number"], ["tov", "Turnovers", "number"], ["pf", "Fouls", "number"]] },
   { label: "Shooting", fields: [["ts_pct", "True shooting", "percent"], ["efg_pct", "Effective FG", "percent"], ["tp_pct", "Three-point", "percent"], ["ft_pct", "Free throw", "percent"]] },
   { label: "Shot profile", fields: [["rimm", "Rim makes", "number"], ["rima", "Rim attempts", "number"], ["rim_pct", "Rim rate", "percent"], ["midm", "Mid-range makes", "number"], ["mida", "Mid-range attempts", "number"], ["mid_pct", "Mid-range rate", "percent"], ["pbackm", "Post / back makes", "number"], ["pbacka", "Post / back attempts", "number"], ["pback_pct", "Post / back rate", "percent"]] },
