@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -23,6 +23,18 @@ const game = (prediction: Game["prediction"]): Game => ({
 });
 
 describe("live football forecast merge", () => {
+  it("can limit landing-page refreshes to the first live page", async () => {
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ total: 250, page_size: 100, rows: [] }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballForecasts(undefined, { maxPages: 1 })).resolves.toEqual([]);
+    expect(calls).toBe(1);
+    globalThis.fetch = originalFetch;
+  });
+
   it("indexes exact ledger market comparisons by game", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response(JSON.stringify({

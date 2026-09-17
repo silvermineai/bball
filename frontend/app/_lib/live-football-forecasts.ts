@@ -23,7 +23,10 @@ type LiveFootballScorecardResponse = {
   games?: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
-export async function loadLiveFootballForecasts(signal?: AbortSignal) {
+export async function loadLiveFootballForecasts(
+  signal?: AbortSignal,
+  options: { maxPages?: number } = {},
+) {
   const firstResponse = await fetch(
     "/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=0",
     { signal },
@@ -31,8 +34,11 @@ export async function loadLiveFootballForecasts(signal?: AbortSignal) {
   if (!firstResponse.ok) throw new Error("Live football forecasts unavailable.");
   const first = await firstResponse.json() as LiveFootballForecastPage;
   const pageCount = Math.ceil(first.total / Math.max(first.page_size, 1));
+  const pagesToFetch = options.maxPages == null
+    ? pageCount
+    : Math.min(pageCount, Math.max(1, Math.floor(options.maxPages)));
   const additional = await Promise.all(
-    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+    Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
       fetch(
         `/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=${index + 1}`,
         { signal },

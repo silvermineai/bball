@@ -3,7 +3,8 @@ import path from "node:path";
 import Link from "next/link";
 import type { Game, Overview } from "../_lib/data";
 import { getOverview } from "../_lib/data";
-import { date, fmt, kick } from "../_lib/format";
+import { date, fmt } from "../_lib/format";
+import LiveFootballDashboardForecastTable from "./LiveFootballDashboardForecastTable";
 import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 
@@ -55,32 +56,6 @@ function getEventEditions(season: number) {
   if (!fs.existsSync(file)) return [] as EventEdition[];
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as { editions?: EventEdition[] };
   return (data.editions || []).filter((edition) => edition.season === season);
-}
-
-function latestKickoff(game: Game) {
-  return game.time_tbd ? "Time TBD" : kick(game.kickoff);
-}
-
-function ForecastTable({ games }: { games: Game[] }) {
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table forecast-table">
-        <thead><tr><th>Game</th><th>Tip</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr></thead>
-        <tbody>{games.filter((game) => game.prediction).slice(0, 12).map((game) => {
-          const prediction = game.prediction!;
-          return <tr key={game.id}>
-            <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
-            <td>{date(game.kickoff)}<small>{latestKickoff(game)}</small></td>
-            <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong></td>
-            <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
-            <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
-            <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
-            <td className="numeric">{fmt(prediction.total)}</td>
-          </tr>;
-        })}</tbody>
-      </table>
-    </div>
-  );
 }
 
 function RatingsTable({ ratings }: { ratings: Overview["ratings"] }) {
@@ -186,7 +161,7 @@ export default function FootballDashboard() {
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
       <p className="dashboard-caption">Every row has a Silvermine score projection, win probability, margin, calibrated range and total. Historical market comparisons stay on the matchup desk when an eligible quote is available.</p>
-      <ForecastTable games={forecasts} />
+      <LiveFootballDashboardForecastTable initialGames={forecasts} />
     </section>
     <div className="dashboard-two-col">
       <section className="dashboard-section" aria-labelledby="football-teams">
