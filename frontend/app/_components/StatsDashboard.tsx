@@ -13,6 +13,7 @@ import { rankPlayerProfiles } from "../_lib/player-index-view";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
+import LiveNationalPlayerTable, { type NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 
 function getPlayers(season: number) {
@@ -77,22 +78,6 @@ type ValueLeader = {
   rank?: number | null;
 };
 
-type NationalPlayer = {
-  player_id: number;
-  division: number;
-  name: string;
-  team_name: string | null;
-  conference: string | null;
-  games: number | null;
-  ppg: number | null;
-  rpg: number | null;
-  apg: number | null;
-  fg_pct: number | null;
-  three_pct: number | null;
-  ft_pct: number | null;
-  ppg_rank: number | null;
-};
-
 function getImpact(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball", `impact-${season - 1}.json`);
   if (!fs.existsSync(file)) return [] as ImpactPlayer[];
@@ -113,9 +98,9 @@ function getValueLeaders(season: number) {
 
 function getNationalPlayers(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball/ncaa-individual.json");
-  if (!fs.existsSync(file)) return [] as NationalPlayer[];
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { season?: number; players?: NationalPlayer[] };
-  if (data.season !== season) return [] as NationalPlayer[];
+  if (!fs.existsSync(file)) return [] as NationalPlayerRow[];
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { season?: number; players?: NationalPlayerRow[] };
+  if (data.season !== season) return [] as NationalPlayerRow[];
   return (data.players || [])
     .filter((player) => player.division === 1 && player.ppg != null)
     .sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1) || a.name.localeCompare(b.name))
@@ -335,31 +320,6 @@ function ValueTable({ players, season }: { players: ValueLeader[]; season: numbe
   );
 }
 
-function NationalTable({ players, season }: { players: NationalPlayer[]; season: number }) {
-  const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table">
-        <thead><tr><th>PPG rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
-        <tbody>{players.map((player) => (
-          <tr key={player.player_id}>
-            <td className="rank-number">{player.ppg_rank ?? "—"}</td>
-            <th scope="row"><Link href={`/basketball/ncaa-player/?id=${player.player_id}&season=${season}`}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
-            <td>{player.team_name || "—"}</td>
-            <td className="numeric">{player.games ?? "—"}</td>
-            <td className="numeric"><strong>{fmt(player.ppg)}</strong></td>
-            <td className="numeric">{fmt(player.rpg)}</td>
-            <td className="numeric">{fmt(player.apg)}</td>
-            <td className="numeric">{pct(player.fg_pct)}</td>
-            <td className="numeric">{pct(player.three_pct)}</td>
-            <td className="numeric">{pct(player.ft_pct)}</td>
-          </tr>
-        ))}</tbody>
-      </table>
-    </div>
-  );
-}
-
 function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasketball> }) {
   const displayLabel = (dataset: { key: string; label: string }) => {
     const labels: Record<string, string> = {
@@ -414,7 +374,7 @@ export default function StatsDashboard() {
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const latestSeason = overview.season - 1;
   const valueLeaders = getValueLeaders(latestSeason);
-  const nationalPlayers = getNationalPlayers(latestSeason);
+  const nationalPlayers = getNationalPlayers(latestSeason) as NationalPlayerRow[];
   const metrics: BasketballLeaderMetric[] = ["ppg", "rpg", "apg", "spg", "bpg", "ts"];
   const leaderCounts = metrics.map((metric) => ({ metric, count: topBasketballLeaders(players, metric, 100000).length }));
   return (
@@ -478,7 +438,7 @@ export default function StatsDashboard() {
         <section className="dashboard-section" aria-labelledby="dashboard-national-records">
           <div className="dashboard-section-heading"><div><span className="eyebrow">05 / NATIONAL RECORDS</span><h2 id="dashboard-national-records">Division I scoring leaders</h2></div><Link href="/basketball/ncaa/?division=1&amp;stat=ppg">Full national table →</Link></div>
           <p className="dashboard-caption">Final Division I records with the supplied national rank, shooting splits and games played. This archive remains separate from the production and impact model layers.</p>
-          <NationalTable players={nationalPlayers} season={latestSeason} />
+          <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
         </section>
       ) : null}
       <section className="dashboard-section" aria-labelledby="dashboard-impact">
