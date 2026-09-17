@@ -14,9 +14,13 @@ export default function Page() {
   // compact static fallback here so the first HTML response does not embed
   // matchup factor payloads, ratings, source receipts, or coefficient arrays
   // that this lab never renders.
-  const { teams: _teams, efficiency: _efficiency, tempo: _tempo, calibration, limitations: _limitations, fallback_priors: _fallbackPriors, ...modelMetadata } = overview.model;
+  const { attribution: _attribution, ...overviewWithoutAttribution } = overview as typeof overview & { attribution?: unknown };
+  const { teams: _teams, efficiency: _efficiency, tempo: _tempo, calibration, limitations: _limitations, fallback_priors: _fallbackPriors, ...modelMetadata } = overviewWithoutAttribution.model;
   const labOverview = {
-    ...overview,
+    ...overviewWithoutAttribution,
+    // The lab reads only forecast counts from coverage. Keep provider receipts
+    // on the dedicated coverage desk instead of serializing unused URLs here.
+    coverage: { ...overviewWithoutAttribution.coverage, datasets: [] },
     ratings: [],
     sources: [],
     upcoming: overview.upcoming.map(({ matchup_factors: _factors, market_comparisons: _markets, ...game }) => game),
