@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import Announcements from "./Announcements";
-import { getRecruiting } from "../../_lib/basketball-data";
+import { getRecruiting, getRosters } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
@@ -19,6 +19,7 @@ export const metadata = {
 };
 export default function Page() {
   const rawData = getRecruiting();
+  const rosters = getRosters();
   // Keep the retained evidence and hashes in the private archive/API, while
   // keeping provider URLs out of the public page payload and initial HTML.
   const data = JSON.parse(JSON.stringify(rawData, (key, value) => {
@@ -58,6 +59,10 @@ export default function Page() {
     .filter((row) => row.stats)
     .sort((a, b) => (b.stats?.mpg ?? -1) - (a.stats?.mpg ?? -1) || (b.stats?.ppg ?? -1) - (a.stats?.ppg ?? -1) || a.name.localeCompare(b.name))
     .slice(0, 16);
+  const continuityRows = (rosters.team_summaries || [])
+    .filter((row) => row.represented_prior_minutes > 0)
+    .sort((a, b) => b.represented_prior_minutes - a.represented_prior_minutes || a.team.localeCompare(b.team))
+    .slice(0, 20);
   return (
     <>
       <div className="page-title">
@@ -90,6 +95,30 @@ export default function Page() {
       </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
+      <section className="section" aria-labelledby="roster-continuity">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Roster model / 2026–27</div>
+            <h2 id="roster-continuity">Where prior workload is represented</h2>
+          </div>
+          <Link href="/basketball/roster-board/">Open the full roster board →</Link>
+        </div>
+        <p className="note">Top programs by prior minutes represented in the retained roster identity map. This is continuity evidence, not an eligibility ruling or depth chart.</p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Returning</th><th className="numeric">New</th><th className="numeric">Prior min.</th><th className="numeric">Represented min.</th><th className="numeric">Represented share</th></tr></thead>
+            <tbody>{continuityRows.map((row) => <tr key={row.team_id}>
+              <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.team}</Link><small>{row.returning_players} returning · {row.transfer_players} transfers</small></th>
+              <td className="numeric">{row.listed_players}</td>
+              <td className="numeric">{row.returning_players}</td>
+              <td className="numeric">{row.new_players}</td>
+              <td className="numeric">{fmt(row.prior_minutes, 0)}</td>
+              <td className="numeric"><strong>{fmt(row.represented_prior_minutes, 0)}</strong></td>
+              <td className="numeric">{row.represented_prior_minutes_share == null ? "—" : `${fmt(row.represented_prior_minutes_share * 100, 1)}%`}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </section>
       <section className="section" aria-labelledby="recruiting-production">
         <div className="section-heading">
           <div>
