@@ -1,15 +1,16 @@
 import Link from "next/link";
 import fs from "node:fs";
 import path from "node:path";
-import { getBasketball, getRosterModel } from "../_lib/basketball-data";
+import { getBasketball, getRosterModel, getRosters } from "../_lib/basketball-data";
 import {
   topBasketballLeaders,
   type BasketballLeaderMetric,
   type BasketballLeaderPlayer,
 } from "../_lib/basketball-leaders";
-import type { BBGame, BBTeam } from "../_lib/basketball-types";
+import type { BBGame, BBRoster, BBTeam } from "../_lib/basketball-types";
 import { date, fmt } from "../_lib/format";
 import { rankPlayerProfiles } from "../_lib/player-index-view";
+import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
@@ -206,6 +207,46 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
   );
 }
 
+function getRosterLeaders() {
+  const rosters = getRosters();
+  const eligible = rosters.players.filter((player) => {
+    const production = player.prior_production;
+    return Boolean(production && production.games >= 5 && production.minutes >= 200);
+  });
+  const scores = priorProductionIndex(eligible);
+  return eligible
+    .map((player) => ({ player, score: scores.get(`${player.id}-${player.team_id}`)?.score ?? null }))
+    .filter((row): row is { player: BBRoster; score: number } => row.score != null)
+    .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes ?? 0) - (a.player.prior_production?.minutes ?? 0) || a.player.name.localeCompare(b.player.name))
+    .slice(0, 12);
+}
+
+function RosterProductionTable({ rows }: { rows: ReturnType<typeof getRosterLeaders> }) {
+  return (
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead><tr><th>#</th><th>Player</th><th>Program</th><th>Status</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th><th className="numeric">Box BPM</th><th className="numeric">Index</th></tr></thead>
+        <tbody>{rows.map(({ player, score }, index) => {
+          const production = player.prior_production;
+          return <tr key={`${player.id}-${player.team_id}`}>
+            <td className="rank-number">{index + 1}</td>
+            <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=2026`}>{player.name}</Link><small>{player.position || "—"} · {player.class_year || "Class unavailable"}</small></th>
+            <td><Link href={`/basketball/programs/${encodeURIComponent(player.team_id)}/`}>{player.team}</Link></td>
+            <td>{player.status.replaceAll("_", " ")}</td>
+            <td className="numeric">{fmt(production?.mpg)}</td>
+            <td className="numeric"><strong>{fmt(production?.ppg)}</strong></td>
+            <td className="numeric">{fmt(production?.rpg)}</td>
+            <td className="numeric">{fmt(production?.apg)}</td>
+            <td className="numeric">{production?.ts == null ? "—" : `${fmt(production.ts * 100)}%`}</td>
+            <td className="numeric">{fmt(production?.box_bpm)}</td>
+            <td className="numeric"><strong>{fmt(score, 1)}</strong><small>prior production index</small></td>
+          </tr>;
+        })}</tbody>
+      </table>
+    </div>
+  );
+}
+
 const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; description: string; percent?: boolean }> = [
   { metric: "ppg", label: "Scoring", description: "points per game" },
   { metric: "rpg", label: "Rebounding", description: "rebounds per game" },
@@ -375,6 +416,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
 export default function StatsDashboard() {
   const overview = getBasketball();
   const rosterModel = getRosterModel();
+  const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
   const recruiting = getRecruiting();
   const impact = getImpact(overview.season);
@@ -463,21 +505,26 @@ export default function StatsDashboard() {
           <ValueTable players={valueLeaders} season={latestSeason} />
         </section>
       ) : null}
+      <section className="dashboard-section" aria-labelledby="dashboard-roster-production">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">08 / ROSTER PRODUCTION</span><h2 id="dashboard-roster-production">2026–27 roster workload leaders</h2></div><Link href="/basketball/roster-board/">Full roster board →</Link></div>
+        <p className="dashboard-caption">Players listed for the next season, ordered by a transparent prior-production index across scoring, rebounding, playmaking, defensive events and shooting. The row keeps prior workload beside the player so recruiting context stays measurable.</p>
+        <RosterProductionTable rows={rosterLeaders} />
+      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">09 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">10 / DATA COVERAGE</span><h2 id="dashboard-coverage">What is in the warehouse</h2></div><Link href="/research/coverage/">Open coverage checks →</Link></div>
         <p className="dashboard-caption">Player boxes, archives, rosters, schedules and ratings retained for analysis. “Latest data” is the newest captured row for each dataset.</p>
         <DataCoverageTable overview={overview} />
       </section>
       {recruiting ? (
         <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">10 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">11 / RECRUITING INTEL</span><h2 id="dashboard-recruiting">Prior production on the move</h2></div><Link href="/basketball/recruiting/">Full recruiting board →</Link></div>
           <p className="dashboard-caption">A ranked view of retained 2026–27 additions with their recorded destination and prior college production. These are recruiting observations, not eligibility or availability decisions.</p>
           <RecruitingSnapshot release={recruiting} />
         </section>
       ) : null}
       <LiveBasketballProspectLeaders />
       <section className="dashboard-section dashboard-links" aria-labelledby="dashboard-drilldowns">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">11 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">12 / EXPLORE THE BOARD</span><h2 id="dashboard-drilldowns">More numbers, clearer paths.</h2></div></div>
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/source-stats/"><strong>Player stat browser</strong><span>Search the complete season line, totals and rate fields</span><b>→</b></Link>
