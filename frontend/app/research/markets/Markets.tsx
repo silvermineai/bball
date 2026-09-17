@@ -228,6 +228,20 @@ export default function Markets() {
             ? "The market archive read is temporarily unavailable; zero counts are not evidence that no lines exist."
             : meta ? `${meta.total.toLocaleString()} retained observations across ${meta.seasons.length} seasons. ${meta.pregame || 0} records currently carry the pregame flag.` : "Loading archive coverage…"} Rows are excluded from prospective odds evaluation until their timing evidence qualifies.
         </p>
+        {meta ? <div className="table-scroll" style={{ marginTop: 14 }}>
+          <table className="data-table" aria-label="Market capture coverage">
+            <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Capture coverage</caption>
+            <thead><tr><th>Measure</th><th className="numeric">Count</th><th>What it means</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Retained observations</th><td className="numeric">{meta.total.toLocaleString()}</td><td>Rows held in the historical archive</td></tr>
+              <tr><th scope="row">Pregame flagged</th><td className="numeric">{(meta.pregame || 0).toLocaleString()}</td><td>Rows with a verified pre-tip timing flag</td></tr>
+              <tr><th scope="row">Capture receipts</th><td className="numeric">{(meta.research_receipts || 0).toLocaleString()}</td><td>Research capture attempts retained</td></tr>
+              <tr><th scope="row">Future summaries checked</th><td className="numeric">{(meta.research_capture?.summary_count || 0).toLocaleString()}</td><td>Scheduled games inspected by the capture</td></tr>
+              <tr><th scope="row">Complete quotes</th><td className="numeric">{(meta.research_capture?.summary_with_pickcenter || 0).toLocaleString()}</td><td>Summaries containing a complete quote set</td></tr>
+              <tr><th scope="row">Validated markets</th><td className="numeric">{(meta.research_capture?.accepted_markets || 0).toLocaleString()}</td><td>Quotes passing exact-game and timing checks</td></tr>
+            </tbody>
+          </table>
+        </div> : null}
         {archivePartial ? <p className="note" role="status">This archive read is partial while {unavailableSources.length ? unavailableSources.join(", ") : "one binding"} is busy. Counts reflect only the feed that answered; missing observations remain unavailable.</p> : null}
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market feed capabilities">
           {meta.provider_capabilities.map((capability, index) => <span key={`${capability.provider}-${index}`}>
