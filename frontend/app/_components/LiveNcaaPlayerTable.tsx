@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
 
-type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "balanced_index";
+type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "poss_share" | "rapm_net" | "impact_index" | "balanced_index";
 
 type PlayerRow = {
   player_id: string;
@@ -50,6 +50,15 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "efg", label: "Effective FG", description: "shot efficiency", volume: 100 },
   { key: "three_pct", label: "3-point accuracy", description: "3P%", volume: 50 },
   { key: "ft_pct", label: "Free-throw accuracy", description: "FT%", volume: 50 },
+  { key: "per40", label: "Scoring rate", description: "points per 40 minutes", volume: 200 },
+  { key: "ast_to", label: "Assist control", description: "assist / turnover ratio", volume: 0 },
+  { key: "stocks40", label: "Defensive events", description: "steals + blocks per 40", volume: 200 },
+  { key: "tov_rate", label: "Turnover rate", description: "turnovers per possession", volume: 50 },
+  { key: "three_rate", label: "3-point shot rate", description: "3PA / FGA", volume: 50 },
+  { key: "ft_rate", label: "Free-throw rate", description: "FTA / FGA", volume: 50 },
+  { key: "poss_share", label: "Possession share", description: "share of team possessions", volume: 50 },
+  { key: "rapm_net", label: "Net RAPM", description: "regularized lineup impact", volume: 0 },
+  { key: "impact_index", label: "Impact index", description: "RAPM + scoring rate", volume: 200 },
   { key: "balanced_index", label: "All-around", description: "balanced production index", volume: 0 },
 ];
 
@@ -91,11 +100,12 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   }, [metric, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
+  const percentageMetric = ["ts", "efg", "three_pct", "ft_pct", "tov_rate", "three_rate", "ft_rate", "poss_share"].includes(metric);
   const displayMetric = (row: PlayerRow) => {
     if (metric === "balanced_index") return fmt(row.value, 2);
     const value = row.value;
     if (value == null) return "—";
-    return ["ts", "efg", "three_pct", "ft_pct"].includes(metric)
+    return percentageMetric
       ? `${fmt(value, 1)}%`
       : fmt(value, 1);
   };
