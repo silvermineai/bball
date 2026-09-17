@@ -473,6 +473,7 @@ export default function StatsDashboard() {
         <div className="dashboard-link-grid">
           <Link href="/basketball/ncaa-player-box/"><strong>Game logs</strong><span>Every retained player box score and split</span><b>→</b></Link>
           <Link href="/basketball/source-stats/"><strong>Player stat browser</strong><span>Search the complete season line, totals and rate fields</span><b>→</b></Link>
+          <Link href="/basketball/blog/"><strong>Game notebooks</strong><span>Read the model, factors and next checks for every forecast</span><b>→</b></Link>
           <Link href="/basketball/ncaa-shooting/"><strong>Shooting lab</strong><span>Shot profile, zones and field-goal attempts</span><b>→</b></Link>
           <Link href="/basketball/lineups/"><strong>Lineups</strong><span>Five-player stints and net performance</span><b>→</b></Link>
           <Link href="/basketball/recruiting/"><strong>Recruiting</strong><span>Rankings, roster movement and fit</span><b>→</b></Link>
