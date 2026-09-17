@@ -1,5 +1,37 @@
 import type { Comparison } from "./research-types";
 
+export type MarketLineSummary = {
+  spread: number | null;
+  total: number | null;
+  spreadGap: number | null;
+  totalGap: number | null;
+  capturedAt: string | null;
+};
+
+/**
+ * Pick one qualifying spread and total for compact forecast tables.
+ * Provider identity stays in the deep evidence view; the landing board only
+ * needs the observed line, model difference and capture clock.
+ */
+export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSummary {
+  const valid = comparisons
+    .filter((comparison) => comparison.market === "spreads" || comparison.market === "totals")
+    .filter((comparison) => comparison.line != null && Number.isFinite(comparison.line));
+  const spread = valid.find((comparison) => comparison.market === "spreads") || null;
+  const total = valid.find((comparison) => comparison.market === "totals") || null;
+  const timestamps = valid
+    .map((comparison) => comparison.updated_at || comparison.captured_at)
+    .filter(Boolean)
+    .sort();
+  return {
+    spread: spread?.line ?? null,
+    total: total?.line ?? null,
+    spreadGap: spread && Number.isFinite(spread.model_difference) ? spread.model_difference : null,
+    totalGap: total && Number.isFinite(total.model_difference) ? total.model_difference : null,
+    capturedAt: timestamps.at(-1) || null,
+  };
+}
+
 /**
  * Turn the scorecard's signed model difference into a reader-facing label.
  * The scorecard stores one common signed value, but its unit depends on the

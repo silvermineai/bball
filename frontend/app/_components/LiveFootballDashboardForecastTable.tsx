@@ -16,6 +16,9 @@ import {
   matchesFootballMatchupSignal,
   type FootballMatchupSignal,
 } from "../_lib/football-matchup-view";
+import { summarizeMarketLines } from "../_lib/market-display";
+import { loadLiveFootballMarketComparisons } from "../_lib/live-football-forecasts";
+import type { Comparison } from "../_lib/research-types";
 
 const sortLabels: Record<FootballMatchupSort, string> = {
   date: "earliest kickoffs first",
@@ -51,19 +54,18 @@ export default function LiveFootballDashboardForecastTable({
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<FootballMatchupSort>("date");
   const [signal, setSignal] = useState<FootballMatchupSignal>("all");
+  const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveFootballForecasts(controller.signal, { maxPages: 1 })
-      .then((rows) => {
-        if (!controller.signal.aborted) {
-          setGames(mergeLiveFootballForecasts(initialGames, rows));
-        }
-      })
-      .catch(() => {
-        // Keep the server-rendered edition visible if the live catalog is
-        // temporarily unavailable; the status line reports that separately.
-      });
+    Promise.allSettled([
+      loadLiveFootballForecasts(controller.signal, { maxPages: 1 }),
+      loadLiveFootballMarketComparisons(controller.signal),
+    ]).then(([forecastResult, marketResult]) => {
+      if (controller.signal.aborted) return;
+      if (forecastResult.status === "fulfilled") setGames(mergeLiveFootballForecasts(initialGames, forecastResult.value));
+      if (marketResult.status === "fulfilled") setMarketComparisons(marketResult.value);
+    });
     return () => controller.abort();
   }, [initialGames]);
 
@@ -97,11 +99,12 @@ export default function LiveFootballDashboardForecastTable({
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Kickoff</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Kickoff</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = game.prediction!;
+            const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
@@ -109,6 +112,8 @@ export default function LiveFootballDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner · {forecastSignal(game)}</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
+                <td className="numeric">{market.spread == null && market.total == null ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
+                <td className="numeric">{market.spreadGap == null && market.totalGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
               </tr>

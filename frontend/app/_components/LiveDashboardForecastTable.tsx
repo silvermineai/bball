@@ -13,6 +13,9 @@ import {
   forecastSignal,
   type MatchupSignal,
 } from "../_lib/basketball-matchups";
+import { summarizeMarketLines } from "../_lib/market-display";
+import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-forecasts";
+import type { Comparison } from "../_lib/research-types";
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 const latestTip = (game: BBGame) =>
@@ -76,19 +79,18 @@ export default function LiveDashboardForecastTable({
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
   const [signal, setSignal] = useState<MatchupSignal>("all");
+  const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballForecasts(controller.signal, { maxPages: 1 })
-      .then((rows) => {
-        if (!controller.signal.aborted) {
-          setGames(mergeLiveBasketballForecasts(initialGames, rows));
-        }
-      })
-      .catch(() => {
-        // The server-rendered edition remains useful when the live catalog is
-        // temporarily unavailable; the status line reports that separately.
-      });
+    Promise.allSettled([
+      loadLiveBasketballForecasts(controller.signal, { maxPages: 1 }),
+      loadLiveBasketballMarketComparisons(controller.signal),
+    ]).then(([forecastResult, marketResult]) => {
+      if (controller.signal.aborted) return;
+      if (forecastResult.status === "fulfilled") setGames(mergeLiveBasketballForecasts(initialGames, forecastResult.value));
+      if (marketResult.status === "fulfilled") setMarketComparisons(marketResult.value);
+    });
     return () => controller.abort();
   }, [initialGames]);
 
@@ -123,12 +125,13 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Roster lens</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = predictionFor(game)!;
             const rosterScenario = rosterByGame.get(game.id);
+            const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
@@ -138,6 +141,8 @@ export default function LiveDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
+                <td className="numeric">{market.spread == null && market.total == null ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
+                <td className="numeric">{market.spreadGap == null && market.totalGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
               </tr>

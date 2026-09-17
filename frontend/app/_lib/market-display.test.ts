@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary } from "./market-display";
+import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary, summarizeMarketLines } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -35,5 +35,13 @@ describe("market comparison display", () => {
   it("keeps a compact quote summary useful in exports", () => {
     const quote = { ...comparison("h2h", 0.043), market_home_probability: 0.512, line: null };
     expect(comparisonQuoteSummary(quote)).toBe("test book h2h 51.2% home · model +4.3 probability pts · captured 2026-09-10T12:00:00Z");
+  });
+
+  it("summarizes only observed spread and total lines", () => {
+    const spread = { ...comparison("spreads", 12.64), line: 5.5, updated_at: "2026-09-12T15:32:51Z" };
+    const total = { ...comparison("totals", 5.85), line: 43.5, updated_at: "2026-09-12T15:32:52Z" };
+    const summary = summarizeMarketLines([spread, total, comparison("h2h", 0.04)]);
+    expect(summary).toEqual({ spread: 5.5, total: 43.5, spreadGap: 12.64, totalGap: 5.85, capturedAt: "2026-09-12T15:32:52Z" });
+    expect(summarizeMarketLines([])).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, capturedAt: null });
   });
 });
