@@ -162,6 +162,31 @@ class EspnPickcenterTests(unittest.TestCase):
         payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_markets WHERE market='spreads'").fetchone()[0])
         self.assertEqual(payload["event_id"], GAME["id"])
 
+    def test_ingest_does_not_call_unpriced_summaries_rejected(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {"captured_at": "2026-11-09T20:00:00Z", "sha256": "fixture"}
+        result = ingest(
+            self.conn,
+            [{"event_id": GAME["id"], "summary": {"pickcenter": []}}],
+            receipt,
+            [GAME],
+            receipt["captured_at"],
+        )
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 0})
+        payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(payload["rejected_records"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

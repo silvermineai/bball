@@ -175,6 +175,13 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
         try:
             event_id = str(item["event_id"])
             game = by_id[event_id]
+            # A future ESPN summary can be valid while publishing no markets
+            # yet. Keep that normal availability state separate from a
+            # malformed or identity-mismatched quote so the public receipt can
+            # explain the capture without calling an unpriced game rejected.
+            pickcenter = item.get("summary", {}).get("pickcenter")
+            if not isinstance(pickcenter, list) or not pickcenter:
+                continue
             for bookmaker, market, updated, payload in parse_pickcenter(item["summary"], game, captured, receipt_id):
                 key = digest([SPORT, game["id"], PROVIDER, bookmaker, market, captured, payload])
                 conn.execute("INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)", (key, SPORT, game["id"], PROVIDER, bookmaker, market, captured, updated, encoded(payload)))
