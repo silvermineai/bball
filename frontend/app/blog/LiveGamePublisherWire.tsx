@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { publicArchiveText } from "../_lib/public-text";
 
 type PublisherMention = {
   id: string;
@@ -74,8 +75,8 @@ export default function LiveGamePublisherWire({
         <div className="article-grid">
           {mentions.map((mention) => <article className="article-card" key={mention.id}>
             <div className="eyebrow">{mention.division ? `${mention.division} · ` : ""}retained report · {mention.published ? new Date(mention.published).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable"}</div>
-            <h3>{mention.headline}</h3>
-            {mention.description && <p>{mention.description}</p>}
+            <h3>{publicArchiveText(mention.headline)}</h3>
+            {mention.description && <p>{publicArchiveText(mention.description)}</p>}
           </article>)}
         </div>
       </>}

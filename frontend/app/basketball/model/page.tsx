@@ -1,14 +1,16 @@
 import { getBasketball, getRecruiting, getRosterModel, getRosters } from "../../_lib/basketball-data";
 import { date, fmt } from "../../_lib/format";
+import { publicArchiveText } from "../../_lib/public-text";
 import Link from "next/link";
 import ModelIntegrity from "./ModelIntegrity";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
-const displayModelNote = (value: string) => value
-  .replaceAll("NCAA and ESPN team IDs", "National and production team IDs")
-  .replaceAll("NCAA RAPM identities", "Lineup RAPM identities")
-  .replaceAll("NCAA roster release", "Roster release");
+const displayModelNote = (value: string) => publicArchiveText(value)
+  .replaceAll("the national archive and the reporting desk team IDs", "national and production team IDs")
+  .replaceAll("the national archive RAPM identities", "lineup RAPM identities")
+  .replaceAll("the national archive roster release", "roster release");
+const displayDataset = (value: string) => publicArchiveText(value.replace(/^ncaa_/i, "national_").replaceAll("_", " "));
 export default function Page() {
   const d = getBasketball(),
     e = d.model.evaluation,
@@ -456,7 +458,7 @@ export default function Page() {
             <tbody>
               {d.sources.map((s) => (
                 <tr key={`${s.dataset}-${s.season}`}>
-                  <td>{s.dataset}</td>
+                  <td>{displayDataset(s.dataset)}</td>
                   <td>{s.season}</td>
                   <td>{date(s.fetched_at)}</td>
                   <td className="mono">{s.sha256.slice(0, 12)}</td>

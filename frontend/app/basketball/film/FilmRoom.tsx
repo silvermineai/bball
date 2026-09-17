@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { publicArchiveText } from "../../_lib/public-text";
 
 export type FilmTeam = { id: number; name: string; shortName: string; conference: string | null };
 export type FilmVideo = {
@@ -124,14 +125,14 @@ export default function FilmRoom({ videos, teams }: Props) {
                 {playing === video.videoId ? (
                   <div className="film-frame" role="status">Clip selected · use the retained video record to review playback.</div>
                 ) : (
-                  <button className="film-thumb" type="button" onClick={() => setPlaying(video.videoId)} aria-label={`Play ${video.title}`}>
+                  <button className="film-thumb" type="button" onClick={() => setPlaying(video.videoId)} aria-label={`Play ${publicArchiveText(video.title)}`}>
                     {video.thumbnail ? <img src={video.thumbnail} alt="" loading="lazy" /> : <span />}
                     <span className="film-play">▶</span>
                   </button>
                 )}
                 <figcaption>
-                  <strong>{video.title}</strong>
-                  <span className="eyebrow">{video.channel} · {publishedDate(video.published)}</span>
+                  <strong>{publicArchiveText(video.title)}</strong>
+                  <span className="eyebrow">{publicArchiveText(video.channel)} · {publishedDate(video.published)}</span>
                 </figcaption>
               </figure>
             ))}

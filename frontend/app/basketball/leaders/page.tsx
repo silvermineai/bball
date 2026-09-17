@@ -279,7 +279,7 @@ export default function Page() {
         </div>
         <p className="note">
           Box Plus/Minus, Offensive BPM and Defensive BPM are preserved from
-          the retained value release. This board requires at least {publisherValue.minimum_minutes.toLocaleString()} recorded minutes so short samples do not lead the list. The player and team IDs remain in their archive namespace; these values are descriptive context, not Silvermine forecasts or NCAA RAPM joins.
+          the retained value release. This board requires at least {publisherValue.minimum_minutes.toLocaleString()} recorded minutes so short samples do not lead the list. The player and team IDs remain in their archive namespace; these values are descriptive context, not Silvermine forecasts or lineup impact joins.
         </p>
         <div className="leader-grid">
           {publisherValue.metrics.map((metric) => (

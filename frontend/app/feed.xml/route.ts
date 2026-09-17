@@ -19,8 +19,8 @@ const guideItems = [
   ["basketball-possession-style", "Count the trip before you count the score.", "How to read source-recorded team possession style without assigning individual credit."],
   ["basketball-recruiting-evidence", "Build the recruiting brief from the evidence outward.", "How to connect source rows, dated statements, prior production and the next staff question."],
   ["basketball-availability-evidence", "Availability is a source question.", "How to read injury, redshirt and tournament-availability signals without turning a headline or roster row into a ruling."],
-  ["basketball-player-game-logs", "Read the game log before you rank the player.", "How to use NCAA player-game rows, denominators and source identity in a recruiting review."],
-  ["basketball-roster-transitions", "Roster continuity is a clue, not a depth chart.", "How to evaluate returning workload across dated NCAA roster transitions without overclaiming eligibility or forecast value."],
+  ["basketball-player-game-logs", "Read the game log before you rank the player.", "How to use national player-game rows, denominators and archive identity in a recruiting review."],
+  ["basketball-roster-transitions", "Roster continuity is a clue, not a depth chart.", "How to evaluate returning workload across dated national roster transitions without overclaiming eligibility or forecast value."],
 ] as const;
 
 type PublisherNews = {

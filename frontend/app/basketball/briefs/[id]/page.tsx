@@ -10,6 +10,7 @@ import {
 import { getScoutProfile } from "../../../_lib/scouting-data";
 import { getLedger } from "../../../_lib/research-data";
 import { date, fmt, kick, signed } from "../../../_lib/format";
+import { publicArchiveText } from "../../../_lib/public-text";
 import {
   adjustedFactorPoints,
   briefEvidence,
@@ -152,6 +153,11 @@ function relatedPublisherArticles(game: { home_name: string; away_name: string }
     .filter(Boolean);
   return (release.articles || [])
     .filter((article) => article.sport === "mens-college-basketball" && terms.some((term) => text(article).includes(term)))
+    .map((article) => ({
+      ...article,
+      headline: publicArchiveText(article.headline),
+      description: publicArchiveText(article.description),
+    }))
     .slice(0, 4);
 }
 
