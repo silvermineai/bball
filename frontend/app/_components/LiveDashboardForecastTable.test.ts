@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortForecastBoard, tipStatus } from "./LiveDashboardForecastTable";
+import { sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -49,5 +49,22 @@ describe("tipStatus", () => {
     expect(tipStatus(games[0])).toBe("Scheduled time");
     expect(tipStatus({ ...games[0], time_tbd: 1 })).toBe("Time TBD");
     expect(tipStatus({ ...games[0], source_time_valid: true, source_start: "2026-11-10T04:00:00Z" })).toBe("Source-confirmed start");
+  });
+});
+
+describe("strongestFactorEdge", () => {
+  it("returns the largest matchup factor edge with its favored side", () => {
+    expect(strongestFactorEdge({
+      ...games[0],
+      matchup_factors: {
+        season: 2026,
+        factors: {},
+        edges: { efg: 0.012, tov: -0.031, orb: 0.018, ftr: 0 },
+      },
+    })).toBe("A TO 3.1");
+  });
+
+  it("returns null when the matchup has no factor edge", () => {
+    expect(strongestFactorEdge(games[0])).toBeNull();
   });
 });
