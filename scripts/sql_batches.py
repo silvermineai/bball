@@ -13,6 +13,9 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "cancelled due to no poll() received",
     "d1 db reset because its code was updated",
     "db reset because its code was updated",
+    # Wrangler can surface a safe import rollback as a structured marker when
+    # the remote D1 database restarts during a long upload.
+    "d1_reset_do",
     "d1 db storage operation exceeded timeout",
     "storage operation exceeded timeout",
     "not currently importing anything",
