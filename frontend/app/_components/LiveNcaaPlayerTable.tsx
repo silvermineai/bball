@@ -62,6 +62,29 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "balanced_index", label: "All-around", description: "balanced production index", volume: 0 },
 ];
 
+const metricGuidance: Record<Metric, string> = {
+  ppg: "Points per game rewards scoring volume and uses recorded games as the denominator.",
+  rpg: "Rebounds per game keeps offensive and defensive rebounds together.",
+  apg: "Assists per game is a recorded playmaking rate; it does not estimate potential assists.",
+  spg: "Steals per game is a box-score defensive event rate.",
+  bpg: "Blocks per game is a box-score rim-protection event rate.",
+  topg: "Turnovers per game is a volume measure; turnover rate is available when possession data is recorded.",
+  ts: "True shooting uses points divided by twice (FGA + 0.475 × FTA); rows without attempts stay unavailable.",
+  efg: "Effective field-goal percentage credits a made three as 1.5 field goals: (FGM + 0.5 × 3PM) / FGA.",
+  three_pct: "Three-point accuracy is 3PM / 3PA and keeps players without attempts out of the qualified ranking.",
+  ft_pct: "Free-throw accuracy is FTM / FTA and keeps players without attempts out of the qualified ranking.",
+  per40: "Points per 40 normalizes scoring by recorded minutes, which helps compare different workloads.",
+  ast_to: "Assist control is assists divided by turnovers; players with no recorded turnovers remain unavailable.",
+  stocks40: "Defensive events per 40 combines steals and blocks, normalized by recorded minutes.",
+  tov_rate: "Turnover rate is recorded turnovers divided by recorded offensive possessions.",
+  three_rate: "Three-point shot rate is 3PA / FGA, a shot-selection measure rather than accuracy.",
+  ft_rate: "Free-throw rate is FTA / FGA, a foul-pressure and shot-profile measure.",
+  poss_share: "Possession share is a player’s recorded offensive possessions divided by team possessions.",
+  rapm_net: "Net RAPM is the exact-ID lineup impact estimate; it requires qualified offensive and defensive possession samples.",
+  impact_index: "Impact index averages standardized Net RAPM and scoring rate when both qualified sources are present.",
+  balanced_index: "The all-around index averages standardized scoring, rebounding, playmaking, defense, shooting and per-40 components that are observed.",
+};
+
 const selectedMetric = (value: string | null): Metric =>
   metrics.some((metric) => metric.key === value) ? value as Metric : "ppg";
 
@@ -121,6 +144,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
         <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `${result.total.toLocaleString()} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
       </div>
+      <p className="note" style={{ marginBottom: 16 }}>{metricGuidance[metric]} Missing source fields remain unavailable rather than being filled with zero. <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open the full metric table →</Link></p>
       {status === "ready" && result ? (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
