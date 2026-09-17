@@ -2,12 +2,36 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import Players from "./Players";
+import type { CareerCatalog } from "../../_lib/careers";
 export const metadata = {
   title: "College basketball player statistics, rankings and impact",
   description:
     "Search historical player production, rank an explainable all-around profile, browse national leaderboards and inspect separate RAPM impact records.",
 };
 export default function Page() {
+  const catalog = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/basketball/history/index.json"),
+      "utf8",
+    ),
+  ) as CareerCatalog;
+  // Receipt clocks and hashes remain useful to the archive UI, but provider
+  // URLs stay private so the public page only presents Silvermine data.
+  const publicCatalog: CareerCatalog = {
+    generated_at: catalog.generated_at,
+    player_ids: catalog.player_ids,
+    seasons: catalog.seasons,
+    limitations: catalog.limitations,
+    sources: catalog.sources.map((group) =>
+      group.map((source) => ({
+        dataset: source.dataset,
+        season: source.season,
+        url: "",
+        fetched_at: source.fetched_at,
+        sha256: source.sha256,
+      })),
+    ),
+  };
   return (
     <>
       <div className="page-title">
@@ -82,15 +106,7 @@ export default function Page() {
         </div>
       </section>
       <Players
-        catalog={JSON.parse(
-          fs.readFileSync(
-            path.join(
-              process.cwd(),
-              "public/data/basketball/history/index.json",
-            ),
-            "utf8",
-          ),
-        )}
+        catalog={publicCatalog}
       />
     </>
   );

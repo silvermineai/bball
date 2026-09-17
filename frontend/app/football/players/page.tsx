@@ -2,10 +2,32 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import PlayerBrowser from "./PlayerBrowser";
+import type { PlayerCatalog } from "../../_lib/football-player-history";
 export const metadata = {
   title: "College football player statistics and rankings",
 };
 export default function Page() {
+  const catalog = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football/player-catalog.json"),
+      "utf8",
+    ),
+  ) as PlayerCatalog;
+  // Keep edition clocks and hashes available to the archive without
+  // serializing provider URLs into the public page payload.
+  const publicCatalog: PlayerCatalog = {
+    ...catalog,
+    seasons: catalog.seasons.map((season) => ({
+      ...season,
+      sources: season.sources.map((source) => ({
+        dataset: source.dataset,
+        season: source.season,
+        url: "",
+        fetched_at: source.fetched_at,
+        sha256: source.sha256,
+      })),
+    })),
+  };
   return (
     <>
       <div className="page-title">
@@ -34,15 +56,7 @@ export default function Page() {
         Want recorded player totals? <Link href="/football/ncaa-leaders/">Open the player leaders board →</Link> for season-scoped name/team aggregates with raw-row links.
       </p>
       <PlayerBrowser
-        catalog={JSON.parse(
-          fs.readFileSync(
-            path.join(
-              process.cwd(),
-              "public/data/football/player-catalog.json",
-            ),
-            "utf8",
-          ),
-        )}
+        catalog={publicCatalog}
       />
     </>
   );
