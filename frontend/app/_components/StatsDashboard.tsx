@@ -515,6 +515,11 @@ export default function StatsDashboard() {
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
           <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
+          <div className="dashboard-subsection" aria-labelledby="dashboard-single-stat-leaders">
+            <div className="dashboard-section-heading"><div><span className="eyebrow">SINGLE-STAT LEADERS</span><h3 id="dashboard-single-stat-leaders">Who leads each box-score field?</h3></div><Link href="/basketball/leaders/">Open every leaderboard →</Link></div>
+            <p className="dashboard-caption">Top five qualified players for each commonly used production field. Select a field on the full leaderboard when you need the complete cohort or a different denominator.</p>
+            <LeaderCards players={players} season={latestSeason} />
+          </div>
         </section>
       </div>
       {recruiting ? (
