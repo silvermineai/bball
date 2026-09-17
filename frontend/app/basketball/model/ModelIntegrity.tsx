@@ -20,7 +20,7 @@ export default function ModelIntegrity() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/coverage", { signal: controller.signal })
+    fetch("/api/basketball/research/coverage?audit=1", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live integrity data is unavailable.");
         return response.json() as Promise<{ possession_validation?: Integrity | null }>;
