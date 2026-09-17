@@ -95,11 +95,13 @@ export default function LiveNationalPlayerTable({
   const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
   const [players, setPlayers] = useState<RankedPlayer[]>(() => initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })));
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const selectedMetric = leaderMetrics.find((candidate) => candidate.key === metric)!;
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setError("");
     setPlayers(metric === "ppg" ? initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })) : []);
     fetch(`/api/basketball/research/ncaa-leaders?division=1&stat=${metric}&page=0`, { signal: controller.signal })
       .then((response) => {
@@ -108,14 +110,18 @@ export default function LiveNationalPlayerTable({
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        const rows = (payload.rows || []).flatMap((raw) => {
+        const rows = (payload.rows || []).flatMap((raw, index) => {
           const row = normalizeNationalLeader(raw);
-          return row ? [{ ...row, leader_rank: metricRank(raw, metric) }] : [];
+          return row ? [{ ...row, leader_rank: metricRank(raw, metric) ?? index + 1 }] : [];
         }).slice(0, 10);
         if (rows.length) setPlayers(rows);
+        else setError("No Division I rows are available for this field.");
       })
-      .catch(() => {
+      .catch((reason: unknown) => {
         // Keep the server-rendered leaderboard visible if D1 is unavailable.
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setError("The live leaderboard is temporarily unavailable for this field.");
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -135,6 +141,7 @@ export default function LiveNationalPlayerTable({
         </label>
         <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Sorted by ${selectedMetric.label.toLowerCase()}. The other columns stay attached for context.`}</p>
       </div>
+      {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
           <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>

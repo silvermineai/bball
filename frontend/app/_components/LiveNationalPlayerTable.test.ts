@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeNationalLeader } from "./LiveNationalPlayerTable";
+import { metricValue, normalizeNationalLeader } from "./LiveNationalPlayerTable";
 
 describe("live national player normalization", () => {
   it("uses live fields and fills the display line from the retained payload", () => {
@@ -40,5 +40,12 @@ describe("live national player normalization", () => {
 
   it("drops rows without an exact player identity", () => {
     expect(normalizeNationalLeader({ name: "Unknown" })).toBeNull();
+  });
+
+  it("reads a selected rate without losing unavailable fields", () => {
+    const player = normalizeNationalLeader({ player_id: "7", name: "A Center", bpg: 2.4 });
+    expect(player).not.toBeNull();
+    expect(metricValue(player!, "bpg")).toBe(2.4);
+    expect(metricValue(player!, "ft_pct")).toBeNull();
   });
 });
