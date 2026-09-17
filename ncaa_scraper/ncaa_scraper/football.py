@@ -230,6 +230,51 @@ def player_board(conn, year):
     }
 
 
+def personnel_preview(conn, year: int, limit: int = 12) -> list[dict]:
+    """Return a small deterministic roster table for the static football desk.
+
+    The football recruiting route is exported as static HTML. Keep its first
+    rows in the same publication as the D1 records so the page can show real
+    personnel immediately, before the interactive catalog hydrates.
+    """
+    rows = read_stats(conn, "rosters", year)
+
+    def text(row: dict, *keys: str) -> str | None:
+        for key in keys:
+            value = row.get(key)
+            if value not in (None, ""):
+                return str(value)
+        return None
+
+    def numeric(value):
+        parsed = number(value)
+        if parsed is None:
+            return None
+        return int(parsed) if parsed.is_integer() else parsed
+
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            text(row, "team_short_display_name", "team_display_name", "team_id") or "",
+            text(row, "athlete_display_name", "full_name", "athlete_id") or "",
+            text(row, "athlete_id") or "",
+        ),
+    )
+    return [
+        {
+            "id": text(row, "athlete_id"),
+            "name": text(row, "athlete_display_name", "full_name", "display_name", "athlete_id"),
+            "team": text(row, "team_short_display_name", "team_display_name", "team_id"),
+            "position": text(row, "position_abbreviation", "position_name", "position"),
+            "experience": text(row, "experience_display_value", "experience_abbreviation"),
+            "status": text(row, "status_name", "status_type", "status"),
+            "height": numeric(row.get("height")),
+            "weight": numeric(row.get("weight")),
+        }
+        for row in ordered[:limit]
+    ]
+
+
 def build(conn, season=2026):
     now = utcnow()
     # The active forecast edition is a five-season window. Older schedule rows
@@ -373,6 +418,7 @@ def build(conn, season=2026):
     artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
+    artifacts[f"personnel-preview-{season}"] = personnel_preview(conn, season)
     for name, payload in artifacts.items():
         encoded = json.dumps(payload, separators=(",", ":"), allow_nan=False)
         (OUT / f"{name}.json").write_text(encoded)

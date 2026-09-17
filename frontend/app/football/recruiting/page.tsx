@@ -1,4 +1,6 @@
 import Link from "next/link";
+import fs from "node:fs";
+import path from "node:path";
 import RecruitingDesk from "./RecruitingDesk";
 
 type PersonnelPreview = {
@@ -12,16 +14,12 @@ type PersonnelPreview = {
   weight?: number | null;
 };
 
-async function getPersonnelPreview(): Promise<PersonnelPreview[]> {
-  const origin = process.env.PUBLIC_SITE_URL || "https://bball.silvermine.dev";
+function getPersonnelPreview(): PersonnelPreview[] {
+  const file = path.join(process.cwd(), "public/data/football/personnel-preview-2026.json");
+  if (!fs.existsSync(file)) return [];
   try {
-    const response = await fetch(
-      `${origin.replace(/\/$/, "")}/api/football/recruiting?view=rosters&season=2026&page=0&limit=12`,
-      { next: { revalidate: 300 } },
-    );
-    if (!response.ok) return [];
-    const payload = await response.json() as { rows?: PersonnelPreview[] };
-    return Array.isArray(payload.rows) ? payload.rows : [];
+    const payload = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
+    return Array.isArray(payload) ? payload as PersonnelPreview[] : [];
   } catch {
     return [];
   }

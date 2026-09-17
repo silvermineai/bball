@@ -5,7 +5,7 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from ncaa_scraper.football import ROOT, datasets_for_year, number, store_rows
+from ncaa_scraper.football import ROOT, datasets_for_year, number, personnel_preview, store_rows
 from ncaa_scraper.football_model import (
     calibrate,
     eligible,
@@ -176,6 +176,63 @@ class ImportTests(unittest.TestCase):
         for value in ["", None, "NaN", "Infinity", "not a stat"]:
             self.assertIsNone(number(value))
         self.assertEqual(number("0"), 0)
+
+    def test_personnel_preview_is_static_and_deterministic(self):
+        store_rows(
+            self.conn,
+            "rosters",
+            2026,
+            [
+                {
+                    "athlete_id": "2",
+                    "athlete_display_name": "Beta Player",
+                    "team_id": "9",
+                    "team_short_display_name": "Beta",
+                    "position_abbreviation": "WR",
+                    "experience_display_value": "Junior",
+                    "status_name": "Active",
+                    "height": 72,
+                    "weight": 195,
+                },
+                {
+                    "athlete_id": "1",
+                    "athlete_display_name": "Alpha Player",
+                    "team_id": "3",
+                    "team_short_display_name": "Alpha",
+                    "position_abbreviation": "QB",
+                    "experience_display_value": "Senior",
+                    "status_name": "Active",
+                    "height": 76.0,
+                    "weight": 220.0,
+                },
+            ],
+            {"fetched_at": "2026-09-17T00:00:00Z"},
+        )
+        self.assertEqual(
+            personnel_preview(self.conn, 2026),
+            [
+                {
+                    "id": "1",
+                    "name": "Alpha Player",
+                    "team": "Alpha",
+                    "position": "QB",
+                    "experience": "Senior",
+                    "status": "Active",
+                    "height": 76,
+                    "weight": 220,
+                },
+                {
+                    "id": "2",
+                    "name": "Beta Player",
+                    "team": "Beta",
+                    "position": "WR",
+                    "experience": "Junior",
+                    "status": "Active",
+                    "height": 72,
+                    "weight": 195,
+                },
+            ],
+        )
 
     def test_future_archive_line_still_lacks_verified_provider_clock(self):
         row = {
