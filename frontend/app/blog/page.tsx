@@ -16,7 +16,7 @@ const guides = [
   [
     "reading-the-forecast",
     "What a preseason model knows. And what it misses.",
-    "Start with a baseline, inspect its error, then ask which football questions the numbers cannot answer.",
+    "Start with a baseline, inspect its error, then ask which basketball questions the numbers cannot answer.",
   ],
   [
     "understanding-player-epa",

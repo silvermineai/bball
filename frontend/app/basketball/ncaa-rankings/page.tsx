@@ -20,13 +20,23 @@ type IndividualPlayer = {
   ppg?: number | null;
   rpg?: number | null;
   apg?: number | null;
+  spg?: number | null;
+  bpg?: number | null;
   mpg?: number | null;
   ppg_rank?: number | null;
   fgm?: number | null;
   fga?: number | null;
+  fg_pct?: number | null;
+  three_pct?: number | null;
   three_fgm?: number | null;
+  three_fga?: number | null;
+  ft_pct?: number | null;
   fta?: number | null;
+  ast_to?: number | null;
   pts?: number | null;
+  tov?: number | null;
+  stl?: number | null;
+  blk?: number | null;
 };
 
 const number = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
@@ -47,9 +57,69 @@ function getScoringLeaders() {
     .slice(0, 20);
 }
 
+type LeaderCategory = {
+  label: string;
+  field: keyof IndividualPlayer;
+  suffix?: string;
+  minimum?: (player: IndividualPlayer) => boolean;
+};
+
+const leaderCategories: LeaderCategory[] = [
+  { label: "Points per game", field: "ppg" },
+  { label: "Rebounds per game", field: "rpg" },
+  { label: "Assists per game", field: "apg" },
+  { label: "Steals per game", field: "spg" },
+  { label: "Blocks per game", field: "bpg" },
+  { label: "Minutes per game", field: "mpg" },
+  { label: "Field-goal percentage", field: "fg_pct", suffix: "%", minimum: (player) => (player.fga || 0) >= 75 },
+  { label: "Three-point percentage", field: "three_pct", suffix: "%", minimum: (player) => (player.three_fga || 0) >= 25 },
+  { label: "Free-throw percentage", field: "ft_pct", suffix: "%", minimum: (player) => (player.fta || 0) >= 30 },
+  { label: "Assist / turnover", field: "ast_to", minimum: (player) => (player.tov || 0) >= 15 },
+];
+
+function getCategoryLeaders() {
+  const file = path.join(process.cwd(), "public/data/basketball/ncaa-individual.json");
+  if (!fs.existsSync(file)) return [] as Array<LeaderCategory & { player: IndividualPlayer; value: number }>;
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: IndividualPlayer[] };
+  const players = (data.players || []).filter((player) => player.division === 1 && (player.games || 0) >= 10);
+  return leaderCategories.flatMap((category) => {
+    const leader = players
+      .filter((player) => {
+        const value = player[category.field];
+        return typeof value === "number" && Number.isFinite(value) && (!category.minimum || category.minimum(player));
+      })
+      .sort((left, right) => Number(right[category.field]) - Number(left[category.field]) || left.name.localeCompare(right.name))[0];
+    return leader && typeof leader[category.field] === "number" ? [{ ...category, player: leader, value: leader[category.field] as number }] : [];
+  });
+}
+
 export default function Page() {
   const leaders = getScoringLeaders();
+  const categoryLeaders = getCategoryLeaders();
   return <>
+    <section className="paper-panel" aria-labelledby="category-leaders" style={{ marginBottom: 24 }}>
+      <div className="section-heading" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="eyebrow">Current season / Division I</div>
+          <h2 id="category-leaders">National category leaders</h2>
+        </div>
+        <span className="note">Rate leaders use simple attempt and game minimums</span>
+      </div>
+      <div className="table-scroll">
+        <table className="data-table">
+          <thead><tr><th>Category</th><th>Leader</th><th>Program</th><th className="numeric">Value</th><th className="numeric">GP</th><th className="numeric">Rank</th></tr></thead>
+          <tbody>{categoryLeaders.map((entry) => <tr key={entry.field}>
+            <th scope="row">{entry.label}</th>
+            <td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(entry.player.player_id)}&season=2026`}>{entry.player.name} →</Link><small>{entry.player.position || "Position unavailable"}</small></td>
+            <td><strong>{entry.player.team_name || "—"}</strong><small>{entry.player.conference || "Conference unavailable"}</small></td>
+            <td className="numeric"><strong>{number(entry.value)}{entry.suffix || ""}</strong></td>
+            <td className="numeric">{number(entry.player.games, 0)}</td>
+            <td className="numeric">{(() => { const rank = entry.player[`${String(entry.field)}_rank` as keyof IndividualPlayer]; return typeof rank === "number" ? number(rank, 0) : "—"; })()}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      {!categoryLeaders.length && <p className="empty">The current category edition is unavailable.</p>}
+    </section>
     <section className="paper-panel" aria-labelledby="scoring-leaders" style={{ marginBottom: 24 }}>
       <div className="section-heading" style={{ marginBottom: 12 }}>
         <div>
