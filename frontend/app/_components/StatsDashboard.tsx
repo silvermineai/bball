@@ -14,6 +14,7 @@ import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
+import LiveBasketballMovementLeaders from "./LiveBasketballMovementLeaders";
 import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
@@ -518,6 +519,7 @@ export default function StatsDashboard() {
           <Link href="/basketball/model/"><strong>Model notebook</strong><span>Training windows, calibration and held-out error</span><b>→</b></Link>
         </div>
       </section>
+      <LiveBasketballMovementLeaders />
       <LiveBasketballProspectLeaders />
       <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {players.length.toLocaleString()} player rows available in the current release.</p>
     </div>
