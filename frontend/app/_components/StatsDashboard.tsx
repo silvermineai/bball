@@ -499,8 +499,15 @@ export default function StatsDashboard() {
           <strong>{forecastRows.toLocaleString()}</strong>
           <span>upcoming matchup forecasts</span>
           <small>Model edition · {overview.model.version}</small>
-          {overview.coverage.forecast_games ? <small>{overview.coverage.forecast_games.toLocaleString()} primary{overview.coverage.baseline_estimate_games ? ` + ${overview.coverage.baseline_estimate_games.toLocaleString()} cold-start` : ""} rows are labeled in the table.</small> : null}
-          <small>Roster lens · {rosterModel.coverage.scenario_games.toLocaleString()} game scenarios · {rosterModel.evaluation.improvement_vs_prior_net == null ? "evaluation pending" : `${fmt(rosterModel.evaluation.improvement_vs_prior_net, 1)} pts better than prior net in holdout`}</small>
+          <table className="dashboard-model-table" aria-label="Forecast model coverage">
+            <thead><tr><th>Signal</th><th className="numeric">Rows</th><th>Role</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Primary</th><td className="numeric">{overview.coverage.forecast_games.toLocaleString()}</td><td>efficiency</td></tr>
+              {overview.coverage.baseline_estimate_games ? <tr><th scope="row">Cold-start</th><td className="numeric">{overview.coverage.baseline_estimate_games.toLocaleString()}</td><td>shrunk prior</td></tr> : null}
+              <tr><th scope="row">Roster lens</th><td className="numeric">{rosterModel.coverage.scenario_games.toLocaleString()}</td><td>continuity scenario</td></tr>
+            </tbody>
+          </table>
+          <small>Every upcoming row has a primary or cold-start estimate. The roster lens is a separately evaluated scenario and does not overwrite the primary forecast.</small>
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
