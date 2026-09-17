@@ -3,7 +3,7 @@ export type RecruitingWireArticle = {
   headline: string;
   description: string;
   published: string;
-  link: string;
+  link?: string;
   categories: string[];
   publisher?: string;
   sport?: string;

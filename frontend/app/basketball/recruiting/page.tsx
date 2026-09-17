@@ -29,6 +29,7 @@ export default function Page() {
       published: string;
       link: string;
       categories: string[];
+      publisher?: string;
       sport?: string;
     }[];
   };
@@ -37,7 +38,7 @@ export default function Page() {
       /recruit|transfer|portal|commit|sign|class of|prospect|injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i.test(
         `${article.headline} ${article.description} ${article.categories.join(" ")}`,
       ),
-    );
+    ).map(({ link: _link, publisher: _publisher, ...article }) => article);
   return (
     <>
       <div className="page-title">

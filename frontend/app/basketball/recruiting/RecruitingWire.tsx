@@ -8,7 +8,9 @@ import { filterRecruitingWire, isRecruitingWireArticle, latestRecruitingWirePubl
 
 const PAGE_SIZE = 12;
 const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability", availability: "Injuries and availability" };
-const sanitizeWireCopy = (value: string) => value.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
+const sanitizeWireCopy = (value: string) => value
+  .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+  .replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
 
 export default function RecruitingWire({ articles }: { articles: RecruitingWireArticle[] }) {
   const initial = typeof window === "undefined" ? { query: "", topic: "all" as RecruitingWireTopic, page: 0 } : parseRecruitingWireFilters(window.location.search);

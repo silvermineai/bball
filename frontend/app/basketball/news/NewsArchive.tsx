@@ -10,16 +10,14 @@ export type PublisherArticle = {
   headline: string;
   description: string;
   published: string;
-  link: string;
+  link?: string;
   categories: string[];
-  publisher: string;
+  publisher?: string;
   sport?: string;
   division?: "D-I" | "D-II" | "D-III";
 };
 
 export type FeedError = {
-  publisher: string;
-  url: string;
   error: string;
   fallback_articles: number;
 };
@@ -27,7 +25,9 @@ export type FeedError = {
 type DivisionFilter = "all" | "D-I" | "D-II" | "D-III";
 
 const PAGE_SIZE = 12;
-const publicText = (value: string) => value.replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
+const publicText = (value: string) => value
+  .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+  .replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
 
 function parseInitial() {
   if (typeof window === "undefined") return { query: "", division: "all" as DivisionFilter, page: 0 };
@@ -43,15 +43,13 @@ function parseInitial() {
 export default function NewsArchive({
   generatedAt,
   articles,
-  feeds,
-  termsUrl,
-  feedErrors = [],
+  groupCount = 0,
+  feedErrorCount = 0,
 }: {
   generatedAt?: string;
   articles: PublisherArticle[];
-  feeds: Array<{ publisher: string; url: string; division?: string }>;
-  termsUrl?: string;
-  feedErrors?: FeedError[];
+  groupCount?: number;
+  feedErrorCount?: number;
 }) {
   const initial = parseInitial();
   const [query, setQuery] = useState(initial.query);
@@ -121,7 +119,7 @@ export default function NewsArchive({
     <section className="section">
       <div className="strip">
         <div><strong>{liveArticles.length.toLocaleString()}</strong><span>Retained headlines</span></div>
-        <div><strong>{feeds.length.toLocaleString()}</strong><span>Archive groups</span></div>
+        <div><strong>{groupCount.toLocaleString()}</strong><span>Archive groups</span></div>
         <div><strong>{filtered.length.toLocaleString()}</strong><span>Matches in view</span></div>
         <div><strong>{generatedAt ? date(generatedAt) : "—"}</strong><span>Release clock</span></div>
       </div>
@@ -131,9 +129,7 @@ export default function NewsArchive({
           : archiveStatus === "fallback"
             ? "Cloudflare D1 archive unavailable; showing the bundled release."
             : "Checking the Cloudflare D1 archive…"}
-        {feedErrors.length > 0 && (
-          <> {feedErrors.map((error) => `One feed unavailable; retained ${error.fallback_articles.toLocaleString()} prior headline${error.fallback_articles === 1 ? "" : "s"}`).join(" · ")}.</>
-        )}
+        {feedErrorCount > 0 && <> {feedErrorCount} archive group{feedErrorCount === 1 ? "" : "s"} unavailable; prior headlines remain retained.</>}
       </p>
       <div className="toolbar">
         <label className="control"><span>SEARCH THE ARCHIVE</span><input type="search" maxLength={120} value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
