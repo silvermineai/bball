@@ -1,4 +1,5 @@
 import re
+import socket
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -33,6 +34,24 @@ class LivePublicationCheckTest(unittest.TestCase):
         ) as sleep:
             self.assertEqual(get_json("https://example.test", "/data"), {"ok": True})
         sleep.assert_called_once_with(0.0)
+
+    def test_get_json_retries_socket_read_timeouts(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            @staticmethod
+            def read():
+                return b'{"ok": true}'
+
+        with patch("scripts.check_live_publication.urlopen", side_effect=[socket.timeout("slow read"), Response()]), patch(
+            "scripts.check_live_publication.time.sleep"
+        ) as sleep:
+            self.assertEqual(get_json("https://example.test", "/data"), {"ok": True})
+        sleep.assert_called_once_with(1.0)
 
     @staticmethod
     def response_for(responses):

@@ -34,7 +34,11 @@ def get_json(base_url: str, path: str, attempts: int = 4) -> dict:
             if not isinstance(payload, dict):
                 raise ValueError(f"{path} did not return a JSON object")
             return payload
-        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        # ``urllib`` can surface a read timeout as ``socket.timeout`` (an
+        # OSError) rather than the built-in TimeoutError, depending on the
+        # Python runtime. Treat both forms as transient so a slow D1 read is
+        # retried instead of aborting the entire publication audit.
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt + 1 < attempts:
                 delay = float(2**attempt)
