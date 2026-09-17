@@ -373,6 +373,7 @@ export default function StatsDashboard() {
   const recruiting = getRecruiting();
   const impact = getImpact(overview.season);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
+  const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const latestSeason = overview.season - 1;
   const valueLeaders = getValueLeaders(latestSeason);
   const nationalPlayers = getNationalPlayers(latestSeason) as NationalPlayerRow[];
@@ -390,14 +391,14 @@ export default function StatsDashboard() {
         </div>
         <div className="dashboard-model-card">
           <span className="model-tag primary">SILVERMINE MODEL</span>
-          <strong>{overview.coverage.forecast_games.toLocaleString()}</strong>
-          <span>primary game forecasts</span>
+          <strong>{forecastRows.toLocaleString()}</strong>
+          <span>upcoming matchup forecasts</span>
           <small>Model edition · {overview.model.version}</small>
-          {overview.coverage.baseline_estimate_games ? <small>{overview.coverage.baseline_estimate_games.toLocaleString()} cold-start rows are labeled in the table.</small> : null}
+          {overview.coverage.forecast_games ? <small>{overview.coverage.forecast_games.toLocaleString()} primary{overview.coverage.baseline_estimate_games ? ` + ${overview.coverage.baseline_estimate_games.toLocaleString()} cold-start` : ""} rows are labeled in the table.</small> : null}
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
-          <div><b>{overview.coverage.upcoming_games ? fmt((forecasts.length / overview.coverage.upcoming_games) * 100) : "—"}%</b><span>upcoming slate covered</span></div>
+          <div><b>{overview.coverage.upcoming_games ? fmt((forecastRows / overview.coverage.upcoming_games) * 100) : "—"}%</b><span>upcoming slate covered</span></div>
           {overview.model.evaluation.baseline_margin_mae != null && (
             <small>
               {fmt(Math.max(0, overview.model.evaluation.baseline_margin_mae - overview.model.evaluation.margin_mae))} pts lower margin error than the baseline on holdout games.
