@@ -603,8 +603,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
   ]), COVERAGE_DB_TIMEOUT_MS);
   let locationValidation: CoverageCount | null = null;
   let possessionValidation: CoverageCount | null = null;
+  let auditStatus: "not_requested" | "complete" | "partial" = audit ? "complete" : "not_requested";
   if (audit) {
-    locationValidation = await withTimeout(db.prepare(`SELECT count(*) AS total,
+    try {
+      locationValidation = await withTimeout(db.prepare(`SELECT count(*) AS total,
       sum(CASE WHEN neutral=1 THEN 1 ELSE 0 END) AS neutral,
       sum(CASE WHEN venue IS NULL OR venue='' THEN 1 ELSE 0 END) AS missing_venue,
       sum(CASE WHEN time_tbd=1 THEN 1 ELSE 0 END) AS unconfirmed_start,
@@ -618,7 +620,12 @@ app.get("/api/basketball/research/coverage", async (c) => {
       COALESCE((SELECT sum(COALESCE(CAST(json_extract(receipt_json, '$.integrity.duplicate_source_contest_ids') AS INTEGER), 0))
         FROM bb_sources WHERE dataset='schedule'), 0) AS duplicate_contest_ids
       FROM bb_games`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
-    possessionValidation = await withTimeout(db.prepare(`WITH raw AS (
+    } catch {
+      // A slow validation scan must not hide the inexpensive coverage counts.
+      auditStatus = "partial";
+    }
+    try {
+      possessionValidation = await withTimeout(db.prepare(`WITH raw AS (
       SELECT g.id,g.periods,g.home_score,g.away_score,
         h.game_id AS h_box_game_id,
         a.game_id AS a_box_game_id,
@@ -693,13 +700,23 @@ app.get("/api/basketball/research/coverage", async (c) => {
       sum(CASE WHEN h_fga IS NOT NULL AND h_fta IS NOT NULL AND h_orb IS NOT NULL AND h_tov IS NOT NULL
                     AND a_fga IS NOT NULL AND a_fta IS NOT NULL AND a_orb IS NOT NULL AND a_tov IS NOT NULL THEN 1 ELSE 0 END) AS paired_box_games
       FROM scored`).first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
+    } catch {
+      // Keep the location checks and row counts usable when the possession
+      // join exceeds the bounded audit window.
+      auditStatus = "partial";
+    }
   }
   const countByDataset = new Map(
     tableNames.map((dataset, index) => [dataset, counts[index].results[0].rows]),
   );
-  const gameCount = dedicatedGameDb && audit
-    ? await withTimeout(gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS)
-    : null;
+  let gameCount: CoverageCount | null = null;
+  if (dedicatedGameDb && audit) {
+    try {
+      gameCount = await withTimeout(gameDb.prepare("SELECT count(*) AS rows FROM bb_ncaa_player_box").first<CoverageCount>(), COVERAGE_DB_TIMEOUT_MS);
+    } catch {
+      auditStatus = "partial";
+    }
+  }
   if (dedicatedGameDb) countByDataset.set("ncaa_player_box", gameCount?.rows ?? 0);
   const receipts = await withTimeout(db.prepare(
     `SELECT dataset, count(*) AS source_count,
@@ -717,6 +734,7 @@ app.get("/api/basketball/research/coverage", async (c) => {
       dataset,
       rows: countByDataset.get(dataset) ?? 0,
     })),
+    audit_status: auditStatus,
     source_receipts: receipts.results,
     location_validation: locationValidation
       ? Object.fromEntries(Object.entries(locationValidation).map(([key, value]) => [key, Number(value || 0)]))
