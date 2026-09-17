@@ -3,6 +3,7 @@ import Markets from "./Markets";
 import FootballMarketBenchmark from "./FootballMarketBenchmark";
 import MarketImportPreflight from "./MarketImportPreflight";
 import { getBasketball } from "../../_lib/basketball-data";
+import { getLedger } from "../../_lib/research-data";
 
 export const metadata = {
   title: "Historical market archive",
@@ -12,6 +13,18 @@ export const metadata = {
 
 export default function Page() {
   const basketball = getBasketball();
+  const ledger = getLedger();
+  const marketCoverage = (["basketball", "football"] as const).map((sport) => {
+    const summary = ledger.sports[sport];
+    const games = ledger.games.filter((game) => game.sport === sport);
+    return {
+      sport,
+      registrations: summary.games,
+      scheduled: summary.status_counts.scheduled || 0,
+      quotedGames: summary.games_with_comparisons,
+      quoteRows: games.reduce((total, game) => total + game.comparisons.length, 0),
+    };
+  });
   return (
     <>
       <div className="dateline eyebrow">
@@ -48,6 +61,29 @@ export default function Page() {
             Prospective scorecard kept clean.
           </span>
         </div>
+      </section>
+      <section className="paper-panel" aria-labelledby="market-coverage" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div>
+            <div className="eyebrow">Retained evidence / current publication</div>
+            <h2 id="market-coverage">Market coverage at a glance</h2>
+          </div>
+          <span className="note">Exact game and timing checks apply</span>
+        </div>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Sport</th><th className="numeric">Registered games</th><th className="numeric">Scheduled</th><th className="numeric">Games with quotes</th><th className="numeric">Quote rows</th><th>Status</th></tr></thead>
+            <tbody>{marketCoverage.map((row) => <tr key={row.sport}>
+              <th scope="row">{row.sport === "basketball" ? "Men’s basketball" : "College football"}</th>
+              <td className="numeric">{row.registrations.toLocaleString()}</td>
+              <td className="numeric">{row.scheduled.toLocaleString()}</td>
+              <td className="numeric">{row.quotedGames.toLocaleString()}</td>
+              <td className="numeric">{row.quoteRows.toLocaleString()}</td>
+              <td>{row.quotedGames ? "Quote evidence available" : "Awaiting a validated quote"}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="note" style={{ marginTop: 12 }}>Counts describe retained research evidence. A missing quote stays missing; it is never inferred from a model estimate or a team name alone. Open the archive below for capture clocks, filters and authorized import.</p>
       </section>
       <Suspense fallback={<p role="status">Loading market archive…</p>}>
         <Markets />
