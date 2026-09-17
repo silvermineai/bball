@@ -140,7 +140,7 @@ export default function FilmRoom({ videos, teams }: Props) {
       </section>
 
       <p className="note section film-source-note">
-        Source: public videos from official conference channels. Silvermine matches a clip to a program only when the source metadata contains that program’s identifier; an unlinked clip remains searchable but is not treated as team evidence.
+        Data note: Silvermine matches a clip to a program only when its metadata contains that program&apos;s identifier; an unlinked clip remains searchable but is not treated as team evidence.
       </p>
     </>
   );

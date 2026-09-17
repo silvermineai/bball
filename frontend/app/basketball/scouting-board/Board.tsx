@@ -693,8 +693,8 @@ export default function Board({ catalog }: { catalog: CareerCatalog }) {
         <details className="board-source">
           <summary>Source coverage and edition</summary>
           <p>
-            the retained archive bulk releases; publisher-stated CC BY 4.0.
-            Silvermine normalizes box scores, aggregates program-season
+            Retained box-score editions. Silvermine normalizes observations,
+            aggregates program-season
             production and calculates these scouting priorities.
           </p>
           {ready && (

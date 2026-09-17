@@ -301,8 +301,8 @@ export default function FootballMatchupEvidence({
       <details className="football-definitions football-provenance">
         <summary>Source receipts and linked data editions</summary>
         <p>
-          Retained editions with CC BY 4.0 coverage. Silvermine aggregates the
-          team rates and selects historical player leaders.
+          Retained editions. Silvermine aggregates the team rates and selects
+          historical player leaders.
           Neither collection time nor this brief’s publication is backdated to
           the games described.
         </p>

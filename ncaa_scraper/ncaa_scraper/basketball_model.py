@@ -216,7 +216,7 @@ def raw_predict(model, game):
     n = len(model["teams"])
     h, a = model["teams"].index(game["home_id"]), model["teams"].index(game["away_id"])
     b, tempo = model["efficiency"], model["tempo"]
-    venue = 0 if game["neutral"] else b[1] / 2
+    venue = home_venue_exposure(game) * b[1]
     pace = tempo[0] + tempo[h + 1] + tempo[a + 1]
     home = (b[0] + b[h + 2] + b[a + n + 2] + venue) * pace / 100
     away = (b[0] + b[a + 2] + b[h + n + 2] - venue) * pace / 100
@@ -255,7 +255,7 @@ def fallback_raw_predict(model, game):
 
     hoff, hdef, htempo = effects(game["home_id"])
     aoff, adef, atempo = effects(game["away_id"])
-    venue = 0 if game["neutral"] else b[1] / 2
+    venue = home_venue_exposure(game) * b[1]
     pace = tempo[0] + htempo + atempo
     home = (b[0] + hoff + adef + venue) * pace / 100
     away = (b[0] + aoff + hdef - venue) * pace / 100

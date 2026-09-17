@@ -105,7 +105,7 @@ export default function Page() {
         <div className="section-heading"><div><div className="eyebrow">The scenes</div><h2>Where the crowds showed up.</h2></div><span className="note">Attendance when supplied</span></div>
         <div className="article-grid">{data.biggestCrowds.slice(0, 10).map((game) => <GameCard key={game.id} game={game} badge={`${(game.attendance ?? 0).toLocaleString()} fans`} sub={game.venue} />)}</div>
       </section>
-      <p className="note">Source: retained the retained archive season-review release. Team links open the native scouting dossier; source-game links open the retained game record. Historical results are context, not current roster or eligibility evidence.</p>
+      <p className="note">Data note: this is a retained season-review edition. Team links open the native scouting dossier; game links open the retained game record. Historical results are context, not current roster or eligibility evidence.</p>
     </>
   );
 }

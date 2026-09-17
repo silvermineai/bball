@@ -31,6 +31,7 @@ from ncaa_scraper.basketball_model import (
     forecast,
     game_features,
     home_venue_exposure,
+    raw_predict,
     train,
 )
 
@@ -68,6 +69,16 @@ class BasketballModelTests(unittest.TestCase):
         self.assertEqual(home_venue_exposure({"neutral": True}), 0.0)
         self.assertEqual(home_venue_exposure({"neutral": "false"}), 0.5)
         self.assertEqual(home_venue_exposure({"neutral": "true"}), 0.0)
+
+    def test_prediction_uses_the_same_venue_semantics_as_fit(self):
+        model = {
+            "teams": ["home", "away"],
+            "efficiency": [100.0, 8.0, 4.0, -4.0, 0.0, 0.0],
+            "tempo": [70.0, 0.0, 0.0],
+        }
+        home = raw_predict(model, {"home_id": "home", "away_id": "away", "neutral": "false"})
+        neutral = raw_predict(model, {"home_id": "home", "away_id": "away", "neutral": "true"})
+        self.assertAlmostEqual(home["home_margin"] - neutral["home_margin"], 5.6)
 
     def test_incremental_refresh_reuses_historical_source_releases(self):
         self.assertFalse(source_refresh_enabled(True, True, 2025))

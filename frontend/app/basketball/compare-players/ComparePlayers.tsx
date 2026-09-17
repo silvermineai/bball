@@ -722,10 +722,9 @@ export default function ComparePlayers({
               ))}
             </div>
             <p>
-              Source: the retained archive bulk releases, labeled CC BY 4.0 by the
-              publisher. Silvermine normalizes the observations and calculates
-              the summaries. Current forecasts and prospective model records do
-              not use these comparison selections.
+              Data note: Silvermine normalizes the retained observations and
+              calculates these summaries. Current forecasts and prospective
+              model records do not use comparison selections.
             </p>
           </section>
         </>

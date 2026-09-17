@@ -215,10 +215,9 @@ export default function LegacyRecords() {
             ) : <p className="empty">No source receipt is available for this imported player view.</p>}
           </section>
           <p className="note">
-            Source: the retained archive bulk releases (CC BY 4.0). NBA-style,
-            publisher-computed metrics in the season table retain their source
-            labels; they may use formulas that differ from our displayed college
-            estimates.
+            Data note: publisher-computed metrics in the season table retain
+            their recorded labels; they may use formulas that differ from our
+            displayed college estimates.
           </p>
         </>
       )}

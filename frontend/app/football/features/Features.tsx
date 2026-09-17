@@ -604,8 +604,8 @@ export default function Features({ summary }: { summary: FeatureSummary }) {
             </p>
           ))}
           <p className="note">
-            Publisher-stated CC BY 4.0. Silvermine normalizes the source fields,
-            builds lagged features and fits independent correction models. Raw
+            Silvermine normalizes the retained fields, builds lagged features
+            and fits independent correction models. Raw
             team-game records are also available in the efficiency desk;
             schedule and score-model evidence are retained in the original
             weekly experiment.

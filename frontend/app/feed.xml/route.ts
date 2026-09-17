@@ -70,7 +70,7 @@ export function GET() {
     ...currentPublisherWire().map((article) => item(
       `${article.division ? `${article.division} · ` : ""}${article.headline}`,
       article.link,
-      `${article.description || "Publisher wire headline."} Source: ${article.publisher || "ESPN/NCAA.com"}.`,
+      `${article.description || "Publisher wire headline."} Silvermine reporting desk.`,
       article.published,
     )),
     ...football.upcoming

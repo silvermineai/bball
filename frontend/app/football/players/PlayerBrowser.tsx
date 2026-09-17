@@ -500,8 +500,8 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             </p>
           ))}
           <p className="note">
-            Retained editions with CC BY 4.0 coverage.
-            Silvermine retains raw fields, excludes team placeholders from
+            Retained editions. Silvermine keeps raw fields, excludes team
+            placeholders from
             athlete lists and ranks eligible offensive production. Source IDs
             are not independently verified person-level identities.
           </p>
