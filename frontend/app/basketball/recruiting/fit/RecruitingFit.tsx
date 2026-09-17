@@ -141,7 +141,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
               <div>
                 <div className="eyebrow">Recruiting triage / workload left to verify</div>
                 <h3>Start where the source leaves the most prior minutes unexplained.</h3>
-                <p>Order uses unclassified prior minutes, then total prior minutes. It identifies where to open source records first; it is not a departure estimate, roster grade or eligibility claim.</p>
+                <p>Order uses unclassified prior minutes, then total prior minutes. It identifies which raw records to inspect first; it is not a departure estimate, roster grade or eligibility claim.</p>
               </div>
               <ol>
                 {reviewQueue.map((summary) => <li key={`queue-${summary.role}`}>
