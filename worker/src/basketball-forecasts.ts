@@ -23,6 +23,10 @@ const querySchema = z.object({
 export const basketballForecasts = new Hono<{ Bindings: Bindings }>();
 const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
+// The catalog joins model metadata to every retained edition. Keep ordinary
+// row reads tight, but allow this read-only summary a little more time on a
+// cold D1 edge without turning a transient slow read into a 503.
+const META_DB_TIMEOUT_MS = 12000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -79,7 +83,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
            FROM bb_models
           ORDER BY created_at DESC, id`,
       ),
-    ]), DB_TIMEOUT_MS);
+    ]), META_DB_TIMEOUT_MS);
     const metadataById = new Map(
       modelMeta.results.map((row) => {
         const item = row as Record<string, unknown>;
