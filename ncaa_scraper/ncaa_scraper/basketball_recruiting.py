@@ -52,6 +52,11 @@ def digest(value):
     return hashlib.sha256(compact(value).encode()).hexdigest()
 
 
+def parse_timestamp(value):
+    """Parse the UTC ``Z`` form on Python versions before 3.11 as well."""
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def keyed(rows, field):
     result = {row[field]: row for row in rows}
     if len(result) != len(rows):
@@ -90,7 +95,7 @@ def build(document, box_release, rated_programs):
         ):
             raise ValueError("Source must be an exact school news URL")
         published = date.fromisoformat(source["published_on"])
-        checked = datetime.fromisoformat(source["checked_at"])
+        checked = parse_timestamp(source["checked_at"])
         if (
             checked.tzinfo is None
             or checked > now

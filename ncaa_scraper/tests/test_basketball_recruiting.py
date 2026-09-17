@@ -4,7 +4,7 @@ import sqlite3
 import unittest
 from pathlib import Path
 
-from ncaa_scraper.basketball_recruiting import build, sql_export
+from ncaa_scraper.basketball_recruiting import build, parse_timestamp, sql_export
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,6 +37,10 @@ class RecruitingTests(unittest.TestCase):
                 if p["category"] != "transfer"
             )
         )
+
+    def test_parse_timestamp_accepts_utc_z_on_older_python(self):
+        parsed = parse_timestamp("2026-09-16T06:56:40.313742Z")
+        self.assertEqual(parsed.utcoffset().total_seconds(), 0)
 
     def test_redshirt_and_same_name_prep_do_not_inherit_college_production(self):
         release = build(self.doc, self.box, self.programs)

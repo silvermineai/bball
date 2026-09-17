@@ -25,6 +25,20 @@ def ratio(numerator, denominator):
     return numerator / denominator if denominator > 0 else None
 
 
+def home_venue_exposure(game):
+    """Return the centered home-court exposure used by fitted ratings.
+
+    A non-neutral game gives the listed home team half of the coefficient and
+    the listed away team the opposite half. Neutral games carry no venue
+    exposure. Keeping this in one helper prevents training and prediction from
+    silently disagreeing about the neutral-site flag.
+    """
+    neutral = game.get("neutral")
+    if isinstance(neutral, str):
+        neutral = neutral.strip().casefold() in {"1", "true", "yes", "y"}
+    return 0.0 if bool(neutral) else 0.5
+
+
 def valid_count(value):
     return (
         isinstance(value, (int, float))
@@ -141,7 +155,7 @@ def fit(games, *, teams=None):
     y, pace_y, weights = [], [], []
     for i, g in enumerate(games):
         h, a = index[g["home_id"]], index[g["away_id"]]
-        venue = 0 if g["neutral"] else 0.5
+        venue = home_venue_exposure(g)
         for j, (own, opp, sign, eff) in enumerate(
             [(h, a, 1, g["home_eff"]), (a, h, -1, g["away_eff"])]
         ):

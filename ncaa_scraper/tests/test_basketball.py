@@ -30,6 +30,7 @@ from ncaa_scraper.basketball_model import (
     fit,
     forecast,
     game_features,
+    home_venue_exposure,
     train,
 )
 
@@ -60,6 +61,14 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_home_venue_exposure_matches_neutral_site_semantics(self):
+        self.assertEqual(home_venue_exposure({"neutral": 0}), 0.5)
+        self.assertEqual(home_venue_exposure({"neutral": False}), 0.5)
+        self.assertEqual(home_venue_exposure({"neutral": 1}), 0.0)
+        self.assertEqual(home_venue_exposure({"neutral": True}), 0.0)
+        self.assertEqual(home_venue_exposure({"neutral": "false"}), 0.5)
+        self.assertEqual(home_venue_exposure({"neutral": "true"}), 0.0)
+
     def test_incremental_refresh_reuses_historical_source_releases(self):
         self.assertFalse(source_refresh_enabled(True, True, 2025))
         self.assertTrue(source_refresh_enabled(True, True, 2026))

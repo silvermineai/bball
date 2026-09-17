@@ -14,7 +14,14 @@ from pathlib import Path
 
 import numpy as np
 
-from .basketball_model import fallback_forecast, forecast, game_features, ratio, train
+from .basketball_model import (
+    fallback_forecast,
+    forecast,
+    game_features,
+    home_venue_exposure,
+    ratio,
+    train,
+)
 from .basketball_roster_model import build as build_roster_model
 from .basketball_sources import BASKETBALL_ATTRIBUTION, client
 from .football import number
@@ -1468,7 +1475,7 @@ def adjusted_factor_ratings(model, games, boxes, season):
         weights = []
         for i, (game, home_value, away_value) in enumerate(pairs):
             h, a = index[game["home_id"]], index[game["away_id"]]
-            venue = 0 if game["neutral"] else 0.5
+            venue = home_venue_exposure(game)
             for j, (own, opp, sign, value) in enumerate(
                 [(h, a, 1, home_value), (a, h, -1, away_value)]
             ):
