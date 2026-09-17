@@ -44,6 +44,20 @@ type EventEdition = {
   coverage: { records: number };
 };
 
+type MarketBenchmark = {
+  generated_at: string;
+  season: number;
+  coverage: {
+    evaluation_games: number;
+    market_games: number;
+    pregame_market_games: number;
+  };
+  metrics: {
+    model: { margin_mae: number | null; winner_accuracy: number | null };
+    archived_line: { margin_mae: number | null; winner_accuracy: number | null };
+  };
+};
+
 function getPlayers(season: number) {
   const file = path.join(process.cwd(), "public/data/football", `players-${season - 1}.json`);
   if (!fs.existsSync(file)) return [] as Player[];
@@ -56,6 +70,12 @@ function getEventEditions(season: number) {
   if (!fs.existsSync(file)) return [] as EventEdition[];
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as { editions?: EventEdition[] };
   return (data.editions || []).filter((edition) => edition.season === season);
+}
+
+function getMarketBenchmark() {
+  const file = path.join(process.cwd(), "public/data/football/market-benchmark.json");
+  if (!fs.existsSync(file)) return null as MarketBenchmark | null;
+  return JSON.parse(fs.readFileSync(file, "utf8")) as MarketBenchmark;
 }
 
 function RatingsTable({ ratings }: { ratings: Overview["ratings"] }) {
@@ -130,6 +150,7 @@ export default function FootballDashboard() {
   const forecasts = overview.upcoming.filter((game) => game.prediction);
   const completedPlayerSeason = overview.season - 1;
   const eventEditions = getEventEditions(overview.season);
+  const marketBenchmark = getMarketBenchmark();
   return <div className="stats-dashboard football-dashboard">
     <div className="dashboard-kicker"><span>COLLEGE FOOTBALL</span><span>{overview.season} / LIVE BOARD</span></div>
     <section className="dashboard-hero">
@@ -180,8 +201,29 @@ export default function FootballDashboard() {
       <p className="dashboard-caption">Current {overview.season} event leaders. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
       <EventLeadersTable editions={eventEditions} />
     </section>
+    {marketBenchmark ? (
+      <section className="dashboard-section" aria-labelledby="football-market-check">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / MARKET CHECK</span><h2 id="football-market-check">Model beside the archived line</h2></div><Link href="/research/scorecard/?sport=football">Full scorecard →</Link></div>
+        <p className="dashboard-caption">A retrospective {marketBenchmark.season} holdout comparison makes the model’s margin and winner accuracy easy to audit. The archived line is reference evidence; only timestamped pregame captures enter prospective market evaluation.</p>
+        <div className="dashboard-strip">
+          <div><strong>{marketBenchmark.coverage.market_games.toLocaleString()}</strong><span>Games with archived lines</span></div>
+          <div><strong>{marketBenchmark.coverage.pregame_market_games.toLocaleString()}</strong><span>Verified pregame captures</span></div>
+          <div><strong>{fmt(marketBenchmark.metrics.model.margin_mae)}</strong><span>Model margin MAE</span></div>
+          <div><strong>{fmt(marketBenchmark.metrics.archived_line.margin_mae)}</strong><span>Archived-line margin MAE</span></div>
+        </div>
+        <div className="dashboard-table-wrap">
+          <table className="data-table dashboard-table">
+            <thead><tr><th>Reference</th><th className="numeric">Winner accuracy</th><th className="numeric">Margin MAE</th><th>Use</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Silvermine model</th><td className="numeric">{marketBenchmark.metrics.model.winner_accuracy == null ? "—" : `${fmt(marketBenchmark.metrics.model.winner_accuracy * 100)}%`}</td><td className="numeric">{fmt(marketBenchmark.metrics.model.margin_mae)} pts</td><td>Prospective forecast candidate</td></tr>
+              <tr><th scope="row">Archived line</th><td className="numeric">{marketBenchmark.metrics.archived_line.winner_accuracy == null ? "—" : `${fmt(marketBenchmark.metrics.archived_line.winner_accuracy * 100)}%`}</td><td className="numeric">{fmt(marketBenchmark.metrics.archived_line.margin_mae)} pts</td><td>Retrospective reference only</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ) : null}
     <section className="dashboard-section dashboard-links" aria-labelledby="football-drilldowns">
-      <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="football-drilldowns">More numbers</h2></div></div>
+      <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="football-drilldowns">More numbers</h2></div></div>
       <div className="dashboard-link-grid"><Link href="/football/events/"><strong>Defense &amp; specialists</strong><span>Sacks, takeaways, kicking, punting and return records</span><b>→</b></Link><Link href="/football/efficiency/"><strong>Efficiency</strong><span>Team rates, success and opponent production</span><b>→</b></Link><Link href="/football/recruiting/"><strong>Recruiting</strong><span>Classes, roster movement and returning production</span><b>→</b></Link><Link href="/football/evaluation/"><strong>Model record</strong><span>Holdout accuracy, calibration and forecast history</span><b>→</b></Link></div>
     </section>
     <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {overview.coverage.box_rows.toLocaleString()} player box-score records in the current football edition.</p>
