@@ -448,7 +448,7 @@ export default function StatsDashboard() {
         <div><strong>{overview.coverage.upcoming_games.toLocaleString()}</strong><span>Upcoming games</span></div>
         <div><strong>{archivedPlayerRows.toLocaleString()}</strong><span>Archived player game rows</span></div>
       </div>
-      <LiveBasketballForecastStatus />
+      <LiveBasketballForecastStatus publishedModelId={overview.model.id} publishedEdition={overview.generated_at} />
       <LiveBasketballMarketStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>

@@ -27,7 +27,23 @@ export function formatForecastCoverage(modelRows: number | null | undefined, upc
   return `${(modelRows ?? 0).toLocaleString()} model rows for ${(upcomingRows ?? 0).toLocaleString()} upcoming games`;
 }
 
-export default function LiveBasketballForecastStatus() {
+export function forecastEditionNotice(
+  liveModelId: string | null | undefined,
+  publishedModelId: string | null | undefined,
+  publishedEdition: string | null | undefined,
+) {
+  if (!liveModelId || !publishedModelId || liveModelId === publishedModelId) return "";
+  const edition = publishedEdition ? ` from ${date(publishedEdition)}` : "";
+  return `Live rows use a newer registered model edition; this page's bundled context is${edition}.`;
+}
+
+export default function LiveBasketballForecastStatus({
+  publishedModelId,
+  publishedEdition,
+}: {
+  publishedModelId?: string;
+  publishedEdition?: string;
+} = {}) {
   const [model, setModel] = useState<ForecastModel | null>(null);
   const [upcomingTotal, setUpcomingTotal] = useState<number | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
@@ -60,6 +76,7 @@ export default function LiveBasketballForecastStatus() {
     : "0 rows";
   const coverage = formatForecastCoverage(model?.forecasts, upcomingTotal);
   const coverageSummary = coverage ? ` · ${coverage}` : "";
+  const editionNotice = forecastEditionNotice(model?.model_id, publishedModelId, publishedEdition);
 
   return (
     <p className="note" role="status">
@@ -67,6 +84,7 @@ export default function LiveBasketballForecastStatus() {
         ? `Live D1 forecast index: ${rowSummary}${coverageSummary} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
             (model.evaluation_winner_accuracy * 100).toFixed(1)
           }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${model.evaluation_baseline_margin_mae != null ? ` / ${(model.evaluation_baseline_margin_mae - model.evaluation_margin_mae).toFixed(1)} points better than baseline` : ""}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
+        + (editionNotice ? ` ${editionNotice}` : "")
         : status === "fallback"
           ? <>Live forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live forecast index…"}

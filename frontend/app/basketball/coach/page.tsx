@@ -87,7 +87,7 @@ export default function Page() {
       </section>
 
       <section className="section" aria-label="Live publication checks" style={{ paddingTop: 0, paddingBottom: 0 }}>
-        <LiveBasketballForecastStatus />
+        <LiveBasketballForecastStatus publishedModelId={basketball.model.id} publishedEdition={basketball.generated_at} />
         <LiveBasketballRecruitingStatus />
         <LiveBasketballMarketStatus />
       </section>
