@@ -578,6 +578,14 @@ export default function StatsDashboard() {
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
           <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
+          <div className="dashboard-subsection" aria-labelledby="dashboard-roster-production">
+            <div className="dashboard-section-heading">
+              <div><span className="eyebrow">2026–27 ROSTER WATCH</span><h3 id="dashboard-roster-production">Returning player production</h3></div>
+              <Link href="/basketball/roster-board/">Open the full roster board →</Link>
+            </div>
+            <p className="dashboard-caption">Players listed in the 2026–27 roster release, ranked by recorded prior-season production. Status shows whether the exact player ID is returning, changing programs or new to the retained release; it is not a depth-chart projection.</p>
+            <RosterProductionTable rows={rosterLeaders} />
+          </div>
           <div className="dashboard-subsection" aria-labelledby="dashboard-single-stat-leaders">
             <div className="dashboard-section-heading"><div><span className="eyebrow">SINGLE-STAT LEADERS</span><h3 id="dashboard-single-stat-leaders">Who leads each box-score field?</h3></div><Link href="/basketball/leaders/">Open every leaderboard →</Link></div>
             <p className="dashboard-caption">Top five qualified players for each commonly used production field. Select a field on the full leaderboard when you need the complete cohort or a different denominator.</p>
