@@ -41,6 +41,7 @@ type Result = {
   season: number;
   metric: Metric;
   total: number;
+  page_size?: number;
   rows: PlayerRow[];
 };
 
@@ -197,7 +198,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   );
   const downloadAllCsv = async () => {
     if (!result || exporting) return;
-    const totalPages = Math.ceil(result.total / 40);
+    const totalPages = Math.ceil(result.total / (result.page_size || 50));
     if (totalPages > 1001) {
       setExportMessage("This cohort is larger than the bounded export window. Search for a player or team first.");
       return;
