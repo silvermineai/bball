@@ -165,22 +165,40 @@ export default function LiveNationalPlayerTable({
       const rows: RankedPlayer[] = [];
       let total = totalRows;
       let pages = Math.max(1, Math.ceil(total / 40));
+      let expectedPageSize = 40;
       for (let page = 0; page < pages; page += 1) {
         const params = new URLSearchParams({ division: "1", stat: metric, page: String(page) });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`);
         if (!response.ok) throw new Error("The complete national leaderboard could not be loaded.");
         const payload = await response.json() as LiveLeaderResponse;
-        total = Number(payload.total || total);
-        pages = Number(payload.pages || Math.max(1, Math.ceil(total / Number(payload.limit || 40))));
-        rows.push(...normalizeRows(payload.rows || [], metric));
+        const pageTotal = Number(payload.total || 0);
+        const pageSize = Number(payload.limit || 40);
+        const pageCount = Number(payload.pages || Math.max(1, Math.ceil(pageTotal / pageSize)));
+        if (!Number.isInteger(pageTotal) || pageTotal < 0 || pageCount < 1 || pageSize < 1) {
+          throw new Error("The national leaderboard returned invalid pagination metadata.");
+        }
+        if (page === 0) {
+          total = pageTotal;
+          pages = pageCount;
+          expectedPageSize = pageSize;
+          if (pages > 1001) throw new Error("This cohort exceeds the bounded export window. Search for a player or program first.");
+        } else if (pageTotal !== total || pageCount !== pages || pageSize !== expectedPageSize) {
+          throw new Error("The national leaderboard changed during export.");
+        }
+        const pageRows = normalizeRows(payload.rows || [], metric);
+        if (pageRows.length > pageSize || (page < pages - 1 && pageRows.length === 0)) {
+          throw new Error("The national leaderboard returned an incomplete page.");
+        }
+        rows.push(...pageRows);
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${total.toLocaleString()} rows…`);
       }
+      if (rows.length !== total) throw new Error("The national leaderboard returned an incomplete export.");
       downloadCsv(`national-player-leaders-${season}-${metric}-all.csv`, toCsv(
         nationalLeaderCsvHeaders,
-        nationalLeaderCsvRows(rows.slice(0, total), metric),
+        nationalLeaderCsvRows(rows, metric),
       ));
-      setExportMessage(`Downloaded ${Math.min(rows.length, total).toLocaleString()} leader rows.`);
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} leader rows.`);
     } catch (reason) {
       setExportMessage(reason instanceof Error ? reason.message : "The complete national leaderboard could not be loaded.");
     } finally {
