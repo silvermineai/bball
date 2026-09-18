@@ -178,9 +178,14 @@ export default function LiveDashboardForecastTable({
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     return market.spread != null || market.total != null;
   }).length;
+  const orderedSignalGames = sortForecastBoard(signalGames, sort);
   const downloadVisibleCsv = () => downloadCsv(
     "basketball-forecast-board.csv",
     toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios, ratings)),
+  );
+  const downloadAllCsv = () => downloadCsv(
+    "basketball-forecast-board-filtered.csv",
+    toCsv(forecastCsvHeaders, forecastCsvRows(orderedSignalGames, marketComparisons, rosterScenarios, ratings)),
   );
   return (
     <>
@@ -223,6 +228,7 @@ export default function LiveDashboardForecastTable({
           </select>
         </label>
         <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!rows.length}>Download visible CSV ↓</button>
+        <button className="button secondary" type="button" onClick={downloadAllCsv} disabled={!signalGames.length}>Download full filtered CSV ↓</button>
         <p className="note" role="status">
           Showing {rows.length} of {signalGames.length} forecast rows{query.trim() ? ` matching “${query.trim()}”` : ""} · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
         </p>
