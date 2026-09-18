@@ -216,7 +216,6 @@ export default function BasketballCard({
       )}
       <p className="market-note">
         {g.venue || "Venue not supplied"}
-        {g.broadcast ? ` · ${g.broadcast}` : ""}
         <br />
         {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
         roster changes are not model features.

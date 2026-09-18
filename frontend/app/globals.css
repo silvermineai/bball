@@ -5227,7 +5227,7 @@ summary {
 .prospect-rank-chart figcaption { margin-top: 12px; color: var(--muted); font-size: 12px; }
 @media (max-width: 600px) { .prospect-rank-chart-bars { gap: 7px; } .prospect-rank-bar { min-width: 50px; } .prospect-rank-bar-track span { width: 28px; } }
 
-/* Sports broadcast refresh: NCAA statbook clarity with ESPN/CBS/DraftKings cues. */
+/* Sports broadcast refresh: compact statbook clarity. */
 :root {
   --paper: #f3f6fa;
   --canvas: #f3f6fa;
