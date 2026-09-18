@@ -22,6 +22,7 @@ class SqlBatchTests(unittest.TestCase):
         )
         self.assertTrue(is_retryable_d1_import_error("Not currently importing anything."))
         self.assertTrue(is_retryable_d1_import_error("A fetch request failed, likely due to a connectivity issue."))
+        self.assertTrue(is_retryable_d1_import_error("Network connection lost."))
         self.assertTrue(is_retryable_d1_import_error("The request timed out."))
         self.assertTrue(is_retryable_d1_import_error('{"D1_RESET_DO":true}'))
         self.assertFalse(is_retryable_d1_import_error("no such table: football_games"))

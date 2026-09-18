@@ -28,6 +28,8 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "fetch request failed",
     "connectivity issue",
     "network connectivity",
+    "network connection lost",
+    "network connection",
     "timed out",
     "timeout",
 )
