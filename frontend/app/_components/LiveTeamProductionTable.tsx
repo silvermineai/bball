@@ -77,12 +77,12 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
     const controller = new AbortController();
     setStatus("checking");
     const stats = teamStatOptions.filter((option) => contextStatKeys.includes(option.key) || option.key === stat);
-    const requests = stats.flatMap(({ category, key }) => [0, 1, 2].map((page) => fetch(`/api/basketball/research/team-stats?season=2026&category=${category}&stat=${key}&page=${page}`, { signal: controller.signal })
+    const requests = stats.map(({ category, key }) => fetch(`/api/basketball/research/team-stats?season=2026&category=${category}&stat=${key}&ids=${encodeURIComponent(teamIdKey)}&limit=500&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live team production unavailable");
         return response.json() as Promise<TeamStatsResponse>;
       })
-      .then((payload) => ({ stat: key, payload }))));
+      .then((payload) => ({ stat: key, payload })));
     Promise.all(requests).then((payloads) => {
         if (controller.signal.aborted) return;
         const divisionOneIds = new Set(teamIdKey.split(",").filter(Boolean));

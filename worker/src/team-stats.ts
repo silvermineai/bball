@@ -64,7 +64,9 @@ const querySchema = z.object({
   category: z.enum(["general", "offensive", "defensive"]).default("offensive"),
   stat: z.string().regex(/^[A-Za-z0-9]{1,80}$/).default("avgPoints"),
   q: z.string().trim().max(120).optional(),
+  ids: z.string().trim().regex(/^[A-Za-z0-9,:_-]{0,12000}$/).optional(),
   page: z.coerce.number().int().min(0).max(250).default(0),
+  limit: z.coerce.number().int().min(1).max(500).default(40),
   direction: z.enum(["desc", "asc"]).default("desc"),
   meta: z.enum(["0", "1"]).default("0"),
 });
@@ -86,7 +88,7 @@ function edgeCache() {
 
 export const teamStats = new Hono<{ Bindings: Bindings }>();
 teamStats.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, category, stat, q, page, direction, meta } = c.req.valid("query");
+  const { season, category, stat, q, ids: idsQuery, page, limit, direction, meta } = c.req.valid("query");
   const db = researchDb(c.env);
   const cache = edgeCache();
   const cacheKey = new Request(c.req.url, { method: "GET" });
@@ -114,8 +116,19 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const valuePath = `$.${field.category}.${field.key}.value`;
   const displayPath = `$.${field.category}.${field.key}.display`;
   const search = q ? `%${q}%` : null;
-  const where = search ? "season=? AND (team_name LIKE ? OR team_id LIKE ?)" : "season=?";
-  const binds: Array<string | number> = search ? [season, search, search] : [season];
+  const ids = idsQuery ? [...new Set(idsQuery.split(",").map((value) => value.trim()).filter(Boolean))] : [];
+  if (ids.length > 500) return c.json({ error: "At most 500 team IDs may be requested." }, 400);
+  const whereParts = ["season=?"];
+  const binds: Array<string | number> = [season];
+  if (search) {
+    whereParts.push("(team_name LIKE ? OR team_id LIKE ?)");
+    binds.push(search, search);
+  }
+  if (ids.length) {
+    whereParts.push(`team_id IN (${ids.map(() => "?").join(",")})`);
+    binds.push(...ids);
+  }
+  const where = whereParts.join(" AND ");
   try {
     const count = await withTimeout(db.prepare(
       `SELECT count(*) AS total, count(json_extract(stats_json, ?)) AS non_null FROM bb_team_season WHERE ${where}`,
@@ -126,10 +139,10 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
             json_extract(stats_json, '${valuePath}') AS value,
             json_extract(stats_json, '${displayPath}') AS display
        FROM bb_team_season WHERE ${where}
-      ORDER BY ${order} LIMIT 40 OFFSET ?`,
-    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+      ORDER BY ${order} LIMIT ? OFFSET ?`,
+    ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
     const response = c.json({
-    season, field, page, page_size: 40,
+    season, field, page, page_size: limit,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
     rows: rows.results.map((row) => ({
       id: row.team_id, team: row.team_name || row.team_id, abbreviation: row.team_abbreviation,

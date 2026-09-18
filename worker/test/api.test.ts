@@ -1223,6 +1223,27 @@ describe("bball api", () => {
     expect(await rowResponse.json()).toEqual({ error: "The team statistics archive is temporarily unavailable." });
   });
 
+  it("supports exact team cohorts with a bounded wide page", async () => {
+    const binds: unknown[][] = [];
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => {
+        binds.push(args);
+        return sql.includes("count(*) AS total")
+          ? { first: async () => ({ total: 2, non_null: 2 }) }
+          : { all: async () => ({ results: [{ team_id: "150", team_name: "Example", team_abbreviation: "EX", value: 82.1, display: "82.1" }] }) };
+      },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints&ids=150,248&limit=500",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ total: 2, page_size: 500, rows: [{ id: "150", value: 82.1 }] });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_id IN (?,?)"))).toBe(true);
+    expect(binds.some((args) => args.includes(500) && args.includes(0))).toBe(true);
+  });
+
   it("rejects invalid team and boutique source parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",
