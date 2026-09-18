@@ -20,19 +20,30 @@ type ForecastModel = {
   evaluation_games?: number | null;
 };
 type ForecastMeta = { models?: ForecastModel[] };
+type ForecastSlice = { total?: number; status?: string; model?: string };
+
+export function formatForecastCoverage(modelRows: number | null | undefined, upcomingRows: number | null | undefined) {
+  if (!Number.isInteger(modelRows) || (modelRows ?? 0) < 0 || !Number.isInteger(upcomingRows) || (upcomingRows ?? 0) < 0) return "";
+  return `${(modelRows ?? 0).toLocaleString()} model rows for ${(upcomingRows ?? 0).toLocaleString()} upcoming games`;
+}
 
 export default function LiveBasketballForecastStatus() {
   const [model, setModel] = useState<ForecastModel | null>(null);
+  const [upcomingTotal, setUpcomingTotal] = useState<number | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
-    fetchJson<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
-      .then((payload) => {
+    Promise.all([
+      fetchJson<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal }),
+      fetchJson<ForecastSlice>("/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&page=0", { signal: controller.signal }),
+    ])
+      .then(([payload, slice]) => {
         if (!controller.signal.aborted) {
           setModel(payload.models?.[0] || null);
+          setUpcomingTotal(Number.isInteger(slice.total) && (slice.total ?? 0) >= 0 ? slice.total ?? 0 : null);
           setStatus(payload.models?.[0] ? "live" : "fallback");
         }
       })
@@ -47,11 +58,13 @@ export default function LiveBasketballForecastStatus() {
       ? `${(model.forecasts || 0).toLocaleString()} rows (${(model.primary_forecasts ?? 0).toLocaleString()} primary${model.cold_start_forecasts ? `, ${model.cold_start_forecasts.toLocaleString()} cold-start` : ""})`
       : `${(model.forecasts || 0).toLocaleString()} rows`
     : "0 rows";
+  const coverage = formatForecastCoverage(model?.forecasts, upcomingTotal);
+  const coverageSummary = coverage ? ` · ${coverage}` : "";
 
   return (
     <p className="note" role="status">
       {status === "live" && model
-        ? `Live D1 forecast index: ${rowSummary} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
+        ? `Live D1 forecast index: ${rowSummary}${coverageSummary} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
             (model.evaluation_winner_accuracy * 100).toFixed(1)
           }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${model.evaluation_baseline_margin_mae != null ? ` / ${(model.evaluation_baseline_margin_mae - model.evaluation_margin_mae).toFixed(1)} points better than baseline` : ""}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
         : status === "fallback"
