@@ -140,7 +140,7 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>#</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">Adj O</th><th className="numeric">Adj D</th><th className="numeric">NET</th><th className="numeric">PACE</th><th className="numeric">SOS</th><th className="numeric">eFG%</th><th className="numeric">TO%</th><th className="numeric">ORB%</th><th className="numeric">FTR</th></tr>
+          <tr><th>#</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">Expected W–L</th><th className="numeric">Luck</th><th className="numeric">Adj O</th><th className="numeric">Adj D</th><th className="numeric">NET</th><th className="numeric">PACE</th><th className="numeric">SOS</th><th className="numeric">eFG%</th><th className="numeric">TO%</th><th className="numeric">ORB%</th><th className="numeric">FTR</th></tr>
         </thead>
         <tbody>
           {teams.slice(0, 24).map((team) => (
@@ -148,6 +148,8 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
               <td className="rank-number">{team.rank}</td>
               <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(team.id)}/`}>{team.name}</Link></th>
               <td className="numeric">{team.wins}–{Math.max(0, team.games - team.wins)}</td>
+              <td className="numeric">{team.expected_wins == null ? "—" : <>{fmt(team.expected_wins)}–{fmt(Math.max(0, team.games - team.expected_wins))}<small>{team.luck_games} games</small></>}</td>
+              <td className="numeric">{team.luck == null ? "—" : <>{team.luck > 0 ? "+" : ""}{fmt(team.luck)} pp<small>actual minus expected</small></>}</td>
               <td className="numeric">{fmt(team.adj_off)}</td>
               <td className="numeric">{fmt(team.adj_def)}</td>
               <td className="numeric"><strong>{fmt(team.adj_net)}</strong></td>
@@ -519,6 +521,8 @@ export default function StatsDashboard() {
     team.games,
     team.wins,
     team.games - team.wins,
+    team.expected_wins,
+    team.luck,
     team.adj_off,
     team.adj_def,
     team.adj_net,
@@ -617,7 +621,7 @@ export default function StatsDashboard() {
       </section>
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><div className="button-row"><DashboardExportButton kind="teams" season={latestSeason} headers={["Season", "Rank", "Team", "Team ID", "Games", "Wins", "Losses", "Adj O", "Adj D", "Adj NET", "PACE", "SOS", "eFG%", "TO%", "ORB%", "FTR", "Adj O eFG%", "Adj D eFG%", "Adj O TO%", "Adj D TO%", "Adj O ORB%", "Adj D ORB%", "Adj O FTR", "Adj D FTR"]} rows={teamExportRows} /><Link href="/basketball/ratings/">Full team table →</Link></div></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><div className="button-row"><DashboardExportButton kind="teams" season={latestSeason} headers={["Season", "Rank", "Team", "Team ID", "Games", "Wins", "Losses", "Expected wins", "Luck (percentage points)", "Adj O", "Adj D", "Adj NET", "PACE", "SOS", "eFG%", "TO%", "ORB%", "FTR", "Adj O eFG%", "Adj D eFG%", "Adj O TO%", "Adj D TO%", "Adj O ORB%", "Adj D ORB%", "Adj O FTR", "Adj D FTR"]} rows={teamExportRows} /><Link href="/basketball/ratings/">Full team table →</Link></div></div>
           <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
           <AdjustedFourFactorsTable teams={overview.ratings} />
