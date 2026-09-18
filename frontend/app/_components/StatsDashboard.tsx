@@ -16,8 +16,6 @@ import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballPlayerArchiveStatus from "./LiveBasketballPlayerArchiveStatus";
 import LiveBasketballRecruitingStatus from "./LiveBasketballRecruitingStatus";
 import LiveBasketballScheduleStatus from "./LiveBasketballScheduleStatus";
-import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import LiveBasketballMovementLeaders from "./LiveBasketballMovementLeaders";
 import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveNationalPlayerTable from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
@@ -40,77 +38,6 @@ function getPlayers(season: number) {
     if (data.players?.length) return data.players;
   }
   return [] as BasketballLeaderPlayer[];
-}
-
-type RecruitingPerson = {
-  key: string;
-  name: string;
-  team_id: string;
-  category: string;
-  previous_program?: string | null;
-  stats?: {
-    games?: number | null;
-    ppg?: number | null;
-    rpg?: number | null;
-    apg?: number | null;
-    ts?: number | null;
-  } | null;
-};
-
-type RecruitingRelease = {
-  season: number;
-  reviewed_at: string;
-  coverage: { programs: number; players: number; events: number; historical_links: number };
-  programs: Array<{ id: string; name: string }>;
-  people: RecruitingPerson[];
-};
-
-function getRecruiting() {
-  const file = path.join(process.cwd(), "public/data/basketball/recruiting.json");
-  if (!fs.existsSync(file)) return null;
-  return JSON.parse(fs.readFileSync(file, "utf8")) as RecruitingRelease;
-}
-
-type ImpactPlayer = {
-  player_id: string;
-  player: string;
-  team: string;
-  orapm: number | null;
-  drapm: number | null;
-  rapm_net: number | null;
-  off_poss: number | null;
-  def_poss: number | null;
-  qualified?: boolean;
-  rank?: number | null;
-};
-
-type ValueLeader = {
-  id: string;
-  name: string;
-  team_id: string;
-  team: string;
-  minutes: number;
-  value: number | null;
-  display?: string;
-  rank?: number | null;
-};
-
-function getImpact(season: number) {
-  const file = path.join(process.cwd(), "public/data/basketball", `impact-${season - 1}.json`);
-  if (!fs.existsSync(file)) return [] as ImpactPlayer[];
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: ImpactPlayer[] };
-  return data.players || [];
-}
-
-function getValueLeaders(season: number) {
-  const file = path.join(process.cwd(), "public/data/basketball/publisher-value-leaders.json");
-  if (!fs.existsSync(file)) return [] as ValueLeader[];
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
-    season?: number;
-    metrics?: Array<{ key: string; leaders?: ValueLeader[] }>;
-  };
-  if (data.season !== season) return [] as ValueLeader[];
-  return data.metrics?.find((metric) => metric.key === "box_bpm")?.leaders || [];
 }
 
 function getNationalPlayers(season: number) {
@@ -347,88 +274,6 @@ function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; s
   );
 }
 
-function RecruitingSnapshot({ release }: { release: RecruitingRelease }) {
-  const programs = new Map(release.programs.map((program) => [program.id, program.name]));
-  const ranked = release.people
-    .filter((person) => person.stats?.ppg != null)
-    .sort((a, b) => (b.stats?.ppg ?? -1) - (a.stats?.ppg ?? -1) || a.name.localeCompare(b.name))
-    .slice(0, 8);
-  return (
-    <>
-      <div className="dashboard-strip dashboard-recruiting-strip">
-        <div><strong>{release.coverage.players.toLocaleString()}</strong><span>Recorded additions</span></div>
-        <div><strong>{release.coverage.programs.toLocaleString()}</strong><span>Destination programs</span></div>
-        <div><strong>{release.coverage.events.toLocaleString()}</strong><span>Dated recruiting events</span></div>
-        <div><strong>{release.coverage.historical_links.toLocaleString()}</strong><span>Prior stat links</span></div>
-      </div>
-      <div className="dashboard-table-wrap">
-        <table className="data-table dashboard-table">
-          <thead><tr><th>Player</th><th>Destination</th><th>Type</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead>
-          <tbody>
-            {ranked.map((person) => (
-              <tr key={person.key}>
-                <th scope="row">{person.name}</th>
-                <td>{programs.get(person.team_id) || "—"}</td>
-                <td>{person.category}</td>
-                <td>{person.previous_program || "—"}</td>
-                <td className="numeric">{person.stats?.games ?? "—"}</td>
-                <td className="numeric"><strong>{fmt(person.stats?.ppg)}</strong></td>
-                <td className="numeric">{fmt(person.stats?.rpg)}</td>
-                <td className="numeric">{fmt(person.stats?.apg)}</td>
-                <td className="numeric">{person.stats?.ts == null ? "—" : `${fmt(person.stats.ts * 100)}%`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-function ImpactTable({ players }: { players: ImpactPlayer[] }) {
-  const rows = players
-    .filter((player) => player.qualified && player.rapm_net != null)
-    .sort((a, b) => (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER))
-    .slice(0, 10);
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table">
-        <thead><tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">ORAPM</th><th className="numeric">DRAPM</th><th className="numeric">NET</th><th className="numeric">Possessions</th></tr></thead>
-        <tbody>{rows.map((player) => (
-          <tr key={`${player.player_id}-${player.team}`}>
-            <td className="rank-number">{player.rank ?? "—"}</td>
-            <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(player.player_id)}&season=2026`}>{player.player}</Link></th>
-            <td>{player.team}</td>
-            <td className="numeric">{fmt(player.orapm, 2)}</td>
-            <td className="numeric">{fmt(player.drapm, 2)}</td>
-            <td className="numeric"><strong>{fmt(player.rapm_net, 2)}</strong></td>
-            <td className="numeric">{fmt(player.off_poss, 0)} / {fmt(player.def_poss, 0)}</td>
-          </tr>
-        ))}</tbody>
-      </table>
-    </div>
-  );
-}
-
-function ValueTable({ players, season }: { players: ValueLeader[]; season: number }) {
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="data-table dashboard-table">
-        <thead><tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">MIN</th><th className="numeric">BOX BPM</th></tr></thead>
-        <tbody>{players.slice(0, 10).map((player) => (
-          <tr key={`${player.id}-${player.team_id}`}>
-            <td className="rank-number">{player.rank ?? "—"}</td>
-            <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link></th>
-            <td>{player.team}</td>
-            <td className="numeric">{fmt(player.minutes, 0)}</td>
-            <td className="numeric"><strong>{fmt(player.value, 2)}</strong></td>
-          </tr>
-        ))}</tbody>
-      </table>
-    </div>
-  );
-}
-
 function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasketball> }) {
   const displayLabel = (dataset: { key: string; label: string }) => {
     const labels: Record<string, string> = {
@@ -505,10 +350,7 @@ export default function StatsDashboard() {
   const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
   const nationalPlayers = getNationalPlayers(overview.season - 1);
-  const recruiting = getRecruiting();
   const latestSeason = overview.season - 1;
-  const impactPlayers = getImpact(latestSeason);
-  const valueLeaders = getValueLeaders(latestSeason);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const archivedPlayerRows = overview.coverage.datasets?.find((dataset) => dataset.key === "ncaa_player_box")?.rows
@@ -648,36 +490,9 @@ export default function StatsDashboard() {
           </div>
         </section>
       </div>
-      {recruiting ? (
-        <section className="dashboard-section" aria-labelledby="dashboard-recruiting">
-          <div className="dashboard-section-heading">
-            <div><span className="eyebrow">04 / RECRUITING BOARD</span><h2 id="dashboard-recruiting">Roster movement with prior production</h2></div>
-            <Link href="/basketball/recruiting/">Open the recruiting desk →</Link>
-          </div>
-          <p className="dashboard-caption">A compact view of the retained 2027 recruiting edition. Prior production is shown only when the player identity and previous program resolve to a recorded season line.</p>
-          <RecruitingSnapshot release={recruiting} />
-        </section>
-      ) : null}
-      <section className="dashboard-section" aria-labelledby="dashboard-impact">
-        <div className="dashboard-section-heading">
-          <div><span className="eyebrow">05 / PLAYER IMPACT</span><h2 id="dashboard-impact">Impact and value leaders</h2></div>
-          <Link href="/basketball/impact/">Full impact table →</Link>
-        </div>
-        <p className="dashboard-caption">Two complementary player measures from the latest completed season: lineup-based impact with possession samples, beside the retained box-score value estimate. They are descriptive research measures, not forecast inputs.</p>
-        <div className="dashboard-two-col">
-          <section className="dashboard-subsection" aria-labelledby="dashboard-rapm">
-            <div className="dashboard-section-heading"><div><span className="eyebrow">LINEUP IMPACT</span><h3 id="dashboard-rapm">Net RAPM leaders</h3></div></div>
-            <ImpactTable players={impactPlayers} />
-          </section>
-          <section className="dashboard-subsection" aria-labelledby="dashboard-bpm">
-            <div className="dashboard-section-heading"><div><span className="eyebrow">BOX VALUE</span><h3 id="dashboard-bpm">Box BPM leaders</h3></div><Link href="/basketball/boutique/?kind=players">Value archive →</Link></div>
-            <ValueTable players={valueLeaders} season={latestSeason} />
-          </section>
-        </div>
-      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
-        <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need impact, recruiting movement, source rows or model details.</p>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need recruiting, impact, source rows or model details.</p>
         <div className="dashboard-link-grid">
           <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
           <Link href="/basketball/impact/"><strong>Player impact</strong><span>RAPM components, possession samples and lineup context</span><b>→</b></Link>
@@ -689,8 +504,6 @@ export default function StatsDashboard() {
           <Link href="/basketball/model/"><strong>Model notebook</strong><span>Training windows, calibration and held-out error</span><b>→</b></Link>
         </div>
       </section>
-      <LiveBasketballMovementLeaders />
-      <LiveBasketballProspectLeaders />
       <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {players.length.toLocaleString()} player rows available in the current release.</p>
     </div>
   );
