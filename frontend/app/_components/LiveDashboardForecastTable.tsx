@@ -16,6 +16,7 @@ import {
 import { summarizeMarketLines } from "../_lib/market-display";
 import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-forecasts";
 import type { Comparison } from "../_lib/research-types";
+import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 const latestTip = (game: BBGame) =>
@@ -67,6 +68,32 @@ export function matchupFactorEdges(game: BBGame) {
   return (Object.keys(factorLabels) as BBFactorKey[])
     .map((key) => ({ key, value: edges[key] }))
     .filter((edge): edge is { key: BBFactorKey; value: number } => edge.value != null && Number.isFinite(edge.value));
+}
+
+export const forecastCsvHeaders = [
+  "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
+  "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
+  "FTR edge", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
+];
+
+export function forecastCsvRows(
+  games: BBGame[],
+  marketComparisons: Record<string, Comparison[]> = {},
+  rosterScenarios: BBRosterScenario[] = [],
+): CsvCell[][] {
+  const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  return games.map((game) => {
+    const prediction = predictionFor(game);
+    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    const factorValues = new Map(matchupFactorEdges(game).map((edge) => [edge.key, edge.value]));
+    return [
+      game.id, game.starts_at, game.away_name, game.home_name, game.prediction ? "primary" : "cold-start",
+      prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
+      prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
+      factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
+      rosterByGame.get(game.id)?.roster_margin, market.spread, market.total, market.spreadGap, market.totalGap,
+    ];
+  });
 }
 
 const startValue = (game: BBGame) => {
@@ -138,6 +165,10 @@ export default function LiveDashboardForecastTable({
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     return market.spread != null || market.total != null;
   }).length;
+  const downloadVisibleCsv = () => downloadCsv(
+    "basketball-forecast-board.csv",
+    toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios)),
+  );
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -178,6 +209,7 @@ export default function LiveDashboardForecastTable({
             <option value={48}>48 games</option>
           </select>
         </label>
+        <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!rows.length}>Download visible CSV ↓</button>
         <p className="note" role="status">
           Showing {rows.length} of {signalGames.length} forecast rows{query.trim() ? ` matching “${query.trim()}”` : ""} · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
         </p>

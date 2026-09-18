@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { forecastCsvRows, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -93,5 +93,18 @@ describe("matchupFactorEdges", () => {
       { key: "orb", value: -0.018 },
       { key: "ftr", value: 0 },
     ]);
+  });
+});
+
+describe("forecastCsvRows", () => {
+  it("exports model and matchup evidence without dropping unavailable fields", () => {
+    const rows = forecastCsvRows([{
+      ...games[0],
+      fallback_prediction: { ...games[0].prediction!, estimate_type: "cold_start" as const },
+      matchup_factors: { season: 2026, factors: {}, edges: { efg: 0.012, tov: -0.031, orb: 0.018, ftr: 0 } },
+    }]);
+    expect(rows[0].slice(0, 8)).toEqual(["late", "2026-11-10T04:00:00Z", "Away late", "Home late", "primary", 70, 75, 0.58]);
+    expect(rows[0].slice(13, 17)).toEqual([0.012, -0.031, 0.018, 0]);
+    expect(rows[0][18]).toBeNull();
   });
 });
