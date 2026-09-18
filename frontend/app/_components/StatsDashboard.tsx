@@ -13,9 +13,6 @@ import { rankPlayerProfiles } from "../_lib/player-index-view";
 import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
-import LiveBasketballPlayerArchiveStatus from "./LiveBasketballPlayerArchiveStatus";
-import LiveBasketballRecruitingStatus from "./LiveBasketballRecruitingStatus";
-import LiveBasketballScheduleStatus from "./LiveBasketballScheduleStatus";
 import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveNationalPlayerTable from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
@@ -414,7 +411,7 @@ export default function StatsDashboard() {
         <div>
           <div className="eyebrow">2026–27 data center</div>
           <h1>College basketball<br /><em>numbers.</em></h1>
-          <p>Upcoming forecasts, team ratings, player leaders and recruiting rows in one live data board.</p>
+          <p>Upcoming forecasts, team ratings and player production in one live data board.</p>
           <div className="hero-actions"><Link className="button" href="/basketball/matchups/">View the slate ↗</Link><Link className="hero-link" href="/basketball/ncaa-rankings/">Player rankings →</Link><Link className="hero-link" href="/basketball/ratings/">Team ratings →</Link></div>
         </div>
         <div className="dashboard-model-card">
@@ -453,9 +450,6 @@ export default function StatsDashboard() {
       </div>
       <LiveBasketballForecastStatus />
       <LiveBasketballMarketStatus />
-      <LiveBasketballScheduleStatus />
-      <LiveBasketballPlayerArchiveStatus />
-      <LiveBasketballRecruitingStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
         <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
@@ -480,7 +474,7 @@ export default function StatsDashboard() {
               <div><span className="eyebrow">2026–27 ROSTER WATCH</span><h3 id="dashboard-roster-production">Returning player production</h3></div>
               <Link href="/basketball/roster-board/">Open the full roster board →</Link>
             </div>
-            <p className="dashboard-caption">Players listed in the 2026–27 roster release, ranked by recorded prior-season production. Status shows whether the exact player ID is returning, changing programs or new to the retained release; it is not a depth-chart projection.</p>
+            <p className="dashboard-caption">Players listed in the 2026–27 roster snapshot, ranked by recorded prior-season production. Status shows whether the exact player ID is returning, changing programs or new to the dataset; it is not a depth-chart projection.</p>
             <RosterProductionTable rows={rosterLeaders} />
           </div>
           <div className="dashboard-subsection" aria-labelledby="dashboard-single-stat-leaders">
@@ -504,7 +498,7 @@ export default function StatsDashboard() {
           <Link href="/basketball/model/"><strong>Model notebook</strong><span>Training windows, calibration and held-out error</span><b>→</b></Link>
         </div>
       </section>
-      <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {players.length.toLocaleString()} player rows available in the current release.</p>
+      <p className="dashboard-updated">Board updated {date(overview.generated_at)} · {players.length.toLocaleString()} player rows available in the current dataset.</p>
     </div>
   );
 }
