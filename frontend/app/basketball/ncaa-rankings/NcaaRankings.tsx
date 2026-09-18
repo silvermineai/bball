@@ -18,7 +18,7 @@ const percentile = (rank: number, total: number) => total <= 1 ? 100 : Math.max(
 // exact source measure the reader asked to study.
 const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "balanced_index";
 const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
-const coachLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
+const statLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
   { key: "all-around", label: "All-around", metric: "balanced_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Eight-component production screen with an audit trail." },
   { key: "impact", label: "Verified impact", metric: "impact_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Exact-ID RAPM plus scoring rate; 500 offensive and defensive possessions." },
   { key: "creator", label: "Lead creator", metric: "apg", minGames: "10", minMinutes: "400", minVolume: "0", description: "Recorded assists per game with a steadier workload." },
@@ -182,18 +182,18 @@ export default function NcaaRankings() {
       <div><strong>{meta?.seasons.length ?? "—"}</strong><span>Archived seasons</span></div>
       <div><strong>IDs</strong><span>Identity namespace</span></div>
     </div>
-    <section className="paper-panel" aria-label="Coach scouting lenses" style={{ marginTop: 24 }}>
+    <section className="paper-panel" aria-label="Player statistic lenses" style={{ marginTop: 24 }}>
       <div className="section-heading" style={{ marginBottom: 12 }}>
-        <div><div className="eyebrow">Coach board / Quick lenses</div><h2>Start with the question.</h2></div>
+        <div><div className="eyebrow">Stat board / Quick filters</div><h2>Start with the metric.</h2></div>
         <span className="note">Every lens keeps the archive ID and cutoff visible.</span>
       </div>
-      <div className="button-row" role="group" aria-label="Coach scouting lenses">
-        {coachLenses.map((lens) => {
+      <div className="button-row" role="group" aria-label="Player statistic filters">
+        {statLenses.map((lens) => {
           const active = metric === lens.metric && minGames === lens.minGames && minMinutes === lens.minMinutes && minVolume === lens.minVolume;
           return <button key={lens.key} type="button" className={`button ${active ? "" : "secondary"}`} aria-pressed={active} onClick={() => { setPage(0); setMetric(lens.metric); setMinGames(lens.minGames); setMinMinutes(lens.minMinutes); setMinVolume(lens.minVolume); }}>{lens.label}</button>;
         })}
       </div>
-      <p className="note" style={{ marginTop: 12 }}>{coachLenses.find((lens) => metric === lens.metric && minGames === lens.minGames && minMinutes === lens.minMinutes && minVolume === lens.minVolume)?.description || "Custom metric and qualification settings. Use the controls below to tune the cohort."}</p>
+      <p className="note" style={{ marginTop: 12 }}>{statLenses.find((lens) => metric === lens.metric && minGames === lens.minGames && minMinutes === lens.minMinutes && minVolume === lens.minVolume)?.description || "Custom metric and qualification settings. Use the controls below to tune the cohort."}</p>
     </section>
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select name="ncaa-ranking-season" value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
@@ -222,9 +222,9 @@ export default function NcaaRankings() {
       {result.rows.length > 0 && (() => {
         const lead = result.rows[0];
         const leadPercentile = percentile(lead.rank, result.total).toFixed(1);
-        return <section className="paper-panel" aria-label="Coach read" style={{ marginBottom: 20 }}>
+        return <section className="paper-panel" aria-label="Stat read" style={{ marginBottom: 20 }}>
           <div className="section-heading" style={{ marginBottom: 8 }}>
-            <div><div className="eyebrow">Coach read / active cohort</div><h3>Start with the first row, then verify the fit.</h3></div>
+            <div><div className="eyebrow">Stat read / active cohort</div><h3>Start with the first row, then verify the sample.</h3></div>
             <span className="note">{labels[result.metric]} · {result.direction === "asc" ? "lowest first" : "highest first"}</span>
           </div>
           <p><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(lead.player_id)}&season=${lead.season}`}><strong>{lead.player_name || lead.player_id}</strong></Link> is first in this ordered {result.total.toLocaleString()}-row cohort at <strong>{fmt(lead.value, ["ts", "efg", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "poss_share", "rim_rate", "transition_share", "unassisted_share"].includes(result.metric) ? 1 : 2)}{["ts", "efg", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "poss_share", "rim_rate", "transition_share", "unassisted_share"].includes(result.metric) ? "%" : ""}</strong> ({leadPercentile}th percentile). The row clears {lead.games} games and {lead.minutes.toLocaleString()} recorded minutes{result.min_volume ? `, plus the ${result.min_volume}-unit rate floor` : ""}. Open the player card for context, or <Link href={`/basketball/ncaa-compare/?ids=${encodeURIComponent(lead.player_id)}&season=${lead.season}`}>add the player to a three-player comparison</Link> before making a roster or matchup decision.</p>
