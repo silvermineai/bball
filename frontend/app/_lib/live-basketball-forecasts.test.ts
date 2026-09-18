@@ -75,9 +75,9 @@ describe("live basketball forecast merge", () => {
       prediction: prediction(1),
     });
     const fetcher = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("one")] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("two")] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("three")] }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("one")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("two")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("three")] }) });
     vi.stubGlobal("fetch", fetcher);
     await expect(loadLiveBasketballForecasts()).resolves.toHaveLength(3);
     expect(fetcher).toHaveBeenCalledTimes(3);
@@ -85,6 +85,52 @@ describe("live basketball forecast merge", () => {
       "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2",
       { signal: undefined },
     );
+    vi.unstubAllGlobals();
+  });
+
+  it("fails closed when a later page changes the cohort metadata", async () => {
+    const row = (id: string): LiveForecastRow => ({
+      game_id: id,
+      season: 2027,
+      starts_at: "2026-11-01T05:00:00Z",
+      home_id: `${id}-home`,
+      away_id: `${id}-away`,
+      home_name: `Home ${id}`,
+      away_name: `Away ${id}`,
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(1),
+    });
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row("one")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("two")] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts()).rejects.toThrow("changed during pagination");
+    vi.unstubAllGlobals();
+  });
+
+  it("fails closed on duplicate game IDs in a complete cohort", async () => {
+    const row: LiveForecastRow = {
+      game_id: "duplicate",
+      season: 2027,
+      starts_at: "2026-11-01T05:00:00Z",
+      home_id: "home",
+      away_id: "away",
+      home_name: "Home",
+      away_name: "Away",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(1),
+    };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts()).rejects.toThrow("duplicate games");
     vi.unstubAllGlobals();
   });
 

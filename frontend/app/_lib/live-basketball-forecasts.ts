@@ -82,22 +82,44 @@ export async function loadLiveBasketballForecasts(
   );
   if (!firstResponse.ok) throw new Error("Live matchup forecasts unavailable.");
   const first = await firstResponse.json() as LiveForecastPage;
-  const pageCount = Math.ceil(first.total / Math.max(first.page_size, 1));
+  const pageTotal = Number(first.total);
+  const pageSize = Number(first.page_size);
+  if (!Number.isInteger(pageTotal) || pageTotal < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+    throw new Error("Live matchup forecasts returned invalid pagination metadata.");
+  }
+  if (!Array.isArray(first.rows) || first.rows.length > pageSize || (pageTotal > 0 && first.rows.length === 0)) {
+    throw new Error("Live matchup forecasts returned an incomplete page.");
+  }
+  const pageCount = Math.max(1, Math.ceil(pageTotal / pageSize));
   const pagesToFetch = options.maxPages == null
     ? pageCount
     : Math.min(pageCount, Math.max(1, Math.floor(options.maxPages)));
-  const additional = await Promise.all(
-    Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
-      fetchWithTransientRetry(
-        `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}${modelQuery}${searchQuery}`,
-        signal,
-      ).then((response) => {
-        if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
-        return response.json() as Promise<LiveForecastPage>;
-      }),
-    ),
-  );
-  return [first, ...additional].flatMap((page) => page.rows);
+  if (pagesToFetch > 1001) throw new Error("The live forecast cohort exceeds the bounded page window.");
+  const pages = [first];
+  for (let page = 1; page < pagesToFetch; page += 1) {
+    const response = await fetchWithTransientRetry(
+      `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${page}${modelQuery}${searchQuery}`,
+      signal,
+    );
+    if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
+    const payload = await response.json() as LiveForecastPage;
+    const payloadTotal = Number(payload.total);
+    const payloadSize = Number(payload.page_size);
+    if (payloadTotal !== pageTotal || payloadSize !== pageSize || !Array.isArray(payload.rows) || payload.rows.length > pageSize) {
+      throw new Error("Live matchup forecasts changed during pagination.");
+    }
+    if (page < pagesToFetch - 1 && payload.rows.length === 0) {
+      throw new Error("Live matchup forecasts returned an incomplete page.");
+    }
+    pages.push(payload);
+  }
+  const rows = pages.flatMap((page) => page.rows);
+  if (pagesToFetch === pageCount && rows.length !== pageTotal) {
+    throw new Error("Live matchup forecasts returned an incomplete cohort.");
+  }
+  const ids = new Set(rows.map((row) => row.game_id));
+  if (ids.size !== rows.length) throw new Error("Live matchup forecasts returned duplicate games.");
+  return rows;
 }
 
 export async function loadLiveBasketballMarketComparisons(signal?: AbortSignal) {
