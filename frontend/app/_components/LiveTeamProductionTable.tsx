@@ -70,6 +70,7 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
   const [data, setData] = useState<TeamProductionRow[] | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const [stat, setStat] = useState<TeamStatKey>("avgPoints");
+  const [rowLimit, setRowLimit] = useState<8 | 16 | 24>(8);
   const teamIdKey = teamIds.join(",");
   const activeStat = teamStatOptions.find((option) => option.key === stat) || teamStatOptions[0];
 
@@ -129,13 +130,14 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
       <p className="dashboard-caption">Current Division I team-season box-score production from the live archive. Choose the field to reorder the table; the surrounding columns remain attached for context.</p>
       <div className="toolbar" style={{ marginBottom: 16 }}>
         <label className="control"><span>RANK BY</span><select value={stat} onChange={(event) => setStat(event.target.value as TeamStatKey)}>{teamStatOptions.map((option) => <option key={option.key} value={option.key}>{option.label} · {option.description}</option>)}</select></label>
-        <p className="note" role="status">{status === "checking" ? "Loading live team rows…" : status === "ready" && data ? `Showing the top ${Math.min(8, data.length)} Division I teams by ${activeStat.label.toLowerCase()}.` : "Live team rows are temporarily unavailable."}</p>
+        <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 8 | 16 | 24)}><option value={8}>8 teams</option><option value={16}>16 teams</option><option value={24}>24 teams</option></select></label>
+        <p className="note" role="status">{status === "checking" ? "Loading live team rows…" : status === "ready" && data ? `Showing the top ${Math.min(rowLimit, data.length)} of ${data.length.toLocaleString()} Division I teams by ${activeStat.label.toLowerCase()}.` : "Live team rows are temporarily unavailable."}</p>
       </div>
       {status === "checking" ? <p className="empty" role="status">Loading current team production…</p> : status === "unavailable" || !data ? <p className="empty" role="status">Live team production is temporarily unavailable. <Link href="/basketball/team-stats/">Open the team stat browser →</Link></p> : (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
             <thead><tr><th>{activeStat.label} rank</th><th>Program</th><th>Abbr.</th><th className="numeric">{shortTeamStatLabel(activeStat)}</th>{contextColumns.map((column) => <th className="numeric" key={column.key}>{column.label}</th>)}</tr></thead>
-            <tbody>{data.slice(0, 8).map((row, index) => (
+            <tbody>{data.slice(0, rowLimit).map((row, index) => (
               <tr key={row.id}>
                 <td className="rank-number">{index + 1}</td>
                 <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(row.id)}/`}>{row.team}</Link></th>
