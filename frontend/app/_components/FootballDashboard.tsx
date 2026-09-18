@@ -185,6 +185,19 @@ export default function FootballDashboard() {
       ] as (string | number | null)[]];
     }),
   );
+  const eventExportRows = eventEditions.flatMap((edition) =>
+    Object.entries(edition.leaders).flatMap(([metric, leaders]) => leaders.map((leader) => [
+      edition.season,
+      edition.dataset,
+      metric,
+      leader.player_name,
+      leader.team,
+      leader.division,
+      leader.records,
+      leader.games,
+      leader.value,
+    ] as (string | number | null)[])),
+  );
   return <div className="stats-dashboard football-dashboard">
     <div className="dashboard-kicker"><span>COLLEGE FOOTBALL</span><span>{overview.season} / LIVE BOARD</span></div>
     <section className="dashboard-hero">
@@ -231,7 +244,7 @@ export default function FootballDashboard() {
       </section>
     </div>
     <section className="dashboard-section" aria-labelledby="football-events">
-      <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><Link href="/football/events/">Full event notebook →</Link></div>
+      <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><div className="button-row"><DashboardExportButton sport="football" kind="events" season={overview.season} headers={["Season", "Dataset", "Stat", "Player", "Team", "Division", "Records", "Games", "Value"]} rows={eventExportRows} /><Link href="/football/events/">Full event notebook →</Link></div></div>
       <p className="dashboard-caption">Six current {overview.season} leaders for each retained defensive and specialist event. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
       <EventLeadersTable editions={eventEditions} />
     </section>

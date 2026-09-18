@@ -3,7 +3,7 @@
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 type Props = {
-  kind: "teams" | "players";
+  kind: "teams" | "players" | "events";
   season: number;
   headers: string[];
   rows: CsvCell[][];
@@ -16,10 +16,16 @@ type Props = {
  * field behind that table.
  */
 export default function DashboardExportButton({ kind, season, headers, rows, sport = "basketball" }: Props) {
-  const label = kind === "teams" ? "Download team CSV ↓" : "Download player CSV ↓";
+  const label = kind === "teams"
+    ? "Download team CSV ↓"
+    : kind === "events"
+      ? "Download event CSV ↓"
+      : "Download player CSV ↓";
   const filename = kind === "teams"
     ? `${sport}-team-ratings-${season}.csv`
-    : `${sport}-player-stats-${season}.csv`;
+    : kind === "events"
+      ? `${sport}-event-leaders-${season}.csv`
+      : `${sport}-player-stats-${season}.csv`;
 
   return (
     <button
