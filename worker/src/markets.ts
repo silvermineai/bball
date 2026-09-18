@@ -12,6 +12,7 @@ const querySchema = z.object({
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
+  publication_check: z.string().trim().max(80).optional(),
 });
 
 export const markets = new Hono<{ Bindings: Bindings }>();
@@ -211,6 +212,9 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       const ledgerReceipts = (ledger?.[2]?.results[0] || {}) as { receipts?: number; latest_captured_at?: string | null };
       const latestCapture = parseResearchCapture(ledger?.[3]?.results[0]);
       const receipts = legacy?.[2]?.results || [];
+      const capabilities = providerCapabilities.filter((item) => item.sports.includes(sport));
+      const publicCapabilities = capabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability);
+      const publicReceipts = parseArchiveReceipts(receipts).map(({ url: _url, attribution: _attribution, ...receipt }) => receipt);
       const response = c.json({
         sport,
         seasons,
@@ -218,9 +222,9 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         pregame: Number(legacyArchive.pregame || 0) + Number(ledgerArchive.total || 0),
         research_receipts: Number(ledgerReceipts.receipts || 0),
         research_latest_capture_at: ledgerReceipts.latest_captured_at || null,
-        ...(latestCapture ? { research_capture: latestCapture } : {}),
-        provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
-        archive_receipts: parseArchiveReceipts(receipts),
+        ...(latestCapture ? { research_capture: (({ provider: _provider, ...capture }) => capture)(latestCapture) } : {}),
+        provider_capabilities: publicCapabilities,
+        archive_receipts: publicReceipts,
         ...(legacyFailed || ledgerFailed
           ? { source: "partial", unavailable_sources: [legacyFailed ? "legacy" : null, ledgerFailed ? "research" : null].filter((value): value is string => value !== null) }
           : {}),
@@ -236,7 +240,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         pregame: 0,
         research_receipts: 0,
         research_latest_capture_at: null,
-        provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)),
+        provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)).map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability),
         source: "unavailable",
         unavailable_reason: "The market archive warehouse did not respond within the read window.",
       }, 200, { "Cache-Control": "no-store" });
@@ -322,7 +326,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       page,
       page_size: 40,
       total: count?.total ?? 0,
-      rows: rows.results,
+      rows: rows.results.map((row) => ({ ...row, source: null, bookmaker: null, provider: null })),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

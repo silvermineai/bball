@@ -66,14 +66,17 @@ recruitingIntake.get("/", async (c) => {
          GROUP BY provider, kind ORDER BY latest_captured_at DESC, provider, kind`,
       ).bind(season).all<{ provider: string; kind: string; rows: number; latest_captured_at: string | null }>(),
     ]), DB_TIMEOUT_MS);
+    const publicProviders = providers.results.map((provider) => ({ ...provider, provider: "Authorized feed" }));
+    const publicProviderFeeds = providerFeeds.results.map((feed) => ({ ...feed, provider: "Authorized feed" }));
+    const publicCapabilities = providerCapabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability);
     const response = c.json({
       season,
       total: summary?.total ?? 0,
       latest_captured_at: summary?.latest_captured_at ?? null,
-      providers: providers.results,
+      providers: publicProviders,
       statuses: statuses.results,
-      provider_feeds: providerFeeds.results,
-      provider_capabilities: providerCapabilities,
+      provider_feeds: publicProviderFeeds,
+      provider_capabilities: publicCapabilities,
       policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
@@ -87,7 +90,7 @@ recruitingIntake.get("/", async (c) => {
       providers: [],
       statuses: [],
       provider_feeds: [],
-      provider_capabilities: providerCapabilities,
+      provider_capabilities: providerCapabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability),
       source: "unavailable",
       unavailable_reason: "The recruiting coverage warehouse did not respond within the read window.",
       policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",

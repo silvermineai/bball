@@ -16,6 +16,7 @@ const querySchema = z.object({
   movement: z.enum(["all", "up", "down", "unchanged", "new", "unavailable"]).default("all"),
   history: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
+  publication_check: z.string().trim().max(80).optional(),
 });
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -279,20 +280,16 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
           status: row.status == null ? null : String(row.status),
           committed_team_id: row.committed_team_id == null ? null : String(row.committed_team_id),
           committed_team_name: row.committed_team_name == null ? null : String(row.committed_team_name),
-          source_url: String((row as { source_url?: string }).source_url || ""),
+          source_url: "",
         }))
         : undefined,
-      source: {
-        provider: "ESPN Recruiting",
-        url: `https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/${season}/recruits`,
-        methodology: "Public ESPN prospect ranking release. Rank, grade and commitment fields are source-reported; they are not transfer eligibility determinations.",
-      },
       rows: rows.results.map((row) => ({
         ...row,
         previous_rank: row.previous_rank == null ? null : Number(row.previous_rank),
         previous_captured_at: row.previous_captured_at == null ? null : String(row.previous_captured_at),
         school_ids: (() => { try { return JSON.parse(String((row as { school_ids_json?: string }).school_ids_json || "[]")); } catch { return []; } })(),
         school_ids_json: undefined,
+        source_url: "",
       })),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

@@ -6,12 +6,12 @@ describe("basketball schedule clock observations", () => {
     const first = vi.fn().mockResolvedValue({ total: 4, confirmed: 2, latest_observed_at: "2026-09-12T00:00:00Z" });
     const prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first })) }));
     const response = await scheduleTimes.request(
-      "/?season=2027&meta=1",
+      "/?season=2027&meta=1&publication_check=unit",
       {},
       { RESEARCH_DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ season: 2027, total: 4, confirmed: 2, latest_observed_at: "2026-09-12T00:00:00Z", provider: "ESPN Scoreboard" });
+    await expect(response.json()).resolves.toMatchObject({ season: 2027, total: 4, confirmed: 2, latest_observed_at: "2026-09-12T00:00:00Z" });
     expect(String((prepare.mock.calls as unknown as Array<[string]>)[0]?.[0])).toContain("ROW_NUMBER");
   });
 
@@ -32,6 +32,15 @@ describe("basketball schedule clock observations", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
+  it("keeps provider labels and source URLs out of the public response", async () => {
+    const first = vi.fn().mockResolvedValue({ total: 1, confirmed: 1, latest_observed_at: "2026-09-12T00:00:00Z" });
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first })) }));
+    const response = await scheduleTimes.request("/?season=2027&meta=1", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).not.toContain("ESPN Scoreboard");
+  });
+
   it("honors the bounded page limit and strips the stored payload", async () => {
     const first = vi.fn().mockResolvedValue({ total: 1, confirmed_count: 1 });
     const all = vi.fn().mockResolvedValue({ results: [{
@@ -50,7 +59,7 @@ describe("basketball schedule clock observations", () => {
     const bind = vi.fn(() => ({ first, all }));
     const prepare = vi.fn(() => ({ bind }));
     const response = await scheduleTimes.request(
-      "/?season=2027&limit=200&page=0",
+      "/?season=2027&limit=200&page=0&publication_check=unit",
       {},
       { RESEARCH_DB: { prepare } },
     );
@@ -58,7 +67,7 @@ describe("basketball schedule clock observations", () => {
     const body = await response.json() as { rows: Array<Record<string, unknown>>; page_size: number; confirmed_count: number };
     expect(body.page_size).toBe(200);
     expect(body.confirmed_count).toBe(1);
-    expect(body.rows[0]).toMatchObject({ game_id: "401900001", source_time_valid: false, source_url: "https://example.test" });
+      expect(body.rows[0]).toMatchObject({ game_id: "401900001", source_time_valid: false, source_url: null, provider: null });
     expect(body.rows[0]).not.toHaveProperty("payload_json");
     expect(bind).toHaveBeenCalledWith(2027, 200, 0);
   });

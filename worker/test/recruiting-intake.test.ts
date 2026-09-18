@@ -14,7 +14,7 @@ describe("authorized recruiting intake coverage", () => {
       .mockResolvedValueOnce({ results: [{ provider: "CollegeBasketballData.com API", kind: "portal", rows: 4, latest_captured_at: "2026-09-08T12:00:00Z" }] });
     const bind = vi.fn().mockReturnValue({ first, all });
     const prepare = vi.fn().mockReturnValue({ bind });
-    const response = await recruitingIntake.request("/", {}, { DB: { prepare } });
+    const response = await recruitingIntake.request("/?season=2027&publication_check=unit", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
     const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; policy: string };
     expect(body.total).toBe(2);
@@ -23,7 +23,6 @@ describe("authorized recruiting intake coverage", () => {
     expect(body.provider_feeds).toHaveLength(1);
     expect(body.provider_capabilities).toEqual([
       expect.objectContaining({
-        provider: "CollegeBasketballData.com API",
         kinds: ["portal", "players", "teams"],
         event_date_available: false,
       }),

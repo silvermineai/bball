@@ -11,6 +11,7 @@ const querySchema = z.object({
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(200).default(40),
   meta: z.enum(["0", "1"]).default("0"),
+  publication_check: z.string().trim().max(80).optional(),
 });
 
 export const scheduleTimes = new Hono<{ Bindings: Bindings }>();
@@ -72,8 +73,6 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
         total: Number(result?.total || 0),
         confirmed: Number(result?.confirmed || 0),
         latest_observed_at: result?.latest_observed_at || null,
-        provider: "ESPN Scoreboard",
-        policy: "Exact ESPN event and participant IDs are required. Source timeValid is shown as an observation and never rewrites the canonical schedule or forecast registration.",
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
@@ -103,7 +102,12 @@ scheduleTimes.get("/", zValidator("query", querySchema), async (c) => {
         // A malformed payload remains an unavailable source URL, not a 500.
       }
       delete value.payload_json;
-      return { ...value, source_time_valid: value.source_time_valid === 1, source_url: payload.source_url || null };
+      return {
+        ...value,
+        source_time_valid: value.source_time_valid === 1,
+        provider: null,
+        source_url: null,
+      };
     });
     const response = c.json({ season, confirmed: confirmed === "1", confirmed_count: Number(count?.confirmed_count || 0), page, page_size: limit, total: Number(count?.total || 0), rows: output });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

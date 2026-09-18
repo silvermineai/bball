@@ -11,7 +11,7 @@ describe("market archive metadata", () => {
       { results: [{ payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", season: 2027, summary_count: 20, summary_with_pickcenter: 0 }), captured_at: "2026-09-15T18:00:00Z" }] },
     ]);
     const response = await markets.request(
-      "/?meta=1&sport=basketball",
+      "/?meta=1&sport=basketball&publication_check=unit",
       {},
       { DB: { prepare, batch } },
     );
@@ -22,12 +22,12 @@ describe("market archive metadata", () => {
       research_capture?: { summary_count?: number; summary_with_pickcenter?: number };
     };
     expect(body.provider_capabilities).toEqual([
-      expect.objectContaining({ provider: "The Odds API", markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
-      expect.objectContaining({ provider: "CollegeBasketballData.com API", markets: ["h2h"], provider_update_clock: false }),
-      expect.objectContaining({ provider: "ESPN Summary", markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
+      expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
+      expect.objectContaining({ markets: ["h2h"], provider_update_clock: false }),
+      expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
     expect(body.archive_receipts).toEqual([]);
-    expect(body.research_capture).toEqual({ provider: "ESPN Summary", captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0 });
+    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0 });
   });
 
   it("returns retained football betting release receipts", async () => {
@@ -41,11 +41,25 @@ describe("market archive metadata", () => {
         attribution: { name: "SportsDataverse", license: "CC BY 4.0" },
       }) }] },
     ]);
-    const response = await markets.request("/?meta=1&sport=football", {}, { DB: { prepare: vi.fn(), batch } });
+    const response = await markets.request("/?meta=1&sport=football&publication_check=unit", {}, { DB: { prepare: vi.fn(), batch } });
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ archive_receipts: [
-      expect.objectContaining({ dataset: "betting", season: 2025, url: "https://example.com/betting.csv", sha256: "a".repeat(64), attribution: { name: "SportsDataverse", license: "CC BY 4.0" } }),
+      expect.objectContaining({ dataset: "betting", season: 2025, sha256: "a".repeat(64) }),
     ] });
+  });
+
+  it("keeps connector names and archive URLs out of the public metadata", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2025 }] },
+      { results: [{ total: 12, pregame: 12 }] },
+      { results: [{ dataset: "betting", season: 2025, receipt_json: JSON.stringify({ url: "https://example.com/betting.csv", fetched_at: "2026-09-12T00:00:00Z", sha256: "a".repeat(64), attribution: { name: "SportsDataverse" } }) }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=football", {}, { DB: { prepare: vi.fn(), batch } });
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).not.toContain("SportsDataverse");
+    expect(body).not.toContain("example.com/betting.csv");
+    expect(body).not.toContain("The Odds API");
   });
 
   it("keeps football market reads on the football archive", async () => {

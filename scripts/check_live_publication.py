@@ -97,7 +97,6 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     for capability in capabilities:
         if (
             not isinstance(capability, dict)
-            or not isinstance(capability.get("provider"), str)
             or not isinstance(capability.get("markets"), list)
             or not capability["markets"]
             or not isinstance(capability.get("provider_update_clock"), bool)
@@ -108,8 +107,6 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
             not isinstance(receipt, dict)
             or not isinstance(receipt.get("dataset"), str)
             or not isinstance(receipt.get("season"), int)
-            or not isinstance(receipt.get("url"), str)
-            or not receipt["url"].startswith("https://")
             or not isinstance(receipt.get("fetched_at"), str)
             or not isinstance(receipt.get("sha256"), str)
             or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
@@ -127,7 +124,6 @@ def schedule_clock_metadata(payload: dict, checked_at: datetime, max_age_hours: 
     latest = payload.get("latest_observed_at")
     if (
         payload.get("season") != 2027
-        or payload.get("provider") != "ESPN Scoreboard"
         or not isinstance(total, int)
         or isinstance(total, bool)
         or total < 0
@@ -566,7 +562,6 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         commitment_destinations = recruiting_rankings.get("commitment_destinations")
         rank_quality = recruiting_rankings.get("rank_quality")
         prospect_captured = recruiting_rankings.get("captured_at")
-        prospect_source = recruiting_rankings.get("source")
         validate_recruiting_destinations(commitment_destinations)
         tied_rank_values, tied_rows = validate_recruiting_rank_quality(rank_quality, prospect_total)
         if (
@@ -576,13 +571,11 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
             or not isinstance(prospect_rows, list)
             or not prospect_rows
             or not isinstance(prospect_captured, str)
-            or not isinstance(prospect_source, dict)
-            or prospect_source.get("provider") != "ESPN Recruiting"
         ):
-            raise ValueError(f"ESPN recruiting rankings release {prospect_season} is malformed or empty")
+            raise ValueError(f"Recruiting rankings release {prospect_season} is malformed or empty")
         prospect_age = (checked_at - timestamp(prospect_captured)).total_seconds() / 3600
         if prospect_age < -24 or prospect_age > max_age_hours:
-            raise ValueError(f"ESPN recruiting rankings release {prospect_season} is {max(prospect_age, 0):.1f} hours old")
+            raise ValueError(f"Recruiting rankings release {prospect_season} is {max(prospect_age, 0):.1f} hours old")
         prospect_counts[str(prospect_season)] = prospect_total
         prospect_destination_counts[str(prospect_season)] = len(commitment_destinations)
         prospect_rank_ties[str(prospect_season)] = {"tied_rank_values": tied_rank_values, "tied_rows": tied_rows}
