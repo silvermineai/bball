@@ -25,6 +25,11 @@ class SqlBatchTests(unittest.TestCase):
         self.assertTrue(is_retryable_d1_import_error("Network connection lost."))
         self.assertTrue(is_retryable_d1_import_error("The request timed out."))
         self.assertTrue(is_retryable_d1_import_error('{"D1_RESET_DO":true}'))
+        self.assertTrue(
+            is_retryable_d1_import_error(
+                "File could not be uploaded. We encountered an internal error."
+            )
+        )
         self.assertFalse(is_retryable_d1_import_error("no such table: football_games"))
 
     def test_deletes_are_isolated_and_inserts_are_bounded(self):

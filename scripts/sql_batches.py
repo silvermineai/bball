@@ -32,6 +32,12 @@ RETRYABLE_D1_IMPORT_MARKERS = (
     "network connection",
     "timed out",
     "timeout",
+    # Wrangler uploads each remote D1 import through an object-storage
+    # handoff. Cloudflare can return a transient object-store 500 after the
+    # scoped delete has committed; replaying the idempotent batch is the safe
+    # way to restore a complete publication.
+    "file could not be uploaded",
+    "we encountered an internal error",
 )
 
 
