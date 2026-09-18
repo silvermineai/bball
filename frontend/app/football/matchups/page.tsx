@@ -50,7 +50,15 @@ export default function Page() {
         <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin, total and the calibrated range come from the registered Silvermine model edition. Open the desk below to filter the full slate and compare qualifying market observations.</p>
       </section>
       <Suspense fallback={<p>Loading matchups…</p>}>
-        <MatchupBrowser games={d.upcoming} generated={d.generated_at} efficiencyScenarios={efficiencyModel.scenarios} marketCoverage={d.coverage} />
+        <MatchupBrowser
+          games={d.upcoming}
+          generated={d.generated_at}
+          efficiencyScenarios={efficiencyModel.scenarios}
+          marketCoverage={{
+            market_observations: d.coverage.market_observations,
+            pregame_market_observations: d.coverage.pregame_market_observations,
+          }}
+        />
       </Suspense>
     </>
   );
