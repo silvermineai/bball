@@ -16,6 +16,8 @@ export type NationalPlayerRow = {
   apg: number | null;
   spg?: number | null;
   bpg?: number | null;
+  fouls?: number | null;
+  turnovers?: number | null;
   fg_pct: number | null;
   three_pct: number | null;
   ft_pct: number | null;
@@ -44,11 +46,15 @@ type LiveLeader = {
   apg?: number | null;
   spg?: number | null;
   bpg?: number | null;
+  fouls?: number | null;
+  turnovers?: number | null;
+  pf?: number | null;
+  tov?: number | null;
   fg_pct?: number | null;
   three_pct?: number | null;
   ft_pct?: number | null;
   publisher_rank?: number | null;
-  payload?: Partial<NationalPlayerRow> | null;
+  payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null }) | null;
 };
 
 export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | null {
@@ -66,6 +72,8 @@ export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | nu
     apg: row.apg ?? payload.apg ?? null,
     spg: row.spg ?? payload.spg ?? null,
     bpg: row.bpg ?? payload.bpg ?? null,
+    fouls: row.fouls ?? row.pf ?? payload.fouls ?? payload.pf ?? null,
+    turnovers: row.turnovers ?? row.tov ?? payload.turnovers ?? payload.tov ?? null,
     fg_pct: row.fg_pct ?? payload.fg_pct ?? null,
     three_pct: row.three_pct ?? payload.three_pct ?? null,
     ft_pct: row.ft_pct ?? payload.ft_pct ?? null,
@@ -130,6 +138,7 @@ export default function LiveNationalPlayerTable({
   }, [initialPlayers, metric]);
 
   const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
+  const perGame = (value: number | null | undefined, games: number | null) => value == null || games == null || games <= 0 ? null : value / games;
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -144,7 +153,7 @@ export default function LiveNationalPlayerTable({
       {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
-          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
+          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
           <tbody>{players.map((player) => (
           <tr key={player.player_id}>
             <td className="rank-number">{player.leader_rank ?? "—"}</td>
@@ -156,6 +165,8 @@ export default function LiveNationalPlayerTable({
             <td className="numeric">{metric === "apg" ? <strong>{fmt(metricValue(player, "apg"))}</strong> : fmt(metricValue(player, "apg"))}</td>
             <td className="numeric">{metric === "spg" ? <strong>{fmt(metricValue(player, "spg"))}</strong> : fmt(metricValue(player, "spg"))}</td>
             <td className="numeric">{metric === "bpg" ? <strong>{fmt(metricValue(player, "bpg"))}</strong> : fmt(metricValue(player, "bpg"))}</td>
+            <td className="numeric">{fmt(perGame(player.fouls, player.games))}</td>
+            <td className="numeric">{fmt(perGame(player.turnovers, player.games))}</td>
             <td className="numeric">{metric === "fg_pct" ? <strong>{pct(metricValue(player, "fg_pct"))}</strong> : pct(metricValue(player, "fg_pct"))}</td>
             <td className="numeric">{metric === "three_pct" ? <strong>{pct(metricValue(player, "three_pct"))}</strong> : pct(metricValue(player, "three_pct"))}</td>
             <td className="numeric">{metric === "ft_pct" ? <strong>{pct(metricValue(player, "ft_pct"))}</strong> : pct(metricValue(player, "ft_pct"))}</td>

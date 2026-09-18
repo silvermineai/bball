@@ -31,6 +31,8 @@ describe("live national player normalization", () => {
       apg: 4.1,
       spg: null,
       bpg: null,
+      fouls: null,
+      turnovers: null,
       fg_pct: 52,
       three_pct: 39,
       ft_pct: 81,
