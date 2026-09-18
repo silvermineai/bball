@@ -496,6 +496,8 @@ export default function StatsDashboard() {
   const valueLeaders = getValueLeaders(latestSeason);
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
+  const archivedPlayerRows = overview.coverage.datasets?.find((dataset) => dataset.key === "ncaa_player_box")?.rows
+    ?? overview.coverage.player_box_rows;
   return (
     <div className="stats-dashboard">
       <div className="dashboard-kicker"><span>MEN&apos;S COLLEGE BASKETBALL</span><span>{overview.label} / LIVE BOARD</span></div>
@@ -538,7 +540,7 @@ export default function StatsDashboard() {
         <div><strong>{overview.ratings.length}</strong><span>Rated teams</span></div>
         <div><strong>{players.length.toLocaleString()}</strong><span>Player profiles</span></div>
         <div><strong>{overview.coverage.upcoming_games.toLocaleString()}</strong><span>Upcoming games</span></div>
-        <div><strong>{overview.coverage.player_box_rows.toLocaleString()}</strong><span>Player box records</span></div>
+        <div><strong>{archivedPlayerRows.toLocaleString()}</strong><span>Archived player game rows</span></div>
       </div>
       <LiveBasketballForecastStatus />
       <LiveBasketballMarketStatus />
