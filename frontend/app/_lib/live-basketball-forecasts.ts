@@ -67,7 +67,7 @@ export async function fetchWithTransientRetry(url: string, signal?: AbortSignal)
 
 export async function loadLiveBasketballForecasts(
   signal?: AbortSignal,
-  options: { maxPages?: number; model?: string; query?: string } = {},
+  options: { maxPages?: number; model?: string; query?: string; cacheBust?: string } = {},
 ) {
   const modelQuery =
     options.model && options.model !== "latest"
@@ -76,8 +76,11 @@ export async function loadLiveBasketballForecasts(
   const searchQuery = options.query?.trim()
     ? `&q=${encodeURIComponent(options.query.trim())}`
     : "";
+  // Each page is independently edge-cached. A cohort key prevents page 0 and
+  // later pages from mixing two adjacent model editions during a refresh.
+  const cohortQuery = `&cohort=${encodeURIComponent(options.cacheBust || String(Date.now()))}`;
   const firstResponse = await fetchWithTransientRetry(
-    `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0${modelQuery}${searchQuery}`,
+    `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0${modelQuery}${searchQuery}${cohortQuery}`,
     signal,
   );
   if (!firstResponse.ok) throw new Error("Live matchup forecasts unavailable.");
@@ -98,7 +101,7 @@ export async function loadLiveBasketballForecasts(
   const pages = [first];
   for (let page = 1; page < pagesToFetch; page += 1) {
     const response = await fetchWithTransientRetry(
-      `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${page}${modelQuery}${searchQuery}`,
+      `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${page}${modelQuery}${searchQuery}${cohortQuery}`,
       signal,
     );
     if (!response.ok) throw new Error("Live matchup forecasts unavailable.");

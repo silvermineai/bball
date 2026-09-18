@@ -37,9 +37,9 @@ describe("live basketball forecast merge", () => {
       json: async () => ({ total: 0, page_size: 100, rows: [] }),
     });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, model: "edition/unsafe?value" })).resolves.toEqual([]);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, model: "edition/unsafe?value", cacheBust: "test" })).resolves.toEqual([]);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&model=edition%2Funsafe%3Fvalue",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&model=edition%2Funsafe%3Fvalue&cohort=test",
       { signal: undefined },
     );
     vi.unstubAllGlobals();
@@ -51,9 +51,9 @@ describe("live basketball forecast merge", () => {
       json: async () => ({ total: 0, page_size: 100, rows: [] }),
     });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, query: "  Duke  " })).resolves.toEqual([]);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, query: "  Duke  ", cacheBust: "test" })).resolves.toEqual([]);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&q=Duke",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&q=Duke&cohort=test",
       { signal: undefined },
     );
     vi.unstubAllGlobals();
@@ -79,10 +79,10 @@ describe("live basketball forecast merge", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("two")] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("three")] }) });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts()).resolves.toHaveLength(3);
+    await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).resolves.toHaveLength(3);
     expect(fetcher).toHaveBeenCalledTimes(3);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2&cohort=test",
       { signal: undefined },
     );
     vi.unstubAllGlobals();
@@ -107,7 +107,7 @@ describe("live basketball forecast merge", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row("one")] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("two")] }) });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts()).rejects.toThrow("changed during pagination");
+    await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).rejects.toThrow("changed during pagination");
     vi.unstubAllGlobals();
   });
 
@@ -130,7 +130,7 @@ describe("live basketball forecast merge", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 2, page_size: 1, rows: [row] }) });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts()).rejects.toThrow("duplicate games");
+    await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).rejects.toThrow("duplicate games");
     vi.unstubAllGlobals();
   });
 
@@ -139,15 +139,15 @@ describe("live basketball forecast merge", () => {
       .mockResolvedValueOnce({ ok: false, status: 503 })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 0, page_size: 100, rows: [] }) });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1 })).resolves.toEqual([]);
+    await expect(loadLiveBasketballForecasts(undefined, { maxPages: 1, cacheBust: "test" })).resolves.toEqual([]);
     expect(fetcher).toHaveBeenNthCalledWith(
       1,
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&cohort=test",
       { signal: undefined },
     );
     expect(fetcher).toHaveBeenNthCalledWith(
       2,
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&retry=1",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=0&cohort=test&retry=1",
       { signal: undefined },
     );
     vi.unstubAllGlobals();
