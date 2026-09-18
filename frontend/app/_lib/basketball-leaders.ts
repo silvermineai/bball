@@ -14,6 +14,7 @@ export type BasketballLeaderPlayer = {
   apg: number | null;
   spg?: number | null;
   bpg?: number | null;
+  fpg?: number | null;
   topg?: number | null;
   efg?: number | null;
   three_pct?: number | null;

@@ -1127,9 +1127,12 @@ def player_index(conn, year=2026):
                 ),
                 "ppg": round(t["points"] / games, 1),
                 "rpg": round(t["rebounds"] / games, 1),
+                "orpg": round(t["offensive_rebounds"] / games, 1),
+                "drpg": round(t["defensive_rebounds"] / games, 1),
                 "apg": round(t["assists"] / games, 1),
                 "spg": round(t["steals"] / games, 1),
                 "bpg": round(t["blocks"] / games, 1),
+                "fpg": round(t["fouls"] / games, 1),
                 "topg": round(t["turnovers"] / games, 1),
                 "efg": ratio(
                     t["field_goals_made"] + 0.5 * t["three_point_field_goals_made"], fga
@@ -1160,9 +1163,12 @@ def player_index(conn, year=2026):
             for k in [
                 "ppg",
                 "rpg",
+                "orpg",
+                "drpg",
                 "apg",
                 "spg",
                 "bpg",
+                "fpg",
                 "topg",
                 "efg",
                 "ts",

@@ -220,7 +220,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Index</th></tr>
+          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Index</th></tr>
         </thead>
         <tbody>
           {rows.map((player) => {
@@ -234,9 +234,13 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
               <td className="numeric">{player.minutes && player.games ? fmt(player.minutes / player.games) : "—"}</td>
               <td className="numeric"><strong>{fmt(player.ppg)}</strong></td>
               <td className="numeric">{fmt(player.rpg)}</td>
+              <td className="numeric">{fmt(player.orpg)}</td>
+              <td className="numeric">{fmt(player.drpg)}</td>
               <td className="numeric">{fmt(player.apg)}</td>
               <td className="numeric">{fmt(player.spg)}</td>
               <td className="numeric">{fmt(player.bpg)}</td>
+              <td className="numeric">{fmt(player.fpg)}</td>
+              <td className="numeric">{fmt(player.topg)}</td>
               <td className="numeric">{player.ts == null ? "—" : `${fmt(player.ts * 100)}%`}</td>
               <td className="numeric">{player.efg == null ? "—" : `${fmt(player.efg * 100)}%`}</td>
               <td className="numeric">{player.three_pct == null ? "—" : `${fmt(player.three_pct * 100)}%`}</td>
