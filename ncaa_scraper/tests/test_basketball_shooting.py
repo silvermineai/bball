@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -157,6 +157,30 @@ class CacheTests(unittest.TestCase):
             self.assertNotEqual(updated["fetched_at"], "2026-01-01T00:00:00Z")
             self.assertEqual(updated["sha256"], digest)
             self.assertEqual(json.loads(receipt.read_text())["etag"], "new")
+
+    def test_transient_parquet_failure_uses_hash_verified_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "test_2026.parquet"
+            pq.write_table(pa.table({"game": [1]}), path)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            receipt = root / "test_2026.parquet.receipt.json"
+            original = {
+                "sha256": digest,
+                "fetched_at": "2026-01-01T00:00:00Z",
+            }
+            receipt.write_text(json.dumps(original))
+            response = Mock(status_code=503, headers={})
+            response.__enter__ = Mock(return_value=response)
+            response.__exit__ = Mock(return_value=False)
+            client = ReleaseClient(root, {"pbp": ("test", "test_{year}.parquet")})
+            client.session.get = Mock(return_value=response)
+            with patch("ncaa_scraper.bulk_parquet.time.sleep"):
+                returned_path, returned = parquet_file(client, "pbp", 2026, refresh=True)
+            self.assertEqual(returned_path, path)
+            self.assertEqual(returned, original)
+            self.assertEqual(json.loads(receipt.read_text()), original)
+            self.assertEqual(client.session.get.call_count, 3)
 
     def test_conditional_revalidation_advances_tabular_receipt_clock(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -7,6 +7,7 @@ import gzip
 import hashlib
 import io
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,6 +77,37 @@ class ReleaseClient:
         )
         self.last_request = 0.0
 
+    def _cached_after_transient_failure(
+        self,
+        path: Path,
+        receipt: dict,
+        name: str,
+        dataset: str,
+        year: int,
+        reason: str,
+    ) -> tuple[list[dict], dict] | None:
+        """Keep a verified prior edition usable when a CDN is temporarily busy.
+
+        A stale copy is only acceptable when its receipt and content hash still
+        agree.  The original receipt is returned unchanged so publication
+        health can see the true capture clock rather than mistaking a failed
+        revalidation for fresh data.
+        """
+        if not path.exists() or not receipt.get("sha256"):
+            return None
+        try:
+            payload = path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != receipt["sha256"]:
+                return None
+            rows = parse_release(payload, name)
+        except (OSError, KeyError, ValueError, SourceUnavailable):
+            return None
+        print(
+            f"Using verified cached {dataset}/{year} after transient source failure: {reason}",
+            file=sys.stderr,
+        )
+        return rows, receipt
+
     def load(
         self, dataset: str, year: int, refresh: bool = False
     ) -> tuple[list[dict], dict]:
@@ -103,6 +135,11 @@ class ReleaseClient:
                     response = self.session.get(url, headers=headers, timeout=(15, 90))
                 except requests.RequestException as exc:
                     if attempt == len(retry_delays):
+                        cached = self._cached_after_transient_failure(
+                            path, receipt, name, dataset, year, "download failed"
+                        )
+                        if cached is not None:
+                            return cached
                         raise SourceUnavailable(
                             f"Download failed: {dataset}/{year}"
                         ) from exc
@@ -129,11 +166,31 @@ class ReleaseClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     if attempt == len(retry_delays):
+                        cached = self._cached_after_transient_failure(
+                            path,
+                            receipt,
+                            name,
+                            dataset,
+                            year,
+                            f"source returned HTTP {response.status_code}",
+                        )
+                        if cached is not None:
+                            return cached
                         raise SourceUnavailable(
                             f"Source busy: {dataset}/{year}; retry on next run"
                         )
                     retry = response.headers.get("Retry-After", "")
                     if retry.isdigit() and int(retry) > 60:
+                        cached = self._cached_after_transient_failure(
+                            path,
+                            receipt,
+                            name,
+                            dataset,
+                            year,
+                            f"source requested a {retry}-second pause",
+                        )
+                        if cached is not None:
+                            return cached
                         raise SourceUnavailable(
                             "Source requested a longer pause; retry later"
                         )

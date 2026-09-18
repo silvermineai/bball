@@ -4,12 +4,34 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import time
 
 import pyarrow.parquet as pq
 import requests
 
 from .football_sources import RELEASES, SourceUnavailable, utcnow
+
+
+def _verified_cached_parquet(path, receipt, dataset, year, reason):
+    """Return a valid prior parquet edition after a transient source failure."""
+    if not path.exists() or not receipt.get("sha256"):
+        return None
+    try:
+        digest = hashlib.sha256()
+        with path.open("rb") as cached:
+            for chunk in iter(lambda: cached.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != receipt["sha256"]:
+            return None
+        pq.ParquetFile(path)
+    except (OSError, KeyError, ValueError):
+        return None
+    print(
+        f"Using verified cached {dataset}/{year} after transient source failure: {reason}",
+        file=sys.stderr,
+    )
+    return path, receipt
 
 
 def parquet_file(client, dataset, year, refresh=False, max_bytes=256 * 1024 * 1024):
@@ -62,6 +84,15 @@ def parquet_file(client, dataset, year, refresh=False, max_bytes=256 * 1024 * 10
                     if response.status_code == 429 or response.status_code >= 500:
                         retry = response.headers.get("Retry-After", "")
                         if attempt == 2 or (retry.isdigit() and int(retry) > 60):
+                            cached = _verified_cached_parquet(
+                                path,
+                                receipt,
+                                dataset,
+                                year,
+                                f"source returned HTTP {response.status_code}",
+                            )
+                            if cached is not None:
+                                return cached
                             raise SourceUnavailable("Source busy; retry on a later run")
                         time.sleep(
                             int(retry) if retry.isdigit() else 2 ** (attempt + 1)
@@ -96,6 +127,11 @@ def parquet_file(client, dataset, year, refresh=False, max_bytes=256 * 1024 * 10
                     return path, receipt
             except requests.RequestException as exc:
                 if attempt == 2:
+                    cached = _verified_cached_parquet(
+                        path, receipt, dataset, year, "download failed"
+                    )
+                    if cached is not None:
+                        return cached
                     raise SourceUnavailable(
                         f"Download failed: {dataset}/{year}"
                     ) from exc
