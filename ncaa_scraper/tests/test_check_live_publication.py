@@ -7,6 +7,7 @@ from urllib.error import HTTPError
 
 from scripts.check_live_publication import (
     check_live,
+    forecast_coverage,
     market_metadata,
     player_box_field_metadata,
     validate_recruiting_destinations,
@@ -16,6 +17,11 @@ from scripts.check_live_publication import (
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_forecast_coverage_requires_exact_upcoming_denominator(self):
+        self.assertEqual(forecast_coverage({"season": 2027, "status": "upcoming", "total": 12}, 2027, 12), 12)
+        with self.assertRaisesRegex(ValueError, "every upcoming game"):
+            forecast_coverage({"season": 2027, "status": "upcoming", "total": 11}, 2027, 12)
+
     def test_get_json_honors_retry_after_for_transient_http_errors(self):
         class Response:
             def __enter__(self):
@@ -67,6 +73,15 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "provider": "ESPN Scoreboard",
                 })
                 return {**value, "latest_observed_at": value.get("latest_observed_at", "2026-09-10T18:00:00Z")}
+            if path.startswith("/api/basketball/research/forecasts?season=2027&status=upcoming&"):
+                model = responses.get("/api/basketball/research/forecasts?meta=1", {}).get("models", [{}])[0]
+                return {
+                    "season": 2027,
+                    "status": "upcoming",
+                    "total": model.get("forecasts", 0),
+                    "model": model.get("model_id"),
+                    "rows": [],
+                }
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),
@@ -301,6 +316,7 @@ class LivePublicationCheckTest(unittest.TestCase):
         with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
             report = check_live("https://example.test", now=now)
         self.assertEqual(report["forecast_model"], "model-1")
+        self.assertEqual(report["forecast_upcoming_rows"], 100)
         self.assertEqual(report["recruiting_intake_rows"], 0)
         self.assertEqual(report["recruiting_rows"], 2)
         self.assertEqual(report["recruiting_reviewed_players"], 96)

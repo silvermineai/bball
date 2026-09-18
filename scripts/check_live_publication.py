@@ -9,6 +9,7 @@ import re
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
@@ -140,6 +141,21 @@ def schedule_clock_metadata(payload: dict, checked_at: datetime, max_age_hours: 
     if age < -24 or age > max_age_hours:
         raise ValueError(f"basketball schedule-clock evidence is {max(age, 0):.1f} hours old")
     return total, confirmed, max(age, 0)
+
+
+def forecast_coverage(payload: dict, expected_season: int, expected_rows: int) -> int:
+    """Require the exact model edition to have one row for every upcoming game."""
+    total = payload.get("total")
+    if (
+        payload.get("season") != expected_season
+        or payload.get("status") != "upcoming"
+        or not isinstance(total, int)
+        or isinstance(total, bool)
+        or total < 0
+        or total != expected_rows
+    ):
+        raise ValueError("latest basketball model does not cover every upcoming game")
+    return total
 
 
 def brief_archive_metadata(payload: dict) -> tuple[int, int]:
@@ -458,6 +474,9 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     latest = models[0]
     if latest.get("target_season") != 2027 or not isinstance(latest.get("forecasts"), int) or latest["forecasts"] <= 0:
         raise ValueError("basketball forecast catalog has no usable 2026–27 edition")
+    model_id = latest.get("model_id")
+    if not isinstance(model_id, str) or not model_id.strip():
+        raise ValueError("basketball forecast catalog has no model ID")
     last_created = latest.get("last_created_at")
     if not isinstance(last_created, str):
         raise ValueError("basketball forecast catalog has no model clock")
@@ -467,6 +486,11 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
     # Distinct probe key prevents a monitor from validating a stale edge-cache
     # response after a publisher sync.
     probe_key = str(int(checked_at.timestamp()))
+    upcoming_forecasts = get_json(
+        base_url,
+        f"/api/basketball/research/forecasts?season=2027&status=upcoming&model={quote(model_id, safe='')}&limit=1&page=0&publication_check={probe_key}",
+    )
+    upcoming_forecast_rows = forecast_coverage(upcoming_forecasts, 2027, latest["forecasts"])
     scorecard = get_json(
         base_url,
         f"/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check={probe_key}",
@@ -616,6 +640,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
         "football_personnel_source_max_age_hours": round(max(personnel_ages), 2),
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
+        "forecast_upcoming_rows": upcoming_forecast_rows,
         "forecast_age_hours": round(max(model_age, 0), 2),
         "scorecard_excluded_rows": scorecard.get("total", 0),
         "football_forecast_model": football_latest.get("model_id"),
