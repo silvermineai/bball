@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { date, fmt } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
+import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
 type Prospect = {
   athlete_id: string;
@@ -28,6 +29,8 @@ type Prospect = {
 
 type ProspectResponse = {
   season: number;
+  page?: number;
+  page_size?: number;
   total: number;
   captured_at?: string | null;
   rows: Prospect[];
@@ -89,6 +92,34 @@ export function prospectCsvRows(rows: Prospect[], season: number): CsvCell[][] {
 export const prospectCountLabel = (total: number, season: number) =>
   `${total.toLocaleString()} prospects in the ${season} class`;
 
+export function validateProspectExportPage(
+  payload: ProspectResponse,
+  expectedSeason: number,
+  expectedTotal: number,
+  expectedPageSize: number,
+  page: number,
+  totalPages: number,
+) {
+  const pageSeason = Number(payload.season);
+  const pageTotal = Number(payload.total);
+  const pageSize = Number(payload.page_size || 50);
+  if (
+    pageSeason !== expectedSeason
+    || !Number.isInteger(pageTotal)
+    || pageTotal !== expectedTotal
+    || !Number.isInteger(pageSize)
+    || pageSize !== expectedPageSize
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > pageSize
+  ) {
+    throw new Error("The prospect release changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The prospect release returned an incomplete page.");
+  }
+  return payload.rows;
+}
+
 export const formatProspectSize = (row: Prospect) => {
   const height = row.height_inches;
   const weight = row.weight_pounds;
@@ -115,24 +146,32 @@ export default function LiveBasketballProspectLeaders() {
     try {
       const params = new URLSearchParams({ season: String(season), committed: "all" });
       if (query.trim()) params.set("q", query.trim());
-      const pageCount = Math.ceil(data.total / 50);
-      const pages = await Promise.all(
-        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
-          fetchJson<ProspectResponse>(`/api/basketball/research/recruiting-rankings?${params.toString()}&page=${index + 1}`),
-        ),
-      );
-      if (pages.some((page) => page.season !== season || page.total !== data.total)) {
-        throw new Error("The prospect release changed during export.");
+      const cohort = `prospect-export-${Date.now()}`;
+      params.set("cohort", cohort);
+      const totalRows = Number(data.total);
+      const pageSize = Number(data.page_size || 50);
+      if (!Number.isInteger(totalRows) || totalRows < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+        throw new Error("The prospect archive returned invalid pagination metadata.");
       }
-      const rows = [
-        ...(data.rows || []),
-        ...pages.flatMap((page) => page.rows || []),
-      ].slice(0, data.total);
-      if (rows.length !== data.total) throw new Error("The prospect release returned an incomplete export.");
+      const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+      if (totalPages > 1001) throw new Error("This class is larger than the bounded export window. Search for a prospect first.");
+      const rows: Prospect[] = [];
+      for (let page = 0; page < totalPages; page += 1) {
+        params.set("page", String(page));
+        const response = await fetchWithTransientRetry(`/api/basketball/research/recruiting-rankings?${params.toString()}`);
+        if (!response.ok) throw new Error("The complete prospect export could not be loaded.");
+        const payload = await response.json() as ProspectResponse;
+        rows.push(...validateProspectExportPage(payload, season, totalRows, pageSize, page, totalPages));
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${totalRows.toLocaleString()} rows…`);
+      }
+      if (rows.length !== totalRows) throw new Error("The prospect release returned an incomplete export.");
+      const identities = new Set(rows.map((row) => row.athlete_id));
+      if (identities.size !== rows.length) throw new Error("The prospect release returned duplicate rows.");
       downloadCsv(
         `basketball-prospects-${season}.csv`,
         toCsv(prospectCsvHeaders, prospectCsvRows(rows, season)),
       );
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} prospect rows.`);
     } catch {
       setExportMessage("The full class export is temporarily unavailable; try again or open the recruiting board.");
     } finally {

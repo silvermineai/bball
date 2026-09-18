@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows } from "./LiveBasketballProspectLeaders";
+import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("prospect size formatting", () => {
   it("renders the recorded height and weight together", () => {
@@ -36,5 +36,21 @@ describe("prospect CSV export", () => {
     expect(prospectCsvHeaders).toContain("Movement");
     expect(rows[0].slice(0, 8)).toEqual([2027, 12, 18, "▲ 6", "42", "Guard", "PG", 94.5]);
     expect(rows[0].slice(12)).toEqual(["150", "Example", null, null, 75, 185, "2026-09-17T00:00:00Z"]);
+  });
+});
+
+describe("prospect export pagination", () => {
+  const row = { athlete_id: "42", name: "Guard" };
+
+  it("accepts a complete page with stable metadata", () => {
+    expect(validateProspectExportPage({ season: 2027, total: 2, page_size: 1, rows: [row] }, 2027, 2, 1, 0, 2)).toEqual([row]);
+  });
+
+  it("rejects an empty intermediate page", () => {
+    expect(() => validateProspectExportPage({ season: 2027, total: 2, page_size: 1, rows: [] }, 2027, 2, 1, 0, 2)).toThrow(/incomplete page/);
+  });
+
+  it("rejects a changed season or total", () => {
+    expect(() => validateProspectExportPage({ season: 2026, total: 3, page_size: 1, rows: [row] }, 2027, 2, 1, 0, 2)).toThrow(/changed/);
   });
 });
