@@ -154,7 +154,10 @@ export default function LiveDashboardForecastTable({
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled([
-      loadLiveBasketballForecasts(controller.signal, { maxPages: 1 }),
+      // The landing board is the primary forecast surface. Hydrate every
+      // registered page so a live model refresh cannot leave later rows on
+      // the bundled static edition while the forecast lab shows newer data.
+      loadLiveBasketballForecasts(controller.signal),
       loadLiveBasketballMarketComparisons(controller.signal),
     ]).then(([forecastResult, marketResult]) => {
       if (controller.signal.aborted) return;

@@ -59,6 +59,35 @@ describe("live basketball forecast merge", () => {
     vi.unstubAllGlobals();
   });
 
+  it("loads the complete registered forecast edition by default", async () => {
+    const row = (id: string): LiveForecastRow => ({
+      game_id: id,
+      season: 2027,
+      starts_at: "2026-11-01T05:00:00Z",
+      home_id: `${id}-home`,
+      away_id: `${id}-away`,
+      home_name: `Home ${id}`,
+      away_name: `Away ${id}`,
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(1),
+    });
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("one")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("two")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 201, page_size: 100, rows: [row("three")] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts()).resolves.toHaveLength(3);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("retries a transient forecast response with a bounded cache-busting query", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 503 })
