@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { BBFactorKey, BBGame, BBRosterScenario } from "../_lib/basketball-types";
+import type { BBFactorKey, BBGame, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
 import { fmt, kick, date } from "../_lib/format";
 import {
   loadLiveBasketballForecasts,
@@ -74,24 +74,31 @@ export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
   "FTR edge", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
+  "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace",
 ];
 
 export function forecastCsvRows(
   games: BBGame[],
   marketComparisons: Record<string, Comparison[]> = {},
   rosterScenarios: BBRosterScenario[] = [],
+  ratings: BBTeam[] = [],
 ): CsvCell[][] {
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
   return games.map((game) => {
     const prediction = predictionFor(game);
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     const factorValues = new Map(matchupFactorEdges(game).map((edge) => [edge.key, edge.value]));
+    const home = ratingById.get(game.home_id);
+    const away = ratingById.get(game.away_id);
     return [
       game.id, game.starts_at, game.away_name, game.home_name, game.prediction ? "primary" : "cold-start",
       prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
       prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
       factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
       rosterByGame.get(game.id)?.roster_margin, market.spread, market.total, market.spreadGap, market.totalGap,
+      home?.adj_off, home?.adj_def, home?.adj_net, home?.adj_tempo,
+      away?.adj_off, away?.adj_def, away?.adj_net, away?.adj_tempo,
     ];
   });
 }
@@ -130,9 +137,11 @@ export function matchesEstimateFilter(game: BBGame, filter: ForecastEstimateFilt
 export default function LiveDashboardForecastTable({
   initialGames,
   rosterScenarios = [],
+  ratings = [],
 }: {
   initialGames: BBGame[];
   rosterScenarios?: BBRosterScenario[];
+  ratings?: BBTeam[];
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
@@ -161,13 +170,14 @@ export default function LiveDashboardForecastTable({
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
   const rows = sortForecastBoard(signalGames, sort).slice(0, rowLimit);
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
   const marketGames = signalGames.filter((game) => {
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     return market.spread != null || market.total != null;
   }).length;
   const downloadVisibleCsv = () => downloadCsv(
     "basketball-forecast-board.csv",
-    toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios)),
+    toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios, ratings)),
   );
   return (
     <>
@@ -217,12 +227,14 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Factor edge</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = predictionFor(game)!;
             const rosterScenario = rosterByGame.get(game.id);
+            const homeRating = ratingById.get(game.home_id);
+            const awayRating = ratingById.get(game.away_id);
             const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
             const factorEdges = matchupFactorEdges(game);
             return (
@@ -238,6 +250,7 @@ export default function LiveDashboardForecastTable({
                   {strongestFactorEdge(game) || "—"}<small>largest Four Factor edge</small>
                   {factorEdges.length > 0 && <details className="forecast-factor-details"><summary>All four</summary>{factorEdges.map((edge) => <small key={edge.key}>{factorLabels[edge.key]} {edge.value >= 0 ? "H" : "A"} {fmt(Math.abs(edge.value) * 100, 1)}</small>)}</details>}
                 </td>
+                <td className="numeric">{homeRating || awayRating ? <details className="forecast-factor-details"><summary>Show ratings</summary>{homeRating ? <small>H {fmt(homeRating.adj_off)} off · {fmt(homeRating.adj_def)} def · {fmt(homeRating.adj_net)} net</small> : <small>H unavailable</small>}{awayRating ? <small>A {fmt(awayRating.adj_off)} off · {fmt(awayRating.adj_def)} def · {fmt(awayRating.adj_net)} net</small> : <small>A unavailable</small>}</details> : "—"}</td>
                 <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
                 <td className="numeric">{market.spread == null && market.total == null ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}</>}</td>

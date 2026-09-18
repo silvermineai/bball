@@ -562,7 +562,7 @@ export default function StatsDashboard() {
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
         <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
-        <LiveDashboardForecastTable initialGames={forecasts} rosterScenarios={rosterModel.scenarios} />
+        <LiveDashboardForecastTable initialGames={forecasts} rosterScenarios={rosterModel.scenarios} ratings={overview.ratings} />
       </section>
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">

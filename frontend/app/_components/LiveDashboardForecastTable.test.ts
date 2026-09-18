@@ -107,4 +107,12 @@ describe("forecastCsvRows", () => {
     expect(rows[0].slice(13, 17)).toEqual([0.012, -0.031, 0.018, 0]);
     expect(rows[0][18]).toBeNull();
   });
+
+  it("exports the adjusted team ratings used to read the matchup", () => {
+    const rows = forecastCsvRows([games[0]], {}, [], [
+      { id: games[0].home_id, name: "Home", rank: 1, adj_off: 116.2, adj_def: 94.4, adj_net: 21.8, adj_tempo: 68.1, games: 30, wins: 25, expected_wins: null, luck: null, luck_games: 30, sos: 4.2, sos_games: 30, efg: null, tov_rate: null, orb_rate: null, ft_rate: null, three_rate: null },
+      { id: games[0].away_id, name: "Away", rank: 2, adj_off: 108.4, adj_def: 99.1, adj_net: 9.3, adj_tempo: 65.7, games: 30, wins: 20, expected_wins: null, luck: null, luck_games: 30, sos: 1.1, sos_games: 30, efg: null, tov_rate: null, orb_rate: null, ft_rate: null, three_rate: null },
+    ]);
+    expect(rows[0].slice(-8)).toEqual([116.2, 94.4, 21.8, 68.1, 108.4, 99.1, 9.3, 65.7]);
+  });
 });
