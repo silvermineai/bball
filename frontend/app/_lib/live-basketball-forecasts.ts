@@ -69,7 +69,7 @@ export async function loadLiveBasketballForecasts(
   signal?: AbortSignal,
   options: { maxPages?: number; model?: string; query?: string; cacheBust?: string } = {},
 ) {
-  const modelQuery =
+  let modelQuery =
     options.model && options.model !== "latest"
       ? `&model=${encodeURIComponent(options.model)}`
       : "";
@@ -92,6 +92,14 @@ export async function loadLiveBasketballForecasts(
   }
   if (!Array.isArray(first.rows) || first.rows.length > pageSize || (pageTotal > 0 && first.rows.length === 0)) {
     throw new Error("Live matchup forecasts returned an incomplete page.");
+  }
+  const firstModelIds = new Set(first.rows.map((row) => row.model_id).filter((value): value is string => Boolean(value)));
+  if (firstModelIds.size > 1) throw new Error("Live matchup forecasts mixed model editions.");
+  const resolvedModelId = [...firstModelIds][0];
+  if (resolvedModelId && (!options.model || options.model === "latest")) {
+    // Pin all later requests to the edition page 0 actually returned. This
+    // prevents different D1 replicas from resolving `latest` differently.
+    modelQuery = `&model=${encodeURIComponent(resolvedModelId)}`;
   }
   const pageCount = Math.max(1, Math.ceil(pageTotal / pageSize));
   const pagesToFetch = options.maxPages == null
@@ -118,6 +126,9 @@ export async function loadLiveBasketballForecasts(
     }
     if (page < pagesToFetch - 1 && payload.rows.length === 0) {
       throw new Error("Live matchup forecasts returned an incomplete page.");
+    }
+    if (resolvedModelId && payload.rows.some((row) => row.model_id && row.model_id !== resolvedModelId)) {
+      throw new Error("Live matchup forecasts mixed model editions.");
     }
   });
   const rows = pages.flatMap((page) => page.rows);

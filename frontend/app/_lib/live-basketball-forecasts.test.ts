@@ -62,6 +62,7 @@ describe("live basketball forecast merge", () => {
   it("loads the complete registered forecast edition by default", async () => {
     const row = (id: string): LiveForecastRow => ({
       game_id: id,
+      model_id: "model-a",
       season: 2027,
       starts_at: "2026-11-01T05:00:00Z",
       home_id: `${id}-home`,
@@ -82,7 +83,7 @@ describe("live basketball forecast merge", () => {
     await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).resolves.toHaveLength(3);
     expect(fetcher).toHaveBeenCalledTimes(3);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2&cohort=test",
+      "/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=2&model=model-a&cohort=test",
       { signal: undefined },
     );
     vi.unstubAllGlobals();
