@@ -5,6 +5,7 @@ import Link from "next/link";
 import { date } from "../../_lib/format";
 import {
   auditSourceClocks,
+  liveCoveragePath,
   summarizePossessionReadiness,
   type SourceReceipt,
 } from "../../_lib/coverage-health";
@@ -201,7 +202,7 @@ export default function CoverageLive() {
     // paint. The scheduled publication monitor requests audit=1 separately
     // when it needs the slower possession and location validation pass.
     setData(null);
-    void load(`/api/basketball/research/coverage?audit=${deepAudit ? "1" : "0"}`, setData, setError);
+    void load(liveCoveragePath(deepAudit, Date.now()), setData, setError);
     void load("/api/football/coverage", setFootball, setFootballError);
     void load<ForecastMeta>("/api/basketball/research/forecasts?season=2027&meta=1", setBasketballForecast, () => undefined);
     void load<ForecastMeta>("/api/football/research/forecasts?season=2026&meta=1", setFootballForecast, () => undefined);

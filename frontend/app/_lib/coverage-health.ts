@@ -32,6 +32,12 @@ export type PossessionReadiness = {
   reviewFlags: number;
 };
 
+/** Force live coverage panels past a cached bounded fallback response. */
+export function liveCoveragePath(deepAudit: boolean, probe: number) {
+  const nonce = Number.isFinite(probe) ? Math.max(0, Math.trunc(probe)) : 0;
+  return `/api/basketball/research/coverage?audit=${deepAudit ? "1" : "0"}&probe=${nonce}`;
+}
+
 /** Turn raw D1 guards into a readable denominator without changing inputs. */
 export function summarizePossessionReadiness(
   validation: PossessionValidation,

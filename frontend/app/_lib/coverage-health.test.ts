@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { auditSourceClocks, summarizePossessionReadiness } from "./coverage-health";
+import { auditSourceClocks, liveCoveragePath, summarizePossessionReadiness } from "./coverage-health";
+
+describe("live coverage request", () => {
+  it("uses an audit mode and cache-busting probe", () => {
+    expect(liveCoveragePath(true, 123.9)).toBe("/api/basketball/research/coverage?audit=1&probe=123");
+    expect(liveCoveragePath(false, Number.NaN)).toBe("/api/basketball/research/coverage?audit=0&probe=0");
+  });
+});
 
 describe("source clock audit", () => {
   it("keeps stale and missing datasets visible when another receipt is fresh", () => {

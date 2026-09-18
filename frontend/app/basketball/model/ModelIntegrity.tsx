@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { liveCoveragePath } from "../../_lib/coverage-health";
 
 type Integrity = {
   total: number;
@@ -20,7 +21,7 @@ export default function ModelIntegrity() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/coverage?audit=1", { signal: controller.signal })
+    fetch(liveCoveragePath(true, Date.now()), { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live integrity data is unavailable.");
         return response.json() as Promise<{ possession_validation?: Integrity | null }>;
