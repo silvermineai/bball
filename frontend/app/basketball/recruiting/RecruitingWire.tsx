@@ -10,7 +10,7 @@ const PAGE_SIZE = 12;
 const labels: Record<RecruitingWireTopic, string> = { all: "All recruiting context", transfer: "Transfers and portal", prep: "Prep recruiting", draft: "NBA draft movement", eligibility: "Eligibility and availability", availability: "Injuries and availability" };
 const sanitizeWireCopy = (value: string) => value
   .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
-  .replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD)\b/gi, "the reporting desk");
+  .replace(/\b(?:ESPN|NCAA(?:\.com)?|SportsDataverse|CBBD|CollegeFootballData)\b/gi, "the reporting desk");
 
 export default function RecruitingWire({ articles }: { articles: RecruitingWireArticle[] }) {
   const initial = typeof window === "undefined" ? { query: "", topic: "all" as RecruitingWireTopic, page: 0 } : parseRecruitingWireFilters(window.location.search);
@@ -60,7 +60,7 @@ export default function RecruitingWire({ articles }: { articles: RecruitingWireA
       <label className="control"><span>SEARCH THE WIRE</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Player, program or headline" /></label>
       <label className="control"><span>TOPIC</span><select value={topic} onChange={(event) => { setTopic(event.target.value as RecruitingWireTopic); setPage(0); }}>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <button className="button secondary" type="button" onClick={share}>Copy archive link</button>
-      <button className="button secondary" type="button" onClick={() => downloadCsv("basketball-recruiting-wire.csv", toCsv(["Published", "Headline", "Description", "Categories"], filtered.map((article) => [article.published, article.headline, article.description, article.categories.join(" | ")])))}>Download CSV ↓</button>
+      <button className="button secondary" type="button" onClick={() => downloadCsv("recruiting-wire.csv", toCsv(["Published", "Headline", "Description", "Categories"], filtered.map((article) => [article.published, sanitizeWireCopy(article.headline), sanitizeWireCopy(article.description), article.categories.map(sanitizeWireCopy).join(" | ")])))}>Download CSV ↓</button>
     </div>
     {copied && <p role="status">{copied}</p>}
     <div className="article-grid">{visible.map((article) => <article className="article-card" key={article.id}><div className="eyebrow">{date(article.published)} · Retained wire</div><h2>{sanitizeWireCopy(article.headline)}</h2><p>{sanitizeWireCopy(article.description)}</p></article>)}</div>

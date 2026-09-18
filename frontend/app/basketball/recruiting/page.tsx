@@ -11,6 +11,7 @@ import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecr
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 import { categoryLabels, recruitingRows, type RecruitingRelease } from "../../_lib/recruiting";
 import { fmt } from "../../_lib/format";
+import { publicArchiveText } from "../../_lib/public-text";
 export const metadata = {
   title: "Basketball recruiting: rankings, movement and player production",
   description:
@@ -51,9 +52,10 @@ export default function Page() {
       ),
     ).map(({ link: _link, publisher: _publisher, ...article }) => ({
       ...article,
-      description: article.description
-        .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media")
+      headline: publicArchiveText(article.headline),
+      description: publicArchiveText(article.description)
         .replace(/<img\b[^>]*>/gi, ""),
+      categories: article.categories.map(publicArchiveText),
     }));
   const productionRows = recruitingRows(data)
     .filter((row) => row.stats)

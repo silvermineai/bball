@@ -156,7 +156,7 @@ export default function EspnRecruitingBoard() {
   const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, result?.edition || null, result?.captured_at || null];
   const downloadPage = () => {
     if (!result) return;
-    downloadCsv(`espn-recruiting-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
+    downloadCsv(`prospect-board-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
     setExportMessage(`Downloaded ${result.rows.length.toLocaleString()} prospects from this page.`);
   };
   const downloadAll = async () => {
@@ -175,7 +175,7 @@ export default function EspnRecruitingBoard() {
         all.push(...payload.rows);
         setExportMessage(`Preparing ${all.length.toLocaleString()} of ${result.total.toLocaleString()} prospects…`);
       }
-      downloadCsv(`espn-recruiting-${season}-filtered.csv`, toCsv(exportHeaders, all.map(exportRow)));
+      downloadCsv(`prospect-board-${season}-filtered.csv`, toCsv(exportHeaders, all.map(exportRow)));
       setExportMessage(`Downloaded ${all.length.toLocaleString()} filtered prospects.`);
     } catch (reason) {
       setExportMessage(reason instanceof Error ? reason.message : "The complete recruiting export could not be loaded.");
@@ -203,7 +203,7 @@ export default function EspnRecruitingBoard() {
   const downloadShortlist = () => {
     if (!shortlist.length) return;
     const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
-    downloadCsv("espn-recruiting-shortlist.csv", toCsv(shortlistExportHeaders, rows));
+    downloadCsv("prospect-board-shortlist.csv", toCsv(shortlistExportHeaders, rows));
     setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
   };
   useEffect(() => {
