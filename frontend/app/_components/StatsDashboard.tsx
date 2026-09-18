@@ -23,6 +23,7 @@ import LiveNationalPlayerTable from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
+import DashboardExportButton from "./DashboardExportButton";
 
 function getPlayers(season: number) {
   // Prefer the current player release because it retains the complete basic
@@ -142,7 +143,7 @@ function TeamTable({ teams }: { teams: BBTeam[] }) {
           <tr><th>#</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">Adj O</th><th className="numeric">Adj D</th><th className="numeric">NET</th><th className="numeric">PACE</th><th className="numeric">SOS</th><th className="numeric">eFG%</th><th className="numeric">TO%</th><th className="numeric">ORB%</th><th className="numeric">FTR</th></tr>
         </thead>
         <tbody>
-          {teams.slice(0, 12).map((team) => (
+          {teams.slice(0, 24).map((team) => (
             <tr key={team.id}>
               <td className="rank-number">{team.rank}</td>
               <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(team.id)}/`}>{team.name}</Link></th>
@@ -223,7 +224,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
   const profileByPlayer = new Map(
     profileRows.map((player) => [`${player.id}::${player.team}`, player]),
   );
-  const rows = profileRows.filter((player) => player.profileScore != null).slice(0, 12);
+  const rows = profileRows.filter((player) => player.profileScore != null).slice(0, 18);
   return (
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
@@ -510,6 +511,56 @@ export default function StatsDashboard() {
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
   const archivedPlayerRows = overview.coverage.datasets?.find((dataset) => dataset.key === "ncaa_player_box")?.rows
     ?? overview.coverage.player_box_rows;
+  const teamExportRows = overview.ratings.map((team) => [
+    latestSeason,
+    team.rank,
+    team.name,
+    team.id,
+    team.games,
+    team.wins,
+    team.games - team.wins,
+    team.adj_off,
+    team.adj_def,
+    team.adj_net,
+    team.adj_tempo,
+    team.sos,
+    team.efg == null ? null : team.efg * 100,
+    team.tov_rate == null ? null : team.tov_rate * 100,
+    team.orb_rate == null ? null : team.orb_rate * 100,
+    team.ft_rate == null ? null : team.ft_rate * 100,
+    team.adj_off_efg == null ? null : team.adj_off_efg * 100,
+    team.adj_def_efg == null ? null : team.adj_def_efg * 100,
+    team.adj_off_tov == null ? null : team.adj_off_tov * 100,
+    team.adj_def_tov == null ? null : team.adj_def_tov * 100,
+    team.adj_off_orb == null ? null : team.adj_off_orb * 100,
+    team.adj_def_orb == null ? null : team.adj_def_orb * 100,
+    team.adj_off_ftr == null ? null : team.adj_off_ftr * 100,
+    team.adj_def_ftr == null ? null : team.adj_def_ftr * 100,
+  ] as (string | number | null)[]);
+  const playerExportRows = players.map((player) => [
+    latestSeason,
+    player.name,
+    player.team,
+    player.id,
+    player.position,
+    player.games,
+    player.minutes,
+    player.games ? player.minutes / player.games : null,
+    player.ppg,
+    player.rpg,
+    player.orpg,
+    player.drpg,
+    player.apg,
+    player.spg,
+    player.bpg,
+    player.fpg,
+    player.topg,
+    player.ts == null ? null : player.ts * 100,
+    player.efg == null ? null : player.efg * 100,
+    player.three_pct == null ? null : player.three_pct * 100,
+    player.ft_pct == null ? null : player.ft_pct * 100,
+    player.qualified ? "true" : "false",
+  ] as (string | number | null)[]);
   return (
     <div className="stats-dashboard">
       <div className="dashboard-kicker"><span>MEN&apos;S COLLEGE BASKETBALL</span><span>{overview.label} / LIVE BOARD</span></div>
@@ -566,14 +617,14 @@ export default function StatsDashboard() {
       </section>
       <div className="dashboard-two-col">
         <section className="dashboard-section" aria-labelledby="dashboard-teams">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><Link href="/basketball/ratings/">Full team table →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="dashboard-teams">Power ratings</h2></div><div className="button-row"><DashboardExportButton kind="teams" season={latestSeason} headers={["Season", "Rank", "Team", "Team ID", "Games", "Wins", "Losses", "Adj O", "Adj D", "Adj NET", "PACE", "SOS", "eFG%", "TO%", "ORB%", "FTR", "Adj O eFG%", "Adj D eFG%", "Adj O TO%", "Adj D TO%", "Adj O ORB%", "Adj D ORB%", "Adj O FTR", "Adj D FTR"]} rows={teamExportRows} /><Link href="/basketball/ratings/">Full team table →</Link></div></div>
           <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
           <AdjustedFourFactorsTable teams={overview.ratings} />
           <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
         </section>
         <section className="dashboard-section" aria-labelledby="dashboard-players">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Player production leaders</h2></div><Link href="/basketball/players/">Full player table →</Link></div>
+          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Player production leaders</h2></div><div className="button-row"><DashboardExportButton kind="players" season={latestSeason} headers={["Season", "Player", "Team", "Player ID", "Position", "Games", "Minutes", "MPG", "PPG", "RPG", "ORPG", "DRPG", "APG", "SPG", "BPG", "PF/G", "TO/G", "TS%", "eFG%", "3P%", "FT%", "Qualified"]} rows={playerExportRows} /><Link href="/basketball/players/">Full player table →</Link></div></div>
           <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by a balanced index, with the core box score and true shooting kept in the row. Use the live table below for any other recorded metric.</p>
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
