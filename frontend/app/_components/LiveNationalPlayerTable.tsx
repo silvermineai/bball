@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
+import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 export type NationalPlayerRow = {
   player_id: number | string;
@@ -85,6 +86,39 @@ export function metricValue(row: NationalPlayerRow, metric: NationalLeaderMetric
   return row[metric] ?? null;
 }
 
+export const nationalLeaderCsvHeaders = [
+  "Rank", "Player ID", "Player", "Team", "Conference", "GP", "PPG", "RPG", "APG", "SPG", "BPG", "PF/G", "TO/G", "FG%", "3P%", "FT%", "Selected metric", "Selected value",
+];
+
+export function nationalLeaderCsvRows(
+  rows: Array<NationalPlayerRow & { leader_rank: number | null }>,
+  metric: NationalLeaderMetric,
+): CsvCell[][] {
+  return rows.map((player) => {
+    const perGame = (value: number | null | undefined) => value == null || player.games == null || player.games <= 0 ? null : value / player.games;
+    return [
+      player.leader_rank,
+      player.player_id,
+      player.name,
+      player.team_name,
+      player.conference,
+      player.games,
+      player.ppg,
+      player.rpg,
+      player.apg,
+      player.spg,
+      player.bpg,
+      perGame(player.fouls),
+      perGame(player.turnovers),
+      player.fg_pct,
+      player.three_pct,
+      player.ft_pct,
+      metric,
+      metricValue(player, metric),
+    ];
+  });
+}
+
 const metricRank = (row: LiveLeader, metric: NationalLeaderMetric) => {
   const payload = row.payload || {};
   if (row.publisher_rank != null) return row.publisher_rank;
@@ -106,6 +140,13 @@ export default function LiveNationalPlayerTable({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const selectedMetric = leaderMetrics.find((candidate) => candidate.key === metric)!;
+
+  const downloadVisibleCsv = () => {
+    downloadCsv(`national-player-leaders-${season}.csv`, toCsv(
+      nationalLeaderCsvHeaders,
+      nationalLeaderCsvRows(players.slice(0, rowLimit), metric),
+    ));
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -157,6 +198,7 @@ export default function LiveNationalPlayerTable({
             <option value={40}>40 players</option>
           </select>
         </label>
+        <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!players.length}>Download visible CSV ↓</button>
         <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Showing ${Math.min(rowLimit, players.length)} ${selectedMetric.label.toLowerCase()} leaders. The other columns stay attached for context.`}</p>
       </div>
       {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}

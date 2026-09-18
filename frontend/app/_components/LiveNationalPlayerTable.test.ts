@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { metricValue, normalizeNationalLeader } from "./LiveNationalPlayerTable";
+import { metricValue, nationalLeaderCsvHeaders, nationalLeaderCsvRows, normalizeNationalLeader } from "./LiveNationalPlayerTable";
 
 describe("live national player normalization", () => {
   it("uses live fields and fills the display line from the retained payload", () => {
@@ -49,5 +49,23 @@ describe("live national player normalization", () => {
     expect(player).not.toBeNull();
     expect(metricValue(player!, "bpg")).toBe(2.4);
     expect(metricValue(player!, "ft_pct")).toBeNull();
+  });
+
+  it("exports the visible ranked rows with attached context and selected metric", () => {
+    const player = normalizeNationalLeader({
+      player_id: "42",
+      name: "A Player",
+      team_name: "A University",
+      ppg: 21.5,
+      publisher_rank: 2,
+      payload: { conference: "Big Test", games: 30, rpg: 7.2, apg: 4.1, fouls: 60, turnovers: 45, fg_pct: 52, three_pct: 39, ft_pct: 81 },
+    });
+    expect(player).not.toBeNull();
+    const row = nationalLeaderCsvRows([{ ...player!, leader_rank: 2 }], "ppg")[0];
+    expect(row.slice(0, 6)).toEqual([2, "42", "A Player", "A University", "Big Test", 30]);
+    expect(row[nationalLeaderCsvHeaders.indexOf("PF/G")]).toBe(2);
+    expect(row[nationalLeaderCsvHeaders.indexOf("TO/G")]).toBe(1.5);
+    expect(row[nationalLeaderCsvHeaders.indexOf("Selected metric")]).toBe("ppg");
+    expect(row[nationalLeaderCsvHeaders.indexOf("Selected value")]).toBe(21.5);
   });
 });
