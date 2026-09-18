@@ -142,6 +142,8 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [result, setResult] = useState<Result | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -193,6 +195,41 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
     `ncaa-player-production-${season}.csv`,
     toCsv(playerCsvHeaders, playerCsvRows(result?.rows.slice(0, rowLimit) || [], metric)),
   );
+  const downloadAllCsv = async () => {
+    if (!result || exporting) return;
+    const totalPages = Math.ceil(result.total / 40);
+    if (totalPages > 1001) {
+      setExportMessage("This cohort is larger than the bounded export window. Search for a player or team first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
+    try {
+      const rows: PlayerRow[] = [];
+      for (let page = 0; page < totalPages; page += 1) {
+        const params = new URLSearchParams({
+          season: String(season),
+          metric,
+          minGames: "5",
+          minMinutes: "200",
+          minVolume: String(metrics.find((candidate) => candidate.key === metric)?.volume || 0),
+          page: String(page),
+        });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params.toString()}`);
+        if (!response.ok) throw new Error("The complete player export could not be loaded.");
+        const payload = await response.json() as Result;
+        rows.push(...payload.rows);
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
+      }
+      downloadCsv(`ncaa-player-production-${season}-${metric}-all.csv`, toCsv(playerCsvHeaders, playerCsvRows(rows, metric)));
+      setExportMessage(`Downloaded ${rows.length.toLocaleString()} player rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete player export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <section className="dashboard-subsection" aria-labelledby="live-ncaa-player-stats">
@@ -206,8 +243,10 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
         <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
         <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!result?.rows.length}>Download visible CSV ↓</button>
+        <button className="button secondary" type="button" onClick={downloadAllCsv} disabled={!result?.rows.length || exporting}>{exporting ? "Preparing full CSV…" : "Download full CSV ↓"}</button>
         <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `${query.trim() ? `Found ${result.total.toLocaleString()}` : `Showing ${Math.min(rowLimit, result.rows.length)} of ${result.total.toLocaleString()}`} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
       </div>
+      {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
       <p className="note" style={{ marginBottom: 16 }}>{metricGuidance[metric]} Missing source fields remain unavailable rather than being filled with zero. <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open the full metric table →</Link></p>
       {status === "ready" && result ? (
         <div className="dashboard-table-wrap">
