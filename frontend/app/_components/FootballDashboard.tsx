@@ -82,7 +82,7 @@ function RatingsTable({ ratings }: { ratings: Overview["ratings"] }) {
   return <div className="dashboard-table-wrap">
     <table className="data-table dashboard-table">
       <thead><tr><th>#</th><th>Program</th><th>Conference</th><th className="numeric">Strength</th></tr></thead>
-      <tbody>{ratings.slice(0, 12).map((team) => <tr key={team.id}>
+      <tbody>{ratings.slice(0, 24).map((team) => <tr key={team.id}>
         <td className="rank-number">{team.rank}</td>
         <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(team.name)}`}>{team.name}</Link></th>
         <td>{team.conference}</td>
@@ -97,7 +97,9 @@ function PlayerTable({ players, season }: { players: Player[]; season: number })
     .map((player) => ({ player, category, stats: player.production[category] }))
     .filter((row) => row.stats?.rank != null)
     .sort((a, b) => (a.stats.rank ?? Infinity) - (b.stats.rank ?? Infinity) || a.player.name.localeCompare(b.player.name))
-    .slice(0, 4));
+    // Keep eight leaders per role visible on the landing board so the
+    // football-first dashboard exposes a useful cohort before drill-down.
+    .slice(0, 8));
   return <div className="dashboard-table-wrap">
     <table className="data-table dashboard-table">
       <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Role</th><th className="numeric">Plays</th><th className="numeric">Yards</th><th className="numeric">TD</th><th className="numeric">EPA</th><th className="numeric">EPA/play</th></tr></thead>
@@ -122,7 +124,7 @@ function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
       ...(edition.dataset === "defense" ? ["sacks", "interceptions"] : []),
       ...(edition.dataset === "specialists" ? ["field_goals", "punts"] : []),
     ].flatMap((metric) =>
-      (edition.leaders[metric] || []).slice(0, 3).map((leader) => ({
+      (edition.leaders[metric] || []).slice(0, 6).map((leader) => ({
         ...leader,
         metric,
         label: metric === "field_goals" ? "field goals" : metric,
@@ -187,18 +189,18 @@ export default function FootballDashboard() {
     <div className="dashboard-two-col">
       <section className="dashboard-section" aria-labelledby="football-teams">
         <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="football-teams">Power ratings</h2></div><Link href="/football/ratings/">Full team table →</Link></div>
-        <p className="dashboard-caption">Independent strength ratings from the latest completed season, with conference context and links into the schedule.</p>
+        <p className="dashboard-caption">Top 24 independent strength ratings from the latest completed season, with conference context and links into the schedule.</p>
         <RatingsTable ratings={overview.ratings} />
       </section>
       <section className="dashboard-section" aria-labelledby="football-players">
         <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="football-players">Production leaders</h2></div><Link href="/football/players/">Full player table →</Link></div>
-        <p className="dashboard-caption">Ranked {completedPlayerSeason} passing, rushing and receiving production by total EPA with the underlying volume visible.</p>
+        <p className="dashboard-caption">Eight ranked {completedPlayerSeason} passing, rushing and receiving leaders per role, with the underlying volume visible.</p>
         <PlayerTable players={players} season={completedPlayerSeason} />
       </section>
     </div>
     <section className="dashboard-section" aria-labelledby="football-events">
       <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><Link href="/football/events/">Full event notebook →</Link></div>
-      <p className="dashboard-caption">Current {overview.season} event leaders. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
+      <p className="dashboard-caption">Six current {overview.season} leaders for each retained defensive and specialist event. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
       <EventLeadersTable editions={eventEditions} />
     </section>
     {marketBenchmark ? (
