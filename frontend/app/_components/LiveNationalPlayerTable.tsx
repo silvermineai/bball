@@ -101,6 +101,7 @@ export default function LiveNationalPlayerTable({
 }) {
   type RankedPlayer = NationalPlayerRow & { leader_rank: number | null };
   const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
+  const [rowLimit, setRowLimit] = useState<10 | 25 | 40>(10);
   const [players, setPlayers] = useState<RankedPlayer[]>(() => initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -121,7 +122,7 @@ export default function LiveNationalPlayerTable({
         const rows = (payload.rows || []).flatMap((raw, index) => {
           const row = normalizeNationalLeader(raw);
           return row ? [{ ...row, leader_rank: metricRank(raw, metric) ?? index + 1 }] : [];
-        }).slice(0, 10);
+        }).slice(0, 40);
         if (rows.length) setPlayers(rows);
         else setError("No Division I rows are available for this field.");
       })
@@ -148,13 +149,21 @@ export default function LiveNationalPlayerTable({
             {leaderMetrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label}</option>)}
           </select>
         </label>
-        <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Sorted by ${selectedMetric.label.toLowerCase()}. The other columns stay attached for context.`}</p>
+        <label className="control">
+          <span>SHOW</span>
+          <select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 40)}>
+            <option value={10}>10 players</option>
+            <option value={25}>25 players</option>
+            <option value={40}>40 players</option>
+          </select>
+        </label>
+        <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Showing ${Math.min(rowLimit, players.length)} ${selectedMetric.label.toLowerCase()} leaders. The other columns stay attached for context.`}</p>
       </div>
       {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
           <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
-          <tbody>{players.map((player) => (
+          <tbody>{players.slice(0, rowLimit).map((player) => (
           <tr key={player.player_id}>
             <td className="rank-number">{player.leader_rank ?? "—"}</td>
             <th scope="row"><Link href={`/basketball/ncaa-player/?id=${player.player_id}&season=${season}`}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
