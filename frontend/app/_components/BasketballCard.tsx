@@ -32,6 +32,17 @@ export default function BasketballCard({
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signal = p ? forecastSignal(p) : null;
+  const contextLayers = [
+    g.matchup_factors ? "four factors" : null,
+    homeRating && awayRating ? "team ratings" : null,
+    homeRoster && awayRoster ? "roster minutes" : null,
+    rosterScenario ? "roster scenario" : null,
+  ].filter((value): value is string => value !== null);
+  const scheduleLabel = g.source_time_valid && g.source_start
+    ? "confirmed tip"
+    : g.time_tbd
+      ? "time TBD"
+      : "scheduled tip";
   return (
     <article className="match-card">
       <div className="meta">
@@ -63,6 +74,17 @@ export default function BasketballCard({
           </div>
           <div className="prob-bar" aria-hidden="true">
             <span style={{ width: `${p.home_win_probability * 100}%` }} />
+          </div>
+          <div className="analysis-readiness" aria-label="Game analysis packet">
+            <div className="analysis-readiness-heading">
+              <strong>Game analysis packet</strong>
+              <span>{contextLayers.length ? `${contextLayers.length} evidence layers` : "forecast only"}</span>
+            </div>
+            <div className="analysis-badges">
+              <span className="analysis-badge is-ready">{coldStart ? "cold-start estimate" : "primary model"}</span>
+              <span className="analysis-badge">{scheduleLabel}</span>
+              {contextLayers.map((layer) => <span className="analysis-badge" key={layer}>{layer}</span>)}
+            </div>
           </div>
           <div className="match-detail">
             <span>{g.home_name} win estimate</span>
@@ -99,7 +121,10 @@ export default function BasketballCard({
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
-          {(homeRating || awayRating) && (
+          {(homeRating || awayRating || rosterScenario || g.matchup_factors || homeRoster || awayRoster) && (
+            <details className="match-card-details">
+              <summary>Open matchup evidence</summary>
+              {(homeRating || awayRating) && (
             <div className="rating-context">
               <div className="match-detail">
                 <strong>Historical strength context</strong>
@@ -127,7 +152,7 @@ export default function BasketballCard({
                 Prior opponent-adjusted team strength and schedule context. It is descriptive history; roster changes, injuries and the forecast model remain separate.
               </small>
             </div>
-          )}
+              )}
           {rosterScenario && (
             <div className="roster-context">
               <div className="match-detail">
@@ -174,6 +199,8 @@ export default function BasketballCard({
                 measure is a review queue, not a departure count.
               </small>
             </div>
+          )}
+            </details>
           )}
           <div className="button-row matchup-program-links" aria-label="Program research links">
             <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.away_id)}/`}>Away program dossier ↗</Link>

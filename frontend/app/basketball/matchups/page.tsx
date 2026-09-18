@@ -1,7 +1,5 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { getBasketball, getBasketballMarketComparisons, getRosterModel, getRosters } from "../../_lib/basketball-data";
-import { fmt, kick } from "../../_lib/format";
 import Matchups from "./Matchups";
 export const metadata = {
   title: "2026–27 college basketball matchup predictions",
@@ -9,61 +7,37 @@ export const metadata = {
 export default function Page() {
   const d = getBasketball();
   const rosters = getRosters();
-  const forecastPreview = d.upcoming
-    .filter((game) => game.prediction || game.fallback_prediction)
-    .slice(0, 20);
+  const modeledGames = d.coverage.forecast_games + (d.coverage.baseline_estimate_games || 0);
   return (
     <>
       <div className="page-title">
         <div className="eyebrow">The schedule / 2026–27</div>
-        <h1>Prepare for what’s next.</h1>
+        <h1>Know the game<br /><em>before tip.</em></h1>
         <p>
-          Search the published slate and compare score estimates, pace and
-          uncertainty. Primary forecasts use historical efficiency, calibrated
-          on a separate season. Games outside that trained field carry a
-          separately calibrated cold-start estimate so the whole published
-          schedule remains useful; those cards are labeled clearly. The desk
-          also shows observed prior-minute coverage for roster context.
+          One clean slate for upcoming games, model projections and the evidence
+          that can explain each matchup. Start with the forecast; open the
+          context only when you need the factors, roster workload or team history.
         </p>
         <p className="note">
-          Use the triage controls to surface the strongest model signals, the
-          closest projected games or the widest uncertainty ranges. “Toss-up,”
-          “Lean” and “Strong lean” describe estimated win-probability confidence;
-          they are not betting advice.
-        </p>
-        <p className="note">
-          For a program-wide personnel view, compare the <Link href="/basketball/roster-lab/">roster workload lab</Link> before opening an individual brief.
+          Filter by team, month, model signal or uncertainty. Every row keeps its
+          model edition, timing clock and missing-data boundaries visible.
         </p>
       </div>
-      <section className="paper-panel" aria-labelledby="forecast-board" style={{ marginBottom: 24 }}>
+      <section className="paper-panel matchup-overview" aria-labelledby="forecast-board" style={{ marginBottom: 24 }}>
         <div className="section-heading" style={{ marginBottom: 12 }}>
           <div>
             <div className="eyebrow">Silvermine forecast board / 2026–27</div>
-            <h2 id="forecast-board">Upcoming games, already modeled</h2>
+            <h2 id="forecast-board">The slate at a glance</h2>
           </div>
-          <span className="note">First 20 published forecasts · newest edition</span>
+          <span className="note">Newest registered edition</span>
         </div>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead><tr><th>Start</th><th>Away</th><th>Home</th><th className="numeric">Away pts</th><th className="numeric">Home pts</th><th className="numeric">Home win%</th><th className="numeric">Margin</th><th className="numeric">Total</th><th>Estimate</th></tr></thead>
-            <tbody>{forecastPreview.map((game) => {
-              const prediction = game.prediction || game.fallback_prediction;
-              return <tr key={game.id}>
-                <td>{kick(game.starts_at)}</td>
-                <td><Link href={`/basketball/programs/${encodeURIComponent(game.away_id)}/`}>{game.away_name}</Link></td>
-                <td><Link href={`/basketball/programs/${encodeURIComponent(game.home_id)}/`}>{game.home_name}</Link></td>
-                <td className="numeric">{fmt(prediction?.away_score)}</td>
-                <td className="numeric"><strong>{fmt(prediction?.home_score)}</strong></td>
-                <td className="numeric">{prediction?.home_win_probability == null ? "—" : `${fmt(prediction.home_win_probability * 100)}%`}</td>
-                <td className="numeric">{fmt(prediction?.home_margin)}</td>
-                <td className="numeric">{fmt(prediction?.total)}</td>
-                <td>{game.prediction ? "Primary" : "Cold start"}<small>{prediction?.margin_low == null || prediction.margin_high == null ? "Range unavailable" : `Range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`}</small></td>
-              </tr>;
-            })}</tbody>
-          </table>
+        <div className="strip matchup-overview-strip">
+          <div><strong>{d.coverage.upcoming_games.toLocaleString()}</strong><span>scheduled games</span></div>
+          <div><strong>{modeledGames.toLocaleString()}</strong><span>games with an estimate</span></div>
+          <div><strong>{d.coverage.forecast_games.toLocaleString()}</strong><span>primary model rows</span></div>
+          <div><strong>{(d.model.evaluation.winner_accuracy * 100).toFixed(1)}%</strong><span>held-out winner accuracy</span></div>
         </div>
-        {!forecastPreview.length && <p className="empty">No published forecasts are available for the upcoming slate.</p>}
-        <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin and total come from the registered model edition. Cold-start estimates remain labeled and carry wider uncertainty; no market line is substituted for a model output.</p>
+        <p className="note" style={{ marginTop: 14 }}>Primary estimates use opponent-adjusted efficiency and calibrated uncertainty. Cold-start rows remain labeled and wider; no missing line, roster field or timing observation is filled in by inference.</p>
       </section>
       <Suspense fallback={<p>Loading slate…</p>}>
         <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={getRosterModel().scenarios} teamRatings={Object.fromEntries(d.ratings.map((team) => [team.id, team]))} model={d.model} generatedAt={d.generated_at} />
