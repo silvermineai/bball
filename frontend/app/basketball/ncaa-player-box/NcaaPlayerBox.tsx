@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 
 type Row = {
@@ -10,7 +11,8 @@ type Row = {
   game_date: string | null; team_name: string | null; opponent_name: string | null;
   player_name: string | null; stats: Record<string, number | null>;
 };
-type Result = { season: number | "all"; archive_mode: "games" | "season"; page: number; page_size: number; total: number; rows: Row[] };
+export type PlayerBoxResult = { season: number | "all"; archive_mode: "games" | "season"; page: number; page_size: number; total: number; rows: Row[] };
+type Result = PlayerBoxResult;
 type ArchiveValidation = {
   total_rows: number;
   missing_ids: number;
@@ -51,6 +53,34 @@ const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Pla
 const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+export function validatePlayerBoxExportPage(
+  payload: PlayerBoxResult,
+  expectedSeason: string,
+  expectedArchiveMode: "games" | "season",
+  expectedTotal: number,
+  expectedPageSize: number,
+  page: number,
+  totalPages: number,
+) {
+  if (
+    String(payload.season) !== expectedSeason
+    || payload.archive_mode !== expectedArchiveMode
+    || Number(payload.page) !== page
+    || !Number.isInteger(Number(payload.total))
+    || Number(payload.total) !== expectedTotal
+    || !Number.isInteger(Number(payload.page_size))
+    || Number(payload.page_size) !== expectedPageSize
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > expectedPageSize
+  ) {
+    throw new Error("The player box release changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The player box release returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 function SourceFieldDetails({ stats }: { stats: Row["stats"] }) {
   return <details className="ncaa-source-fields">
@@ -158,7 +188,7 @@ export default function NcaaPlayerBox() {
   };
   const downloadAll = async () => {
     if (!result || exporting) return;
-    const totalPages = Math.ceil(result.total / result.page_size);
+    const totalPages = Math.max(1, Math.ceil(result.total / result.page_size));
     if (totalPages > 1001) {
       setExportMessage("This season exceeds the bounded browser export window. Add a player, team, or ID search first.");
       return;
@@ -167,15 +197,20 @@ export default function NcaaPlayerBox() {
     setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
     try {
       const rows: Row[] = [];
+      const cohort = `player-box-export-${Date.now()}`;
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ season, page: String(requestedPage), archive });
+        params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
-        const response = await fetch(`/api/basketball/research/ncaa-player-box?${params}`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-player-box?${params.toString()}`);
         if (!response.ok) throw new Error("The complete player export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...payload.rows);
+        rows.push(...validatePlayerBoxExportPage(payload, season, result.archive_mode, result.total, result.page_size, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
       }
+      if (rows.length !== result.total) throw new Error("The player box release returned an incomplete export.");
+      const identities = new Set(rows.map((row) => `${row.season}:${row.contest_id || "season"}:${row.team_id}:${row.player_id}`));
+      if (identities.size !== rows.length) throw new Error("The player box release returned duplicate player rows.");
       downloadCsv(`ncaa-player-box-${season}-${result.archive_mode}-all.csv`, toCsv(csvHeaders, rows.map(exportRow)));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} rows.`);
     } catch (reason) {
