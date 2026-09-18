@@ -58,6 +58,8 @@ type LiveLeader = {
   payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null }) | null;
 };
 
+type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number };
+
 export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | null {
   const payload = row.payload || {};
   if (row.player_id == null || !row.name) return null;
@@ -135,10 +137,14 @@ export default function LiveNationalPlayerTable({
 }) {
   type RankedPlayer = NationalPlayerRow & { leader_rank: number | null };
   const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
+  const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 40>(10);
   const [players, setPlayers] = useState<RankedPlayer[]>(() => initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })));
+  const [totalRows, setTotalRows] = useState(initialPlayers.length);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const selectedMetric = leaderMetrics.find((candidate) => candidate.key === metric)!;
 
   const downloadVisibleCsv = () => {
@@ -147,23 +153,57 @@ export default function LiveNationalPlayerTable({
       nationalLeaderCsvRows(players.slice(0, rowLimit), metric),
     ));
   };
+  const normalizeRows = (rawRows: LiveLeader[], selected: NationalLeaderMetric) => rawRows.flatMap((raw, index) => {
+    const row = normalizeNationalLeader(raw);
+    return row ? [{ ...row, leader_rank: metricRank(raw, selected) ?? index + 1 }] : [];
+  });
+  const downloadAllCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${totalRows.toLocaleString()} rows…`);
+    try {
+      const rows: RankedPlayer[] = [];
+      let total = totalRows;
+      let pages = Math.max(1, Math.ceil(total / 40));
+      for (let page = 0; page < pages; page += 1) {
+        const params = new URLSearchParams({ division: "1", stat: metric, page: String(page) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`);
+        if (!response.ok) throw new Error("The complete national leaderboard could not be loaded.");
+        const payload = await response.json() as LiveLeaderResponse;
+        total = Number(payload.total || total);
+        pages = Number(payload.pages || Math.max(1, Math.ceil(total / Number(payload.limit || 40))));
+        rows.push(...normalizeRows(payload.rows || [], metric));
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${total.toLocaleString()} rows…`);
+      }
+      downloadCsv(`national-player-leaders-${season}-${metric}-all.csv`, toCsv(
+        nationalLeaderCsvHeaders,
+        nationalLeaderCsvRows(rows.slice(0, total), metric),
+      ));
+      setExportMessage(`Downloaded ${Math.min(rows.length, total).toLocaleString()} leader rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete national leaderboard could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
     setPlayers(metric === "ppg" ? initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })) : []);
-    fetch(`/api/basketball/research/ncaa-leaders?division=1&stat=${metric}&page=0`, { signal: controller.signal })
+    const params = new URLSearchParams({ division: "1", stat: metric, page: "0" });
+    if (query.trim()) params.set("q", query.trim());
+    fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live player leaders unavailable");
-        return response.json() as Promise<{ rows?: LiveLeader[] }>;
+        return response.json() as Promise<LiveLeaderResponse>;
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        const rows = (payload.rows || []).flatMap((raw, index) => {
-          const row = normalizeNationalLeader(raw);
-          return row ? [{ ...row, leader_rank: metricRank(raw, metric) ?? index + 1 }] : [];
-        }).slice(0, 40);
+        const rows = normalizeRows(payload.rows || [], metric).slice(0, 40);
+        setTotalRows(Number(payload.total || rows.length));
         if (rows.length) setPlayers(rows);
         else setError("No Division I rows are available for this field.");
       })
@@ -177,7 +217,7 @@ export default function LiveNationalPlayerTable({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [initialPlayers, metric]);
+  }, [initialPlayers, metric, query]);
 
   const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
   const perGame = (value: number | null | undefined, games: number | null) => value == null || games == null || games <= 0 ? null : value / games;
@@ -191,6 +231,10 @@ export default function LiveNationalPlayerTable({
           </select>
         </label>
         <label className="control">
+          <span>PLAYER OR TEAM</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or team" aria-label="Search national player or team" />
+        </label>
+        <label className="control">
           <span>SHOW</span>
           <select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 40)}>
             <option value={10}>10 players</option>
@@ -199,8 +243,10 @@ export default function LiveNationalPlayerTable({
           </select>
         </label>
         <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!players.length}>Download visible CSV ↓</button>
-        <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Showing ${Math.min(rowLimit, players.length)} ${selectedMetric.label.toLowerCase()} leaders. The other columns stay attached for context.`}</p>
+        <button className="button secondary" type="button" onClick={downloadAllCsv} disabled={exporting || !players.length}>{exporting ? "Preparing full CSV…" : "Download full CSV ↓"}</button>
+        <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Showing ${Math.min(rowLimit, players.length)} of ${totalRows.toLocaleString()} ${selectedMetric.label.toLowerCase()} leaders. The other columns stay attached for context.`}</p>
       </div>
+      {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
       {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
