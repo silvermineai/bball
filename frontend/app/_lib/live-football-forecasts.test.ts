@@ -35,6 +35,18 @@ describe("live football forecast merge", () => {
     globalThis.fetch = originalFetch;
   });
 
+  it("loads every registered page by default", async () => {
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ total: 250, page_size: 100, rows: [] }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballForecasts()).resolves.toEqual([]);
+    expect(calls).toBe(3);
+    globalThis.fetch = originalFetch;
+  });
+
   it("indexes exact ledger market comparisons by game", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response(JSON.stringify({

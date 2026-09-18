@@ -60,7 +60,9 @@ export default function LiveFootballDashboardForecastTable({
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled([
-      loadLiveFootballForecasts(controller.signal, { maxPages: 1 }),
+      // Keep the football landing board aligned with the complete registered
+      // edition; a first-page-only refresh leaves later games on static data.
+      loadLiveFootballForecasts(controller.signal),
       loadLiveFootballMarketComparisons(controller.signal),
     ]).then(([forecastResult, marketResult]) => {
       if (controller.signal.aborted) return;
