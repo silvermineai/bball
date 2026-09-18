@@ -54,6 +54,7 @@ export default function LiveFootballDashboardForecastTable({
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<FootballMatchupSort>("date");
   const [signal, setSignal] = useState<FootballMatchupSignal>("all");
+  const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function LiveFootballDashboardForecastTable({
 
   const forecastedGames = games.filter((game) => game.prediction);
   const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
-  const rows = sortFootballMatchups(signalGames, sort).slice(0, 12);
+  const rows = sortFootballMatchups(signalGames, sort).slice(0, rowLimit);
   const marketGames = signalGames.filter((game) => {
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     return market.spread != null || market.total != null;
@@ -96,6 +97,14 @@ export default function LiveFootballDashboardForecastTable({
             <option value="toss-up">Toss-ups · under 60%</option>
             <option value="lean">Leans · 60–74.9%</option>
             <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <label className="control">
+          <span>SHOW</span>
+          <select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 12 | 24 | 48)}>
+            <option value={12}>12 games</option>
+            <option value={24}>24 games</option>
+            <option value={48}>48 games</option>
           </select>
         </label>
         <p className="note" role="status">Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sortLabels[sort]} · {marketGames} with qualifying market lines.</p>
