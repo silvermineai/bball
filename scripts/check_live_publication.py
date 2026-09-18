@@ -21,6 +21,11 @@ def timestamp(value: str) -> datetime:
 
 
 def get_json(base_url: str, path: str, attempts: int = 4) -> dict:
+    # Cloudflare can cache the bounded static fallback for the audit endpoint
+    # after a transient D1 timeout. A probe key forces the monitor to observe
+    # the live receipt catalog instead of validating that stale fallback.
+    if path == "/api/basketball/research/coverage?audit=1":
+        path = f"{path}&probe={time.time_ns()}"
     url = f"{base_url.rstrip('/')}{path}"
     last_error: Exception | None = None
     for attempt in range(attempts):
