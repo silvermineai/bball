@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date, fmt } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
+import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 type Prospect = {
   athlete_id: string;
@@ -11,6 +12,9 @@ type Prospect = {
   position?: string | null;
   rank?: number | null;
   previous_rank?: number | null;
+  position_rank?: number | null;
+  state_rank?: number | null;
+  region_rank?: number | null;
   grade?: number | null;
   committed_team_name?: string | null;
   committed_team_id?: string | null;
@@ -19,6 +23,7 @@ type Prospect = {
   hometown?: string | null;
   height_inches?: number | null;
   weight_pounds?: number | null;
+  captured_at?: string | null;
 };
 
 type ProspectResponse = {
@@ -51,6 +56,36 @@ const movement = (row: Prospect) => {
   return delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : "—";
 };
 
+export const prospectCsvHeaders = [
+  "Class", "Rank", "Previous rank", "Movement", "Prospect ID", "Prospect", "Position",
+  "Grade", "Position rank", "State rank", "Region rank", "Status", "Destination ID",
+  "Destination", "High school", "Hometown", "Height (in)", "Weight (lb)", "Captured",
+];
+
+export function prospectCsvRows(rows: Prospect[], season: number): CsvCell[][] {
+  return rows.map((row) => [
+    season,
+    row.rank ?? null,
+    row.previous_rank ?? null,
+    movement(row),
+    row.athlete_id,
+    row.name,
+    row.position ?? null,
+    row.grade ?? null,
+    row.position_rank ?? null,
+    row.state_rank ?? null,
+    row.region_rank ?? null,
+    row.status ?? null,
+    row.committed_team_id ?? null,
+    row.committed_team_name ?? null,
+    row.high_school ?? null,
+    row.hometown ?? null,
+    row.height_inches ?? null,
+    row.weight_pounds ?? null,
+    row.captured_at ?? null,
+  ]);
+}
+
 export const prospectCountLabel = (total: number, season: number) =>
   `${total.toLocaleString()} prospects in the ${season} class`;
 
@@ -70,6 +105,40 @@ export default function LiveBasketballProspectLeaders() {
   const [season, setSeason] = useState<ProspectSeason>(2027);
   const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
+
+  const exportProspects = async () => {
+    if (!data || exporting) return;
+    setExporting(true);
+    setExportMessage("");
+    try {
+      const params = new URLSearchParams({ season: String(season), committed: "all" });
+      if (query.trim()) params.set("q", query.trim());
+      const pageCount = Math.ceil(data.total / 50);
+      const pages = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+          fetchJson<ProspectResponse>(`/api/basketball/research/recruiting-rankings?${params.toString()}&page=${index + 1}`),
+        ),
+      );
+      if (pages.some((page) => page.season !== season || page.total !== data.total)) {
+        throw new Error("The prospect release changed during export.");
+      }
+      const rows = [
+        ...(data.rows || []),
+        ...pages.flatMap((page) => page.rows || []),
+      ].slice(0, data.total);
+      if (rows.length !== data.total) throw new Error("The prospect release returned an incomplete export.");
+      downloadCsv(
+        `basketball-prospects-${season}.csv`,
+        toCsv(prospectCsvHeaders, prospectCsvRows(rows, season)),
+      );
+    } catch {
+      setExportMessage("The full class export is temporarily unavailable; try again or open the recruiting board.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -111,9 +180,11 @@ export default function LiveBasketballProspectLeaders() {
           </label>
           <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Prospect or destination" aria-label="Search prospect or destination" /></label>
           <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
+          <button className="button secondary" type="button" onClick={exportProspects} disabled={exporting || !data?.rows.length}>{exporting ? "Preparing CSV…" : "Download class CSV ↓"}</button>
           <Link href="/basketball/recruiting/">Full recruiting board →</Link>
         </div>
       </div>
+      {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact {season} class view. The full board supports every tracked class, position and commitment filter.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
