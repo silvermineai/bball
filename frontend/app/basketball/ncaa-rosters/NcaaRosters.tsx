@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { safeSum } from "../../_lib/ncaa-player-box";
 
 type Zone = { attempts: number; makes: number; points: number };
 type Shooting = { attempts: number; makes: number; distance_sum: number; distance_count: number; zones: Record<string, Zone> };
 type Row = { season: number; team_id: string; player_id: string; team_name: string | null; player_name: string | null; profile: Record<string, string>; recorded_games: number | null; recorded_minutes: number | null; recorded_points: number | null; recorded_rebounds: number | null; recorded_assists: number | null; shooting: Shooting | null };
-type Result = { season: number; page: number; page_size: number; total: number; rows: Row[] };
+export type NcaaRosterResult = { season: number; page: number; page_size: number; total: number; rows: Row[] };
+type Result = NcaaRosterResult;
 type Meta = { seasons: number[]; classes: string[]; positions: string[]; total: number; source?: { url: string | null; fetched_at: string | null; sha256: string | null } };
 type Transition = { team_id: string; team_name: string; previous_players: number; current_players: number; overlap_players: number; new_players: number; departed_players: number; continuity_rate: number | null };
 type TransitionResult = { from_season: number; to_season: number; page: number; page_size: number; total: number; rows: Transition[] };
@@ -16,6 +18,32 @@ const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const pct = (zone: Zone | undefined) => zone && zone.attempts ? `${(100 * zone.makes / zone.attempts).toFixed(1)}%` : "—";
 const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
+
+export function validateNcaaRosterExportPage(
+  payload: NcaaRosterResult,
+  expectedSeason: number,
+  expectedTotal: number,
+  expectedPageSize: number,
+  page: number,
+  totalPages: number,
+) {
+  if (
+    Number(payload.season) !== expectedSeason
+    || Number(payload.page) !== page
+    || !Number.isInteger(Number(payload.total))
+    || Number(payload.total) !== expectedTotal
+    || !Number.isInteger(Number(payload.page_size))
+    || Number(payload.page_size) !== expectedPageSize
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > expectedPageSize
+  ) {
+    throw new Error("The roster release changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The roster release returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 export default function NcaaRosters() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -100,7 +128,7 @@ export default function NcaaRosters() {
   };
   const downloadAll = async () => {
     if (!result || exporting) return;
-    const totalPages = Math.ceil(result.total / result.page_size);
+    const totalPages = Math.max(1, Math.ceil(result.total / result.page_size));
     if (totalPages > 1001) {
       setExportMessage("This cohort exceeds the bounded export window. Add a player, school, class or position filter first, or use the exact source parquet.");
       return;
@@ -109,17 +137,22 @@ export default function NcaaRosters() {
     setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
     try {
       const rows: Row[] = [];
+      const cohort = `roster-export-${Date.now()}`;
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ season, page: String(requestedPage) });
+        params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
         if (classYear) params.set("classYear", classYear);
         if (position) params.set("position", position);
-        const response = await fetch(`/api/basketball/research/ncaa-rosters?${params}`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-rosters?${params.toString()}`);
         if (!response.ok) throw new Error("The complete roster export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...payload.rows);
+        rows.push(...validateNcaaRosterExportPage(payload, Number(season), result.total, result.page_size, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
       }
+      if (rows.length !== result.total) throw new Error("The roster release returned an incomplete export.");
+      const identities = new Set(rows.map((row) => `${row.season}:${row.team_id}:${row.player_id}`));
+      if (identities.size !== rows.length) throw new Error("The roster release returned duplicate player rows.");
       downloadCsv(`ncaa-rosters-${season}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result.season))));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} roster rows.`);
     } catch (reason) {
