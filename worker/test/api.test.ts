@@ -1575,6 +1575,31 @@ describe("bball api", () => {
     expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
   });
 
+  it("ranks NCAA turnovers per game from the lowest recorded volume first", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 2 }),
+        all: vi.fn().mockResolvedValue({ results: [
+          { player_name: "Low turnover", value: 1.1, rank: 1 },
+          { player_name: "High turnover", value: 3.4, rank: 2 },
+        ] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=topg&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { direction: string; rows: Array<{ player_name: string; rank: number }> };
+    expect(body.direction).toBe("asc");
+    expect(body.rows[0]).toMatchObject({ player_name: "Low turnover", rank: 1 });
+    const rowSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("RANK() OVER"));
+    expect(rowSql).toContain("ORDER BY value ASC");
+    expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
+  });
+
   it("ranks NCAA personal fouls per game from retained source fields", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({

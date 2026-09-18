@@ -124,10 +124,11 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
 }[metric]);
 
 const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "orapm" || metric === "drapm";
-// Turnovers are the one published player metric where a lower value is the
-// favorable direction. Keep the ordering in the API aligned with the coaching
-// interpretation shown in the UI; all other ranking metrics remain high-first.
-const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" ? "asc" : "desc";
+// Turnover volume and turnover rate are the two player measures where a
+// smaller value is the favorable direction. Keep the API order aligned with
+// the "Ball security" label used by the dashboard and ranking desk; all other
+// ranking metrics remain high-first.
+const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" || metric === "topg" ? "asc" : "desc";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 const volumeColumn = (metric: Metric) => {
   if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
