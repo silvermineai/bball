@@ -97,6 +97,7 @@ const percentage = (made: number | null, attempted: number | null) =>
 export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number }) {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
   const [metric, setMetric] = useState<Metric>(() => selectedMetric(initial?.get("livePlayerMetric") || null));
+  const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [result, setResult] = useState<Result | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
 
@@ -142,14 +143,15 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       <p className="dashboard-caption">Current archive rows with a five-game and 200-minute floor. The selected field orders the table; the surrounding production columns stay attached for context.</p>
       <div className="toolbar" style={{ marginBottom: 16 }}>
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
-        <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `${result.total.toLocaleString()} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
+        <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
+        <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `Showing ${Math.min(rowLimit, result.rows.length)} of ${result.total.toLocaleString()} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
       </div>
       <p className="note" style={{ marginBottom: 16 }}>{metricGuidance[metric]} Missing source fields remain unavailable rather than being filled with zero. <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open the full metric table →</Link></p>
       {status === "ready" && result ? (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
             <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
-            <tbody>{result.rows.slice(0, 10).map((row) => (
+            <tbody>{result.rows.slice(0, rowLimit).map((row) => (
               <tr key={`${row.player_id}-${row.team_name || ""}`}>
                 <td className="rank-number">{row.rank}</td>
                 <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small></th>
