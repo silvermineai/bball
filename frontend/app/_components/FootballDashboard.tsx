@@ -7,6 +7,7 @@ import { date, fmt } from "../_lib/format";
 import LiveFootballDashboardForecastTable from "./LiveFootballDashboardForecastTable";
 import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
+import DashboardExportButton from "./DashboardExportButton";
 
 type Production = {
   games?: number | null;
@@ -153,6 +154,37 @@ export default function FootballDashboard() {
   const completedPlayerSeason = overview.season - 1;
   const eventEditions = getEventEditions(overview.season);
   const marketBenchmark = getMarketBenchmark();
+  const teamExportRows = overview.ratings.map((team) => [
+    overview.season,
+    team.rank,
+    team.name,
+    team.id,
+    team.conference,
+    team.rating,
+  ] as (string | number | null)[]);
+  const playerExportRows = players.flatMap((player) =>
+    ["passing", "rushing", "receiving"].flatMap((category) => {
+      const stats = player.production[category];
+      if (!stats) return [];
+      return [[
+        completedPlayerSeason,
+        player.id,
+        player.name,
+        player.team,
+        player.conference,
+        player.division,
+        category,
+        stats.rank,
+        stats.games,
+        stats.plays,
+        stats.yards,
+        stats.yards_per_play,
+        stats.epa,
+        stats.epa_per_play,
+        stats.touchdowns,
+      ] as (string | number | null)[]];
+    }),
+  );
   return <div className="stats-dashboard football-dashboard">
     <div className="dashboard-kicker"><span>COLLEGE FOOTBALL</span><span>{overview.season} / LIVE BOARD</span></div>
     <section className="dashboard-hero">
@@ -188,12 +220,12 @@ export default function FootballDashboard() {
     </section>
     <div className="dashboard-two-col">
       <section className="dashboard-section" aria-labelledby="football-teams">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="football-teams">Power ratings</h2></div><Link href="/football/ratings/">Full team table →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">02 / TEAM STATS</span><h2 id="football-teams">Power ratings</h2></div><div className="button-row"><DashboardExportButton sport="football" kind="teams" season={overview.season} headers={["Season", "Rank", "Team", "Team ID", "Conference", "Strength"]} rows={teamExportRows} /><Link href="/football/ratings/">Full team table →</Link></div></div>
         <p className="dashboard-caption">Top 24 independent strength ratings from the latest completed season, with conference context and links into the schedule.</p>
         <RatingsTable ratings={overview.ratings} />
       </section>
       <section className="dashboard-section" aria-labelledby="football-players">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="football-players">Production leaders</h2></div><Link href="/football/players/">Full player table →</Link></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="football-players">Production leaders</h2></div><div className="button-row"><DashboardExportButton sport="football" kind="players" season={completedPlayerSeason} headers={["Season", "Player ID", "Player", "Team", "Conference", "Division", "Role", "Rank", "Games", "Plays", "Yards", "Yards/play", "EPA", "EPA/play", "Touchdowns"]} rows={playerExportRows} /><Link href="/football/players/">Full player table →</Link></div></div>
         <p className="dashboard-caption">Eight ranked {completedPlayerSeason} passing, rushing and receiving leaders per role, with the underlying volume visible.</p>
         <PlayerTable players={players} season={completedPlayerSeason} />
       </section>

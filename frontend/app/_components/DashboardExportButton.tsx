@@ -7,6 +7,7 @@ type Props = {
   season: number;
   headers: string[];
   rows: CsvCell[][];
+  sport?: "basketball" | "football";
 };
 
 /**
@@ -14,11 +15,11 @@ type Props = {
  * tables stay compact, while the download preserves every published row and
  * field behind that table.
  */
-export default function DashboardExportButton({ kind, season, headers, rows }: Props) {
+export default function DashboardExportButton({ kind, season, headers, rows, sport = "basketball" }: Props) {
   const label = kind === "teams" ? "Download team CSV ↓" : "Download player CSV ↓";
   const filename = kind === "teams"
-    ? `basketball-team-ratings-${season}.csv`
-    : `basketball-player-stats-${season}.csv`;
+    ? `${sport}-team-ratings-${season}.csv`
+    : `${sport}-player-stats-${season}.csv`;
 
   return (
     <button
