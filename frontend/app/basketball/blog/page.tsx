@@ -52,7 +52,7 @@ export default function Page() {
           attached; a generated preview is a starting point for reporting, not
           a claim about availability or a betting edge.
         </p>
-        <LiveBasketballJournal games={games.slice(0, 12)} />
+        <LiveBasketballJournal games={games.slice(0, 12)} ratings={basketball.ratings} />
       </section>
       <section className="section two-col">
         <article className="paper-panel">

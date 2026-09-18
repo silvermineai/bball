@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { BBGame } from "../_lib/basketball-types";
+import type { BBFactorKey, BBGame, BBTeam } from "../_lib/basketball-types";
 import type { Comparison } from "../_lib/research-types";
-import { date, kick } from "../_lib/format";
+import { date, fmt, kick } from "../_lib/format";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { comparisonQuoteSummary } from "../_lib/market-display";
 import { downloadCsv, toCsv } from "../_lib/csv";
@@ -15,12 +15,13 @@ import {
 } from "../_lib/live-basketball-forecasts";
 
 const PREP_LIST_KEY = "silvermine-basketball-prep-list-v1";
+const factorLabels: Record<BBFactorKey, string> = { efg: "eFG%", tov: "TO%", orb: "ORB%", ftr: "FTR" };
 type SavedGame = Pick<BBGame, "id" | "starts_at" | "away_name" | "home_name" | "source_start" | "source_time_valid"> & {
   prediction: NonNullable<BBGame["prediction"]>;
   marketContext?: string | null;
 };
 
-export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
+export default function LiveBasketballJournal({ games, ratings = [] }: { games: BBGame[]; ratings?: BBTeam[] }) {
   const [activeGames, setActiveGames] = useState(games);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [edition, setEdition] = useState<{ modelId: string; capturedAt: string } | null>(null);
@@ -28,6 +29,7 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [savedGames, setSavedGames] = useState<Record<string, SavedGame>>({});
   const [savedMessage, setSavedMessage] = useState("");
+  const ratingsById = new Map(ratings.map((team) => [team.id, team]));
 
   useEffect(() => {
     try {
@@ -147,6 +149,11 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
             if (!p) return null;
             const lens = basketballEditorialLens(g);
             const sourceClock = g.source_time_valid && g.source_start ? ` · schedule clock ${kick(g.source_start)}` : "";
+            const awayRating = ratingsById.get(g.away_id);
+            const homeRating = ratingsById.get(g.home_id);
+            const factorEdges = Object.entries(g.matchup_factors?.edges || {})
+              .filter((entry): entry is [BBFactorKey, number] => Number.isFinite(entry[1]))
+              .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
             return <article className="article-card" key={g.id}>
               <div className="eyebrow">{date(g.starts_at)} · Model brief{sourceClock}</div>
               <h2>
@@ -158,6 +165,10 @@ export default function LiveBasketballJournal({ games }: { games: BBGame[] }) {
               <p className="note">
                 {p.margin_low.toFixed(1)} to {p.margin_high.toFixed(1)} home-margin range · {p.pace.toFixed(1)} possessions per 40 minutes.
               </p>
+              {(awayRating || homeRating || factorEdges.length > 0) && <dl className="journal-statline">
+                {(awayRating || homeRating) && <div><dt>Latest team net</dt><dd>{g.away_name} {awayRating ? fmt(awayRating.adj_net, 1) : "—"} · {g.home_name} {homeRating ? fmt(homeRating.adj_net, 1) : "—"}</dd></div>}
+                {factorEdges.length > 0 && <div><dt>Four Factor edges</dt><dd>{factorEdges.map(([key, edge]) => `${edge > 0 ? g.home_name : g.away_name} ${factorLabels[key]} ${fmt(Math.abs(edge) * 100, 1)}`).join(" · ")}</dd></div>}
+              </dl>}
               {lens && <>
                 <p className="journal-editorial-lens"><strong>{lens.title}.</strong> {lens.body}</p>
                 <p className="note"><strong>Reporting question:</strong> {lens.questions[0]}</p>
