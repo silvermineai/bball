@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateRecruitingExportPage, type RecruitingBoardResult } from "./EspnRecruitingBoard";
+import { validateRecruitingExportPage, type RecruitingBoardResult } from "./RecruitingBoard";
 
 describe("recruiting board export pagination", () => {
   const row = {

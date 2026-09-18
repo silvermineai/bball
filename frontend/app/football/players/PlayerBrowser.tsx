@@ -443,17 +443,17 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         records; no composite rank is assigned to those roles.
       </p>
       <section className="section paper-panel">
-        <h2>Read the source coverage.</h2>
+        <h2>Read the dataset coverage.</h2>
         <p>
           Player boxes retain every imported category row, including
           team-attributed plays. Negative source IDs labeled “Team” are kept in
           storage but excluded from athlete profiles and rankings. Games and
-          player counts describe these source releases, not verified national
+          player counts describe these dataset editions, not verified national
           completeness. Schedule counts include all imported divisions, while
           player box coverage is narrower.
         </p>
         <details>
-          <summary>Season coverage and source receipts</summary>
+          <summary>Season coverage and capture receipts</summary>
           <div className="table-scroll">
             <table className="data-table">
               <thead>

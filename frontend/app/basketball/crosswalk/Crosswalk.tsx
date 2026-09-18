@@ -130,7 +130,7 @@ export default function Crosswalk() {
         <div className="pagination"><button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>Next →</button></div>
       </>}
       {meta?.source.url && <details className="note" style={{ marginTop: 24 }}><summary>Capture receipt</summary><p style={{ marginTop: 12 }}>Retrieved {meta.source.fetched_at ? new Date(meta.source.fetched_at).toLocaleString("en-US", { timeZone: "UTC" }) : "date unavailable"} · SHA-256 <code>{meta.source.sha256 || "unavailable"}</code></p><span>Retained archive record</span></details>}
-      <p className="note" style={{ marginTop: 24 }}>Alternate identifiers are shown as recorded evidence and are not used to merge records. An identity match does not establish eligibility, transfer status, roster availability or a unique person outside the source&apos;s own match.</p>
+      <p className="note" style={{ marginTop: 24 }}>Alternate identifiers are shown as recorded evidence and are not used to merge records. An identity match does not establish eligibility, transfer status, roster availability or a unique person beyond the recorded match.</p>
     </section>
   );
 }

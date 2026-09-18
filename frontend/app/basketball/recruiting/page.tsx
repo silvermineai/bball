@@ -6,7 +6,7 @@ import { getRecruiting, getRosters } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
-import RecruitingBoard from "./EspnRecruitingBoard";
+import RecruitingBoard from "./RecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 import { categoryLabels, recruitingRows, type RecruitingRelease } from "../../_lib/recruiting";

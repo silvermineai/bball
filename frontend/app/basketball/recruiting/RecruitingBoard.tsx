@@ -115,7 +115,7 @@ const fitHref = (teamId: string | null | undefined) => teamId
   ? `/basketball/recruiting/fit/?team=${encodeURIComponent(teamId)}`
   : null;
 
-export default function EspnRecruitingBoard() {
+export default function RecruitingBoard() {
   const [season, setSeason] = useState("2027");
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("");
