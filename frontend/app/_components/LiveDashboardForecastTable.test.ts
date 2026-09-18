@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { matchesEstimateFilter, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -41,6 +41,16 @@ describe("sortForecastBoard", () => {
   it("orders confidence and absolute margin from highest to lowest", () => {
     expect(sortForecastBoard(games, "confidence").map((row) => row.id)).toEqual(["early", "middle", "late"]);
     expect(sortForecastBoard(games, "margin").map((row) => row.id)).toEqual(["early", "middle", "late"]);
+  });
+});
+
+describe("matchesEstimateFilter", () => {
+  it("separates primary and cold-start estimates without dropping either from all", () => {
+    const coldStart = { ...games[0], prediction: null, fallback_prediction: { ...games[0].prediction!, estimate_type: "cold_start" as const } };
+    expect(games.filter((row) => matchesEstimateFilter(row, "primary")).map((row) => row.id)).toEqual(["late", "early", "middle"]);
+    expect(matchesEstimateFilter(coldStart, "primary")).toBe(false);
+    expect(matchesEstimateFilter(coldStart, "cold-start")).toBe(true);
+    expect(matchesEstimateFilter(coldStart, "all")).toBe(true);
   });
 });
 

@@ -36,6 +36,7 @@ function modelLabel(game: BBGame) {
 }
 
 export type ForecastBoardSort = "start" | "confidence" | "margin";
+export type ForecastEstimateFilter = "all" | "primary" | "cold-start";
 const signalLabels: Record<MatchupSignal, string> = {
   all: "all model signals",
   "toss-up": "toss-ups under 60%",
@@ -88,6 +89,11 @@ export function sortForecastBoard(games: BBGame[], sort: ForecastBoardSort) {
   });
 }
 
+export function matchesEstimateFilter(game: BBGame, filter: ForecastEstimateFilter) {
+  if (filter === "all") return Boolean(predictionFor(game));
+  return filter === "primary" ? Boolean(game.prediction) : Boolean(game.fallback_prediction && !game.prediction);
+}
+
 export default function LiveDashboardForecastTable({
   initialGames,
   rosterScenarios = [],
@@ -98,6 +104,7 @@ export default function LiveDashboardForecastTable({
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
   const [signal, setSignal] = useState<MatchupSignal>("all");
+  const [estimate, setEstimate] = useState<ForecastEstimateFilter>("all");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
 
@@ -114,7 +121,7 @@ export default function LiveDashboardForecastTable({
     return () => controller.abort();
   }, [initialGames]);
 
-  const forecastedGames = games.filter((game) => predictionFor(game));
+  const forecastedGames = games.filter((game) => matchesEstimateFilter(game, estimate));
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
   const rows = sortForecastBoard(signalGames, sort).slice(0, rowLimit);
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
@@ -140,6 +147,14 @@ export default function LiveDashboardForecastTable({
             <option value="toss-up">Toss-ups · under 60%</option>
             <option value="lean">Leans · 60–74.9%</option>
             <option value="strong">Strong leans · 75%+</option>
+          </select>
+        </label>
+        <label className="control">
+          <span>ESTIMATE TYPE</span>
+          <select value={estimate} onChange={(event) => setEstimate(event.target.value as ForecastEstimateFilter)}>
+            <option value="all">All estimates</option>
+            <option value="primary">Primary model only</option>
+            <option value="cold-start">Cold-start only</option>
           </select>
         </label>
         <label className="control">
