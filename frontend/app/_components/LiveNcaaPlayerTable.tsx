@@ -100,6 +100,7 @@ const percentage = (made: number | null, attempted: number | null) =>
 export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number }) {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
   const [metric, setMetric] = useState<Metric>(() => selectedMetric(initial?.get("livePlayerMetric") || null));
+  const [query, setQuery] = useState(() => initial?.get("livePlayerQ") || "");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [result, setResult] = useState<Result | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
@@ -108,7 +109,17 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
     const controller = new AbortController();
     const selected = metrics.find((candidate) => candidate.key === metric)!;
     setStatus("checking");
-    fetch(`/api/basketball/research/ncaa-player-rankings?season=${season}&metric=${selected.key}&minGames=5&minMinutes=200&minVolume=${selected.volume}&page=0`, { signal: controller.signal })
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({
+        season: String(season),
+        metric: selected.key,
+        minGames: "5",
+        minMinutes: "200",
+        minVolume: String(selected.volume),
+        page: "0",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      fetch(`/api/basketball/research/ncaa-player-rankings?${params.toString()}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live player archive unavailable");
         return response.json() as Promise<Result>;
@@ -123,8 +134,12 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
           setStatus("unavailable");
         }
       });
-    return () => controller.abort();
-  }, [metric, season]);
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [metric, query, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
   const percentageMetric = ["ts", "efg", "three_pct", "ft_pct", "tov_rate", "three_rate", "ft_rate", "poss_share"].includes(metric);
@@ -145,9 +160,10 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       </div>
       <p className="dashboard-caption">Current archive rows with a five-game and 200-minute floor. The selected field orders the table; the surrounding production columns stay attached for context.</p>
       <div className="toolbar" style={{ marginBottom: 16 }}>
+        <label className="control"><span>SEARCH PLAYER / TEAM</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or team" aria-label="Search player or team" /></label>
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
         <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
-        <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `Showing ${Math.min(rowLimit, result.rows.length)} of ${result.total.toLocaleString()} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
+        <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `${query.trim() ? `Found ${result.total.toLocaleString()}` : `Showing ${Math.min(rowLimit, result.rows.length)} of ${result.total.toLocaleString()}`} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
       </div>
       <p className="note" style={{ marginBottom: 16 }}>{metricGuidance[metric]} Missing source fields remain unavailable rather than being filled with zero. <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open the full metric table →</Link></p>
       {status === "ready" && result ? (
