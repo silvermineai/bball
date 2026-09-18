@@ -105,6 +105,7 @@ export default function LiveDashboardForecastTable({
   const [sort, setSort] = useState<ForecastBoardSort>("start");
   const [signal, setSignal] = useState<MatchupSignal>("all");
   const [estimate, setEstimate] = useState<ForecastEstimateFilter>("all");
+  const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
 
@@ -121,7 +122,9 @@ export default function LiveDashboardForecastTable({
     return () => controller.abort();
   }, [initialGames]);
 
-  const forecastedGames = games.filter((game) => matchesEstimateFilter(game, estimate));
+  const forecastedGames = games
+    .filter((game) => matchesEstimateFilter(game, estimate))
+    .filter((game) => `${game.away_name} ${game.home_name}`.toLowerCase().includes(query.trim().toLowerCase()));
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
   const rows = sortForecastBoard(signalGames, sort).slice(0, rowLimit);
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
@@ -132,6 +135,10 @@ export default function LiveDashboardForecastTable({
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
+        <label className="control">
+          <span>SEARCH TEAM</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Program name" aria-label="Search forecast teams" />
+        </label>
         <label className="control">
           <span>ORDER SLATE BY</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as ForecastBoardSort)}>
@@ -166,7 +173,7 @@ export default function LiveDashboardForecastTable({
           </select>
         </label>
         <p className="note" role="status">
-          Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
+          Showing {rows.length} of {signalGames.length} forecast rows{query.trim() ? ` matching “${query.trim()}”` : ""} · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
         </p>
       </div>
       <div className="dashboard-table-wrap">
