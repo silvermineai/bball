@@ -115,11 +115,19 @@ function getValueLeaders(season: number) {
 function getNationalPlayers(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball/ncaa-individual.json");
   if (!fs.existsSync(file)) return [] as NationalPlayerRow[];
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as { season?: number; players?: NationalPlayerRow[] };
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    season?: number;
+    players?: Array<NationalPlayerRow & { pf?: number | null; tov?: number | null }>;
+  };
   if (data.season !== season) return [] as NationalPlayerRow[];
   return (data.players || [])
     .filter((player) => player.division === 1 && player.ppg != null)
     .sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1) || a.name.localeCompare(b.name))
+    .map((player) => ({
+      ...player,
+      fouls: player.fouls ?? player.pf ?? null,
+      turnovers: player.turnovers ?? player.tov ?? null,
+    }))
     .slice(0, 10);
 }
 
