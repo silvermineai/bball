@@ -51,7 +51,7 @@ function retryDelay(milliseconds: number, signal?: AbortSignal) {
   });
 }
 
-async function fetchWithTransientRetry(url: string, signal?: AbortSignal) {
+export async function fetchWithTransientRetry(url: string, signal?: AbortSignal) {
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
     const requestUrl = attempt === 0
       ? url

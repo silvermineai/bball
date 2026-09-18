@@ -40,6 +40,39 @@ describe("live basketball schedule clocks", () => {
     vi.unstubAllGlobals();
   });
 
+  it("loads every archive page when the API reports more than one page", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ total: 3, page_size: 2, confirmed_count: 2, rows: [
+          { game_id: "401", source_time_valid: true },
+          { game_id: "402", source_time_valid: false },
+        ] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ total: 3, page_size: 2, confirmed_count: 2, rows: [
+          { game_id: "403", source_time_valid: true },
+        ] }),
+      });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballScheduleClocks()).resolves.toMatchObject({
+      total: 3,
+      confirmed_count: 2,
+      rows: [
+        { game_id: "401" },
+        { game_id: "402" },
+        { game_id: "403" },
+      ],
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "/api/basketball/research/schedule-times?season=2027&limit=200&page=1",
+      { signal: undefined },
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("adds source-clock evidence without rewriting the canonical game", () => {
     const merged = mergeBasketballScheduleClocks([game("401"), game("402")], [
       { game_id: "401", source_start: "2026-11-02T05:00:00Z", source_time_valid: true, observed_at: "2026-09-12T10:00:00Z" },

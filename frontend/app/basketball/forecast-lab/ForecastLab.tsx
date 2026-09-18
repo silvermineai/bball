@@ -14,6 +14,10 @@ import {
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import {
+  loadLiveBasketballScheduleClocks,
+  type ScheduleClockRow,
+} from "../../_lib/live-basketball-schedule";
+import {
   forecastLabFilterSearch,
   formatForecastModelOption,
   parseForecastLabFilters,
@@ -58,14 +62,6 @@ type LiveModel = {
   evaluation_interval_coverage?: number | null;
 };
 type LiveCatalog = { models: LiveModel[] };
-type ScheduleClockRow = {
-  game_id: string;
-  source_start?: string | null;
-  source_time_valid?: boolean;
-  observed_at?: string | null;
-};
-type ScheduleClockResponse = { rows?: ScheduleClockRow[]; total?: number; confirmed?: number | boolean; confirmed_count?: number };
-
 function numeric(value: number | null | undefined, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 }
@@ -141,11 +137,7 @@ export default function ForecastLab({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/schedule-times?season=2027&limit=200", { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Live schedule-clock evidence unavailable.");
-        return response.json() as Promise<ScheduleClockResponse>;
-      })
+    loadLiveBasketballScheduleClocks(controller.signal)
       .then((payload) => {
         if (!controller.signal.aborted) {
           setScheduleClocks(payload.rows || []);

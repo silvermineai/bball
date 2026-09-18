@@ -1,4 +1,5 @@
 import type { BBGame } from "./basketball-types";
+import { fetchWithTransientRetry } from "./live-basketball-forecasts";
 
 export type ScheduleClockRow = {
   game_id: string;
@@ -10,6 +11,7 @@ export type ScheduleClockRow = {
 export type ScheduleClockResponse = {
   rows?: ScheduleClockRow[];
   total?: number;
+  page_size?: number;
   confirmed?: number | boolean;
   confirmed_count?: number;
 };
@@ -18,15 +20,40 @@ export async function loadLiveBasketballScheduleClocks(
   signal?: AbortSignal,
   season = 2027,
 ): Promise<ScheduleClockResponse> {
-  const response = await fetch(
+  const response = await fetchWithTransientRetry(
     `/api/basketball/research/schedule-times?season=${season}&limit=200`,
-    { signal },
+    signal,
   );
   if (!response.ok) throw new Error("Live schedule-clock evidence unavailable.");
   const payload = await response.json() as ScheduleClockResponse;
+  const total = Number.isFinite(payload.total) ? Math.max(0, Math.floor(payload.total as number)) : null;
+  const pageSize = Number.isFinite(payload.page_size) && (payload.page_size as number) > 0
+    ? Math.floor(payload.page_size as number)
+    : Math.max((payload.rows || []).length, 200);
+  const pageCount = total == null ? 1 : Math.ceil(total / pageSize);
+  if (pageCount > 1000) throw new Error("Live schedule-clock archive is too large to load safely.");
+  const additional = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+      fetchWithTransientRetry(
+        `/api/basketball/research/schedule-times?season=${season}&limit=200&page=${index + 1}`,
+        signal,
+      ).then(async (pageResponse) => {
+        if (!pageResponse.ok) throw new Error("Live schedule-clock evidence unavailable.");
+        const page = await pageResponse.json() as ScheduleClockResponse;
+        if (total != null && page.total != null && page.total !== total) {
+          throw new Error("Live schedule-clock archive changed while it was loading.");
+        }
+        return page;
+      }),
+    ),
+  );
+  const rows = [payload, ...additional].flatMap((page) => page.rows || []);
+  if (total != null && rows.length < total) {
+    throw new Error("Live schedule-clock archive returned an incomplete page set.");
+  }
   return {
     ...payload,
-    rows: (payload.rows || []).filter((row) => /^\d{1,20}$/.test(String(row.game_id || ""))),
+    rows: rows.filter((row) => /^\d{1,20}$/.test(String(row.game_id || ""))),
   };
 }
 
