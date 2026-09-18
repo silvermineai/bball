@@ -68,15 +68,20 @@ export default function LiveBasketballProspectLeaders() {
   const [data, setData] = useState<ProspectResponse | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const [season, setSeason] = useState<ProspectSeason>(2027);
+  const [query, setQuery] = useState("");
+  const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
 
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
     setData(null);
-    fetchJson<ProspectResponse>(
-      `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
-      { signal: controller.signal },
-    )
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ season: String(season), page: "0", committed: "all" });
+      if (query.trim()) params.set("q", query.trim());
+      fetchJson<ProspectResponse>(
+        `/api/basketball/research/recruiting-rankings?${params.toString()}`,
+        { signal: controller.signal },
+      )
       .then((payload) => {
         if (!controller.signal.aborted) {
           setData(payload);
@@ -86,8 +91,12 @@ export default function LiveBasketballProspectLeaders() {
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("unavailable");
       });
-    return () => controller.abort();
-  }, [season]);
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, season]);
 
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
@@ -100,6 +109,8 @@ export default function LiveBasketballProspectLeaders() {
               {prospectSeasons.map((value) => <option key={value} value={value}>{value} class</option>)}
             </select>
           </label>
+          <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Prospect or destination" aria-label="Search prospect or destination" /></label>
+          <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
           <Link href="/basketball/recruiting/">Full recruiting board →</Link>
         </div>
       </div>
@@ -115,7 +126,7 @@ export default function LiveBasketballProspectLeaders() {
           <div className="dashboard-table-wrap">
             <table className="data-table dashboard-table">
               <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Size</th><th>Hometown</th><th>Destination</th></tr></thead>
-              <tbody>{data.rows.slice(0, 10).map((row) => (
+              <tbody>{data.rows.slice(0, rowLimit).map((row) => (
                 <tr key={row.athlete_id}>
                   <td className="rank-number">{row.rank ?? "—"}</td>
                   <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${data.season}&id=${encodeURIComponent(row.athlete_id)}`}>{row.name}</Link></th>
