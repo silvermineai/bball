@@ -3,6 +3,7 @@ import { date, fmt } from "../../_lib/format";
 import { publicArchiveText } from "../../_lib/public-text";
 import Link from "next/link";
 import ModelIntegrity from "./ModelIntegrity";
+import ForecastCalibrationTable, { readPublishedCalibration } from "./ForecastCalibrationTable";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
@@ -44,6 +45,7 @@ export default function Page() {
       .filter((team) => team.predicted_net != null)
       .sort((a, b) => (b.predicted_net ?? -Infinity) - (a.predicted_net ?? -Infinity))
       .slice(0, 20);
+  const calibrationBuckets = readPublishedCalibration();
   return (
     <>
       <div className="page-title">
@@ -145,6 +147,7 @@ export default function Page() {
         </section>
       </div>
       <ModelIntegrity />
+      <ForecastCalibrationTable buckets={calibrationBuckets} />
       <section className="section">
         <div className="section-heading">
           <div>
