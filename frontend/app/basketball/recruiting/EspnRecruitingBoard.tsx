@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchJson } from "../../_lib/fetch-json";
+import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
   recruitingShortlistKey,
@@ -32,7 +33,8 @@ type Prospect = {
   previous_rank?: number | null;
   previous_captured_at?: string | null;
 };
-type Result = {
+export type RecruitingBoardResult = {
+  season: number;
   total: number;
   page: number;
   page_size: number;
@@ -61,7 +63,39 @@ type Result = {
   source?: { provider: string; methodology: string; url?: string };
   unavailable_reason?: string;
 };
+type Result = RecruitingBoardResult;
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
+
+export function validateRecruitingExportPage(
+  payload: RecruitingBoardResult,
+  expectedSeason: number,
+  expectedTotal: number,
+  expectedPageSize: number,
+  expectedEdition: string | null | undefined,
+  page: number,
+  totalPages: number,
+) {
+  const pageSeason = Number(payload.season);
+  const pageTotal = Number(payload.total);
+  const pageSize = Number(payload.page_size);
+  if (
+    pageSeason !== expectedSeason
+    || Number(payload.page) !== page
+    || !Number.isInteger(pageTotal)
+    || pageTotal !== expectedTotal
+    || !Number.isInteger(pageSize)
+    || pageSize !== expectedPageSize
+    || (payload.edition ?? null) !== (expectedEdition ?? null)
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > pageSize
+  ) {
+    throw new Error("The recruiting edition changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The recruiting edition returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const grade = (value: number | null) => value == null || value <= 0 ? "—" : number(value);
@@ -165,16 +199,29 @@ export default function EspnRecruitingBoard() {
     setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} prospects…`);
     try {
       const all: Prospect[] = [];
-      const pages = Math.max(1, Math.ceil(result.total / result.page_size));
+      const totalRows = Number(result.total);
+      const pageSize = Number(result.page_size);
+      if (!Number.isInteger(totalRows) || totalRows < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+        throw new Error("The recruiting board returned invalid pagination metadata.");
+      }
+      const pages = Math.max(1, Math.ceil(totalRows / pageSize));
+      if (pages > 1001) throw new Error("This filtered cohort is larger than the bounded export window. Narrow the filters first.");
+      const cohort = `recruiting-export-${Date.now()}`;
       for (let requestedPage = 0; requestedPage < pages; requestedPage += 1) {
         const params = new URLSearchParams({ season, page: String(requestedPage), committed, movement });
+        params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
         if (position) params.set("position", position);
         if (rankMax) params.set("rank_max", rankMax);
-        const payload = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?${params}`);
-        all.push(...payload.rows);
-        setExportMessage(`Preparing ${all.length.toLocaleString()} of ${result.total.toLocaleString()} prospects…`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/recruiting-rankings?${params.toString()}`);
+        if (!response.ok) throw new Error("The complete recruiting export could not be loaded.");
+        const payload = await response.json() as RecruitingBoardResult;
+        all.push(...validateRecruitingExportPage(payload, Number(season), totalRows, pageSize, result.edition, requestedPage, pages));
+        setExportMessage(`Preparing ${all.length.toLocaleString()} of ${totalRows.toLocaleString()} prospects…`);
       }
+      if (all.length !== totalRows) throw new Error("The recruiting edition returned an incomplete export.");
+      const identities = new Set(all.map((row) => row.athlete_id));
+      if (identities.size !== all.length) throw new Error("The recruiting edition returned duplicate prospect rows.");
       downloadCsv(`prospect-board-${season}-filtered.csv`, toCsv(exportHeaders, all.map(exportRow)));
       setExportMessage(`Downloaded ${all.length.toLocaleString()} filtered prospects.`);
     } catch (reason) {
