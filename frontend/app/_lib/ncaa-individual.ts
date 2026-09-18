@@ -258,3 +258,57 @@ export function publisherRank(
   const value = player[key];
   return typeof value === "number" ? value : null;
 }
+
+export const ncaaLeaderCsvHeaders = [
+  "View order", "Published rank", "Player", "Player ID", "Program", "Division", "Conference", "Class", "Position", "Games", "PPG", "RPG", "APG", "SPG", "BPG", "FG%", "3P%", "FT%", "Threes/G", "MPG", "AST/TO", "Double-doubles", "Points", "Rebounds", "Assists", "Steals", "Blocks", "Turnovers", "Offensive rebounds", "Defensive rebounds", "Fouls", "Offensive possessions", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "Total minutes", "Retained measures JSON",
+];
+
+export function ncaaLeaderCsvRows(
+  rows: NCAAIndividualPlayer[],
+  stat: NCAAStatKey,
+  offset = 0,
+): CsvCell[][] {
+  return rows.map((player, index) => [
+    offset + index + 1,
+    publisherRank(player, stat),
+    player.name,
+    player.player_id,
+    player.team_name,
+    player.division,
+    player.conference,
+    player.class_year,
+    player.position,
+    player.games,
+    player.ppg,
+    player.rpg,
+    player.apg,
+    player.spg,
+    player.bpg,
+    player.fg_pct,
+    player.three_pct,
+    player.ft_pct,
+    player.threes_pg,
+    player.mpg,
+    player.ast_to,
+    player.dbl_dbl,
+    player.pts,
+    player.reb,
+    player.ast,
+    player.stl,
+    player.blk,
+    player.tov,
+    player.orb,
+    player.drb,
+    player.pf,
+    player.o_poss,
+    player.fgm,
+    player.fga,
+    player.three_fgm,
+    player.three_fga,
+    player.ftm,
+    player.fta,
+    player.mins,
+    player.source_stats ? JSON.stringify(player.source_stats) : null,
+  ]);
+}
+import type { CsvCell } from "./csv";

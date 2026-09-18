@@ -17,6 +17,8 @@ import {
   type NCAAStatKey,
   type NCAADivisionFilter,
   ncaaValueCoverage,
+  ncaaLeaderCsvHeaders,
+  ncaaLeaderCsvRows,
 } from "../../_lib/ncaa-individual";
 
 const stats = Object.keys(ncaaStatLabels) as NCAAStatKey[];
@@ -37,6 +39,8 @@ type LiveLeaderMeta = {
   provenance?: LiveLeaderResponse["provenance"];
 };
 
+const PAGE_SIZE = 40;
+
 export default function NCAAIndividual() {
   const params = useSearchParams();
   const initial = parseNCAAFilters(params.toString());
@@ -51,6 +55,8 @@ export default function NCAAIndividual() {
   const [liveMeta, setLiveMeta] = useState<LiveLeaderMeta | null>(null);
   const [liveError, setLiveError] = useState("");
   const [retryNonce, setRetryNonce] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/basketball/research/ncaa-leaders?meta=1", { signal: controller.signal })
@@ -120,10 +126,39 @@ export default function NCAAIndividual() {
     const value = p[stat];
     return value == null ? "—" : fmt(value, percentStats.has(stat) ? 1 : stat === "ast_to" ? 2 : 1);
   };
-  const download = () => downloadCsv(`ncaa-leaders-${division}-${stat}.csv`, toCsv(
-    ["View order", "Publisher rank", "Player", "Player ID", "Program", "Division", "Conference", "Class", "Position", "Games", ncaaStatLabels[stat], "Retained source rows JSON"],
-    rows.map((p, i) => [i + 1, publisherRank(p, stat), p.name, p.player_id, p.team_name, p.division, p.conference, p.class_year, p.position, p.games, p[stat], p.source_stats ? JSON.stringify(p.source_stats) : null]),
+  const download = () => downloadCsv(`ncaa-leaders-${division}-${stat}-page-${page + 1}.csv`, toCsv(
+    ncaaLeaderCsvHeaders,
+    ncaaLeaderCsvRows(rows, stat, page * PAGE_SIZE),
   ));
+  const downloadAll = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportMessage("Preparing the complete filtered leaderboard…");
+    try {
+      let allRows: NCAAIndividualPlayer[] = [];
+      if (live) {
+        const totalPages = Math.ceil(totalRows / PAGE_SIZE);
+        if (totalPages > 1001) throw new Error("This cohort exceeds the bounded export window. Search for a player or program first.");
+        for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
+          const params = new URLSearchParams({ division, stat, page: String(requestedPage) });
+          if (query.trim()) params.set("q", query.trim());
+          const response = await fetch(`/api/basketball/research/ncaa-leaders?${params}`);
+          if (!response.ok) throw new Error("The complete national leaderboard could not be loaded.");
+          const payload = await response.json() as LiveLeaderResponse;
+          allRows.push(...payload.rows.map((row) => row.payload));
+          setExportMessage(`Preparing ${allRows.length.toLocaleString()} of ${totalRows.toLocaleString()} rows…`);
+        }
+      } else {
+        allRows = staticRows;
+      }
+      downloadCsv(`ncaa-leaders-${division}-${stat}-all.csv`, toCsv(ncaaLeaderCsvHeaders, ncaaLeaderCsvRows(allRows, stat)));
+      setExportMessage(`Downloaded ${allRows.length.toLocaleString()} complete leaderboard rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete national leaderboard could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
   const sourceCoverage = liveMeta?.coverage || data?.coverage;
   const apgSupplement = data?.supplements?.apg;
   const astSupplement = data?.supplements?.ast;
@@ -214,7 +249,8 @@ export default function NCAAIndividual() {
             </table>
           </div>
         </details>
-        <div className="section-heading" style={{ marginBottom: 20 }}><p>{totalRows.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} values on this page · {ncaaStatLabels[stat]}</p><button className="button secondary" type="button" onClick={download}>Download CSV ↓</button></div>
+        <div className="section-heading" style={{ marginBottom: 20 }}><p>{totalRows.toLocaleString()} matching records · {rows.filter((p) => p[stat] != null).length.toLocaleString()} values on this page · {ncaaStatLabels[stat]}</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div></div>
+        {exportMessage && <p className="note" role="status">{exportMessage}</p>}
         <p className="note" style={{ marginBottom: 20 }}>View order follows the current division, search and measure filters. Retained rank is shown only when the edition supplied a rank for the selected measure.</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>View order</th><th>Rank</th><th>Player</th><th>Program</th><th>Division</th><th>Class / position</th><th className="numeric">{ncaaStatLabels[stat]}</th><th className="numeric">Games</th><th>Retained measures</th></tr></thead><tbody>{pageRows.map((p, i) => <tr key={`${p.division}-${p.player_id}`}><td className="rank-number">{page * 40 + i + 1}</td><td className="rank-number">{publisherRank(p, stat) ?? "—"}</td><td><Link href={`/basketball/ncaa-player/?id=${p.player_id}&season=${liveMeta?.season || data?.season || 2026}`}>{p.name} →</Link><small>Archive ID {p.player_id}</small><a className="hero-link" href={`/basketball/players/?season=${liveMeta?.season || data?.season || 2026}&q=${encodeURIComponent(p.name)}`}>Search archive by name →</a></td><td>{p.team_name || "—"}<small>{p.conference || ""}</small></td><td>D{p.division}</td><td>{[p.class_year, p.position, p.height].filter(Boolean).join(" · ") || "—"}</td><td className="numeric">{shown(p)}</td><td className="numeric">{p.games ?? "—"}</td><td>{p.source_stats ? <details><summary>{Object.keys(p.source_stats).length} measures</summary>{Object.entries(p.source_stats).map(([key, evidence]) => <div key={key}><strong>{key}</strong><small>{evidence.headers.join(" · ") || "Archive headers unavailable"}</small><small>{evidence.cells.join(" · ")}</small></div>)}</details> : <span className="muted">Unavailable</span>}</td></tr>)}</tbody></table></div>
         {!rows.length && <p className="empty">No records match that search.</p>}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ncaaFilterSearch,
+  ncaaLeaderCsvRows,
   ncaaValueCoverage,
   parseNCAAFilters,
   publisherRank,
@@ -121,5 +122,15 @@ describe("NCAA individual leader sorting", () => {
     expect(publisherRank(row, "pts")).toBeNull();
     expect(publisherRank({ ...row, fg_pct_rank: 42 }, "fg_pct")).toBe(42);
     expect(publisherRank({ ...row, ast_to_rank: 9 }, "ast_to")).toBe(9);
+  });
+
+  it("exports the complete retained stat line with stable view order", () => {
+    const row = { ...player("Ranked", 20), ppg_rank: 17, rpg: 8, pts: 400, fta: 60, source_stats: { ppg: { headers: ["PPG"], cells: ["20"], rank: 17, value: 20 } } };
+    const values = ncaaLeaderCsvRows([row], "ppg", 40)[0];
+    expect(values.slice(0, 6)).toEqual([41, 17, "Ranked", row.player_id, "Test", 1]);
+    expect(values[10]).toBe(20);
+    expect(values[11]).toBe(8);
+    expect(values[37]).toBe(60);
+    expect(values[39]).toContain('"ppg"');
   });
 });
