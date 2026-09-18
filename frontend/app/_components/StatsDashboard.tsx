@@ -155,7 +155,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Index</th></tr>
+          <tr><th>#</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PTS/40</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">A/TO</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Index</th></tr>
         </thead>
         <tbody>
           {rows.map((player) => {
@@ -167,11 +167,13 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
               <td>{player.team}</td>
               <td className="numeric">{player.games}</td>
               <td className="numeric">{player.minutes && player.games ? fmt(player.minutes / player.games) : "—"}</td>
+              <td className="numeric">{player.ppg != null && player.minutes > 0 && player.games > 0 ? fmt(player.ppg / (player.minutes / player.games) * 40) : "—"}</td>
               <td className="numeric"><strong>{fmt(player.ppg)}</strong></td>
               <td className="numeric">{fmt(player.rpg)}</td>
               <td className="numeric">{fmt(player.orpg)}</td>
               <td className="numeric">{fmt(player.drpg)}</td>
               <td className="numeric">{fmt(player.apg)}</td>
+              <td className="numeric">{player.apg != null && player.topg != null && player.topg > 0 ? fmt(player.apg / player.topg, 2) : "—"}</td>
               <td className="numeric">{fmt(player.spg)}</td>
               <td className="numeric">{fmt(player.bpg)}</td>
               <td className="numeric">{fmt(player.fpg)}</td>
@@ -389,11 +391,13 @@ export default function StatsDashboard() {
     player.games,
     player.minutes,
     player.games ? player.minutes / player.games : null,
+    player.ppg != null && player.minutes > 0 && player.games > 0 ? player.ppg / (player.minutes / player.games) * 40 : null,
     player.ppg,
     player.rpg,
     player.orpg,
     player.drpg,
     player.apg,
+    player.apg != null && player.topg != null && player.topg > 0 ? player.apg / player.topg : null,
     player.spg,
     player.bpg,
     player.fpg,
@@ -463,9 +467,9 @@ export default function StatsDashboard() {
           <AdjustedFourFactorsTable teams={overview.ratings} />
           <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
         </section>
-        <section className="dashboard-section" aria-labelledby="dashboard-players">
-          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Player production leaders</h2></div><div className="button-row"><DashboardExportButton kind="players" season={latestSeason} headers={["Season", "Player", "Team", "Player ID", "Position", "Games", "Minutes", "MPG", "PPG", "RPG", "ORPG", "DRPG", "APG", "SPG", "BPG", "PF/G", "TO/G", "TS%", "eFG%", "3P%", "FT%", "Qualified"]} rows={playerExportRows} /><Link href="/basketball/players/">Full player table →</Link></div></div>
-          <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by a balanced index, with the core box score and true shooting kept in the row. Use the live table below for any other recorded metric.</p>
+          <section className="dashboard-section" aria-labelledby="dashboard-players">
+          <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Player production leaders</h2></div><div className="button-row"><DashboardExportButton kind="players" season={latestSeason} headers={["Season", "Player", "Team", "Player ID", "Position", "Games", "Minutes", "MPG", "PTS/40", "PPG", "RPG", "ORPG", "DRPG", "APG", "A/TO", "SPG", "BPG", "PF/G", "TO/G", "TS%", "eFG%", "3P%", "FT%", "Qualified"]} rows={playerExportRows} /><Link href="/basketball/players/">Full player table →</Link></div></div>
+          <p className="dashboard-caption">Top qualified {latestSeason - 1}–{String(latestSeason).slice(-2)} players by a balanced index, with volume, workload-normalized scoring, playmaking control and shooting efficiency kept in the row. Use the live table below for any other recorded metric.</p>
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
           <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
