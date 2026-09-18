@@ -94,7 +94,16 @@ def build(season=2023):
     incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
     if not model.get("id", "").startswith("basketball-efficiency-v2-"):
         raise ValueError("Unexpected basketball model ID")
-    conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    # A D1 resume can be started after the large local warehouse was cleaned
+    # up.  The published overview is still a verified, hash-checked model
+    # edition, so keep the compact model/forecast release recoverable without
+    # pretending that historical identity tables are available locally.
+    conn = None
+    if DB.exists() and DB.stat().st_size > 0:
+        try:
+            conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+        except sqlite3.DatabaseError:
+            conn = None
     statements = []
     # Models are queried only for identity and creation time by the public API.
     # Keep a compact, useful metadata record in D1 while the complete fitted
@@ -154,7 +163,7 @@ def build(season=2023):
     # Add the 2022–23 ESPN-derived season and its compact identity context.
     # Full publishers may replay these rows; INSERT OR REPLACE keeps either
     # path safe and preserves all existing editions.
-    if not incremental:
+    if not incremental and conn is not None:
         for table in (
             "bb_sources",
             "bb_games",
@@ -175,7 +184,7 @@ def build(season=2023):
     # season partitions through this core sync so the rankings API can answer
     # historical season queries without replaying the multi-gigabyte player
     # game archive.
-    if not incremental:
+    if not incremental and conn is not None:
         try:
             for impact_season in range(2011, 2027):
                 statements.extend(row_statements(conn, "bb_impact", impact_season))
@@ -188,7 +197,7 @@ def build(season=2023):
     # table before import. Re-publish every season here so a refresh cannot
     # leave a historical season sparse when the compact core release is
     # synced after the large edition.
-    if not incremental:
+    if not incremental and conn is not None:
         try:
             for core_season in range(2003, 2027):
                 statements.extend(row_statements(conn, "bb_player_core", core_season))
@@ -196,14 +205,15 @@ def build(season=2023):
             pass
     # Player identities are global, so include the current compact dictionary
     # needed by player-box lookups after adding a historical season.
-    columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]
-    for row in conn.execute(f"SELECT {','.join(columns)} FROM bb_players"):
-        statements.append(
-            f"INSERT OR REPLACE INTO bb_players ({','.join(columns)}) VALUES ("
-            + ",".join(quote(value) for value in row)
-            + ");\n"
-        )
-    conn.close()
+    if conn is not None:
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]
+        for row in conn.execute(f"SELECT {','.join(columns)} FROM bb_players"):
+            statements.append(
+                f"INSERT OR REPLACE INTO bb_players ({','.join(columns)}) VALUES ("
+                + ",".join(quote(value) for value in row)
+                + ");\n"
+            )
+        conn.close()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     for old in OUT.parent.glob(f"{OUT.stem}*{OUT.suffix}"):
         old.unlink()

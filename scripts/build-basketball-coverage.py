@@ -57,6 +57,14 @@ def build(conn: sqlite3.Connection) -> list[dict[str, object]]:
 
 
 def main() -> None:
+    # The large warehouse is optional during a D1 resume.  Preserve the last
+    # verified unresolved-coverage artifact rather than replacing it with an
+    # empty report that would falsely imply complete identity coverage.
+    if not DB.exists() or DB.stat().st_size == 0:
+        if OUTPUT.exists():
+            print(f"Preserved verified coverage artifact; local warehouse unavailable: {OUTPUT}")
+            return
+        raise SystemExit(f"Cannot build coverage without local warehouse: {DB}")
     with sqlite3.connect(DB) as conn:
         breakdown = build(conn)
     overview = json.loads(OVERVIEW.read_text())
