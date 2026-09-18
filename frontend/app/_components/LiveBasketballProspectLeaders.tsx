@@ -26,6 +26,20 @@ type ProspectResponse = {
   total: number;
   captured_at?: string | null;
   rows: Prospect[];
+  cohort?: {
+    committed?: number;
+    ranked?: number;
+    graded?: number;
+  };
+  position_breakdown?: Array<{ position: string; total: number }>;
+  commitment_destinations?: Array<{
+    team_id?: string | null;
+    team: string;
+    total: number;
+    top100_total?: number;
+    best_rank?: number | null;
+    average_rank?: number | null;
+  }>;
 };
 
 const prospectSeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
@@ -92,6 +106,12 @@ export default function LiveBasketballProspectLeaders() {
       <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact {season} class view. The full board supports every tracked class, position and commitment filter.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
+          <div className="dashboard-strip dashboard-recruiting-strip">
+            <div><strong>{data.total.toLocaleString()}</strong><span>Prospects tracked</span></div>
+            <div><strong>{(data.cohort?.ranked ?? 0).toLocaleString()}</strong><span>With national rank</span></div>
+            <div><strong>{(data.cohort?.graded ?? 0).toLocaleString()}</strong><span>With numeric grade</span></div>
+            <div><strong>{(data.cohort?.committed ?? 0).toLocaleString()}</strong><span>With recorded destination</span></div>
+          </div>
           <div className="dashboard-table-wrap">
             <table className="data-table dashboard-table">
               <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Size</th><th>Hometown</th><th>Destination</th></tr></thead>
@@ -108,6 +128,27 @@ export default function LiveBasketballProspectLeaders() {
                 </tr>
               ))}</tbody>
             </table>
+          </div>
+          <div className="dashboard-two-col" style={{ marginTop: 18 }}>
+            <div className="dashboard-table-wrap">
+              <table className="data-table dashboard-table">
+                <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Position mix</caption>
+                <thead><tr><th>Position</th><th className="numeric">Players</th></tr></thead>
+                <tbody>{(data.position_breakdown || []).slice(0, 6).map((row) => <tr key={row.position}><th scope="row">{row.position}</th><td className="numeric">{row.total.toLocaleString()}</td></tr>)}</tbody>
+              </table>
+            </div>
+            <div className="dashboard-table-wrap">
+              <table className="data-table dashboard-table">
+                <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Top recorded destinations</caption>
+                <thead><tr><th>Program</th><th className="numeric">Players</th><th className="numeric">Top 100</th><th className="numeric">Best rank</th></tr></thead>
+                <tbody>{(data.commitment_destinations || []).slice(0, 6).map((row) => <tr key={`${row.team_id || row.team}`}>
+                  <th scope="row">{row.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.team}</Link> : row.team}</th>
+                  <td className="numeric">{row.total.toLocaleString()}</td>
+                  <td className="numeric">{(row.top100_total ?? 0).toLocaleString()}</td>
+                  <td className="numeric">{row.best_rank == null ? "—" : `#${row.best_rank}`}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
           </div>
           <p className="dashboard-updated">{prospectCountLabel(data.total, data.season)} · captured {data.captured_at ? date(data.captured_at) : "time unavailable"}</p>
         </>
