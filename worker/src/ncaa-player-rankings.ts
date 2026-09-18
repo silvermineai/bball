@@ -1,5 +1,5 @@
 import { researchDb } from "./research-db";
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -22,6 +22,7 @@ const querySchema = z.object({
 export const ncaaPlayerRankings = new Hono<{ Bindings: Bindings }>();
 const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
+const PUBLISHED_RANKINGS_TIMEOUT_MS = 2500;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -35,6 +36,206 @@ function edgeCache() {
   return typeof caches === "undefined"
     ? null
     : (caches as unknown as { default: Cache }).default;
+}
+
+type PublishedIndividualPlayer = {
+  player_id?: unknown;
+  division?: unknown;
+  name?: unknown;
+  team_name?: unknown;
+  class_year?: unknown;
+  position?: unknown;
+  games?: unknown;
+  ppg?: unknown;
+  rpg?: unknown;
+  apg?: unknown;
+  spg?: unknown;
+  bpg?: unknown;
+  fg_pct?: unknown;
+  three_pct?: unknown;
+  ft_pct?: unknown;
+  mpg?: unknown;
+  ast_to?: unknown;
+  pf?: unknown;
+  tov?: unknown;
+  orb?: unknown;
+  drb?: unknown;
+  pts?: unknown;
+  fga?: unknown;
+  fgm?: unknown;
+  tpa?: unknown;
+  tpm?: unknown;
+  fta?: unknown;
+  ftm?: unknown;
+  o_poss?: unknown;
+  mins?: unknown;
+  [key: string]: unknown;
+};
+
+type PublishedIndividualCatalog = {
+  season?: unknown;
+  generated_at?: unknown;
+  players?: unknown;
+};
+
+const finite = (value: unknown): number | null => {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const publishedSupportedMetrics = new Set<Metric>([
+  "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg",
+  "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "ft_pct", "ft_rate",
+  "orb40", "drb40", "reb40", "points_poss", "ast_rate", "tov_rate", "three_rate",
+]);
+
+const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number | null => {
+  const games = finite(player.games) || 0;
+  const minutes = finite(player.mins) ?? ((finite(player.mpg) ?? 0) * games);
+  const points = finite(player.pts) ?? ((finite(player.ppg) ?? 0) * games);
+  const fga = finite(player.fga);
+  const fta = finite(player.fta);
+  const fgm = finite(player.fgm);
+  const tpa = finite(player.tpa);
+  const tpm = finite(player.tpm);
+  const turnovers = finite(player.tov);
+  const possessions = finite(player.o_poss);
+  const orb = finite(player.orb);
+  const drb = finite(player.drb);
+  const direct = (key: string) => finite(player[key]);
+  switch (metric) {
+    case "ppg": return finite(player.ppg);
+    case "rpg": return finite(player.rpg);
+    case "orpg": return games > 0 && orb != null ? orb / games : null;
+    case "drpg": return games > 0 && drb != null ? drb / games : null;
+    case "apg": return finite(player.apg);
+    case "spg": return finite(player.spg);
+    case "bpg": return finite(player.bpg);
+    case "fpg": return games > 0 && finite(player.pf) != null ? (finite(player.pf) as number) / games : null;
+    case "mpg": return finite(player.mpg) ?? (games > 0 ? minutes / games : null);
+    case "topg": return games > 0 && turnovers != null ? turnovers / games : null;
+    case "ts": return fga != null && fta != null && (fga + 0.475 * fta) > 0 ? 100 * points / (2 * (fga + 0.475 * fta)) : null;
+    case "efg": return fga != null && fga > 0 && fgm != null && tpm != null ? 100 * (fgm + 0.5 * tpm) / fga : null;
+    case "per40": return minutes > 0 ? 40 * points / minutes : null;
+    case "ast_to": return turnovers != null && turnovers > 0 && finite(player.ast) != null ? (finite(player.ast) as number) / turnovers : null;
+    case "stocks40": return minutes > 0 && finite(player.stl) != null && finite(player.blk) != null ? 40 * ((finite(player.stl) as number) + (finite(player.blk) as number)) / minutes : null;
+    case "tov_rate": return possessions != null && possessions > 0 && turnovers != null ? 100 * turnovers / possessions : null;
+    case "three_rate": return fga != null && fga > 0 && tpa != null ? 100 * tpa / fga : null;
+    case "three_pct": return finite(player.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
+    case "ft_pct": return finite(player.ft_pct) ?? (fta != null && fta > 0 && finite(player.ftm) != null ? 100 * (finite(player.ftm) as number) / fta : null);
+    case "ft_rate": return fga != null && fga > 0 && fta != null ? 100 * fta / fga : null;
+    case "orb40": return minutes > 0 && orb != null ? 40 * orb / minutes : null;
+    case "drb40": return minutes > 0 && drb != null ? 40 * drb / minutes : null;
+    case "reb40": return minutes > 0 && finite(player.reb) != null ? 40 * (finite(player.reb) as number) / minutes : null;
+    case "points_poss": return possessions != null && possessions > 0 ? points / possessions : null;
+    case "ast_rate": return possessions != null && possessions > 0 && finite(player.ast) != null ? 100 * (finite(player.ast) as number) / possessions : null;
+    case "poss_share": return null;
+    case "rim_pct":
+    case "mid_pct":
+    case "rim_rate":
+    case "transition_share":
+    case "unassisted_share":
+    case "rapm_net":
+    case "orapm":
+    case "drapm":
+    case "balanced_index":
+    case "impact_index":
+      return direct(metric);
+  }
+};
+
+async function publishedRankingsFallback(
+  c: Context<{ Bindings: Bindings }>,
+  args: { season: number; metric: Metric; minGames: number; minMinutes: number; minVolume: number; q?: string; classYear?: string; position?: string; page: number; meta: string },
+): Promise<Response | null> {
+  if (!c.env.ASSETS || args.season !== 2026 || (args.meta !== "1" && !publishedSupportedMetrics.has(args.metric))) return null;
+  try {
+    const asset = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/basketball/ncaa-individual.json", c.req.url))),
+      PUBLISHED_RANKINGS_TIMEOUT_MS,
+    );
+    if (!asset.ok) return null;
+    const catalog = await asset.json() as PublishedIndividualCatalog;
+    const players = Array.isArray(catalog.players)
+      ? catalog.players.filter((value): value is PublishedIndividualPlayer => Boolean(value && typeof value === "object"))
+      : [];
+    if (args.meta === "1") {
+      const classes = [...new Set(players.map((player) => typeof player.class_year === "string" ? player.class_year : "").filter(Boolean))].sort();
+      const positions = [...new Set(players.map((player) => typeof player.position === "string" ? player.position : "").filter(Boolean))].sort();
+      const response = c.json({
+        seasons: [2026],
+        metrics,
+        classes,
+        positions,
+        sources: [],
+        generated_at: typeof catalog.generated_at === "string" ? catalog.generated_at : null,
+        source: "published_fallback",
+      });
+      response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+      return response;
+    }
+    const search = args.q?.toLowerCase();
+    const volume = (player: PublishedIndividualPlayer) => {
+      if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(player.fga);
+      if (args.metric === "three_pct") return finite(player.tpa);
+      if (args.metric === "ft_pct") return finite(player.fta);
+      if (["tov_rate", "ast_rate", "points_poss"].includes(args.metric)) return finite(player.o_poss);
+      return null;
+    };
+    const rows = players
+      .filter((player) => finite(player.division) === 1)
+      .filter((player) => (finite(player.games) || 0) >= args.minGames && ((finite(player.mins) ?? ((finite(player.mpg) || 0) * (finite(player.games) || 0))) >= args.minMinutes))
+      .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
+      .filter((player) => !args.classYear || player.class_year === args.classYear)
+      .filter((player) => !args.position || player.position === args.position)
+      .filter((player) => (volume(player) ?? 0) >= args.minVolume)
+      .map((player) => ({ player, value: playerMetric(player, args.metric) }))
+      .filter((row): row is { player: PublishedIndividualPlayer; value: number } => row.value != null)
+      .sort((a, b) => (args.metric === "topg" || args.metric === "tov_rate" ? a.value - b.value : b.value - a.value) || String(a.player.name || "").localeCompare(String(b.player.name || "")));
+    const start = args.page * 50;
+    const response = c.json({
+      season: 2026,
+      metric: args.metric,
+      direction: args.metric === "topg" || args.metric === "tov_rate" ? "asc" : "desc",
+      min_games: args.minGames,
+      min_minutes: args.minMinutes,
+      min_volume: args.minVolume,
+      page: args.page,
+      page_size: 50,
+      total: rows.length,
+      source: "published_fallback",
+      rows: rows.slice(start, start + 50).map(({ player, value }, index) => ({
+        player_id: String(player.player_id || ""),
+        player_name: typeof player.name === "string" ? player.name : null,
+        team_name: typeof player.team_name === "string" ? player.team_name : null,
+        position: typeof player.position === "string" ? player.position : null,
+        class_year: typeof player.class_year === "string" ? player.class_year : null,
+        games: finite(player.games) || 0,
+        minutes: finite(player.mins) ?? 0,
+        points: finite(player.pts),
+        rebounds: finite(player.reb),
+        offensive_rebounds: finite(player.orb),
+        defensive_rebounds: finite(player.drb),
+        assists: finite(player.ast),
+        steals: finite(player.stl),
+        blocks: finite(player.blk),
+        fouls: finite(player.pf),
+        turnovers: finite(player.tov),
+        fga: finite(player.fga),
+        fgm: finite(player.fgm),
+        tpa: finite(player.tpa),
+        tpm: finite(player.tpm),
+        fta: finite(player.fta),
+        ftm: finite(player.ftm),
+        value,
+        rank: start + index + 1,
+      })),
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    return response;
+  } catch {
+    return null;
+  }
 }
 
 // Season aggregates retain only source-observed numeric fields. A missing
@@ -276,6 +477,8 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
     } catch {
+      const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta });
+      if (fallback) return fallback;
       return c.json({ error: "The NCAA player rankings catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
   }
@@ -340,6 +543,8 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;
   } catch {
+    const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta });
+    if (fallback) return fallback;
     return c.json({ error: "The NCAA player rankings are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
 });
