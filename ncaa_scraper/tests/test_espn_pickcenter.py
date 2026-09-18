@@ -138,6 +138,35 @@ class EspnPickcenterTests(unittest.TestCase):
             self.assertEqual(len(games), 1)
             self.assertEqual(games[0]["away_aliases"], {"away university"})
 
+    def test_football_schedule_falls_back_when_rebuild_left_empty_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local = root / ".local"
+            local.mkdir()
+            # sqlite can open a zero-byte file, so this exercises the same
+            # interrupted-refresh state that previously raised no-such-table.
+            (local / "football.sqlite3").touch()
+            target = root / "frontend/public/data/football"
+            target.mkdir(parents=True)
+            (target / "overview.json").write_text(json.dumps({"upcoming": [
+                {
+                    "id": "401900002",
+                    "kickoff": "2026-09-20T18:00:00.000Z",
+                    "season": 2026,
+                    "home_id": "100",
+                    "away_id": "200",
+                    "home_name": "Home University",
+                    "away_name": "Away University",
+                    "completed": 0,
+                    "time_tbd": 0,
+                }
+            ]}))
+            with patch("ncaa_scraper.odds_feed.ROOT", root):
+                games = schedules("football")
+            self.assertEqual(len(games), 1)
+            self.assertEqual(games[0]["starts_at"], "2026-09-20T18:00:00.000000Z")
+            self.assertEqual(games[0]["home_aliases"], {"home university"})
+
     def test_ingest_writes_receipt_and_three_rows(self):
         self.conn = sqlite3.connect(":memory:")
         self.conn.executescript("""

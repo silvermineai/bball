@@ -41,11 +41,11 @@ def schedules(sport):
     database = ROOT / ".local" / f"{sport}.sqlite3"
     # Public collectors should remain usable when a local warehouse is being
     # rebuilt or has been cleaned up after an interrupted import. The
-    # published basketball overview contains the exact upcoming schedule and
-    # participant IDs needed for strict odds matching; it is only a fallback
-    # and never fabricates aliases or historical rows.
-    def published_basketball_schedule():
-        overview_path = ROOT / "frontend/public/data/basketball/overview.json"
+    # published overview contains the exact upcoming schedule and participant
+    # IDs needed for strict odds matching; it is only a fallback and never
+    # fabricates aliases or historical rows.
+    def published_schedule():
+        overview_path = ROOT / "frontend/public/data" / sport / "overview.json"
         try:
             overview = json.loads(overview_path.read_text())
             games = [
@@ -55,22 +55,25 @@ def schedules(sport):
             ]
         except (OSError, TypeError, ValueError) as error:
             raise sqlite3.OperationalError(
-                "basketball warehouse and published schedule fallback are unavailable"
+                f"{sport} warehouse and published schedule fallback are unavailable"
             ) from error
         if not games:
             raise sqlite3.OperationalError(
-                "basketball warehouse and published schedule fallback are empty"
+                f"{sport} warehouse and published schedule fallback are empty"
             )
         for game in games:
-            game["starts_at"] = timestamp(game["starts_at"])
+            # Football releases call the timestamp kickoff; basketball calls
+            # it starts_at. Normalize both public editions to one collector
+            # contract before applying the exact participant/time join.
+            game["starts_at"] = timestamp(game.get("starts_at") or game.get("kickoff"))
             for side in ("home", "away"):
                 game[f"{side}_aliases"] = {
                     normalize_name(game[f"{side}_name"])
                 }
         return games
 
-    if sport == "basketball" and not database.exists():
-        return published_basketball_schedule()
+    if sport in {"basketball", "football"} and not database.exists():
+        return published_schedule()
 
     try:
         conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
@@ -91,10 +94,26 @@ def schedules(sport):
             # continue matching exact participants and start times.
             if conn.execute("SELECT count(*) FROM bb_games").fetchone()[0] == 0:
                 conn.close()
-                return published_basketball_schedule()
+                return published_schedule()
+        elif sport == "football":
+            tables = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            # A compact or interrupted football rebuild can leave an empty
+            # SQLite file behind. Use the checked-in schedule until the
+            # warehouse has both canonical tables and rows.
+            if not {"football_stats", "football_games"}.issubset(tables):
+                conn.close()
+                return published_schedule()
+            if conn.execute("SELECT count(*) FROM football_games").fetchone()[0] == 0:
+                conn.close()
+                return published_schedule()
     except sqlite3.DatabaseError as error:
-        if sport == "basketball":
-            return published_basketball_schedule()
+        if sport in {"basketball", "football"}:
+            return published_schedule()
         raise sqlite3.OperationalError(
             f"{sport} warehouse is not a readable SQLite database"
         ) from error
