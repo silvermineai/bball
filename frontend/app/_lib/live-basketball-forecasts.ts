@@ -98,14 +98,19 @@ export async function loadLiveBasketballForecasts(
     ? pageCount
     : Math.min(pageCount, Math.max(1, Math.floor(options.maxPages)));
   if (pagesToFetch > 1001) throw new Error("The live forecast cohort exceeds the bounded page window.");
-  const pages = [first];
-  for (let page = 1; page < pagesToFetch; page += 1) {
-    const response = await fetchWithTransientRetry(
-      `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${page}${modelQuery}${searchQuery}${cohortQuery}`,
-      signal,
-    );
-    if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
-    const payload = await response.json() as LiveForecastPage;
+  const additional = await Promise.all(
+    Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
+      fetchWithTransientRetry(
+        `/api/basketball/research/forecasts?season=2027&status=upcoming&limit=100&page=${index + 1}${modelQuery}${searchQuery}${cohortQuery}`,
+        signal,
+      ).then(async (response) => {
+        if (!response.ok) throw new Error("Live matchup forecasts unavailable.");
+        return await response.json() as LiveForecastPage;
+      }),
+    ),
+  );
+  const pages = [first, ...additional];
+  pages.forEach((payload, page) => {
     const payloadTotal = Number(payload.total);
     const payloadSize = Number(payload.page_size);
     if (payloadTotal !== pageTotal || payloadSize !== pageSize || !Array.isArray(payload.rows) || payload.rows.length > pageSize) {
@@ -114,8 +119,7 @@ export async function loadLiveBasketballForecasts(
     if (page < pagesToFetch - 1 && payload.rows.length === 0) {
       throw new Error("Live matchup forecasts returned an incomplete page.");
     }
-    pages.push(payload);
-  }
+  });
   const rows = pages.flatMap((page) => page.rows);
   if (pagesToFetch === pageCount && rows.length !== pageTotal) {
     throw new Error("Live matchup forecasts returned an incomplete cohort.");
