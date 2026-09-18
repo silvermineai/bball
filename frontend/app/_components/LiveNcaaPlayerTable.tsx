@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
+import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
-type Metric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "poss_share" | "rapm_net" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "poss_share" | "rapm_net" | "impact_index" | "balanced_index";
+type Metric = LiveNCAAMetric;
 
-type PlayerRow = {
+export type LiveNCAAPlayerRow = {
   player_id: string;
   player_name: string | null;
   team_name: string | null;
@@ -32,6 +34,8 @@ type PlayerRow = {
   value: number | null;
   rank: number;
 };
+
+type PlayerRow = LiveNCAAPlayerRow;
 
 type Result = {
   season: number;
@@ -97,6 +101,40 @@ const perGame = (value: number | null, games: number) =>
 const percentage = (made: number | null, attempted: number | null) =>
   made == null || attempted == null || attempted <= 0 ? null : (100 * made) / attempted;
 
+export const playerCsvHeaders = [
+  "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
+  "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
+  "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Fouls", "PF/G", "Turnovers", "TO/G",
+  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value",
+];
+
+/** Keep the homepage export aligned with the visible player table and retain raw denominators. */
+export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCell[][] {
+  return rows.map((row) => {
+    const mpg = perGame(row.minutes, row.games);
+    const ppg = perGame(row.points, row.games);
+    const rpg = perGame(row.rebounds, row.games);
+    const orpg = perGame(row.offensive_rebounds, row.games);
+    const drpg = perGame(row.defensive_rebounds, row.games);
+    const apg = perGame(row.assists, row.games);
+    const spg = perGame(row.steals, row.games);
+    const bpg = perGame(row.blocks, row.games);
+    const fpg = perGame(row.fouls, row.games);
+    const topg = perGame(row.turnovers, row.games);
+    const efg = percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga);
+    const threePct = percentage(row.tpm, row.tpa);
+    const ftPct = percentage(row.ftm, row.fta);
+    const ts = percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null);
+    return [
+      row.rank, row.player_id, row.player_name, row.team_name, row.position, row.class_year,
+      row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
+      row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.fouls, fpg,
+      row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
+      metric, row.value,
+    ];
+  });
+}
+
 export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number }) {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
   const [metric, setMetric] = useState<Metric>(() => selectedMetric(initial?.get("livePlayerMetric") || null));
@@ -151,6 +189,10 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       ? `${fmt(value, 1)}%`
       : fmt(value, 1);
   };
+  const downloadVisibleCsv = () => downloadCsv(
+    `ncaa-player-production-${season}.csv`,
+    toCsv(playerCsvHeaders, playerCsvRows(result?.rows.slice(0, rowLimit) || [], metric)),
+  );
 
   return (
     <section className="dashboard-subsection" aria-labelledby="live-ncaa-player-stats">
@@ -163,6 +205,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         <label className="control"><span>SEARCH PLAYER / TEAM</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or team" aria-label="Search player or team" /></label>
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
         <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
+        <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!result?.rows.length}>Download visible CSV ↓</button>
         <p className="note" role="status">{status === "checking" ? "Loading live player rows…" : status === "ready" && result ? `${query.trim() ? `Found ${result.total.toLocaleString()}` : `Showing ${Math.min(rowLimit, result.rows.length)} of ${result.total.toLocaleString()}`} qualified rows · ${active.description}` : "Live player rows are temporarily unavailable."}</p>
       </div>
       <p className="note" style={{ marginBottom: 16 }}>{metricGuidance[metric]} Missing source fields remain unavailable rather than being filled with zero. <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open the full metric table →</Link></p>
