@@ -197,6 +197,41 @@ export default function Page() {
     total_rows: number;
     seasons: { season: number; rows: number; source_url?: string }[];
   };
+  const playerBoxFields = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "ncaa-player-box-fields.json"), "utf8"),
+  ) as {
+    generated_at: string;
+    fields: string[];
+    seasons: {
+      season: number;
+      rows: number;
+      fields: Record<string, { observed: number; share: number }>;
+    }[];
+  };
+  const latestPlayerBoxFields = playerBoxFields.seasons.at(-1);
+  const fieldGroup = (field: string) => {
+    if (/^(rim|mid|tp|fg|ft|efg|ts)_/.test(field) || /^(rima|rimm|mida|midm|tpa|tpm|fga|fgm|fta|ftm)/.test(field)) return "Shot zones";
+    if (/(trans|half|unast|ast)$/.test(field) || /_(trans|half|unast|ast)_/.test(field)) return "Context splits";
+    if (field.includes("pct") || field.endsWith("_rate")) return "Efficiency rates";
+    if (["ast", "blk", "drb", "mins", "o_poss", "orb", "pf", "pts", "stl", "tov"].includes(field)) return "Core box totals";
+    return "Core box totals";
+  };
+  const fieldGroups = ["Core box totals", "Shot zones", "Context splits", "Efficiency rates"];
+  const playerBoxFieldRows = fieldGroups.flatMap((group) =>
+    playerBoxFields.fields
+      .filter((field) => fieldGroup(field) === group)
+      .sort()
+      .map((field) => {
+        const latest = latestPlayerBoxFields?.fields[field];
+        const seasonsObserved = playerBoxFields.seasons.filter(
+          (season) => (season.fields[field]?.observed ?? 0) > 0,
+        ).length;
+        return { field, group, latest, seasonsObserved };
+      }),
+  );
+  const completeLatestPlayerBoxFields = playerBoxFieldRows.filter(
+    (row) => row.latest?.share === 1,
+  ).length;
   const standings = JSON.parse(
     fs.readFileSync(path.join(dataDir, "standings.json"), "utf8"),
   ) as {
@@ -590,12 +625,76 @@ export default function Page() {
         )}
       </section>
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">04 / Player box field inventory</div>
+            <h2>See the stats behind the rankings.</h2>
+          </div>
+          <span className="note">Built {date(playerBoxFields.generated_at)}</span>
+        </div>
+        <p className="note">
+          The player-game warehouse retains {count(playerBoxFields.fields.length)} fields
+          across {count(playerBoxFields.seasons.length)} seasons. This is the actual
+          field inventory used for player tables, shooting splits and derived rates;
+          a blank share stays blank instead of being filled by inference.
+        </p>
+        <div className="strip">
+          <div>
+            <strong>{count(playerBoxFields.fields.length)}</strong>
+            <span>Tracked player fields</span>
+          </div>
+          <div>
+            <strong>{count(playerBoxFields.seasons.length)}</strong>
+            <span>Seasons in the archive</span>
+          </div>
+          <div>
+            <strong>{count(latestPlayerBoxFields?.rows ?? 0)}</strong>
+            <span>Rows in the latest season</span>
+          </div>
+          <div>
+            <strong>{count(completeLatestPlayerBoxFields)}</strong>
+            <span>Latest fields observed on every row</span>
+          </div>
+        </div>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Group</th>
+                <th className="numeric">Latest rows</th>
+                <th className="numeric">Latest share</th>
+                <th className="numeric">Seasons observed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {playerBoxFieldRows.map((row) => (
+                <tr key={row.field}>
+                  <td><strong>{row.field}</strong></td>
+                  <td>{row.group}</td>
+                  <td className="numeric">{count(row.latest?.observed ?? 0)}</td>
+                  <td className="numeric">{row.latest ? `${(row.latest.share * 100).toFixed(1)}%` : "—"}</td>
+                  <td className="numeric">{count(row.seasonsObserved)} / {count(playerBoxFields.seasons.length)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">
+          Core totals cover minutes, points, rebounds, assists, steals, blocks,
+          fouls, turnovers and offensive possessions. Shot-zone and context fields
+          preserve rim, midrange, three-point, transition, half-court and assisted
+          splits for deeper player comparisons.
+        </p>
+      </section>
+
       <CoverageLive />
 
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">04 / Supplemental research archives</div>
+            <div className="eyebrow">05 / Supplemental research archives</div>
             <h2>The deeper player and possession files.</h2>
           </div>
           <span className="note">Source-native and derived layers</span>
@@ -645,7 +744,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">05 / Identity review queue</div>
+            <div className="eyebrow">06 / Identity review queue</div>
             <h2>Missing IDs do not mean missing observations.</h2>
           </div>
           <span className="note">{count(unresolvedObserved)} rows retain source values</span>
@@ -675,7 +774,7 @@ export default function Page() {
 
       <section className="section two-col">
         <article className="paper-panel">
-          <div className="eyebrow">06 / Recruiting file</div>
+          <div className="eyebrow">07 / Recruiting file</div>
           <h2>Useful evidence, clearly partial.</h2>
           <div className="rule-list">
             <div>
@@ -733,7 +832,7 @@ export default function Page() {
         </article>
 
         <article className="paper-panel">
-          <div className="eyebrow">07 / Forecast record</div>
+          <div className="eyebrow">08 / Forecast record</div>
           <h2>Predictions have a clock.</h2>
           <div className="rule-list">
             <div>
@@ -792,7 +891,7 @@ export default function Page() {
       <section className="section">
         <div className="section-heading">
           <div>
-          <div className="eyebrow">08 / Basketball data library</div>
+          <div className="eyebrow">09 / Basketball data library</div>
             <h2>Choose the evidence layer.</h2>
           </div>
           <span className="note">Each dataset keeps its own source identity.</span>
@@ -878,7 +977,7 @@ export default function Page() {
 
       <section className="section banner">
         <div>
-          <div className="eyebrow">09 / Source boundary</div>
+          <div className="eyebrow">10 / Source boundary</div>
           <h3 style={{ marginTop: 12 }}>Attribution is part of the statistic.</h3>
           <p>
             Current releases come from the retained bulk
