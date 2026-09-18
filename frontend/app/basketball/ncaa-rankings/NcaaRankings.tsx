@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 
 type Metric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "ts" | "efg" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "three_pct" | "ft_pct" | "rim_pct" | "mid_pct" | "ft_rate" | "ast_rate" | "points_poss" | "orb40" | "drb40" | "reb40" | "poss_share" | "rim_rate" | "transition_share" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "balanced_index" | "impact_index";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; roster_height?: string | null; hometown?: string | null; high_school?: string | null; games: number; minutes: number; points: number; rebounds: number; offensive_rebounds?: number | null; defensive_rebounds?: number | null; assists: number; steals: number; blocks: number; turnovers: number | null; fouls: number | null; possessions?: number | null; fga?: number | null; fgm?: number | null; tpa?: number | null; tpm?: number | null; fta?: number | null; ftm?: number | null; rim_attempts?: number | null; rim_makes?: number | null; mid_attempts?: number | null; mid_makes?: number | null; transition_points?: number | null; unassisted_points?: number | null; team_possessions?: number | null; value: number; component_count?: number; ppg_value?: number | null; rpg_value?: number | null; apg_value?: number | null; spg_value?: number | null; bpg_value?: number | null; ts_value?: number | null; ts_denominator?: number | null; efg_value?: number | null; efg_denominator?: number | null; per40_value?: number | null; rank: number; rapm_net: number | null; orapm: number | null; drapm: number | null; off_poss: number | null; def_poss: number | null };
-type Result = { season: number; metric: Metric; direction?: "asc" | "desc"; min_games: number; min_minutes: number; min_volume: number; page: number; page_size: number; total: number; rows: Row[] };
+export type NcaaRankingResult = { season: number; metric: Metric; direction: "asc" | "desc"; min_games: number; min_minutes: number; min_volume: number; page: number; page_size: number; total: number; rows: Row[] };
+type Result = NcaaRankingResult;
 type SourceReceipt = { dataset: string; url: string | null; fetched_at: string | null; sha256: string | null };
 type Meta = { seasons: number[]; metrics: Metric[]; positions: string[]; classes: string[]; sources?: SourceReceipt[] };
 const labels: Record<Metric, string> = { ppg: "Points per game", rpg: "Rebounds per game", orpg: "Offensive rebounds per game", drpg: "Defensive rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", fpg: "Fouls per game", mpg: "Minutes per game", topg: "Turnovers per game", ts: "True shooting %", efg: "Effective FG %", per40: "Points per 40 minutes", ast_to: "Assist-to-turnover ratio", stocks40: "Stocks per 40 minutes", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", three_pct: "Three-point accuracy", ft_pct: "Free-throw accuracy", rim_pct: "Rim accuracy", mid_pct: "Midrange accuracy", ft_rate: "Free-throw attempt rate", ast_rate: "Assists per recorded possession", points_poss: "Points per recorded possession", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40 minutes", poss_share: "Team possession share", rim_rate: "Rim attempt rate", transition_share: "Transition scoring share", unassisted_share: "Unassisted scoring share", rapm_net: "Net RAPM", orapm: "Offensive RAPM", drapm: "Defensive RAPM", balanced_index: "Balanced production index", impact_index: "Impact + production index" };
@@ -37,6 +39,42 @@ const exportRow = (result: Result, row: Row) => {
   const [makes, attempts] = accuracySample(result.metric, row);
   return [result.season, labels[result.metric], row.rank, percentile(row.rank, result.total).toFixed(1), row.player_name, row.player_id, row.team_name, row.team_id, row.position, row.class_year, row.roster_height, row.hometown, row.high_school, row.games, row.minutes, row.points, row.rebounds, row.offensive_rebounds, row.defensive_rebounds, row.assists, row.steals, row.blocks, row.turnovers, row.fouls, row.possessions, row.team_possessions, row.fgm, row.fga, row.tpm, row.tpa, row.ftm, row.fta, row.rim_makes, row.rim_attempts, row.mid_makes, row.mid_attempts, row.transition_points, row.unassisted_points, row.value, makes, attempts, row.component_count == null ? null : `${row.component_count}/8`, row.ppg_value, row.rpg_value, row.apg_value, row.spg_value, row.bpg_value, row.ts_value, row.ts_denominator, row.efg_value, row.efg_denominator, row.per40_value, row.rapm_net, row.per40_value, row.orapm, row.drapm, row.off_poss, row.def_poss];
 };
+
+export function validateNcaaRankingExportPage(
+  payload: NcaaRankingResult,
+  expectedSeason: number,
+  expectedMetric: Metric,
+  expectedDirection: "asc" | "desc",
+  expectedMinGames: number,
+  expectedMinMinutes: number,
+  expectedMinVolume: number,
+  expectedTotal: number,
+  expectedPageSize: number,
+  page: number,
+  totalPages: number,
+) {
+  if (
+    Number(payload.season) !== expectedSeason
+    || payload.metric !== expectedMetric
+    || payload.direction !== expectedDirection
+    || Number(payload.min_games) !== expectedMinGames
+    || Number(payload.min_minutes) !== expectedMinMinutes
+    || Number(payload.min_volume) !== expectedMinVolume
+    || Number(payload.page) !== page
+    || !Number.isInteger(Number(payload.total))
+    || Number(payload.total) !== expectedTotal
+    || !Number.isInteger(Number(payload.page_size))
+    || Number(payload.page_size) !== expectedPageSize
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > expectedPageSize
+  ) {
+    throw new Error("The player ranking release changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The player ranking release returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 export default function NcaaRankings() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -149,17 +187,29 @@ export default function NcaaRankings() {
     setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
     try {
       const rows: Row[] = [];
+      const expectedSeason = Number(season);
+      const expectedMinGames = Number(minGames);
+      const expectedMinMinutes = Number(minMinutes);
+      const expectedMinVolume = Number(minVolume);
+      if (!Number.isInteger(expectedSeason) || !Number.isInteger(expectedMinGames) || !Number.isInteger(expectedMinMinutes) || !Number.isInteger(expectedMinVolume) || !result.direction) {
+        throw new Error("The player ranking board returned invalid export metadata.");
+      }
+      const cohort = `ranking-export-${Date.now()}`;
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume, page: String(requestedPage) });
+        params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
         if (position) params.set("position", position);
         if (classYear) params.set("classYear", classYear);
-        const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params}`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-player-rankings?${params.toString()}`);
         if (!response.ok) throw new Error("The complete ranking export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...payload.rows);
+        rows.push(...validateNcaaRankingExportPage(payload, expectedSeason, metric, result.direction, expectedMinGames, expectedMinMinutes, expectedMinVolume, result.total, result.page_size, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
       }
+      if (rows.length !== result.total) throw new Error("The player ranking release returned an incomplete export.");
+      const identities = new Set(rows.map((row) => `${row.player_id}::${row.team_id}`));
+      if (identities.size !== rows.length) throw new Error("The player ranking release returned duplicate player rows.");
       downloadCsv(`ncaa-player-rankings-${season}-${metric}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(result, row))));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} ranked rows.`);
     } catch (reason) {
