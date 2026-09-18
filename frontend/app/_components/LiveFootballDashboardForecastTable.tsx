@@ -19,6 +19,7 @@ import {
 import { summarizeMarketLines } from "../_lib/market-display";
 import { loadLiveFootballMarketComparisons } from "../_lib/live-football-forecasts";
 import type { Comparison } from "../_lib/research-types";
+import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 const sortLabels: Record<FootballMatchupSort, string> = {
   date: "earliest kickoffs first",
@@ -43,6 +44,35 @@ function forecastSignal(game: Game) {
   if (!prediction) return "";
   const confidence = Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability);
   return confidence >= 0.75 ? "Strong lean" : confidence >= 0.6 ? "Lean" : "Toss-up";
+}
+
+export const footballForecastCsvHeaders = [
+  "Game ID", "Kickoff", "Week", "Away", "Home", "Away conference", "Home conference", "Neutral site", "Time TBD",
+  "Away score", "Home score", "Home win probability", "Projected margin", "Margin low", "Margin high", "Projected total",
+  "Verified market spread", "Verified market total", "Spread gap", "Total gap", "Market capture",
+];
+
+/** Export the complete filtered football forecast cohort, retaining unavailable values as blanks. */
+export function footballForecastCsvRows(
+  games: Game[],
+  marketComparisons: Record<string, Comparison[]> = {},
+): CsvCell[][] {
+  return games.map((game) => {
+    const prediction = game.prediction;
+    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    const legacy = game.market;
+    const spread = market.spread ?? legacy?.home_spread ?? null;
+    const total = market.total ?? legacy?.total ?? null;
+    const spreadGap = market.spreadGap ?? legacy?.margin_difference ?? null;
+    const totalGap = market.totalGap ?? (total != null && prediction?.total != null ? prediction.total - total : null);
+    return [
+      game.id, game.kickoff, game.week, game.away_name, game.home_name, game.away_conference, game.home_conference,
+      game.neutral ? "yes" : "no", game.time_tbd ? "yes" : "no", prediction?.away_score, prediction?.home_score,
+      prediction?.home_win_probability == null ? null : prediction.home_win_probability * 100, prediction?.home_margin,
+      prediction?.margin_low, prediction?.margin_high, prediction?.total, spread, total, spreadGap, totalGap,
+      market.capturedAt ?? legacy?.observed_at ?? null,
+    ];
+  });
 }
 
 /** Replace the first landing-page slice with the current forecast catalog. */
@@ -79,6 +109,10 @@ export default function LiveFootballDashboardForecastTable({
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
     return market.spread != null || market.total != null;
   }).length;
+  const downloadFilteredCsv = () => downloadCsv(
+    "football-forecast-board.csv",
+    toCsv(footballForecastCsvHeaders, footballForecastCsvRows(signalGames, marketComparisons)),
+  );
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
@@ -109,6 +143,7 @@ export default function LiveFootballDashboardForecastTable({
             <option value={48}>48 games</option>
           </select>
         </label>
+        <button className="button secondary" type="button" onClick={downloadFilteredCsv} disabled={!signalGames.length}>Download filtered CSV ↓</button>
         <p className="note" role="status">Showing {rows.length} of {signalGames.length} forecast rows · {signalLabels[signal]} · {sortLabels[sort]} · {marketGames} with qualifying market lines.</p>
       </div>
       <div className="dashboard-table-wrap">
