@@ -53,14 +53,20 @@ const factorLabels: Record<BBFactorKey, string> = {
 
 /** Keep the compact board explainable without turning each row into a card. */
 export function strongestFactorEdge(game: BBGame) {
-  const edges = game.matchup_factors?.edges;
-  if (!edges) return null;
-  const strongest = (Object.entries(edges) as Array<[BBFactorKey, number | undefined]>)
-    .filter((entry): entry is [BBFactorKey, number] => entry[1] != null && Number.isFinite(entry[1]))
+  const strongest = matchupFactorEdges(game)
+    .map((edge) => [edge.key, edge.value] as [BBFactorKey, number])
     .sort((left, right) => Math.abs(right[1]) - Math.abs(left[1]))[0];
   if (!strongest || strongest[1] === 0) return null;
   const [key, edge] = strongest;
   return `${edge > 0 ? "H" : "A"} ${factorLabels[key]} ${fmt(Math.abs(edge) * 100, 1)}`;
+}
+
+export function matchupFactorEdges(game: BBGame) {
+  const edges = game.matchup_factors?.edges;
+  if (!edges) return [] as Array<{ key: BBFactorKey; value: number }>;
+  return (Object.keys(factorLabels) as BBFactorKey[])
+    .map((key) => ({ key, value: edges[key] }))
+    .filter((edge): edge is { key: BBFactorKey; value: number } => edge.value != null && Number.isFinite(edge.value));
 }
 
 const startValue = (game: BBGame) => {
@@ -186,6 +192,7 @@ export default function LiveDashboardForecastTable({
             const prediction = predictionFor(game)!;
             const rosterScenario = rosterByGame.get(game.id);
             const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+            const factorEdges = matchupFactorEdges(game);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
@@ -195,7 +202,10 @@ export default function LiveDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric"><strong>{fmt(prediction.pace)}</strong><small>possessions</small></td>
-                <td className="numeric">{strongestFactorEdge(game) || "—"}<small>largest Four Factor edge</small></td>
+                <td className="numeric">
+                  {strongestFactorEdge(game) || "—"}<small>largest Four Factor edge</small>
+                  {factorEdges.length > 0 && <details className="forecast-factor-details"><summary>All four</summary>{factorEdges.map((edge) => <small key={edge.key}>{factorLabels[edge.key]} {edge.value >= 0 ? "H" : "A"} {fmt(Math.abs(edge.value) * 100, 1)}</small>)}</details>}
+                </td>
                 <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
                 <td className="numeric">{market.spread == null && market.total == null ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}</>}</td>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesEstimateFilter, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -76,5 +76,22 @@ describe("strongestFactorEdge", () => {
 
   it("returns null when the matchup has no factor edge", () => {
     expect(strongestFactorEdge(games[0])).toBeNull();
+  });
+});
+
+describe("matchupFactorEdges", () => {
+  it("keeps every finite four-factor edge in the published order", () => {
+    expect(matchupFactorEdges({
+      ...games[0],
+      matchup_factors: {
+        season: 2026,
+        factors: {},
+        edges: { efg: 0.012, tov: undefined, orb: -0.018, ftr: 0 },
+      },
+    })).toEqual([
+      { key: "efg", value: 0.012 },
+      { key: "orb", value: -0.018 },
+      { key: "ftr", value: 0 },
+    ]);
   });
 });
