@@ -58,6 +58,7 @@ function parseObject(value: unknown): Record<string, unknown> {
 }
 
 const COVERAGE_DB_TIMEOUT_MS = 8000;
+const PUBLISHED_COVERAGE_TIMEOUT_MS = 2000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -65,6 +66,87 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
     timer = setTimeout(() => reject(new Error("coverage database query timed out")), milliseconds);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+type PublishedBasketballOverview = {
+  generated_at?: unknown;
+  coverage?: {
+    schedule_records?: unknown;
+    player_box_rows?: unknown;
+    unresolved_rows?: unknown;
+    forecast_games?: unknown;
+    datasets?: unknown;
+  };
+};
+
+async function publishedBasketballCoverage(c: Context<AppEnv>, audit: boolean): Promise<Response | null> {
+  if (!c.env.ASSETS) return null;
+  try {
+    const asset = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/basketball/overview.json", c.req.url))),
+      PUBLISHED_COVERAGE_TIMEOUT_MS,
+    );
+    if (!asset.ok) return null;
+    const overview = await asset.json() as PublishedBasketballOverview;
+    const coverage = overview.coverage || {};
+    const datasetRows = new Map<string, number>();
+    if (Array.isArray(coverage.datasets)) {
+      for (const value of coverage.datasets) {
+        if (!value || typeof value !== "object") continue;
+        const row = value as Record<string, unknown>;
+        if (typeof row.key !== "string" || typeof row.rows !== "number" || !Number.isFinite(row.rows)) continue;
+        datasetRows.set(row.key, row.rows);
+      }
+    }
+    const summaryRows: Record<string, number> = {
+      games: Number(coverage.schedule_records || datasetRows.get("schedule") || 0),
+      player_box: Number(coverage.player_box_rows || datasetRows.get("player_box") || 0),
+      rosters: datasetRows.get("rosters") || 0,
+      forecasts: Number(coverage.forecast_games || 0),
+      unresolved: Number(coverage.unresolved_rows || 0),
+      player_season: datasetRows.get("player_season") || 0,
+    };
+    const auditAliases: Record<string, string> = {
+      games: "schedule",
+      team_box: "team_box",
+      player_box: "player_box",
+      rosters: "rosters",
+      impact: "ncaa_rapm",
+      ncaa_individual_players: "player_core",
+      forecasts: "forecasts",
+      player_core: "player_core",
+      unresolved: "unresolved",
+      player_season: "player_season",
+      team_season: "team_season",
+      publisher_ratings: "publisher_ratings",
+      player_value: "publisher_player_value",
+      lineups: "ncaa_lineups",
+      ncaa_player_box: "ncaa_player_box",
+      ncaa_player_season: "ncaa_player_season",
+      ncaa_rosters: "ncaa_team_rosters",
+      ncaa_player_shooting: "ncaa_shots",
+    };
+    const datasets = audit
+      ? Object.keys(auditAliases).map((dataset) => ({
+        dataset,
+        rows: dataset === "forecasts" || dataset === "games" || dataset === "player_box" || dataset === "unresolved"
+          ? summaryRows[dataset]
+          : datasetRows.get(auditAliases[dataset]) || 0,
+      }))
+      : Object.keys(summaryRows).map((dataset) => ({ dataset, rows: summaryRows[dataset] }));
+    const response = c.json({
+      coverage: datasets,
+      audit_status: "static_fallback",
+      generated_at: typeof overview.generated_at === "string" ? overview.generated_at : null,
+      source_receipts: [],
+      location_validation: null,
+      possession_validation: null,
+    });
+    response.headers.set("Cache-Control", "public, max-age=60");
+    return response;
+  } catch {
+    return null;
+  }
 }
 
 type AppEnv = {
@@ -748,6 +830,11 @@ app.get("/api/basketball/research/coverage", async (c) => {
   }
   return response;
   } catch {
+    const fallback = await publishedBasketballCoverage(c, audit);
+    if (fallback) {
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, fallback.clone()).catch(() => undefined));
+      return fallback;
+    }
     return c.json({ error: "The basketball coverage audit is temporarily unavailable; retry shortly." }, 503, { "Cache-Control": "no-store", "Retry-After": "30" });
   }
 });

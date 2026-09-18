@@ -1079,6 +1079,39 @@ describe("bball api", () => {
     });
   });
 
+  it("serves the published coverage catalog when D1 is busy", async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      generated_at: "2026-09-17T10:00:00Z",
+      coverage: {
+        schedule_records: 42,
+        player_box_rows: 84,
+        forecast_games: 12,
+        unresolved_rows: 3,
+        datasets: [
+          { key: "rosters", rows: 9 },
+          { key: "player_season", rows: 7 },
+          { key: "ncaa_player_box", rows: 100 },
+        ],
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await app.request(
+      "/api/basketball/research/coverage?audit=1",
+      {},
+      {
+        DB: { prepare: vi.fn(), batch: vi.fn().mockRejectedValue(new Error("database busy")) },
+        ASSETS: { fetch },
+      },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { audit_status: string; coverage: Array<{ dataset: string; rows: number }>; generated_at: string };
+    expect(body.audit_status).toBe("static_fallback");
+    expect(body.generated_at).toBe("2026-09-17T10:00:00Z");
+    expect(body.coverage.find((entry) => entry.dataset === "games")).toEqual({ dataset: "games", rows: 42 });
+    expect(body.coverage.find((entry) => entry.dataset === "ncaa_player_box")).toEqual({ dataset: "ncaa_player_box", rows: 100 });
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("rejects unknown publisher stat fields before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/publisher-stats?stat=not-a-source-field",

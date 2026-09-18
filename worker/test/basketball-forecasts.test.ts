@@ -16,6 +16,41 @@ describe("basketball forecast availability", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
+  it("serves the published upcoming board when the forecast warehouse is busy", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2027,
+      generated_at: "2026-09-17T10:00:00Z",
+      model: { id: "basketball-efficiency-v2-published" },
+      upcoming: [
+        {
+          id: "401",
+          season: 2027,
+          starts_at: "2026-11-02T05:00:00Z",
+          home_id: "1",
+          away_id: "2",
+          home_name: "Home",
+          away_name: "Away",
+          completed: 0,
+          neutral: 0,
+          time_tbd: 1,
+          prediction: { home_margin: 4.5, total: 145.5 },
+        },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&limit=1",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { source: string; total: number; rows: Array<Record<string, unknown>> };
+    expect(body.source).toBe("published_fallback");
+    expect(body.total).toBe(1);
+    expect(body.rows[0]).toMatchObject({ game_id: "401", model_id: "basketball-efficiency-v2-published", prediction: { home_margin: 4.5, total: 145.5 } });
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("attaches the published roster model lens when requested", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {

@@ -28,6 +28,7 @@ const DB_TIMEOUT_MS = 5000;
 // row reads tight, but allow this read-only summary a little more time on a
 // cold D1 edge without turning a transient slow read into a 503.
 const META_DB_TIMEOUT_MS = 12000;
+const PUBLISHED_FORECAST_TIMEOUT_MS = 3000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -98,6 +99,89 @@ async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
     };
   } catch {
     return { lenses: new Map<string, RosterLens>(), model: null };
+  }
+}
+
+type PublishedForecastOverview = {
+  season?: unknown;
+  generated_at?: unknown;
+  model?: { id?: unknown };
+  upcoming?: unknown;
+};
+
+async function publishedForecastFallback(
+  c: Context<{ Bindings: Bindings }>,
+  args: { season: number; gameId?: string; status: string; q?: string; model: string; roster: string; page: number; limit: number },
+): Promise<Response | null> {
+  // The bundled overview is an intentionally narrow safety net for the
+  // default published board. Keep filtered or historical requests honest and
+  // let them retain the normal retryable D1 error when the warehouse is down.
+  if (
+    !c.env.ASSETS
+    || args.season !== 2027
+    || args.status !== "upcoming"
+    || args.gameId
+    || args.q
+    || args.model !== "latest"
+    || args.roster !== "0"
+  ) return null;
+  try {
+    const asset = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/basketball/overview.json", c.req.url))),
+      PUBLISHED_FORECAST_TIMEOUT_MS,
+    );
+    if (!asset.ok) return null;
+    const overview = await asset.json() as PublishedForecastOverview;
+    const upcoming = Array.isArray(overview.upcoming) ? overview.upcoming : [];
+    const modelId = typeof overview.model?.id === "string" ? overview.model.id : "published-basketball-efficiency";
+    const createdAt = typeof overview.generated_at === "string" ? overview.generated_at : null;
+    const rows = upcoming
+      .filter((value): value is Record<string, unknown> => Boolean(value && typeof value === "object"))
+      .map((game) => {
+        const prediction = game.prediction && typeof game.prediction === "object" && !Array.isArray(game.prediction)
+          ? game.prediction
+          : game.fallback_prediction && typeof game.fallback_prediction === "object" && !Array.isArray(game.fallback_prediction)
+            ? game.fallback_prediction
+            : null;
+        return {
+          game_id: typeof game.id === "string" ? game.id : String(game.id || ""),
+          model_id: modelId,
+          created_at: createdAt,
+          season: Number(game.season || overview.season || 2027),
+          starts_at: typeof game.starts_at === "string" ? game.starts_at : null,
+          home_id: typeof game.home_id === "string" ? game.home_id : String(game.home_id || ""),
+          away_id: typeof game.away_id === "string" ? game.away_id : String(game.away_id || ""),
+          home_name: typeof game.home_name === "string" ? game.home_name : null,
+          away_name: typeof game.away_name === "string" ? game.away_name : null,
+          home_score: game.home_score == null ? null : Number(game.home_score),
+          away_score: game.away_score == null ? null : Number(game.away_score),
+          completed: Number(game.completed || 0),
+          neutral: Number(game.neutral || 0),
+          time_tbd: Number(game.time_tbd || 0),
+          venue: typeof game.venue === "string" ? game.venue : null,
+          broadcast: typeof game.broadcast === "string" ? game.broadcast : null,
+          source_start: null,
+          source_time_valid: null,
+          source_observed_at: null,
+          prediction,
+        };
+      });
+    const start = args.page * args.limit;
+    const response = c.json({
+      season: args.season,
+      status: args.status,
+      model: args.model,
+      query: null,
+      page: args.page,
+      page_size: args.limit,
+      total: rows.length,
+      source: "published_fallback",
+      rows: rows.slice(start, start + args.limit),
+    });
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    return response;
+  } catch {
+    return null;
   }
 }
 
@@ -295,6 +379,11 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;
   } catch {
+    const fallback = await publishedForecastFallback(c, { season, gameId, status, q, model, roster, page, limit });
+    if (fallback) {
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, fallback.clone()).catch(() => undefined));
+      return fallback;
+    }
     return c.json({ error: "The live basketball forecasts are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
 });
