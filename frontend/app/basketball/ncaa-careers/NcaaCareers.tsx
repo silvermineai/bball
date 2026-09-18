@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 
 type Metric = "points" | "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "minutes" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "stocks40" | "ast_to" | "tov_rate" | "three_rate" | "orb40" | "drb40" | "reb40";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position?: string | null; class_year?: string | null; games: number; minutes: number | null; points: number | null; rebounds: number | null; offensive_rebounds?: number | null; defensive_rebounds?: number | null; assists: number | null; steals?: number | null; blocks?: number | null; turnovers?: number | null; fouls?: number | null; possessions?: number | null; fga?: number | null; fgm?: number | null; tpa?: number | null; tpm?: number | null; fta?: number | null; ftm?: number | null; value: number; rank: number };
 type SourceReceipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
-type Result = { from_season: number; to_season: number; metric: Metric; min_games: number; min_minutes: number; min_denominator: number; denominator_field?: string | null; page: number; page_size: number; total: number; source_receipts?: SourceReceipt[]; rows: Row[] };
+export type NcaaCareerResult = { from_season: number; to_season: number; metric: Metric; min_games: number; min_minutes: number; min_denominator: number; denominator_field?: string | null; page: number; page_size: number; total: number; source_receipts?: SourceReceipt[]; rows: Row[] };
+type Result = NcaaCareerResult;
 type Meta = { seasons: number[]; metrics: Metric[]; classes?: string[]; positions?: string[] };
 const labels: Record<Metric, string> = { points: "Total points", ppg: "Points per game", rpg: "Rebounds per game", orpg: "Offensive rebounds per game", drpg: "Defensive rebounds per game", apg: "Assists per game", spg: "Steals per game", bpg: "Blocks per game", fpg: "Fouls per game", topg: "Turnovers per game", minutes: "Total minutes", ts: "True shooting %", efg: "Effective FG %", three_pct: "Three-point accuracy", ft_pct: "Free-throw accuracy", per40: "Points per 40 minutes", stocks40: "Stocks per 40 minutes", ast_to: "Assist-to-turnover ratio", tov_rate: "Turnover rate", three_rate: "Three-point attempt rate", orb40: "Offensive rebounds per 40", drb40: "Defensive rebounds per 40", reb40: "Rebounds per 40" };
 const percentMetrics = new Set<Metric>(["ts", "efg", "three_pct", "ft_pct", "tov_rate", "three_rate"]);
@@ -47,6 +49,49 @@ const seasonFromQuery = (value: string | null, fallback: number) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 2010 && parsed <= 2026 ? String(parsed) : String(fallback);
 };
+
+const receiptSignature = (receipts: SourceReceipt[] | undefined) => (receipts || [])
+  .map((receipt) => `${receipt.dataset}:${receipt.season}:${receipt.sha256}:${receipt.fetched_at}`)
+  .sort()
+  .join("|");
+
+export function validateNcaaCareerExportPage(
+  payload: NcaaCareerResult,
+  expectedFromSeason: number,
+  expectedToSeason: number,
+  expectedMetric: Metric,
+  expectedMinGames: number,
+  expectedMinMinutes: number,
+  expectedMinDenominator: number,
+  expectedTotal: number,
+  expectedPageSize: number,
+  expectedReceipts: SourceReceipt[] | undefined,
+  page: number,
+  totalPages: number,
+) {
+  if (
+    Number(payload.from_season) !== expectedFromSeason
+    || Number(payload.to_season) !== expectedToSeason
+    || payload.metric !== expectedMetric
+    || Number(payload.min_games) !== expectedMinGames
+    || Number(payload.min_minutes) !== expectedMinMinutes
+    || Number(payload.min_denominator) !== expectedMinDenominator
+    || Number(payload.page) !== page
+    || !Number.isInteger(Number(payload.total))
+    || Number(payload.total) !== expectedTotal
+    || !Number.isInteger(Number(payload.page_size))
+    || Number(payload.page_size) !== expectedPageSize
+    || receiptSignature(payload.source_receipts) !== receiptSignature(expectedReceipts)
+    || !Array.isArray(payload.rows)
+    || payload.rows.length > expectedPageSize
+  ) {
+    throw new Error("The historical player-season release changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The historical player-season release returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 export default function NcaaCareers() {
   const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
@@ -133,7 +178,7 @@ export default function NcaaCareers() {
   };
   const downloadAll = async () => {
     if (!result || exporting) return;
-    const totalPages = Math.ceil(result.total / result.page_size);
+    const totalPages = Math.max(1, Math.ceil(result.total / result.page_size));
     if (totalPages > 1001) {
       setExportMessage("This cohort exceeds the bounded export window. Add a player, season, metric or workload filter first.");
       return;
@@ -142,17 +187,22 @@ export default function NcaaCareers() {
     setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} player-seasons…`);
     try {
       const rows: Row[] = [];
+      const cohort = `career-export-${Date.now()}`;
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ fromSeason, toSeason, metric, minGames, minMinutes, minDenominator, page: String(requestedPage) });
+        params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
         if (classYear) params.set("classYear", classYear);
         if (position) params.set("position", position);
-        const response = await fetch(`/api/basketball/research/ncaa-careers?${params}`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-careers?${params.toString()}`);
         if (!response.ok) throw new Error("The complete NCAA career export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...payload.rows);
+        rows.push(...validateNcaaCareerExportPage(payload, result.from_season, result.to_season, result.metric, result.min_games, result.min_minutes, result.min_denominator, result.total, result.page_size, result.source_receipts, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} player-seasons…`);
       }
+      if (rows.length !== result.total) throw new Error("The historical player-season release returned an incomplete export.");
+      const identities = new Set(rows.map((row) => `${row.season}:${row.player_id}:${row.team_id}`));
+      if (identities.size !== rows.length) throw new Error("The historical player-season release returned duplicate player rows.");
       downloadCsv(`ncaa-historical-leaderboard-${fromSeason}-${toSeason}-${metric}-all.csv`, toCsv(exportHeaders, rows.map((row) => exportRow(row, result))));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} player-season rows.`);
     } catch (reason) {
