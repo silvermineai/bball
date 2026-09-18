@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playerCsvHeaders, playerCsvRows, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
+import { playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
 
 const row: LiveNCAAPlayerRow = {
   player_id: "p-1",
@@ -47,5 +47,18 @@ describe("homepage NCAA player export", () => {
     expect(values[playerCsvHeaders.indexOf("3P%")]).toBeNull();
     expect(values[playerCsvHeaders.indexOf("FT%")]).toBeNull();
     expect(values[playerCsvHeaders.indexOf("TS%")]).toBeNull();
+  });
+
+  it("requires stable pagination metadata and non-empty intermediate pages", () => {
+    const page = { total: 2, page_size: 1, rows: [row] };
+    expect(validatePlayerExportPage(page, 2, 1, 0, 2)).toEqual([row]);
+    expect(() => validatePlayerExportPage({ ...page, total: 3 }, 2, 1, 1, 2)).toThrow("changed during export");
+    expect(() => validatePlayerExportPage({ ...page, rows: [] }, 2, 1, 0, 2)).toThrow("incomplete page");
+  });
+
+  it("accepts a short final page without accepting an incomplete cohort", () => {
+    const page = { total: 2, page_size: 2, rows: [row] };
+    expect(validatePlayerExportPage(page, 2, 2, 0, 1)).toEqual([row]);
+    expect(() => validatePlayerExportPage({ ...page, rows: [] }, 2, 2, 0, 1)).not.toThrow();
   });
 });

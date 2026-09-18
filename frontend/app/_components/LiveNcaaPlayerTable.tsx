@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
+import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
 export type LiveNCAAMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "poss_share" | "rapm_net" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
@@ -37,13 +38,32 @@ export type LiveNCAAPlayerRow = {
 
 type PlayerRow = LiveNCAAPlayerRow;
 
-type Result = {
-  season: number;
-  metric: Metric;
+export type LiveNCAAPlayerRankingResult = {
+  season?: number;
+  metric?: Metric;
   total: number;
   page_size?: number;
   rows: PlayerRow[];
 };
+type Result = LiveNCAAPlayerRankingResult;
+
+export function validatePlayerExportPage(
+  payload: LiveNCAAPlayerRankingResult,
+  expectedTotal: number,
+  expectedPageSize: number,
+  page: number,
+  totalPages: number,
+) {
+  const pageTotal = Number(payload.total);
+  const pageSize = Number(payload.page_size || 50);
+  if (!Number.isInteger(pageTotal) || pageTotal !== expectedTotal || !Number.isInteger(pageSize) || pageSize !== expectedPageSize || !Array.isArray(payload.rows) || payload.rows.length > pageSize) {
+    throw new Error("The player archive changed during export.");
+  }
+  if (page < totalPages - 1 && payload.rows.length === 0) {
+    throw new Error("The player archive returned an incomplete page.");
+  }
+  return payload.rows;
+}
 
 const metrics: Array<{ key: Metric; label: string; description: string; volume: number }> = [
   { key: "ppg", label: "Scoring", description: "points per game", volume: 0 },
@@ -198,15 +218,22 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   );
   const downloadAllCsv = async () => {
     if (!result || exporting) return;
-    const totalPages = Math.ceil(result.total / (result.page_size || 50));
+    const totalRows = Number(result.total);
+    const pageSize = Number(result.page_size || 50);
+    if (!Number.isInteger(totalRows) || totalRows < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+      setExportMessage("The player archive returned invalid pagination metadata.");
+      return;
+    }
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
     if (totalPages > 1001) {
       setExportMessage("This cohort is larger than the bounded export window. Search for a player or team first.");
       return;
     }
     setExporting(true);
-    setExportMessage(`Preparing 0 of ${result.total.toLocaleString()} rows…`);
+    setExportMessage(`Preparing 0 of ${totalRows.toLocaleString()} rows…`);
     try {
       const rows: PlayerRow[] = [];
+      const cohort = `player-export-${Date.now()}`;
       for (let page = 0; page < totalPages; page += 1) {
         const params = new URLSearchParams({
           season: String(season),
@@ -215,14 +242,18 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
           minMinutes: "200",
           minVolume: String(metrics.find((candidate) => candidate.key === metric)?.volume || 0),
           page: String(page),
+          cohort,
         });
         if (query.trim()) params.set("q", query.trim());
-        const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params.toString()}`);
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-player-rankings?${params.toString()}`);
         if (!response.ok) throw new Error("The complete player export could not be loaded.");
-        const payload = await response.json() as Result;
-        rows.push(...payload.rows);
-        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
+        const payload = await response.json() as LiveNCAAPlayerRankingResult;
+        rows.push(...validatePlayerExportPage(payload, totalRows, pageSize, page, totalPages));
+        setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${totalRows.toLocaleString()} rows…`);
       }
+      if (rows.length !== totalRows) throw new Error("The player archive returned an incomplete export.");
+      const identities = new Set(rows.map((row) => `${row.player_id}::${row.team_name || ""}`));
+      if (identities.size !== rows.length) throw new Error("The player archive returned duplicate player rows.");
       downloadCsv(`ncaa-player-production-${season}-${metric}-all.csv`, toCsv(playerCsvHeaders, playerCsvRows(rows, metric)));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} player rows.`);
     } catch (reason) {
