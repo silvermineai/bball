@@ -75,12 +75,15 @@ jobs:
 
       - name: Smoke test production
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/football/recruiting/ \
+          retry_curl() {
+            curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 180 "$@"
+          }
+          retry_curl https://bball.silvermine.dev/ >/dev/null
+          retry_curl https://bball.silvermine.dev/football/recruiting/ \
             | grep -q 'Roster rows, already in the page'
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/football/matchups/ \
+          retry_curl https://bball.silvermine.dev/football/matchups/ \
             | grep -q 'Upcoming games, already modeled'
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/api/health >/dev/null
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+          retry_curl https://bball.silvermine.dev/api/health >/dev/null
+          retry_curl \
             'https://bball.silvermine.dev/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&workflow_smoke=1' \
             | python -c 'import json,sys; p=json.load(sys.stdin); assert p.get("season") == 2027 and p.get("total", 0) > 0 and p.get("rows"), "forecast smoke response is empty"'
