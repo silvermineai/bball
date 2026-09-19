@@ -11,6 +11,7 @@ from scripts.check_live_publication import (
     forecast_coverage,
     roster_forecast_alignment,
     market_metadata,
+    matchup_personnel_coverage,
     player_box_field_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
@@ -62,6 +63,47 @@ class LivePublicationCheckTest(unittest.TestCase):
         payload["roster_alignment"] = {**payload["roster_alignment"], "compatible": False, "status": "model_mismatch"}
         with self.assertRaisesRegex(ValueError, "not aligned"):
             roster_forecast_alignment(payload, "model-1")
+
+    @staticmethod
+    def matchup_personnel_payload():
+        stats = {"ppg": 12.1, "rpg": None, "apg": 3.4}
+        player = {
+            "team_id": "1", "athlete_id": "10", "name": "Example Guard", "status": "returning",
+            "prior_minutes": 800, "prior_stints": [{"team_id": "1", "stats": stats, "box_bpm": 2.5}],
+        }
+        empty_player = {
+            "team_id": "2", "athlete_id": "20", "name": "Example Wing", "status": "new_to_dataset",
+            "prior_minutes": None, "prior_stints": [],
+        }
+        return {
+            "season": 2027, "prior_season": 2026,
+            "game": {"id": "401902275", "home_id": "1", "away_id": "2"},
+            "coverage": {"listed_players": 2, "players_with_prior_minutes": 1, "players_with_publisher_stats": 1, "players_with_box_bpm": 1},
+            "home": {"team_id": "1", "listed_players": 1, "returning_players": 1, "incoming_players": 0, "new_to_dataset_players": 0, "ambiguous_players": 0, "players_with_prior_minutes": 1, "players_with_publisher_stats": 1, "players_with_box_bpm": 1, "players": [player]},
+            "away": {"team_id": "2", "listed_players": 1, "returning_players": 0, "incoming_players": 0, "new_to_dataset_players": 1, "ambiguous_players": 0, "players_with_prior_minutes": 0, "players_with_publisher_stats": 0, "players_with_box_bpm": 0, "players": [empty_player]},
+            "source_receipts": [{"dataset": "rosters", "season": 2027, "fetched_at": "2026-09-10T18:00:00Z", "sha256": "a" * 64}],
+            "identity_policy": "Exact source athlete IDs.",
+        }
+
+    def test_matchup_personnel_reconciles_exact_forecast_and_roster_evidence(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        forecast = {"season": 2027, "game_id": "401902275", "home_id": "1", "away_id": "2"}
+        self.assertEqual(
+            matchup_personnel_coverage(self.matchup_personnel_payload(), forecast, now, 36),
+            {"listed_players": 2, "players_with_prior_minutes": 1, "players_with_publisher_stats": 1, "players_with_box_bpm": 1, "source_receipts": 1, "source_max_age_hours": 2.0},
+        )
+
+    def test_matchup_personnel_rejects_mismatched_or_inconsistent_evidence(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        forecast = {"season": 2027, "game_id": "401902275", "home_id": "1", "away_id": "2"}
+        wrong_game = self.matchup_personnel_payload()
+        wrong_game["game"]["id"] = "999"
+        with self.assertRaisesRegex(ValueError, "identity is malformed"):
+            matchup_personnel_coverage(wrong_game, forecast, now, 36)
+        inconsistent = self.matchup_personnel_payload()
+        inconsistent["coverage"]["players_with_prior_minutes"] = 0
+        with self.assertRaisesRegex(ValueError, "total coverage does not reconcile"):
+            matchup_personnel_coverage(inconsistent, forecast, now, 36)
 
     def test_get_json_honors_retry_after_for_transient_http_errors(self):
         class Response:
@@ -130,8 +172,10 @@ class LivePublicationCheckTest(unittest.TestCase):
                         "status": "matched",
                         "matched_rows": 0,
                     },
-                    "rows": [],
+                    "rows": [{"season": 2027, "game_id": "401902275", "home_id": "1", "away_id": "2"}],
                 }
+            if path.startswith("/api/basketball/research/matchup-personnel?"):
+                return LivePublicationCheckTest.matchup_personnel_payload()
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),
@@ -369,6 +413,13 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["forecast_upcoming_rows"], 100)
         self.assertEqual(report["forecast_roster_scenario_rows"], 100)
+        self.assertEqual(report["matchup_personnel_game_id"], "401902275")
+        self.assertEqual(report["matchup_personnel_listed_players"], 2)
+        self.assertEqual(report["matchup_personnel_players_with_prior_minutes"], 1)
+        self.assertEqual(report["matchup_personnel_players_with_stats"], 1)
+        self.assertEqual(report["matchup_personnel_players_with_box_bpm"], 1)
+        self.assertEqual(report["matchup_personnel_source_receipts"], 1)
+        self.assertEqual(report["matchup_personnel_source_max_age_hours"], 2.0)
         self.assertEqual(report["recruiting_intake_rows"], 0)
         self.assertEqual(report["recruiting_rows"], 2)
         self.assertEqual(report["recruiting_reviewed_players"], 96)

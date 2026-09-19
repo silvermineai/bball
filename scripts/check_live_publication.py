@@ -201,6 +201,159 @@ def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
     return model["scenario_games"]
 
 
+def matchup_personnel_coverage(
+    payload: dict,
+    forecast: dict,
+    checked_at: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate exact-game roster evidence against the selected forecast row."""
+    forecast_season = forecast.get("season")
+    forecast_game_id = forecast.get("game_id")
+    forecast_home_id = forecast.get("home_id")
+    forecast_away_id = forecast.get("away_id")
+    if (
+        not isinstance(forecast_season, int)
+        or isinstance(forecast_season, bool)
+        or not isinstance(forecast_game_id, str)
+        or not isinstance(forecast_home_id, str)
+        or not isinstance(forecast_away_id, str)
+    ):
+        raise ValueError("basketball forecast game identity is malformed")
+    game = payload.get("game")
+    coverage = payload.get("coverage")
+    receipts = payload.get("source_receipts")
+    if (
+        payload.get("season") != forecast_season
+        or payload.get("prior_season") != forecast_season - 1
+        or not isinstance(game, dict)
+        or game.get("id") != forecast_game_id
+        or game.get("home_id") != forecast_home_id
+        or game.get("away_id") != forecast_away_id
+        or not isinstance(coverage, dict)
+        or not isinstance(receipts, list)
+        or not receipts
+        or not isinstance(payload.get("identity_policy"), str)
+        or not payload["identity_policy"].strip()
+    ):
+        raise ValueError("basketball matchup personnel identity is malformed")
+
+    statuses = {"returning", "incoming", "new_to_dataset", "ambiguous"}
+    coverage_keys = (
+        "listed_players", "players_with_prior_minutes",
+        "players_with_publisher_stats", "players_with_box_bpm",
+    )
+    totals = {key: 0 for key in coverage_keys}
+    seen: set[tuple[str, str]] = set()
+    for side_name, expected_team in (("home", forecast_home_id), ("away", forecast_away_id)):
+        side = payload.get(side_name)
+        if not isinstance(side, dict) or side.get("team_id") != expected_team:
+            raise ValueError("basketball matchup personnel side identity is malformed")
+        players = side.get("players")
+        side_keys = coverage_keys + (
+            "returning_players", "incoming_players",
+            "new_to_dataset_players", "ambiguous_players",
+        )
+        if (
+            not isinstance(players, list)
+            or not players
+            or any(
+                not isinstance(side.get(key), int)
+                or isinstance(side.get(key), bool)
+                or side[key] < 0
+                for key in side_keys
+            )
+            or side["listed_players"] != len(players)
+        ):
+            raise ValueError("basketball matchup personnel coverage is malformed")
+        computed_statuses = {status: 0 for status in statuses}
+        computed_minutes = computed_stats = computed_bpm = 0
+        for player in players:
+            if (
+                not isinstance(player, dict)
+                or player.get("team_id") != expected_team
+                or not isinstance(player.get("athlete_id"), str)
+                or not player["athlete_id"].strip()
+                or not isinstance(player.get("name"), str)
+                or not player["name"].strip()
+                or player.get("status") not in statuses
+                or not isinstance(player.get("prior_stints"), list)
+            ):
+                raise ValueError("basketball matchup personnel player row is malformed")
+            identity = (expected_team, player["athlete_id"])
+            if identity in seen:
+                raise ValueError("basketball matchup personnel contains a duplicate roster identity")
+            seen.add(identity)
+            computed_statuses[player["status"]] += 1
+            prior_minutes = player.get("prior_minutes")
+            if prior_minutes is not None:
+                if not isinstance(prior_minutes, (int, float)) or isinstance(prior_minutes, bool) or prior_minutes < 0:
+                    raise ValueError("basketball matchup personnel prior minutes are malformed")
+                computed_minutes += 1
+            has_stats = has_bpm = False
+            for stint in player["prior_stints"]:
+                stats = stint.get("stats") if isinstance(stint, dict) else None
+                if (
+                    not isinstance(stint, dict)
+                    or not isinstance(stint.get("team_id"), str)
+                    or not stint["team_id"].strip()
+                    or not isinstance(stats, dict)
+                ):
+                    raise ValueError("basketball matchup personnel prior stint is malformed")
+                for metric in ("ppg", "rpg", "apg"):
+                    value = stats.get(metric)
+                    if value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool)):
+                        raise ValueError("basketball matchup personnel stat value is malformed")
+                    has_stats = has_stats or value is not None
+                bpm = stint.get("box_bpm")
+                if bpm is not None and (not isinstance(bpm, (int, float)) or isinstance(bpm, bool)):
+                    raise ValueError("basketball matchup personnel Box BPM is malformed")
+                has_bpm = has_bpm or bpm is not None
+            computed_stats += int(has_stats)
+            computed_bpm += int(has_bpm)
+        expected_statuses = {
+            "returning": side["returning_players"],
+            "incoming": side["incoming_players"],
+            "new_to_dataset": side["new_to_dataset_players"],
+            "ambiguous": side["ambiguous_players"],
+        }
+        if (
+            computed_statuses != expected_statuses
+            or computed_minutes != side["players_with_prior_minutes"]
+            or computed_stats != side["players_with_publisher_stats"]
+            or computed_bpm != side["players_with_box_bpm"]
+        ):
+            raise ValueError("basketball matchup personnel coverage does not reconcile")
+        for key in coverage_keys:
+            totals[key] += side[key]
+
+    if any(coverage.get(key) != totals[key] for key in coverage_keys):
+        raise ValueError("basketball matchup personnel total coverage does not reconcile")
+    if totals["listed_players"] <= 0 or totals["players_with_prior_minutes"] <= 0 or totals["players_with_publisher_stats"] <= 0:
+        raise ValueError("basketball matchup personnel has no usable player evidence")
+
+    receipt_ages = []
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("dataset"), str)
+            or receipt.get("season") not in {payload["prior_season"], payload["season"]}
+            or not isinstance(receipt.get("fetched_at"), str)
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+        ):
+            raise ValueError("basketball matchup personnel source receipt is malformed")
+        age = (checked_at - timestamp(receipt["fetched_at"])).total_seconds() / 3600
+        if age < -24 or age > max_age_hours:
+            raise ValueError(f"basketball matchup personnel source is {max(age, 0):.1f} hours old")
+        receipt_ages.append(age)
+    return {
+        **totals,
+        "source_receipts": len(receipts),
+        "source_max_age_hours": max(receipt_ages),
+    }
+
+
 def brief_archive_metadata(payload: dict) -> tuple[int, int]:
     """Validate the durable reading archive without downloading snapshots."""
     total = payload.get("total")
@@ -541,6 +694,20 @@ def check_live(
     )
     upcoming_forecast_rows = forecast_coverage(upcoming_forecasts, 2027, latest["forecasts"])
     roster_scenario_rows = roster_forecast_alignment(upcoming_forecasts, model_id)
+    upcoming_rows = upcoming_forecasts.get("rows")
+    if not isinstance(upcoming_rows, list) or not upcoming_rows or not isinstance(upcoming_rows[0], dict):
+        raise ValueError("latest basketball model has no inspectable upcoming game")
+    personnel_game = upcoming_rows[0]
+    game_id = personnel_game.get("game_id")
+    if not isinstance(game_id, str) or not re.fullmatch(r"\d{1,20}", game_id):
+        raise ValueError("latest basketball model has an invalid game identity")
+    matchup_personnel = get_json(
+        base_url,
+        f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
+    )
+    matchup_personnel_summary = matchup_personnel_coverage(
+        matchup_personnel, personnel_game, checked_at, max_age_hours
+    )
     scorecard = get_json(
         base_url,
         f"/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check={probe_key}",
@@ -692,6 +859,13 @@ def check_live(
         "forecast_rows": latest["forecasts"],
         "forecast_upcoming_rows": upcoming_forecast_rows,
         "forecast_roster_scenario_rows": roster_scenario_rows,
+        "matchup_personnel_game_id": game_id,
+        "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
+        "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],
+        "matchup_personnel_players_with_stats": matchup_personnel_summary["players_with_publisher_stats"],
+        "matchup_personnel_players_with_box_bpm": matchup_personnel_summary["players_with_box_bpm"],
+        "matchup_personnel_source_receipts": matchup_personnel_summary["source_receipts"],
+        "matchup_personnel_source_max_age_hours": round(max(matchup_personnel_summary["source_max_age_hours"], 0), 2),
         "forecast_age_hours": round(max(model_age, 0), 2),
         "scorecard_excluded_rows": scorecard.get("total", 0),
         "football_forecast_model": football_latest.get("model_id"),
