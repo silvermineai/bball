@@ -2,9 +2,11 @@
 """Validate the joins that make an upcoming basketball forecast actionable.
 
 Primary forecasts must carry both team profiles, historical player workload,
-all four matchup factors, and a roster-continuity scenario. Cold-start rows
-remain valid when those contextual joins are unavailable, but they must carry
-an explicit fallback estimate so the UI can disclose the reduced evidence.
+all four matchup factors, and a roster-continuity scenario. The published score,
+margin, total, factor edges, and roster scenario must agree with one another.
+Cold-start rows remain valid when those contextual joins are unavailable, but
+they must carry an explicit fallback estimate so the UI can disclose the
+reduced evidence.
 """
 
 from __future__ import annotations
@@ -55,6 +57,14 @@ def validate_prediction(value: Any, label: str) -> None:
         raise ValueError(f"{label} has an invalid home win probability")
     if value["margin_low"] > value["margin_high"]:
         raise ValueError(f"{label} has an inverted margin interval")
+    # These fields are published together. Catch a partial or mismatched
+    # refresh before the UI turns them into a game plan.
+    if abs((value["home_score"] - value["away_score"]) - value["home_margin"]) > 0.05:
+        raise ValueError(f"{label} has a score/margin mismatch")
+    if abs((value["home_score"] + value["away_score"]) - value["total"]) > 0.05:
+        raise ValueError(f"{label} has a score/total mismatch")
+    if value["pace"] <= 0:
+        raise ValueError(f"{label} has a non-positive pace")
 
 
 def validate_profile(path: Path, team_id: str, label: str) -> None:
@@ -97,14 +107,23 @@ def validate_factors(game: dict[str, Any]) -> None:
         values = factors["factors"].get(key)
         if not isinstance(values, dict) or any(not finite(values.get(field)) for field in ("home_offense", "home_defense", "away_offense", "away_defense")):
             raise ValueError(f"game {game['id']} has malformed {key} matchup values")
+        edges = factors.get("edges")
+        if not isinstance(edges, dict) or not finite(edges.get(key)):
+            raise ValueError(f"game {game['id']} has a malformed {key} matchup edge")
 
 
-def validate_scenario(scenario: Any, game_id: str) -> None:
+def validate_scenario(scenario: Any, game_id: str, home_id: str, away_id: str, prediction: dict[str, Any]) -> None:
     if not isinstance(scenario, dict) or str(scenario.get("game_id")) != game_id:
         raise ValueError(f"game {game_id} is missing its roster scenario")
+    if str(scenario.get("home_id")) != home_id or str(scenario.get("away_id")) != away_id:
+        raise ValueError(f"game {game_id} roster scenario has mismatched participants")
     for field in ("base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net"):
         if not finite(scenario.get(field)):
             raise ValueError(f"game {game_id} has a non-numeric roster scenario {field}")
+    if abs(scenario["base_margin"] - prediction["home_margin"]) > 0.05:
+        raise ValueError(f"game {game_id} roster scenario is based on a different forecast margin")
+    if abs((scenario["roster_margin"] - scenario["base_margin"]) - scenario["margin_delta"]) > 0.05:
+        raise ValueError(f"game {game_id} roster scenario has a margin-delta mismatch")
 
 
 def check(root: Path) -> dict[str, Any]:
@@ -118,11 +137,14 @@ def check(root: Path) -> dict[str, Any]:
         raise ValueError("overview has no team ratings")
     rating_by_id = {str(row.get("id")): row for row in ratings if isinstance(row, dict)}
     roster_model = read_json(basketball / "roster-model.json")
-    scenarios = {
-        str(row.get("game_id")): row
-        for row in roster_model.get("scenarios", [])
-        if isinstance(row, dict)
-    }
+    scenarios = {}
+    for row in roster_model.get("scenarios", []):
+        if not isinstance(row, dict):
+            raise ValueError("roster model contains a non-object scenario")
+        scenario_id = str(row.get("game_id", ""))
+        if scenario_id in scenarios:
+            raise ValueError(f"roster model contains duplicate scenario ID: {scenario_id}")
+        scenarios[scenario_id] = row
     seen: set[str] = set()
     primary = fallback = 0
     primary_context = {"team_ratings": 0, "scouting_profiles": 0, "player_workload": 0, "factors": 0, "roster_scenarios": 0}
@@ -144,6 +166,8 @@ def check(root: Path) -> dict[str, Any]:
             raise ValueError(f"game {game_id} has invalid participants")
         if not str(game.get("home_name", "")).strip() or not str(game.get("away_name", "")).strip():
             raise ValueError(f"game {game_id} has an unnamed participant")
+        if game.get("prediction") is not None and game.get("fallback_prediction") is not None:
+            raise ValueError(f"game {game_id} has both primary and fallback predictions")
         if game.get("prediction") is not None:
             primary += 1
             validate_prediction(game["prediction"], f"game {game_id} primary prediction")
@@ -157,12 +181,15 @@ def check(root: Path) -> dict[str, Any]:
                 validate_profile(profile_path, team_id, f"game {game_id} {side} team")
                 primary_context["scouting_profiles"] += 1
                 primary_context["player_workload"] += 1
-            validate_scenario(scenarios.get(game_id), game_id)
+            validate_scenario(scenarios.get(game_id), game_id, home_id, away_id, game["prediction"])
             primary_context["roster_scenarios"] += 1
             primary_context["factors"] += 1
         elif game.get("fallback_prediction") is not None:
             fallback += 1
-            validate_prediction(game["fallback_prediction"], f"game {game_id} fallback prediction")
+            fallback_prediction = game["fallback_prediction"]
+            validate_prediction(fallback_prediction, f"game {game_id} fallback prediction")
+            if not isinstance(fallback_prediction, dict) or fallback_prediction.get("estimate_type") != "cold_start":
+                raise ValueError(f"game {game_id} fallback prediction is not labeled cold_start")
         else:
             raise ValueError(f"game {game_id} has neither a primary nor fallback prediction")
     expected = overview.get("coverage", {})
