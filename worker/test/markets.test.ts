@@ -27,7 +27,25 @@ describe("market archive metadata", () => {
       expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
     expect(body.archive_receipts).toEqual([]);
-    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0 });
+    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
+  });
+
+  it("classifies quote validation outcomes from the capture receipt", async () => {
+    const makeResponse = async (capture: Record<string, number>) => {
+      const batch = vi.fn().mockResolvedValue([
+        { results: [] },
+        { results: [{ total: 0, pregame: 0 }] },
+        { results: [] },
+        { results: [{ payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", ...capture }), captured_at: "2026-09-15T18:00:00Z" }] },
+      ]);
+      return markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    };
+
+    const rejected = await makeResponse({ summary_count: 3, summary_with_pickcenter: 2, accepted_markets: 0, rejected_records: 2 });
+    await expect(rejected.json()).resolves.toMatchObject({ research_capture: { market_status: "quotes_failed_validation" } });
+
+    const accepted = await makeResponse({ summary_count: 3, summary_with_pickcenter: 2, accepted_markets: 4, rejected_records: 0 });
+    await expect(accepted.json()).resolves.toMatchObject({ research_capture: { market_status: "validated_quotes" } });
   });
 
   it("returns retained football betting release receipts", async () => {

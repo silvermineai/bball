@@ -87,7 +87,16 @@ type ResearchCapture = {
   summary_with_pickcenter?: number;
   accepted_markets?: number;
   rejected_records?: number;
+  market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "validated_quotes" | "unknown";
 };
+
+function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captured_at" | "market_status">): ResearchCapture["market_status"] {
+  if (capture.summary_count === 0) return "no_eligible_summaries";
+  if (capture.summary_with_pickcenter === 0) return "no_quotes_published";
+  if ((capture.accepted_markets ?? 0) > 0) return "validated_quotes";
+  if ((capture.rejected_records ?? 0) > 0) return "quotes_failed_validation";
+  return "unknown";
+}
 
 function parseResearchCapture(value: unknown): ResearchCapture | null {
   if (!value || typeof value !== "object") return null;
@@ -110,6 +119,7 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     if (typeof payload.rejected_records === "number" && Number.isInteger(payload.rejected_records) && payload.rejected_records >= 0) {
       result.rejected_records = payload.rejected_records;
     }
+    result.market_status = captureMarketStatus(result);
     return result;
   } catch {
     return null;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import { normalizeMarketSeason } from "../../_lib/market-view";
+import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 
 type Meta = {
   seasons: number[];
@@ -19,6 +20,7 @@ type Meta = {
     summary_with_pickcenter?: number;
     accepted_markets?: number;
     rejected_records?: number;
+    market_status?: MarketCaptureStatus;
   };
   source?: string;
   unavailable_reason?: string;
@@ -219,6 +221,7 @@ export default function Markets() {
   };
 
   const pages = useMemo(() => Math.max(1, Math.ceil((data?.total || 0) / 40)), [data]);
+  const captureStatus = meta?.research_capture?.market_status;
   return (
     <section className="section" aria-label="Historical market archive">
       <div className="paper-panel brief-archive-note">
@@ -279,14 +282,14 @@ export default function Markets() {
         {!data.rows.length && data.total === 0 && !query.trim() && (
           <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
             <div className="eyebrow">Connector status</div>
-            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? meta?.research_receipts ? "No complete basketball quote passed validation yet." : "No basketball quote capture has been recorded yet." : "No market observations are connected yet."}</h3>
+            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? meta?.research_receipts ? marketCaptureStatusLabel(captureStatus) : "No basketball quote capture has been recorded yet." : "No market observations are connected yet."}</h3>
             <p>
               {archiveUnavailable
                 ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about feed coverage."
                 : <>{sport === "basketball" && meta?.research_receipts
                   ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future game summaries; ${(
                     meta.research_capture.summary_with_pickcenter || 0
-                  ).toLocaleString()} included complete market quotes${meta.research_capture.accepted_markets != null ? ` and ${meta.research_capture.accepted_markets.toLocaleString()} passed validation` : ""}${meta.research_capture.rejected_records != null ? `; ${meta.research_capture.rejected_records.toLocaleString()} were rejected` : ""}` : ""}, but no complete two-sided market passed the exact participant, start-time and pregame checks. This is unavailable evidence, not proof that a game had no line.</>
+                  ).toLocaleString()} included complete market quotes${meta.research_capture.accepted_markets != null ? ` and ${meta.research_capture.accepted_markets.toLocaleString()} passed validation` : ""}${meta.research_capture.rejected_records != null ? `; ${meta.research_capture.rejected_records.toLocaleString()} were rejected` : ""}` : ""}. {marketCaptureStatusDetail(captureStatus)} This is unavailable evidence, not proof that a game had no line.</>
                     : <>The archive is empty for this sport because no authorized feed
               export has been ingested. This is unavailable evidence, not proof
               that a game had no line. The prospective scorecard stays clean
