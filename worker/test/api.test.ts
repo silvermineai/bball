@@ -1077,6 +1077,32 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY game_date DESC"))).toBe(true);
   });
 
+  it("serves an exact-ID career game-log page across retained seasons", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => ({ sql, args }),
+    }));
+    const batch = vi.fn(async (statements: Array<{ sql: string }>) => statements.map((statement) => (
+      statement.sql.includes("count(*)")
+        ? { results: [{ total: 3 }] }
+        : { results: [
+          { season: 2026, contest_id: "9001", team_id: "77", game_date: "2026-01-02", team_name: "Example U", opponent_name: "Sample State", player_name: "Example Player", stats_json: JSON.stringify({ mins: 31, pts: 18 }) },
+          { season: 2025, contest_id: "8001", team_id: "66", game_date: "2025-01-03", team_name: "Example College", opponent_name: "Sample Tech", player_name: "Example Player", stats_json: JSON.stringify({ mins: 29, pts: 14 }) },
+        ] }
+    )));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-card/123/games?season=all&limit=500",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { season: string; total: number; rows: Array<{ season: number; stats: Record<string, unknown> }> };
+    expect(body.season).toBe("all");
+    expect(body.total).toBe(3);
+    expect(body.rows.map((row) => row.season)).toEqual([2026, 2025]);
+    expect(body.rows[1].stats).toEqual({ mins: 29, pts: 14 });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("WHERE player_id=? ORDER BY season DESC"))).toBe(true);
+  });
+
   it("returns a retryable response when the NCAA player game archive is busy", async () => {
     const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
     const response = await app.request(

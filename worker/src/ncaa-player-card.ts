@@ -8,7 +8,8 @@ type Bindings = Env;
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
 });
-const gamesQuerySchema = querySchema.extend({
+const gamesQuerySchema = z.object({
+  season: z.union([z.coerce.number().int().min(2010).max(2026), z.literal("all")]).default(2026),
   page: z.coerce.number().int().min(0).max(100).default(0),
   limit: z.coerce.number().int().min(1).max(500).default(500),
 });
@@ -61,9 +62,19 @@ ncaaPlayerCard.get("/:id/games", zValidator("query", gamesQuerySchema), async (c
   }
   try {
     const gameDb = ncaaBoxDb(c.env);
+    const allSeasons = season === "all";
+    // The player-first index keeps this career view bounded even though the
+    // game archive is partitioned by season. Keep the season predicate when a
+    // caller asks for one edition so the existing hot path remains selective.
+    const countStatement = allSeasons
+      ? gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=?").bind(playerId)
+      : gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=? AND season=?").bind(playerId, season);
+    const rowsStatement = allSeasons
+      ? gameDb.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? ORDER BY season DESC,game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, limit, page * limit)
+      : gameDb.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, season, limit, page * limit);
     const [count, result] = await withTimeout(gameDb.batch([
-      gameDb.prepare("SELECT count(*) AS total FROM bb_ncaa_player_box WHERE player_id=? AND season=?").bind(playerId, season),
-      gameDb.prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT ? OFFSET ?").bind(playerId, season, limit, page * limit),
+      countStatement,
+      rowsStatement,
     ]), DB_TIMEOUT_MS);
     const total = Number((count.results[0] as { total?: number } | undefined)?.total || 0);
     if (!total) return c.json({ error: "No NCAA game rows found" }, 404);
