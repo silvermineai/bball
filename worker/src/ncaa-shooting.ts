@@ -20,6 +20,9 @@ const sourceSchema = z.object({
 
 export const ncaaShooting = new Hono<{ Bindings: Bindings }>();
 const CACHE_TTL = 300;
+// Bump this when the published coordinate archive shape changes so an older
+// cached empty response can never hide a newly loaded shooting release.
+const CACHE_KEY_VERSION = "2";
 const DB_TIMEOUT_MS = 5000;
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -93,7 +96,9 @@ ncaaShooting.get("/source", zValidator("query", sourceSchema), async (c) => {
 ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
   const { season, metric, minAttempts, q, page, meta } = c.req.valid("query");
   const cache = edgeCache();
-  const cacheKey = new Request(c.req.url, { method: "GET" });
+  const cacheUrl = new URL(c.req.url);
+  cacheUrl.searchParams.set("_release", CACHE_KEY_VERSION);
+  const cacheKey = new Request(cacheUrl, { method: "GET" });
   if (cache) {
     try {
       const cached = await withTimeout(cache.match(cacheKey), 1000);
