@@ -1,10 +1,10 @@
 export const fmt = (n: number | null | undefined, d = 1) =>
-  n == null
+  n == null || !Number.isFinite(n)
     ? "—"
     : n.toLocaleString("en-US", {
         maximumFractionDigits: d,
-        minimumFractionDigits: d,
-      });
+      minimumFractionDigits: d,
+    });
 export const date = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -20,4 +20,4 @@ export const kick = (value: string) =>
     minute: "2-digit",
     timeZone: "America/New_York",
   }).format(new Date(value)) + " ET";
-export const signed = (n: number) => `${n > 0 ? "+" : ""}${fmt(n)}`;
+export const signed = (n: number) => n == null || !Number.isFinite(n) ? "—" : `${n > 0 ? "+" : ""}${fmt(n)}`;
