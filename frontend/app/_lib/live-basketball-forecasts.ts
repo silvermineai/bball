@@ -163,6 +163,11 @@ export async function loadLiveBasketballForecasts(
   }
   const ids = new Set(rows.map((row) => row.game_id));
   if (ids.size !== rows.length) throw new Error("Live matchup forecasts returned duplicate games.");
+  const cohortModelIds = new Set(rows.map((row) => row.model_id).filter((value): value is string => Boolean(value)));
+  if (cohortModelIds.size > 1) throw new Error("Live matchup forecasts mixed model editions.");
+  if (rows.length > 0 && rows.some((row) => !row.model_id)) {
+    throw new Error("Live matchup forecasts returned an unlabeled model edition.");
+  }
   return rows;
 }
 

@@ -112,6 +112,55 @@ describe("live basketball forecast merge", () => {
     vi.unstubAllGlobals();
   });
 
+  it("fails closed when an unlabeled first page hides mixed later model editions", async () => {
+    const row = (id: string, model_id?: string): LiveForecastRow => ({
+      game_id: id,
+      model_id,
+      season: 2027,
+      starts_at: "2026-11-01T05:00:00Z",
+      home_id: `${id}-home`,
+      away_id: `${id}-away`,
+      home_name: `Home ${id}`,
+      away_name: `Away ${id}`,
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(1),
+    });
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("one")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("two", "model-a")] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 3, page_size: 1, rows: [row("three", "model-b")] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).rejects.toThrow("mixed model editions");
+    vi.unstubAllGlobals();
+  });
+
+  it("fails closed when a nonempty forecast cohort has no edition labels", async () => {
+    const row: LiveForecastRow = {
+      game_id: "unlabeled",
+      season: 2027,
+      starts_at: "2026-11-01T05:00:00Z",
+      home_id: "home",
+      away_id: "away",
+      home_name: "Home",
+      away_name: "Away",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(1),
+    };
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ total: 1, page_size: 100, rows: [row] }),
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballForecasts(undefined, { cacheBust: "test" })).rejects.toThrow("unlabeled model edition");
+    vi.unstubAllGlobals();
+  });
+
   it("fails closed on duplicate game IDs in a complete cohort", async () => {
     const row: LiveForecastRow = {
       game_id: "duplicate",
