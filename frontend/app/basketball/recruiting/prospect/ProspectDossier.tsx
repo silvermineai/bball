@@ -11,6 +11,7 @@ import {
   type RecruitingShortlistEntry,
 } from "../../../_lib/recruiting-shortlist";
 import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-schools";
+import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
 
 type Prospect = {
   athlete_id: string;
@@ -34,16 +35,6 @@ type Prospect = {
   previous_captured_at?: string | null;
   school_ids?: string[];
 };
-type RankHistoryEntry = {
-  edition: string;
-  captured_at: string;
-  rank: number | null;
-  grade: number | null;
-  status: string | null;
-  committed_team_id: string | null;
-  committed_team_name: string | null;
-  source_url: string;
-};
 type PublisherMention = {
   id: string;
   publisher: string;
@@ -53,7 +44,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RankHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -68,7 +59,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const season = /^\d{4}$/.test(params.get("season") || "") ? params.get("season")! : "2027";
   const athleteId = /^\d{1,15}$/.test(params.get("id") || "") ? params.get("id")! : "";
   const [prospect, setProspect] = useState<Prospect | null>(null);
-  const [history, setHistory] = useState<RankHistoryEntry[]>([]);
+  const [history, setHistory] = useState<RecruitingHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
@@ -141,6 +132,9 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     ? prospectSchools(prospect.school_ids, programs, prospect.committed_team_id)
     : [];
   const isShortlisted = Boolean(shortlistKey && shortlist.some((entry) => entry.key === shortlistKey));
+  const destinationChanges = commitmentTransitions(history);
+  const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
+  const latestHistory = history.at(-1);
   const toggleProspectShortlist = () => {
     if (!prospect) return;
     const entry: RecruitingShortlistEntry = {
@@ -185,6 +179,24 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <p className="note">{rankMovement ? `Previous national rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier edition for this exact athlete ID is retained yet. Future captures will establish the comparison baseline."}</p>
             </section>;
           })()}
+          <section className="paper-panel" aria-label="Prospect commitment history" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Destination history / exact athlete ID</div><h2>{latestHistory?.committed_team_name || prospect.committed_team_name || "No destination recorded"}</h2></div>
+              <span className="note">{destinationChanges.length} observed change{destinationChanges.length === 1 ? "" : "s"}</span>
+            </div>
+            <p className="note">Changes appear only when two adjacent retained editions differ. They describe the stored captures; they do not establish when an announcement, offer, signing or eligibility decision occurred.</p>
+            <dl className="roster-stat-grid" style={{ marginTop: 16 }}>
+              <div><dt>Current recorded status</dt><dd>{latestHistory?.status || prospect.status || "—"}</dd></div>
+              <div><dt>First retained destination</dt><dd>{firstRecordedDestination?.committed_team_name || firstRecordedDestination?.committed_team_id || "—"}</dd></div>
+              <div><dt>First seen</dt><dd>{firstRecordedDestination?.captured_at ? new Date(firstRecordedDestination.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</dd></div>
+              <div><dt>Retained captures</dt><dd>{history.length || "—"}</dd></div>
+            </dl>
+            {destinationChanges.length ? <div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Captured</th><th>Observed change</th><th>Recorded destination / status</th><th>Edition provenance</th></tr></thead><tbody>{destinationChanges.map((change) => {
+              const label = change.kind === "destination_recorded" ? "Destination recorded" : change.kind === "destination_changed" ? "Destination changed" : change.kind === "destination_cleared" ? "Destination no longer recorded" : "Status changed";
+              const value = change.committed_team_name || change.committed_team_id || change.status || "—";
+              return <tr key={`${change.previous_edition}-${change.edition}`}><td>{new Date(change.captured_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td><td><strong>{label}</strong>{change.kind === "destination_changed" && <small>From {change.previous_team_name || change.previous_team_id || "—"}</small>}{change.kind === "status_changed" && <small>From {change.previous_status || "—"}</small>}</td><td>{value}</td><td><small>From <span className="source-hash">{change.previous_edition}</span></small><small>To <span className="source-hash">{change.edition}</span></small></td></tr>;
+            })}</tbody></table></div> : <p className="empty" style={{ marginTop: 16 }}>No destination or status change is observable between the retained captures for this exact athlete ID.</p>}
+          </section>
           {history.length > 1 && <section className="paper-panel" aria-label="Prospect rank history" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Retained editions</div><h2>See the rank over time.</h2></div>
