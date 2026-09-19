@@ -62,6 +62,16 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       )
       ORDER BY m.created_at DESC,m.id DESC LIMIT 1`,
   ).bind(season).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
+  // Clients pin subsequent pages to the immutable model ID returned on page
+  // zero. Resolve that edition's artifact as well so scores and calibrated
+  // intervals do not disappear merely because `model` is no longer `latest`.
+  const selectedModel = model === "latest"
+    ? latestModel
+    : model === "all"
+      ? null
+      : await db.prepare(
+        "SELECT id,created_at,cutoff,artifact_json FROM football_models WHERE id=? LIMIT 1",
+      ).bind(model).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
 
   if (meta === "1") {
     const [seasons, models] = await db.batch([
@@ -127,8 +137,8 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       ORDER BY g.kickoff ASC,p.created_at DESC,p.model_id ASC
       LIMIT ? OFFSET ?`,
   ).bind(...binds, limit, page * limit).all();
-  const intervalWidth = model === "latest" && latestModel
-    ? marginHalfWidth(latestModel.artifact_json)
+  const intervalWidth = selectedModel
+    ? marginHalfWidth(selectedModel.artifact_json)
     : null;
   c.header("Cache-Control", "public, max-age=300");
   return c.json({

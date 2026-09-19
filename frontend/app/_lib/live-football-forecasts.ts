@@ -3,6 +3,7 @@ import type { Comparison } from "./research-types";
 
 export type LiveFootballForecastRow = {
   game_id: string;
+  model_id?: string;
   kickoff: string;
   home_id: string;
   away_id: string;
@@ -29,22 +30,38 @@ type LiveFootballScorecardResponse = {
 
 export async function loadLiveFootballForecasts(
   signal?: AbortSignal,
-  options: { maxPages?: number } = {},
+  options: { maxPages?: number; cacheBust?: string } = {},
 ) {
+  const cohort = encodeURIComponent(options.cacheBust || String(Date.now()));
   const firstResponse = await fetch(
-    "/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=0",
+    `/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=0&cohort=${cohort}`,
     { signal },
   );
   if (!firstResponse.ok) throw new Error("Live football forecasts unavailable.");
   const first = await firstResponse.json() as LiveFootballForecastPage;
-  const pageCount = Math.ceil(first.total / Math.max(first.page_size, 1));
+  const total = Number(first.total);
+  const pageSize = Number(first.page_size);
+  if (!Number.isInteger(total) || total < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+    throw new Error("Live football forecasts returned invalid pagination metadata.");
+  }
+  if (!Array.isArray(first.rows) || first.rows.length > pageSize || (total > 0 && first.rows.length === 0)) {
+    throw new Error("Live football forecasts returned an incomplete page.");
+  }
+  const firstModelIds = new Set(first.rows.map((row) => row.model_id).filter((value): value is string => Boolean(value)));
+  if (first.rows.length > 0 && firstModelIds.size !== 1) {
+    throw new Error("Live football forecasts did not identify one model edition.");
+  }
+  const resolvedModelId = [...firstModelIds][0];
+  const modelQuery = resolvedModelId ? `&model=${encodeURIComponent(resolvedModelId)}` : "";
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const pagesToFetch = options.maxPages == null
     ? pageCount
     : Math.min(pageCount, Math.max(1, Math.floor(options.maxPages)));
+  if (pagesToFetch > 1001) throw new Error("The live football forecast cohort exceeds the bounded page window.");
   const additional = await Promise.all(
     Array.from({ length: Math.max(0, pagesToFetch - 1) }, (_, index) =>
       fetch(
-        `/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=${index + 1}`,
+        `/api/football/research/forecasts?season=2026&status=upcoming&limit=100&page=${index + 1}${modelQuery}&cohort=${cohort}`,
         { signal },
       ).then((response) => {
         if (!response.ok) throw new Error("Live football forecasts unavailable.");
@@ -52,7 +69,25 @@ export async function loadLiveFootballForecasts(
       }),
     ),
   );
-  return [first, ...additional].flatMap((page) => page.rows);
+  const pages = [first, ...additional];
+  pages.forEach((payload, page) => {
+    if (Number(payload.total) !== total || Number(payload.page_size) !== pageSize || !Array.isArray(payload.rows) || payload.rows.length > pageSize) {
+      throw new Error("Live football forecasts changed during pagination.");
+    }
+    if (page < pagesToFetch - 1 && payload.rows.length === 0) {
+      throw new Error("Live football forecasts returned an incomplete page.");
+    }
+    if (resolvedModelId && payload.rows.some((row) => row.model_id !== resolvedModelId)) {
+      throw new Error("Live football forecasts mixed model editions.");
+    }
+  });
+  const rows = pages.flatMap((page) => page.rows);
+  if (pagesToFetch === pageCount && rows.length !== total) {
+    throw new Error("Live football forecasts returned an incomplete cohort.");
+  }
+  const ids = new Set(rows.map((row) => row.game_id));
+  if (ids.size !== rows.length) throw new Error("Live football forecasts returned duplicate games.");
+  return rows;
 }
 
 /** Load only exact, ledger-qualified market comparisons for football games. */

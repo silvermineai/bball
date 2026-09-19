@@ -269,6 +269,43 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("g.season=?"))).toBe(true);
   });
 
+  it("keeps calibrated football intervals when pagination pins an explicit model", async () => {
+    const artifact = {
+      id: "ridge-team-calibrated-v2-test",
+      created_at: "2026-09-09T02:00:00Z",
+      cutoff: "2026-09-09T02:00:00Z",
+      artifact_json: JSON.stringify({ calibration: { margin_half_width: 20 } }),
+    };
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        first: async () => sql.includes("count(*) AS total") ? { total: 1 } : artifact,
+        all: async () => ({ results: [{
+          game_id: "401900001",
+          model_id: artifact.id,
+          created_at: artifact.created_at,
+          home_margin: 6.5,
+          total: 48.25,
+          home_win_probability: 0.64,
+          season: 2026,
+          kickoff: "2026-09-12T19:00:00Z",
+          home_id: "1",
+          away_id: "2",
+          home_name: "Home",
+          away_name: "Away",
+        }] }),
+      }),
+    }));
+    const response = await app.request(
+      `/api/football/research/forecasts?season=2026&status=upcoming&model=${artifact.id}&limit=2`,
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rows: Array<{ margin_low: number; margin_high: number }> };
+    expect(body.rows[0]).toMatchObject({ margin_low: -13.5, margin_high: 26.5 });
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("WHERE id=? LIMIT 1"))).toBe(true);
+  });
+
   it("returns D1 coverage counts alongside source receipt timestamps", async () => {
     const prepare = vi.fn((sql: string) => ({
       all: vi.fn().mockResolvedValue(sql.includes("bb_sources") ? {

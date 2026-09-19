@@ -22,28 +22,67 @@ const game = (prediction: Game["prediction"]): Game => ({
   market: null,
 });
 
+const liveRow = (index: number, modelId = "football-v1"): LiveFootballForecastRow => ({
+  game_id: `game-${index}`,
+  model_id: modelId,
+  kickoff: `2026-09-12T${String(index % 24).padStart(2, "0")}:00:00Z`,
+  home_id: `home-${index}`,
+  away_id: `away-${index}`,
+  home_name: `Home ${index}`,
+  away_name: `Away ${index}`,
+  home_margin: 3,
+  total: 48,
+  home_win_probability: 0.58,
+  home_score: 25.5,
+  away_score: 22.5,
+  margin_low: -20,
+  margin_high: 26,
+});
+
 describe("live football forecast merge", () => {
   it("can limit landing-page refreshes to the first live page", async () => {
     const originalFetch = globalThis.fetch;
     let calls = 0;
     globalThis.fetch = (async () => {
       calls += 1;
-      return new Response(JSON.stringify({ total: 250, page_size: 100, rows: [] }), { status: 200 });
+      return new Response(JSON.stringify({ total: 250, page_size: 100, rows: [liveRow(0)] }), { status: 200 });
     }) as typeof fetch;
-    await expect(loadLiveFootballForecasts(undefined, { maxPages: 1 })).resolves.toEqual([]);
+    await expect(loadLiveFootballForecasts(undefined, { maxPages: 1, cacheBust: "cohort-a" })).resolves.toHaveLength(1);
     expect(calls).toBe(1);
     globalThis.fetch = originalFetch;
   });
 
-  it("loads every registered page by default", async () => {
+  it("pins every later page to the model edition returned by page zero", async () => {
     const originalFetch = globalThis.fetch;
-    let calls = 0;
-    globalThis.fetch = (async () => {
-      calls += 1;
-      return new Response(JSON.stringify({ total: 250, page_size: 100, rows: [] }), { status: 200 });
+    const urls: string[] = [];
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+      urls.push(url);
+      const page = Number(new URL(url, "https://example.test").searchParams.get("page"));
+      const count = page < 2 ? 100 : 50;
+      const rows = Array.from({ length: count }, (_, offset) => liveRow(page * 100 + offset));
+      return new Response(JSON.stringify({ total: 250, page_size: 100, rows }), { status: 200 });
     }) as typeof fetch;
-    await expect(loadLiveFootballForecasts()).resolves.toEqual([]);
-    expect(calls).toBe(3);
+    await expect(loadLiveFootballForecasts(undefined, { cacheBust: "cohort-b" })).resolves.toHaveLength(250);
+    expect(urls).toHaveLength(3);
+    expect(urls[0]).not.toContain("model=");
+    expect(urls.slice(1).every((url) => url.includes("model=football-v1"))).toBe(true);
+    expect(urls.every((url) => url.includes("cohort=cohort-b"))).toBe(true);
+    globalThis.fetch = originalFetch;
+  });
+
+  it("rejects a forecast cohort that changes while pages are loading", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const page = Number(new URL(String(input), "https://example.test").searchParams.get("page"));
+      return new Response(JSON.stringify({
+        total: 2,
+        page_size: 1,
+        rows: [liveRow(page, page === 0 ? "football-v1" : "football-v2")],
+      }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballForecasts(undefined, { cacheBust: "cohort-c" }))
+      .rejects.toThrow("mixed model editions");
     globalThis.fetch = originalFetch;
   });
 
