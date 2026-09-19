@@ -7,6 +7,10 @@ describe("NCAA ranking source evidence", () => {
       primary: "400 PTS",
       detail: "300 FGA + 0.475 × 80 FTA",
     });
+    expect(rankingEvidence("half_ts", { half_points: 280, half_fga: 230, half_fta: 60 })).toEqual({
+      primary: "280 HALF-COURT PTS",
+      detail: "230 FGA + 0.475 × 60 FTA",
+    });
   });
 
   it("uses the denominator that qualifies each ranking rate", () => {
@@ -27,6 +31,7 @@ describe("NCAA ranking source evidence", () => {
   it("withholds evidence when any required source input is unavailable", () => {
     expect(rankingEvidence("efg", { fgm: 150, tpm: null, fga: 300 })).toBeNull();
     expect(rankingEvidence("stocks40", { steals: 30, blocks: undefined, minutes: 600 })).toBeNull();
+    expect(rankingEvidence("half_ts", { half_points: 280, half_fga: 230, half_fta: null })).toBeNull();
   });
 
   it("does not add an evidence column to directly recorded ranking totals", () => {

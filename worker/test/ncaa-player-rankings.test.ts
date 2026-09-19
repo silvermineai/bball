@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { ncaaPlayerRankings } from "../src/ncaa-player-rankings";
+import { metricExpression, ncaaPlayerRankings, volumeColumn } from "../src/ncaa-player-rankings";
 
 describe("NCAA player rankings availability", () => {
+  it("defines half-court true shooting from retained context fields and qualifies by half-court FGA", () => {
+    expect(metricExpression("half_ts")).toBe("CASE WHEN (half_fga + 0.475 * half_fta) > 0 THEN 100.0 * half_points / (2 * (half_fga + 0.475 * half_fta)) ELSE NULL END");
+    expect(volumeColumn("half_ts")).toBe("half_fga");
+  });
+
   it("returns a retryable status when the rankings catalog is unavailable", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await ncaaPlayerRankings.request(

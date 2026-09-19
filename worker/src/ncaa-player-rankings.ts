@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -147,6 +147,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "poss_share": return null;
     case "rim_pct":
     case "mid_pct":
+    case "half_ts":
     case "rim_rate":
     case "transition_share":
     case "unassisted_share":
@@ -304,6 +305,9 @@ const aggregate = (where: string) => `
     ${sourceSum("midm")} AS mid_makes,
     ${sourceSum("pts_trans")} AS transition_points,
     ${sourceSum("pts_unast")} AS unassisted_points,
+    ${sourceSum("pts_half")} AS half_points,
+    ${sourceSum("fga_half")} AS half_fga,
+    ${sourceSum("fta_half")} AS half_fta,
     CASE WHEN SUM(CASE WHEN json_extract(s.stats_json,'$.o_poss') IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY s.season, s.team_id) = COUNT(*) OVER (PARTITION BY s.season, s.team_id)
       THEN SUM(SUM(CAST(json_extract(s.stats_json,'$.o_poss') AS REAL))) OVER (PARTITION BY s.season, s.team_id)
       ELSE NULL END AS team_possessions,
@@ -315,7 +319,7 @@ const aggregate = (where: string) => `
   FROM bb_ncaa_player_season s WHERE ${where}
   GROUP BY s.season, s.player_id, s.team_id`;
 
-const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_index">) => ({
+export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_index">) => ({
   ppg: "points / games",
   rpg: "rebounds / games",
   orpg: "offensive_rebounds / games",
@@ -328,6 +332,7 @@ const metricExpression = (metric: Exclude<Metric, "balanced_index" | "impact_ind
   topg: "turnovers / games",
   ts: "CASE WHEN (fga + 0.475 * fta) > 0 THEN 100.0 * points / (2 * (fga + 0.475 * fta)) ELSE NULL END",
   efg: "CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END",
+  half_ts: "CASE WHEN (half_fga + 0.475 * half_fta) > 0 THEN 100.0 * half_points / (2 * (half_fga + 0.475 * half_fta)) ELSE NULL END",
   per40: "CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END",
   ast_to: "CASE WHEN turnovers > 0 THEN assists / turnovers ELSE NULL END",
   stocks40: "CASE WHEN minutes > 0 THEN 40.0 * (steals + blocks) / minutes ELSE NULL END",
@@ -359,7 +364,7 @@ const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "or
 // ranking metrics remain high-first.
 const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" || metric === "topg" ? "asc" : "desc";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
-const volumeColumn = (metric: Metric) => {
+export const volumeColumn = (metric: Metric) => {
   if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
   if (metric === "three_pct") return "tpa";
   if (metric === "ft_pct") return "fta";
@@ -368,6 +373,7 @@ const volumeColumn = (metric: Metric) => {
   if (metric === "ast_to") return "turnovers";
   if (metric === "tov_rate" || metric === "ast_rate" || metric === "points_poss" || metric === "poss_share") return "possessions";
   if (metric === "transition_share" || metric === "unassisted_share") return "points";
+  if (metric === "half_ts") return "half_fga";
   return null;
 };
 

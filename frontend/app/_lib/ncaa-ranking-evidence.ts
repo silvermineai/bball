@@ -1,6 +1,7 @@
 export type RankingEvidenceMetric =
   | "ts"
   | "efg"
+  | "half_ts"
   | "per40"
   | "ast_to"
   | "stocks40"
@@ -45,12 +46,15 @@ export type RankingEvidenceRow = {
   mid_makes?: number | null;
   transition_points?: number | null;
   unassisted_points?: number | null;
+  half_points?: number | null;
+  half_fga?: number | null;
+  half_fta?: number | null;
 };
 
 export type RankingEvidence = { primary: string; detail: string };
 
 const evidenceMetrics = new Set<string>([
-  "ts", "efg", "per40", "ast_to", "stocks40", "tov_rate", "three_rate",
+  "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate",
   "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate",
   "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate",
   "transition_share", "unassisted_share",
@@ -87,6 +91,10 @@ export function rankingEvidence(metric: string, row: RankingEvidenceRow): Rankin
     case "efg":
       return available(row.fgm) && available(row.tpm) && available(row.fga)
         ? { primary: `${count(row.fgm)} FGM + 0.5 × ${count(row.tpm)} 3PM`, detail: `${count(row.fga)} FGA` }
+        : null;
+    case "half_ts":
+      return available(row.half_points) && available(row.half_fga) && available(row.half_fta)
+        ? { primary: `${count(row.half_points)} HALF-COURT PTS`, detail: `${count(row.half_fga)} FGA + 0.475 × ${count(row.half_fta)} FTA` }
         : null;
     case "per40": return pair(row.points, "PTS", row.minutes, "MIN");
     case "ast_to": return pair(row.assists, "AST", row.turnovers, "TO");
