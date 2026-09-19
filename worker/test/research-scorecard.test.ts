@@ -76,19 +76,22 @@ describe("live research scorecard", () => {
       };
     });
     const response = await researchScorecard.request(
-      "/?sport=basketball&season=2027&limit=5000",
+      "/?sport=basketball&season=2027&model=model-1&limit=5000",
       {},
       { RESEARCH_DB: { prepare } as never },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { live: boolean; total: number; market_observations: number; qualifying_market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
+    const body = await response.json() as { live: boolean; model: string | null; total: number; market_observations: number; qualifying_market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
     expect(body.live).toBe(true);
+    expect(body.model).toBe("model-1");
     expect(body.total).toBe(1);
     expect(body.market_observations).toBe(7);
     expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
     expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, market_observations: 7, unmatched_events: 3, games_with_comparisons: 1, qualifying_market_observations: 1 });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("p.model_id=?"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("registered_at<=? AND model_id=?"))).toBe(true);
   });
 
   it("publishes reliability and keeps model-edition results separate", async () => {
