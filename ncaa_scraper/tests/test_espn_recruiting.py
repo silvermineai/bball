@@ -2,7 +2,7 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from ncaa_scraper.espn_recruiting import _fetch, _team_name, sql_export
+from ncaa_scraper.espn_recruiting import _fetch, _national_rank, _team_name, sql_export
 
 
 def release(edition: str, captured_at: str):
@@ -34,6 +34,11 @@ def release(edition: str, captured_at: str):
 
 
 class EspnRecruitingTests(unittest.TestCase):
+    def test_ungraded_source_placeholder_is_not_a_national_rank(self):
+        self.assertIsNone(_national_rank({"rank": 1}, 0))
+        self.assertEqual(_national_rank({"rank": 1, "positionRank": 1}, 0), 1)
+        self.assertEqual(_national_rank({"rank": 1}, 95), 1)
+
     def test_fetch_retries_temporary_source_failures(self):
         class Response:
             def __init__(self, status_code, body=b""):

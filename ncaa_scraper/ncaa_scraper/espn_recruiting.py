@@ -102,6 +102,17 @@ def _number(value: object, *, integer: bool = False) -> float | int | None:
     return int(parsed) if integer else parsed
 
 
+def _national_rank(attributes: dict[str, object], grade: float | int | None) -> int | None:
+    """Discard source placeholder ranks on otherwise entirely ungraded rows."""
+    rank = _number(attributes.get("rank"), integer=True)
+    if rank is not None and grade == 0 and all(
+        attributes.get(field) in (None, "")
+        for field in ("positionRank", "stateRank", "regionRank")
+    ):
+        return None
+    return rank
+
+
 def _team_names() -> dict[str, str]:
     path = ROOT / ".local/basketball.sqlite3"
     if not path.exists():
@@ -223,12 +234,13 @@ def normalize_detail(detail: dict, season: int, captured_at: str, team_names: di
     if isinstance(hometown, dict):
         hometown_text = ", ".join(str(value).strip() for value in (hometown.get("city"), hometown.get("stateAbbreviation") or hometown.get("state")) if value)
     high_school = athlete.get("highSchool")
+    grade = _number(detail.get("grade"))
     payload = {
         "athlete_id": athlete_id,
         "name": name,
         "position": (athlete.get("position") or {}).get("abbreviation") if isinstance(athlete.get("position"), dict) else None,
-        "grade": _number(detail.get("grade")),
-        "rank": _number(attributes.get("rank"), integer=True),
+        "grade": grade,
+        "rank": _national_rank(attributes, grade),
         "position_rank": _number(attributes.get("positionRank"), integer=True),
         "state_rank": _number(attributes.get("stateRank"), integer=True),
         "region_rank": _number(attributes.get("regionRank"), integer=True),
