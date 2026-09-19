@@ -30,6 +30,21 @@ export type NcaaTeamBoxRow = {
   season: number; team_id: string; espn_team_id: string | null; team: string; games: number; contests: number; possessions: number | null; points: number; points_allowed: number; off_rtg: number | null; def_rtg: number | null; net_rtg: number | null; tempo: number | null; efg_pct: number | null; def_efg_pct: number | null; ts_pct: number | null; def_ts_pct: number | null; to_rate_derived: number | null; def_to_rate_derived: number | null; orb_pct: number | null; def_orb_pct: number | null; ft_rate: number | null; def_ft_rate: number | null; three_rate: number | null; def_three_rate: number | null; net_rank: number; source_totals: Record<string, number>; source_averages: Record<string, number>;
 };
 export type NcaaTeamBoxEdition = { season: number; generated_at: string; source: Record<string, unknown>; coverage: { source_rows: number; teams: number; contests: number; edition: string }; methodology: string; teams: NcaaTeamBoxRow[] };
+
+/**
+ * Return the retained source aggregates in stable key order.
+ *
+ * The public team table shows a compact set of derived rates, but each row
+ * also carries the complete source totals and averages. Keeping this helper
+ * strict and deterministic lets the UI expose those values without silently
+ * turning malformed or non-finite values into statistics.
+ */
+export function sourceMetricEntries(values: Record<string, number>) {
+  return Object.entries(values)
+    .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+    .sort(([left], [right]) => left.localeCompare(right));
+}
+
 export function sortNcaaTeamBox(rows: NcaaTeamBoxRow[], sort: NcaaTeamBoxSort, direction: "asc" | "desc") {
   const multiplier = direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
