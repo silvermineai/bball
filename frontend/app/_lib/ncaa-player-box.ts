@@ -1,5 +1,17 @@
 export type NumericStats = Record<string, number | null | undefined>;
 
+export type PlayerScoringProfileRow = {
+  key: "rim" | "midrange" | "three" | "putback" | "halfcourt" | "transition" | "unassisted";
+  label: string;
+  makes: number | null;
+  attempts: number | null;
+  points: number | null;
+  accuracy: number | null;
+  effectiveFieldGoal: number | null;
+  attemptShare: number | null;
+  pointShare: number | null;
+};
+
 /** Return a rate only when both source fields are present and the denominator is positive. */
 export function safeRate(made: number | null | undefined, attempted: number | null | undefined) {
   return made != null && attempted != null && attempted > 0 ? made / attempted : null;
@@ -54,5 +66,72 @@ export function playerAdvancedRates(stats: NumericStats) {
     freeThrowAttemptRate: safeRate(stats.fta, stats.fga),
     assistRate: safeRate(stats.ast, stats.o_poss),
     turnoverRate: safeRate(stats.tov, stats.o_poss),
+  };
+}
+
+const finiteStat = (stats: NumericStats, key: string) => {
+  const value = stats[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
+/**
+ * Turn retained scoring totals into a player-card drill-down without filling
+ * gaps in the source. Zone rows and play-context rows are intentionally kept
+ * separate: unassisted attempts can also occur in half-court or transition.
+ */
+export function playerScoringProfile(stats: NumericStats) {
+  const fieldGoalAttempts = finiteStat(stats, "fga");
+  const points = finiteStat(stats, "pts");
+  const row = (
+    key: PlayerScoringProfileRow["key"],
+    label: string,
+    makeKey: string,
+    attemptKey: string,
+    pointKey?: string,
+    threeKey?: string,
+  ): PlayerScoringProfileRow => {
+    const makes = finiteStat(stats, makeKey);
+    const attempts = finiteStat(stats, attemptKey);
+    const rowPoints = pointKey ? finiteStat(stats, pointKey) : null;
+    const threes = threeKey ? finiteStat(stats, threeKey) : null;
+    return {
+      key,
+      label,
+      makes,
+      attempts,
+      points: rowPoints,
+      accuracy: safeRate(makes, attempts),
+      effectiveFieldGoal: threeKey
+        ? effectiveFieldGoal(makes, threes, attempts)
+        : null,
+      attemptShare: safeRate(attempts, fieldGoalAttempts),
+      pointShare: pointKey ? safeRate(rowPoints, points) : null,
+    };
+  };
+
+  return {
+    zones: [
+      row("rim", "At rim", "rimm", "rima"),
+      row("midrange", "Midrange", "midm", "mida"),
+      row("three", "3-point", "tpm", "tpa"),
+      row("putback", "Putbacks", "pbackm", "pbacka"),
+    ],
+    contexts: [
+      row("halfcourt", "Half court", "fgm_half", "fga_half", "pts_half", "tpm_half"),
+      row("transition", "Transition", "fgm_trans", "fga_trans", "pts_trans", "tpm_trans"),
+      row("unassisted", "Unassisted", "fgm_unast", "fga_unast", "pts_unast", "tpm_unast"),
+    ],
+    assistedMakeShare: safeRate(
+      finiteStat(stats, "fgm_ast"),
+      finiteStat(stats, "fgm"),
+    ),
+    assistedRimMakeShare: safeRate(
+      finiteStat(stats, "rimm_ast"),
+      finiteStat(stats, "rimm"),
+    ),
+    assistedThreeMakeShare: safeRate(
+      finiteStat(stats, "tpm_ast"),
+      finiteStat(stats, "tpm"),
+    ),
   };
 }

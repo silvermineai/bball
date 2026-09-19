@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { buildNcaaRecentForm } from "../../_lib/ncaa-player-form";
-import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
 import type { PlayerShotLocation } from "../../_lib/player-shot-locations";
@@ -79,6 +79,65 @@ function ShotProfile({ row }: { row: ShotRow }) {
     <div className="strip"><div><strong>{row.stats.attempts.toLocaleString()}</strong><span>Recorded attempts</span></div><div><strong>{pct(rate(row.stats.makes, row.stats.attempts))}</strong><span>Field-goal rate</span></div><div><strong>{row.stats.distance_count ? `${(row.stats.distance_sum / row.stats.distance_count).toFixed(1)} ft` : "—"}</strong><span>Average distance</span></div></div>
     <div className="metric-bars">{["rim", "mid", "corner3", "abovebreak3"].map((key) => { const zone = shotZones[key]; const share = row.stats.attempts ? (zone?.attempts || 0) / row.stats.attempts : 0; return <div className="metric-bar" key={key}><span>{key === "abovebreak3" ? "Above-break 3" : key === "corner3" ? "Corner 3" : key === "rim" ? "Rim" : "Midrange"}</span><span className="career-bar-track"><span style={{ width: `${share * 100}%` }} /></span><strong>{zone?.attempts?.toLocaleString() || "—"} · {pct(rate(zone?.makes || null, zone?.attempts || null))}</strong></div>; })}</div>
   </div>;
+}
+
+function ScoringContext({ stats }: { stats: Stats }) {
+  const profile = playerScoringProfile(stats);
+  return <section className="section">
+    <div className="section-heading">
+      <div>
+        <div className="eyebrow">Scoring anatomy / selected season</div>
+        <h2>See how the points were built.</h2>
+      </div>
+      <span className="note">Pooled exact-ID totals</span>
+    </div>
+    <p className="note">
+      Counts are recomputed from the retained team rows for this Archive ID.
+      Zone and play-context rows are separate views of the same attempts, so
+      they should not be added together. Missing source fields stay unavailable.
+    </p>
+    <div className="two-col" style={{ marginTop: 18 }}>
+      <div className="paper-panel">
+        <h3>Shot zones</h3>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Area</th><th className="numeric">FG</th><th className="numeric">FG%</th><th className="numeric">Share of FGA</th></tr></thead>
+            <tbody>{profile.zones.map((row) => <tr key={row.key}>
+              <td>{row.label}</td>
+              <td className="numeric">{fmt(row.makes, 0)}/{fmt(row.attempts, 0)}</td>
+              <td className="numeric">{pct(row.accuracy)}</td>
+              <td className="numeric">{pct(row.attemptShare)}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </div>
+      <div className="paper-panel">
+        <h3>Play context</h3>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Context</th><th className="numeric">FG</th><th className="numeric">eFG%</th><th className="numeric">FGA share</th><th className="numeric">PTS share</th></tr></thead>
+            <tbody>{profile.contexts.map((row) => <tr key={row.key}>
+              <td>{row.label}</td>
+              <td className="numeric">{fmt(row.makes, 0)}/{fmt(row.attempts, 0)}</td>
+              <td className="numeric">{pct(row.effectiveFieldGoal)}</td>
+              <td className="numeric">{pct(row.attemptShare)}</td>
+              <td className="numeric">{row.points == null ? "—" : `${fmt(row.points, 0)} · ${pct(row.pointShare)}`}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div className="strip" style={{ marginTop: 18 }}>
+      <div><strong>{pct(profile.assistedMakeShare)}</strong><span>Made FGs assisted</span></div>
+      <div><strong>{pct(profile.assistedRimMakeShare)}</strong><span>Rim makes assisted</span></div>
+      <div><strong>{pct(profile.assistedThreeMakeShare)}</strong><span>3-point makes assisted</span></div>
+    </div>
+    <p className="note">
+      Assisted shares divide source-recorded assisted makes by all recorded
+      makes in that area. A blank half-court or transition rate means this
+      edition retained the point split without every shooting denominator.
+    </p>
+  </section>;
 }
 
 export default function NcaaPlayerCard() {
@@ -187,6 +246,7 @@ export default function NcaaPlayerCard() {
       <PlayerRankingSnapshot id={id} season={season} />
       <PlayerTrajectory rows={trajectory} selectedSeason={season} />
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Selected season / Production</div><h2>What the archive recorded.</h2></div><span className="note">{selected?.length || 0} team record{selected?.length === 1 ? "" : "s"}</span></div><div className="strip"><div><strong>{fmt(minutes == null || !games ? null : minutes / games)}</strong><span>Minutes per game</span></div><div><strong>{fmt(safeSum(orb, drb) == null || !games ? null : safeSum(orb, drb)! / games)}</strong><span>Rebounds per game</span></div><div><strong>{fmt(ast == null || !games ? null : ast / games)}</strong><span>Assists per game</span></div><div><strong>{fmt(turnovers == null || !games ? null : turnovers / games)}</strong><span>Turnovers per game</span></div><div><strong>{fmt(fouls == null || !games ? null : fouls / games)}</strong><span>Fouls per game</span></div><div><strong>{pct(efg)}</strong><span>Effective FG%</span></div><div><strong>{pct(rate(ftm, fta))}</strong><span>Free-throw accuracy</span></div></div><div className="table-scroll"><table className="data-table"><thead><tr><th>Season / team</th><th className="numeric">GP</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">TO</th><th className="numeric">PF</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">FT</th></tr></thead><tbody>{card.seasons.map((row) => <tr key={`${row.season}-${row.team_id}`} className={row.season === season ? "career-selected-row" : ""}><td><button className="career-season-link" onClick={() => setSeason(row.season)}>{label(row.season)} · {row.team_name || row.team_id} →</button><small>Team ID {row.team_id}</small></td><td className="numeric">{row.games}</td><td className="numeric">{fmt(value(row.stats, "pts"), 0)}</td><td className="numeric">{fmt(safeSum(value(row.stats, "orb"), value(row.stats, "drb")), 0)}</td><td className="numeric">{fmt(value(row.stats, "ast"), 0)}</td><td className="numeric">{fmt(value(row.stats, "tov"), 0)}</td><td className="numeric">{fmt(value(row.stats, "pf"), 0)}</td><td className="numeric">{fmt(value(row.stats, "fgm"), 0)}/{fmt(value(row.stats, "fga"), 0)}</td><td className="numeric">{fmt(value(row.stats, "tpm"), 0)}/{fmt(value(row.stats, "tpa"), 0)}</td><td className="numeric">{fmt(value(row.stats, "ftm"), 0)}/{fmt(value(row.stats, "fta"), 0)} <small>{pct(rate(value(row.stats, "ftm"), value(row.stats, "fta")))}</small></td></tr>)}</tbody></table></div></section>
+      {selectedStats ? <ScoringContext stats={selectedStats} /> : null}
       <section className="section paper-panel"><div className="eyebrow">Derived rates / selected season</div><h2>See the player&apos;s efficiency shape.</h2><p className="note">These rates use the pooled exact-ID team rows above. A missing denominator keeps only the affected rate unavailable; no zero is inferred.</p><div className="strip"><div><strong>{fmt(advancedRates.pointsPerPossession, 2)}</strong><span>Points / recorded possession</span></div><div><strong>{pct(advancedRates.threePointAttemptRate)}</strong><span>3-point attempt rate</span></div><div><strong>{pct(advancedRates.freeThrowAttemptRate)}</strong><span>Free-throw attempt rate</span></div><div><strong>{pct(advancedRates.assistRate)}</strong><span>Assists / possession</span></div><div><strong>{pct(advancedRates.turnoverRate)}</strong><span>Turnovers / possession</span></div></div><p className="note">Points per possession is a scoring-efficiency ratio. The remaining values are workload and shot-profile rates, not opponent adjustments, usage projections or eligibility findings.</p></section>
       {selected?.length ? <SourceTotals rows={selected} /> : null}
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Recent form / latest retained contests</div><h2>Read the current rhythm.</h2></div><span className="note">{recentForm.window_games ? `Latest ${recentForm.window_games} of up to 12 rows` : "No recent rows"}</span></div><p className="note">This is a short retained-row window, ordered newest first by the player archive. It is descriptive context for film and preparation, not a projection. Each metric uses only contests where its required fields were recorded; missing values are not treated as zero.</p><div className="strip"><div><strong>{fmt(recentForm.points_per_game)}</strong><span>Recent points / game · {recentForm.points_games} rows</span></div><div><strong>{fmt(recentForm.minutes_per_game)}</strong><span>Recent minutes / game · {recentForm.minutes_games} rows</span></div><div><strong>{pct(recentForm.true_shooting)}</strong><span>Recent pooled TS% · {recentForm.shooting_games} rows</span></div><div><strong>{recentForm.points_delta == null ? "—" : `${recentForm.points_delta > 0 ? "+" : ""}${fmt(recentForm.points_delta)}`}</strong><span>Points / game vs prior five</span></div></div><p className="note">The comparison uses the next five retained rows when available. A blank comparison means the preceding window has no complete points sample.</p></section>

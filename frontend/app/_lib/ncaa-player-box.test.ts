@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
 
 describe("NCAA player box rate helpers", () => {
   it("keeps missing source fields unavailable while preserving recorded zero makes", () => {
@@ -43,5 +43,85 @@ describe("NCAA player box rate helpers", () => {
     expect(effectiveFieldGoal(5, 2, 10)).toBeCloseTo(0.6);
     expect(effectiveFieldGoal(5, null, 10)).toBeNull();
     expect(effectiveFieldGoal(5, 2, null)).toBeNull();
+  });
+
+  it("builds zone and scoring-context rows from retained totals", () => {
+    const profile = playerScoringProfile({
+      pts: 120,
+      fgm: 45,
+      fga: 100,
+      rimm: 20,
+      rima: 25,
+      midm: 10,
+      mida: 25,
+      tpm: 15,
+      tpa: 50,
+      pbackm: 3,
+      pbacka: 4,
+      fgm_trans: 12,
+      fga_trans: 20,
+      tpm_trans: 4,
+      pts_trans: 32,
+      fgm_unast: 25,
+      fga_unast: 60,
+      tpm_unast: 5,
+      pts_unast: 65,
+      fgm_ast: 20,
+      rimm_ast: 8,
+      tpm_ast: 10,
+    });
+
+    expect(profile.zones[0]).toMatchObject({
+      key: "rim",
+      makes: 20,
+      attempts: 25,
+      accuracy: 0.8,
+      attemptShare: 0.25,
+    });
+    expect(profile.contexts[1]).toMatchObject({
+      key: "transition",
+      effectiveFieldGoal: 0.7,
+      attemptShare: 0.2,
+      pointShare: 32 / 120,
+    });
+    expect(profile.assistedMakeShare).toBeCloseTo(20 / 45);
+    expect(profile.assistedRimMakeShare).toBe(0.4);
+    expect(profile.assistedThreeMakeShare).toBeCloseTo(2 / 3);
+  });
+
+  it("does not manufacture scoring splits when a source field is missing", () => {
+    const transferRows = [
+      { stats: { rimm: 10, rima: 14 } },
+      { stats: { rimm: 8, rima: null } },
+    ];
+    const profile = playerScoringProfile({
+      pts: 80,
+      fgm: 30,
+      fga: 70,
+      rimm: completeStatsSum(transferRows, "rimm"),
+      rima: completeStatsSum(transferRows, "rima"),
+      fgm_trans: null,
+      fga_trans: 12,
+      tpm_trans: 2,
+      pts_trans: 20,
+      fgm_ast: null,
+      tpm: 0,
+      tpm_ast: 0,
+    });
+
+    expect(profile.zones[0]).toMatchObject({
+      makes: 18,
+      attempts: null,
+      accuracy: null,
+      attemptShare: null,
+    });
+    expect(profile.contexts[1]).toMatchObject({
+      accuracy: null,
+      effectiveFieldGoal: null,
+      attemptShare: 12 / 70,
+      pointShare: 0.25,
+    });
+    expect(profile.assistedMakeShare).toBeNull();
+    expect(profile.assistedThreeMakeShare).toBeNull();
   });
 });
