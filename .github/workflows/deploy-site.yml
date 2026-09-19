@@ -60,6 +60,7 @@ jobs:
 
       - name: Test and build frontend
         run: |
+          python scripts/check_basketball_game_readiness.py
           npm test --prefix frontend
           npm run build --prefix frontend
 

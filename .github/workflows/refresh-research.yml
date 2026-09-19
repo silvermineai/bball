@@ -190,6 +190,9 @@ jobs:
           python -m unittest discover -s ncaa_scraper/tests -p 'test_publication_health.py'
           python scripts/check-freshness.py --sport "$REFRESH_SPORT"
 
+      - name: Check basketball game readiness
+        run: python scripts/check_basketball_game_readiness.py
+
       - name: Validate and deploy combined publication
         # When a scheduled run has a licensed odds key, the odds-aware
         # publication below performs the final validation/deploy after the

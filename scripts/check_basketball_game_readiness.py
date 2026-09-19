@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+"""Validate the joins that make an upcoming basketball forecast actionable.
+
+Primary forecasts must carry both team profiles, historical player workload,
+all four matchup factors, and a roster-continuity scenario. Cold-start rows
+remain valid when those contextual joins are unavailable, but they must carry
+an explicit fallback estimate so the UI can disclose the reduced evidence.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+
+ID_RE = re.compile(r"^\d{1,15}$")
+FACTOR_KEYS = ("efg", "tov", "orb", "ftr")
+PREDICTION_FIELDS = (
+    "away_score",
+    "home_score",
+    "home_margin",
+    "total",
+    "pace",
+    "home_win_probability",
+    "margin_low",
+    "margin_high",
+)
+
+
+def finite(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} is not a JSON object")
+    return value
+
+
+def validate_prediction(value: Any, label: str) -> None:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} is missing an estimate")
+    for field in PREDICTION_FIELDS:
+        if not finite(value.get(field)):
+            raise ValueError(f"{label} has a non-numeric {field}")
+    probability = value["home_win_probability"]
+    if not 0 <= probability <= 1:
+        raise ValueError(f"{label} has an invalid home win probability")
+    if value["margin_low"] > value["margin_high"]:
+        raise ValueError(f"{label} has an inverted margin interval")
+
+
+def validate_profile(path: Path, team_id: str, label: str) -> None:
+    profile = read_json(path)
+    if profile.get("id") != team_id or not isinstance(profile.get("players"), list):
+        raise ValueError(f"{label} scouting profile has an invalid identity or player list")
+    season = profile.get("season")
+    if not isinstance(season, int):
+        raise ValueError(f"{label} scouting profile has no season")
+    workload = [
+        player
+        for player in profile["players"]
+        if isinstance(player, dict)
+        and player.get("team_id") == team_id
+        and player.get("season") == season
+        and finite(player.get("minutes"))
+        and player["minutes"] >= 200
+        and isinstance(player.get("games"), int)
+        and player["games"] > 0
+    ]
+    if not workload:
+        raise ValueError(f"{label} has no qualifying historical player workload")
+
+
+def validate_team(rating: Any, team_id: str, label: str) -> None:
+    if not isinstance(rating, dict) or str(rating.get("id")) != team_id:
+        raise ValueError(f"{label} is missing its team rating")
+    for field in ("adj_off", "adj_def", "adj_net", "adj_tempo"):
+        if not finite(rating.get(field)):
+            raise ValueError(f"{label} has a non-numeric {field}")
+
+
+def validate_factors(game: dict[str, Any]) -> None:
+    factors = game.get("matchup_factors")
+    if not isinstance(factors, dict) or not isinstance(factors.get("factors"), dict):
+        raise ValueError(f"game {game['id']} is missing matchup factors")
+    if set(factors["factors"]) != set(FACTOR_KEYS):
+        raise ValueError(f"game {game['id']} does not have all four matchup factors")
+    for key in FACTOR_KEYS:
+        values = factors["factors"].get(key)
+        if not isinstance(values, dict) or any(not finite(values.get(field)) for field in ("home_offense", "home_defense", "away_offense", "away_defense")):
+            raise ValueError(f"game {game['id']} has malformed {key} matchup values")
+
+
+def validate_scenario(scenario: Any, game_id: str) -> None:
+    if not isinstance(scenario, dict) or str(scenario.get("game_id")) != game_id:
+        raise ValueError(f"game {game_id} is missing its roster scenario")
+    for field in ("base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net"):
+        if not finite(scenario.get(field)):
+            raise ValueError(f"game {game_id} has a non-numeric roster scenario {field}")
+
+
+def check(root: Path) -> dict[str, Any]:
+    basketball = root / "frontend" / "public" / "data" / "basketball"
+    overview = read_json(basketball / "overview.json")
+    games = overview.get("upcoming")
+    ratings = overview.get("ratings")
+    if not isinstance(games, list) or not games:
+        raise ValueError("overview has no upcoming basketball games")
+    if not isinstance(ratings, list) or not ratings:
+        raise ValueError("overview has no team ratings")
+    rating_by_id = {str(row.get("id")): row for row in ratings if isinstance(row, dict)}
+    roster_model = read_json(basketball / "roster-model.json")
+    scenarios = {
+        str(row.get("game_id")): row
+        for row in roster_model.get("scenarios", [])
+        if isinstance(row, dict)
+    }
+    seen: set[str] = set()
+    primary = fallback = 0
+    primary_context = {"team_ratings": 0, "scouting_profiles": 0, "player_workload": 0, "factors": 0, "roster_scenarios": 0}
+    for game in games:
+        if not isinstance(game, dict):
+            raise ValueError("overview contains a non-object upcoming game")
+        game_id = str(game.get("id", ""))
+        if not ID_RE.fullmatch(game_id) or game_id in seen:
+            raise ValueError(f"overview contains an invalid or duplicate game ID: {game_id!r}")
+        seen.add(game_id)
+        if not isinstance(game.get("starts_at"), str):
+            raise ValueError(f"game {game_id} has no start timestamp")
+        try:
+            datetime.fromisoformat(game["starts_at"].replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"game {game_id} has an invalid start timestamp") from exc
+        home_id, away_id = str(game.get("home_id", "")), str(game.get("away_id", ""))
+        if not ID_RE.fullmatch(home_id) or not ID_RE.fullmatch(away_id) or home_id == away_id:
+            raise ValueError(f"game {game_id} has invalid participants")
+        if not str(game.get("home_name", "")).strip() or not str(game.get("away_name", "")).strip():
+            raise ValueError(f"game {game_id} has an unnamed participant")
+        if game.get("prediction") is not None:
+            primary += 1
+            validate_prediction(game["prediction"], f"game {game_id} primary prediction")
+            validate_factors(game)
+            for team_id, side in ((home_id, "home"), (away_id, "away")):
+                validate_team(rating_by_id.get(team_id), team_id, f"game {game_id} {side} team")
+                primary_context["team_ratings"] += 1
+                profile_path = basketball / "scouting" / f"{team_id}.json"
+                if not profile_path.exists():
+                    raise ValueError(f"game {game_id} {side} team has no scouting profile")
+                validate_profile(profile_path, team_id, f"game {game_id} {side} team")
+                primary_context["scouting_profiles"] += 1
+                primary_context["player_workload"] += 1
+            validate_scenario(scenarios.get(game_id), game_id)
+            primary_context["roster_scenarios"] += 1
+            primary_context["factors"] += 1
+        elif game.get("fallback_prediction") is not None:
+            fallback += 1
+            validate_prediction(game["fallback_prediction"], f"game {game_id} fallback prediction")
+        else:
+            raise ValueError(f"game {game_id} has neither a primary nor fallback prediction")
+    expected = overview.get("coverage", {})
+    expected_primary = expected.get("forecast_games")
+    expected_fallback = expected.get("baseline_estimate_games")
+    if isinstance(expected_primary, int) and expected_primary != primary:
+        raise ValueError(f"coverage says {expected_primary} primary games but found {primary}")
+    if isinstance(expected_fallback, int) and expected_fallback != fallback:
+        raise ValueError(f"coverage says {expected_fallback} cold-start games but found {fallback}")
+    return {
+        "season": overview.get("season"),
+        "upcoming_games": len(games),
+        "primary_games": primary,
+        "cold_start_games": fallback,
+        "primary_context": primary_context,
+        "checked_profiles": len({str(g.get("home_id")) for g in games if g.get("prediction")} | {str(g.get("away_id")) for g in games if g.get("prediction")}),
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    args = parser.parse_args()
+    try:
+        print(json.dumps(check(args.root), indent=2))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"basketball game readiness failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None

@@ -21,4 +21,6 @@ jobs:
         with:
           python-version: "3.13"
       - name: Check deployed publication
-        run: python scripts/check_live_publication.py --max-age-hours 240
+        run: |
+          python scripts/check_basketball_game_readiness.py
+          python scripts/check_live_publication.py --max-age-hours 240
