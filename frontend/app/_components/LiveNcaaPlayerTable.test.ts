@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
+import { effectiveFieldGoalPercent, playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
 
 const row: LiveNCAAPlayerRow = {
   player_id: "p-1",
@@ -47,6 +47,15 @@ describe("homepage NCAA player export", () => {
     expect(values[playerCsvHeaders.indexOf("3P%")]).toBeNull();
     expect(values[playerCsvHeaders.indexOf("FT%")]).toBeNull();
     expect(values[playerCsvHeaders.indexOf("TS%")]).toBeNull();
+  });
+
+  it("keeps eFG unavailable when either field-goal make total is missing", () => {
+    expect(effectiveFieldGoalPercent(null, 32, 200)).toBeNull();
+    expect(effectiveFieldGoalPercent(100, null, 200)).toBeNull();
+    expect(effectiveFieldGoalPercent(100, 32, null)).toBeNull();
+    expect(effectiveFieldGoalPercent(100, 32, 200)).toBe(58);
+    const values = playerCsvRows([{ ...row, fgm: null }], "efg")[0];
+    expect(values[playerCsvHeaders.indexOf("eFG%")]).toBeNull();
   });
 
   it("requires stable pagination metadata and non-empty intermediate pages", () => {

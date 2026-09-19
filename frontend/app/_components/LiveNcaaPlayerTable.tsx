@@ -122,6 +122,13 @@ const perGame = (value: number | null, games: number) =>
 const percentage = (made: number | null, attempted: number | null) =>
   made == null || attempted == null || attempted <= 0 ? null : (100 * made) / attempted;
 
+/** Keep eFG unavailable when either source make total is missing. */
+export const effectiveFieldGoalPercent = (
+  fgm: number | null,
+  tpm: number | null,
+  fga: number | null,
+) => fgm == null || tpm == null ? null : percentage(fgm + 0.5 * tpm, fga);
+
 export const playerCsvHeaders = [
   "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
@@ -142,7 +149,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
     const bpg = perGame(row.blocks, row.games);
     const fpg = perGame(row.fouls, row.games);
     const topg = perGame(row.turnovers, row.games);
-    const efg = percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga);
+    const efg = effectiveFieldGoalPercent(row.fgm, row.tpm, row.fga);
     const threePct = percentage(row.tpm, row.tpa);
     const ftPct = percentage(row.ftm, row.fta);
     const ts = percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null);
@@ -302,7 +309,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
                 <td className="numeric">{fmt(perGame(row.fouls, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.turnovers, row.games))}</td>
                 <td className="numeric">{percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null) == null ? "—" : `${fmt(percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null), 1)}%`}</td>
-                <td className="numeric">{percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga) == null ? "—" : `${fmt(percentage((row.fgm ?? 0) + 0.5 * (row.tpm ?? 0), row.fga), 1)}%`}</td>
+                <td className="numeric">{effectiveFieldGoalPercent(row.fgm, row.tpm, row.fga) == null ? "—" : `${fmt(effectiveFieldGoalPercent(row.fgm, row.tpm, row.fga), 1)}%`}</td>
                 <td className="numeric">{percentage(row.tpm, row.tpa) == null ? "—" : `${fmt(percentage(row.tpm, row.tpa), 1)}%`}</td>
                 <td className="numeric">{percentage(row.ftm, row.fta) == null ? "—" : `${fmt(percentage(row.ftm, row.fta), 1)}%`}</td>
                 <td className="numeric"><strong>{displayMetric(row)}</strong></td>
