@@ -102,6 +102,7 @@ export default async function Page({
   if (!titles[slug] && (!g || !p) && !basketballGame) notFound();
   if (basketballGame) {
     const rosterModel = getRosterModel();
+    const rosters = getRosters();
     const loadPersonnel = (teamId: string) => {
       try {
         return historicalPersonnel(getScoutProfile(teamId));
@@ -109,6 +110,9 @@ export default async function Page({
         return [];
       }
     };
+    const rosterPlayersFor = (teamId: string) => rosters.players
+      .filter((player) => player.team_id === teamId)
+      .sort((a, b) => (b.prior_production?.minutes ?? -1) - (a.prior_production?.minutes ?? -1) || a.name.localeCompare(b.name));
     return (
       <BasketballNotebook
         game={basketballGame}
@@ -118,6 +122,8 @@ export default async function Page({
         rosterScenario={rosterModel.scenarios.find((scenario) => scenario.game_id === basketballGame.id)}
         homePlayers={loadPersonnel(basketballGame.home_id)}
         awayPlayers={loadPersonnel(basketballGame.away_id)}
+        homeRosterPlayers={rosterPlayersFor(basketballGame.home_id)}
+        awayRosterPlayers={rosterPlayersFor(basketballGame.away_id)}
       />
     );
   }

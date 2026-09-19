@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { BBGame, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
+import type { BBGame, BBRoster, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
@@ -22,6 +22,8 @@ export default function BasketballNotebook({
   rosterScenario,
   homePlayers = [],
   awayPlayers = [],
+  homeRosterPlayers = [],
+  awayRosterPlayers = [],
 }: {
   game: BBGame;
   generatedAt: string;
@@ -30,6 +32,8 @@ export default function BasketballNotebook({
   rosterScenario?: BBRosterScenario | null;
   homePlayers?: ScoutPlayer[];
   awayPlayers?: ScoutPlayer[];
+  homeRosterPlayers?: BBRoster[];
+  awayRosterPlayers?: BBRoster[];
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -59,6 +63,7 @@ export default function BasketballNotebook({
   ];
   const teamContextCount = Number(Boolean(homeTeam)) + Number(Boolean(awayTeam));
   const playerContextCount = Number(awayPlayers.length > 0) + Number(homePlayers.length > 0);
+  const rosterListingCount = Number(homeRosterPlayers.length > 0) + Number(awayRosterPlayers.length > 0);
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -92,6 +97,7 @@ export default function BasketballNotebook({
         <div><strong>{teamContextCount}/2</strong><span>Team profiles attached</span></div>
         <div><strong>{playerContextCount}/2</strong><span>Historical player groups attached</span></div>
         <div><strong>{rosterScenario ? "Ready" : "—"}</strong><span>Roster continuity scenario</span></div>
+        <div><strong>{rosterListingCount}/2</strong><span>Roster listings attached</span></div>
       </div>
 
       <section className="paper-panel notebook-forecast" aria-label="Stored forecast">
@@ -186,6 +192,50 @@ export default function BasketballNotebook({
                   </table>
                 </div>
               ) : <p className="empty">No qualifying historical player rows are available for this team.</p>}
+            </section>
+          ))}
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="notebook-roster-snapshot">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Current roster observation</div>
+            <h2 id="notebook-roster-snapshot">Who is listed today?</h2>
+          </div>
+          <Link href="/basketball/ncaa-rosters/">Open the roster archive →</Link>
+        </div>
+        <p className="note">
+          Exact-ID rows from the current roster snapshot, ordered by prior
+          recorded minutes. Status is an observed listing label; it does not
+          establish eligibility, availability, a commitment or a projected
+          rotation.
+        </p>
+        <div className="two-col">
+          {([
+            { teamName: game.away_name, players: awayRosterPlayers },
+            { teamName: game.home_name, players: homeRosterPlayers },
+          ] as Array<{ teamName: string; players: BBRoster[] }>).map(({ teamName, players }) => (
+            <section className="paper-panel" key={teamName}>
+              <h3>{teamName}</h3>
+              {players.length ? (
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead><tr><th>Player</th><th>Status</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">TS%</th></tr></thead>
+                    <tbody>{players.slice(0, 8).map((player) => {
+                      const production = player.prior_production;
+                      return <tr key={player.id}>
+                        <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=2026`}>{player.name}</Link><small>{player.position || "Position unavailable"}</small></th>
+                        <td>{player.status.replaceAll("_", " ")}</td>
+                        <td className="numeric">{production ? fmt(production.minutes, 0) : "—"}</td>
+                        <td className="numeric">{production ? fmt(production.mpg) : "—"}</td>
+                        <td className="numeric">{production ? fmt(production.ppg) : "—"}</td>
+                        <td className="numeric">{production?.ts == null ? "—" : percent(production.ts)}</td>
+                      </tr>;
+                    })}</tbody>
+                  </table>
+                </div>
+              ) : <p className="empty">No current roster listing is attached to this team in the published snapshot.</p>}
             </section>
           ))}
         </div>
