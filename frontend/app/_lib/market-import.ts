@@ -138,6 +138,7 @@ export function validateMarketImportCsv(text: string, now = new Date()): MarketI
     if (capturedDate && capturedDate >= now) addError(`Row ${row}: captured_at must be before the current time.`);
     if (startsDate && capturedDate && capturedDate >= startsDate) addError(`Row ${row}: captured_at must be before starts_at.`);
     if (capturedDate && updatedDate && updatedDate > capturedDate) addError(`Row ${row}: updated_at cannot be after captured_at.`);
+    if (capturedDate && updatedDate && capturedDate.valueOf() - updatedDate.valueOf() > 86_400_000) addError(`Row ${row}: updated_at must be no more than 24 hours before captured_at.`);
     const marketLine = number(value("line")) ?? number(value("home_spread")) ?? number(value("total_line"));
     if (market === "spreads" && marketLine == null) addError(`Row ${row}: spreads require line or home_spread.`);
     if (market === "totals" && marketLine == null) addError(`Row ${row}: totals require line or total_line.`);

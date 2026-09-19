@@ -64,7 +64,7 @@ class MarketCsvTests(unittest.TestCase):
             "lines.csv",
             "Licensed Feed",
             "https://provider.example/terms",
-            "2026-11-09T20:01:00Z",
+            "2026-11-10T01:01:00Z",
         )
         self.assertEqual(result["accepted_markets"], 1)
         quote = self.conn.execute("SELECT * FROM audit_markets").fetchone()
@@ -83,10 +83,36 @@ class MarketCsvTests(unittest.TestCase):
                 "lines.csv",
                 "Licensed Feed",
                 "https://provider.example/terms",
-                "2026-11-09T20:01:00Z",
+                "2026-11-10T01:01:00Z",
             )
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 0)
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_import_rejects_future_and_stale_quote_clocks(self, _schedules):
+        for row in (
+            self.row(captured_at="2026-11-10T01:02:00Z", updated_at="2026-11-10T01:01:00Z"),
+            self.row(captured_at="2026-11-10T01:00:00Z", updated_at="2026-11-09T00:59:59Z"),
+        ):
+            with self.subTest(row=row), self.assertRaises(ValueError):
+                import_rows(
+                    self.conn,
+                    "basketball",
+                    [row],
+                    "c" * 64,
+                    "lines.csv",
+                    "Licensed Feed",
+                    "https://provider.example/terms",
+                    "2026-11-10T01:01:00Z",
+                )
+            self.assertEqual(
+                self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0],
+                0,
+            )
+            self.assertEqual(
+                self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0],
+                0,
+            )
 
 
 if __name__ == "__main__":

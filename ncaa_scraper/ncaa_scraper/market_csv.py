@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from .football_sources import ROOT, utcnow
@@ -48,7 +49,9 @@ def numeric(row: dict[str, str], *keys: str) -> float | None:
     return None
 
 
-def event_and_market(row: dict[str, str], game: dict, row_number: int):
+def event_and_market(
+    row: dict[str, str], game: dict, row_number: int, imported_at: str
+):
     market = (row.get("market") or "").strip().lower()
     if market not in MARKETS:
         raise ValueError(f"row {row_number}: market must be spreads, totals or h2h")
@@ -60,10 +63,19 @@ def event_and_market(row: dict[str, str], game: dict, row_number: int):
         raise ValueError(f"row {row_number}: starts_at does not match the exact schedule row")
     captured = timestamp(row["captured_at"])
     updated = timestamp(row["updated_at"])
+    imported = timestamp(imported_at)
     if captured >= game["starts_at"]:
         raise ValueError(f"row {row_number}: captured_at must be before scheduled start")
+    if captured > imported:
+        raise ValueError(f"row {row_number}: captured_at cannot be after import time")
     if updated > captured:
         raise ValueError(f"row {row_number}: updated_at is after captured_at")
+    captured_instant = datetime.fromisoformat(captured.replace("Z", "+00:00"))
+    updated_instant = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+    if (captured_instant - updated_instant).total_seconds() > 86_400:
+        raise ValueError(
+            f"row {row_number}: updated_at must be no more than 24 hours before captured_at"
+        )
     if not row.get("bookmaker", "").strip():
         raise ValueError(f"row {row_number}: bookmaker is required")
     event_id = (row.get("event_id") or "").strip() or digest([game["id"], row_number, row])
@@ -133,7 +145,9 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
             if not game_id or game_id not in games:
                 raise ValueError("game_id is not an exact source schedule ID")
             game = {**games[game_id], "sport": sport}
-            event, market, bookmaker, captured = event_and_market(row, game, row_number)
+            event, market, bookmaker, captured = event_and_market(
+                row, game, row_number, imported_at
+            )
             updated, payload = normalize_market(
                 event,
                 {"key": bookmaker, "last_update": market["last_update"]},
