@@ -48,6 +48,6 @@ describe("football forecast board export", () => {
       "g1", "2026-09-12T16:00:00Z", 2, "Away", "Home", "Away Conf", "Home Conf", "no", "no", 22, 26,
       62, 4, -8, 16, 48,
     ]);
-    expect(rows[0].slice(16)).toEqual([-3.5, null, 7.5, null, "2026-09-10T12:00:00Z"]);
+    expect(rows[0].slice(16)).toEqual([-3.5, null, 7.5, null, "2026-09-10T12:00:00Z", null, null]);
   });
 });

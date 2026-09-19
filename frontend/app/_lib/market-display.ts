@@ -5,6 +5,8 @@ export type MarketLineSummary = {
   total: number | null;
   spreadGap: number | null;
   totalGap: number | null;
+  homeProbability: number | null;
+  winProbabilityGap: number | null;
   capturedAt: string | null;
 };
 
@@ -21,6 +23,11 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
   const newest = (market: Comparison["market"]) => valid
     .filter((comparison) => comparison.market === market)
     .sort((left, right) => timestamp(right).localeCompare(timestamp(left)))[0] || null;
+  const moneyline = comparisons
+    .filter((comparison) => comparison.market === "h2h")
+    .filter((comparison) => comparison.market_home_probability != null && Number.isFinite(comparison.market_home_probability))
+    .filter((comparison) => Number.isFinite(comparison.model_difference))
+    .sort((left, right) => timestamp(right).localeCompare(timestamp(left)))[0] || null;
   const spread = newest("spreads");
   const total = newest("totals");
   const timestamps = valid
@@ -32,8 +39,14 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
     total: total?.line ?? null,
     spreadGap: spread && Number.isFinite(spread.model_difference) ? spread.model_difference : null,
     totalGap: total && Number.isFinite(total.model_difference) ? total.model_difference : null,
+    homeProbability: moneyline?.market_home_probability ?? null,
+    winProbabilityGap: moneyline?.model_difference ?? null,
     capturedAt: timestamps.at(-1) || null,
   };
+}
+
+export function hasQualifiedMarketComparison(summary: MarketLineSummary): boolean {
+  return summary.spread != null || summary.total != null || summary.homeProbability != null;
 }
 
 /**

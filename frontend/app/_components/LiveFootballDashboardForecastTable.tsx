@@ -16,7 +16,7 @@ import {
   matchesFootballMatchupSignal,
   type FootballMatchupSignal,
 } from "../_lib/football-matchup-view";
-import { summarizeMarketLines } from "../_lib/market-display";
+import { hasQualifiedMarketComparison, summarizeMarketLines } from "../_lib/market-display";
 import { loadLiveFootballMarketComparisons } from "../_lib/live-football-forecasts";
 import type { Comparison } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
@@ -49,7 +49,7 @@ function forecastSignal(game: Game) {
 export const footballForecastCsvHeaders = [
   "Game ID", "Kickoff", "Week", "Away", "Home", "Away conference", "Home conference", "Neutral site", "Time TBD",
   "Away score", "Home score", "Home win probability", "Projected margin", "Margin low", "Margin high", "Projected total",
-  "Verified market spread", "Verified market total", "Spread gap", "Total gap", "Market capture",
+  "Verified market spread", "Verified market total", "Spread gap", "Total gap", "Market capture", "Verified market home probability", "Moneyline probability gap",
 ];
 
 /** Export the complete filtered football forecast cohort, retaining unavailable values as blanks. */
@@ -71,6 +71,8 @@ export function footballForecastCsvRows(
       prediction?.home_win_probability == null ? null : prediction.home_win_probability * 100, prediction?.home_margin,
       prediction?.margin_low, prediction?.margin_high, prediction?.total, spread, total, spreadGap, totalGap,
       market.capturedAt ?? legacy?.observed_at ?? null,
+      market.homeProbability == null ? null : market.homeProbability * 100,
+      market.winProbabilityGap == null ? null : market.winProbabilityGap * 100,
     ];
   });
 }
@@ -107,7 +109,7 @@ export default function LiveFootballDashboardForecastTable({
   const rows = sortFootballMatchups(signalGames, sort).slice(0, rowLimit);
   const marketGames = signalGames.filter((game) => {
     const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
-    return market.spread != null || market.total != null;
+    return hasQualifiedMarketComparison(market);
   }).length;
   const downloadFilteredCsv = () => downloadCsv(
     "football-forecast-board.csv",
@@ -162,8 +164,8 @@ export default function LiveFootballDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner · {forecastSignal(game)}</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
-                <td className="numeric">{market.spread == null && market.total == null ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
-                <td className="numeric">{market.spreadGap == null && market.totalGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}</>}</td>
+                <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
+                <td className="numeric">{market.spreadGap == null && market.totalGap == null && market.winProbabilityGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}{market.winProbabilityGap == null ? null : <small>{market.winProbabilityGap >= 0 ? "+" : ""}{fmt(market.winProbabilityGap * 100, 1)} pp ML</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
               </tr>

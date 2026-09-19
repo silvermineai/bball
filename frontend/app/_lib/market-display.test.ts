@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary, summarizeMarketLines } from "./market-display";
+import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -41,8 +41,17 @@ describe("market comparison display", () => {
     const staleSpread = { ...comparison("spreads", 11.1), line: 4.5, updated_at: "2026-09-12T15:30:00Z" };
     const spread = { ...comparison("spreads", 12.64), line: 5.5, updated_at: "2026-09-12T15:32:51Z" };
     const total = { ...comparison("totals", 5.85), line: 43.5, updated_at: "2026-09-12T15:32:52Z" };
-    const summary = summarizeMarketLines([staleSpread, spread, total, comparison("h2h", 0.04)]);
-    expect(summary).toEqual({ spread: 5.5, total: 43.5, spreadGap: 12.64, totalGap: 5.85, capturedAt: "2026-09-12T15:32:52Z" });
-    expect(summarizeMarketLines([])).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, capturedAt: null });
+    const summary = summarizeMarketLines([staleSpread, spread, total, { ...comparison("h2h", 0.04), market_home_probability: 0.5 }]);
+    expect(summary).toEqual({ spread: 5.5, total: 43.5, spreadGap: 12.64, totalGap: 5.85, homeProbability: 0.5, winProbabilityGap: 0.04, capturedAt: "2026-09-12T15:32:52Z" });
+    expect(hasQualifiedMarketComparison(summary)).toBe(true);
+    const empty = summarizeMarketLines([]);
+    expect(empty).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
+    expect(hasQualifiedMarketComparison(empty)).toBe(false);
+  });
+
+  it("retains a moneyline-only comparison for compact boards", () => {
+    const summary = summarizeMarketLines([{ ...comparison("h2h", 0.043), market_home_probability: 0.512 }]);
+    expect(summary).toMatchObject({ spread: null, total: null, homeProbability: 0.512, winProbabilityGap: 0.043 });
+    expect(hasQualifiedMarketComparison(summary)).toBe(true);
   });
 });
