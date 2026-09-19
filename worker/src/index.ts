@@ -42,6 +42,7 @@ import { ncaaBoxDb, researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
 import { scheduleTimes } from "./schedule-times";
 import { basketballRosters } from "./basketball-rosters";
+import { matchupPersonnel } from "./matchup-personnel";
 import { footballDb } from "./football-db";
 
 type Bindings = Env;
@@ -248,6 +249,7 @@ app.route("/api/basketball/research/shooting", shooting);
 app.route("/api/basketball/research/recruiting", recruiting);
 app.route("/api/basketball/research/recruiting-rankings", recruitingRankings);
 app.route("/api/basketball/research/rosters", basketballRosters);
+app.route("/api/basketball/research/matchup-personnel", matchupPersonnel);
 app.route("/api/basketball/research/recruiting-intake", recruitingIntake);
 app.route("/api/basketball/research/careers", careers);
 app.route("/api/basketball/research/publisher-stats", publisherStats);
