@@ -7,8 +7,10 @@ import type { BBGame, BBOverview, BBRosterScenario } from "../../_lib/basketball
 import type { Comparison } from "../../_lib/research-types";
 import {
   forecastEvidenceCoverage,
+  forecastSignalContext,
   type ForecastEvidenceCoverage,
   type ForecastMatchupSignal,
+  type ForecastSignalContext,
 } from "../../_lib/forecast-lab-analysis";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
@@ -41,6 +43,7 @@ type Row = {
   modelDelta: ModelDelta | null;
   factorSignal: ForecastMatchupSignal | null;
   evidence: ForecastEvidenceCoverage;
+  signal: ForecastSignalContext;
 };
 
 type ModelDelta = {
@@ -102,6 +105,7 @@ function modelRow(
     comparisons: marketComparisons,
     modelDelta,
     factorSignal: factorSignal || null,
+    signal: forecastSignalContext(prediction, !!game.prediction),
     evidence: forecastEvidenceCoverage({
       primary: !!game.prediction,
       scheduled,
@@ -365,7 +369,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Estimate type", "Signal context", "Probability edge from even (pp)", "Prediction range width", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -376,7 +380,10 @@ export default function ForecastLab({
         row.evidence.total,
         row.evidence.missing.join("; "),
         row.evidence.market,
-        row.game.prediction ? "primary" : "cold-start",
+        row.signal.estimate,
+        row.signal.label,
+        row.signal.probability_edge_pp,
+        row.signal.range_width,
         row.prediction.home_margin,
         row.scenario?.roster_margin,
         row.scenario?.margin_delta,
@@ -525,7 +532,7 @@ export default function ForecastLab({
             return <tr key={row.game.id}>
               <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}<small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small></td>
               <td><strong>{row.evidence.present}/{row.evidence.total} core checks</strong><small>{row.evidence.complete ? "Ready for full matchup review" : `Missing: ${row.evidence.missing.join(", ")}`}</small><small>{row.evidence.market === "verified" ? "Verified market lineage available" : "Market lineage unavailable"}</small></td>
-              <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
+              <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.signal.label} · {row.signal.probability_edge_pp == null ? "probability unavailable" : `${numeric(row.signal.probability_edge_pp)} pp from even`}</small></td>
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>

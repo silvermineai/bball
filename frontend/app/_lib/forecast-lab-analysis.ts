@@ -1,4 +1,4 @@
-import type { BBFactorKey, BBGame, BBMatchupFactors } from "./basketball-types";
+import type { BBFactorKey, BBGame, BBMatchupFactors, BBPrediction } from "./basketball-types";
 
 const FACTORS: ReadonlyArray<{ key: BBFactorKey; label: string }> = [
   { key: "efg", label: "Shot quality" },
@@ -21,6 +21,63 @@ export type ForecastEvidenceCoverage = {
   complete: boolean;
   market: "verified" | "unavailable";
 };
+
+export type ForecastSignalContext = {
+  estimate: "primary" | "cold-start" | "unavailable";
+  label: "Strong signal" | "Lean signal" | "Near even" | "Cold-start estimate" | "Unavailable";
+  probability_edge_pp: number | null;
+  range_width: number | null;
+};
+
+/**
+ * Put the probability and interval into a small, honest decision context.
+ * The label is descriptive only: it does not turn a model probability into a
+ * betting recommendation. Invalid stored values stay unavailable so a broken
+ * row cannot look like a weak or strong signal in the matchup table.
+ */
+export function forecastSignalContext(
+  prediction: BBPrediction | null | undefined,
+  primary: boolean,
+): ForecastSignalContext {
+  if (!prediction) {
+    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null };
+  }
+  const values = [
+    prediction.home_win_probability,
+    prediction.margin_low,
+    prediction.margin_high,
+  ];
+  if (
+    values.some((value) => !Number.isFinite(value))
+    || prediction.home_win_probability < 0
+    || prediction.home_win_probability > 1
+    || prediction.margin_low > prediction.margin_high
+  ) {
+    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null };
+  }
+  const probabilityEdge = Math.abs(prediction.home_win_probability - 0.5) * 100;
+  const rangeWidth = prediction.margin_high - prediction.margin_low;
+  if (!primary || prediction.estimate_type === "cold_start") {
+    return {
+      estimate: "cold-start",
+      label: "Cold-start estimate",
+      probability_edge_pp: Number(probabilityEdge.toFixed(1)),
+      range_width: Number(rangeWidth.toFixed(1)),
+    };
+  }
+  const strongestProbability = Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability);
+  const label = strongestProbability >= 0.75
+    ? "Strong signal"
+    : strongestProbability >= 0.6
+      ? "Lean signal"
+      : "Near even";
+  return {
+    estimate: "primary",
+    label,
+    probability_edge_pp: Number(probabilityEdge.toFixed(1)),
+    range_width: Number(rangeWidth.toFixed(1)),
+  };
+}
 
 /**
  * Summarize the evidence needed to turn a forecast row into a usable matchup

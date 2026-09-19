@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastEvidenceCoverage, forecastSignalContext, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -9,6 +9,48 @@ const factors: BBMatchupFactors = {
 };
 
 describe("forecast lab matchup signals", () => {
+  it("labels primary probability strength without turning it into a recommendation", () => {
+    expect(forecastSignalContext({
+      home_win_probability: 0.78,
+      margin_low: -4.25,
+      margin_high: 12.75,
+    } as BBGame["prediction"], true)).toEqual({
+      estimate: "primary",
+      label: "Strong signal",
+      probability_edge_pp: 28,
+      range_width: 17,
+    });
+    expect(forecastSignalContext({
+      home_win_probability: 0.56,
+      margin_low: -8,
+      margin_high: 8,
+    } as BBGame["prediction"], true).label).toBe("Near even");
+  });
+
+  it("keeps cold-start and malformed estimates visibly separate", () => {
+    expect(forecastSignalContext({
+      home_win_probability: 0.82,
+      margin_low: -25,
+      margin_high: 25,
+      estimate_type: "cold_start",
+    } as BBGame["prediction"], false)).toMatchObject({
+      estimate: "cold-start",
+      label: "Cold-start estimate",
+      probability_edge_pp: 32,
+      range_width: 50,
+    });
+    expect(forecastSignalContext({
+      home_win_probability: Number.NaN,
+      margin_low: -5,
+      margin_high: 5,
+    } as BBGame["prediction"], true)).toEqual({
+      estimate: "unavailable",
+      label: "Unavailable",
+      probability_edge_pp: null,
+      range_width: null,
+    });
+  });
+
   it("selects the largest finite factor gap with stable tie ordering", () => {
     expect(strongestMatchupSignal(factors)).toEqual({
       factor: "tov",
