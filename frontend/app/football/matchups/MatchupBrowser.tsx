@@ -12,6 +12,7 @@ import {
   mergeLiveFootballForecasts,
 } from "../../_lib/live-football-forecasts";
 import type { Comparison } from "../../_lib/research-types";
+import type { FootballSlateIntel } from "../../_lib/football-brief";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
 import {
   matchesFootballMatchupSignal,
@@ -25,11 +26,13 @@ export default function MatchupBrowser({
   games,
   generated,
   efficiencyScenarios = [],
+  matchupIntel,
   marketCoverage,
 }: {
   games: Game[];
   generated: string;
   efficiencyScenarios?: FootballEfficiencyScenario[];
+  matchupIntel?: FootballSlateIntel;
   marketCoverage?: {
     market_observations: number;
     pregame_market_observations: number;
@@ -316,7 +319,14 @@ export default function MatchupBrowser({
       <div className="match-grid">
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
-            <MatchCard game={(liveMarketComparisons?.[g.id] || g.market_comparisons)?.length ? { ...g, market_comparisons: liveMarketComparisons?.[g.id] || g.market_comparisons } : g} efficiencyScenario={scenarioByGame.get(g.id)} />
+            <MatchCard
+              game={(liveMarketComparisons?.[g.id] || g.market_comparisons)?.length ? { ...g, market_comparisons: liveMarketComparisons?.[g.id] || g.market_comparisons } : g}
+              efficiencyScenario={scenarioByGame.get(g.id)}
+              intel={matchupIntel ? {
+                playerSeason: matchupIntel.playerSeason,
+                programs: [matchupIntel.programs[g.away_id], matchupIntel.programs[g.home_id]].filter((program) => program != null),
+              } : undefined}
+            />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
               {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
             </button>

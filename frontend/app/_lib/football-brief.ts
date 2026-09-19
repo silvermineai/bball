@@ -114,3 +114,74 @@ export type FootballBriefEvidence = {
   programs: { id: string; name: string; personnel: PersonnelRow[] }[];
   sources: EfficiencyIndex["sources"];
 };
+
+export type FootballCardIntel = {
+  playerSeason: number;
+  programs: {
+    id: string;
+    name: string;
+    leaders: {
+      id: string;
+      name: string;
+      category: string;
+      plays: number;
+      epaPerPlay: number;
+    }[];
+  }[];
+};
+export type FootballProgramIntel = FootballCardIntel["programs"][number];
+export type FootballSlateIntel = {
+  playerSeason: number;
+  programs: Record<string, FootballProgramIntel>;
+};
+
+/**
+ * Keep matchup-card personnel context small and evidence-bound: one qualified
+ * leader per source category, preserving the exact player ID and season used
+ * by the full matchup notebook.
+ */
+export function footballCardIntel(
+  evidence: FootballBriefEvidence,
+): FootballCardIntel {
+  return {
+    playerSeason: evidence.playerSeason,
+    programs: evidence.programs.map((program) => ({
+      id: program.id,
+      name: program.name,
+      leaders: ["passing", "rushing", "receiving"].flatMap((category) => {
+        const row = program.personnel.find(
+          (candidate) => candidate.category === category,
+        );
+        return row &&
+          row.production.plays != null &&
+          row.production.epa_per_play != null
+          ? [{
+              id: row.player.id,
+              name: row.player.name,
+              category,
+              plays: row.production.plays,
+              epaPerPlay: row.production.epa_per_play,
+            }]
+          : [];
+      }),
+    })),
+  };
+}
+
+/** Deduplicate program context before it crosses the server/client boundary. */
+export function footballSlateIntel(
+  evidence: FootballBriefEvidence[],
+): FootballSlateIntel {
+  const playerSeason = evidence[0]?.playerSeason ?? 0;
+  if (evidence.some((item) => item.playerSeason !== playerSeason)) {
+    throw Error("Football card intel cannot mix player seasons");
+  }
+  return {
+    playerSeason,
+    programs: Object.fromEntries(
+      evidence
+        .flatMap((item) => footballCardIntel(item).programs)
+        .map((program) => [program.id, program]),
+    ),
+  };
+}

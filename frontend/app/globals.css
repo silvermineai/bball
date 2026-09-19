@@ -596,6 +596,69 @@ th,
 .match-card-details[open] summary {
   margin-bottom: 2px;
 }
+.football-card-intel {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.football-card-intel-heading {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.football-card-intel-heading strong {
+  font-size: 11px;
+}
+.football-card-intel-heading span {
+  color: var(--muted);
+  font: 9px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+.football-card-intel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.football-card-intel-grid h4 {
+  font-size: 11px;
+  margin: 0 0 6px;
+}
+.football-card-intel-grid ul {
+  display: grid;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.football-card-intel-grid li,
+.football-card-intel-grid p {
+  font-size: 10px;
+  line-height: 1.35;
+  margin: 0;
+}
+.football-card-intel-grid li a {
+  display: block;
+  font-weight: 600;
+}
+.football-card-intel-grid li small,
+.football-card-intel-note {
+  color: var(--muted);
+  display: block;
+  font-size: 9px;
+  margin-top: 2px;
+}
+.football-card-intel-note {
+  border-top: 1px solid var(--line);
+  line-height: 1.45;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.football-card-actions {
+  justify-content: space-between;
+  margin-top: 14px;
+}
 .match-detail {
   display: flex;
   justify-content: space-between;

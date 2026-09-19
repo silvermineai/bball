@@ -3,7 +3,13 @@ import fs from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { getOverview } from "./data";
 import { getFootballBriefEvidence } from "./football-brief-data";
-import { historicalLeaders, type BriefPlayer } from "./football-brief";
+import {
+  footballCardIntel,
+  footballSlateIntel,
+  historicalLeaders,
+  type BriefPlayer,
+  type FootballBriefEvidence,
+} from "./football-brief";
 const read = (file: string) =>
   JSON.parse(readFileSync(`public/data/football/${file}`, "utf8"));
 describe("football matchup notebooks", () => {
@@ -95,6 +101,42 @@ describe("football matchup notebooks", () => {
       ["1", "receiving"],
     ]);
     expect(historicalLeaders(players, "999", 2025)).toEqual([]);
+  });
+  it("builds a compact card preview with one exact-ID leader per category", () => {
+    const evidence = {
+      playerSeason: 2025,
+      programs: [{
+        id: "1",
+        name: "Example State",
+        personnel: [
+          { player: { id: "11", team_id: "1", name: "Pass One", team: "Example State", season: 2025 }, category: "passing", production: { plays: 140, epa: 20, epa_per_play: 0.143, games: 10, rank: 1 } },
+          { player: { id: "12", team_id: "1", name: "Pass Two", team: "Example State", season: 2025 }, category: "passing", production: { plays: 120, epa: 14, epa_per_play: 0.117, games: 10, rank: 2 } },
+          { player: { id: "13", team_id: "1", name: "Runner", team: "Example State", season: 2025 }, category: "rushing", production: { plays: 80, epa: 8, epa_per_play: 0.1, games: 10, rank: 3 } },
+          { player: { id: "14", team_id: "1", name: "Missing Rate", team: "Example State", season: 2025 }, category: "receiving", production: { plays: 40, epa: 5, epa_per_play: null, games: 10, rank: 4 } },
+        ],
+      }],
+    } as unknown as FootballBriefEvidence;
+    expect(footballCardIntel(evidence)).toEqual({
+      playerSeason: 2025,
+      programs: [{
+        id: "1",
+        name: "Example State",
+        leaders: [
+          { id: "11", name: "Pass One", category: "passing", plays: 140, epaPerPlay: 0.143 },
+          { id: "13", name: "Runner", category: "rushing", plays: 80, epaPerPlay: 0.1 },
+        ],
+      }],
+    });
+    expect(footballSlateIntel([evidence, evidence])).toEqual({
+      playerSeason: 2025,
+      programs: {
+        "1": footballCardIntel(evidence).programs[0],
+      },
+    });
+    expect(() => footballSlateIntel([
+      evidence,
+      { ...evidence, playerSeason: 2024 },
+    ])).toThrow("cannot mix player seasons");
   });
   it("refuses a player file that no longer matches its catalog hash", async () => {
     vi.resetModules();

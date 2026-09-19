@@ -1,8 +1,22 @@
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game } from "../_lib/data";
+import type { FootballCardIntel } from "../_lib/football-brief";
 import { fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-export default function MatchCard({ game: g, efficiencyScenario }: { game: Game; efficiencyScenario?: FootballEfficiencyScenario }) {
+const categoryLabel: Record<string, string> = {
+  passing: "Pass",
+  rushing: "Rush",
+  receiving: "Receive",
+};
+export default function MatchCard({
+  game: g,
+  efficiencyScenario,
+  intel,
+}: {
+  game: Game;
+  efficiencyScenario?: FootballEfficiencyScenario;
+  intel?: FootballCardIntel;
+}) {
   const p = g.prediction;
   return (
     <article className="match-card">
@@ -50,6 +64,36 @@ export default function MatchCard({ game: g, efficiencyScenario }: { game: Game;
           No forecast: a team is outside the model’s trained FBS field. Schedule
           retained for planning.
         </p>
+      )}
+      {intel && intel.programs.some((program) => program.leaders.length) && (
+        <section className="football-card-intel" aria-label={`${intel.playerSeason} player production to review`}>
+          <div className="football-card-intel-heading">
+            <strong>Personnel to review</strong>
+            <span>{intel.playerSeason} retained production</span>
+          </div>
+          <div className="football-card-intel-grid">
+            {intel.programs.map((program) => (
+              <div key={program.id}>
+                <h4>{program.name}</h4>
+                {program.leaders.length ? (
+                  <ul>
+                    {program.leaders.map((leader) => (
+                      <li key={`${leader.category}-${leader.id}`}>
+                        <Link href={`/football/player/?id=${encodeURIComponent(leader.id)}&season=${intel.playerSeason}`}>
+                          {leader.name}
+                        </Link>
+                        <small>{categoryLabel[leader.category] || leader.category} · {fmt(leader.epaPerPlay, 2)} EPA/play · {leader.plays.toLocaleString()} plays</small>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p>No qualified category leader.</p>}
+              </div>
+            ))}
+          </div>
+          <small className="football-card-intel-note">
+            Prior-season source affiliation; this does not verify the current roster or availability.
+          </small>
+        </section>
       )}
       {efficiencyScenario && (
         <div className="market-note">
@@ -104,9 +148,14 @@ export default function MatchCard({ game: g, efficiencyScenario }: { game: Game;
         )}
       </div>
       {p && (
-        <Link className="note" href={`/blog/game-${g.id}/`}>
-          Read the matchup brief →
-        </Link>
+        <div className="button-row football-card-actions">
+          <Link className="note" href={`/blog/game-${g.id}/`}>
+            Read the matchup brief →
+          </Link>
+          <Link className="note" href={`/research/game/?sport=football&id=${encodeURIComponent(g.id)}`}>
+            Forecast record ↗
+          </Link>
+        </div>
       )}
     </article>
   );
