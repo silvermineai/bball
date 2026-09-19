@@ -6,13 +6,19 @@ import {
   categoryLabels,
   eventLabels,
   publicationDate,
-  type RecruitingRelease,
 } from "../../_lib/recruiting";
 import {
   playerRecruitingContext,
+  parseLivePlayerRecruitingPayload,
+  playerRecruitingContextRequests,
   type PlayerRecruitingContext as PlayerRecruitingContextData,
 } from "../../_lib/player-recruiting";
-import type { BBRosters } from "../../_lib/basketball-types";
+
+type ReleaseMeta = {
+  edition: string;
+  reviewedAt: string;
+  rosterFetchedAt: string | null;
+};
 
 export default function PlayerRecruitingContext({
   id,
@@ -20,28 +26,36 @@ export default function PlayerRecruitingContext({
   id: string;
 }) {
   const [context, setContext] = useState<PlayerRecruitingContextData | null>(null);
+  const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     setContext(null);
+    setReleaseMeta(null);
     setError("");
+    const requests = playerRecruitingContextRequests();
     Promise.all([
-      fetch("/data/basketball/recruiting.json", { signal: controller.signal }),
-      fetch("/data/basketball/rosters.json", { signal: controller.signal }),
+      fetch(requests.recruiting, { signal: controller.signal }),
+      fetch(requests.rosters, { signal: controller.signal }),
     ])
       .then(async ([recruitingResponse, rosterResponse]) => {
         if (!recruitingResponse.ok || !rosterResponse.ok) {
-          throw new Error("The recruiting evidence release could not be loaded.");
+          throw new Error("The live recruiting evidence release could not be loaded.");
         }
-        return Promise.all([
-          recruitingResponse.json() as Promise<RecruitingRelease>,
-          rosterResponse.json() as Promise<BBRosters>,
-        ]);
+        return Promise.all([recruitingResponse.json(), rosterResponse.json()]);
       })
-      .then(([recruiting, rosters]) => {
+      .then(([recruitingPayload, rosterPayload]) => {
+        const parsed = parseLivePlayerRecruitingPayload(recruitingPayload, rosterPayload);
+        if (!parsed) throw new Error("The live recruiting evidence release is incomplete.");
         if (!controller.signal.aborted) {
-          setContext(playerRecruitingContext(id, recruiting, rosters));
+          setContext(playerRecruitingContext(id, parsed.recruiting, parsed.rosters));
+          const rosterSource = parsed.rosters.source;
+          setReleaseMeta({
+            edition: parsed.recruiting.edition,
+            reviewedAt: parsed.recruiting.reviewed_at,
+            rosterFetchedAt: rosterSource?.fetched_at || null,
+          });
         }
       })
       .catch((reason: Error) => {
@@ -66,11 +80,17 @@ export default function PlayerRecruitingContext({
         </Link>
       </div>
       <p className="note">
-        This panel joins only the publisher&apos;s exact source ID ({id}). A name
+        This panel joins only the publisher&apos;s exact source ID ({id}) from the live retained release. A name
         match alone is never treated as identity evidence. Dated announcements
         are a partial review file; roster observations describe a source listing,
         not eligibility, availability, or a confirmed destination.
       </p>
+      {releaseMeta ? (
+        <p className="note">
+          Live recruiting edition <code>{releaseMeta.edition.slice(0, 16)}…</code> · reviewed {releaseMeta.reviewedAt.slice(0, 10)}
+          {releaseMeta.rosterFetchedAt ? ` · roster receipt ${releaseMeta.rosterFetchedAt.slice(0, 10)}` : ""}
+        </p>
+      ) : null}
       <div className="strip">
         <div><strong>{announcements.length}</strong><span>Reviewed announcement records</span></div>
         <div><strong>{announcements.reduce((sum, row) => sum + row.timeline.length, 0)}</strong><span>Dated source events</span></div>
@@ -128,7 +148,7 @@ export default function PlayerRecruitingContext({
       ) : (
         <p className="empty">No exact current roster observation is linked to this source ID. The absence of a listing is not evidence that the player is unavailable.</p>
       )}
-      <p className="note">The research file was reviewed from selected school announcements and a current source roster release. Use the linked receipts to inspect the underlying statement.</p>
+      <p className="note">The panel reflects selected school announcements and the current source roster release. Use the linked receipts to inspect the underlying statement.</p>
     </section>
   );
 }
