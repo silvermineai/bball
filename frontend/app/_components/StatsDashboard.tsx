@@ -20,6 +20,7 @@ import LiveTeamProductionTable from "./LiveTeamProductionTable";
 import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
 import DashboardExportButton from "./DashboardExportButton";
+import LivePlayerShotMap from "./LivePlayerShotMap";
 
 function getPlayers(season: number) {
   // Prefer the current player release because it retains the complete basic
@@ -480,8 +481,9 @@ export default function StatsDashboard() {
           </div>
         </section>
       </div>
+      <LivePlayerShotMap season={latestSeason} />
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">05 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
         <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need recruiting, impact, source rows or model details.</p>
         <div className="dashboard-link-grid">
           <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
