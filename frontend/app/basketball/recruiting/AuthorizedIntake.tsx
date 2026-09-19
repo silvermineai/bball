@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { validateRecruitingIntakeCsv, type RecruitingIntakePreflight } from "../../_lib/recruiting-intake";
+import { describeRecruitingIntakeCoverage, validateRecruitingIntakeCsv, type RecruitingIntakePreflight } from "../../_lib/recruiting-intake";
 
 type IntakeCoverage = {
   total: number;
@@ -17,6 +17,8 @@ type IntakeCoverage = {
     docs_url: string;
     policy: string;
   }>;
+  source?: string;
+  unavailable_reason?: string;
   policy: string;
 };
 
@@ -47,6 +49,7 @@ export default function AuthorizedIntake() {
     ...(coverage?.providers ?? []).map((provider) => provider.provider),
     ...providerFeeds.map((feed) => feed.provider),
   ]);
+  const coverageDisplay = coverage ? describeRecruitingIntakeCoverage(coverage) : null;
   return (
     <section className="section">
       <div className="paper-panel recruiting-intake">
@@ -62,11 +65,16 @@ export default function AuthorizedIntake() {
         <p>
           An approved transfer or eligibility feed can be imported with its license, capture clocks and stable record IDs. Optional licensed feeds can be enabled with a server-side key; their portal, recruiting-player and team-ranking rows stay in a separate private D1 table. Silvermine does not merge imported records into school announcements, roster observations or forecast inputs.
         </p>
-        {error ? <p className="status-error" role="alert">{error}</p> : !coverage ? <p className="empty" role="status">Checking authorized intake coverage…</p> : (
+        {error ? <p className="status-error" role="alert">{error}</p> : !coverage ? <p className="empty" role="status">Checking authorized intake coverage…</p> : !coverageDisplay?.available ? (
+          <div className="recruiting-intake-preflight-result has-errors" role="status">
+            <strong>{coverageDisplay?.headline}</strong>
+            <p>{coverageDisplay?.detail} No intake count is shown because this response does not establish whether licensed rows exist.</p>
+          </div>
+        ) : (
           <div className="recruiting-intake-status">
             <div>
-              <strong>{coverage.total.toLocaleString()}</strong>
-              <span>source-reported rows imported</span>
+              <strong>{coverageDisplay.headline}</strong>
+              <span>{coverageDisplay.detail}</span>
             </div>
             <div>
               <strong>{importedProviders.size.toLocaleString()}</strong>

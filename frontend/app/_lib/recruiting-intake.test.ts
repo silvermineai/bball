@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRecruitingCsv, validateRecruitingIntakeCsv } from "./recruiting-intake";
+import { describeRecruitingIntakeCoverage, parseRecruitingCsv, validateRecruitingIntakeCsv } from "./recruiting-intake";
 
 const header = "record_id,season,player_name,player_source_id,from_program,from_program_id,to_program,to_program_id,status,status_date,source_published_on,source_url,source_publisher,captured_at";
 
@@ -16,5 +16,27 @@ describe("recruiting intake preflight", () => {
     expect(result.errors.join(" ")).toContain("HTTPS URL");
     expect(result.errors.join(" ")).toContain("future");
     expect(result.errors.join(" ")).toContain("duplicate record_id");
+  });
+});
+
+describe("recruiting intake coverage display", () => {
+  it("does not present an unavailable warehouse as a confirmed zero", () => {
+    expect(describeRecruitingIntakeCoverage({
+      total: 0,
+      source: "unavailable",
+      unavailable_reason: "The recruiting coverage warehouse did not respond within the read window.",
+    })).toEqual({
+      available: false,
+      headline: "Coverage temporarily unavailable",
+      detail: "The recruiting coverage warehouse did not respond within the read window.",
+    });
+  });
+
+  it("keeps a successful empty response as a real zero", () => {
+    expect(describeRecruitingIntakeCoverage({ total: 0 })).toEqual({
+      available: true,
+      headline: "0",
+      detail: "source-reported rows imported",
+    });
   });
 });

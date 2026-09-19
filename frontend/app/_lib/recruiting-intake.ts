@@ -16,6 +16,34 @@ export type RecruitingIntakePreflight = {
   warnings: string[];
 };
 
+export type RecruitingIntakeCoverage = {
+  total: number;
+  source?: string;
+  unavailable_reason?: string;
+};
+
+export type RecruitingIntakeCoverageDisplay = {
+  available: boolean;
+  headline: string;
+  detail: string;
+};
+
+/** Keep an unavailable warehouse response distinct from a confirmed empty intake. */
+export function describeRecruitingIntakeCoverage(coverage: RecruitingIntakeCoverage): RecruitingIntakeCoverageDisplay {
+  if (coverage.source === "unavailable") {
+    return {
+      available: false,
+      headline: "Coverage temporarily unavailable",
+      detail: coverage.unavailable_reason || "The recruiting coverage warehouse did not respond.",
+    };
+  }
+  return {
+    available: true,
+    headline: coverage.total.toLocaleString("en-US"),
+    detail: "source-reported rows imported",
+  };
+}
+
 /** Parse RFC 4180-style CSV without sending the selected file anywhere. */
 export function parseRecruitingCsv(text: string): string[][] {
   const rows: string[][] = [];
