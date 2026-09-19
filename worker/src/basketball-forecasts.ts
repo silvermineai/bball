@@ -299,7 +299,22 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(search, search);
   }
   if (model === "latest") {
-    clauses.push("f.model_id=(SELECT id FROM bb_models ORDER BY created_at DESC,id DESC LIMIT 1)");
+    // A model row can be registered before its forecast batch finishes, and
+    // retained metadata can include editions for a different season. Resolve
+    // `latest` from editions that actually have rows in the requested season
+    // so a partial publication cannot make a complete prior slate disappear.
+    clauses.push(`f.model_id=(
+      SELECT f_latest.model_id
+        FROM bb_forecasts f_latest
+        JOIN bb_games g_latest ON g_latest.id=f_latest.game_id
+        LEFT JOIN bb_models m_latest ON m_latest.id=f_latest.model_id
+       WHERE g_latest.season=?
+       GROUP BY f_latest.model_id
+       ORDER BY MAX(COALESCE(m_latest.created_at,f_latest.created_at)) DESC,
+                f_latest.model_id DESC
+       LIMIT 1
+    )`);
+    binds.push(season);
   } else if (model !== "all") {
     clauses.push("f.model_id=?");
     binds.push(model);

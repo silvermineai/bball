@@ -2,6 +2,67 @@ import { describe, expect, it, vi } from "vitest";
 import { basketballForecasts } from "../src/basketball-forecasts";
 
 describe("basketball forecast availability", () => {
+  it("resolves latest from models that contain forecasts for the requested season", async () => {
+    const countBinds: Array<string | number> = [];
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return {
+          bind: (...values: Array<string | number>) => {
+            countBinds.push(...values);
+            return {
+              first: async () => ({
+                total: sql.includes("g_latest.season=?") ? 1 : 0,
+              }),
+            };
+          },
+        };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({ results: [{
+            game_id: "401",
+            model_id: "basketball-efficiency-v2-complete",
+            created_at: "2026-09-17T00:00:00Z",
+            prediction_json: JSON.stringify({ home_margin: 4.5 }),
+            season: 2027,
+            starts_at: "2026-11-02T05:00:00Z",
+            home_id: "1",
+            away_id: "2",
+            home_name: "Home",
+            away_name: "Away",
+            home_score: null,
+            away_score: null,
+            completed: 0,
+            neutral: 0,
+            time_tbd: 1,
+            venue: null,
+            broadcast: null,
+            source_start: null,
+            source_time_valid: null,
+            source_observed_at: null,
+          }] }),
+        }),
+      };
+    });
+
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&model=latest&limit=1",
+      {},
+      { DB: { prepare } },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 1,
+      rows: [{ game_id: "401", model_id: "basketball-efficiency-v2-complete" }],
+    });
+    const countSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("SELECT count(*) AS total FROM bb_forecasts"))?.[0]);
+    expect(countSql).toContain("JOIN bb_games g_latest ON g_latest.id=f_latest.game_id");
+    expect(countSql).toContain("LEFT JOIN bb_models m_latest ON m_latest.id=f_latest.model_id");
+    expect(countSql).toContain("WHERE g_latest.season=?");
+    expect(countBinds).toEqual([2027, 2027]);
+  });
+
   it("returns a retryable status when the D1 catalog is unavailable", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await basketballForecasts.request(
