@@ -44,6 +44,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link className="main-nav-home" href="/">Home</Link>
               <Link href="/basketball/ratings/">Teams</Link>
               <Link href="/basketball/players/">Players</Link>
+              <Link href="/basketball/recruiting/">Recruiting</Link>
               <Link href="/basketball/matchups/">Games</Link>
               <Link href="/basketball/forecast-lab/">Predictions</Link>
               <Link href="/football/">Football</Link>
