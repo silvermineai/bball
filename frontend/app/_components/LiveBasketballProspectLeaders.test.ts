@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
 import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+
+describe("homepage recruiting section", () => {
+  it("renders the prospect board as the fifth dashboard section", () => {
+    const html = renderToStaticMarkup(createElement(LiveBasketballProspectLeaders));
+    expect(html).toContain("05 / RECRUITING");
+    expect(html).toContain("Top 2027 prospects");
+    expect(html).toContain('aria-labelledby="dashboard-prospects"');
+  });
+});
 
 describe("prospect size formatting", () => {
   it("renders the recorded height and weight together", () => {

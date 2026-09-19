@@ -209,7 +209,7 @@ export default function LiveBasketballProspectLeaders() {
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
       <div className="dashboard-section-heading">
-        <div><span className="eyebrow">08 / PROSPECT RANKINGS</span><h2 id="dashboard-prospects">Top {season} prospects</h2></div>
+        <div><span className="eyebrow">05 / RECRUITING</span><h2 id="dashboard-prospects">Top {season} prospects</h2></div>
         <div className="button-row">
           <label className="control">
             <span>CLASS</span>
