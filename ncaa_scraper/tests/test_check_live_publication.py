@@ -6,17 +6,42 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from scripts.check_live_publication import (
+    DAILY_PUBLICATION_MAX_AGE_HOURS,
     check_live,
     forecast_coverage,
     market_metadata,
     player_box_field_metadata,
     validate_recruiting_destinations,
+    validate_coverage_audit,
     validate_reviewed_recruiting_release,
     get_json,
 )
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_daily_monitor_requires_complete_warehouse_audit(self):
+        complete = {
+            "audit_status": "complete",
+            "location_validation": {},
+            "possession_validation": {},
+        }
+        self.assertEqual(validate_coverage_audit(complete), ({}, {}))
+        with self.assertRaisesRegex(ValueError, "coverage audit is partial"):
+            validate_coverage_audit({
+                "audit_status": "partial",
+                "location_validation": {},
+                "possession_validation": None,
+            })
+        with self.assertRaisesRegex(ValueError, "incomplete validation results"):
+            validate_coverage_audit({
+                "audit_status": "complete",
+                "location_validation": {},
+                "possession_validation": None,
+            })
+
+    def test_daily_monitor_freshness_window_catches_second_missed_refresh(self):
+        self.assertEqual(DAILY_PUBLICATION_MAX_AGE_HOURS, 36)
+
     def test_forecast_coverage_requires_exact_upcoming_denominator(self):
         self.assertEqual(forecast_coverage({"season": 2027, "status": "upcoming", "total": 12}, 2027, 12), 12)
         with self.assertRaisesRegex(ValueError, "every upcoming game"):
@@ -215,6 +240,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/coverage?audit=1": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "audit_status": "complete",
                 "location_validation": {},
                 "possession_validation": {},
             },
@@ -350,6 +376,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/coverage?audit=1": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "audit_status": "complete",
                 "location_validation": {},
                 "possession_validation": {},
             },
@@ -431,6 +458,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/coverage?audit=1": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-08-01T18:00:00Z"}],
+                "audit_status": "complete",
                 "location_validation": {},
                 "possession_validation": {},
             },
@@ -446,6 +474,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/coverage?audit=1": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "audit_status": "complete",
                 "location_validation": {},
                 "possession_validation": {},
             },
@@ -465,6 +494,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             "/api/basketball/research/coverage?audit=1": {
                 "coverage": [{"dataset": "games"}],
                 "source_receipts": [{"dataset": "games", "latest_source_at": "2026-09-10T18:00:00Z"}],
+                "audit_status": "complete",
                 "location_validation": {},
                 "possession_validation": {},
             },

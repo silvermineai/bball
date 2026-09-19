@@ -13,6 +13,12 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
+# The source refresh is scheduled every day. Allow for delayed GitHub-hosted
+# runners and the bounded four-hour publisher job, but fail before a second
+# daily refresh can be missed without an alert.
+DAILY_PUBLICATION_MAX_AGE_HOURS = 36
+
+
 def timestamp(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -76,6 +82,18 @@ def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours:
             raise ValueError(f"{label} source {name} is {max(age, 0):.1f} hours old")
         ages.append(age)
     return ages
+
+
+def validate_coverage_audit(payload: dict) -> tuple[dict, dict]:
+    """Require the deployed deep audit to finish instead of accepting partial evidence."""
+    status = payload.get("audit_status")
+    location = payload.get("location_validation")
+    possession = payload.get("possession_validation")
+    if status != "complete":
+        raise ValueError(f"basketball coverage audit is {status or 'missing'}")
+    if not isinstance(location, dict) or not isinstance(possession, dict):
+        raise ValueError("basketball coverage audit has incomplete validation results")
+    return location, possession
 
 
 def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
@@ -414,18 +432,24 @@ def validate_recruiting_rank_quality(quality: object, total: object) -> tuple[in
     return tied_rank_values, tied_rows
 
 
-def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: float = 240) -> dict:
+def check_live(
+    base_url: str,
+    *,
+    now: datetime | None = None,
+    max_age_hours: float = DAILY_PUBLICATION_MAX_AGE_HOURS,
+) -> dict:
     checked_at = now or datetime.now(timezone.utc)
     health = get_json(base_url, "/api/health")
     if health.get("ok") is not True:
         raise ValueError("Worker health response is not ok")
 
     basketball = get_json(base_url, "/api/basketball/research/coverage?audit=1")
-    required = {"coverage", "source_receipts", "location_validation", "possession_validation"}
+    required = {"coverage", "source_receipts", "audit_status", "location_validation", "possession_validation"}
     if not required.issubset(basketball):
         raise ValueError(f"basketball coverage is missing {sorted(required - set(basketball))}")
     if not isinstance(basketball["coverage"], list) or not basketball["coverage"]:
         raise ValueError("basketball coverage has no dataset rows")
+    validate_coverage_audit(basketball)
     ages = receipt_ages(basketball, "basketball", checked_at, max_age_hours)
 
     football = get_json(base_url, "/api/football/coverage")
@@ -694,7 +718,7 @@ def check_live(base_url: str, *, now: datetime | None = None, max_age_hours: flo
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="https://bball.silvermine.dev")
-    parser.add_argument("--max-age-hours", type=float, default=240)
+    parser.add_argument("--max-age-hours", type=float, default=DAILY_PUBLICATION_MAX_AGE_HOURS)
     args = parser.parse_args()
     try:
         report = check_live(args.base_url, max_age_hours=args.max_age_hours)

@@ -246,7 +246,7 @@ jobs:
           curl --fail --silent --show-error --retry 3 --retry-delay 2 https://bball.silvermine.dev/ >/dev/null
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             -H 'Cache-Control: no-cache' \
-            'https://bball.silvermine.dev/api/basketball/research/coverage?audit=0&workflow_smoke=1' \
+            "https://bball.silvermine.dev/api/basketball/research/coverage?audit=1&workflow_smoke=${GITHUB_RUN_ID}" \
             -o /tmp/basketball-coverage.json
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             -H 'Cache-Control: no-cache' \
@@ -275,13 +275,11 @@ jobs:
               raise SystemExit(f'coverage response is missing required fields: {missing}')
           if not isinstance(payload['coverage'], list) or not payload['coverage']:
               raise SystemExit('coverage response has no dataset rows')
-          if payload['audit_status'] not in ('not_requested', 'complete', 'partial'):
-              raise SystemExit(f"coverage response has invalid audit status: {payload['audit_status']}")
+          if payload['audit_status'] != 'complete':
+              raise SystemExit(f"coverage audit did not complete: {payload['audit_status']}")
           for key in ('location_validation', 'possession_validation'):
-              if payload['audit_status'] == 'complete' and not isinstance(payload[key], dict):
+              if not isinstance(payload[key], dict):
                   raise SystemExit(f'coverage response has no {key} object for a complete audit')
-              if payload['audit_status'] == 'partial' and payload[key] is not None and not isinstance(payload[key], dict):
-                  raise SystemExit(f'coverage response has invalid {key} value')
           print('Production coverage smoke test passed')
 
           recruiting = json.loads(Path('/tmp/basketball-recruiting.json').read_text())
