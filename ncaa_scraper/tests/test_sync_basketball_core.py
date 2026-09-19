@@ -37,6 +37,55 @@ class BasketballCoreSyncTests(unittest.TestCase):
         self.assertEqual(metadata["target_season"], 2027)
         self.assertNotIn("efficiency", metadata)
 
+    def test_roster_publication_keeps_exact_model_scenarios(self):
+        artifact = {
+            "version": "basketball-roster-challenger-v2",
+            "generated_at": "2026-09-19T00:00:00Z",
+            "primary_model_id": "model-1",
+            "coverage": {"scenario_games": 1},
+            "teams": [{"team_id": "1"}],
+            "scenarios": [
+                {
+                    "game_id": "game-1",
+                    "home_id": "1",
+                    "away_id": "2",
+                    "primary_model_id": "model-1",
+                }
+            ],
+        }
+        metadata, scenarios = MODULE.roster_publication(
+            artifact, "model-1", {"game-1"}
+        )
+        self.assertEqual(metadata["primary_model_id"], "model-1")
+        self.assertNotIn("teams", metadata)
+        self.assertNotIn("scenarios", metadata)
+        self.assertEqual(scenarios, artifact["scenarios"])
+
+    def test_roster_publication_rejects_cross_edition_relabeling(self):
+        artifact = {
+            "generated_at": "2026-09-19T00:00:00Z",
+            "primary_model_id": "model-old",
+            "scenarios": [],
+        }
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            MODULE.roster_publication(artifact, "model-new", set())
+
+    def test_roster_publication_rejects_rows_outside_forecast_slate(self):
+        artifact = {
+            "generated_at": "2026-09-19T00:00:00Z",
+            "primary_model_id": "model-1",
+            "scenarios": [
+                {
+                    "game_id": "game-2",
+                    "home_id": "1",
+                    "away_id": "2",
+                    "primary_model_id": "model-1",
+                }
+            ],
+        }
+        with self.assertRaisesRegex(ValueError, "outside the forecast slate"):
+            MODULE.roster_publication(artifact, "model-1", {"game-1"})
+
 
 if __name__ == "__main__":
     unittest.main()

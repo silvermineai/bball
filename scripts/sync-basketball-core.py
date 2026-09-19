@@ -106,11 +106,59 @@ def published_model_metadata(model, expected_forecasts):
     return metadata
 
 
+def roster_publication(artifact, model_id, forecast_game_ids):
+    """Validate and split a roster artifact into D1-sized edition records."""
+    if not isinstance(artifact, dict):
+        raise ValueError("Roster artifact must be an object")
+    if artifact.get("primary_model_id") != model_id:
+        raise ValueError("Roster artifact does not match the published primary model")
+    generated_at = artifact.get("generated_at")
+    if not isinstance(generated_at, str) or not generated_at:
+        raise ValueError("Roster artifact is missing its generation time")
+    values = artifact.get("scenarios")
+    if not isinstance(values, list):
+        raise ValueError("Roster artifact scenarios must be a list")
+    scenarios = []
+    seen = set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("Roster scenario must be an object")
+        game_id = str(value.get("game_id") or "")
+        if not game_id or game_id in seen:
+            raise ValueError("Roster scenarios require unique game IDs")
+        if game_id not in forecast_game_ids:
+            raise ValueError(f"Roster scenario {game_id} is outside the forecast slate")
+        if value.get("primary_model_id") != model_id:
+            raise ValueError(f"Roster scenario {game_id} has a mismatched model ID")
+        home_id = str(value.get("home_id") or "")
+        away_id = str(value.get("away_id") or "")
+        if not home_id or not away_id:
+            raise ValueError(f"Roster scenario {game_id} is missing participants")
+        seen.add(game_id)
+        scenarios.append(value)
+    coverage = artifact.get("coverage")
+    if (
+        isinstance(coverage, dict)
+        and coverage.get("scenario_games") is not None
+        and coverage.get("scenario_games") != len(scenarios)
+    ):
+        raise ValueError("Roster scenario coverage does not match the artifact rows")
+    metadata = {
+        key: value
+        for key, value in artifact.items()
+        if key not in {"teams", "scenarios"}
+    }
+    return metadata, scenarios
+
+
 def build(season=2023):
     overview = json.loads(
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
     )
     model = overview["model"]
+    roster_artifact = json.loads(
+        (ROOT / "frontend/public/data/basketball/roster-model.json").read_text()
+    )
     incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
     if not model.get("id", "").startswith("basketball-efficiency-v2-"):
         raise ValueError("Unexpected basketball model ID")
@@ -126,6 +174,11 @@ def build(season=2023):
             conn = None
     statements = []
     forecast_rows = list(forecast_records(overview))
+    roster_metadata, roster_scenarios = roster_publication(
+        roster_artifact,
+        model["id"],
+        {str(game["id"]) for game, _ in forecast_rows},
+    )
     # Models are queried only for identity and creation time by the public API.
     # Keep a compact, useful metadata record in D1 while the complete fitted
     # artifact remains in the static, hash-checked edition.
@@ -135,6 +188,16 @@ def build(season=2023):
     # D1 cannot retain a forecast for a game that left the current schedule.
     statements.append(
         "DELETE FROM bb_forecasts WHERE model_id=" + quote(model["id"]) + ";\n"
+    )
+    statements.append(
+        "DELETE FROM bb_roster_scenarios WHERE primary_model_id="
+        + quote(model["id"])
+        + ";\n"
+    )
+    statements.append(
+        "DELETE FROM bb_roster_models WHERE primary_model_id="
+        + quote(model["id"])
+        + ";\n"
     )
     for game, prediction in forecast_rows:
         # Primary and cold-start estimates are both Silvermine model outputs.
@@ -149,6 +212,35 @@ def build(season=2023):
                     model["id"],
                     overview["generated_at"],
                     json.dumps(prediction, separators=(",", ":")),
+                )
+            )
+            + ");\n"
+        )
+    statements.append(
+        "INSERT OR REPLACE INTO bb_roster_models "
+        "(primary_model_id,created_at,metadata_json) VALUES ("
+        + ",".join(
+            quote(value)
+            for value in (
+                model["id"],
+                roster_artifact["generated_at"],
+                json.dumps(roster_metadata, separators=(",", ":")),
+            )
+        )
+        + ");\n"
+    )
+    for scenario in roster_scenarios:
+        statements.append(
+            "INSERT OR REPLACE INTO bb_roster_scenarios "
+            "(primary_model_id,game_id,home_id,away_id,lens_json) VALUES ("
+            + ",".join(
+                quote(value)
+                for value in (
+                    model["id"],
+                    scenario["game_id"],
+                    scenario["home_id"],
+                    scenario["away_id"],
+                    json.dumps(scenario, separators=(",", ":")),
                 )
             )
             + ");\n"
@@ -215,13 +307,18 @@ def build(season=2023):
     # Player identities are global, so include the current compact dictionary
     # needed by player-box lookups after adding a historical season.
     if conn is not None:
-        columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]
-        for row in conn.execute(f"SELECT {','.join(columns)} FROM bb_players"):
-            statements.append(
-                f"INSERT OR REPLACE INTO bb_players ({','.join(columns)}) VALUES ("
-                + ",".join(quote(value) for value in row)
-                + ");\n"
-            )
+        try:
+            columns = [row[1] for row in conn.execute("PRAGMA table_info(bb_players)")]
+            if columns:
+                for row in conn.execute(f"SELECT {','.join(columns)} FROM bb_players"):
+                    statements.append(
+                        f"INSERT OR REPLACE INTO bb_players ({','.join(columns)}) VALUES ("
+                        + ",".join(quote(value) for value in row)
+                        + ");\n"
+                    )
+        except sqlite3.OperationalError:
+            # Small development fixtures may contain only the model inputs.
+            pass
         conn.close()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     for old in OUT.parent.glob(f"{OUT.stem}*{OUT.suffix}"):
@@ -232,6 +329,7 @@ def build(season=2023):
         "season": season,
         "batches": [path.name for path in batches],
         "forecast_rows": len(forecast_rows),
+        "roster_scenario_rows": len(roster_scenarios),
     }
     OUT.with_name("basketball-core-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n"

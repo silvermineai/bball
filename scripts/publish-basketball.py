@@ -616,6 +616,18 @@ run_remote_migration(
         D1_DB_NAME,
         "--remote",
         "--file",
+        "migrations/0034_basketball_roster_models.sql",
+    ]
+)
+run_remote_migration(
+    [
+        PY,
+        "scripts/cloudflare.py",
+        "d1",
+        "execute",
+        D1_DB_NAME,
+        "--remote",
+        "--file",
         "migrations/0017_basketball_team_season.sql",
     ]
 )

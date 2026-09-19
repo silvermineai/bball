@@ -66,8 +66,75 @@ type RosterModelArtifact = {
   scenarios?: unknown;
 };
 
-async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
-  if (!c.env.ASSETS) return { lenses: new Map<string, RosterLens>(), model: null };
+function parseRosterLens(value: unknown, expectedModelId: string): RosterLens | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const fields = ["game_id", "home_id", "away_id", "primary_model_id"];
+  if (fields.some((field) => typeof row[field] !== "string")) return null;
+  if (row.primary_model_id !== expectedModelId) return null;
+  const numbers = ["base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net", "roster_home_win_probability", "roster_margin_low", "roster_margin_high"];
+  if (numbers.some((field) => typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) return null;
+  if ((row.roster_home_win_probability as number) < 0 || (row.roster_home_win_probability as number) > 1) return null;
+  if ((row.roster_margin_low as number) > (row.roster_margin as number) || (row.roster_margin_high as number) < (row.roster_margin as number)) return null;
+  return row as unknown as RosterLens;
+}
+
+function rosterModelSummary(artifact: RosterModelArtifact, source: "d1" | "published_asset") {
+  const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+  const coverage = artifact.coverage || {};
+  const evaluation = artifact.evaluation || {};
+  return {
+    version: typeof artifact.version === "string" ? artifact.version : null,
+    generated_at: typeof artifact.generated_at === "string" ? artifact.generated_at : null,
+    primary_model_id: typeof artifact.primary_model_id === "string" ? artifact.primary_model_id : null,
+    scenario_games: number(coverage.scenario_games),
+    current_predicted_teams: number(coverage.current_predicted_teams),
+    held_out_transition: number(evaluation.held_out_transition),
+    improvement_vs_prior_net: number(evaluation.improvement_vs_prior_net),
+    mae: number(evaluation.mae),
+    source,
+  };
+}
+
+async function readRosterLenses(
+  c: Context<{ Bindings: Bindings }>,
+  modelId: string | null,
+  gameIds: string[],
+) {
+  const empty = { lenses: new Map<string, RosterLens>(), model: null };
+  if (!modelId) return empty;
+  const database = researchDb(c.env);
+  if (gameIds.length && typeof database.batch === "function") {
+    try {
+      const placeholders = gameIds.map(() => "?").join(",");
+      const [metadataResult, scenarioResult] = await withTimeout(database.batch([
+        database.prepare(
+          "SELECT metadata_json FROM bb_roster_models WHERE primary_model_id=? LIMIT 1",
+        ).bind(modelId),
+        database.prepare(
+          `SELECT lens_json FROM bb_roster_scenarios WHERE primary_model_id=? AND game_id IN (${placeholders})`,
+        ).bind(modelId, ...gameIds),
+      ]), DB_TIMEOUT_MS);
+      const metadataJson = (metadataResult.results[0] as { metadata_json?: unknown } | undefined)?.metadata_json;
+      if (typeof metadataJson === "string") {
+        const parsed = JSON.parse(metadataJson) as RosterModelArtifact;
+        if (parsed.primary_model_id === modelId) {
+          const lenses = new Map<string, RosterLens>();
+          for (const row of scenarioResult.results) {
+            const lensJson = (row as { lens_json?: unknown }).lens_json;
+            if (typeof lensJson !== "string") continue;
+            const lens = parseRosterLens(JSON.parse(lensJson) as unknown, modelId);
+            if (lens) lenses.set(lens.game_id, lens);
+          }
+          return { lenses, model: rosterModelSummary(parsed, "d1") };
+        }
+      }
+    } catch {
+      // Older deployments may not have the roster tables yet. The bundled
+      // artifact remains a safe fallback only when its exact edition matches.
+    }
+  }
+  if (!c.env.ASSETS) return empty;
   try {
     const response = await withTimeout(
       c.env.ASSETS.fetch(new Request(new URL("/data/basketball/roster-model.json", c.req.url))),
@@ -75,38 +142,16 @@ async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
     );
     if (!response.ok) return { lenses: new Map<string, RosterLens>(), model: null };
     const artifact = await response.json() as RosterModelArtifact;
+    if (artifact.primary_model_id !== modelId) return empty;
     const rows = Array.isArray(artifact.scenarios) ? artifact.scenarios : [];
     const lenses = new Map<string, RosterLens>();
     for (const value of rows) {
-      if (!value || typeof value !== "object") continue;
-      const row = value as Record<string, unknown>;
-      const fields = ["game_id", "home_id", "away_id", "primary_model_id"];
-      if (fields.some((field) => typeof row[field] !== "string")) continue;
-      const numbers = ["base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net", "roster_home_win_probability", "roster_margin_low", "roster_margin_high"];
-      if (numbers.some((field) => typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) continue;
-      if ((row.roster_home_win_probability as number) < 0 || (row.roster_home_win_probability as number) > 1) continue;
-      if ((row.roster_margin_low as number) > (row.roster_margin as number) || (row.roster_margin_high as number) < (row.roster_margin as number)) continue;
-      const lens = row as unknown as RosterLens;
-      lenses.set(lens.game_id, lens);
+      const lens = parseRosterLens(value, modelId);
+      if (lens && gameIds.includes(lens.game_id)) lenses.set(lens.game_id, lens);
     }
-    const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
-    const coverage = artifact.coverage || {};
-    const evaluation = artifact.evaluation || {};
-    return {
-      lenses,
-      model: {
-        version: typeof artifact.version === "string" ? artifact.version : null,
-        generated_at: typeof artifact.generated_at === "string" ? artifact.generated_at : null,
-        primary_model_id: typeof artifact.primary_model_id === "string" ? artifact.primary_model_id : null,
-        scenario_games: number(coverage.scenario_games),
-        current_predicted_teams: number(coverage.current_predicted_teams),
-        held_out_transition: number(evaluation.held_out_transition),
-        improvement_vs_prior_net: number(evaluation.improvement_vs_prior_net),
-        mae: number(evaluation.mae),
-      },
-    };
+    return { lenses, model: rosterModelSummary(artifact, "published_asset") };
   } catch {
-    return { lenses: new Map<string, RosterLens>(), model: null };
+    return empty;
   }
 }
 
@@ -408,9 +453,11 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     source_time_valid: number | null;
     source_observed_at: string | null;
   }>(), DB_TIMEOUT_MS);
-  const rosterArtifact = roster === "1" ? await readRosterLenses(c) : { lenses: new Map<string, RosterLens>(), model: null };
   const resolvedModelIds = new Set(rows.results.map((row) => row.model_id));
   const resolvedModelId = resolvedModelIds.size === 1 ? [...resolvedModelIds][0] : null;
+  const rosterArtifact = roster === "1"
+    ? await readRosterLenses(c, resolvedModelId, rows.results.map((row) => row.game_id))
+    : { lenses: new Map<string, RosterLens>(), model: null };
   const rosterPrimaryModelId = rosterArtifact.model?.primary_model_id || null;
   const rosterCompatible = Boolean(resolvedModelId && rosterPrimaryModelId === resolvedModelId);
   const responseRows = rows.results.map(({ prediction_json, ...row }) => {

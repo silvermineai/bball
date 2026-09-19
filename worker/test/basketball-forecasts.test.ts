@@ -208,7 +208,7 @@ describe("basketball forecast availability", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
-  it("withholds a roster lens from a different primary model edition", async () => {
+  it("withholds a bundled roster lens from a different primary model edition", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
         return { bind: () => ({ first: async () => ({ total: 1 }) }) };
@@ -240,7 +240,60 @@ describe("basketball forecast availability", () => {
     );
     expect(response.status).toBe(200);
     const body = await response.json() as { roster_alignment: Record<string, unknown>; rows: Array<Record<string, unknown>> };
-    expect(body.roster_alignment).toEqual({ resolved_model_id: "basketball-efficiency-v2-old", roster_primary_model_id: "basketball-efficiency-v2-current", compatible: false, status: "model_mismatch", matched_rows: 0 });
+    expect(body.roster_alignment).toEqual({ resolved_model_id: "basketball-efficiency-v2-old", roster_primary_model_id: null, compatible: false, status: "unavailable", matched_rows: 0 });
     expect(body.rows[0].roster_lens).toBeNull();
+  });
+
+  it("reads the roster challenger from the exact D1 model edition", async () => {
+    const modelId = "basketball-efficiency-v2-current";
+    const forecast = {
+      game_id: "401902275", model_id: modelId, created_at: "2026-09-19T00:00:00Z",
+      prediction_json: JSON.stringify({ home_margin: 4.5 }), season: 2027,
+      starts_at: "2026-11-02T05:00:00Z", home_id: "2086", away_id: "322",
+      home_name: "Butler", away_name: "Lafayette", home_score: null, away_score: null,
+      completed: 0, neutral: 0, time_tbd: 1, venue: null, broadcast: null,
+      source_start: null, source_time_valid: null, source_observed_at: null,
+    };
+    const lens = {
+      game_id: "401902275", home_id: "2086", away_id: "322", primary_model_id: modelId,
+      base_margin: 4.5, roster_margin: 5.1, margin_delta: 0.6,
+      home_predicted_net: 2.1, away_predicted_net: -3.4,
+      roster_home_win_probability: 0.64, roster_margin_low: -10.8, roster_margin_high: 21,
+    };
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      if (sql.includes("FROM bb_roster_models")) {
+        return { bind: () => ({ kind: "roster-model" }) };
+      }
+      if (sql.includes("FROM bb_roster_scenarios")) {
+        return { bind: () => ({ kind: "roster-scenarios" }) };
+      }
+      return { bind: () => ({ all: async () => ({ results: [forecast] }) }) };
+    });
+    const batch = vi.fn(async (statements: Array<{ kind?: string }>) => {
+      expect(statements.map((statement) => statement.kind)).toEqual(["roster-model", "roster-scenarios"]);
+      return [
+        { results: [{ metadata_json: JSON.stringify({
+          version: "basketball-roster-challenger-v2", generated_at: "2026-09-19T00:00:01Z",
+          primary_model_id: modelId, coverage: { scenario_games: 1, current_predicted_teams: 2 },
+          evaluation: { held_out_transition: 2026, improvement_vs_prior_net: 0.5, mae: 10.4 },
+        }) }] },
+        { results: [{ lens_json: JSON.stringify(lens) }] },
+      ];
+    });
+    const fetch = vi.fn();
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&model=latest&roster=1&limit=1",
+      {},
+      { DB: { prepare, batch }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { roster_model: Record<string, unknown>; roster_alignment: Record<string, unknown>; rows: Array<Record<string, unknown>> };
+    expect(body.roster_model).toMatchObject({ primary_model_id: modelId, source: "d1", scenario_games: 1 });
+    expect(body.roster_alignment).toEqual({ resolved_model_id: modelId, roster_primary_model_id: modelId, compatible: true, status: "matched", matched_rows: 1 });
+    expect(body.rows[0].roster_lens).toMatchObject(lens);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
