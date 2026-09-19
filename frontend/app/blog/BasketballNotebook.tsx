@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { BBGame, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
+import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 
@@ -19,12 +20,16 @@ export default function BasketballNotebook({
   homeTeam,
   awayTeam,
   rosterScenario,
+  homePlayers = [],
+  awayPlayers = [],
 }: {
   game: BBGame;
   generatedAt: string;
   homeTeam?: BBTeam | null;
   awayTeam?: BBTeam | null;
   rosterScenario?: BBRosterScenario | null;
+  homePlayers?: ScoutPlayer[];
+  awayPlayers?: ScoutPlayer[];
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -134,6 +139,48 @@ export default function BasketballNotebook({
         ) : (
           <p className="note">No same-edition roster continuity scenario is available for this game.</p>
         )}
+      </section>
+
+      <section className="section" aria-labelledby="notebook-player-snapshot">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Historical player workload</div>
+            <h2 id="notebook-player-snapshot">Who carried the old possessions?</h2>
+          </div>
+          <Link href="/basketball/players/">Open the player table →</Link>
+        </div>
+        <p className="note">
+          The three highest-minute contributors in the latest completed season.
+          These rows preserve recorded production for preparation; they are not
+          a projected rotation or an availability decision.
+        </p>
+        <div className="two-col">
+          {([
+            { teamName: game.away_name, players: awayPlayers },
+            { teamName: game.home_name, players: homePlayers },
+          ] as Array<{ teamName: string; players: ScoutPlayer[] }>).map(({ teamName, players }) => (
+            <section className="paper-panel" key={teamName}>
+              <h3>{teamName}</h3>
+              {players.length ? (
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead><tr><th>Player</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead>
+                    <tbody>{players.map((player) => (
+                      <tr key={player.id}>
+                        <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(player.id)}&season=${player.season}`}>{player.name}</Link><small>{player.position || "Position unavailable"}</small></th>
+                        <td className="numeric">{fmt(player.minutes, 0)}</td>
+                        <td className="numeric">{fmt(player.mpg)}</td>
+                        <td className="numeric">{fmt(player.ppg)}</td>
+                        <td className="numeric">{fmt(player.apg)}</td>
+                        <td className="numeric">{percent(player.ts)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              ) : <p className="empty">No qualifying historical player rows are available for this team.</p>}
+            </section>
+          ))}
+        </div>
       </section>
 
       {lens && (

@@ -3,6 +3,8 @@ import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
 import { getBasketball, getRosters, getRosterModel } from "../../_lib/basketball-data";
+import { historicalPersonnel } from "../../_lib/matchup-brief";
+import { getScoutProfile } from "../../_lib/scouting-data";
 import { date, fmt } from "../../_lib/format";
 import BasketballNotebook from "../BasketballNotebook";
 const titles: Record<string, string> = {
@@ -100,6 +102,13 @@ export default async function Page({
   if (!titles[slug] && (!g || !p) && !basketballGame) notFound();
   if (basketballGame) {
     const rosterModel = getRosterModel();
+    const loadPersonnel = (teamId: string) => {
+      try {
+        return historicalPersonnel(getScoutProfile(teamId));
+      } catch {
+        return [];
+      }
+    };
     return (
       <BasketballNotebook
         game={basketballGame}
@@ -107,6 +116,8 @@ export default async function Page({
         homeTeam={basketball.ratings.find((team) => team.id === basketballGame.home_id)}
         awayTeam={basketball.ratings.find((team) => team.id === basketballGame.away_id)}
         rosterScenario={rosterModel.scenarios.find((scenario) => scenario.game_id === basketballGame.id)}
+        homePlayers={loadPersonnel(basketballGame.home_id)}
+        awayPlayers={loadPersonnel(basketballGame.away_id)}
       />
     );
   }
