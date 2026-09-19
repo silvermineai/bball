@@ -486,7 +486,10 @@ export default function Matchups({
                     <small>{game.source_time_valid && game.source_start ? `Recorded ${kick(game.source_start)}` : game.time_tbd ? `${date(game.starts_at)} · time TBD` : kick(game.starts_at)}</small>
                 </div>
                 <div className="button-row">
-                  {(game.prediction || game.fallback_prediction) && <Link className="note" href={`/basketball/briefs/${game.id}/`}>Brief ↗</Link>}
+                  {(game.prediction || game.fallback_prediction) && <>
+                    <Link className="note" href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Notebook ↗</Link>
+                    <Link className="note" href={`/basketball/briefs/${encodeURIComponent(game.id)}/`}>Brief ↗</Link>
+                  </>}
                   <button className="button secondary" type="button" onClick={() => togglePrep(game.id)}>Remove</button>
                 </div>
               </div>

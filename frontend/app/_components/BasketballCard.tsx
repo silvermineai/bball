@@ -205,6 +205,7 @@ export default function BasketballCard({
           <div className="button-row matchup-program-links" aria-label="Program research links">
             <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.away_id)}/`}>Away program dossier ↗</Link>
             <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.home_id)}/`}>Home program dossier ↗</Link>
+            <Link className="note" href={`/blog/basketball-game-${encodeURIComponent(g.id)}/`}>Game notebook ↗</Link>
           </div>
           {g.market_comparisons?.length ? (
             <div className="market-quotes">
@@ -253,9 +254,14 @@ export default function BasketballCard({
         </Link>
       </p>
       {p && (
-        <Link className="note" href={`/basketball/briefs/${g.id}/`}>
-          Read the matchup brief →
-        </Link>
+        <div className="button-row">
+          <Link className="note" href={`/blog/basketball-game-${encodeURIComponent(g.id)}/`}>
+            Open game notebook →
+          </Link>
+          <Link className="note" href={`/basketball/briefs/${encodeURIComponent(g.id)}/`}>
+            Brief ↗
+          </Link>
+        </div>
       )}
     </article>
   );
