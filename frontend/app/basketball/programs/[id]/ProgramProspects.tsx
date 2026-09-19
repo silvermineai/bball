@@ -18,15 +18,75 @@ export type ProgramProspect = {
   hometown: string | null;
 };
 
-type RecruitingClass = {
+export type RecruitingClass = {
   season: number;
   total: number;
+  page?: number;
+  page_size?: number;
   cohort?: { committed: number };
   edition: string | null;
   captured_at: string | null;
   rows: ProgramProspect[];
   unavailable_reason?: string;
 };
+
+type ProgramProspectFetcher = <T>(url: string, options?: { signal?: AbortSignal }) => Promise<T>;
+
+const MAX_CLASS_PAGES = 1001;
+
+function validPage(release: RecruitingClass, season: number, page: number, expected: RecruitingClass) {
+  const pageSize = Number(release.page_size || expected.page_size || 50);
+  return Number(release.season) === season
+    && Number(release.page || 0) === page
+    && Number(release.total) === Number(expected.total)
+    && Number.isInteger(pageSize)
+    && pageSize > 0
+    && (release.edition ?? null) === (expected.edition ?? null)
+    && (release.captured_at ?? null) === (expected.captured_at ?? null)
+    && Array.isArray(release.rows)
+    && release.rows.length <= pageSize;
+}
+
+/**
+ * Load a complete exact-program class while keeping the release immutable.
+ * A changed edition, malformed page, duplicate athlete ID or oversized export
+ * invalidates the class rather than exposing a partial or mixed board.
+ */
+export async function loadProgramProspectClass(
+  season: number,
+  teamId: string,
+  signal?: AbortSignal,
+  fetcher: ProgramProspectFetcher = fetchJson,
+): Promise<RecruitingClass | null> {
+  const request = (page: number) =>
+    `/api/basketball/research/recruiting-rankings?season=${season}&team_id=${encodeURIComponent(teamId)}&page=${page}`;
+  const first = await fetcher<RecruitingClass>(request(0), { signal });
+  const pageSize = Number(first.page_size || 50);
+  const total = Number(first.total);
+  const totalPages = Number.isInteger(total) && total >= 0 && Number.isInteger(pageSize) && pageSize > 0
+    ? Math.max(1, Math.ceil(total / pageSize))
+    : 0;
+  if (
+    first.unavailable_reason
+    || !validPage(first, season, 0, first)
+    || totalPages < 1
+    || totalPages > MAX_CLASS_PAGES
+  ) return null;
+
+  const pages = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => fetcher<RecruitingClass>(request(index + 1), { signal })),
+  );
+  const releases = [first, ...pages];
+  if (releases.some((release, page) => !validPage(release, season, page, first))) return null;
+  const rows = releases.flatMap((release) => release.rows);
+  if (rows.length !== total) return null;
+  const identities = new Set<string>();
+  for (const row of rows) {
+    if (!/^\d{1,15}$/.test(String(row.athlete_id || "")) || identities.has(String(row.athlete_id))) return null;
+    identities.add(String(row.athlete_id));
+  }
+  return { ...first, rows };
+}
 
 export type ProgramProspectRow = ProgramProspect & {
   season: number;
@@ -65,18 +125,13 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled(CLASSES.map((season) =>
-      fetchJson<RecruitingClass>(
-        `/api/basketball/research/recruiting-rankings?season=${season}&team_id=${encodeURIComponent(teamId)}&page=0`,
-        { signal: controller.signal },
-      ),
-    )).then((results) => {
+    Promise.allSettled(CLASSES.map((season) => loadProgramProspectClass(season, teamId, controller.signal))).then((results) => {
       if (controller.signal.aborted) return;
       const available = results.flatMap((result) =>
         result.status === "fulfilled"
+        && result.value
         && result.value.season >= CLASSES[0]
         && result.value.season <= CLASSES[CLASSES.length - 1]
-        && !result.value.unavailable_reason
           ? [result.value]
           : [],
       );
