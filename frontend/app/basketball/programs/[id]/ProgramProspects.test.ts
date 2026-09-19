@@ -4,6 +4,7 @@ import {
   isExactProgramProspect,
   loadProgramProspectClass,
   programProspectEvidence,
+  summarizeProgramProspects,
   type ProgramProspect,
   type RecruitingClass,
 } from "./ProgramProspects";
@@ -81,5 +82,23 @@ describe("program prospect evidence", () => {
       "2027:Unranked:missing",
     ]);
     expect(rows[0].evidence).toBe("Recorded commitment");
+  });
+
+  it("summarizes only exact program matches instead of national class totals", () => {
+    const rows = [
+      { ...prospect({ athlete_id: "10", committed_team_id: "2755" }), season: 2026, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "11", committed_team_id: null }), season: 2027, evidence: "Listed school" as const },
+      { ...prospect({ athlete_id: "12", committed_team_id: "2755" }), season: 2027, evidence: "Recorded commitment" as const },
+    ];
+    expect(summarizeProgramProspects(rows)).toEqual({
+      matched: 3,
+      committed: 2,
+      listed: 1,
+      editions: 2,
+      byClass: [
+        { season: 2026, matched: 1, committed: 1, listed: 0 },
+        { season: 2027, matched: 2, committed: 1, listed: 1 },
+      ],
+    });
   });
 });

@@ -93,6 +93,40 @@ export type ProgramProspectRow = ProgramProspect & {
   evidence: "Recorded commitment" | "Listed school";
 };
 
+export type ProgramProspectSummary = {
+  matched: number;
+  committed: number;
+  listed: number;
+  editions: number;
+  byClass: Array<{ season: number; matched: number; committed: number; listed: number }>;
+};
+
+/**
+ * Summarize only rows that match the exact program ID. The API's `total` and
+ * `cohort.committed` fields describe the full national class, so using them
+ * here would overstate a program's recruiting footprint.
+ */
+export function summarizeProgramProspects(rows: ProgramProspectRow[]): ProgramProspectSummary {
+  const byClass = new Map<number, { matched: number; committed: number; listed: number }>();
+  for (const row of rows) {
+    const current = byClass.get(row.season) || { matched: 0, committed: 0, listed: 0 };
+    current.matched += 1;
+    if (row.evidence === "Recorded commitment") current.committed += 1;
+    else current.listed += 1;
+    byClass.set(row.season, current);
+  }
+  const classRows = Array.from(byClass.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([season, values]) => ({ season, ...values }));
+  return {
+    matched: rows.length,
+    committed: rows.filter((row) => row.evidence === "Recorded commitment").length,
+    listed: rows.filter((row) => row.evidence === "Listed school").length,
+    editions: classRows.length,
+    byClass: classRows,
+  };
+}
+
 export function programProspectEvidence(row: ProgramProspect, teamId: string): ProgramProspectRow["evidence"] {
   return row.committed_team_id === teamId ? "Recorded commitment" : "Listed school";
 }
@@ -142,10 +176,7 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
   }, [teamId]);
 
   const rows = combineProgramProspectClasses(releases, teamId);
-  const total = releases.reduce((sum, release) => sum + Math.max(0, release.total), 0);
-  const committed = releases.reduce((sum, release) => sum + Math.max(0, release.cohort?.committed || 0), 0);
-  const listed = Math.max(0, total - committed);
-  const editions = new Set(releases.map((release) => release.edition).filter(Boolean)).size;
+  const summary = summarizeProgramProspects(rows);
 
   return (
     <section className="section paper-panel program-prospect-panel" aria-labelledby="program-prospect-title">
@@ -163,16 +194,23 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
         <p className="empty" role="status">Loading exact-ID prospect records…</p>
       ) : status === "unavailable" ? (
         <p className="empty" role="status">The program prospect index is temporarily unavailable.</p>
-      ) : total === 0 ? (
+      ) : summary.matched === 0 ? (
         <p className="empty" role="status">No 2026–29 prospect row in the retained classes includes this exact program ID. Missing evidence does not mean the program is inactive.</p>
       ) : (
         <>
           <div className="strip recruiting-strip">
-            <div><strong>{total.toLocaleString()}</strong><span>Matched prospect rows</span></div>
-            <div><strong>{committed.toLocaleString()}</strong><span>Recorded commitments</span></div>
-            <div><strong>{listed.toLocaleString()}</strong><span>Other listed-school rows</span></div>
-            <div><strong>{editions.toLocaleString()}</strong><span>Class editions represented</span></div>
+            <div><strong>{summary.matched.toLocaleString()}</strong><span>Matched prospect rows</span></div>
+            <div><strong>{summary.committed.toLocaleString()}</strong><span>Recorded commitments</span></div>
+            <div><strong>{summary.listed.toLocaleString()}</strong><span>Other listed-school rows</span></div>
+            <div><strong>{summary.editions.toLocaleString()}</strong><span>Class editions represented</span></div>
           </div>
+          {summary.byClass.length > 0 && <div className="table-scroll" style={{ marginTop: 20 }}>
+            <table className="data-table">
+              <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Matched rows by class</caption>
+              <thead><tr><th>Class</th><th className="numeric">Matched</th><th className="numeric">Recorded commitments</th><th className="numeric">Listed school only</th></tr></thead>
+              <tbody>{summary.byClass.map((item) => <tr key={item.season}><th scope="row">{item.season}</th><td className="numeric">{item.matched.toLocaleString()}</td><td className="numeric">{item.committed.toLocaleString()}</td><td className="numeric">{item.listed.toLocaleString()}</td></tr>)}</tbody>
+            </table>
+          </div>}
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Program evidence</th><th>Origin</th><th>Record</th></tr></thead>
@@ -189,7 +227,6 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
               ))}</tbody>
             </table>
           </div>
-          {total > rows.length && <p className="note">The matched total is larger than the first API page; open the national board for the complete retained class releases.</p>}
           {rows.length > 12 && <p className="note">Showing the 12 highest recorded ranks across the matched class rows. {rows.length.toLocaleString()} rows are available in the loaded releases.</p>}
         </>
       )}
