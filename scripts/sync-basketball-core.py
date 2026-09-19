@@ -86,6 +86,26 @@ def forecast_records(overview):
             yield game, prediction
 
 
+def published_model_metadata(model, expected_forecasts):
+    """Return the public model contract used to validate a complete D1 edition."""
+    metadata = {
+        key: model[key]
+        for key in (
+            "version",
+            "target_season",
+            "cutoff",
+            "training_games",
+            "training_seasons",
+            "settings",
+            "calibration",
+            "evaluation",
+        )
+        if key in model
+    }
+    metadata["expected_forecasts"] = expected_forecasts
+    return metadata
+
+
 def build(season=2023):
     overview = json.loads(
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
@@ -105,47 +125,21 @@ def build(season=2023):
         except sqlite3.DatabaseError:
             conn = None
     statements = []
+    forecast_rows = list(forecast_records(overview))
     # Models are queried only for identity and creation time by the public API.
     # Keep a compact, useful metadata record in D1 while the complete fitted
     # artifact remains in the static, hash-checked edition.
-    model_metadata = {
-        key: model[key]
-        for key in (
-        "version",
-        "target_season",
-        "cutoff",
-        "training_games",
-            "training_seasons",
-            "settings",
-            "calibration",
-            "evaluation",
-        )
-        if key in model
-    }
-    statements.append(
-        "INSERT OR REPLACE INTO bb_models (id,created_at,artifact_json) VALUES ("
-        + ",".join(
-            quote(v)
-            for v in (
-                model["id"],
-                overview["generated_at"],
-                json.dumps(model_metadata, separators=(",", ":")),
-            )
-        )
-        + ");\n"
-    )
+    model_metadata = published_model_metadata(model, len(forecast_rows))
     # A repeated publication can reuse the same model ID when only source
     # metadata changed. Remove that edition's old slate before rebuilding it so
     # D1 cannot retain a forecast for a game that left the current schedule.
     statements.append(
         "DELETE FROM bb_forecasts WHERE model_id=" + quote(model["id"]) + ";\n"
     )
-    forecast_rows = []
-    for game, prediction in forecast_records(overview):
+    for game, prediction in forecast_rows:
         # Primary and cold-start estimates are both Silvermine model outputs.
         # Keep the fallback rows in D1 too, so the live forecast catalog covers
         # every scheduled game instead of silently dropping unmodeled teams.
-        forecast_rows.append(game)
         statements.append(
             "INSERT OR REPLACE INTO bb_forecasts (game_id,model_id,created_at,prediction_json) VALUES ("
             + ",".join(
@@ -159,6 +153,21 @@ def build(season=2023):
             )
             + ");\n"
         )
+    # Register the edition only after all forecast statements. D1 imports can
+    # be split across requests, so publishing this receipt last prevents an
+    # unregistered partial batch from becoming the live `latest` model.
+    statements.append(
+        "INSERT OR REPLACE INTO bb_models (id,created_at,artifact_json) VALUES ("
+        + ",".join(
+            quote(v)
+            for v in (
+                model["id"],
+                overview["generated_at"],
+                json.dumps(model_metadata, separators=(",", ":")),
+            )
+        )
+        + ");\n"
+    )
 
     # Add the 2022–23 ESPN-derived season and its compact identity context.
     # Full publishers may replay these rows; INSERT OR REPLACE keeps either

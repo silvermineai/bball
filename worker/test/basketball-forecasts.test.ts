@@ -58,9 +58,39 @@ describe("basketball forecast availability", () => {
     });
     const countSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("SELECT count(*) AS total FROM bb_forecasts"))?.[0]);
     expect(countSql).toContain("JOIN bb_games g_latest ON g_latest.id=f_latest.game_id");
-    expect(countSql).toContain("LEFT JOIN bb_models m_latest ON m_latest.id=f_latest.model_id");
+    expect(countSql).toContain("JOIN bb_models m_latest ON m_latest.id=f_latest.model_id");
     expect(countSql).toContain("WHERE g_latest.season=?");
+    expect(countSql).toContain("'$.expected_forecasts'");
+    expect(countSql).toContain("HAVING COUNT(*)=COALESCE");
     expect(countBinds).toEqual([2027, 2027]);
+  });
+
+  it("keeps a newer partial publication behind the latest complete edition", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2027 }] },
+      { results: [
+        { model_id: "partial", forecasts: 1, primary_forecasts: 1, cold_start_forecasts: 0, invalid_forecasts: 0, last_created_at: "2026-09-09T00:00:00Z" },
+        { model_id: "complete", forecasts: 12, primary_forecasts: 10, cold_start_forecasts: 2, invalid_forecasts: 0, last_created_at: "2026-09-08T00:00:00Z" },
+      ] },
+      { results: [
+        { model_id: "partial", model_created_at: "2026-09-09T00:00:00Z", target_season: 2027, expected_forecasts: 12 },
+        { model_id: "complete", model_created_at: "2026-09-08T00:00:00Z", target_season: 2027, expected_forecasts: 12 },
+      ] },
+    ]);
+
+    const response = await basketballForecasts.request(
+      "/?meta=1&season=2027",
+      {},
+      { DB: { prepare, batch } },
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as { models: Array<Record<string, unknown>> };
+    expect(body.models).toMatchObject([
+      { model_id: "complete", forecasts: 12, expected_forecasts: 12, publication_complete: true },
+      { model_id: "partial", forecasts: 1, expected_forecasts: 12, publication_complete: false },
+    ]);
   });
 
   it("returns a retryable status when the D1 catalog is unavailable", async () => {

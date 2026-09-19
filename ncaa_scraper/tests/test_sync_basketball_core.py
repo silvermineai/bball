@@ -25,6 +25,18 @@ class BasketballCoreSyncTests(unittest.TestCase):
         self.assertEqual([game["id"] for game, _ in rows], ["primary", "cold"])
         self.assertEqual(rows[1][1]["home_margin"], -2)
 
+    def test_published_model_metadata_declares_complete_forecast_count(self):
+        model = {
+            "version": "basketball-efficiency-v2",
+            "target_season": 2027,
+            "training_games": 100,
+            "efficiency": [1, 2, 3],
+        }
+        metadata = MODULE.published_model_metadata(model, 1629)
+        self.assertEqual(metadata["expected_forecasts"], 1629)
+        self.assertEqual(metadata["target_season"], 2027)
+        self.assertNotIn("efficiency", metadata)
+
 
 if __name__ == "__main__":
     unittest.main()

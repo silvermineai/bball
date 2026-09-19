@@ -238,6 +238,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(artifact_json,'$.cutoff') AS cutoff,
                 json_extract(artifact_json,'$.training_games') AS training_games,
                 json_extract(artifact_json,'$.training_seasons') AS training_seasons,
+                json_extract(artifact_json,'$.expected_forecasts') AS expected_forecasts,
                 json_extract(artifact_json,'$.calibration.season') AS calibration_season,
                 json_extract(artifact_json,'$.calibration.games') AS calibration_games,
                 json_extract(artifact_json,'$.calibration.margin_half_width') AS margin_half_width,
@@ -278,6 +279,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         target_season: item.target_season == null ? null : Number(item.target_season),
         training_games: item.training_games == null ? null : Number(item.training_games),
         training_seasons: trainingSeasons,
+        expected_forecasts: item.expected_forecasts == null ? null : Number(item.expected_forecasts),
+        publication_complete: item.expected_forecasts == null
+          ? true
+          : Number(item.forecasts || 0) === Number(item.expected_forecasts),
         calibration_season: item.calibration_season == null ? null : Number(item.calibration_season),
         calibration_games: item.calibration_games == null ? null : Number(item.calibration_games),
         margin_half_width: item.margin_half_width == null ? null : Number(item.margin_half_width),
@@ -294,6 +299,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     modelsWithMetadata.sort((left, right) => {
       const leftRecord = left as Record<string, unknown>;
       const rightRecord = right as Record<string, unknown>;
+      const leftComplete = left.publication_complete ? 0 : 1;
+      const rightComplete = right.publication_complete ? 0 : 1;
+      if (leftComplete !== rightComplete) return leftComplete - rightComplete;
       const leftUsable = left.target_season == null ? 1 : 0;
       const rightUsable = right.target_season == null ? 1 : 0;
       if (leftUsable !== rightUsable) return leftUsable - rightUsable;
@@ -333,9 +341,13 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       SELECT f_latest.model_id
         FROM bb_forecasts f_latest
         JOIN bb_games g_latest ON g_latest.id=f_latest.game_id
-        LEFT JOIN bb_models m_latest ON m_latest.id=f_latest.model_id
+        JOIN bb_models m_latest ON m_latest.id=f_latest.model_id
        WHERE g_latest.season=?
        GROUP BY f_latest.model_id
+      HAVING COUNT(*)=COALESCE(
+               json_extract(m_latest.artifact_json,'$.expected_forecasts'),
+               COUNT(*)
+             )
        ORDER BY MAX(COALESCE(m_latest.created_at,f_latest.created_at)) DESC,
                 f_latest.model_id DESC
        LIMIT 1
