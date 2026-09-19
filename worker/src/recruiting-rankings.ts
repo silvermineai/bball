@@ -31,6 +31,17 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
+// Some source releases use rank=1 as a placeholder on rows that have no
+// grade or supporting position/state/region rank. The collector now rejects
+// that shape, but older retained editions must remain reproducible in D1.
+// Normalize it at read time as unavailable so a stale source placeholder can
+// never become the public #1 prospect, a rank filter hit, or class-rank points.
+const effectiveRank = (alias: string) =>
+  `CASE WHEN ${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL THEN NULL ELSE ${alias}.rank END`;
+
+const withheldPlaceholderRank = (alias: string) =>
+  `${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL`;
+
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, athlete_id, q, position, rank_max, committed, movement, history: includeHistory, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
@@ -40,18 +51,19 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     : committed === "no"
       ? "r.committed_team_id IS NULL"
       : "1=1";
-  const previousRank = `(SELECT p.rank FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
+  const currentRank = effectiveRank("r");
+  const previousRank = `(SELECT ${effectiveRank("p")} FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
   const previousCapture = `(SELECT p.captured_at FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
   const movementClause = movement === "up"
-    ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank < ${previousRank}`
+    ? `${previousRank} IS NOT NULL AND ${currentRank} IS NOT NULL AND ${currentRank} < ${previousRank}`
     : movement === "down"
-      ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank > ${previousRank}`
+      ? `${previousRank} IS NOT NULL AND ${currentRank} IS NOT NULL AND ${currentRank} > ${previousRank}`
       : movement === "unchanged"
-        ? `${previousRank} IS NOT NULL AND r.rank IS NOT NULL AND r.rank = ${previousRank}`
+        ? `${previousRank} IS NOT NULL AND ${currentRank} IS NOT NULL AND ${currentRank} = ${previousRank}`
         : movement === "new"
           ? `${previousCapture} IS NULL`
           : movement === "unavailable"
-            ? `${previousCapture} IS NOT NULL AND (${previousRank} IS NULL OR r.rank IS NULL)`
+            ? `${previousCapture} IS NOT NULL AND (${previousRank} IS NULL OR ${currentRank} IS NULL)`
             : "1=1";
   const filters = [
     "r.season=?",
@@ -59,7 +71,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     ...(athlete_id ? ["r.athlete_id=?"] : []),
     ...(search ? ["(r.name LIKE ? ESCAPE '\\' OR r.high_school LIKE ? ESCAPE '\\' OR r.hometown LIKE ? ESCAPE '\\' OR r.committed_team_name LIKE ? ESCAPE '\\')"] : []),
     ...(positionValue ? ["upper(r.position)=?"] : []),
-    ...(rank_max != null ? ["r.rank IS NOT NULL AND r.rank<=?"] : []),
+    ...(rank_max != null ? [`${currentRank} IS NOT NULL AND ${currentRank}<=?`] : []),
     committedClause,
     movementClause,
   ].join(" AND ");
@@ -79,7 +91,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const count = await withTimeout(db.prepare(
       `SELECT count(*) AS total,
               sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_total,
-              sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
               sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS grade_total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}`,
@@ -87,7 +99,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const fieldCoverage = await withTimeout(db.prepare(
       `SELECT count(*) AS total,
               sum(CASE WHEN NULLIF(TRIM(r.position),'') IS NOT NULL THEN 1 ELSE 0 END) AS position,
-              sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS rank,
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS rank,
               sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS grade,
               sum(CASE WHEN r.position_rank IS NOT NULL THEN 1 ELSE 0 END) AS position_rank,
               sum(CASE WHEN r.state_rank IS NOT NULL THEN 1 ELSE 0 END) AS state_rank,
@@ -101,10 +113,10 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         WHERE ${filters}`,
     ).bind(...binds).first<Record<string, number | null>>(), DB_TIMEOUT_MS);
     const rows = await withTimeout(db.prepare(
-      `SELECT r.athlete_id,r.name,r.position,r.grade,r.rank,r.position_rank,r.state_rank,r.region_rank,
+      `SELECT r.athlete_id,r.name,r.position,r.grade,${currentRank} AS rank,r.position_rank,r.state_rank,r.region_rank,
               r.status,r.committed_team_id,r.committed_team_name,r.school_ids_json,r.high_school,
               r.hometown,r.height_inches,r.weight_pounds,r.captured_at,r.source_url,
-              (SELECT p.rank FROM bb_espn_recruiting p
+              (SELECT ${effectiveRank("p")} FROM bb_espn_recruiting p
                 WHERE p.season=r.season AND p.athlete_id=r.athlete_id
                   AND p.edition != r.edition
                   AND p.captured_at < c.captured_at
@@ -116,13 +128,13 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
                 ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_captured_at
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}
-        ORDER BY CASE WHEN r.rank IS NULL THEN 1 ELSE 0 END,r.rank,r.name
+        ORDER BY CASE WHEN ${currentRank} IS NULL THEN 1 ELSE 0 END,${currentRank},r.name
         LIMIT 50 OFFSET ?`,
     ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
     const movement = await withTimeout(db.prepare(
       `WITH current_rows AS (
-        SELECT r.rank,
-          (SELECT p.rank FROM bb_espn_recruiting p
+        SELECT ${currentRank} AS rank,
+          (SELECT ${effectiveRank("p")} FROM bb_espn_recruiting p
             WHERE p.season=r.season AND p.athlete_id=r.athlete_id
               AND p.edition != r.edition
               AND p.captured_at < c.captured_at
@@ -151,19 +163,23 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       rank_unavailable: number | null;
     }>(), DB_TIMEOUT_MS);
     const rankQuality = await withTimeout(db.prepare(
-      `WITH ranked_rows AS (
-        SELECT r.rank
+      `WITH cohort_rows AS (
+        SELECT ${currentRank} AS rank,
+               CASE WHEN ${withheldPlaceholderRank("r")} THEN 1 ELSE 0 END AS placeholder_withheld
           FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
-         WHERE ${filters} AND r.rank IS NOT NULL
+         WHERE ${filters}
+      ), ranked_rows AS (
+        SELECT rank FROM cohort_rows WHERE rank IS NOT NULL
       ), tied_ranks AS (
         SELECT rank, count(*) AS rows
           FROM ranked_rows
          GROUP BY rank
         HAVING count(*) > 1
       )
-      SELECT count(*) AS tied_rank_values, COALESCE(sum(rows),0) AS tied_rows
-        FROM tied_ranks`,
-    ).bind(...binds).first<{ tied_rank_values: number | null; tied_rows: number | null }>(), DB_TIMEOUT_MS);
+      SELECT (SELECT count(*) FROM tied_ranks) AS tied_rank_values,
+             (SELECT COALESCE(sum(rows),0) FROM tied_ranks) AS tied_rows,
+             (SELECT COALESCE(sum(placeholder_withheld),0) FROM cohort_rows) AS withheld_placeholder_rows`,
+    ).bind(...binds).first<{ tied_rank_values: number | null; tied_rows: number | null; withheld_placeholder_rows: number | null }>(), DB_TIMEOUT_MS);
     const positions = await withTimeout(db.prepare(
       `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -175,11 +191,11 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       `SELECT CAST(r.committed_team_id AS TEXT) AS team_id,
               TRIM(r.committed_team_name) AS team,
               count(*) AS total,
-              sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
-              sum(CASE WHEN r.rank IS NOT NULL AND r.rank<=100 THEN 1 ELSE 0 END) AS top100_total,
-              sum(CASE WHEN r.rank IS NOT NULL THEN MAX(1, 101-r.rank) ELSE 0 END) AS source_rank_points,
-              min(r.rank) AS best_rank,
-              avg(CASE WHEN r.rank IS NOT NULL THEN r.rank END) AS average_rank
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS top100_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN MAX(1, 101-${currentRank}) ELSE 0 END) AS source_rank_points,
+              min(${currentRank}) AS best_rank,
+              avg(CASE WHEN ${currentRank} IS NOT NULL THEN ${currentRank} END) AS average_rank
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters} AND r.committed_team_name IS NOT NULL AND TRIM(r.committed_team_name) <> ''
         GROUP BY CAST(r.committed_team_id AS TEXT), TRIM(r.committed_team_name)
@@ -211,9 +227,9 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
     const historyRows = athlete_id && includeHistory === "1"
       ? await withTimeout(db.prepare(
-        `SELECT edition,captured_at,rank,grade,status,committed_team_id,committed_team_name,source_url
-           FROM bb_espn_recruiting
-          WHERE season=? AND athlete_id=?
+        `SELECT h.edition,h.captured_at,${effectiveRank("h")} AS rank,h.grade,h.status,h.committed_team_id,h.committed_team_name,h.source_url
+           FROM bb_espn_recruiting h
+          WHERE h.season=? AND h.athlete_id=?
           ORDER BY captured_at ASC, edition ASC`,
       ).bind(season, athlete_id).all(), DB_TIMEOUT_MS)
       : null;
@@ -268,6 +284,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ranked_rows: Number(count?.ranked_total || 0),
         tied_rank_values: Number(rankQuality?.tied_rank_values || 0),
         tied_rows: Number(rankQuality?.tied_rows || 0),
+        withheld_placeholder_rows: Number(rankQuality?.withheld_placeholder_rows || 0),
       },
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,

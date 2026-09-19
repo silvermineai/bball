@@ -56,7 +56,7 @@ export type RecruitingBoardResult = {
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
-  rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number };
+  rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number; withheld_placeholder_rows?: number };
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
@@ -428,7 +428,7 @@ export default function RecruitingBoard() {
             {result.captured_at ? <> · captured {captureLabel(result.captured_at)} UTC</> : " · capture date unavailable"}.
             {" "}The edition identifier lets a staff member reproduce this exact board after a later refresh.
           </p>
-          {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.</p>}
+          {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.{result.rank_quality.withheld_placeholder_rows ? ` ${result.rank_quality.withheld_placeholder_rows.toLocaleString()} ungraded source placeholder rank${result.rank_quality.withheld_placeholder_rows === 1 ? " was" : "s were"} withheld.` : ""}</p>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="Rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">{movementEvidence ? "Edition-to-edition movement" : "Baseline edition"}</div><h3>{movementEvidence ? "See what changed in the board." : "Establish the board before tracking change."}</h3></div><span className="note">{movementEvidence ? "Compared with the latest earlier capture for each athlete" : "No earlier capture is retained for these exact athlete IDs"}</span>
