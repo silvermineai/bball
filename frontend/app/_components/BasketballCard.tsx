@@ -7,9 +7,8 @@ import type {
   BBTeam,
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
-import { forecastSignal } from "../_lib/basketball-matchups";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastUnknownTeams } from "../_lib/forecast-lab-analysis";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 
 export default function BasketballCard({
@@ -33,7 +32,7 @@ export default function BasketballCard({
 }) {
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
-  const signal = p ? forecastSignal(p) : null;
+  const signalContext = forecastSignalContext(p, !!g.prediction);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
     .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))
@@ -117,7 +116,7 @@ export default function BasketballCard({
           )}
           <div className="match-detail muted">
             <span>Model signal</span>
-            <span>{signal?.label}</span>
+            <span>{signalContext.label}</span>
           </div>
           <div className="match-detail muted">
             <span>Forecast edition</span>
@@ -140,6 +139,10 @@ export default function BasketballCard({
             <span>
               {fmt(p.margin_low)} to {fmt(p.margin_high)}
             </span>
+          </div>
+          <div className="match-detail muted">
+            <span>80% range width</span>
+            <span>{signalContext.range_width == null ? "—" : `${fmt(signalContext.range_width, 1)} pts`}</span>
           </div>
           <div className="match-detail muted">
             <span>Estimated possessions</span>

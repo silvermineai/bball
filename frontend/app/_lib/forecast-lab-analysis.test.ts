@@ -49,6 +49,14 @@ describe("forecast lab matchup signals", () => {
       probability_edge_pp: null,
       range_width: null,
     });
+    expect(forecastSignalContext({
+      home_win_probability: 0.62,
+      margin_low: 8,
+      margin_high: -8,
+    } as BBGame["prediction"], true)).toMatchObject({
+      label: "Unavailable",
+      range_width: null,
+    });
   });
 
   it("keeps the exact cold-start reason while rejecting duplicate or malformed names", () => {
