@@ -426,8 +426,8 @@ class BasketballIngestTests(unittest.TestCase):
         ).fetchone()[0])
         self.assertEqual(stats["coordinate_count"], 2)
         self.assertEqual(stats["located_count"], 1)
-        self.assertEqual(stats["coordinates"][0]["x"], -12.5)
-        self.assertEqual(stats["coordinates"][0]["contest_id"], "9001")
+        self.assertEqual(stats["coordinates"][0][1], -12.5)
+        self.assertEqual(stats["coordinates"][0][0], "9001")
 
     def test_unknown_numeric_ncaa_source_stats_are_retained(self):
         self.conn.executescript(

@@ -667,8 +667,9 @@ def ingest(conn, dataset, year, rows, receipt):
                 "distance_count": 0, "zones": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
                 "types": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
                 # Keep the source attempt geometry alongside the aggregate
-                # profile.  The player card can therefore render a shot chart
-                # without joining on names or substituting another feed.
+                # profile. The compact positional row below keeps large
+                # player profiles below D1's per-statement limit while the
+                # player card expands it back into named fields.
                 "coordinates": [],
             })
             for i, r in enumerate(rows):
@@ -720,16 +721,19 @@ def ingest(conn, dataset, year, rows, receipt):
                 # in the aggregate table but cannot be safely attached to a
                 # player card.  Preserve nulls so coverage remains auditable.
                 if not player_id.startswith("source:"):
-                    entry["coordinates"].append({
-                        "contest_id": source_label(r.get("contest_id")),
-                        "x": number(r.get("shot_x")),
-                        "y": number(r.get("shot_y")),
-                        "distance_ft": distance,
-                        "zone": source_label(r.get("shot_zone")) or "unknown",
-                        "type": source_label(r.get("shot_type")) or "unknown",
-                        "made": made,
-                        "points": points,
-                    })
+                    # Coordinate row schema: contest_id, x, y, distance_ft,
+                    # zone, type, made, points. Keep this order stable; it is
+                    # an internal wire format shared with the player card.
+                    entry["coordinates"].append([
+                        source_label(r.get("contest_id")),
+                        number(r.get("shot_x")),
+                        number(r.get("shot_y")),
+                        distance,
+                        source_label(r.get("shot_zone")) or "unknown",
+                        source_label(r.get("shot_type")) or "unknown",
+                        made,
+                        points,
+                    ])
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_ncaa_player_shooting VALUES (?,?,?,?,?,?)",
                 [
@@ -741,7 +745,7 @@ def ingest(conn, dataset, year, rows, receipt):
                             "zones": entry["zones"], "types": entry["types"],
                             "coordinates": entry["coordinates"],
                             "coordinate_count": len(entry["coordinates"]),
-                            "located_count": sum(1 for shot in entry["coordinates"] if shot["x"] is not None and shot["y"] is not None),
+                            "located_count": sum(1 for shot in entry["coordinates"] if shot[1] is not None and shot[2] is not None),
                             "identity_basis": "source_label_only" if player_id.startswith("source:") else "ncaa_id",
                         }, separators=(",", ":")),
                     )

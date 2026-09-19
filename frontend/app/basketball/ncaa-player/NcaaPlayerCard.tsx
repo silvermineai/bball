@@ -20,7 +20,8 @@ type Stats = Record<string, number | null>;
 type SeasonRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; games: number; stats: Stats };
 type RosterRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; profile: Record<string, string | number | null> };
 type CoordinateShot = { contest_id?: string | null; x: number | null; y: number | null; distance_ft?: number | null; zone?: string | null; type?: string | null; made?: boolean | number | null; points?: number | null };
-type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: CoordinateShot[]; coordinate_count?: number; located_count?: number } };
+type CoordinateTuple = [string | null, number | null, number | null, number | null, string | null, string | null, boolean | number | null, number | null];
+type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: Array<CoordinateShot | CoordinateTuple>; coordinate_count?: number; located_count?: number } };
 type GameRow = { contest_id: string; team_id: string; game_date: string | null; team_name: string | null; opponent_name: string | null; player_name: string | null; stats: Stats };
 type GameExport = { season: number; page: number; page_size: number; total: number; rows: GameRow[] };
 type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting: ShotRow[]; games: GameRow[]; source_receipts?: Array<{ dataset: string; season: number; url: string; fetched_at: string; sha256: string }>; identity_note: string };
@@ -33,6 +34,20 @@ const stat = (row: SeasonRow | undefined, key: string) => value(row?.stats, key)
 const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+function expandCoordinate(raw: CoordinateShot | CoordinateTuple): CoordinateShot {
+  if (!Array.isArray(raw)) return raw;
+  return {
+    contest_id: raw[0],
+    x: raw[1],
+    y: raw[2],
+    distance_ft: raw[3],
+    zone: raw[4],
+    type: raw[5],
+    made: raw[6],
+    points: raw[7],
+  };
+}
 
 function SourceTotals({ rows }: { rows: SeasonRow[] }) {
   const fieldCount = rows.reduce((total, row) => total + Object.keys(row.stats).length, 0);
@@ -98,7 +113,9 @@ export default function NcaaPlayerCard() {
   }, [selected]);
   const roster = card?.rosters.find((row) => row.season === season);
   const shootingRows = useMemo(() => card?.shooting.filter((row) => row.season === season) || [], [card, season]);
-  const shotLocations = useMemo<PlayerShotLocation[]>(() => shootingRows.flatMap((row) => (row.stats.coordinates || []).map((shot, index) => ({
+  const shotLocations = useMemo<PlayerShotLocation[]>(() => shootingRows.flatMap((row) => (row.stats.coordinates || []).map((raw, index) => {
+    const shot = expandCoordinate(raw);
+    return {
     id: `${row.team_id}-${shot.contest_id || "attempt"}-${index}`,
     game: shot.contest_id || null,
     player: id,
@@ -109,7 +126,7 @@ export default function NcaaPlayerCard() {
     type: shot.type || shot.zone || null,
     location_status: shot.x == null || shot.y == null ? "missing" : "located",
     text: shot.zone || "",
-  }))), [id, shootingRows]);
+  }; })), [id, shootingRows]);
   const recentForm = useMemo(() => buildNcaaRecentForm(card?.games || [], 5), [card?.games]);
   const trajectory = useMemo(
     () => buildNcaaPlayerTrajectory(card?.seasons || []),
