@@ -227,15 +227,16 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
   const groups = new Map<string, Json[]>();
   for (const row of rows) for (const quote of (row.comparisons as Json[])) {
     if (row.status !== "settled") continue;
-    const key = `${quote.provider}|${quote.bookmaker}|${quote.market}`;
-    groups.set(key, [...(groups.get(key) || []), quote]);
+    const modelId = String(row.model_id || "");
+    const key = `${modelId}|${quote.provider}|${quote.bookmaker}|${quote.market}`;
+    groups.set(key, [...(groups.get(key) || []), { ...quote, model_id: modelId }]);
   }
   const marketMetrics = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, quotes]) => {
     const first = quotes[0];
     const direction: Record<string, number> = {};
     for (const q of quotes) if (typeof q.direction_result === "string") direction[q.direction_result] = (direction[q.direction_result] || 0) + 1;
     return {
-      provider: first.provider, bookmaker: first.bookmaker, market: first.market, games: quotes.length,
+      model_id: first.model_id, provider: first.provider, bookmaker: first.bookmaker, market: first.market, games: quotes.length,
       model_mae: mean(quotes.flatMap((q) => number(q.model_absolute_error) === null ? [] : [Number(q.model_absolute_error)])),
       market_mae: mean(quotes.flatMap((q) => number(q.market_absolute_error) === null ? [] : [Number(q.market_absolute_error)])),
       model_brier: mean(quotes.flatMap((q) => number(q.model_brier) === null ? [] : [Number(q.model_brier)])),

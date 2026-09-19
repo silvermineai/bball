@@ -122,6 +122,18 @@ describe("live research scorecard", () => {
       }),
       state_json: JSON.stringify({ home_id: "home-2", away_id: "away-2", starts_at: "2026-01-04T00:00:00.000000Z", time_tbd: 0, completed: 1, home_score: 60, away_score: 70 }),
     };
+    const quotes = [
+      {
+        id: "quote-model-1", sport: "basketball", game_id: "game-settled", provider: "licensed-feed", bookmaker: "book-1", market: "spreads",
+        captured_at: "2026-01-01T12:00:00.000000Z", updated_at: "2026-01-01T11:59:00.000000Z",
+        payload_json: JSON.stringify({ home_id: "home", away_id: "away", starts_at: "2026-01-02T00:00:00.000000Z", line: -2, home_price: 1.91, away_price: 1.91 }),
+      },
+      {
+        id: "quote-model-2", sport: "basketball", game_id: "game-settled-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads",
+        captured_at: "2026-01-03T12:00:00.000000Z", updated_at: "2026-01-03T11:59:00.000000Z",
+        payload_json: JSON.stringify({ home_id: "home-2", away_id: "away-2", starts_at: "2026-01-04T00:00:00.000000Z", line: 1, home_price: 1.91, away_price: 1.91 }),
+      },
+    ];
     const prepare = vi.fn((sql: string) => {
       const first = async () => {
         if (sql.includes("MAX(CAST")) return { season: 2027 };
@@ -132,7 +144,11 @@ describe("live research scorecard", () => {
         first,
         bind: (..._args: unknown[]) => ({
           first,
-          all: async () => sql.includes("ROW_NUMBER() OVER") ? { results: [selected, second] } : { results: [] },
+          all: async () => sql.includes("ROW_NUMBER() OVER")
+            ? { results: [selected, second] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: quotes }
+              : { results: [] },
         }),
       };
     });
@@ -141,6 +157,7 @@ describe("live research scorecard", () => {
     const body = await response.json() as { sports: { basketball: {
       metrics: { reliability: Array<{ lower: number; upper: number; games: number; predicted: number; observed: number }> };
       model_metrics: Array<Record<string, unknown>>;
+      market_metrics: Array<Record<string, unknown>>;
     } } };
     expect(body.sports.basketball.metrics.reliability).toEqual([
       { lower: 0.2, upper: 0.3, games: 1, predicted: 0.2, observed: 0 },
@@ -152,6 +169,10 @@ describe("live research scorecard", () => {
     ]);
     expect(body.sports.basketball.model_metrics[0].brier).toBeCloseTo(0.04);
     expect(body.sports.basketball.model_metrics[1].brier).toBeCloseTo(0.09);
+    expect(body.sports.basketball.market_metrics).toMatchObject([
+      { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8 },
+      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9 },
+    ]);
   });
 
   it("returns a retryable response when the scorecard warehouse is busy", async () => {

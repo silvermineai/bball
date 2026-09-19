@@ -270,6 +270,10 @@ class LedgerTests(unittest.TestCase):
             self.report()["sports"]["football"]["qualifying_market_observations"],
             3,
         )
+        self.assertEqual(
+            {metric["model_id"] for metric in self.report()["sports"]["football"]["market_metrics"]},
+            {"v1"},
+        )
         # Future timestamps cannot masquerade as a pregame capture.
         self.c.execute("UPDATE audit_markets SET captured_at=?", (timestamp(END),))
         self.assertEqual(self.report()["games"][0]["comparisons"], [])

@@ -87,6 +87,8 @@ export type SportSummary = {
     interval_coverage: number | null;
   }[];
   market_metrics: {
+    /** Exact forecast edition evaluated against this market cohort. */
+    model_id?: string;
     provider: string;
     bookmaker: string;
     market: string;

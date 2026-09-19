@@ -339,33 +339,40 @@ export default function Scorecard() {
           </p>
         </div>
       ) : (
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Market quote</th>
-                <th>Market</th>
-                <th>Matched games</th>
-                <th>Model MAE</th>
-                <th>Market MAE</th>
-                <th>Model Brier</th>
-                <th>Market Brier</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.market_metrics.map((r) => (
-                <tr key={r.provider + r.bookmaker + r.market}>
-                  <td><strong>Verified line</strong><small>Captured market quote</small></td>
-                  <td>{r.market}</td>
-                  <td>{r.games}</td>
-                  <td>{fmt(r.model_mae)}</td>
-                  <td>{fmt(r.market_mae)}</td>
-                  <td>{fmt(r.model_brier, 4)}</td>
-                  <td>{fmt(r.market_brier, 4)}</td>
+        <div>
+          <p className="note">
+            Market results stay attached to the exact model edition that produced each selected forecast. Older edition snapshots without model lineage are labeled as legacy pooled results.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model edition</th>
+                  <th>Market quote</th>
+                  <th>Market</th>
+                  <th>Matched games</th>
+                  <th>Model MAE</th>
+                  <th>Market MAE</th>
+                  <th>Model Brier</th>
+                  <th>Market Brier</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {summary.market_metrics.map((r) => (
+                  <tr key={`${r.model_id || "legacy"}|${r.provider}|${r.bookmaker}|${r.market}`}>
+                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code></th>
+                    <td><strong>Verified line</strong><small>Captured market quote</small></td>
+                    <td>{r.market}</td>
+                    <td>{r.games}</td>
+                    <td>{fmt(r.model_mae)}</td>
+                    <td>{fmt(r.market_mae)}</td>
+                    <td>{fmt(r.model_brier, 4)}</td>
+                    <td>{fmt(r.market_brier, 4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {sport === "football" && benchmark && (

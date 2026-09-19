@@ -699,11 +699,19 @@ def build_report(conn, now):
         for row in subset:
             if row["status"] == "settled":
                 for q in row["comparisons"]:
-                    grouped[(q["provider"], q["bookmaker"], q["market"])].append(q)
+                    grouped[
+                        (
+                            row["model_id"],
+                            q["provider"],
+                            q["bookmaker"],
+                            q["market"],
+                        )
+                    ].append(q)
         market_metrics = []
-        for (provider, book, market), qs in sorted(grouped.items()):
+        for (model_id, provider, book, market), qs in sorted(grouped.items()):
             market_metrics.append(
                 {
+                    "model_id": model_id,
                     "provider": provider,
                     "bookmaker": book,
                     "market": market,
