@@ -60,6 +60,17 @@ describe("market archive metadata", () => {
     expect(JSON.stringify(body)).not.toContain("CollegeBasketballData.com");
   });
 
+  it("does not label postgame ledger observations as pregame coverage", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 4, pregame: 1 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({ total: 4, pregame: 1 });
+  });
+
   it("classifies quote validation outcomes from the capture receipt", async () => {
     const makeResponse = async (capture: Record<string, number>) => {
       const batch = vi.fn().mockResolvedValue([
