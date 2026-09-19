@@ -31,6 +31,7 @@ import {
   type ForecastLabSort,
   type ForecastLabView,
 } from "../../_lib/forecast-lab-view";
+import { latestForecastLabMarketQuote } from "../../_lib/forecast-lab-market";
 
 type View = ForecastLabView;
 type Sort = ForecastLabSort;
@@ -80,7 +81,12 @@ function numeric(value: number | null | undefined, digits = 1) {
 }
 
 function marketQuote(comparisons: Comparison[], market: Comparison["market"]) {
-  return comparisons.find((quote) => quote.market === market) || null;
+  return latestForecastLabMarketQuote(comparisons, market);
+}
+
+function marketClock(value: string | null | undefined) {
+  if (!value || !Number.isFinite(Date.parse(value))) return "clock unavailable";
+  return kick(value);
 }
 
 function signed(value: number | null | undefined, suffix = " pts") {
@@ -369,7 +375,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Estimate type", "Signal context", "Probability edge from even (pp)", "Prediction range width", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Estimate type", "Signal context", "Probability edge from even (pp)", "Prediction range width", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Spread provider", "Spread bookmaker", "Spread captured at", "Spread updated at", "Latest home spread", "Spread edge", "Total provider", "Total bookmaker", "Total captured at", "Total updated at", "Latest total", "Total edge", "Moneyline provider", "Moneyline bookmaker", "Moneyline captured at", "Moneyline updated at", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -400,10 +406,22 @@ export default function ForecastLab({
         row.factorSignal?.season,
         row.factorSignal ? factorSignalModelId : null,
         row.comparisons.length,
+        marketQuote(row.comparisons, "spreads")?.provider,
+        marketQuote(row.comparisons, "spreads")?.bookmaker,
+        marketQuote(row.comparisons, "spreads")?.captured_at,
+        marketQuote(row.comparisons, "spreads")?.updated_at,
         marketQuote(row.comparisons, "spreads")?.line,
         marketQuote(row.comparisons, "spreads")?.model_difference,
+        marketQuote(row.comparisons, "totals")?.provider,
+        marketQuote(row.comparisons, "totals")?.bookmaker,
+        marketQuote(row.comparisons, "totals")?.captured_at,
+        marketQuote(row.comparisons, "totals")?.updated_at,
         marketQuote(row.comparisons, "totals")?.line,
         marketQuote(row.comparisons, "totals")?.model_difference,
+        marketQuote(row.comparisons, "h2h")?.provider,
+        marketQuote(row.comparisons, "h2h")?.bookmaker,
+        marketQuote(row.comparisons, "h2h")?.captured_at,
+        marketQuote(row.comparisons, "h2h")?.updated_at,
         marketQuote(row.comparisons, "h2h")?.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100,
         marketQuote(row.comparisons, "h2h")?.model_difference == null ? null : marketQuote(row.comparisons, "h2h")!.model_difference * 100,
         row.modelDelta?.margin,
@@ -536,7 +554,7 @@ export default function ForecastLab({
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
-              <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small>{marketQuote(row.comparisons, "spreads") && <small>Spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>Total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>No-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}</> : <span className="muted">No verified market quote</span>}</td>
+              <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong>{marketQuote(row.comparisons, "spreads") && <small>{marketQuote(row.comparisons, "spreads")!.bookmaker} · spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>{marketQuote(row.comparisons, "totals")!.bookmaker} · total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>{marketQuote(row.comparisons, "h2h")!.bookmaker} · no-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}{(["spreads", "totals", "h2h"] as const).map((market) => { const q = marketQuote(row.comparisons, market); return q ? <small key={`${market}-clock`}>{market.toUpperCase()} · {q.provider} · captured {marketClock(q.captured_at)} · updated {marketClock(q.updated_at)}</small> : null; })}</> : <span className="muted">No verified market quote</span>}</td>
               <td className="numeric">{row.modelDelta ? <><strong>{signed(row.modelDelta.margin)}</strong><small>margin vs latest</small><small>{signed(row.modelDelta.total)} total · {signed(row.modelDelta.winProbability * 100, " pp")} home probability</small></> : <span className="muted">—</span>}</td>
             </tr>;
           })}</tbody>
