@@ -9,6 +9,7 @@ type ForecastModel = {
   forecasts?: number;
   primary_forecasts?: number;
   cold_start_forecasts?: number;
+  invalid_forecasts?: number;
   last_created_at?: string | null;
   target_season?: number | null;
   training_games?: number | null;
@@ -71,7 +72,7 @@ export default function LiveBasketballForecastStatus({
 
   const rowSummary = model
     ? model.primary_forecasts != null || model.cold_start_forecasts != null
-      ? `${(model.forecasts || 0).toLocaleString()} rows (${(model.primary_forecasts ?? 0).toLocaleString()} primary${model.cold_start_forecasts ? `, ${model.cold_start_forecasts.toLocaleString()} cold-start` : ""})`
+      ? `${(model.forecasts || 0).toLocaleString()} rows (${(model.primary_forecasts ?? 0).toLocaleString()} primary${model.cold_start_forecasts ? `, ${model.cold_start_forecasts.toLocaleString()} cold-start` : ""}${model.invalid_forecasts ? `, ${model.invalid_forecasts.toLocaleString()} invalid` : ""})`
       : `${(model.forecasts || 0).toLocaleString()} rows`
     : "0 rows";
   const coverage = formatForecastCoverage(model?.forecasts, upcomingTotal);

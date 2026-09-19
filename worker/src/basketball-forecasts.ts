@@ -207,8 +207,30 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
       researchDb(c.env).prepare(
-        "SELECT model_id, count(*) AS forecasts, MIN(created_at) AS first_created_at, MAX(created_at) AS last_created_at FROM bb_forecasts GROUP BY model_id ORDER BY last_created_at DESC, model_id",
-      ),
+        `SELECT f.model_id,
+                count(*) AS forecasts,
+                SUM(CASE
+                      WHEN json_valid(f.prediction_json)=1
+                       AND json_type(CASE WHEN json_valid(f.prediction_json)=1 THEN f.prediction_json ELSE '{}' END)='object'
+                       AND COALESCE(json_extract(CASE WHEN json_valid(f.prediction_json)=1 THEN f.prediction_json ELSE '{}' END,'$.estimate_type'),'primary')<>'cold_start'
+                      THEN 1 ELSE 0 END) AS primary_forecasts,
+                SUM(CASE
+                      WHEN json_valid(f.prediction_json)=1
+                       AND json_type(CASE WHEN json_valid(f.prediction_json)=1 THEN f.prediction_json ELSE '{}' END)='object'
+                       AND json_extract(CASE WHEN json_valid(f.prediction_json)=1 THEN f.prediction_json ELSE '{}' END,'$.estimate_type')='cold_start'
+                      THEN 1 ELSE 0 END) AS cold_start_forecasts,
+                SUM(CASE
+                      WHEN json_valid(f.prediction_json)=0
+                        OR json_type(CASE WHEN json_valid(f.prediction_json)=1 THEN f.prediction_json ELSE '{}' END)<>'object'
+                      THEN 1 ELSE 0 END) AS invalid_forecasts,
+                MIN(f.created_at) AS first_created_at,
+                MAX(f.created_at) AS last_created_at
+           FROM bb_forecasts f
+           JOIN bb_games g ON g.id=f.game_id
+          WHERE g.season=?
+          GROUP BY f.model_id
+          ORDER BY last_created_at DESC,f.model_id`,
+      ).bind(season),
       researchDb(c.env).prepare(
         `SELECT id AS model_id, created_at AS model_created_at,
                 json_extract(artifact_json,'$.version') AS version,
@@ -249,6 +271,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       }
       return {
         ...item,
+        forecasts: Number(item.forecasts || 0),
+        primary_forecasts: Number(item.primary_forecasts || 0),
+        cold_start_forecasts: Number(item.cold_start_forecasts || 0),
+        invalid_forecasts: Number(item.invalid_forecasts || 0),
         target_season: item.target_season == null ? null : Number(item.target_season),
         training_games: item.training_games == null ? null : Number(item.training_games),
         training_seasons: trainingSeasons,

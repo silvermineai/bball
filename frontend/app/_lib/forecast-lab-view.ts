@@ -5,6 +5,9 @@ export type ForecastModelOption = {
   model_id: string;
   version?: string | null;
   forecasts: number;
+  primary_forecasts?: number;
+  cold_start_forecasts?: number;
+  invalid_forecasts?: number;
   last_created_at?: string | null;
   target_season?: number | null;
 };
@@ -19,7 +22,10 @@ export const formatForecastModelOption = (model: ForecastModelOption): string =>
     : "date unavailable";
   const fingerprint = model.model_id.split("-").pop() || model.model_id;
   const metadata = model.target_season == null ? " · metadata unavailable" : "";
-  return `${model.version || "Unlabeled edition"} · ${date} · ${model.forecasts.toLocaleString()} rows · ${fingerprint}${metadata}`;
+  const estimateMix = model.primary_forecasts != null || model.cold_start_forecasts != null
+    ? ` (${(model.primary_forecasts ?? 0).toLocaleString()} primary, ${(model.cold_start_forecasts ?? 0).toLocaleString()} cold-start${model.invalid_forecasts ? `, ${model.invalid_forecasts.toLocaleString()} invalid` : ""})`
+    : "";
+  return `${model.version || "Unlabeled edition"} · ${date} · ${model.forecasts.toLocaleString()} rows${estimateMix} · ${fingerprint}${metadata}`;
 };
 
 const views = new Set<ForecastLabView>(["all", "scenario", "cold-start", "market", "model-delta"]);

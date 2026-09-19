@@ -525,10 +525,16 @@ describe("bball api", () => {
   });
 
   it("publishes forecast model metadata without exposing the stored coefficient artifact", async () => {
-    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const bound: Array<{ sql: string; values: unknown[] }> = [];
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn((...values: unknown[]) => {
+        bound.push({ sql, values });
+        return {};
+      }),
+    }));
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2027 }] },
-      { results: [{ model_id: "basketball-efficiency-v1-test", forecasts: 12, primary_forecasts: 10, cold_start_forecasts: 2, first_created_at: "2026-09-08T00:00:00Z", last_created_at: "2026-09-08T01:00:00Z" }] },
+      { results: [{ model_id: "basketball-efficiency-v1-test", forecasts: 12, primary_forecasts: 10, cold_start_forecasts: 2, invalid_forecasts: 0, first_created_at: "2026-09-08T00:00:00Z", last_created_at: "2026-09-08T01:00:00Z" }] },
       { results: [{
         model_id: "basketball-efficiency-v1-test",
         model_created_at: "2026-09-08T00:00:00Z",
@@ -559,6 +565,7 @@ describe("bball api", () => {
       model_id: "basketball-efficiency-v1-test",
       primary_forecasts: 10,
       cold_start_forecasts: 2,
+      invalid_forecasts: 0,
       target_season: 2027,
       training_games: 22932,
       training_seasons: [2023, 2024, 2025, 2026],
@@ -568,6 +575,13 @@ describe("bball api", () => {
       evaluation_interval_coverage: 0.79,
     });
     expect(body.models[0]).not.toHaveProperty("efficiency");
+    const modelAggregate = bound.find(({ sql }) => sql.includes("primary_forecasts"));
+    expect(modelAggregate?.sql).toContain("JOIN bb_games g ON g.id=f.game_id");
+    expect(modelAggregate?.sql).toContain("WHERE g.season=?");
+    expect(modelAggregate?.sql).toContain("json_valid(f.prediction_json)");
+    expect(modelAggregate?.sql).toContain("'$.estimate_type')='cold_start'");
+    expect(modelAggregate?.sql).toContain("AS invalid_forecasts");
+    expect(modelAggregate?.values).toEqual([2027]);
     expect(batch).toHaveBeenCalledOnce();
   });
 

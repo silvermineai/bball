@@ -47,6 +47,9 @@ type LiveModel = {
   model_id: string;
   version?: string | null;
   forecasts: number;
+  primary_forecasts?: number;
+  cold_start_forecasts?: number;
+  invalid_forecasts?: number;
   last_created_at: string | null;
   target_season: number | null;
   cutoff: string | null;
@@ -370,7 +373,9 @@ export default function ForecastLab({
       <section className="section two-col forecast-release-status" style={{ marginTop: 26 }}>
           <div className="paper-panel">
             <div className="eyebrow">Release health / model clock</div>
-            <h2>{(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.</h2>
+            <h2>{liveModel && (liveModel.primary_forecasts != null || liveModel.cold_start_forecasts != null)
+              ? `${liveModel.forecasts.toLocaleString()} forecast rows are registered: ${(liveModel.primary_forecasts ?? 0).toLocaleString()} primary, ${(liveModel.cold_start_forecasts ?? 0).toLocaleString()} cold-start${liveModel.invalid_forecasts ? `, ${liveModel.invalid_forecasts.toLocaleString()} invalid` : ""}.`
+              : `${(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.`}</h2>
             <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
             <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
             <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate recorded clock layer currently has {(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>

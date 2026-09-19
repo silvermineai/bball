@@ -27,10 +27,12 @@ describe("forecast lab filters", () => {
     expect(formatForecastModelOption({
       model_id: "basketball-efficiency-v2-65f2629d5bd3",
       version: "basketball-efficiency-v2",
-      forecasts: 1579,
+      forecasts: 1629,
+      primary_forecasts: 1579,
+      cold_start_forecasts: 50,
       last_created_at: "2026-09-12T07:18:21.423011Z",
       target_season: 2027,
-    })).toBe("basketball-efficiency-v2 · Sep 12 · 1,579 rows · 65f2629d5bd3");
+    })).toBe("basketball-efficiency-v2 · Sep 12 · 1,629 rows (1,579 primary, 50 cold-start) · 65f2629d5bd3");
     expect(formatForecastModelOption({
       model_id: "basketball-efficiency-v2-338f9be0c3b6",
       forecasts: 1579,
