@@ -18,6 +18,7 @@ import {
 import { fmt } from "../../_lib/format";
 import { comparisonParams } from "../../_lib/player-comparison";
 import { publicArchiveText } from "../../_lib/public-text";
+import type { ProspectProgram } from "../../_lib/prospect-schools";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
   if (!player) return <span className="note">No recorded player in this evidence set</span>;
@@ -39,6 +40,14 @@ export const metadata = {
 export default function Page() {
   const rawData = getRecruiting();
   const rosters = getRosters();
+  const programDirectory = (JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/teams.json"), "utf8"),
+  ) as { teams?: Array<{ id: string | number; name: string; shortName?: string | null }> }).teams
+    ?.map((program) => ({
+      id: String(program.id),
+      name: program.name,
+      shortName: program.shortName || null,
+    } satisfies ProspectProgram)) || [];
   // Keep the retained evidence and hashes in the private archive/API, while
   // keeping provider URLs out of the public page payload and initial HTML.
   const data = JSON.parse(JSON.stringify(rawData, (key, value) => {
@@ -171,7 +180,7 @@ export default function Page() {
       </section>
       <RecruitingWire articles={recruitingNews} />
       <MovementWatch />
-      <RecruitingBoard />
+      <RecruitingBoard programs={programDirectory} />
       <AuthorizedIntake />
       <section className="section recruiting-context">
         <div className="section-heading">

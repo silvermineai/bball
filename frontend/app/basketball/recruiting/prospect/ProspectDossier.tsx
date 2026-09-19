@@ -10,6 +10,7 @@ import {
   toggleRecruitingShortlist,
   type RecruitingShortlistEntry,
 } from "../../../_lib/recruiting-shortlist";
+import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-schools";
 
 type Prospect = {
   athlete_id: string;
@@ -31,6 +32,7 @@ type Prospect = {
   source_url: string;
   previous_rank?: number | null;
   previous_captured_at?: string | null;
+  school_ids?: string[];
 };
 type RankHistoryEntry = {
   edition: string;
@@ -61,7 +63,7 @@ const movement = (current: number | null, previous: number | null, previousCaptu
   return { change, label: change > 0 ? `▲ ${change}` : change < 0 ? `▼ ${Math.abs(change)}` : "= 0" };
 };
 
-export default function ProspectPage() {
+export default function ProspectPage({ programs }: { programs: ProspectProgram[] }) {
   const params = useSearchParams();
   const season = /^\d{4}$/.test(params.get("season") || "") ? params.get("season")! : "2027";
   const athleteId = /^\d{1,15}$/.test(params.get("id") || "") ? params.get("id")! : "";
@@ -135,6 +137,9 @@ export default function ProspectPage() {
   }, [prospect]);
 
   const shortlistKey = prospect ? recruitingShortlistKey(season, prospect.athlete_id) : "";
+  const recordedSchools = prospect
+    ? prospectSchools(prospect.school_ids, programs, prospect.committed_team_id)
+    : [];
   const isShortlisted = Boolean(shortlistKey && shortlist.some((entry) => entry.key === shortlistKey));
   const toggleProspectShortlist = () => {
     if (!prospect) return;
@@ -220,6 +225,14 @@ export default function ProspectPage() {
               <article className="paper-panel"><div className="eyebrow">Player profile</div><h2>{prospect.position || "Position not listed"}</h2><dl className="roster-stat-grid"><div><dt>High school</dt><dd>{prospect.high_school || "—"}</dd></div><div><dt>Hometown</dt><dd>{prospect.hometown || "—"}</dd></div><div><dt>Status</dt><dd>{prospect.status || "—"}</dd></div><div><dt>State rank</dt><dd>{rank(prospect.state_rank)}</dd></div><div><dt>Region rank</dt><dd>{rank(prospect.region_rank)}</dd></div><div><dt>Height</dt><dd>{prospect.height_inches == null ? "—" : `${number(prospect.height_inches / 12, 1)} ft`}</dd></div><div><dt>Weight</dt><dd>{prospect.weight_pounds == null ? "—" : `${number(prospect.weight_pounds)} lb`}</dd></div><div><dt>Athlete ID</dt><dd>{prospect.athlete_id}</dd></div></dl></article>
               <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>Rank, grade and commitment fields are recorded values.</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or eligibility determination.</p>{prospect.committed_team_id && <p className="note"><Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(prospect.committed_team_id)}`}>Compare that program&apos;s role workload and prior production →</Link></p>}<small className="note">Edition {edition || "unavailable"} · Athlete ID {prospect.athlete_id}</small></article>
             </div>
+          </section>
+          <section className="section paper-panel" id="recorded-schools" aria-labelledby="recorded-schools-title">
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">School list / retained prospect row</div><h2 id="recorded-schools-title">Programs attached to this record.</h2></div>
+              <span className="note">{recordedSchools.length ? `${recordedSchools.length} recorded` : "No schools recorded"}</span>
+            </div>
+            <p className="note">This reproduces the school IDs stored with this exact prospect capture. A listed school does not by itself establish an offer, active interest, a visit or a commitment. Only the separately recorded commitment field receives that label.</p>
+            {recordedSchools.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Program</th><th>Status in this record</th><th>Program research</th></tr></thead><tbody>{recordedSchools.map((school) => <tr key={school.id}><th scope="row">{school.resolved ? <Link href={`/basketball/programs/${encodeURIComponent(school.id)}/`}>{school.name}</Link> : school.name}<small>Program ID {school.id}</small></th><td>{school.committed ? <strong>Recorded commitment</strong> : "Listed school"}</td><td>{school.resolved ? <><Link href={`/basketball/programs/${encodeURIComponent(school.id)}/`}>Open dossier →</Link><small><Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(school.id)}`}>Inspect roster fit →</Link></small></> : <span className="note">Program directory match unavailable</span>}</td></tr>)}</tbody></table></div> : <p className="empty">This retained prospect row contains no school IDs. Missing school evidence remains unavailable.</p>}
           </section>
           <section className="section paper-panel" aria-labelledby="prospect-publisher-mentions">
             <div className="section-heading" style={{ marginBottom: 12 }}>

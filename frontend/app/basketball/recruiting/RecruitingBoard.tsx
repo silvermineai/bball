@@ -12,6 +12,7 @@ import {
   toggleRecruitingShortlist,
   type RecruitingShortlistEntry,
 } from "../../_lib/recruiting-shortlist";
+import { prospectSchools, type ProspectProgram } from "../../_lib/prospect-schools";
 
 type Prospect = {
   athlete_id: string;
@@ -30,6 +31,7 @@ type Prospect = {
   height_inches: number | null;
   weight_pounds: number | null;
   source_url: string;
+  school_ids?: string[];
   previous_rank?: number | null;
   previous_captured_at?: string | null;
 };
@@ -142,7 +144,7 @@ const fitHref = (teamId: string | null | undefined) => teamId
   ? `/basketball/recruiting/fit/?team=${encodeURIComponent(teamId)}`
   : null;
 
-export default function RecruitingBoard() {
+export default function RecruitingBoard({ programs }: { programs: ProspectProgram[] }) {
   const [season, setSeason] = useState("2027");
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("");
@@ -215,9 +217,12 @@ export default function RecruitingBoard() {
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
+  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "recorded_school_count", "recorded_schools", "recorded_school_ids", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
   const shortlistExportHeaders = exportHeaders;
-  const exportRow = (row: Prospect) => [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, row.status, row.high_school, row.hometown, row.athlete_id, result?.edition || null, result?.captured_at || null];
+  const exportRow = (row: Prospect) => {
+    const schools = prospectSchools(row.school_ids, programs, row.committed_team_id);
+    return [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, schools.length, schools.map((school) => school.name).join("; "), schools.map((school) => school.id).join("; "), row.status, row.high_school, row.hometown, row.athlete_id, result?.edition || null, result?.captured_at || null];
+  };
   const downloadPage = () => {
     if (!result) return;
     downloadCsv(`prospect-board-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
@@ -279,7 +284,7 @@ export default function RecruitingBoard() {
   const removeShortlist = (key: string) => setShortlist((current) => current.filter((entry) => entry.key !== key));
   const downloadShortlist = () => {
     if (!shortlist.length) return;
-    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
+    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, null, null, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
     downloadCsv("prospect-board-shortlist.csv", toCsv(shortlistExportHeaders, rows));
     setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
   };
@@ -465,8 +470,10 @@ export default function RecruitingBoard() {
           <div className="table-wrap">
             <table className="data-table">
               <caption className="sr-only">{season} basketball recruiting prospects</caption>
-              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
-              <tbody>{result.rows.map((row) => <tr key={row.athlete_id}>
+              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Recorded schools</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
+              <tbody>{result.rows.map((row) => {
+                const schools = prospectSchools(row.school_ids, programs, row.committed_team_id);
+                return <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
                 <td>{!row.previous_captured_at ? <span className="note">New / —</span> : row.previous_rank == null || row.rank == null ? <span className="note">Rank unavailable<small>prior capture retained</small></span> : <span className={row.previous_rank - row.rank > 0 ? "movement-up" : row.previous_rank - row.rank < 0 ? "movement-down" : "note"}>{row.previous_rank - row.rank > 0 ? "▲" : row.previous_rank - row.rank < 0 ? "▼" : "="} {Math.abs(row.previous_rank - row.rank)} <small>from #{row.previous_rank}</small></span>}</td>
                 <td><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}`}><strong>{row.name}</strong></Link><br /><span className="note">{row.high_school || "High school not listed"}</span></td>
@@ -474,10 +481,11 @@ export default function RecruitingBoard() {
                 <td>{grade(row.grade)}</td>
                 <td>{size(row.height_inches, row.weight_pounds)}</td>
                 <td>{row.committed_team_name ? row.committed_team_id ? <><Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link>{fitHref(row.committed_team_id) && <small><Link href={fitHref(row.committed_team_id)!}>Open roster fit →</Link></small>}</> : row.committed_team_name : row.status || "—"}</td>
+                <td>{schools.length ? <><strong>{schools.length}</strong><small>{schools.slice(0, 3).map((school) => school.name).join(" · ")}{schools.length > 3 ? ` · +${schools.length - 3}` : ""}</small><small><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}#recorded-schools`}>Open school list →</Link></small></> : <span className="note">Not recorded</span>}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><small>{result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{result.edition || "Edition unavailable"}</small></td>
                 <td><button className="button secondary" type="button" onClick={() => toggleShortlist(row)} aria-pressed={shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id))}>{shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id)) ? "Saved" : "Save"}</button></td>
-              </tr>)}</tbody>
+              </tr>})}</tbody>
             </table>
           </div>
           <div className="pagination" aria-label="Prospect board pages">
@@ -485,7 +493,7 @@ export default function RecruitingBoard() {
             <button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button>
             <button className="button secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Next</button>
           </div>
-          <p className="section-note">Class edition captured {result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "—"}. Rank, grade and status remain recorded evidence; they do not establish a roster spot, transfer date or eligibility.</p>
+          <p className="section-note">Class edition captured {result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "—"}. Recorded school lists reproduce the schools attached to the prospect row; they do not establish an offer, active interest, a commitment, roster spot, transfer date or eligibility.</p>
         </>
       )}
     </section>
