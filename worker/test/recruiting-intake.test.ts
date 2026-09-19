@@ -7,7 +7,15 @@ describe("authorized recruiting intake coverage", () => {
   });
 
   it("publishes counts and provider clocks without row payloads", async () => {
-    const first = vi.fn().mockResolvedValue({ total: 2, latest_captured_at: "2026-09-08T12:00:00Z" });
+    const first = vi.fn()
+      .mockResolvedValueOnce({ total: 2, latest_captured_at: "2026-09-08T12:00:00Z" })
+      .mockResolvedValueOnce({
+        edition: "espn-edition",
+        latest_captured_at: "2026-09-08T13:00:00Z",
+        rows: 383,
+        ranked_rows: 100,
+        committed_rows: 42,
+      });
     const all = vi.fn()
       .mockResolvedValueOnce({ results: [{ provider: "Licensed Feed", rows: 2, latest_captured_at: "2026-09-08T12:00:00Z" }] })
       .mockResolvedValueOnce({ results: [{ status: "reported_transfer", rows: 2 }] })
@@ -16,18 +24,24 @@ describe("authorized recruiting intake coverage", () => {
     const prepare = vi.fn().mockReturnValue({ bind });
     const response = await recruitingIntake.request("/?season=2027&publication_check=unit", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; policy: string };
+    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; public_rankings: { rows: number; ranked_rows: number; committed_rows: number; edition: string }; policy: string };
     expect(body.total).toBe(2);
     expect(body.providers).toHaveLength(1);
     expect(body.statuses).toHaveLength(1);
     expect(body.provider_feeds).toHaveLength(1);
+    expect(body.public_rankings).toEqual(expect.objectContaining({
+      rows: 383,
+      ranked_rows: 100,
+      committed_rows: 42,
+      edition: "espn-edition",
+    }));
     expect(body.provider_capabilities).toEqual([
       expect.objectContaining({
         kinds: ["portal", "players", "teams"],
         event_date_available: false,
       }),
     ]);
-    expect(body.policy).toContain("Coverage metadata only");
+    expect(body.policy).toContain("zero authorized-intake count means no licensed transfer/eligibility export");
     expect(JSON.stringify(body)).not.toContain("player_name");
   });
 

@@ -17,6 +17,14 @@ type IntakeCoverage = {
     docs_url: string;
     policy: string;
   }>;
+  public_rankings?: {
+    rows: number;
+    ranked_rows: number;
+    committed_rows: number;
+    edition: string | null;
+    latest_captured_at: string | null;
+    policy: string;
+  };
   source?: string;
   unavailable_reason?: string;
   policy: string;
@@ -84,11 +92,15 @@ export default function AuthorizedIntake() {
               <strong>{clock(coverage.latest_captured_at)}</strong>
               <span>latest capture clock</span>
             </div>
+            {coverage.public_rankings && <div>
+              <strong>{coverage.public_rankings.rows.toLocaleString()}</strong>
+              <span>public prospect rows · {coverage.public_rankings.ranked_rows.toLocaleString()} ranked</span>
+            </div>}
             <div className="recruiting-intake-detail">
               {coverage.total || providerFeeds.length ? <>
                 {coverage.providers.map((provider, index) => <span key={provider.provider}>Licensed feed {index + 1} · {provider.rows.toLocaleString()} intake rows · {clock(provider.latest_captured_at)}</span>)}
                 {providerFeeds.map((feed, index) => <span key={`${feed.provider}-${feed.kind}`}>Licensed feed {index + 1} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
-              </> : <span>No licensed feed export has been imported for this season. The reviewed school-announcement file remains the visible player-level evidence.</span>}
+              </> : <span>No authorized transfer or eligibility export has been imported for this season. The public prospect board and reviewed school-announcement file remain separate evidence.</span>}
             </div>
             {providerCapabilities.length > 0 && <div className="recruiting-intake-detail">
               {providerCapabilities.map((capability, index) => <span key={capability.provider}>

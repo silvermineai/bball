@@ -47,7 +47,7 @@ recruitingIntake.get("/", async (c) => {
     }
   }
   try {
-    const [summary, providers, statuses, providerFeeds] = await withTimeout(Promise.all([
+    const [summary, providers, statuses, providerFeeds, publicRankings] = await withTimeout(Promise.all([
       researchDb(c.env).prepare(
         `SELECT count(*) AS total, max(captured_at) AS latest_captured_at
          FROM bb_recruiting_intake WHERE season=?`,
@@ -65,6 +65,23 @@ recruitingIntake.get("/", async (c) => {
          FROM bb_cbbd_recruiting WHERE season=?
          GROUP BY provider, kind ORDER BY latest_captured_at DESC, provider, kind`,
       ).bind(season).all<{ provider: string; kind: string; rows: number; latest_captured_at: string | null }>(),
+      researchDb(c.env).prepare(
+        `SELECT c.edition, c.captured_at AS latest_captured_at,
+                count(r.athlete_id) AS rows,
+                sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_rows,
+                sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_rows
+           FROM bb_espn_recruiting_current c
+           LEFT JOIN bb_espn_recruiting r
+             ON r.season=c.season AND r.edition=c.edition
+          WHERE c.season=?
+          GROUP BY c.edition, c.captured_at`,
+      ).bind(season).first<{
+        edition: string | null;
+        latest_captured_at: string | null;
+        rows: number;
+        ranked_rows: number | null;
+        committed_rows: number | null;
+      }>(),
     ]), DB_TIMEOUT_MS);
     const publicProviders = providers.results.map((provider) => ({ ...provider, provider: "Authorized feed" }));
     const publicProviderFeeds = providerFeeds.results.map((feed) => ({ ...feed, provider: "Authorized feed" }));
@@ -77,7 +94,15 @@ recruitingIntake.get("/", async (c) => {
       statuses: statuses.results,
       provider_feeds: publicProviderFeeds,
       provider_capabilities: publicCapabilities,
-      policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
+      public_rankings: {
+        rows: Number(publicRankings?.rows || 0),
+        ranked_rows: Number(publicRankings?.ranked_rows || 0),
+        committed_rows: Number(publicRankings?.committed_rows || 0),
+        edition: publicRankings?.edition || null,
+        latest_captured_at: publicRankings?.latest_captured_at || null,
+        policy: "Public prospect rankings are separate from authorized transfer, eligibility and portal intake; they do not establish roster status or eligibility.",
+      },
+      policy: "Coverage metadata only. A zero authorized-intake count means no licensed transfer/eligibility export is loaded; the separate public prospect board is reported above when available. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
@@ -91,9 +116,17 @@ recruitingIntake.get("/", async (c) => {
       statuses: [],
       provider_feeds: [],
       provider_capabilities: providerCapabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability),
+      public_rankings: {
+        rows: 0,
+        ranked_rows: 0,
+        committed_rows: 0,
+        edition: null,
+        latest_captured_at: null,
+        policy: "Public prospect ranking coverage is unavailable while the warehouse is unavailable.",
+      },
       source: "unavailable",
       unavailable_reason: "The recruiting coverage warehouse did not respond within the read window.",
-      policy: "Coverage metadata only. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
+      policy: "Coverage metadata only. The warehouse response did not establish whether authorized intake or public prospect rows exist.",
     }, 200, { "Cache-Control": "no-store" });
   }
 });
