@@ -30,7 +30,15 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
     .sort((left, right) => timestamp(right).localeCompare(timestamp(left)))[0] || null;
   const spread = newest("spreads");
   const total = newest("totals");
-  const timestamps = valid
+  const timestamps = comparisons
+    .filter((comparison) => {
+      if (comparison.market === "h2h") {
+        return comparison.market_home_probability != null
+          && Number.isFinite(comparison.market_home_probability)
+          && Number.isFinite(comparison.model_difference);
+      }
+      return valid.includes(comparison);
+    })
     .map((comparison) => comparison.updated_at || comparison.captured_at)
     .filter(Boolean)
     .sort();

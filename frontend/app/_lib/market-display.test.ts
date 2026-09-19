@@ -50,8 +50,8 @@ describe("market comparison display", () => {
   });
 
   it("retains a moneyline-only comparison for compact boards", () => {
-    const summary = summarizeMarketLines([{ ...comparison("h2h", 0.043), market_home_probability: 0.512 }]);
-    expect(summary).toMatchObject({ spread: null, total: null, homeProbability: 0.512, winProbabilityGap: 0.043 });
+    const summary = summarizeMarketLines([{ ...comparison("h2h", 0.043), market_home_probability: 0.512, updated_at: "2026-09-12T15:35:00Z" }]);
+    expect(summary).toMatchObject({ spread: null, total: null, homeProbability: 0.512, winProbabilityGap: 0.043, capturedAt: "2026-09-12T15:35:00Z" });
     expect(hasQualifiedMarketComparison(summary)).toBe(true);
   });
 });
