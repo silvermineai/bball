@@ -25,6 +25,10 @@ type LiveFootballForecastPage = {
 };
 
 type LiveFootballScorecardResponse = {
+  live?: boolean;
+  season?: number | null;
+  total?: number;
+  page_size?: number;
   games?: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
@@ -93,14 +97,38 @@ export async function loadLiveFootballForecasts(
 /** Load only exact, ledger-qualified market comparisons for football games. */
 export async function loadLiveFootballMarketComparisons(signal?: AbortSignal) {
   const response = await fetch(
-    "/api/research/scorecard?sport=football&limit=5000",
+    "/api/research/scorecard?sport=football&season=2026&limit=5000",
     { signal },
   );
   if (!response.ok) throw new Error("Live football market comparisons unavailable.");
   const payload = await response.json() as LiveFootballScorecardResponse;
+  const total = Number(payload.total);
+  const pageSize = Number(payload.page_size);
+  if (payload.live !== true || payload.season !== 2026 || !Number.isInteger(total) || total < 0
+    || !Number.isInteger(pageSize) || pageSize < 1 || !Array.isArray(payload.games)
+    || payload.games.length !== total || payload.games.length > pageSize) {
+    throw new Error("Live football market comparisons returned an incomplete cohort.");
+  }
+  const ids = new Set(payload.games.map((game) => game.game_id));
+  if (ids.size !== payload.games.length) {
+    throw new Error("Live football market comparisons returned duplicate games.");
+  }
   return Object.fromEntries(
-    (payload.games || []).map((game) => [game.game_id, game.comparisons || []]),
+    payload.games.map((game) => [game.game_id, game.comparisons || []]),
   ) as Record<string, Comparison[]>;
+}
+
+/**
+ * Once the live scorecard has loaded, it is authoritative even when a game has
+ * no qualifying quote. Clearing the static comparison prevents an older
+ * snapshot from surviving a live eligibility or schedule change.
+ */
+export function applyLiveFootballMarketComparisons(
+  game: Game,
+  liveComparisons: Record<string, Comparison[]> | null,
+): Game {
+  if (liveComparisons === null) return game;
+  return { ...game, market_comparisons: liveComparisons[game.id] || [] };
 }
 
 export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballForecastRow[]) {

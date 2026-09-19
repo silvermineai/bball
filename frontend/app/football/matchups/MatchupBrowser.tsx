@@ -7,6 +7,7 @@ import MatchCard from "../../_components/MatchCard";
 import { date, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
+  applyLiveFootballMarketComparisons,
   loadLiveFootballForecasts,
   loadLiveFootballMarketComparisons,
   mergeLiveFootballForecasts,
@@ -320,7 +321,7 @@ export default function MatchupBrowser({
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
             <MatchCard
-              game={(liveMarketComparisons?.[g.id] || g.market_comparisons)?.length ? { ...g, market_comparisons: liveMarketComparisons?.[g.id] || g.market_comparisons } : g}
+              game={applyLiveFootballMarketComparisons(g, liveMarketComparisons)}
               efficiencyScenario={scenarioByGame.get(g.id)}
               intel={matchupIntel ? {
                 playerSeason: matchupIntel.playerSeason,

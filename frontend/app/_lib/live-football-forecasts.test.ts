@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { applyLiveFootballMarketComparisons, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -88,13 +88,51 @@ describe("live football forecast merge", () => {
 
   it("indexes exact ledger market comparisons by game", async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => new Response(JSON.stringify({
-      games: [{ game_id: "game-1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
-    }), { status: 200 })) as typeof fetch;
+    let requested = "";
+    globalThis.fetch = (async (input) => {
+      requested = String(input);
+      return new Response(JSON.stringify({
+        live: true,
+        season: 2026,
+        total: 1,
+        page_size: 5000,
+        games: [{ game_id: "game-1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+      }), { status: 200 });
+    }) as typeof fetch;
     await expect(loadLiveFootballMarketComparisons()).resolves.toMatchObject({
       "game-1": [{ provider: "licensed", market: "spreads", line: -3.5 }],
     });
+    expect(requested).toContain("sport=football&season=2026&limit=5000");
     globalThis.fetch = originalFetch;
+  });
+
+  it("rejects a partial live market cohort instead of rendering incomplete evidence", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      live: true,
+      season: 2026,
+      total: 2,
+      page_size: 5000,
+      games: [{ game_id: "game-1", comparisons: [] }],
+    }), { status: 200 })) as typeof fetch;
+    await expect(loadLiveFootballMarketComparisons()).rejects.toThrow("incomplete cohort");
+    globalThis.fetch = originalFetch;
+  });
+
+  it("clears a stale static quote when the live ledger has no qualifying comparison", () => {
+    const staticQuote = {
+      provider: "archive",
+      bookmaker: "book",
+      market: "spreads" as const,
+      captured_at: "2026-09-01T12:00:00Z",
+      updated_at: "2026-09-01T12:00:00Z",
+      line: -3.5,
+      model_difference: 2,
+      market_home_probability: null,
+    };
+    const published = { ...game(null), market_comparisons: [staticQuote] };
+    expect(applyLiveFootballMarketComparisons(published, null).market_comparisons).toEqual([staticQuote]);
+    expect(applyLiveFootballMarketComparisons(published, {}).market_comparisons).toEqual([]);
   });
 
   it("updates the complete model estimate and retains non-model card evidence", () => {
