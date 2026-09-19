@@ -85,16 +85,20 @@ type ResearchCapture = {
   season?: number;
   summary_count?: number;
   summary_with_pickcenter?: number;
+  source_rows?: number;
+  rows_with_lines?: number;
   accepted_markets?: number;
   rejected_records?: number;
   market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "validated_quotes" | "unknown";
 };
 
 function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captured_at" | "market_status">): ResearchCapture["market_status"] {
-  if (capture.summary_count === 0) return "no_eligible_summaries";
-  if (capture.summary_with_pickcenter === 0) return "no_quotes_published";
+  const sourceRows = capture.summary_count ?? capture.source_rows;
+  const pricedRows = capture.summary_with_pickcenter ?? capture.rows_with_lines;
+  if (sourceRows === 0) return "no_eligible_summaries";
   if ((capture.accepted_markets ?? 0) > 0) return "validated_quotes";
-  if ((capture.rejected_records ?? 0) > 0) return "quotes_failed_validation";
+  if ((capture.rejected_records ?? 0) > 0 && pricedRows !== 0) return "quotes_failed_validation";
+  if (pricedRows === 0) return "no_quotes_published";
   return "unknown";
 }
 
@@ -104,14 +108,22 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
   if (typeof row.payload_json !== "string" || typeof row.captured_at !== "string") return null;
   try {
     const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
-    if (payload.provider !== "ESPN Summary" || typeof payload.sport !== "string") return null;
-    const result: ResearchCapture = { provider: "ESPN Summary", captured_at: row.captured_at };
+    const provider = payload.provider;
+    if (provider !== "ESPN Summary" && provider !== "CollegeBasketballData.com API") return null;
+    if (typeof payload.sport !== "string") return null;
+    const result: ResearchCapture = { provider, captured_at: row.captured_at };
     if (typeof payload.season === "number" && Number.isInteger(payload.season)) result.season = payload.season;
     if (typeof payload.summary_count === "number" && Number.isInteger(payload.summary_count) && payload.summary_count >= 0) {
       result.summary_count = payload.summary_count;
     }
     if (typeof payload.summary_with_pickcenter === "number" && Number.isInteger(payload.summary_with_pickcenter) && payload.summary_with_pickcenter >= 0) {
       result.summary_with_pickcenter = payload.summary_with_pickcenter;
+    }
+    if (typeof payload.source_rows === "number" && Number.isInteger(payload.source_rows) && payload.source_rows >= 0) {
+      result.source_rows = payload.source_rows;
+    }
+    if (typeof payload.rows_with_lines === "number" && Number.isInteger(payload.rows_with_lines) && payload.rows_with_lines >= 0) {
+      result.rows_with_lines = payload.rows_with_lines;
     }
     if (typeof payload.accepted_markets === "number" && Number.isInteger(payload.accepted_markets) && payload.accepted_markets >= 0) {
       result.accepted_markets = payload.accepted_markets;
@@ -195,7 +207,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=?").bind(sport),
-          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider')=? ORDER BY captured_at DESC LIMIT 1").bind(sport, "ESPN Summary"),
+          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider') IN ('ESPN Summary','CollegeBasketballData.com API') ORDER BY captured_at DESC LIMIT 1").bind(sport),
         ]), DB_TIMEOUT_MS)
         : Promise.resolve(null);
       const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);

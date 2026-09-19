@@ -12,10 +12,9 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
-from pathlib import Path
 
 from .cbbd_recruiting import LICENSE_URL, PROVIDER, api_key, capture_clock, compact, digest, fetch_json
-from .football_sources import ROOT, utcnow
+from .football_sources import utcnow
 from .odds_feed import normalize_name, schedules
 from .research_ledger import connect, timestamp
 
@@ -60,6 +59,7 @@ def ingest(conn: sqlite3.Connection, rows: list[dict], receipt: dict, games: lis
         (receipt_id, captured, PROVIDER, compact(receipt)),
     )
     accepted = rejected = 0
+    rows_with_lines = 0
     for row in rows:
         try:
             game = match_game(row, games)
@@ -69,7 +69,19 @@ def ingest(conn: sqlite3.Connection, rows: list[dict], receipt: dict, games: lis
             lines = row.get("lines")
             if not isinstance(lines, list):
                 raise ValueError("Missing lines array")
-            for line in lines:
+        except (KeyError, TypeError, ValueError):
+            # A bad event identity or started game rejects only that source row.
+            # Other rows in the bounded response remain eligible for import.
+            rejected += 1
+            continue
+        if lines:
+            rows_with_lines += 1
+        # Validate each provider line independently. One malformed bookmaker
+        # must not discard another complete moneyline for the same game.
+        for line in lines:
+            try:
+                if not isinstance(line, dict):
+                    raise ValueError("Malformed line record")
                 provider = str(line.get("provider", "")).strip()
                 if not provider or len(provider) > 100:
                     raise ValueError("Missing line provider")
@@ -91,8 +103,27 @@ def ingest(conn: sqlite3.Connection, rows: list[dict], receipt: dict, games: lis
                     (key, "basketball", game["id"], PROVIDER, provider, "h2h", captured, captured, compact(payload)),
                 )
                 accepted += 1
-        except (KeyError, TypeError, ValueError):
-            rejected += 1
+            except (KeyError, TypeError, ValueError):
+                rejected += 1
+    # Keep the receipt self-describing so the publication API can distinguish a
+    # valid no-lines response from malformed rows without exposing raw quotes.
+    status = (
+        "validated_quotes" if accepted > 0 else
+        "quotes_failed_validation" if rejected > 0 else
+        "no_quotes_published" if rows else
+        "no_eligible_summaries"
+    )
+    conn.execute(
+        "UPDATE audit_receipts SET payload_json=? WHERE id=?",
+        (compact({
+            **receipt,
+            "source_rows": len(rows),
+            "rows_with_lines": rows_with_lines,
+            "accepted_markets": accepted,
+            "rejected_records": rejected,
+            "market_status": status,
+        }), receipt_id),
+    )
     conn.commit()
     return {"accepted_markets": accepted, "rejected_records": rejected}
 

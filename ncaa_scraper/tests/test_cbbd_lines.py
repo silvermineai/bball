@@ -77,6 +77,35 @@ class CbbdLinesTests(unittest.TestCase):
         self.assertEqual(quote[:3], ("CollegeBasketballData.com API", "consensus", "h2h"))
         self.assertAlmostEqual(__import__("json").loads(quote[3])["home_price"], 1.689655, places=5)
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 1)
+        receipt = __import__("json").loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(receipt["source_rows"], 2)
+        self.assertEqual(receipt["rows_with_lines"], 1)
+        self.assertEqual(receipt["accepted_markets"], 1)
+        self.assertEqual(receipt["rejected_records"], 1)
+        self.assertEqual(receipt["market_status"], "validated_quotes")
+
+    def test_ingest_keeps_valid_bookmaker_when_another_line_is_malformed(self):
+        rows = [{
+            "gameId": 44,
+            "startDate": "2026-11-10T02:00:00Z",
+            "homeTeam": "Home State",
+            "awayTeam": "Away State",
+            "lines": [
+                {"provider": "consensus", "homeMoneyline": -145, "awayMoneyline": 125},
+                {"provider": "broken", "homeMoneyline": "OFF", "awayMoneyline": 125},
+            ],
+        }]
+        result = ingest(
+            self.conn,
+            rows,
+            {"captured_at": "2026-11-09T20:00:00Z", "license_url": "https://collegebasketballdata.com/terms"},
+            [GAME],
+            "2026-11-09T20:00:00Z",
+        )
+        self.assertEqual(result, {"accepted_markets": 1, "rejected_records": 1})
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 1)
+        receipt = __import__("json").loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(receipt["market_status"], "validated_quotes")
 
 
 if __name__ == "__main__":

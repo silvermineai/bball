@@ -30,6 +30,36 @@ describe("market archive metadata", () => {
     expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
   });
 
+  it("surfaces the authorized basketball lines capture diagnostics", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 4, pregame: 4 }] },
+      { results: [{ receipts: 3, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "CollegeBasketballData.com API",
+        sport: "basketball",
+        season: 2027,
+        source_rows: 12,
+        rows_with_lines: 4,
+        accepted_markets: 4,
+        rejected_records: 1,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    const body = await response.json() as Record<string, unknown>;
+    expect(body).toMatchObject({
+      research_capture: {
+        season: 2027,
+        source_rows: 12,
+        rows_with_lines: 4,
+        accepted_markets: 4,
+        rejected_records: 1,
+        market_status: "validated_quotes",
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("CollegeBasketballData.com");
+  });
+
   it("classifies quote validation outcomes from the capture receipt", async () => {
     const makeResponse = async (capture: Record<string, number>) => {
       const batch = vi.fn().mockResolvedValue([
