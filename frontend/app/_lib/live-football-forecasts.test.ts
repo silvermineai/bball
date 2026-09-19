@@ -94,15 +94,16 @@ describe("live football forecast merge", () => {
       return new Response(JSON.stringify({
         live: true,
         season: 2026,
+        model: "football-v1",
         total: 1,
         page_size: 5000,
-        games: [{ game_id: "game-1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+        games: [{ game_id: "game-1", model_id: "football-v1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
       }), { status: 200 });
     }) as typeof fetch;
-    await expect(loadLiveFootballMarketComparisons()).resolves.toMatchObject({
-      "game-1": [{ provider: "licensed", market: "spreads", line: -3.5 }],
+    await expect(loadLiveFootballMarketComparisons(undefined, "football-v1")).resolves.toMatchObject({
+      "game-1": { model_id: "football-v1", comparisons: [{ provider: "licensed", market: "spreads", line: -3.5 }] },
     });
-    expect(requested).toContain("sport=football&season=2026&limit=5000");
+    expect(requested).toContain("sport=football&season=2026&model=football-v1&limit=5000");
     globalThis.fetch = originalFetch;
   });
 
@@ -111,11 +112,12 @@ describe("live football forecast merge", () => {
     globalThis.fetch = (async () => new Response(JSON.stringify({
       live: true,
       season: 2026,
+      model: "football-v1",
       total: 2,
       page_size: 5000,
       games: [{ game_id: "game-1", comparisons: [] }],
     }), { status: 200 })) as typeof fetch;
-    await expect(loadLiveFootballMarketComparisons()).rejects.toThrow("incomplete cohort");
+    await expect(loadLiveFootballMarketComparisons(undefined, "football-v1")).rejects.toThrow("incomplete cohort");
     globalThis.fetch = originalFetch;
   });
 
@@ -133,6 +135,32 @@ describe("live football forecast merge", () => {
     const published = { ...game(null), market_comparisons: [staticQuote] };
     expect(applyLiveFootballMarketComparisons(published, null).market_comparisons).toEqual([staticQuote]);
     expect(applyLiveFootballMarketComparisons(published, {}).market_comparisons).toEqual([]);
+  });
+
+  it("fails closed when a market quote belongs to another model edition", () => {
+    const prediction = {
+      home_margin: 3,
+      total: 48,
+      home_score: 25.5,
+      away_score: 22.5,
+      home_win_probability: 0.58,
+      margin_low: -20,
+      margin_high: 26,
+      model_id: "football-v2",
+    };
+    const quote = {
+      provider: "licensed",
+      bookmaker: "book",
+      market: "spreads" as const,
+      captured_at: "2026-09-10T12:00:00Z",
+      updated_at: "2026-09-10T12:00:00Z",
+      line: -3.5,
+      model_difference: 2,
+      market_home_probability: null,
+    };
+    const comparisons = { "game-1": { model_id: "football-v1", comparisons: [quote] } };
+    expect(applyLiveFootballMarketComparisons(game(prediction), comparisons).market_comparisons).toEqual([]);
+    expect(applyLiveFootballMarketComparisons(game(prediction), { "game-1": { model_id: "football-v2", comparisons: [quote] } }).market_comparisons).toEqual([quote]);
   });
 
   it("updates the complete model estimate and retains non-model card evidence", () => {
@@ -159,6 +187,8 @@ describe("live football forecast merge", () => {
       away_score: 22,
       margin_low: -16,
       margin_high: 30,
+      model_id: "football-live-v2",
+      created_at: "2026-09-12T14:00:00Z",
     }] satisfies LiveFootballForecastRow[];
     const merged = mergeLiveFootballForecasts([game(original)], rows)[0];
     expect(merged.prediction).toMatchObject({
@@ -169,6 +199,8 @@ describe("live football forecast merge", () => {
       away_score: 22,
       margin_low: -16,
       margin_high: 30,
+      model_id: "football-live-v2",
+      generated_at: "2026-09-12T14:00:00Z",
     });
     expect(merged.home_name).toBe("Home updated");
   });

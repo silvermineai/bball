@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game } from "../_lib/data";
 import type { FootballCardIntel } from "../_lib/football-brief";
-import { fmt, kick } from "../_lib/format";
+import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
@@ -58,6 +58,10 @@ export default function MatchCard({
               {fmt(p.margin_low)} to {fmt(p.margin_high)}
             </span>
           </div>
+          <small className="factor-source">
+            Model edition <code>{p.model_id || "unlabeled"}</code>
+            {p.generated_at ? ` · registered ${date(p.generated_at)}` : " · registration clock unavailable"}
+          </small>
         </>
       ) : (
         <p className="note">

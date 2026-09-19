@@ -87,7 +87,7 @@ export default function LiveFootballDashboardForecastTable({
   const [sort, setSort] = useState<FootballMatchupSort>("date");
   const [signal, setSignal] = useState<FootballMatchupSignal>("all");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
-  const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
+  const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]> | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -95,11 +95,18 @@ export default function LiveFootballDashboardForecastTable({
       // Keep the football landing board aligned with the complete registered
       // edition; a first-page-only refresh leaves later games on static data.
       loadLiveFootballForecasts(controller.signal),
-      loadLiveFootballMarketComparisons(controller.signal),
-    ]).then(([forecastResult, marketResult]) => {
-      if (controller.signal.aborted) return;
-      if (forecastResult.status === "fulfilled") setGames(mergeLiveFootballForecasts(initialGames, forecastResult.value));
-      if (marketResult.status === "fulfilled") setMarketComparisons(marketResult.value);
+    ]).then(([forecastResult]) => {
+      if (controller.signal.aborted || forecastResult.status !== "fulfilled") return;
+      const nextGames = mergeLiveFootballForecasts(initialGames, forecastResult.value);
+      setGames(nextGames);
+      const modelId = forecastResult.value.find((row) => row.model_id)?.model_id;
+      if (!modelId) return;
+      return loadLiveFootballMarketComparisons(controller.signal, modelId).then((marketResult) => {
+        if (controller.signal.aborted) return;
+        setMarketComparisons(Object.fromEntries(
+          Object.entries(marketResult).map(([gameId, entry]) => [gameId, entry.model_id === modelId ? entry.comparisons : []]),
+        ));
+      });
     });
     return () => controller.abort();
   }, [initialGames]);
@@ -108,12 +115,12 @@ export default function LiveFootballDashboardForecastTable({
   const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
   const rows = sortFootballMatchups(signalGames, sort).slice(0, rowLimit);
   const marketGames = signalGames.filter((game) => {
-    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    const market = summarizeMarketLines(marketComparisons?.[game.id] || []);
     return hasQualifiedMarketComparison(market);
   }).length;
   const downloadFilteredCsv = () => downloadCsv(
     "football-forecast-board.csv",
-    toCsv(footballForecastCsvHeaders, footballForecastCsvRows(signalGames, marketComparisons)),
+    toCsv(footballForecastCsvHeaders, footballForecastCsvRows(signalGames, marketComparisons || {})),
   );
   return (
     <>
@@ -156,7 +163,7 @@ export default function LiveFootballDashboardForecastTable({
         <tbody>
           {rows.map((game) => {
             const prediction = game.prediction!;
-            const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+            const market = summarizeMarketLines(marketComparisons?.[game.id] || []);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>

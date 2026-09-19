@@ -4,6 +4,7 @@ import type { Comparison } from "./research-types";
 export type LiveFootballForecastRow = {
   game_id: string;
   model_id?: string;
+  created_at?: string;
   kickoff: string;
   home_id: string;
   away_id: string;
@@ -27,9 +28,15 @@ type LiveFootballForecastPage = {
 type LiveFootballScorecardResponse = {
   live?: boolean;
   season?: number | null;
+  model?: string | null;
   total?: number;
   page_size?: number;
-  games?: Array<{ game_id: string; comparisons?: Comparison[] }>;
+  games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[] }>;
+};
+
+export type LiveFootballMarketComparisonSet = {
+  model_id?: string;
+  comparisons: Comparison[];
 };
 
 export async function loadLiveFootballForecasts(
@@ -95,16 +102,17 @@ export async function loadLiveFootballForecasts(
 }
 
 /** Load only exact, ledger-qualified market comparisons for football games. */
-export async function loadLiveFootballMarketComparisons(signal?: AbortSignal) {
+export async function loadLiveFootballMarketComparisons(signal: AbortSignal | undefined, modelId: string) {
+  if (!modelId) throw new Error("Live football market comparisons require a model edition.");
   const response = await fetch(
-    "/api/research/scorecard?sport=football&season=2026&limit=5000",
+    `/api/research/scorecard?sport=football&season=2026&model=${encodeURIComponent(modelId)}&limit=5000`,
     { signal },
   );
   if (!response.ok) throw new Error("Live football market comparisons unavailable.");
   const payload = await response.json() as LiveFootballScorecardResponse;
   const total = Number(payload.total);
   const pageSize = Number(payload.page_size);
-  if (payload.live !== true || payload.season !== 2026 || !Number.isInteger(total) || total < 0
+  if (payload.live !== true || payload.season !== 2026 || payload.model !== modelId || !Number.isInteger(total) || total < 0
     || !Number.isInteger(pageSize) || pageSize < 1 || !Array.isArray(payload.games)
     || payload.games.length !== total || payload.games.length > pageSize) {
     throw new Error("Live football market comparisons returned an incomplete cohort.");
@@ -114,8 +122,11 @@ export async function loadLiveFootballMarketComparisons(signal?: AbortSignal) {
     throw new Error("Live football market comparisons returned duplicate games.");
   }
   return Object.fromEntries(
-    payload.games.map((game) => [game.game_id, game.comparisons || []]),
-  ) as Record<string, Comparison[]>;
+    payload.games.map((game) => [game.game_id, {
+      model_id: game.model_id,
+      comparisons: game.comparisons || [],
+    }]),
+  ) as Record<string, LiveFootballMarketComparisonSet>;
 }
 
 /**
@@ -125,10 +136,19 @@ export async function loadLiveFootballMarketComparisons(signal?: AbortSignal) {
  */
 export function applyLiveFootballMarketComparisons(
   game: Game,
-  liveComparisons: Record<string, Comparison[]> | null,
+  liveComparisons: Record<string, LiveFootballMarketComparisonSet> | null,
+  expectedModelId?: string,
 ): Game {
   if (liveComparisons === null) return game;
-  return { ...game, market_comparisons: liveComparisons[game.id] || [] };
+  const linked = liveComparisons[game.id];
+  const modelId = game.prediction?.model_id || expectedModelId;
+  // A quote's model difference is only meaningful beside the exact forecast
+  // edition that produced it. Missing lineage fails closed rather than
+  // allowing a prior edition's line to appear beside a newer estimate.
+  if (!linked || !linked.model_id || !modelId || linked.model_id !== modelId) {
+    return { ...game, market_comparisons: [] };
+  }
+  return { ...game, market_comparisons: linked.comparisons };
 }
 
 export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballForecastRow[]) {
@@ -161,6 +181,8 @@ export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballFore
       away_score: live.away_score ?? game.prediction!.away_score,
       margin_low: live.margin_low ?? game.prediction!.margin_low,
       margin_high: live.margin_high ?? game.prediction!.margin_high,
+      model_id: live.model_id || game.prediction?.model_id,
+      generated_at: live.created_at || game.prediction?.generated_at,
     };
     return {
       ...game,

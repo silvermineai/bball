@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game } from "../../_lib/data";
 import MatchCard from "../../_components/MatchCard";
-import { date, kick } from "../../_lib/format";
+import { date, fmt, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import {
   applyLiveFootballMarketComparisons,
@@ -12,7 +12,7 @@ import {
   loadLiveFootballMarketComparisons,
   mergeLiveFootballForecasts,
 } from "../../_lib/live-football-forecasts";
-import type { Comparison } from "../../_lib/research-types";
+import type { LiveFootballMarketComparisonSet } from "../../_lib/live-football-forecasts";
 import type { FootballSlateIntel } from "../../_lib/football-brief";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
 import {
@@ -29,6 +29,7 @@ export default function MatchupBrowser({
   efficiencyScenarios = [],
   matchupIntel,
   marketCoverage,
+  modelId,
 }: {
   games: Game[];
   generated: string;
@@ -38,6 +39,7 @@ export default function MatchupBrowser({
     market_observations: number;
     pregame_market_observations: number;
   };
+  modelId?: string;
 }) {
   const params = useSearchParams();
   const requestedPicks = params.get("picks") || "";
@@ -54,8 +56,9 @@ export default function MatchupBrowser({
     [prepHydrated, setPrepHydrated] = useState(false),
     [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
+    [liveModelId, setLiveModelId] = useState<string | null>(null),
     [liveError, setLiveError] = useState(""),
-    [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, Comparison[]> | null>(null),
+    [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, LiveFootballMarketComparisonSet> | null>(null),
     [liveMarketError, setLiveMarketError] = useState("");
   const activeGames = liveGames || games;
   const filteredRows = activeGames.filter(
@@ -77,6 +80,14 @@ export default function MatchupBrowser({
   );
   const rows = sortFootballMatchups(filteredRows, sort);
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const marketLinkedRows = activeGames
+    .map((game) => ({
+      game,
+      comparisons: applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [],
+    }))
+    .filter(({ game, comparisons }) => Boolean(game.prediction) && comparisons.length > 0)
+    .sort((left, right) => left.game.kickoff.localeCompare(right.game.kickoff));
+  const linkedComparisons = (game: Game) => applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [];
   const prepRows = prepIds
     .map((id) => activeGames.find((game) => game.id === id))
     .filter((game): game is Game => !!game);
@@ -141,6 +152,7 @@ export default function MatchupBrowser({
       .then((rows) => {
         if (!controller.signal.aborted) {
           setLiveGames(mergeLiveFootballForecasts(games, rows));
+          setLiveModelId(rows.find((row) => row.model_id)?.model_id || null);
           setLiveError("");
         }
       })
@@ -152,8 +164,9 @@ export default function MatchupBrowser({
     return () => controller.abort();
   }, [games]);
   useEffect(() => {
+    if (!liveModelId) return;
     const controller = new AbortController();
-    loadLiveFootballMarketComparisons(controller.signal)
+    loadLiveFootballMarketComparisons(controller.signal, liveModelId)
       .then((comparisons) => {
         if (!controller.signal.aborted) {
           setLiveMarketComparisons(comparisons);
@@ -166,7 +179,7 @@ export default function MatchupBrowser({
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [liveModelId]);
   return (
     <>
       <div className="toolbar">
@@ -268,7 +281,7 @@ export default function MatchupBrowser({
             ? `${liveError} Showing the published snapshot.`
             : "Checking the live D1 forecast edition…"}
       </p>
-      {liveMarketComparisons && <p className="note" role="status">Live football market ledger checked; {Object.values(liveMarketComparisons).filter((quotes) => quotes.length).length.toLocaleString()} games have one or more qualifying comparisons.</p>}
+      {liveMarketComparisons && <p className="note" role="status">Live football market ledger checked; {marketLinkedRows.length.toLocaleString()} upcoming games have one or more qualifying comparisons from the active model edition.</p>}
       {liveMarketError && <p className="note" role="status">{liveMarketError} The archived market coverage panel remains available.</p>}
       <section className="paper-panel football-market-status" aria-labelledby="football-market-status-title">
         <div>
@@ -284,6 +297,61 @@ export default function MatchupBrowser({
         </p>
         <Link href="/research/markets/?sport=football">Open the football market archive →</Link>
       </section>
+      {liveMarketComparisons && (
+        <section className="paper-panel football-market-links" aria-labelledby="football-market-links-title">
+          <div className="section-heading" style={{ marginBottom: 12 }}>
+            <div>
+              <div className="eyebrow">MODEL / MARKET CONNECTION</div>
+              <h2 id="football-market-links-title">Upcoming forecasts with a qualifying line</h2>
+            </div>
+            <span className="note">{marketLinkedRows.length.toLocaleString()} games linked</span>
+          </div>
+          <p className="note">
+            These rows join the published forecast to a timestamped pregame quote for the exact game. Spread and total gaps are model estimate minus the observed line; moneyline rows show the model and market home win probabilities.
+          </p>
+          {marketLinkedRows.length ? (
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Matchup / start</th>
+                    <th className="numeric">Model margin</th>
+                    <th className="numeric">Model home win</th>
+                    <th className="numeric">Spread / gap</th>
+                    <th className="numeric">Total / gap</th>
+                    <th>Captured</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {marketLinkedRows.slice(0, 12).map(({ game, comparisons }) => {
+                    const spread = comparisons.find((quote) => quote.market === "spreads");
+                    const total = comparisons.find((quote) => quote.market === "totals");
+                    const captured = comparisons[0]?.captured_at;
+                    return (
+                      <tr key={game.id}>
+                        <td>
+                          <Link href={`/research/game/?sport=football&id=${encodeURIComponent(game.id)}`}>
+                            {game.away_name} at {game.home_name}
+                          </Link>
+                          <small>{kick(game.kickoff)}</small>
+                        </td>
+                        <td className="numeric">{fmt(game.prediction?.home_margin)}</td>
+                        <td className="numeric">{game.prediction?.home_win_probability == null ? "—" : `${fmt(game.prediction.home_win_probability * 100)}%`}</td>
+                        <td className="numeric">{spread?.line == null ? "—" : `${spread.line > 0 ? "+" : ""}${fmt(spread.line)} / ${spread.model_difference >= 0 ? "+" : ""}${fmt(spread.model_difference)}`}</td>
+                        <td className="numeric">{total?.line == null ? "—" : `${fmt(total.line)} / ${total.model_difference >= 0 ? "+" : ""}${fmt(total.model_difference)}`}</td>
+                        <td>{captured ? kick(captured) : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="empty">No upcoming model forecast currently has a qualifying market quote attached.</p>
+          )}
+          {marketLinkedRows.length > 12 && <p className="note" style={{ marginTop: 12 }}>Showing the first 12 linked games by scheduled start. The cards and research ledger retain all {marketLinkedRows.length.toLocaleString()} connections.</p>}
+        </section>
+      )}
       <div className="section-heading" style={{ marginBottom: 20 }}>
         <p>{rows.length} games in the filtered slate</p>
         <button
@@ -293,7 +361,7 @@ export default function MatchupBrowser({
             "football-matchups.csv",
             toCsv(
               ["Scheduled start", "Week", "Away program", "Home program", "Away conference", "Home conference", "Neutral", "Projected away score", "Projected home score", "Home win probability", "Projected home margin", "Margin range low", "Margin range high", "Archived home spread", "Archived total", "Model spread gap", "Model total gap", "Market source", "Market observed at", "Qualifying market quote count", "Market quote snapshots"],
-              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.total, g.market?.margin_difference, g.market?.total == null || g.prediction?.total == null ? null : g.prediction.total - g.market.total, g.market?.source, g.market?.observed_at, (liveMarketComparisons?.[g.id] || g.market_comparisons || []).length, (liveMarketComparisons?.[g.id] || g.market_comparisons || []).map(comparisonQuoteSummary).join(" | ")]),
+              rows.map((g) => [g.kickoff, g.week, g.away_name, g.home_name, g.away_conference, g.home_conference, g.neutral ? "yes" : "no", g.prediction?.away_score, g.prediction?.home_score, g.prediction?.home_win_probability == null ? null : g.prediction.home_win_probability * 100, g.prediction?.home_score == null || g.prediction?.away_score == null ? null : g.prediction.home_score - g.prediction.away_score, g.prediction?.margin_low, g.prediction?.margin_high, g.market?.home_spread, g.market?.total, g.market?.margin_difference, g.market?.total == null || g.prediction?.total == null ? null : g.prediction.total - g.market.total, g.market?.source, g.market?.observed_at, linkedComparisons(g).length, linkedComparisons(g).map(comparisonQuoteSummary).join(" | ")]),
             ),
           )}
         >
@@ -321,7 +389,19 @@ export default function MatchupBrowser({
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
             <MatchCard
-              game={applyLiveFootballMarketComparisons(g, liveMarketComparisons)}
+              game={(() => {
+                const current = applyLiveFootballMarketComparisons(g, liveMarketComparisons, modelId);
+                return current.prediction
+                  ? {
+                      ...current,
+                      prediction: {
+                        ...current.prediction,
+                        model_id: current.prediction.model_id || modelId,
+                        generated_at: current.prediction.generated_at || generated,
+                      },
+                    }
+                  : current;
+              })()}
               efficiencyScenario={scenarioByGame.get(g.id)}
               intel={matchupIntel ? {
                 playerSeason: matchupIntel.playerSeason,

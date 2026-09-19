@@ -9,6 +9,10 @@ export type Forecast = {
   home_win_probability: number;
   margin_low: number;
   margin_high: number;
+  /** Registered model edition that produced this estimate. */
+  model_id?: string;
+  /** Forecast registration/capture clock for the model edition. */
+  generated_at?: string;
 };
 export type Game = {
   id: string;

@@ -23,6 +23,8 @@ const querySchema = z.object({
   ]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(5000).default(5000),
+  /** Restrict selection to one immutable forecast edition for live comparisons. */
+  model: z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/).optional(),
 });
 
 export const researchScorecard = new Hono<{ Bindings: Bindings }>();
@@ -301,8 +303,13 @@ async function latestSeason(db: D1Database, sport: Sport): Promise<number | null
   return row?.season == null ? null : Number(row.season);
 }
 
-async function loadSport(db: D1Database, sport: Sport, season: number, now: string): Promise<{ rows: Json[]; registeredVersions: number }> {
-  const count = await db.prepare("SELECT count(*) AS total FROM audit_predictions WHERE sport=? AND CAST(json_extract(payload_json,'$.season') AS INTEGER)=? AND registered_at<=?").bind(sport, season, now).first<{ total: number }>();
+async function loadSport(db: D1Database, sport: Sport, season: number, now: string, modelId?: string): Promise<{ rows: Json[]; registeredVersions: number }> {
+  const modelClause = modelId ? " AND model_id=?" : "";
+  const countBinds: Array<string | number> = [sport, season, now];
+  if (modelId) countBinds.push(modelId);
+  const count = await db.prepare(`SELECT count(*) AS total FROM audit_predictions WHERE sport=? AND CAST(json_extract(payload_json,'$.season') AS INTEGER)=? AND registered_at<=?${modelClause}`).bind(...countBinds).first<{ total: number }>();
+  const predictionBinds: Array<string | number> = [now, sport, season, now];
+  if (modelId) predictionBinds.push(modelId);
   const result = await db.prepare(`
     WITH latest_state AS (
       SELECT sport, game_id, payload_json,
@@ -322,14 +329,14 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
         END AS exclusion
         FROM audit_predictions p
         LEFT JOIN latest_state s ON s.sport=p.sport AND s.game_id=p.game_id AND s.state_rank=1
-       WHERE p.sport=? AND CAST(json_extract(p.payload_json,'$.season') AS INTEGER)=? AND p.registered_at<=?
+       WHERE p.sport=? AND CAST(json_extract(p.payload_json,'$.season') AS INTEGER)=? AND p.registered_at<=?${modelId ? " AND p.model_id=?" : ""}
     ), ranked AS (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY CASE WHEN exclusion IS NULL THEN 0 ELSE 1 END, CASE WHEN exclusion IS NULL THEN registered_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN registered_at ELSE NULL END DESC, CASE WHEN exclusion IS NULL THEN generated_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN generated_at ELSE NULL END DESC, id) AS pick
         FROM candidates
     )
     SELECT id,sport,game_id,model_id,generated_at,registered_at,starts_at,time_tbd,payload_json,state_json,exclusion
       FROM ranked WHERE pick=1 ORDER BY starts_at,sport,game_id
-  `).bind(now, sport, season, now).all();
+  `).bind(...predictionBinds).all();
   const rawRows = result.results as Array<Record<string, unknown>>;
   const quotesResult = await db.prepare("SELECT id,sport,game_id,provider,bookmaker,market,captured_at,updated_at,payload_json FROM audit_markets WHERE sport=? ORDER BY captured_at,updated_at,id").bind(sport).all();
   const quotesByGame = new Map<string, Json[]>();
@@ -365,12 +372,12 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
   return { rows, registeredVersions: Number(count?.total || 0) };
 }
 
-async function loadReport(db: D1Database, sport: Sport | "all", season: number | undefined, now: string) {
+async function loadReport(db: D1Database, sport: Sport | "all", season: number | undefined, now: string, modelId?: string) {
   const sports = sport === "all" ? SPORTS : [sport];
   const seasons = await Promise.all(sports.map(async (code) => ({ code, season: season ?? await latestSeason(db, code) })));
   const loaded = await Promise.all(seasons.map(async ({ code, season: target }) => {
     const [data, marketCount, unmatchedCount] = await Promise.all([
-      target === null ? Promise.resolve({ rows: [], registeredVersions: 0 }) : loadSport(db, code, target, now),
+      target === null ? Promise.resolve({ rows: [], registeredVersions: 0 }) : loadSport(db, code, target, now, modelId),
       db.prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(code).first<{ total: number }>(),
       db.prepare("SELECT count(*) AS total FROM audit_unmatched WHERE sport=?").bind(code).first<{ total: number }>(),
     ]);
@@ -394,7 +401,7 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
 }
 
 researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
-  const { sport, season, q, status, page, limit } = c.req.valid("query");
+  const { sport, season, q, status, page, limit, model } = c.req.valid("query");
   const cache = edgeCache();
   const cacheKey = new Request(c.req.url, { method: "GET" });
   if (cache) {
@@ -408,7 +415,7 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
   const now = new Date().toISOString();
   let report: Awaited<ReturnType<typeof loadReport>>;
   try {
-    report = await withTimeout(loadReport(researchDb(c.env), sport, season, now), DB_TIMEOUT_MS);
+    report = await withTimeout(loadReport(researchDb(c.env), sport, season, now, model), DB_TIMEOUT_MS);
   } catch {
     return c.json({ error: "The live research scorecard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
@@ -420,7 +427,7 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
   const pageRows = filtered.slice(page * limit, page * limit + limit);
   const selectedSports = Object.fromEntries(report.loaded.map(({ code }) => [code, report.summaries[code]]));
   const response = c.json({
-    live: true, generated_at: now, policy: POLICY, sport, season: season ?? null, status, query: q || null, page, page_size: limit, total: filtered.length,
+    live: true, generated_at: now, policy: POLICY, sport, season: season ?? null, model: model || null, status, query: q || null, page, page_size: limit, total: filtered.length,
     seasons: Object.fromEntries(report.loaded.map(({ code, season: target }) => [code, target])), sports: selectedSports, games: pageRows,
     market_observations: report.market_observations, unmatched_events: report.unmatched_events,
     qualifying_market_observations: report.loaded.reduce(
