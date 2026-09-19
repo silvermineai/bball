@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import {
+  validateCompletePlayerProfileExport,
+  validatePlayerProfileExportPage,
+} from "../../_lib/player-profile-export";
 
 type Row = {
   id: string;
@@ -118,9 +122,10 @@ export default function Profiles() {
         const response = await fetch(`/api/basketball/research/player-core?${params}`);
         if (!response.ok) throw new Error("The complete player profile export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...payload.rows);
+        rows.push(...validatePlayerProfileExportPage(payload, season, result.total, result.page_size, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} profiles…`);
       }
+      validateCompletePlayerProfileExport(rows, result.total);
       downloadCsv(`basketball-player-profiles-${season}-all.csv`, toCsv(exportHeaders, rows.map(exportRow)));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} player profiles.`);
     } catch (reason) {
