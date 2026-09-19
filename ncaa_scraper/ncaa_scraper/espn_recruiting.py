@@ -16,7 +16,6 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import requests
 
@@ -88,6 +87,39 @@ def _id_from_ref(value: object, kind: str) -> str | None:
         return None
     match = re.search(rf"/{kind}/(\d+)(?:\?|$)", value)
     return match.group(1) if match else None
+
+
+def _listed_athlete_ids(listing: dict[str, object]) -> list[str]:
+    """Validate that the bounded list response represents one complete class."""
+    refs = listing.get("items")
+    if not isinstance(refs, list) or not refs or len(refs) > 500:
+        raise ValueError("ESPN recruiting list is missing or outside the bound")
+
+    metadata = {
+        key: listing.get(key)
+        for key in ("count", "pageIndex", "pageSize", "pageCount")
+    }
+    if any(not isinstance(value, int) or isinstance(value, bool) for value in metadata.values()):
+        raise ValueError("ESPN recruiting list pagination metadata is malformed")
+    if (
+        metadata["count"] != len(refs)
+        or metadata["pageIndex"] != 1
+        or metadata["pageCount"] != 1
+        or metadata["pageSize"] < len(refs)
+        or metadata["pageSize"] > 500
+    ):
+        raise ValueError("ESPN recruiting list is incomplete or outside the bound")
+
+    athlete_ids = [
+        _id_from_ref(item.get("$ref") if isinstance(item, dict) else None, "recruits")
+        for item in refs
+    ]
+    if any(athlete_id is None for athlete_id in athlete_ids):
+        raise ValueError("ESPN recruiting list contains an invalid athlete reference")
+    unique_ids = sorted(set(athlete_ids))
+    if len(unique_ids) != len(refs):
+        raise ValueError("ESPN recruiting list contains duplicate athlete references")
+    return unique_ids
 
 
 def _number(value: object, *, integer: bool = False) -> float | int | None:
@@ -266,33 +298,35 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
     if not 1 <= workers <= 8:
         raise ValueError("workers must be between 1 and 8")
     listing, listing_body = _fetch(LIST_URL.format(season=season))
-    refs = listing.get("items")
-    if not isinstance(refs, list) or not refs or len(refs) > 500:
-        raise ValueError("ESPN recruiting list is missing or outside the bound")
-    athlete_ids = sorted({athlete_id for athlete_id in (_id_from_ref(item.get("$ref") if isinstance(item, dict) else None, "recruits") for item in refs) if athlete_id})
-    if not athlete_ids:
-        raise ValueError("ESPN recruiting list contains no athlete IDs")
+    athlete_ids = _listed_athlete_ids(listing)
     captured_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     CACHE.mkdir(parents=True, exist_ok=True)
     team_names = _team_names()
     records: list[dict] = []
 
-    def load(athlete_id: str) -> dict | None:
+    def load(athlete_id: str) -> tuple[str, dict | None]:
         url = DETAIL_URL.format(athlete_id=athlete_id)
         try:
             detail, body = _fetch(url)
             (CACHE / f"{season}-{athlete_id}.json").write_bytes(body)
-            return normalize_detail(detail, season, captured_at, team_names, body)
+            return athlete_id, normalize_detail(detail, season, captured_at, team_names, body)
         except (OSError, RuntimeError, TypeError, ValueError, UnicodeError, json.JSONDecodeError, requests.RequestException):
-            return None
+            return athlete_id, None
 
+    failed_ids: list[str] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        for record in pool.map(load, athlete_ids):
+        for athlete_id, record in pool.map(load, athlete_ids):
             if record:
                 records.append(record)
+            else:
+                failed_ids.append(athlete_id)
+    if failed_ids:
+        raise RuntimeError(
+            "ESPN recruiting detail refresh incomplete: "
+            f"{len(failed_ids)} of {len(athlete_ids)} prospect records failed; "
+            "refusing to replace the current edition"
+        )
     records.sort(key=lambda row: (row.get("rank") is None, row.get("rank") or 10**6, row["athlete_id"]))
-    if not records:
-        raise RuntimeError("ESPN recruiting detail refresh returned no valid records")
     missing_team_ids = {
         str(row["committed_team_id"])
         for row in records
@@ -315,7 +349,11 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
         "list_url": LIST_URL.format(season=season),
         "list_sha256": hashlib.sha256(listing_body).hexdigest(),
         "records": records,
-        "coverage": {"prospects": len(records), "listed_prospects": len(athlete_ids)},
+        "coverage": {
+            "prospects": len(records),
+            "listed_prospects": len(athlete_ids),
+            "complete": len(records) == len(athlete_ids),
+        },
     }
 
 

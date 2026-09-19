@@ -1,8 +1,17 @@
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from ncaa_scraper.espn_recruiting import _fetch, _national_rank, _team_name, sql_export
+from ncaa_scraper.espn_recruiting import (
+    _fetch,
+    _listed_athlete_ids,
+    _national_rank,
+    _team_name,
+    fetch_release,
+    sql_export,
+)
 
 
 def release(edition: str, captured_at: str):
@@ -34,6 +43,57 @@ def release(edition: str, captured_at: str):
 
 
 class EspnRecruitingTests(unittest.TestCase):
+    def test_list_requires_complete_single_page_metadata(self):
+        listing = {
+            "count": 2,
+            "pageIndex": 1,
+            "pageSize": 500,
+            "pageCount": 1,
+            "items": [
+                {"$ref": "https://example.test/recruits/42?lang=en"},
+                {"$ref": "https://example.test/recruits/7?lang=en"},
+            ],
+        }
+        self.assertEqual(_listed_athlete_ids(listing), ["42", "7"])
+
+        for key, value in (("count", 3), ("pageIndex", 2), ("pageCount", 2), ("pageSize", 1)):
+            incomplete = {**listing, key: value}
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "incomplete"):
+                _listed_athlete_ids(incomplete)
+
+    def test_list_rejects_invalid_or_duplicate_references(self):
+        base = {"count": 2, "pageIndex": 1, "pageSize": 500, "pageCount": 1}
+        with self.assertRaisesRegex(ValueError, "invalid athlete reference"):
+            _listed_athlete_ids({**base, "items": [{"$ref": "https://example.test/recruits/42"}, {}]})
+        with self.assertRaisesRegex(ValueError, "duplicate athlete references"):
+            _listed_athlete_ids({**base, "items": [{"$ref": "https://example.test/recruits/42"}] * 2})
+
+    def test_refresh_refuses_to_publish_when_any_listed_detail_fails(self):
+        listing = {
+            "count": 2,
+            "pageIndex": 1,
+            "pageSize": 500,
+            "pageCount": 1,
+            "items": [
+                {"$ref": "https://example.test/recruits/1"},
+                {"$ref": "https://example.test/recruits/2"},
+            ],
+        }
+        detail = {"athlete": {"id": "1", "displayName": "Ava Example"}}
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "ncaa_scraper.espn_recruiting.CACHE", Path(directory)
+        ), patch(
+            "ncaa_scraper.espn_recruiting._team_names", return_value={}
+        ), patch(
+            "ncaa_scraper.espn_recruiting._fetch",
+            side_effect=[(listing, b"listing"), (detail, b"detail"), RuntimeError("source unavailable")],
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "1 of 2 prospect records failed; refusing to replace the current edition",
+            ):
+                fetch_release(2027, workers=1)
+
     def test_ungraded_source_placeholder_is_not_a_national_rank(self):
         self.assertIsNone(_national_rank({"rank": 1}, 0))
         self.assertEqual(_national_rank({"rank": 1, "positionRank": 1}, 0), 1)
