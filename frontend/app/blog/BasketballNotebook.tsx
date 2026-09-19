@@ -4,6 +4,20 @@ import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 
+/**
+ * Keep the forecast identity visible on every notebook. A publication date on
+ * its own is not enough to reproduce a matchup after the next model refresh.
+ */
+export function notebookForecastIdentity(
+  modelId: string | null | undefined,
+  generatedAt: string | null | undefined,
+) {
+  return {
+    modelId: modelId?.trim() || "unavailable",
+    generatedAt: generatedAt || "unavailable",
+  };
+}
+
 const factorLabels: Record<string, string> = {
   efg: "Shot quality",
   tov: "Ball security",
@@ -17,6 +31,7 @@ const percent = (value: number | null | undefined) =>
 export default function BasketballNotebook({
   game,
   generatedAt,
+  modelId,
   homeTeam,
   awayTeam,
   rosterScenario,
@@ -27,6 +42,7 @@ export default function BasketballNotebook({
 }: {
   game: BBGame;
   generatedAt: string;
+  modelId?: string | null;
   homeTeam?: BBTeam | null;
   awayTeam?: BBTeam | null;
   rosterScenario?: BBRosterScenario | null;
@@ -37,6 +53,7 @@ export default function BasketballNotebook({
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
+  const forecastIdentity = notebookForecastIdentity(modelId || game.forecast_model_id, generatedAt);
   const lens = basketballEditorialLens(game);
   const factorRows = Object.entries(game.matchup_factors?.factors || {})
     .filter(([, values]) => values)
@@ -99,6 +116,12 @@ export default function BasketballNotebook({
         <div><strong>{rosterScenario ? "Ready" : "—"}</strong><span>Roster continuity scenario</span></div>
         <div><strong>{rosterListingCount}/2</strong><span>Roster listings attached</span></div>
       </div>
+      <p className="note notebook-edition" role="status">
+        Forecast edition <span className="source-hash">{forecastIdentity.modelId}</span>
+        {forecastIdentity.generatedAt === "unavailable"
+          ? " · capture clock unavailable"
+          : ` · captured ${date(forecastIdentity.generatedAt)}`}
+      </p>
 
       <section className="paper-panel notebook-forecast" aria-label="Stored forecast">
         <div className="eyebrow">The baseline</div>

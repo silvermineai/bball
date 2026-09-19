@@ -117,6 +117,7 @@ export default async function Page({
       <BasketballNotebook
         game={basketballGame}
         generatedAt={basketball.generated_at}
+        modelId={basketball.model.id}
         homeTeam={basketball.ratings.find((team) => team.id === basketballGame.home_id)}
         awayTeam={basketball.ratings.find((team) => team.id === basketballGame.away_id)}
         rosterScenario={rosterModel.scenarios.find((scenario) => scenario.game_id === basketballGame.id)}
