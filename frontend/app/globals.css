@@ -496,7 +496,7 @@ th,
   text-transform: uppercase;
 }
 .personnel-table {
-  min-width: 650px;
+  min-width: 1040px;
 }
 .personnel-table th,
 .personnel-table td {

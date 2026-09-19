@@ -82,10 +82,19 @@ export type MatchupPersonnelTableRow = {
   status: MatchupPersonnelPlayer["status"];
   prior_team: string | null;
   minutes: number | null;
+  mpg: number | null;
   ppg: number | null;
   rpg: number | null;
   apg: number | null;
+  fg_pct: number | null;
+  three_pct: number | null;
+  ft_pct: number | null;
+  field_goals: string | null;
+  three_pointers: string | null;
+  free_throws: string | null;
   box_bpm: number | null;
+  box_obpm: number | null;
+  box_dbpm: number | null;
 };
 
 const statuses = new Set(["returning", "incoming", "new_to_dataset", "ambiguous"]);
@@ -226,10 +235,19 @@ export function matchupPersonnelRows(side: MatchupPersonnelSide): MatchupPersonn
       status: player.status,
       prior_team: stint?.team || null,
       minutes: stint?.minutes ?? null,
+      mpg: stint?.stats.mpg ?? null,
       ppg: stint?.stats.ppg ?? null,
       rpg: stint?.stats.rpg ?? null,
       apg: stint?.stats.apg ?? null,
+      fg_pct: stint?.stats.fg_pct ?? null,
+      three_pct: stint?.stats.three_pct ?? null,
+      ft_pct: stint?.stats.ft_pct ?? null,
+      field_goals: stint?.stats.field_goals ?? null,
+      three_pointers: stint?.stats.three_pointers ?? null,
+      free_throws: stint?.stats.free_throws ?? null,
       box_bpm: stint?.box_bpm ?? null,
+      box_obpm: stint?.box_obpm ?? null,
+      box_dbpm: stint?.box_dbpm ?? null,
     }));
   });
 }

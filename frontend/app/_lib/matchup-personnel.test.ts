@@ -28,8 +28,8 @@ describe("matchup personnel client", () => {
   it("validates exact matchup identity and keeps multi-team stat lines separate", () => {
     const parsed = parseMatchupPersonnel(payload(), { gameId: "401", season: 2027, homeId: "1", awayId: "2" });
     expect(matchupPersonnelRows(parsed.home)).toEqual([
-      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Old U", minutes: 500, ppg: 12.4, rpg: null, box_bpm: 2.4 }),
-      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Older U", minutes: 300, ppg: null, rpg: null, box_bpm: null }),
+      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Old U", minutes: 500, mpg: 28, ppg: 12.4, rpg: null, fg_pct: null, box_bpm: 2.4, box_obpm: 3, box_dbpm: -0.6 }),
+      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Older U", minutes: 300, mpg: 28, ppg: null, rpg: null, box_bpm: null, box_obpm: null, box_dbpm: null }),
     ]);
     expect(personnelStatusLabel("incoming")).toBe("IN");
   });

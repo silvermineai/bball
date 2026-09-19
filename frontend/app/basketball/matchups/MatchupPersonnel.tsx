@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { BBGame } from "../../_lib/basketball-types";
 import {
   loadMatchupPersonnel,
@@ -14,7 +15,11 @@ function metric(value: number | null, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 }
 
-function PersonnelTable({ side }: { side: MatchupPersonnelSide }) {
+function percentage(value: number | null) {
+  return value == null || !Number.isFinite(value) ? "—" : `${value.toFixed(1)}%`;
+}
+
+function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; priorSeason: number }) {
   const rows = matchupPersonnelRows(side);
   return (
     <article className="personnel-team">
@@ -31,17 +36,23 @@ function PersonnelTable({ side }: { side: MatchupPersonnelSide }) {
       </p>
       <div className="table-scroll">
         <table className="data-table personnel-table">
-          <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">BPM</th></tr></thead>
+          <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>
           <tbody>{rows.map((row) => (
             <tr key={row.key}>
-              <td><strong>{row.player}</strong><small>{row.position || "Position unavailable"}</small></td>
+              <td><Link href={`/basketball/player/?id=${encodeURIComponent(row.athlete_id)}&season=${priorSeason}`}><strong>{row.player}</strong></Link><small>{row.position || "Position unavailable"} · Profile ID {row.athlete_id}</small><small>FG {row.field_goals || "—"} · 3P {row.three_pointers || "—"} · FT {row.free_throws || "—"}</small></td>
               <td><span className={`personnel-status ${row.status}`}>{personnelStatusLabel(row.status)}</span></td>
               <td>{row.prior_team || <span className="muted">—</span>}</td>
               <td className="numeric">{metric(row.minutes, 0)}</td>
+              <td className="numeric">{metric(row.mpg)}</td>
               <td className="numeric">{metric(row.ppg)}</td>
               <td className="numeric">{metric(row.rpg)}</td>
               <td className="numeric">{metric(row.apg)}</td>
+              <td className="numeric">{percentage(row.fg_pct)}</td>
+              <td className="numeric">{percentage(row.three_pct)}</td>
+              <td className="numeric">{percentage(row.ft_pct)}</td>
               <td className="numeric">{metric(row.box_bpm)}</td>
+              <td className="numeric">{metric(row.box_obpm)}</td>
+              <td className="numeric">{metric(row.box_dbpm)}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -95,8 +106,8 @@ export default function MatchupPersonnelPanel({ game }: { game: BBGame }) {
         <div><strong>{personnel.coverage.players_with_box_bpm}/{personnel.coverage.listed_players}</strong><span>Box BPM</span></div>
       </div>
       <div className="personnel-grid">
-        <PersonnelTable side={personnel.away} />
-        <PersonnelTable side={personnel.home} />
+        <PersonnelTable side={personnel.away} priorSeason={personnel.prior_season} />
+        <PersonnelTable side={personnel.home} priorSeason={personnel.prior_season} />
       </div>
       <p className="note personnel-policy">Each prior-team stint remains a separate row. Dashes mean unavailable source evidence; they are never treated as zero.</p>
     </section>
