@@ -6015,6 +6015,9 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 /* Player-card ranking profile: compact, percentile-first scouting evidence. */
 .ranking-profile-summary { margin-top: 18px; }
 .ranking-stat-line { font-family: "IBM Plex Mono", monospace; line-height: 1.45; white-space: normal; }
+.ranking-recorded-details { margin-top: 4px; font-size: 0.78rem; }
+.ranking-recorded-details summary { color: var(--muted); cursor: pointer; }
+.ranking-recorded-details small { font-family: "IBM Plex Mono", monospace; line-height: 1.45; white-space: normal; }
 .ranking-profile-summary > div:nth-child(3) strong {
   max-width: 220px;
   font-size: 23px;
