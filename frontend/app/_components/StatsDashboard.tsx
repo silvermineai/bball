@@ -22,6 +22,7 @@ import LiveDashboardForecastTable from "./LiveDashboardForecastTable";
 import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
 import DashboardExportButton from "./DashboardExportButton";
 import LivePlayerShotMap from "./LivePlayerShotMap";
+import { coverageReceiptState, dashboardCoverageRows } from "../_lib/dashboard-coverage";
 
 function getPlayers(season: number) {
   // Prefer the current player release because it retains the complete basic
@@ -287,9 +288,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
     };
     return labels[dataset.key] || dataset.label.replace(/\b(?:NCAA|ESPN)\b/gi, "Archived");
   };
-  const rows = (overview.coverage.datasets || [])
-    .filter((dataset) => dataset.rows > 0)
-    .sort((a, b) => b.rows - a.rows || a.label.localeCompare(b.label));
+  const rows = dashboardCoverageRows(overview.coverage.datasets);
   const links: Record<string, string> = {
     schedule: "/basketball/games/",
     team_box: "/basketball/ncaa-team-box/",
@@ -318,18 +317,19 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
     <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table">
         <thead>
-          <tr><th>Dataset</th><th className="numeric">Rows</th><th className="numeric">Seasons</th><th className="numeric">Latest data</th><th className="numeric">Captures</th></tr>
+          <tr><th>Dataset</th><th className="numeric">Rows</th><th className="numeric">Seasons</th><th className="numeric">Latest capture</th><th>Receipt state</th></tr>
         </thead>
         <tbody>
-          {rows.map((dataset) => (
-            <tr key={dataset.key === "publisher_ratings" ? "archived_ratings" : dataset.key}>
+          {rows.map((dataset) => {
+            const receiptState = coverageReceiptState(dataset);
+            return <tr key={dataset.key === "publisher_ratings" ? "archived_ratings" : dataset.key}>
               <th scope="row"><Link href={links[dataset.key] || "/research/coverage/"}>{displayLabel(dataset)} →</Link><small>{dataset.key === "player_box" ? "Game-level player production" : dataset.key === "ncaa_player_box" ? "Archived player game production" : dataset.key === "player_season" ? "Season player aggregates" : dataset.key === "ncaa_player_season" ? "Archived player aggregates" : dataset.key === "rosters" ? "Current roster records" : dataset.key === "schedule" ? "Game schedule and finals" : dataset.key === "team_box" ? "Game-level team production" : dataset.key === "publisher_ratings" ? "Archived team ratings" : dataset.key === "ncaa_lineups" ? "Five-player lineup stints" : dataset.key === "ncaa_rapm" ? "Regularized lineup impact" : dataset.key === "ncaa_shots" ? "Attributed shot profiles" : dataset.key === "ncaa_possessions" ? "Team possession-style rows" : dataset.key === "ncaa_game_rosters" ? "Game-day player listings" : dataset.key === "ncaa_officials" ? "Game officiating rows" : dataset.key === "player_core" ? "Player identity and profile rows" : dataset.key === "player_crosswalk" ? "Cross-source identity links" : dataset.key === "publisher_player_value" ? "Archived player value rows" : dataset.key === "team_season" ? "Team-season aggregates" : "Retained dataset"}</small></th>
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
               <td className="numeric">{captured(dataset.latest_source_at)}</td>
-              <td className="numeric">{dataset.source_count}</td>
-            </tr>
-          ))}
+              <td><strong>{receiptState === "recorded" ? "Recorded" : receiptState === "missing" ? "Unavailable" : "Incomplete"}</strong><small>{dataset.source_count.toLocaleString()} capture receipt{dataset.source_count === 1 ? "" : "s"}</small></td>
+            </tr>;
+          })}
         </tbody>
       </table>
     </div>
@@ -484,8 +484,13 @@ export default function StatsDashboard() {
       </div>
       <LivePlayerShotMap season={latestSeason} />
       <LiveBasketballProspectLeaders />
+      <section className="dashboard-section" aria-labelledby="dashboard-coverage">
+        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DATA COVERAGE</span><h2 id="dashboard-coverage">What the analysis can actually use</h2></div><Link href="/research/coverage/">Open the full integrity check →</Link></div>
+        <p className="dashboard-caption">Published row counts, season depth and capture receipts for every retained dataset behind this board. An unavailable or incomplete receipt remains visible even when the dataset contains rows; volume alone does not establish freshness or reproducibility.</p>
+        <DataCoverageTable overview={overview} />
+      </section>
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
-        <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
+        <div className="dashboard-section-heading"><div><span className="eyebrow">07 / DRILL DOWN</span><h2 id="dashboard-secondary">More ways to read the numbers</h2></div></div>
         <p className="dashboard-caption">The landing board stays focused on games, teams and players. Open a dedicated desk when you need recruiting, impact, source rows or model details.</p>
         <div className="dashboard-link-grid">
           <Link href="/basketball/leaders/"><strong>Player leaders</strong><span>Scoring, rebounding, playmaking, defense and shooting</span><b>→</b></Link>
