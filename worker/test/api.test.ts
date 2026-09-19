@@ -1405,7 +1405,7 @@ describe("bball api", () => {
       }
       return {
         bind: (...args: unknown[]) => {
-          expect(args).toEqual([2026, "150", "248", 0]);
+          expect(args).toEqual([2026, "150", "248", 40, 0]);
           return { all: vi.fn().mockResolvedValue({ results: [
             { id: "150", team: "Duke Blue Devils", value: 28.4 },
             { id: "248", team: "North Carolina Tar Heels", value: 22.1 },

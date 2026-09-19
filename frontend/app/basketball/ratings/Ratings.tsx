@@ -8,6 +8,24 @@ import {
   sortTeamRatings,
   type RatingSortKey,
 } from "../../_lib/basketball-ratings";
+
+type ArchivedRatingRow = { id: string; team?: string | null; value: number | null };
+type ArchivedRatingResponse = { rows?: ArchivedRatingRow[]; total?: number; page_size?: number };
+
+type ArchivedComparison = {
+  rank: number | null;
+  adjustedNet: number | null;
+};
+
+function archiveComparison(
+  rankRows: ArchivedRatingRow[],
+  netRows: ArchivedRatingRow[],
+): Map<string, ArchivedComparison> {
+  const comparison = new Map<string, ArchivedComparison>();
+  for (const row of rankRows) comparison.set(row.id, { rank: row.value, adjustedNet: null });
+  for (const row of netRows) comparison.set(row.id, { rank: comparison.get(row.id)?.rank ?? null, adjustedNet: row.value });
+  return comparison;
+}
 const sortLabels: Record<RatingSortKey, string> = {
   adj_net: "Adjusted net efficiency",
   adj_off: "Offense · higher first",
@@ -34,6 +52,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
     [sort, setSort] = useState<RatingSortKey>("adj_net"),
     [hydrated, setHydrated] = useState(false),
     [copied, setCopied] = useState("");
+  const [archived, setArchived] = useState<Map<string, ArchivedComparison>>(new Map());
+  const [archivedStatus, setArchivedStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setQ(params.get("q") || "");
@@ -49,6 +69,32 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
     const query = params.toString();
     window.history.replaceState(window.history.state, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
   }, [hydrated, q, sort]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setArchivedStatus("loading");
+    Promise.all([
+      fetch("/api/basketball/research/boutique?kind=ratings&season=2026&metric=rank&limit=500", { signal: controller.signal }),
+      fetch("/api/basketball/research/boutique?kind=ratings&season=2026&metric=adj_em&limit=500", { signal: controller.signal }),
+    ])
+      .then(async ([rankResponse, netResponse]) => {
+        if (!rankResponse.ok || !netResponse.ok) throw new Error("Archived comparison ratings unavailable.");
+        const [rankPayload, netPayload] = await Promise.all([
+          rankResponse.json() as Promise<ArchivedRatingResponse>,
+          netResponse.json() as Promise<ArchivedRatingResponse>,
+        ]);
+        if (!controller.signal.aborted) {
+          setArchived(archiveComparison(rankPayload.rows || [], netPayload.rows || []));
+          setArchivedStatus("ready");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setArchived(new Map());
+          setArchivedStatus("unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, []);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -89,6 +135,13 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
         <button className="button secondary" type="button" onClick={share}>Copy ratings link</button>
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
+      <p className="note" role="status" style={{ marginTop: 16 }}>
+        {archivedStatus === "ready"
+          ? `Archived comparison loaded for ${archived.size.toLocaleString()} exact team IDs. It is a separate retained rating edition, not a blended Silvermine score.`
+          : archivedStatus === "unavailable"
+            ? "Archived comparison ratings are temporarily unavailable; Silvermine ratings remain visible."
+            : "Loading archived comparison ratings…"}
+      </p>
       <div className="section-heading" style={{ marginTop: 20 }}>
         <p>{filtered.length.toLocaleString()} matching programs · export respects the current search and sort</p>
         <button
@@ -122,6 +175,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                 "Adj O",
                 "Adj D",
                 "Net",
+                "Archive rank",
+                "Archive adj net",
                 "Tempo",
                 "SOS",
                 "Rated opp.",
@@ -161,6 +216,8 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                   t.adj_off,
                   t.adj_def,
                   t.adj_net,
+                  archived.get(t.id)?.rank ?? null,
+                  archived.get(t.id)?.adjustedNet ?? null,
                   t.adj_tempo,
                   t.sos,
                   t.sos_games,
@@ -183,7 +240,7 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
                   ].map((n) => (n == null ? null : n * 100)),
                 ].map((v, i) => (
                   <td className="numeric" key={i}>
-                    {fmt(v, i === 5 ? 0 : 1)}
+                    {fmt(v, i === 3 || i === 7 ? 0 : 1)}
                   </td>
                 ))}
               </tr>

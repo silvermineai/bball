@@ -28,6 +28,7 @@ const querySchema = z.object({
   ids: z.string().trim().max(2400).regex(/^\d+(,\d+){0,399}$/).optional(),
   playerId: z.string().regex(/^\d{1,15}$/).optional(),
   page: z.coerce.number().int().min(0).max(250).default(0),
+  limit: z.coerce.number().int().min(1).max(500).default(40),
   direction: z.enum(["desc", "asc"]).default("desc"),
   meta: z.enum(["0", "1"]).default("0"),
 });
@@ -51,7 +52,7 @@ function edgeCache() {
 }
 
 boutique.get("/", zValidator("query", querySchema), async (c) => {
-  const { kind, season, metric: requestedMetric, q, ids, playerId, page, direction, meta } = c.req.valid("query");
+  const { kind, season, metric: requestedMetric, q, ids, playerId, page, limit, direction, meta } = c.req.valid("query");
   if (playerId && kind !== "players") return c.json({ error: "playerId is only valid for player value rows" }, 400);
   if (ids && kind !== "ratings") return c.json({ error: "ids is only valid for team rating rows" }, 400);
   const metrics = kind === "ratings" ? ratingMetrics : playerMetrics;
@@ -120,9 +121,9 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
       ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
       : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
     const rows = await withTimeout(db.prepare(
-      `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT 40 OFFSET ?`,
-    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
-    const response = c.json({ kind, season, metric, page, page_size: 40, total: count?.total ?? 0, non_null: count?.non_null ?? 0, rows: rows.results });
+      `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+    ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
+    const response = c.json({ kind, season, metric, page, page_size: limit, total: count?.total ?? 0, non_null: count?.non_null ?? 0, rows: rows.results });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
