@@ -209,13 +209,15 @@ describe("bball api", () => {
 
   it("serves bounded football forecasts from the latest registered D1 model", async () => {
     const prepare = vi.fn((sql: string) => {
-      if (sql.includes("SELECT id,created_at,cutoff,artifact_json FROM football_models")) {
+      if (sql.includes("FROM football_models m")) {
         return {
-          first: async () => ({
-            id: "ridge-team-calibrated-v2-test",
-            created_at: "2026-09-09T02:00:00Z",
-            cutoff: "2026-09-09T02:00:00Z",
-            artifact_json: "{}",
+          bind: () => ({
+            first: async () => ({
+              id: "ridge-team-calibrated-v2-test",
+              created_at: "2026-09-09T02:00:00Z",
+              cutoff: "2026-09-09T02:00:00Z",
+              artifact_json: JSON.stringify({ calibration: { margin_half_width: 20 } }),
+            }),
           }),
         };
       }
@@ -260,10 +262,11 @@ describe("bball api", () => {
       { DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { total: number; rows: Array<{ home_margin: number; total: number; home_win_probability: number }> };
+    const body = (await response.json()) as { total: number; rows: Array<{ home_margin: number; total: number; home_win_probability: number; home_score: number; away_score: number; margin_low: number; margin_high: number }> };
     expect(body.total).toBe(1);
-    expect(body.rows[0]).toMatchObject({ home_margin: 6.5, total: 48.25, home_win_probability: 0.64 });
+    expect(body.rows[0]).toMatchObject({ home_margin: 6.5, total: 48.25, home_win_probability: 0.64, home_score: 27.4, away_score: 20.9, margin_low: -13.5, margin_high: 26.5 });
     expect(prepare.mock.calls.some(([query]) => String(query).includes("g.kickoff>?"))).toBe(true);
+    expect(prepare.mock.calls.some(([query]) => String(query).includes("g.season=?"))).toBe(true);
   });
 
   it("returns D1 coverage counts alongside source receipt timestamps", async () => {

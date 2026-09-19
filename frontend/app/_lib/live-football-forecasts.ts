@@ -11,6 +11,10 @@ export type LiveFootballForecastRow = {
   home_margin: number | null;
   total: number | null;
   home_win_probability: number | null;
+  home_score: number | null;
+  away_score: number | null;
+  margin_low: number | null;
+  margin_high: number | null;
 };
 
 type LiveFootballForecastPage = {
@@ -68,12 +72,32 @@ export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballFore
   const liveById = new Map(rows.map((row) => [row.game_id, row]));
   return games.map((game) => {
     const live = liveById.get(game.id);
-    if (!live || !game.prediction) return game;
+    if (!live) return game;
+    const completeLivePrediction = live.home_margin !== null
+      && live.total !== null
+      && live.home_win_probability !== null
+      && live.home_score !== null
+      && live.away_score !== null
+      && live.margin_low !== null
+      && live.margin_high !== null;
+    if (!game.prediction && !completeLivePrediction) return game;
     const prediction: Forecast = {
-      ...game.prediction,
-      home_margin: live.home_margin ?? game.prediction.home_margin,
-      total: live.total ?? game.prediction.total,
-      home_win_probability: live.home_win_probability ?? game.prediction.home_win_probability,
+      ...(game.prediction || {
+        home_margin: live.home_margin!,
+        total: live.total!,
+        home_win_probability: live.home_win_probability!,
+        home_score: live.home_score!,
+        away_score: live.away_score!,
+        margin_low: live.margin_low!,
+        margin_high: live.margin_high!,
+      }),
+      home_margin: live.home_margin ?? game.prediction!.home_margin,
+      total: live.total ?? game.prediction!.total,
+      home_win_probability: live.home_win_probability ?? game.prediction!.home_win_probability,
+      home_score: live.home_score ?? game.prediction!.home_score,
+      away_score: live.away_score ?? game.prediction!.away_score,
+      margin_low: live.margin_low ?? game.prediction!.margin_low,
+      margin_high: live.margin_high ?? game.prediction!.margin_high,
     };
     return {
       ...game,

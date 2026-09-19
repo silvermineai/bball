@@ -29,12 +29,39 @@ function asNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function round(value: number, digits: number) {
+  const scale = 10 ** digits;
+  return Math.round((value + Number.EPSILON) * scale) / scale;
+}
+
+function marginHalfWidth(artifactJson: string) {
+  try {
+    const artifact = JSON.parse(artifactJson) as {
+      calibration?: { margin_half_width?: unknown };
+      sigma?: unknown;
+    };
+    const calibrated = asNumber(artifact.calibration?.margin_half_width);
+    if (calibrated !== null && calibrated >= 0) return calibrated;
+    const sigma = asNumber(artifact.sigma);
+    return sigma !== null && sigma >= 0 ? 1.281552 * sigma : null;
+  } catch {
+    return null;
+  }
+}
+
 footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const { season, status, q, model, page, limit, meta } = c.req.valid("query");
   const db = footballDb(c.env);
   const latestModel = await db.prepare(
-    "SELECT id,created_at,cutoff,artifact_json FROM football_models ORDER BY created_at DESC,id DESC LIMIT 1",
-  ).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
+    `SELECT m.id,m.created_at,m.cutoff,m.artifact_json
+       FROM football_models m
+      WHERE EXISTS (
+        SELECT 1 FROM football_predictions p
+        JOIN football_games g ON g.id=p.game_id
+        WHERE p.model_id=m.id AND g.season=?
+      )
+      ORDER BY m.created_at DESC,m.id DESC LIMIT 1`,
+  ).bind(season).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
 
   if (meta === "1") {
     const [seasons, models] = await db.batch([
@@ -100,6 +127,9 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       ORDER BY g.kickoff ASC,p.created_at DESC,p.model_id ASC
       LIMIT ? OFFSET ?`,
   ).bind(...binds, limit, page * limit).all();
+  const intervalWidth = model === "latest" && latestModel
+    ? marginHalfWidth(latestModel.artifact_json)
+    : null;
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     season,
@@ -112,11 +142,17 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     latest_model: latestModel ? { model_id: latestModel.id, created_at: latestModel.created_at, cutoff: latestModel.cutoff } : null,
     rows: rows.results.map((row) => {
       const item = row as Record<string, unknown>;
+      const homeMargin = asNumber(item.home_margin);
+      const total = asNumber(item.total);
       return {
         ...item,
-        home_margin: asNumber(item.home_margin),
-        total: asNumber(item.total),
+        home_margin: homeMargin,
+        total,
         home_win_probability: asNumber(item.home_win_probability),
+        home_score: homeMargin === null || total === null ? null : round((total + homeMargin) / 2, 1),
+        away_score: homeMargin === null || total === null ? null : round((total - homeMargin) / 2, 1),
+        margin_low: homeMargin === null || intervalWidth === null ? null : round(homeMargin - intervalWidth, 1),
+        margin_high: homeMargin === null || intervalWidth === null ? null : round(homeMargin + intervalWidth, 1),
       };
     }),
   });

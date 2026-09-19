@@ -58,7 +58,7 @@ describe("live football forecast merge", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("updates only the model values and retains the static card evidence", () => {
+  it("updates the complete model estimate and retains non-model card evidence", () => {
     const original = {
       home_margin: 3,
       total: 48,
@@ -78,19 +78,25 @@ describe("live football forecast merge", () => {
       home_margin: 7,
       total: 51,
       home_win_probability: 0.64,
+      home_score: 29,
+      away_score: 22,
+      margin_low: -16,
+      margin_high: 30,
     }] satisfies LiveFootballForecastRow[];
     const merged = mergeLiveFootballForecasts([game(original)], rows)[0];
     expect(merged.prediction).toMatchObject({
       home_margin: 7,
       total: 51,
       home_win_probability: 0.64,
-      margin_low: -20,
-      margin_high: 26,
+      home_score: 29,
+      away_score: 22,
+      margin_low: -16,
+      margin_high: 30,
     });
     expect(merged.home_name).toBe("Home updated");
   });
 
-  it("leaves games without a static prediction unchanged", () => {
+  it("publishes a complete live forecast when the static game has no prediction", () => {
     const merged = mergeLiveFootballForecasts([game(null)], [{
       game_id: "game-1",
       kickoff: "2026-09-12T17:00:00Z",
@@ -101,8 +107,39 @@ describe("live football forecast merge", () => {
       home_margin: 7,
       total: 51,
       home_win_probability: 0.64,
+      home_score: 29,
+      away_score: 22,
+      margin_low: -16,
+      margin_high: 30,
     }]);
-    expect(merged[0].prediction).toBeNull();
-    expect(merged[0].home_name).toBe("Home");
+    expect(merged[0].prediction).toEqual({
+      home_margin: 7,
+      total: 51,
+      home_win_probability: 0.64,
+      home_score: 29,
+      away_score: 22,
+      margin_low: -16,
+      margin_high: 30,
+    });
+    expect(merged[0].home_name).toBe("Home updated");
+  });
+
+  it("does not invent a live forecast when reproducible interval fields are missing", () => {
+    const merged = mergeLiveFootballForecasts([game(null)], [{
+      game_id: "game-1",
+      kickoff: "2026-09-12T17:00:00Z",
+      home_id: "home",
+      away_id: "away",
+      home_name: "Home updated",
+      away_name: "Away updated",
+      home_margin: 7,
+      total: 51,
+      home_win_probability: 0.64,
+      home_score: 29,
+      away_score: 22,
+      margin_low: null,
+      margin_high: null,
+    }]);
+    expect(merged[0]).toEqual(game(null));
   });
 });
