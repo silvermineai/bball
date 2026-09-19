@@ -5905,3 +5905,55 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   .dashboard-link-grid a, .dashboard-link-grid a:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--dashboard-line); }
   .dashboard-link-grid a:last-child { border-bottom: 0; }
 }
+
+/* Player-card ranking profile: compact, percentile-first scouting evidence. */
+.ranking-profile-summary { margin-top: 18px; }
+.ranking-profile-summary > div:nth-child(3) strong {
+  max-width: 220px;
+  font-size: 23px;
+  line-height: 1.05;
+}
+.ranking-profile-list {
+  display: grid;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.ranking-profile-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(160px, 2fr) 64px minmax(80px, .7fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 54px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ranking-profile-label { display: grid; gap: 3px; }
+.ranking-profile-label a { color: var(--ink); font-weight: 700; }
+.ranking-profile-label span,
+.ranking-profile-row small {
+  color: var(--muted);
+  font: 10px/1.35 "IBM Plex Mono", monospace;
+}
+.ranking-profile-track {
+  height: 8px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--line) 55%, transparent);
+}
+.ranking-profile-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--ink));
+}
+.ranking-profile-row > strong {
+  color: var(--ink);
+  font: 700 19px/1 "Barlow Condensed", sans-serif;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ranking-profile-row.is-unavailable { opacity: .68; }
+.ranking-profile-row.is-unavailable .ranking-profile-track { background: repeating-linear-gradient(90deg, transparent 0 8px, var(--line) 8px 9px); }
+@media (max-width: 700px) {
+  .ranking-profile-row { grid-template-columns: minmax(0, 1fr) 58px; gap: 6px 12px; }
+  .ranking-profile-track { grid-column: 1 / -1; grid-row: 2; }
+  .ranking-profile-row > small { grid-column: 1 / -1; }
+}

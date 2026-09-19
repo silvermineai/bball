@@ -11,6 +11,14 @@ export type SnapshotRow = {
   note: string;
 };
 
+export type SnapshotSummary = {
+  qualified: number;
+  total: number;
+  topDecile: number;
+  medianPercentile: number | null;
+  strongest: SnapshotRow | null;
+};
+
 type ApiRow = {
   player_id?: unknown;
   value?: unknown;
@@ -37,8 +45,50 @@ const definitions: Array<{
   { metric: "impact_index", label: "Impact + production", note: "5 games · 200 minutes · 500 O/D possessions" },
 ];
 
+export function rankingSnapshotSearch(metric: SnapshotMetric, season: number, playerId: string) {
+  const definition = definitions.find((candidate) => candidate.metric === metric);
+  const params = new URLSearchParams({
+    season: String(season),
+    metric,
+    minGames: "5",
+    minMinutes: "200",
+    minVolume: String(definition?.minVolume ?? 0),
+    q: playerId,
+  });
+  return params.toString();
+}
+
 const percentile = (rank: number, total: number) =>
   total <= 1 ? 100 : Math.max(0, Math.min(100, (100 * (total - rank)) / (total - 1)));
+
+/**
+ * Summarize only boards the player qualified for. This deliberately uses the
+ * API rank/percentile rather than mixing raw values with different units.
+ */
+export function summarizeRankingSnapshot(rows: SnapshotRow[]): SnapshotSummary {
+  const qualified = rows.filter(
+    (row): row is SnapshotRow & { percentile: number } =>
+      row.status === "qualified" && row.percentile != null,
+  );
+  const ordered = qualified.map((row) => row.percentile).sort((a, b) => a - b);
+  const middle = Math.floor(ordered.length / 2);
+  const medianPercentile = !ordered.length
+    ? null
+    : ordered.length % 2
+      ? ordered[middle]
+      : (ordered[middle - 1] + ordered[middle]) / 2;
+  const strongest = qualified.reduce<SnapshotRow | null>(
+    (best, row) => best == null || row.percentile > (best.percentile ?? -1) ? row : best,
+    null,
+  );
+  return {
+    qualified: qualified.length,
+    total: rows.length,
+    topDecile: qualified.filter((row) => row.percentile >= 90).length,
+    medianPercentile,
+    strongest,
+  };
+}
 
 export const snapshotRow = (
   definition: (typeof definitions)[number],

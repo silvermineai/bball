@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   loadNcaaPlayerRankingSnapshot,
+  rankingSnapshotSearch,
+  summarizeRankingSnapshot,
   type SnapshotRow,
 } from "../../_lib/ncaa-player-ranking-snapshot";
 
@@ -22,6 +24,7 @@ export default function PlayerRankingSnapshot({
   season: number;
 }) {
   const [rows, setRows] = useState<SnapshotRow[] | null>(null);
+  const summary = rows ? summarizeRankingSnapshot(rows) : null;
   useEffect(() => {
     const controller = new AbortController();
     setRows(null);
@@ -39,41 +42,47 @@ export default function PlayerRankingSnapshot({
     <section className="section paper-panel" aria-label="Player ranking snapshot">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Live source rankings / {season - 1}–{String(season).slice(-2)}</div>
-          <h2>Where this player lands.</h2>
+          <div className="eyebrow">Player ranking profile / {season - 1}–{String(season).slice(-2)}</div>
+          <h2>See the shape, then inspect the sample.</h2>
         </div>
         <Link href={`/basketball/ncaa-rankings/?season=${season}&q=${encodeURIComponent(id)}`}>
           Tune the full board →
         </Link>
       </div>
       <p className="note">
-        Exact player ID match, refreshed from the ranking API. Percentiles use each board&apos;s full qualified cohort; a missing row means the player did not clear that board&apos;s stated sample, not that the source recorded zero.
+        Exact player ID match, refreshed from the ranking API. Percentiles use each board&apos;s full qualified cohort; a missing row means the player did not clear that board&apos;s stated sample, not that the archive recorded zero.
       </p>
       {!rows ? (
         <p className="empty" role="status">Loading ranking snapshot…</p>
-      ) : (
-        <div className="strip">
-          {rows.map((row) => (
-            <div key={row.metric}>
-              <strong>
-                {row.status === "qualified" && row.rank != null
-                  ? `#${row.rank}`
-                  : row.status === "not_qualified"
-                    ? "Not qualified"
-                    : "Unavailable"}
-              </strong>
-              <span>{row.label}</span>
-              <small>
-                {row.status === "qualified"
-                  ? `${valueLabel(row)} · ${row.percentile?.toFixed(1)}th percentile · ${row.total.toLocaleString()} qualified`
-                  : `${row.note}${row.total ? ` · ${row.total.toLocaleString()} on board` : ""}`}
-              </small>
-            </div>
-          ))}
-        </div>
-      )}
+      ) : summary ? (
+        <>
+          <div className="strip ranking-profile-summary" aria-label="Player ranking profile summary">
+            <div><strong>{summary.qualified}/{summary.total}</strong><span>Boards qualified</span></div>
+            <div><strong>{summary.medianPercentile == null ? "—" : `${summary.medianPercentile.toFixed(1)}%`}</strong><span>Median qualified percentile</span></div>
+            <div><strong>{summary.strongest ? summary.strongest.label : "—"}</strong><span>Strongest relative board</span></div>
+            <div><strong>{summary.topDecile}</strong><span>Top-decile boards</span></div>
+          </div>
+          <div className="ranking-profile-list" aria-label="Player percentile profile">
+            {rows.map((row) => {
+              const qualified = row.status === "qualified" && row.rank != null && row.percentile != null;
+              const href = `/basketball/ncaa-rankings/?${rankingSnapshotSearch(row.metric, season, id)}`;
+              return <article className={`ranking-profile-row${qualified ? "" : " is-unavailable"}`} key={row.metric}>
+                <div className="ranking-profile-label">
+                  <Link href={href}>{row.label} →</Link>
+                  <span>{qualified ? `#${row.rank} of ${row.total.toLocaleString()}` : row.status === "not_qualified" ? "Sample not met" : "Board unavailable"}</span>
+                </div>
+                <div className="ranking-profile-track" aria-hidden="true">
+                  <span style={{ width: qualified ? `${Math.max(2, row.percentile!)}%` : "0%" }} />
+                </div>
+                <strong>{qualified ? `${row.percentile!.toFixed(1)}%` : "—"}</strong>
+                <small>{qualified ? valueLabel(row) : row.note}</small>
+              </article>;
+            })}
+          </div>
+        </>
+      ) : null}
       <p className="note" style={{ marginTop: 16 }}>
-        Balanced production and impact + production are descriptive Silvermine shortlist indices built from the retained source rows. They are not recruiting grades, eligibility decisions or forecast inputs.
+        The summary compares percentile ranks only; it does not average points, percentages and impact values together. Balanced production and impact + production are descriptive shortlist indices built from retained rows. They are not recruiting grades, eligibility decisions or forecast inputs.
       </p>
     </section>
   );
