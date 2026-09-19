@@ -146,18 +146,56 @@ def validate_factors(game: dict[str, Any]) -> None:
             raise ValueError(f"game {game['id']} has a malformed {key} matchup edge")
 
 
-def validate_scenario(scenario: Any, game_id: str, home_id: str, away_id: str, prediction: dict[str, Any]) -> None:
+def validate_scenario(
+    scenario: Any,
+    game_id: str,
+    home_id: str,
+    away_id: str,
+    prediction: dict[str, Any],
+    model_id: str,
+    calibration: dict[str, Any],
+) -> None:
     if not isinstance(scenario, dict) or str(scenario.get("game_id")) != game_id:
         raise ValueError(f"game {game_id} is missing its roster scenario")
     if str(scenario.get("home_id")) != home_id or str(scenario.get("away_id")) != away_id:
         raise ValueError(f"game {game_id} roster scenario has mismatched participants")
-    for field in ("base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net"):
+    for field in (
+        "base_margin",
+        "roster_margin",
+        "margin_delta",
+        "home_predicted_net",
+        "away_predicted_net",
+        "roster_home_win_probability",
+        "roster_margin_low",
+        "roster_margin_high",
+    ):
         if not finite(scenario.get(field)):
             raise ValueError(f"game {game_id} has a non-numeric roster scenario {field}")
+    if not 0 <= scenario["roster_home_win_probability"] <= 1:
+        raise ValueError(f"game {game_id} roster scenario has an invalid win probability")
+    if scenario.get("primary_model_id") != model_id:
+        raise ValueError(f"game {game_id} roster scenario has a mismatched model ID")
     if abs(scenario["base_margin"] - prediction["home_margin"]) > 0.05:
         raise ValueError(f"game {game_id} roster scenario is based on a different forecast margin")
     if abs((scenario["roster_margin"] - scenario["base_margin"]) - scenario["margin_delta"]) > 0.05:
         raise ValueError(f"game {game_id} roster scenario has a margin-delta mismatch")
+    if not scenario["roster_margin_low"] <= scenario["roster_margin"] <= scenario["roster_margin_high"]:
+        raise ValueError(f"game {game_id} roster scenario has a malformed margin range")
+    coefficients = calibration.get("logistic_coefficients")
+    width = calibration.get("margin_half_width")
+    if not isinstance(coefficients, list) or len(coefficients) != 2 or not finite(width):
+        raise ValueError(f"game {game_id} cannot verify roster scenario calibration")
+    intercept, slope = coefficients
+    if not finite(intercept) or not finite(slope):
+        raise ValueError(f"game {game_id} cannot verify roster scenario probability")
+    expected_probability = 1 / (1 + math.exp(-max(-30, min(30, intercept + slope * scenario["roster_margin"]))))
+    if abs(scenario["roster_home_win_probability"] - expected_probability) > 0.00002:
+        raise ValueError(f"game {game_id} roster scenario probability disagrees with primary calibration")
+    if (
+        abs(scenario["roster_margin_low"] - (scenario["roster_margin"] - width)) > 0.02
+        or abs(scenario["roster_margin_high"] - (scenario["roster_margin"] + width)) > 0.02
+    ):
+        raise ValueError(f"game {game_id} roster scenario range disagrees with primary calibration")
 
 
 def check(root: Path) -> dict[str, Any]:
@@ -184,6 +222,12 @@ def check(root: Path) -> dict[str, Any]:
     model_team_ids = set(model_teams)
     rating_by_id = {str(row.get("id")): row for row in ratings if isinstance(row, dict)}
     roster_model = read_json(basketball / "roster-model.json")
+    model_id = str(model.get("id", ""))
+    calibration = model.get("calibration")
+    if roster_model.get("primary_model_id") != model_id:
+        raise ValueError("roster model does not identify the active primary model")
+    if not isinstance(calibration, dict):
+        raise ValueError("overview model has no calibration")
     scenarios = {}
     for row in roster_model.get("scenarios", []):
         if not isinstance(row, dict):
@@ -228,7 +272,15 @@ def check(root: Path) -> dict[str, Any]:
                 validate_profile(profile_path, team_id, f"game {game_id} {side} team")
                 primary_context["scouting_profiles"] += 1
                 primary_context["player_workload"] += 1
-            validate_scenario(scenarios.get(game_id), game_id, home_id, away_id, game["prediction"])
+            validate_scenario(
+                scenarios.get(game_id),
+                game_id,
+                home_id,
+                away_id,
+                game["prediction"],
+                model_id,
+                calibration,
+            )
             primary_context["roster_scenarios"] += 1
             primary_context["factors"] += 1
         elif game.get("fallback_prediction") is not None:

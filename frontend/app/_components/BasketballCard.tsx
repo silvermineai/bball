@@ -167,8 +167,16 @@ export default function BasketballCard({
                 <span>Shift from baseline</span>
                 <span>{rosterScenario.margin_delta > 0 ? "+" : ""}{fmt(rosterScenario.margin_delta, 1)} pts</span>
               </div>
+              <div className="match-detail muted">
+                <span>Scenario home win</span>
+                <span>{fmt(rosterScenario.roster_home_win_probability * 100, 1)}%</span>
+              </div>
+              <div className="match-detail muted">
+                <span>Scenario margin range</span>
+                <span>{fmt(rosterScenario.roster_margin_low, 1)} to {fmt(rosterScenario.roster_margin_high, 1)}</span>
+              </div>
               <small>
-                Uses prior net efficiency and exact-ID recorded continuity. It does not change the primary probability, range or ledger registration.
+                Uses prior net efficiency and exact-ID recorded continuity. Probability and range reuse this primary edition&apos;s held-out calibration; the scenario does not replace the prospective ledger forecast.
               </small>
             </div>
           )}

@@ -46,16 +46,21 @@ type RosterLens = {
   game_id: string;
   home_id: string;
   away_id: string;
+  primary_model_id: string;
   base_margin: number;
   roster_margin: number;
   margin_delta: number;
   home_predicted_net: number;
   away_predicted_net: number;
+  roster_home_win_probability: number;
+  roster_margin_low: number;
+  roster_margin_high: number;
 };
 
 type RosterModelArtifact = {
   version?: unknown;
   generated_at?: unknown;
+  primary_model_id?: unknown;
   coverage?: { scenario_games?: unknown; current_predicted_teams?: unknown };
   evaluation?: { held_out_transition?: unknown; improvement_vs_prior_net?: unknown; mae?: unknown };
   scenarios?: unknown;
@@ -75,10 +80,12 @@ async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
     for (const value of rows) {
       if (!value || typeof value !== "object") continue;
       const row = value as Record<string, unknown>;
-      const fields = ["game_id", "home_id", "away_id"];
+      const fields = ["game_id", "home_id", "away_id", "primary_model_id"];
       if (fields.some((field) => typeof row[field] !== "string")) continue;
-      const numbers = ["base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net"];
+      const numbers = ["base_margin", "roster_margin", "margin_delta", "home_predicted_net", "away_predicted_net", "roster_home_win_probability", "roster_margin_low", "roster_margin_high"];
       if (numbers.some((field) => typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) continue;
+      if ((row.roster_home_win_probability as number) < 0 || (row.roster_home_win_probability as number) > 1) continue;
+      if ((row.roster_margin_low as number) > (row.roster_margin as number) || (row.roster_margin_high as number) < (row.roster_margin as number)) continue;
       const lens = row as unknown as RosterLens;
       lenses.set(lens.game_id, lens);
     }
@@ -90,6 +97,7 @@ async function readRosterLenses(c: Context<{ Bindings: Bindings }>) {
       model: {
         version: typeof artifact.version === "string" ? artifact.version : null,
         generated_at: typeof artifact.generated_at === "string" ? artifact.generated_at : null,
+        primary_model_id: typeof artifact.primary_model_id === "string" ? artifact.primary_model_id : null,
         scenario_games: number(coverage.scenario_games),
         current_predicted_teams: number(coverage.current_predicted_teams),
         held_out_transition: number(evaluation.held_out_transition),
@@ -424,7 +432,12 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         ...row,
         source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
         prediction,
-        ...(roster === "1" ? { roster_lens: rosterArtifact.lenses.get(row.game_id) || null } : {}),
+        ...(roster === "1" ? {
+          roster_lens: (() => {
+            const lens = rosterArtifact.lenses.get(row.game_id);
+            return lens?.primary_model_id === row.model_id ? lens : null;
+          })(),
+        } : {}),
       };
     }),
   });

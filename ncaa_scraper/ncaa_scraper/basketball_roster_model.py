@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "basketball-roster-challenger-v1"
+VERSION = "basketball-roster-challenger-v2"
 FT_POSSESSION_WEIGHT = 0.475
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "frontend/public/data/basketball"
@@ -353,6 +353,42 @@ def predict(model: dict, row: dict) -> float | None:
     return float(np.asarray(values) @ np.asarray(model["coefficients"]))
 
 
+def scenario_forecast(primary_model: dict, roster_margin: float) -> dict:
+    """Apply the primary edition's probability map and interval to a scenario.
+
+    The roster challenger changes only expected margin. Reusing the registered
+    primary model's held-out probability mapping and interval width keeps the
+    scenario internally coherent without claiming an independently calibrated
+    roster model.
+    """
+    model_id = primary_model.get("id")
+    calibration = primary_model.get("calibration")
+    if not isinstance(model_id, str) or not model_id:
+        raise ValueError("Roster scenarios require an identified primary model")
+    if not isinstance(calibration, dict):
+        raise ValueError("Roster scenarios require primary-model calibration")
+    coefficients = calibration.get("logistic_coefficients")
+    width = calibration.get("margin_half_width")
+    if (
+        not isinstance(coefficients, list)
+        or len(coefficients) != 2
+        or any(not isinstance(value, (int, float)) or not math.isfinite(float(value)) for value in coefficients)
+        or not isinstance(width, (int, float))
+        or not math.isfinite(float(width))
+        or float(width) < 0
+    ):
+        raise ValueError("Roster scenarios require valid primary-model calibration")
+    intercept, slope = (float(value) for value in coefficients)
+    margin = float(roster_margin)
+    probability = 1 / (1 + math.exp(-max(-30, min(30, intercept + slope * margin))))
+    return {
+        "primary_model_id": model_id,
+        "roster_home_win_probability": round(probability, 5),
+        "roster_margin_low": round(margin - float(width), 2),
+        "roster_margin_high": round(margin + float(width), 2),
+    }
+
+
 def metrics(model: dict, rows: list[dict]) -> dict:
     scored = [(row, predict(model, row)) for row in rows]
     scored = [(row, value) for row, value in scored if value is not None and row.get("target_net") is not None]
@@ -432,12 +468,20 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
                 "margin_delta": round(margin_delta, 3),
                 "home_predicted_net": round(home["predicted_net"], 3),
                 "away_predicted_net": round(away["predicted_net"], 3),
+                **scenario_forecast(primary_model, scenario_margin),
             }
         )
     return {
         "version": VERSION,
         "generated_at": _now(),
         "target_season": 2027,
+        "primary_model_id": primary_model["id"],
+        "scenario_calibration": {
+            "method": "Primary model logistic probability map and 80% margin half-width applied to the roster-adjusted margin",
+            "calibration_season": primary_model["calibration"]["season"],
+            "calibration_games": primary_model["calibration"]["games"],
+            "margin_half_width": primary_model["calibration"]["margin_half_width"],
+        },
         "training_seasons": [2025, 2026],
         "feature_definition": "Prior descriptive team net efficiency plus exact-athlete-ID source-listed returning, represented and incoming prior-minute shares, listed-player count and minutes-weighted attributed publisher Box BPM retained by source player ID.",
         "model": production,
@@ -464,7 +508,7 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
             "Only two historical roster transitions are available for fitting; the held-out evaluation is one season and is not a guarantee of future performance.",
             "Roster listings do not establish eligibility, availability, transfer reason, injury status or depth-chart role.",
             "Publisher Box BPM is unavailable for some source IDs; rows without prior BPM coverage are withheld from the challenger rather than imputed.",
-            "The scenario changes the primary margin by the learned team-strength delta but does not recalibrate win probability or uncertainty.",
+            "Scenario win probability and range reuse the primary edition's held-out calibration; the roster challenger has not been independently calibrated on game outcomes.",
         ],
         "teams": current_rows,
         "scenarios": scenarios,

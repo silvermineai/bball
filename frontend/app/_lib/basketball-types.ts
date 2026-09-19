@@ -270,11 +270,15 @@ export type BBRosterScenario = {
   game_id: string;
   home_id: string;
   away_id: string;
+  primary_model_id: string;
   base_margin: number;
   roster_margin: number;
   margin_delta: number;
   home_predicted_net: number;
   away_predicted_net: number;
+  roster_home_win_probability: number;
+  roster_margin_low: number;
+  roster_margin_high: number;
 };
 export type BBRosterModelTeam = {
   season: number;
@@ -303,6 +307,13 @@ export type BBRosterModel = {
   version: string;
   generated_at: string;
   target_season: number;
+  primary_model_id: string;
+  scenario_calibration: {
+    method: string;
+    calibration_season: number;
+    calibration_games: number;
+    margin_half_width: number;
+  };
   training_seasons: number[];
   feature_definition: string;
   model: { coefficients: number[]; features: string[]; rows: number };

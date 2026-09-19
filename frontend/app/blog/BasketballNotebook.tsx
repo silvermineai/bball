@@ -148,6 +148,8 @@ export default function BasketballNotebook({
           <div className="raw-stat-grid">
             <div><dt>Roster-lens margin</dt><dd>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)} home</dd></div>
             <div><dt>Change vs baseline</dt><dd>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} pts</dd></div>
+            <div><dt>Scenario home win</dt><dd>{fmt(rosterScenario.roster_home_win_probability * 100)}%</dd></div>
+            <div><dt>Scenario margin range</dt><dd>{fmt(rosterScenario.roster_margin_low)} to {fmt(rosterScenario.roster_margin_high)}</dd></div>
             <div><dt>Scenario team net</dt><dd>{fmt(rosterScenario.away_predicted_net)} away · {fmt(rosterScenario.home_predicted_net)} home</dd></div>
           </div>
         ) : (

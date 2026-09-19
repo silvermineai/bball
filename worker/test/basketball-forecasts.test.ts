@@ -175,19 +175,24 @@ describe("basketball forecast availability", () => {
       };
     });
     const fetch = vi.fn(async () => new Response(JSON.stringify({
-      version: "basketball-roster-challenger-v1",
+      version: "basketball-roster-challenger-v2",
       generated_at: "2026-09-17T00:00:00Z",
+      primary_model_id: "basketball-efficiency-v2-test",
       coverage: { scenario_games: 1, current_predicted_teams: 2 },
       evaluation: { held_out_transition: 2026, improvement_vs_prior_net: 0.5, mae: 10.4 },
       scenarios: [{
         game_id: "401902275",
         home_id: "2086",
         away_id: "322",
+        primary_model_id: "basketball-efficiency-v2-test",
         base_margin: 4.5,
         roster_margin: 5.1,
         margin_delta: 0.6,
         home_predicted_net: 2.1,
         away_predicted_net: -3.4,
+        roster_home_win_probability: 0.64,
+        roster_margin_low: -10.8,
+        roster_margin_high: 21.0,
       }],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     const response = await basketballForecasts.request(
@@ -197,8 +202,43 @@ describe("basketball forecast availability", () => {
     );
     expect(response.status).toBe(200);
     const body = await response.json() as { roster_model: Record<string, unknown>; rows: Array<Record<string, unknown>> };
-    expect(body.roster_model).toMatchObject({ version: "basketball-roster-challenger-v1", scenario_games: 1, improvement_vs_prior_net: 0.5 });
-    expect(body.rows[0].roster_lens).toMatchObject({ game_id: "401902275", roster_margin: 5.1, margin_delta: 0.6 });
+    expect(body.roster_model).toMatchObject({ version: "basketball-roster-challenger-v2", primary_model_id: "basketball-efficiency-v2-test", scenario_games: 1, improvement_vs_prior_net: 0.5 });
+    expect(body.rows[0].roster_lens).toMatchObject({ game_id: "401902275", primary_model_id: "basketball-efficiency-v2-test", roster_margin: 5.1, margin_delta: 0.6, roster_home_win_probability: 0.64, roster_margin_low: -10.8, roster_margin_high: 21 });
     expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("withholds a roster lens from a different primary model edition", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return { bind: () => ({ all: async () => ({ results: [{
+        game_id: "401902275", model_id: "basketball-efficiency-v2-old", created_at: "2026-09-16T00:00:00Z",
+        prediction_json: JSON.stringify({ home_margin: 3.5 }), season: 2027,
+        starts_at: "2026-11-02T05:00:00Z", home_id: "2086", away_id: "322",
+        home_name: "Butler", away_name: "Lafayette", home_score: null, away_score: null,
+        completed: 0, neutral: 0, time_tbd: 1, venue: null, broadcast: null,
+        source_start: null, source_time_valid: null, source_observed_at: null,
+      }] }) }) };
+    });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      version: "basketball-roster-challenger-v2",
+      primary_model_id: "basketball-efficiency-v2-current",
+      scenarios: [{
+        game_id: "401902275", home_id: "2086", away_id: "322",
+        primary_model_id: "basketball-efficiency-v2-current", base_margin: 4.5,
+        roster_margin: 5.1, margin_delta: 0.6, home_predicted_net: 2.1,
+        away_predicted_net: -3.4, roster_home_win_probability: 0.64,
+        roster_margin_low: -10.8, roster_margin_high: 21,
+      }],
+    }), { status: 200 }));
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&model=basketball-efficiency-v2-old&roster=1&limit=1",
+      {},
+      { DB: { prepare }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rows: Array<Record<string, unknown>> };
+    expect(body.rows[0].roster_lens).toBeNull();
   });
 });

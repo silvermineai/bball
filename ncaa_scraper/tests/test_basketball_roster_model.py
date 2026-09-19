@@ -1,7 +1,14 @@
 import unittest
 
 from ncaa_scraper.basketball import _prior_production
-from ncaa_scraper.basketball_roster_model import FEATURES, WORKLOAD_FEATURES, fit, metrics, predict
+from ncaa_scraper.basketball_roster_model import (
+    FEATURES,
+    WORKLOAD_FEATURES,
+    fit,
+    metrics,
+    predict,
+    scenario_forecast,
+)
 
 
 def row(i: int, target: float | None = None) -> dict:
@@ -62,6 +69,26 @@ class RosterModelTests(unittest.TestCase):
         workload_row["prior_bpm"] = None
         workload_row["represented_bpm"] = None
         self.assertIsNotNone(predict(model, workload_row))
+
+    def test_scenario_forecast_reuses_primary_calibration(self):
+        result = scenario_forecast(
+            {
+                "id": "basketball-efficiency-v2-test",
+                "calibration": {
+                    "logistic_coefficients": [0.1, 0.2],
+                    "margin_half_width": 12.5,
+                },
+            },
+            5.0,
+        )
+        self.assertEqual(result["primary_model_id"], "basketball-efficiency-v2-test")
+        self.assertAlmostEqual(result["roster_home_win_probability"], 0.75026, places=5)
+        self.assertEqual(result["roster_margin_low"], -7.5)
+        self.assertEqual(result["roster_margin_high"], 17.5)
+
+    def test_scenario_forecast_rejects_missing_calibration(self):
+        with self.assertRaisesRegex(ValueError, "calibration"):
+            scenario_forecast({"id": "basketball-efficiency-v2-test"}, 5.0)
 
 
 if __name__ == "__main__":

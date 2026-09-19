@@ -309,7 +309,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Home win probability", "Margin range low", "Margin range high", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -321,8 +321,12 @@ export default function ForecastLab({
         row.scenario?.roster_margin,
         row.scenario?.margin_delta,
         row.prediction.home_win_probability * 100,
+        row.scenario == null ? null : row.scenario.roster_home_win_probability * 100,
         row.prediction.margin_low,
         row.prediction.margin_high,
+        row.scenario?.roster_margin_low,
+        row.scenario?.roster_margin_high,
+        row.scenario?.primary_model_id,
         row.comparisons.length,
         marketQuote(row.comparisons, "spreads")?.line,
         marketQuote(row.comparisons, "spreads")?.model_difference,
@@ -359,7 +363,7 @@ export default function ForecastLab({
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario and does not change the primary probability, interval, ledger registration or market interpretation. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>
@@ -452,7 +456,7 @@ export default function ForecastLab({
             return <tr key={row.game.id}>
               <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}{row.game.prediction && <small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small>}</td>
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
-              <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary</small><small>prior net + exact-ID continuity</small></> : <span>—</span>}</td>
+              <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
               <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small>{marketQuote(row.comparisons, "spreads") && <small>Spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>Total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>No-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}</> : <span className="muted">No verified market quote</span>}</td>
               <td className="numeric">{row.modelDelta ? <><strong>{signed(row.modelDelta.margin)}</strong><small>margin vs latest</small><small>{signed(row.modelDelta.total)} total · {signed(row.modelDelta.winProbability * 100, " pp")} home probability</small></> : <span className="muted">—</span>}</td>
@@ -462,7 +466,7 @@ export default function ForecastLab({
       </div>
       {!rows.length && <p className="empty">No modeled games match this view.</p>}
       <section className="section two-col" style={{ marginTop: 34 }}>
-        <div className="paper-panel"><div className="eyebrow">Read the disagreement</div><h2>Primary model first. Scenario second.</h2><p>The primary forecast is the historical opponent-adjusted efficiency and tempo model. The roster challenger uses prior net efficiency plus exact source-athlete-ID continuity and prior minutes. A positive scenario delta moves the modeled home margin up; it is a research prompt, not an adjusted win probability.</p></div>
+        <div className="paper-panel"><div className="eyebrow">Read the disagreement</div><h2>Primary model first. Scenario second.</h2><p>The primary forecast is the historical opponent-adjusted efficiency and tempo model. The roster challenger uses prior net efficiency plus exact source-athlete-ID continuity and prior minutes. Its adjusted probability and range use the same held-out calibration as the identified primary model edition, while remaining a research sensitivity rather than the registered forecast.</p></div>
         <div className="paper-panel"><div className="eyebrow">Verify the inputs</div><h2>Every row has a trail.</h2><p>Open a matchup brief for Four Factors, historical workload, source roster observations and the research ledger. Market rows appear only when a licensed pregame quote matched the exact game, participants and start time.</p><p><Link href="/basketball/model/">Read the model notebook →</Link> · <Link href="/basketball/recruiting/">Review recruiting evidence →</Link></p></div>
       </section>
     </>
