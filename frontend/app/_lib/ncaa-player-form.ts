@@ -14,6 +14,11 @@ export type NcaaRecentForm = {
   points_delta: number | null;
 };
 
+export type NcaaGamePossessionLine = {
+  possessions: number | null;
+  points_per_possession: number | null;
+};
+
 /** Describe the visible game-log window against the season total. */
 export function gameEvidenceWindowLabel(recordedGames: number, loadedRows: number) {
   const total = Number.isFinite(recordedGames) && recordedGames >= 0 ? Math.trunc(recordedGames) : 0;
@@ -27,6 +32,19 @@ export function gameEvidenceWindowLabel(recordedGames: number, loadedRows: numbe
 function numberValue(stats: NcaaFormGame["stats"], key: string) {
   const value = stats[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Keep a game-level scoring ratio tied to its source-recorded denominator. */
+export function playerGamePossessionLine(stats: NcaaFormGame["stats"]): NcaaGamePossessionLine {
+  const points = numberValue(stats, "pts");
+  const possessions = numberValue(stats, "o_poss");
+  return {
+    possessions,
+    points_per_possession:
+      points == null || possessions == null || possessions <= 0
+        ? null
+        : points / possessions,
+  };
 }
 
 function average(games: NcaaFormGame[], key: string) {

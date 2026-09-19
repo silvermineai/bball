@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildNcaaRecentForm, gameEvidenceWindowLabel } from "./ncaa-player-form";
+import {
+  buildNcaaRecentForm,
+  gameEvidenceWindowLabel,
+  playerGamePossessionLine,
+} from "./ncaa-player-form";
 
 const game = (stats: Record<string, number | null | undefined>) => ({ stats });
 
@@ -44,5 +48,29 @@ describe("NCAA player recent form", () => {
     expect(result.points_per_game).toBe(14);
     expect(result.prior_points_per_game).toBeNull();
     expect(result.points_delta).toBeNull();
+  });
+});
+
+describe("NCAA player game possession evidence", () => {
+  it("exposes the retained possession count and derives scoring yield", () => {
+    expect(playerGamePossessionLine({ pts: 18, o_poss: 27 })).toEqual({
+      possessions: 27,
+      points_per_possession: 2 / 3,
+    });
+  });
+
+  it("keeps the ratio unavailable when either source value is unusable", () => {
+    expect(playerGamePossessionLine({ pts: 18, o_poss: null })).toEqual({
+      possessions: null,
+      points_per_possession: null,
+    });
+    expect(playerGamePossessionLine({ pts: null, o_poss: 24 })).toEqual({
+      possessions: 24,
+      points_per_possession: null,
+    });
+    expect(playerGamePossessionLine({ pts: 0, o_poss: 0 })).toEqual({
+      possessions: 0,
+      points_per_possession: null,
+    });
   });
 });
