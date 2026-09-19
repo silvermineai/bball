@@ -67,8 +67,10 @@ describe("market archive metadata", () => {
       { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
       { results: [] },
     ]);
-    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare, batch } });
     await expect(response.json()).resolves.toMatchObject({ total: 4, pregame: 1 });
+    expect((prepare.mock.calls as unknown as Array<[unknown]>).map(([sql]) => String(sql)).join("\n")).toContain("json_extract(m.payload_json,'$.starts_at')");
   });
 
   it("classifies quote validation outcomes from the capture receipt", async () => {
