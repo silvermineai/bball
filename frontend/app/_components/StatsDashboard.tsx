@@ -13,6 +13,7 @@ import { rankPlayerProfiles } from "../_lib/player-index-view";
 import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
+import LiveBasketballProspectStatus from "./LiveBasketballProspectStatus";
 import type { NationalPlayerRow } from "./LiveNationalPlayerTable";
 import LiveNationalPlayerTable from "./LiveNationalPlayerTable";
 import LiveTeamProductionTable from "./LiveTeamProductionTable";
@@ -444,6 +445,7 @@ export default function StatsDashboard() {
       </div>
       <LiveBasketballForecastStatus publishedModelId={overview.model.id} publishedEdition={overview.generated_at} />
       <LiveBasketballMarketStatus />
+      <LiveBasketballProspectStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
         <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
