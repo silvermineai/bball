@@ -15,6 +15,7 @@ from ncaa_scraper.ncaa_individual import (
     parse_table,
     atomic_write,
     release_is_degraded,
+    source_totals,
     to_num,
 )
 
@@ -61,6 +62,8 @@ class NCAAIndividualTests(unittest.TestCase):
         release = export_release(conn)
         self.assertEqual(release["coverage"]["players"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
+        self.assertEqual(release["coverage"]["divisions"]["1"]["stl"], 0)
+        self.assertEqual(release["coverage"]["divisions"]["2"]["fta"], 0)
         self.assertEqual(release["players"][0]["name"], "A Player")
         self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
         self.assertEqual(release["generated_at"], "2026-06-12T23:00:00Z")
@@ -90,12 +93,41 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(player["fg_pct_rank"], 12)
         self.assertEqual(player["dbl_dbl_rank"], 33)
 
+    def test_export_promotes_totals_from_retained_source_rows(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(SCHEMA)
+        conn.execute(
+            "INSERT INTO ncaa_players (player_id,division,name,source_stats_json,updated_at) VALUES (?,?,?,?,?)",
+            (
+                10,
+                2,
+                "Complete Player",
+                '{"spg":{"cells":["1","Complete Player","Sr.","6-2","G","30","58","1.93"]},'
+                '"ast_to":{"cells":["1","Complete Player","Sr.","6-2","G","30","149","70","2.13"]}}',
+                "2026-06-12 23:00:00",
+            ),
+        )
+        player = export_release(conn)["players"][0]
+        self.assertEqual(player["stl"], 58)
+        self.assertEqual(player["ast"], 149)
+        self.assertEqual(player["tov"], 70)
+
     def test_ensure_schema_upgrades_legacy_snapshot(self):
         conn = sqlite3.connect(":memory:")
         legacy_schema = SCHEMA.replace("  source_stats_json TEXT,\n", "")
         conn.executescript(legacy_schema)
         ensure_schema(conn)
-        self.assertIn("source_stats_json", {row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")})
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(ncaa_players)")}
+        self.assertIn("source_stats_json", columns)
+        self.assertTrue({"fta", "stl", "blk", "tov", "mins"}.issubset(columns))
+
+    def test_source_totals_promote_every_known_ranking_count(self):
+        self.assertEqual(source_totals("spg", ["1", "P", "Sr", "6-2", "G", "30", "58", "1.93"]), {"stl": 58})
+        self.assertEqual(source_totals("bpg", ["1", "P", "Sr", "6-9", "F", "30", "44", "1.47"]), {"blk": 44})
+        self.assertEqual(source_totals("ft_pct", ["1", "P", "Sr", "6-2", "G", "30", "183", "220", "83.2"]), {"ftm": 183, "fta": 220})
+        self.assertEqual(source_totals("ast_to", ["1", "P", "Sr", "6-2", "G", "30", "149", "70", "2.13"]), {"ast": 149, "tov": 70})
+        self.assertEqual(source_totals("mpg", ["1", "P", "Sr", "6-2", "G", "30", "1135:22", "37:51"]), {"mins": 1135 + 22 / 60})
+        self.assertEqual(source_totals("dbl_dbl", ["1", "P", "Sr", "6-2", "G", "30", "8"]), {})
 
     def test_assists_uses_current_ncaa_sequence_and_rejects_stale_body(self):
         self.assertEqual(INDIVIDUAL_STATS["140.0"], "apg")
@@ -125,6 +157,25 @@ class NCAAIndividualTests(unittest.TestCase):
         candidate = {
             "season": 2026,
             "coverage": {"divisions": {"1": {"players": 1, "ppg": 1, "rpg": 1, "mpg": 1}}},
+        }
+        self.assertFalse(release_is_degraded(previous, candidate))
+
+    def test_derived_fill_does_not_block_equivalent_source_snapshot(self):
+        previous = {
+            "season": 2026,
+            "coverage": {"divisions": {"1": {"players": 2, "ppg": 2, "rpg": 2, "mpg": 2}}},
+            "players": [
+                {"division": 1, "source_stats": {"ppg": {}, "rpg": {}, "mpg": {}}},
+                {"division": 1, "source_stats": {"ppg": {}}},
+            ],
+        }
+        candidate = {
+            "season": 2026,
+            "coverage": {"divisions": {"1": {"players": 2, "ppg": 2, "rpg": 1, "mpg": 1}}},
+            "players": [
+                {"division": 1, "source_stats": {"ppg": {}, "rpg": {}, "mpg": {}}},
+                {"division": 1, "source_stats": {"ppg": {}}},
+            ],
         }
         self.assertFalse(release_is_degraded(previous, candidate))
 

@@ -60,6 +60,32 @@ INDIVIDUAL_STATS = {
 }
 STAT_FALLBACKS = {"apg": ("216.0",)}
 
+# Typed totals carried alongside the ranking measure on each publisher page.
+# Retaining these cells matters most outside Division I, where an attributed
+# player-box supplement is not available. The complete source row remains in
+# ``source_stats_json``; this mapping only promotes known columns so they can
+# be queried without parsing display strings downstream.
+SOURCE_TOTAL_FIELDS = {
+    "ppg": ((6, "fgm"), (7, "three_fgm"), (8, "ftm"), (9, "pts")),
+    "rpg": ((6, "reb"),),
+    "apg": ((6, "ast"),),
+    "spg": ((6, "stl"),),
+    "bpg": ((6, "blk"),),
+    "fg_pct": ((6, "fgm"), (7, "fga")),
+    "three_pct": ((6, "three_fgm"), (7, "three_fga")),
+    "ft_pct": ((6, "ftm"), (7, "fta")),
+    "threes_pg": ((6, "three_fgm"),),
+    "mpg": ((6, "mins"),),
+    "ast_to": ((6, "ast"), (7, "tov")),
+}
+
+PLAYER_STAT_FIELDS = (
+    "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+    "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl",
+    "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+    "mins",
+)
+
 TEAM_SCORING_STAT = "145.0"  # team Scoring Offense: G, W-L, PTS, PPG
 
 SCHEMA = """
@@ -73,6 +99,7 @@ CREATE TABLE IF NOT EXISTS ncaa_players (
   mpg REAL, ast_to REAL, dbl_dbl REAL,
   pts INTEGER, reb INTEGER, ast INTEGER, fgm INTEGER, fga INTEGER,
   three_fgm INTEGER, three_fga INTEGER, ftm INTEGER,
+  fta INTEGER, stl INTEGER, blk INTEGER, tov INTEGER, mins REAL,
   ppg_rank INTEGER, rpg_rank INTEGER, apg_rank INTEGER,
   spg_rank INTEGER, bpg_rank INTEGER, fg_pct_rank INTEGER,
   three_pct_rank INTEGER, ft_pct_rank INTEGER, threes_pg_rank INTEGER,
@@ -110,6 +137,15 @@ def to_num(text: str):
         return float(text) if "." in text else int(text)
     except ValueError:
         return None
+
+
+def source_totals(slug: str, cells: list[str]) -> dict[str, int | float | None]:
+    """Promote known counting columns from a retained publisher row."""
+    return {
+        field: to_num(cells[index])
+        for index, field in SOURCE_TOTAL_FIELDS.get(slug, ())
+        if index < len(cells)
+    }
 
 
 def decode_html(value: str) -> str:
@@ -194,6 +230,16 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     for column in rank_columns:
         if column not in columns:
             conn.execute(f"ALTER TABLE ncaa_players ADD COLUMN {column} INTEGER")
+    value_columns = {
+        "fta": "INTEGER",
+        "stl": "INTEGER",
+        "blk": "INTEGER",
+        "tov": "INTEGER",
+        "mins": "REAL",
+    }
+    for column, kind in value_columns.items():
+        if column not in columns:
+            conn.execute(f"ALTER TABLE ncaa_players ADD COLUMN {column} {kind}")
     conn.commit()
 
 
@@ -218,6 +264,16 @@ def export_release(conn: sqlite3.Connection) -> dict:
                 source_stats = None
             if isinstance(source_stats, dict) and source_stats:
                 item["source_stats"] = source_stats
+                # Promote totals from retained source rows as well as during a
+                # live/cache parse. This upgrades an older SQLite snapshot
+                # without another request and makes the source page, rather
+                # than a later derived fill, authoritative when both exist.
+                for slug, evidence in source_stats.items():
+                    if not isinstance(evidence, dict) or not isinstance(evidence.get("cells"), list):
+                        continue
+                    for field, value in source_totals(slug, evidence["cells"]).items():
+                        if value is not None:
+                            item[field] = value
                 # Older local snapshots retained each publisher rank only in
                 # source_stats_json. Promote those ranks into typed columns
                 # during export so a rebuild does not need another fetch.
@@ -235,10 +291,10 @@ def export_release(conn: sqlite3.Connection) -> dict:
         rows = [p for p in players if p["division"] == division]
         coverage[str(division)] = {
             "players": len(rows),
-            "ppg": sum(p.get("ppg") is not None for p in rows),
-            "rpg": sum(p.get("rpg") is not None for p in rows),
-            "apg": sum(p.get("apg") is not None for p in rows),
-            "mpg": sum(p.get("mpg") is not None for p in rows),
+            **{
+                field: sum(p.get(field) is not None for p in rows)
+                for field in PLAYER_STAT_FIELDS
+            },
         }
     updated = [p[0] for p in conn.execute("SELECT updated_at FROM ncaa_players WHERE updated_at IS NOT NULL")]
     generated = max(updated) if updated else None
@@ -321,10 +377,31 @@ def release_is_degraded(previous: dict, candidate: dict) -> bool:
     """
     if previous.get("season") != candidate.get("season"):
         return False
-    previous_divisions = previous.get("coverage", {}).get("divisions", {})
-    candidate_divisions = candidate.get("coverage", {}).get("divisions", {})
-    previous_d1 = previous_divisions.get("1") if isinstance(previous_divisions, dict) else None
-    candidate_d1 = candidate_divisions.get("1") if isinstance(candidate_divisions, dict) else None
+    def direct_d1_coverage(release: dict) -> dict | None:
+        players = release.get("players")
+        if isinstance(players, list):
+            d1 = [row for row in players if isinstance(row, dict) and row.get("division") == 1]
+            if d1:
+                return {
+                    "players": len(d1),
+                    **{
+                        slug: sum(
+                            isinstance(row.get("source_stats"), dict)
+                            and isinstance(row["source_stats"].get(slug), dict)
+                            for row in d1
+                        )
+                        for slug in ("ppg", "rpg", "mpg")
+                    },
+                }
+        divisions = release.get("coverage", {}).get("divisions", {})
+        return divisions.get("1") if isinstance(divisions, dict) else None
+
+    # Compare publisher-row coverage, not the post-enrichment value matrix.
+    # Otherwise an exact-ID box supplement makes the previous release appear
+    # more complete than every future ranking snapshot and permanently blocks
+    # refreshed source rows from publication.
+    previous_d1 = direct_d1_coverage(previous)
+    candidate_d1 = direct_d1_coverage(candidate)
     if not isinstance(previous_d1, dict):
         return False
     if not isinstance(candidate_d1, dict):
@@ -471,22 +548,12 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
             if rank is not None:
                 conn.execute(f"UPDATE ncaa_players SET {slug}_rank=? WHERE player_id=?", (int(rank), pid))
 
-            # counting stats from the PPG page (FGM, 3FG, FT, PTS) and others
-            if slug == "ppg" and len(cells) >= 11:
+            totals = source_totals(slug, cells)
+            if totals:
+                assignments = ",".join(f"{column}=?" for column in totals)
                 conn.execute(
-                    "UPDATE ncaa_players SET fgm=?, three_fgm=?, ftm=?, pts=? WHERE player_id=?",
-                    (to_num(cells[6]), to_num(cells[7]), to_num(cells[8]), to_num(cells[9]), pid),
-                )
-            elif slug == "rpg" and len(cells) >= 8:
-                conn.execute("UPDATE ncaa_players SET reb=? WHERE player_id=?", (to_num(cells[6]), pid))
-            elif slug == "apg" and len(cells) >= 8:
-                conn.execute("UPDATE ncaa_players SET ast=? WHERE player_id=?", (to_num(cells[6]), pid))
-            elif slug == "fg_pct" and len(cells) >= 9:
-                conn.execute("UPDATE ncaa_players SET fgm=?, fga=? WHERE player_id=?", (to_num(cells[6]), to_num(cells[7]), pid))
-            elif slug == "three_pct" and len(cells) >= 9:
-                conn.execute(
-                    "UPDATE ncaa_players SET three_fgm=?, three_fga=? WHERE player_id=?",
-                    (to_num(cells[6]), to_num(cells[7]), pid),
+                    f"UPDATE ncaa_players SET {assignments} WHERE player_id=?",
+                    (*totals.values(), pid),
                 )
             added += 1
         conn.commit()
