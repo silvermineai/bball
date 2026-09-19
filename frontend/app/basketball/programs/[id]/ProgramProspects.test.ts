@@ -104,9 +104,33 @@ describe("program prospect evidence", () => {
       committedElsewhere: 1,
       editions: 2,
       byClass: [
-        { season: 2026, matched: 1, committed: 1, listed: 0, committedElsewhere: 0 },
-        { season: 2027, matched: 3, committed: 1, listed: 1, committedElsewhere: 1 },
+        { season: 2026, matched: 1, committed: 1, listed: 0, committedElsewhere: 0, committedRanked: 1, committedBestRank: 20, committedAverageRank: 20, listedRanked: 0, listedBestRank: null, listedAverageRank: null },
+        { season: 2027, matched: 3, committed: 1, listed: 1, committedElsewhere: 1, committedRanked: 1, committedBestRank: 20, committedAverageRank: 20, listedRanked: 1, listedBestRank: 20, listedAverageRank: 20 },
       ],
+    });
+  });
+
+  it("profiles commitment and open ranks separately without treating missing ranks as zero", () => {
+    const rows = [
+      { ...prospect({ athlete_id: "10", rank: 36 }), season: 2027, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "11", rank: 100 }), season: 2027, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "12", rank: null }), season: 2027, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "13", rank: 7 }), season: 2027, evidence: "Listed school" as const },
+      { ...prospect({ athlete_id: "14", rank: 0 }), season: 2027, evidence: "Listed school" as const },
+      { ...prospect({ athlete_id: "15", rank: 1 }), season: 2027, evidence: "Committed elsewhere" as const },
+    ];
+    const profile = summarizeProgramProspects(rows).byClass[0];
+
+    expect(profile).toMatchObject({
+      committed: 3,
+      committedRanked: 2,
+      committedBestRank: 36,
+      committedAverageRank: 68,
+      listed: 2,
+      listedRanked: 1,
+      listedBestRank: 7,
+      listedAverageRank: 7,
+      committedElsewhere: 1,
     });
   });
 });

@@ -99,8 +99,28 @@ export type ProgramProspectSummary = {
   listed: number;
   committedElsewhere: number;
   editions: number;
-  byClass: Array<{ season: number; matched: number; committed: number; listed: number; committedElsewhere: number }>;
+  byClass: Array<{
+    season: number;
+    matched: number;
+    committed: number;
+    listed: number;
+    committedElsewhere: number;
+    committedRanked: number;
+    committedBestRank: number | null;
+    committedAverageRank: number | null;
+    listedRanked: number;
+    listedBestRank: number | null;
+    listedAverageRank: number | null;
+  }>;
 };
+
+const recordedRank = (value: number | null): value is number => Number.isInteger(value) && (value ?? 0) > 0;
+
+const rankProfile = (ranks: number[]) => ({
+  ranked: ranks.length,
+  best: ranks.length ? Math.min(...ranks) : null,
+  average: ranks.length ? ranks.reduce((total, rank) => total + rank, 0) / ranks.length : null,
+});
 
 /**
  * Summarize only rows that match the exact program ID. The API's `total` and
@@ -108,18 +128,40 @@ export type ProgramProspectSummary = {
  * here would overstate a program's recruiting footprint.
  */
 export function summarizeProgramProspects(rows: ProgramProspectRow[]): ProgramProspectSummary {
-  const byClass = new Map<number, { matched: number; committed: number; listed: number; committedElsewhere: number }>();
+  const byClass = new Map<number, { matched: number; committed: number; listed: number; committedElsewhere: number; committedRanks: number[]; listedRanks: number[] }>();
   for (const row of rows) {
-    const current = byClass.get(row.season) || { matched: 0, committed: 0, listed: 0, committedElsewhere: 0 };
+    const current = byClass.get(row.season) || { matched: 0, committed: 0, listed: 0, committedElsewhere: 0, committedRanks: [], listedRanks: [] };
     current.matched += 1;
-    if (row.evidence === "Recorded commitment") current.committed += 1;
+    if (row.evidence === "Recorded commitment") {
+      current.committed += 1;
+      if (recordedRank(row.rank)) current.committedRanks.push(row.rank);
+    }
     else if (row.evidence === "Committed elsewhere") current.committedElsewhere += 1;
-    else current.listed += 1;
+    else {
+      current.listed += 1;
+      if (recordedRank(row.rank)) current.listedRanks.push(row.rank);
+    }
     byClass.set(row.season, current);
   }
   const classRows = Array.from(byClass.entries())
     .sort(([a], [b]) => a - b)
-    .map(([season, values]) => ({ season, ...values }));
+    .map(([season, values]) => {
+      const committed = rankProfile(values.committedRanks);
+      const listed = rankProfile(values.listedRanks);
+      return {
+        season,
+        matched: values.matched,
+        committed: values.committed,
+        listed: values.listed,
+        committedElsewhere: values.committedElsewhere,
+        committedRanked: committed.ranked,
+        committedBestRank: committed.best,
+        committedAverageRank: committed.average,
+        listedRanked: listed.ranked,
+        listedBestRank: listed.best,
+        listedAverageRank: listed.average,
+      };
+    });
   return {
     matched: rows.length,
     committed: rows.filter((row) => row.evidence === "Recorded commitment").length,
@@ -213,10 +255,11 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
           </div>
           {summary.byClass.length > 0 && <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
-              <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Matched rows by class</caption>
-              <thead><tr><th>Class</th><th className="numeric">Matched</th><th className="numeric">Committed here</th><th className="numeric">Uncommitted / listed</th><th className="numeric">Committed elsewhere</th></tr></thead>
-              <tbody>{summary.byClass.map((item) => <tr key={item.season}><th scope="row">{item.season}</th><td className="numeric">{item.matched.toLocaleString()}</td><td className="numeric">{item.committed.toLocaleString()}</td><td className="numeric">{item.listed.toLocaleString()}</td><td className="numeric">{item.committedElsewhere.toLocaleString()}</td></tr>)}</tbody>
+              <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Class rank profile / exact program matches</caption>
+              <thead><tr><th>Class</th><th className="numeric">Matched</th><th className="numeric">Committed here</th><th>Committed rank profile</th><th className="numeric">Uncommitted / listed</th><th>Open listed rank profile</th><th className="numeric">Committed elsewhere</th></tr></thead>
+              <tbody>{summary.byClass.map((item) => <tr key={item.season}><th scope="row">{item.season}</th><td className="numeric">{item.matched.toLocaleString()}</td><td className="numeric">{item.committed.toLocaleString()}</td><td>{item.committedRanked ? <><strong>#{item.committedBestRank} best</strong><small>#{item.committedAverageRank?.toFixed(1)} average · {item.committedRanked} of {item.committed} ranked</small></> : <span className="note">No recorded rank</span>}</td><td className="numeric">{item.listed.toLocaleString()}</td><td>{item.listedRanked ? <><strong>#{item.listedBestRank} best</strong><small>#{item.listedAverageRank?.toFixed(1)} average · {item.listedRanked} of {item.listed} ranked</small></> : <span className="note">No recorded rank</span>}</td><td className="numeric">{item.committedElsewhere.toLocaleString()}</td></tr>)}</tbody>
             </table>
+            <p className="note" style={{ marginTop: 10 }}>Best and average ranks use only positive recorded national ranks within that class and evidence state. Unranked rows remain in the commitment and listed counts but never enter the average. Closed recruitments are kept out of both rank profiles.</p>
           </div>}
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">

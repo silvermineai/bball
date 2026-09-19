@@ -17,7 +17,7 @@ import {
 } from "../../_lib/recruiting";
 import { fmt } from "../../_lib/format";
 import { comparisonParams } from "../../_lib/player-comparison";
-import { publicArchiveText } from "../../_lib/public-text";
+import { publicArchiveArticle } from "../../_lib/public-text";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
@@ -77,13 +77,7 @@ export default function Page() {
       /recruit|transfer|portal|commit|sign|class of|prospect|injur|surgery|\bout\b|miss(?:es|ing)?(?:\s+the)?\s+season|unavailable|return to play/i.test(
         `${article.headline} ${article.description} ${article.categories.join(" ")}`,
       ),
-    ).map(({ link: _link, publisher: _publisher, ...article }) => ({
-      ...article,
-      headline: publicArchiveText(article.headline),
-      description: publicArchiveText(article.description)
-        .replace(/<img\b[^>]*>/gi, ""),
-      categories: article.categories.map(publicArchiveText),
-    }));
+    ).map(publicArchiveArticle);
   const productionComparisons = recruitingRosterProductionComparisons(data, rosters);
   const continuityRows = (rosters.team_summaries || [])
     .filter((row) => row.represented_prior_minutes > 0)

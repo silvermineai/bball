@@ -1,16 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import NewsArchive, { type PublisherArticle } from "./NewsArchive";
+import { publicArchiveArticle } from "../../_lib/public-text";
 
 export const metadata = {
   title: "College basketball news archive",
   description: "Searchable men’s college basketball headlines with dates and retained summaries.",
   alternates: { canonical: "/basketball/news/" },
 };
-
-const publicArchiveText = (value: string) => value
-  .replace(/<img\b[^>]*>/gi, "")
-  .replace(/https?:\/\/[^\s"'<>]+/gi, "archived media");
 
 export default function Page() {
   const release = JSON.parse(fs.readFileSync(path.join(process.cwd(), "public/data/news.json"), "utf8")) as {
@@ -21,11 +18,7 @@ export default function Page() {
   };
   const articles = (release.articles || [])
     .filter((article) => article.sport === "mens-college-basketball")
-    .map(({ link: _link, publisher: _publisher, ...article }) => ({
-      ...article,
-      headline: publicArchiveText(article.headline),
-      description: publicArchiveText(article.description),
-    }));
+    .map(publicArchiveArticle);
   return (
     <>
       <div className="page-title">
