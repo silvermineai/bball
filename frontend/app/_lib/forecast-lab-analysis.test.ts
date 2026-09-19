@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, forecastSignalContext, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -92,12 +92,27 @@ describe("forecast lab matchup signals", () => {
   });
 
   it("marks a complete core brief while retaining verified market lineage", () => {
-    expect(forecastEvidenceCoverage({
+    const evidence = forecastEvidenceCoverage({
       primary: true,
       scheduled: true,
       factors: true,
       roster: true,
       market: true,
-    })).toMatchObject({ present: 4, total: 4, missing: [], complete: true, market: "verified" });
+    });
+    expect(evidence).toMatchObject({ present: 4, total: 4, missing: [], complete: true, market: "verified" });
+    expect(forecastEvidenceLabel(evidence)).toBe("Core packet + market");
+    expect(forecastEvidenceDetail(evidence)).toContain("qualifying pregame market quote is attached");
+  });
+
+  it("surfaces the schedule and market gaps on an upcoming game", () => {
+    const evidence = forecastEvidenceCoverage({
+      primary: true,
+      scheduled: false,
+      factors: true,
+      roster: true,
+      market: false,
+    });
+    expect(forecastEvidenceLabel(evidence)).toBe("3/4 core evidence");
+    expect(forecastEvidenceDetail(evidence)).toBe("Missing: confirmed tip time. No qualifying pregame market quote is attached; no market edge is inferred.");
   });
 });

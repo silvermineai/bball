@@ -9,6 +9,7 @@ import type {
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel } from "../_lib/forecast-lab-analysis";
 
 export default function BasketballCard({
   game: g,
@@ -38,6 +39,13 @@ export default function BasketballCard({
     homeRoster && awayRoster ? "roster minutes" : null,
     rosterScenario ? "roster scenario" : null,
   ].filter((value): value is string => value !== null);
+  const evidence = forecastEvidenceCoverage({
+    primary: !!g.prediction,
+    scheduled: !!(g.source_time_valid && g.source_start),
+    factors: !!g.matchup_factors,
+    roster: !!rosterScenario,
+    market: !!g.market_comparisons?.length,
+  });
   const scheduleLabel = g.source_time_valid && g.source_start
     ? "confirmed tip"
     : g.time_tbd
@@ -78,13 +86,14 @@ export default function BasketballCard({
           <div className="analysis-readiness" aria-label="Game analysis packet">
             <div className="analysis-readiness-heading">
               <strong>Game analysis packet</strong>
-              <span>{contextLayers.length ? `${contextLayers.length} evidence layers` : "forecast only"}</span>
+              <span>{forecastEvidenceLabel(evidence)}</span>
             </div>
             <div className="analysis-badges">
-              <span className="analysis-badge is-ready">{coldStart ? "cold-start estimate" : "primary model"}</span>
+              <span className={`analysis-badge ${evidence.complete ? "is-ready" : ""}`}>{coldStart ? "cold-start estimate" : "primary model"}</span>
               <span className="analysis-badge">{scheduleLabel}</span>
               {contextLayers.map((layer) => <span className="analysis-badge" key={layer}>{layer}</span>)}
             </div>
+            <small className="analysis-readiness-note">{forecastEvidenceDetail(evidence)}</small>
           </div>
           <div className="match-detail">
             <span>{g.home_name} win estimate</span>

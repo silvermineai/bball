@@ -22,6 +22,20 @@ export type ForecastEvidenceCoverage = {
   market: "verified" | "unavailable";
 };
 
+/** Give each game card a compact, evidence-first readiness label. */
+export function forecastEvidenceLabel(evidence: ForecastEvidenceCoverage): string {
+  if (!evidence.complete) return `${evidence.present}/${evidence.total} core evidence`;
+  return evidence.market === "verified" ? "Core packet + market" : "Core packet; market pending";
+}
+
+/** Explain the specific missing evidence without treating absent markets as model errors. */
+export function forecastEvidenceDetail(evidence: ForecastEvidenceCoverage): string {
+  const missing = evidence.missing.length ? `Missing: ${evidence.missing.join(", ")}.` : "Core model evidence is present.";
+  return evidence.market === "verified"
+    ? `${missing} A qualifying pregame market quote is attached.`
+    : `${missing} No qualifying pregame market quote is attached; no market edge is inferred.`;
+}
+
 export type ForecastSignalContext = {
   estimate: "primary" | "cold-start" | "unavailable";
   label: "Strong signal" | "Lean signal" | "Near even" | "Cold-start estimate" | "Unavailable";
