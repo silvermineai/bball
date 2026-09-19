@@ -69,6 +69,23 @@ export type SportSummary = {
   metrics: Metrics;
   games_with_comparisons: number;
   qualifying_market_observations?: number;
+  /** Results remain separated by the model selected under the ledger policy. */
+  model_metrics?: {
+    model_id: string;
+    selected_forecasts: number;
+    eligible_forecasts: number;
+    settled_games: number;
+    first_registered_at: string | null;
+    last_registered_at: string | null;
+    margin_mae: number | null;
+    total_mae: number | null;
+    winner_accuracy: number | null;
+    winner_picks: number;
+    brier: number | null;
+    log_loss: number | null;
+    interval_games: number;
+    interval_coverage: number | null;
+  }[];
   market_metrics: {
     provider: string;
     bookmaker: string;

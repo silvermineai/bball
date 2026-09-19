@@ -199,6 +199,54 @@ export default function Scorecard() {
           Unmatched feed events <b>{unmatchedEvents.toLocaleString()}</b>
         </span>
       </div>
+      {summary.model_metrics?.length ? (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="model-edition-record-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Model lineage / first eligible forecast</div>
+              <h2 id="model-edition-record-title">Keep each edition’s record separate.</h2>
+            </div>
+            <span className="note">Prospective ledger only</span>
+          </div>
+          <p className="note">
+            Each game belongs to the model edition selected by the ledger policy. Metrics use only settled eligible games from that edition; an em dash means the required outcome or interval evidence is unavailable.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model edition</th>
+                  <th>First registered</th>
+                  <th className="numeric">Selected</th>
+                  <th className="numeric">Eligible</th>
+                  <th className="numeric">Settled</th>
+                  <th className="numeric">Margin MAE</th>
+                  <th className="numeric">Brier</th>
+                  <th className="numeric">80% range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.model_metrics.map((edition) => (
+                  <tr key={edition.model_id}>
+                    <th scope="row"><code>{edition.model_id}</code></th>
+                    <td>{edition.first_registered_at ? date(edition.first_registered_at) : "—"}</td>
+                    <td className="numeric">{edition.selected_forecasts.toLocaleString()}</td>
+                    <td className="numeric">{edition.eligible_forecasts.toLocaleString()}</td>
+                    <td className="numeric">{edition.settled_games.toLocaleString()}</td>
+                    <td className="numeric">{fmt(edition.margin_mae)}</td>
+                    <td className="numeric">{fmt(edition.brier, 4)}</td>
+                    <td className="numeric">
+                      {edition.interval_coverage === null
+                        ? "—"
+                        : `${fmt(edition.interval_coverage * 100)}% (${edition.interval_games.toLocaleString()})`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
       {m.reliability?.length ? (
         <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="reliability-title">
           <div className="section-heading">

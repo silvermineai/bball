@@ -245,6 +245,38 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
   });
   const counts: Record<string, number> = {};
   for (const row of rows) counts[String(row.status)] = (counts[String(row.status)] || 0) + 1;
+  const modelGroups = new Map<string, Json[]>();
+  for (const row of rows) {
+    const modelId = String(row.model_id || "");
+    const group = modelGroups.get(modelId);
+    if (group) group.push(row);
+    else modelGroups.set(modelId, [row]);
+  }
+  const modelMetrics = [...modelGroups.entries()].map(([modelId, selected]) => {
+    const measured = metrics(selected);
+    const registered = selected
+      .map((row) => iso(row.registered_at))
+      .filter((value): value is string => value !== null)
+      .sort();
+    return {
+      model_id: modelId,
+      selected_forecasts: selected.length,
+      eligible_forecasts: selected.filter((row) => !row.exclusion).length,
+      settled_games: measured.games,
+      first_registered_at: registered[0] || null,
+      last_registered_at: registered.at(-1) || null,
+      margin_mae: measured.margin_mae,
+      total_mae: measured.total_mae,
+      winner_accuracy: measured.winner_accuracy,
+      winner_picks: measured.winner_picks,
+      brier: measured.brier,
+      log_loss: measured.log_loss,
+      interval_games: measured.interval_games,
+      interval_coverage: measured.interval_coverage,
+    };
+  }).sort((left, right) =>
+    String(right.last_registered_at || "").localeCompare(String(left.last_registered_at || ""))
+      || left.model_id.localeCompare(right.model_id));
   return {
     games: rows.length,
     registered_versions: registeredVersions,
@@ -258,6 +290,7 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
       (total, row) => total + (row.comparisons as Json[]).length,
       0,
     ),
+    model_metrics: modelMetrics,
     market_metrics: marketMetrics,
   };
 }
