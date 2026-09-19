@@ -257,7 +257,6 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
       if (all.length !== totalRows) throw new Error("The recruiting edition returned an incomplete export.");
       const identities = new Set(all.map((row) => row.athlete_id));
       if (identities.size !== all.length) throw new Error("The recruiting edition returned duplicate prospect rows.");
-      downloadCsv(`prospect-board-${season}-filtered.csv`, toCsv(exportHeaders, all.map(exportRow)));
       setExportMessage(`Downloaded ${all.length.toLocaleString()} filtered prospects.`);
     } catch (reason) {
       setExportMessage(reason instanceof Error ? reason.message : "The complete recruiting export could not be loaded.");
