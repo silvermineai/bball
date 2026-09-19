@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { forecastModelId, loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -154,23 +154,29 @@ describe("live basketball forecast merge", () => {
     vi.unstubAllGlobals();
   });
 
-  it("normalizes live scorecard comparisons by game ID", async () => {
+  it("resolves one forecast edition and pins scorecard comparisons to it", async () => {
+    expect(forecastModelId([{ model_id: "model-a" }, { model_id: "model-a" }])).toBe("model-a");
+    expect(forecastModelId([{ model_id: "model-a" }, { model_id: "model-b" }])).toBeNull();
+    expect(forecastModelId([{ model_id: undefined }])).toBeNull();
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ games: [
-        { game_id: "g1", comparisons: [{ provider: "test", bookmaker: "book", market: "h2h" }] },
-        { game_id: "g2" },
+        { game_id: "g1", model_id: "model-a", comparisons: [{ provider: "test", bookmaker: "book", market: "h2h" }] },
+        { game_id: "g2", model_id: "model-b", comparisons: [{ provider: "wrong", bookmaker: "wrong", market: "h2h" }] },
+        { game_id: "g3", model_id: "model-a" },
       ] }),
     });
     vi.stubGlobal("fetch", fetcher);
-    await expect(loadLiveBasketballMarketComparisons()).resolves.toEqual({
+    await expect(loadLiveBasketballMarketComparisons(undefined, "model-a")).resolves.toEqual({
       g1: [{ provider: "test", bookmaker: "book", market: "h2h" }],
-      g2: [],
+      g3: [],
     });
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/research/scorecard?sport=basketball&limit=5000",
+      "/api/research/scorecard?sport=basketball&model=model-a&limit=5000",
       { signal: undefined },
     );
+    await expect(loadLiveBasketballMarketComparisons(undefined, null)).resolves.toEqual({});
+    expect(fetcher).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
   });
 

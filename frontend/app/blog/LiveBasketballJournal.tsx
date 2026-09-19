@@ -9,6 +9,7 @@ import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { comparisonQuoteSummary } from "../_lib/market-display";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import {
+  forecastModelId,
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
@@ -106,7 +107,8 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
       .then((rows) => {
         if (!controller.signal.aborted) {
           setActiveGames(mergeLiveBasketballForecasts(games, rows));
-          if (rows[0]?.model_id && rows[0].created_at) setEdition({ modelId: rows[0].model_id, capturedAt: rows[0].created_at });
+          const modelId = forecastModelId(rows);
+          if (modelId && rows[0]?.created_at) setEdition({ modelId, capturedAt: rows[0].created_at });
           setStatus("live");
         }
       })
@@ -118,7 +120,7 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballMarketComparisons(controller.signal)
+    loadLiveBasketballMarketComparisons(controller.signal, edition?.modelId)
       .then((value) => {
         if (!controller.signal.aborted) setMarkets(value);
       })
@@ -126,7 +128,7 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
         // Market evidence is optional; the forecast preview remains useful without it.
       });
     return () => controller.abort();
-  }, []);
+  }, [edition?.modelId]);
 
   return (
     <>

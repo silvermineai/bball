@@ -16,6 +16,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
 import ManualMarketCheck from "../briefs/ManualMarketCheck";
 import {
+  forecastModelId,
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
@@ -175,6 +176,7 @@ export default function ForecastLab({
   const [liveCatalog, setLiveCatalog] = useState<LiveCatalog | null>(null);
   const [liveCatalogError, setLiveCatalogError] = useState("");
   const [liveGames, setLiveGames] = useState<BBGame[] | null>(null);
+  const [liveForecastModelId, setLiveForecastModelId] = useState<string | null>(null);
   const [liveMarkets, setLiveMarkets] = useState<Record<string, Comparison[]> | null>(null);
   const [liveMarketsError, setLiveMarketsError] = useState("");
   const [liveGamesError, setLiveGamesError] = useState("");
@@ -227,10 +229,12 @@ export default function ForecastLab({
   useEffect(() => {
     const controller = new AbortController();
     setLiveGames(null);
+    setLiveForecastModelId(null);
     loadLiveBasketballForecasts(controller.signal, { model: modelSelection })
       .then((rows) => {
         if (!controller.signal.aborted) {
           setLiveGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
+          setLiveForecastModelId(forecastModelId(rows));
           setLiveGamesError("");
         }
       })
@@ -267,7 +271,8 @@ export default function ForecastLab({
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballMarketComparisons(controller.signal)
+    const modelId = modelSelection === "latest" ? liveForecastModelId : modelSelection;
+    loadLiveBasketballMarketComparisons(controller.signal, modelId)
       .then((value) => {
         if (!controller.signal.aborted) {
           setLiveMarkets(value);
@@ -276,11 +281,12 @@ export default function ForecastLab({
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveMarkets({});
           setLiveMarketsError(reason instanceof Error ? reason.message : "Live market comparisons unavailable.");
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [liveForecastModelId, modelSelection]);
 
   useEffect(() => {
     const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId, model: modelSelection });

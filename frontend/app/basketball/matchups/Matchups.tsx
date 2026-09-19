@@ -17,6 +17,7 @@ import {
   type MatchupSort,
 } from "../../_lib/basketball-matchups";
 import {
+  forecastModelId,
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
   matchingRosterScenario,
@@ -75,6 +76,7 @@ export default function Matchups({
     } | null>(null),
     [liveCatalogError, setLiveCatalogError] = useState(""),
     [liveGames, setLiveGames] = useState<BBGame[] | null>(null),
+    [liveForecastModelId, setLiveForecastModelId] = useState<string | null>(null),
     [liveGamesError, setLiveGamesError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, NonNullable<BBGame["market_comparisons"]>> | null>(null),
     [liveMarketsError, setLiveMarketsError] = useState(""),
@@ -133,10 +135,12 @@ export default function Matchups({
 
   useEffect(() => {
     const controller = new AbortController();
+    setLiveForecastModelId(null);
     const load = async () => {
       const rows = await loadLiveBasketballForecasts(controller.signal);
       if (!controller.signal.aborted) {
         setLiveGames(mergeLiveBasketballForecasts(games, rows));
+        setLiveForecastModelId(forecastModelId(rows));
         setLiveGamesError("");
       }
     };
@@ -150,7 +154,7 @@ export default function Matchups({
 
   useEffect(() => {
     const controller = new AbortController();
-    loadLiveBasketballMarketComparisons(controller.signal)
+    loadLiveBasketballMarketComparisons(controller.signal, liveForecastModelId)
       .then((value) => {
         if (!controller.signal.aborted) {
           setLiveMarketComparisons(value);
@@ -159,11 +163,12 @@ export default function Matchups({
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setLiveMarketComparisons({});
           setLiveMarketsError(reason instanceof Error ? reason.message : "Live market comparisons unavailable.");
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [liveForecastModelId]);
 
   useEffect(() => {
     const validIds = new Set(activeGames.map((game) => game.id));
@@ -490,8 +495,8 @@ export default function Matchups({
                   publisherRatings[g.home_id]?.value,
                   publisherRatings[g.away_id]?.id || g.away_id,
                   publisherRatings[g.home_id]?.id || g.home_id,
-                  (liveMarketComparisons?.[g.id] ?? marketComparisons[g.id] ?? []).length,
-                  (liveMarketComparisons?.[g.id] ?? marketComparisons[g.id] ?? []).map(comparisonQuoteSummary).join(" | "),
+                  (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).length,
+                  (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).map(comparisonQuoteSummary).join(" | "),
                 ]),
               ),
             )
@@ -542,7 +547,7 @@ export default function Matchups({
         {rows.slice(page * 12, page * 12 + 12).map((g) => (
           <div className="matchup-card-wrap" key={g.id}>
             <BasketballCard
-              game={(liveMarketComparisons?.[g.id] || marketComparisons[g.id])?.length ? { ...g, market_comparisons: (liveMarketComparisons?.[g.id] || marketComparisons[g.id]) } : g}
+                  game={(liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id])?.length ? { ...g, market_comparisons: liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] } : g}
               homeRoster={rosterByTeam.get(g.home_id)}
               awayRoster={rosterByTeam.get(g.away_id)}
               rosterScenario={matchingRosterScenario(g, rosterScenarioByGame.get(g.id), model.id) || undefined}

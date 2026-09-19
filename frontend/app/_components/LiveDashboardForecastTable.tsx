@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { BBFactorKey, BBGame, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
 import { fmt, kick, date } from "../_lib/format";
 import {
+  forecastModelId,
   loadLiveBasketballForecasts,
   matchingRosterScenario,
   mergeLiveBasketballForecasts,
@@ -89,7 +90,7 @@ export function forecastCsvRows(
   const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
   return games.map((game) => {
     const prediction = predictionFor(game);
-    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    const market = summarizeMarketLines(marketComparisons[game.id] || []);
     const factorValues = new Map(matchupFactorEdges(game).map((edge) => [edge.key, edge.value]));
     const home = ratingById.get(game.home_id);
     const away = ratingById.get(game.away_id);
@@ -159,17 +160,24 @@ export default function LiveDashboardForecastTable({
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled([
-      // The landing board is the primary forecast surface. Hydrate every
-      // registered page so a live model refresh cannot leave later rows on
-      // the bundled static edition while the forecast lab shows newer data.
-      loadLiveBasketballForecasts(controller.signal),
-      loadLiveBasketballMarketComparisons(controller.signal),
-    ]).then(([forecastResult, marketResult]) => {
-      if (controller.signal.aborted) return;
-      if (forecastResult.status === "fulfilled") setGames(mergeLiveBasketballForecasts(initialGames, forecastResult.value));
-      if (marketResult.status === "fulfilled") setMarketComparisons(marketResult.value);
-    });
+    // Hydrate the forecast cohort first. Market evidence is requested only
+    // after one model edition is known, so a game can never display a line
+    // selected from a different ledger edition.
+    loadLiveBasketballForecasts(controller.signal)
+      .then(async (rows) => {
+        if (controller.signal.aborted) return;
+        setGames(mergeLiveBasketballForecasts(initialGames, rows));
+        try {
+          const markets = await loadLiveBasketballMarketComparisons(controller.signal, forecastModelId(rows));
+          if (!controller.signal.aborted) setMarketComparisons(markets);
+        } catch {
+          // Market evidence is optional; the forecast board remains useful.
+        }
+      })
+      .catch(() => {
+        // Keep the server-rendered board when the live forecast is unavailable.
+        setMarketComparisons({});
+      });
     return () => controller.abort();
   }, [initialGames]);
 
@@ -181,7 +189,7 @@ export default function LiveDashboardForecastTable({
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
   const marketGames = signalGames.filter((game) => {
-    const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+    const market = summarizeMarketLines(marketComparisons[game.id] || []);
     return hasQualifiedMarketComparison(market);
   }).length;
   const orderedSignalGames = sortForecastBoard(signalGames, sort);
@@ -250,7 +258,7 @@ export default function LiveDashboardForecastTable({
             const rosterScenario = matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId);
             const homeRating = ratingById.get(game.home_id);
             const awayRating = ratingById.get(game.away_id);
-            const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
+            const market = summarizeMarketLines(marketComparisons[game.id] || []);
             const factorEdges = matchupFactorEdges(game);
             return (
               <tr key={game.id}>

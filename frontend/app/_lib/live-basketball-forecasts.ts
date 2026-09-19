@@ -28,8 +28,14 @@ type LiveForecastPage = {
 };
 
 type LiveScorecardResponse = {
-  games: Array<{ game_id: string; comparisons?: Comparison[] }>;
+  games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[] }>;
 };
+
+/** Resolve one immutable forecast edition before attaching market evidence. */
+export function forecastModelId(rows: Pick<LiveForecastRow, "model_id">[]) {
+  const ids = new Set(rows.map((row) => row.model_id).filter((value): value is string => Boolean(value)));
+  return ids.size === 1 ? [...ids][0] : null;
+}
 
 export function publishedBasketballPrediction(
   game: Pick<BBGame, "prediction" | "fallback_prediction">,
@@ -160,15 +166,23 @@ export async function loadLiveBasketballForecasts(
   return rows;
 }
 
-export async function loadLiveBasketballMarketComparisons(signal?: AbortSignal) {
+export async function loadLiveBasketballMarketComparisons(
+  signal: AbortSignal | undefined,
+  modelId: string | null | undefined,
+) {
+  // Market lines are only useful beside the exact forecast edition that
+  // produced the prediction. An absent edition is an honest empty result.
+  if (!modelId) return {} as Record<string, Comparison[]>;
   const response = await fetchWithTransientRetry(
-    "/api/research/scorecard?sport=basketball&limit=5000",
+    `/api/research/scorecard?sport=basketball&model=${encodeURIComponent(modelId)}&limit=5000`,
     signal,
   );
   if (!response.ok) throw new Error("Live market comparisons unavailable.");
   const payload = await response.json() as LiveScorecardResponse;
   return Object.fromEntries(
-    (payload.games || []).map((game) => [game.game_id, game.comparisons || []]),
+    (payload.games || [])
+      .filter((game) => game.model_id === modelId)
+      .map((game) => [game.game_id, game.comparisons || []]),
   ) as Record<string, Comparison[]>;
 }
 
