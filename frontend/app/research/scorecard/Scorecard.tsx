@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
-import { reasons, type Ledger } from "../../_lib/research-types";
+import { modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
@@ -97,7 +97,8 @@ export default function Scorecard() {
   const summary = data.sports[sport],
     m = summary.metrics,
     marketObservations = summary.market_observations ?? 0,
-    unmatchedEvents = summary.unmatched_events ?? 0;
+    unmatchedEvents = summary.unmatched_events ?? 0,
+    reliabilityScope = modelReliabilityScope(summary);
   const rows = data.games.filter(
     (g) =>
       g.sport === sport &&
@@ -159,11 +160,11 @@ export default function Scorecard() {
         </div>
         <div>
           <strong>{m.games.toLocaleString()}</strong>
-          <span>Eligible games settled</span>
+          <span>Settled games across editions</span>
         </div>
         <div>
           <strong>{fmt(m.margin_mae)}</strong>
-          <span>Margin MAE · points</span>
+          <span>Margin MAE · selected editions</span>
         </div>
         <div>
           <strong>
@@ -171,9 +172,14 @@ export default function Scorecard() {
               ? "—"
               : fmt(m.winner_accuracy * 100) + "%"}
           </strong>
-          <span>Winner accuracy · {m.winner_picks} picks</span>
+          <span>Winner accuracy · selected editions · {m.winner_picks} picks</span>
         </div>
       </div>
+      {reliabilityScope.current && reliabilityScope.editionCount > 1 ? (
+        <p className="note" role="status" style={{ marginTop: 12 }}>
+          Headline reliability aggregates {reliabilityScope.aggregateSettled.toLocaleString()} settled eligible games across {reliabilityScope.editionCount.toLocaleString()} model editions. Current edition <code>{reliabilityScope.current.model_id}</code> has {reliabilityScope.current.settled_games.toLocaleString()} settled games and {reliabilityScope.current.eligible_forecasts.toLocaleString()} eligible forecasts; {reliabilityScope.priorSettled.toLocaleString()} settled games come from earlier editions.
+        </p>
+      ) : null}
       <div className="ledger-metrics">
         <span>
           Brier score <b>{fmt(m.brier, 4)}</b>

@@ -100,6 +100,34 @@ export type SportSummary = {
     direction_results: Record<string, number>;
   }[];
 };
+
+export type ModelEditionMetric = NonNullable<SportSummary["model_metrics"]>[number];
+
+export type ModelReliabilityScope = {
+  current: ModelEditionMetric | null;
+  editionCount: number;
+  aggregateSettled: number;
+  priorSettled: number;
+};
+
+/** Identify the newest registered edition before describing aggregate reliability. */
+export function modelReliabilityScope(summary: Pick<SportSummary, "metrics" | "model_metrics">): ModelReliabilityScope {
+  const editions = summary.model_metrics || [];
+  const current = editions.reduce<ModelEditionMetric | null>((latest, edition) => {
+    if (!latest) return edition;
+    const latestClock = latest.first_registered_at || latest.last_registered_at || "";
+    const editionClock = edition.first_registered_at || edition.last_registered_at || "";
+    return editionClock > latestClock ? edition : latest;
+  }, null);
+  const aggregateSettled = summary.metrics.games;
+  return {
+    current,
+    editionCount: editions.length,
+    aggregateSettled,
+    priorSettled: Math.max(0, aggregateSettled - (current?.settled_games || 0)),
+  };
+}
+
 export type Ledger = {
   generated_at: string;
   policy: string;
