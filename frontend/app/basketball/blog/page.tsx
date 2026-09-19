@@ -2,6 +2,8 @@ import Link from "next/link";
 import LiveBasketballJournal from "../../blog/LiveBasketballJournal";
 import { getBasketball } from "../../_lib/basketball-data";
 import { date } from "../../_lib/format";
+import NotebookFinder from "./NotebookFinder";
+import type { NotebookIndexGame } from "./notebook-index";
 
 export const metadata = {
   title: "Upcoming basketball game notebooks",
@@ -13,8 +15,28 @@ export const metadata = {
 export default function Page() {
   const basketball = getBasketball();
   const games = basketball.upcoming
-    .filter((game) => game.prediction || game.fallback_prediction)
-    .slice(0, 24);
+    .filter((game) => game.prediction || game.fallback_prediction);
+  const notebookIndex: NotebookIndexGame[] = games.slice(0, 8).map((game) => {
+    const forecast = game.prediction || game.fallback_prediction!;
+    return {
+      id: game.id,
+      startsAt: game.starts_at,
+      awayId: game.away_id,
+      awayName: game.away_name,
+      homeId: game.home_id,
+      homeName: game.home_name,
+      neutral: Boolean(game.neutral),
+      timeTbd: Boolean(game.time_tbd),
+      forecast: {
+        awayScore: forecast.away_score,
+        homeScore: forecast.home_score,
+        homeWinProbability: forecast.home_win_probability,
+        marginLow: forecast.margin_low,
+        marginHigh: forecast.margin_high,
+        estimateType: forecast.estimate_type === "cold_start" ? "cold_start" : "primary",
+      },
+    };
+  });
   const nextGame = games[0];
   return (
     <>
@@ -33,11 +55,12 @@ export default function Page() {
         </div>
       </div>
       <div className="strip">
-        <div><strong>{games.length.toLocaleString()}</strong><span>Notebook previews in this edition</span></div>
+        <div><strong>{games.length.toLocaleString()}</strong><span>Searchable game notebooks</span></div>
         <div><strong>{basketball.coverage.forecast_games.toLocaleString()}</strong><span>Published 2026–27 forecasts</span></div>
         <div><strong>{basketball.model.evaluation.games.toLocaleString()}</strong><span>Held-out games behind the test</span></div>
         <div><strong>{nextGame ? date(nextGame.starts_at) : "—"}</strong><span>Next scheduled date</span></div>
       </div>
+      <NotebookFinder games={notebookIndex} total={games.length} />
       <section className="section">
         <div className="section-heading">
           <div>

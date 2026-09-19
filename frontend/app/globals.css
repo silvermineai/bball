@@ -1367,6 +1367,38 @@ th,
 .journal-prep-toggle { display: block; margin-top: 14px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .88rem; font-weight: 650; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--orange); text-underline-offset: 4px; }
 .journal-prep-toggle:hover { color: var(--accent); }
 @media (max-width: 700px) { .journal-prep-list { display: block; } .journal-prep-list .button-row { margin-top: 10px; } }
+.notebook-finder { margin: 38px 0 10px; padding: 26px; border: 1px solid var(--line); border-top: 4px solid var(--blue); background: var(--surface); }
+.notebook-finder-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.notebook-finder-heading h2 { margin: 5px 0 0; font-size: clamp(28px, 4vw, 42px); }
+.notebook-finder-heading > span { color: var(--muted); font: 10px "IBM Plex Mono", monospace; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.notebook-finder-search { display: grid; gap: 7px; margin-top: 22px; max-width: 720px; }
+.notebook-finder-search input { width: 100%; font-size: 15px; }
+.notebook-finder-note { margin: 9px 0 18px; }
+.notebook-finder-results { border-top: 1px solid var(--line); }
+.notebook-finder-game { display: grid; grid-template-columns: 128px minmax(230px, 1.3fr) minmax(170px, .7fr) auto; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.notebook-finder-date span, .notebook-finder-date small, .notebook-finder-range span { display: block; }
+.notebook-finder-date span { font: 600 12px "IBM Plex Mono", monospace; }
+.notebook-finder-date small, .notebook-finder-range span { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.notebook-finder-matchup .eyebrow { color: var(--blue); font-size: 9px; }
+.notebook-finder-matchup h3 { margin: 4px 0; font-size: 21px; }
+.notebook-finder-matchup h3 span { color: var(--muted); font-size: 13px; font-style: italic; font-weight: 400; }
+.notebook-finder-matchup p { margin: 0; color: var(--muted); font-size: 11px; }
+.notebook-finder-range strong { display: block; margin-top: 5px; font: 600 14px "IBM Plex Mono", monospace; }
+.notebook-finder-links { display: grid; justify-items: end; gap: 7px; min-width: 110px; font-size: 11px; font-weight: 650; }
+.notebook-finder-links a:last-child { color: var(--muted); font-weight: 500; }
+@media (max-width: 850px) {
+  .notebook-finder-game { grid-template-columns: 110px minmax(0, 1fr) auto; }
+  .notebook-finder-range { grid-column: 2; }
+  .notebook-finder-links { grid-column: 3; grid-row: 1 / span 2; }
+}
+@media (max-width: 620px) {
+  .notebook-finder { padding: 20px 17px; }
+  .notebook-finder-heading { display: block; }
+  .notebook-finder-heading > span { display: block; margin-top: 9px; }
+  .notebook-finder-game { grid-template-columns: 1fr; gap: 10px; }
+  .notebook-finder-range, .notebook-finder-links { grid-column: auto; grid-row: auto; }
+  .notebook-finder-links { display: flex; justify-content: flex-start; gap: 18px; }
+}
 .learning-path-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
