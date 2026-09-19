@@ -56,7 +56,8 @@ export default function Matchups({
     [coverage, setCoverage] = useState<MatchupCoverage>(initial.coverage),
     [signal, setSignal] = useState<MatchupSignal>(initial.signal),
     [sort, setSort] = useState<MatchupSort>(initial.sort),
-    [page, setPage] = useState(initial.page),
+    [page, setPage] = useState(initial.gameId ? 0 : initial.page),
+    [focusedGameId, setFocusedGameId] = useState(initial.gameId || ""),
     [prepIds, setPrepIds] = useState<string[]>(initial.picks || []),
     [prepHydrated, setPrepHydrated] = useState(false),
     [copied, setCopied] = useState(""),
@@ -204,7 +205,7 @@ export default function Matchups({
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    const next = matchupFilterSearch({ team: q, month, coverage, signal, sort, page, picks: prepIds });
+    const next = matchupFilterSearch({ team: q, month, coverage, signal, sort, page, gameId: focusedGameId || undefined, picks: prepIds });
     if (next !== window.location.search) {
       window.history.replaceState(
         window.history.state,
@@ -212,11 +213,12 @@ export default function Matchups({
         `${window.location.pathname}${next}${window.location.hash}`,
       );
     }
-  }, [q, month, coverage, signal, sort, page, prepIds]);
+  }, [q, month, coverage, signal, sort, page, focusedGameId, prepIds]);
   const eligibleGames = scope === "forecasted" ? scheduledGames.filter((g) => g.prediction != null || g.fallback_prediction != null) : scheduledGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
     eligibleGames.filter((g) => {
+      if (focusedGameId) return g.id === focusedGameId;
       return (
         (g.home_name + " " + g.away_name)
           .toLowerCase()
@@ -236,6 +238,9 @@ export default function Matchups({
   const prepRows = prepIds
     .map((id) => scheduledGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
+  const focusedGame = focusedGameId
+    ? scheduledGames.find((game) => game.id === focusedGameId) || null
+    : null;
   const confirmedScheduleCount = scheduleClocks
     ? scheduleClocks.confirmed_count
       ?? (typeof scheduleClocks.confirmed === "number"
@@ -257,6 +262,28 @@ export default function Matchups({
   };
   return (
     <>
+      {focusedGameId && (
+        <section className="paper-panel matchup-focus-panel" aria-labelledby="focused-matchup-title">
+          <div>
+            <span className="eyebrow">Selected matchup</span>
+            <h2 id="focused-matchup-title">
+              {focusedGame ? `${focusedGame.away_name} at ${focusedGame.home_name}` : "Matchup unavailable"}
+            </h2>
+            <p className="note">
+              {focusedGame
+                ? "This shareable view isolates the requested game and its complete analysis packet."
+                : "That game is not present in the current 2026–27 schedule edition."}
+            </p>
+          </div>
+          <div className="button-row">
+            {focusedGame && (focusedGame.prediction || focusedGame.fallback_prediction) && <>
+              <Link className="button secondary" href={`/basketball/briefs/${encodeURIComponent(focusedGame.id)}/`}>Evidence brief</Link>
+              <Link className="button secondary" href={`/blog/basketball-game-${encodeURIComponent(focusedGame.id)}/`}>Game notebook</Link>
+            </>}
+            <button className="button" type="button" onClick={() => { setFocusedGameId(""); setPage(0); }}>View full slate</button>
+          </div>
+        </section>
+      )}
       <div className="toolbar">
         <label className="control">
           <span>TEAM</span>
@@ -266,6 +293,7 @@ export default function Matchups({
             type="search"
             value={q}
             onChange={(e) => {
+              setFocusedGameId("");
               setQ(e.target.value);
               setPage(0);
             }}
@@ -278,6 +306,7 @@ export default function Matchups({
             name="matchup-month"
             value={month}
             onChange={(e) => {
+              setFocusedGameId("");
               setMonth(e.target.value);
               setPage(0);
             }}
@@ -302,6 +331,7 @@ export default function Matchups({
               name="matchup-forecast"
               value={coverage}
               onChange={(e) => {
+                setFocusedGameId("");
                 setCoverage(e.target.value as MatchupCoverage);
                 setPage(0);
               }}
@@ -318,6 +348,7 @@ export default function Matchups({
             name="matchup-signal"
             value={signal}
             onChange={(e) => {
+              setFocusedGameId("");
               setSignal(e.target.value as MatchupSignal);
               setPage(0);
             }}
@@ -334,6 +365,7 @@ export default function Matchups({
             name="matchup-sort"
             value={sort}
             onChange={(e) => {
+              setFocusedGameId("");
               setSort(e.target.value as MatchupSort);
               setPage(0);
             }}

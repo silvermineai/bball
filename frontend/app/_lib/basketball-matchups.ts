@@ -16,6 +16,7 @@ export type MatchupFilters = {
   signal: MatchupSignal;
   sort: MatchupSort;
   page: number;
+  gameId?: string;
   picks?: string[];
 };
 
@@ -41,6 +42,7 @@ export function parseMatchupFilters(search: string): MatchupFilters {
   const signal = params.get("signal") as MatchupSignal | null;
   const month = params.get("month") || "all";
   const parsedPage = Number(params.get("page") || 0);
+  const gameId = (params.get("game") || "").trim().slice(0, 200);
   const picks = params.getAll("pick").filter(Boolean).slice(0, 12);
   return {
     team: params.get("team") || "",
@@ -50,6 +52,7 @@ export function parseMatchupFilters(search: string): MatchupFilters {
     signal: signal && matchupSignals.has(signal) ? signal : "all",
     sort: sort && matchupSorts.has(sort) ? sort : "date",
     page: Number.isInteger(parsedPage) && parsedPage >= 0 && parsedPage <= 500 ? parsedPage : 0,
+    ...(gameId ? { gameId } : {}),
     ...(picks.length ? { picks } : {}),
   };
 }
@@ -63,6 +66,7 @@ export function matchupFilterSearch(filters: MatchupFilters) {
   if (filters.signal !== "all") params.set("signal", filters.signal);
   if (filters.sort !== "date") params.set("sort", filters.sort);
   if (filters.page > 0) params.set("page", String(filters.page));
+  if (filters.gameId) params.set("game", filters.gameId);
   for (const pick of filters.picks || []) {
     if (pick) params.append("pick", pick);
   }

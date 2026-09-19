@@ -110,6 +110,12 @@ describe("basketball matchup triage", () => {
     ).toBe("?team=Kansas+Jayhawks&month=2026-11&coverage=forecasted&signal=lean&sort=confidence&page=3");
   });
 
+  it("round-trips an exact matchup deep link", () => {
+    const filters = parseMatchupFilters("?game=401912207");
+    expect(filters.gameId).toBe("401912207");
+    expect(matchupFilterSearch(filters)).toBe("?game=401912207");
+  });
+
   it("withholds invalid controls and omits defaults", () => {
     expect(parseMatchupFilters("?month=tomorrow&coverage=maybe&sort=bad")).toEqual({
       team: "",
