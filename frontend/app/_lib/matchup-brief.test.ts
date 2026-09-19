@@ -7,6 +7,8 @@ import {
   headToHeadSummary,
   historicalPersonnel,
   pressurePoints,
+  rosterContext,
+  rosterEvidenceReadiness,
 } from "./matchup-brief";
 import { basketballScenario } from "./basketball-scenario";
 import { scenarioQuery, scenarioVenue } from "./scenario-location";
@@ -64,7 +66,14 @@ describe("matchup evidence and scenario handoff", () => {
       );
       expect(result.pressures.length).toBeLessThanOrEqual(4);
       for (const program of result.programs) {
-        expect(program.roster).not.toBeNull();
+        const listed = rosters.players.filter(
+          (player) => player.team_id === program.profile.id,
+        ).length;
+        if (!listed) {
+          expect(program.roster).toBeNull();
+          continue;
+        }
+        expect(program.roster?.listed).toBe(listed);
         expect(program.roster!.representedMinutes).toBeLessThanOrEqual(
           program.roster!.priorMinutes,
         );
@@ -106,6 +115,38 @@ describe("matchup evidence and scenario handoff", () => {
       count++;
     }
     expect(count).toBe(overview.coverage.forecast_games);
+  });
+  it("requires player rows before marking a program roster as observed", () => {
+    const game = overview.upcoming.find(
+      (candidate) =>
+        !!(candidate.prediction || candidate.fallback_prediction) &&
+        profiles.has(candidate.home_id) &&
+        profiles.has(candidate.away_id),
+    )!;
+    const profile = profiles.get(game.home_id)!;
+    const withoutProgram = {
+      ...rosters,
+      players: rosters.players.filter((player) => player.team_id !== profile.id),
+    };
+
+    const observed = rosterContext(profile, rosters);
+    expect(rosterContext(profile, withoutProgram)).toBeNull();
+    expect(observed?.listed).toBeGreaterThan(0);
+    expect(
+      rosterEvidenceReadiness([
+        { profile: { name: profile.name }, roster: observed },
+        { profile: { name: "Unobserved program" }, roster: null },
+      ]),
+    ).toMatchObject({
+      state: "partial",
+      observedPrograms: 1,
+      totalPrograms: 2,
+      label: "1 of 2 teams has roster rows",
+      teams: [
+        { name: profile.name, listed: observed?.listed },
+        { name: "Unobserved program", listed: null },
+      ],
+    });
   });
   it("rejects mixed profile editions and mismatched ledger snapshots", () => {
     const versionRows = ledger.versions?.length ? ledger.versions : ledger.games;

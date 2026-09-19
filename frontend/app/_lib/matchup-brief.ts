@@ -237,6 +237,10 @@ export function rosterContext(
 ): BriefRosterContext | null {
   if (!rosters || rosters.season !== profile.forecast_season) return null;
   const listed = rosters.players.filter((p) => p.team_id === profile.id);
+  // A matching release edition is not itself evidence for this program. Keep
+  // an absent team explicit so the brief cannot report an empty calculation
+  // as an observed roster.
+  if (!listed.length) return null;
   const prior = profile.players.filter(
     (p) => p.team_id === profile.id && p.season === profile.season,
   );
@@ -294,6 +298,52 @@ export function rosterContext(
       priorMinutes > 0 ? representedMinutes / priorMinutes : null,
     positionCounts,
     positionWorkload,
+  };
+}
+
+export type BriefRosterReadiness = {
+  state: "complete" | "partial" | "missing";
+  observedPrograms: number;
+  totalPrograms: number;
+  label: string;
+  teams: Array<{
+    name: string;
+    listed: number | null;
+    representedMinutesShare: number | null;
+  }>;
+};
+
+/** Describe only the team-level roster evidence present for this matchup. */
+export function rosterEvidenceReadiness(
+  programs: Array<{
+    profile: Pick<ScoutProfile, "name">;
+    roster: BriefRosterContext | null;
+  }>,
+): BriefRosterReadiness {
+  const observedPrograms = programs.filter((program) => program.roster).length;
+  const totalPrograms = programs.length;
+  const state =
+    observedPrograms === totalPrograms
+      ? "complete"
+      : observedPrograms > 0
+        ? "partial"
+        : "missing";
+  return {
+    state,
+    observedPrograms,
+    totalPrograms,
+    label:
+      state === "complete"
+        ? "Both teams have roster rows"
+        : state === "partial"
+          ? `${observedPrograms} of ${totalPrograms} teams has roster rows`
+          : "No roster rows for either team",
+    teams: programs.map((program) => ({
+      name: program.profile.name,
+      listed: program.roster?.listed ?? null,
+      representedMinutesShare:
+        program.roster?.representedMinutesShare ?? null,
+    })),
   };
 }
 

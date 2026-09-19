@@ -17,6 +17,7 @@ import {
   briefFactors,
   briefScenarioUrl,
   headToHeadSummary,
+  rosterEvidenceReadiness,
 } from "../../../_lib/matchup-brief";
 import { eventLabels, publicationDate } from "../../../_lib/recruiting";
 import { reasons } from "../../../_lib/research-types";
@@ -190,7 +191,7 @@ export default async function Page({
   const record = evidence.ledger,
     quotes = record && !record.exclusion ? record.comparisons : [],
     publisherArticles = relatedPublisherArticles(g),
-    rosterPrograms = evidence.programs.filter((program) => program.roster),
+    rosterReadiness = rosterEvidenceReadiness(evidence.programs),
     marginWidth = p.margin_high - p.margin_low,
     readiness = [
       {
@@ -219,19 +220,16 @@ export default async function Page({
       {
         key: "roster",
         label: "Roster evidence",
-        value: rosterPrograms.length === 2 ? "Both teams observed" : `${rosterPrograms.length}/2 teams observed`,
-        detail:
-          rosterPrograms.length === 2
-            ? rosterPrograms
-                .map((program) => {
-                  const share = program.roster?.representedMinutesShare;
-                  return `${program.profile.name} ${share == null ? "—" : `${fmt(share * 100, 0)}%`} prior minutes represented`;
-                })
-                .join(" · ")
-            : "Use the roster and dated announcement sections to identify what remains unverified.",
+        value: rosterReadiness.label,
+        detail: rosterReadiness.teams
+          .map((team) => {
+            if (team.listed == null) return `${team.name}: no roster observation`;
+            return `${team.name}: ${team.listed} players listed · ${team.representedMinutesShare == null ? "prior-minute share unavailable" : `${fmt(team.representedMinutesShare * 100, 0)}% prior minutes represented`}`;
+          })
+          .join(" · "),
         href: "#roster-evidence",
         link: "Roster evidence",
-        tone: rosterPrograms.length === 2 ? "ink" : "caution",
+        tone: rosterReadiness.state === "complete" ? "ink" : "caution",
       },
       {
         key: "market",
