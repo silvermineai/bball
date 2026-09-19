@@ -73,3 +73,36 @@ export function playerRecruitingContext(
 
 export type PlayerRecruitingContext = ReturnType<typeof playerRecruitingContext>;
 export type PlayerRosterObservation = BBRoster;
+
+/**
+ * The compact stat set shown when a recruiting record is handed off to a
+ * player profile.  Keep the labels and denominator visible so the profile
+ * does not reduce a prior season to points and minutes alone.
+ */
+export type RecruitingStatSnapshot = {
+  mpg?: number | null;
+  ppg?: number | null;
+  rpg?: number | null;
+  apg?: number | null;
+  spg?: number | null;
+  bpg?: number | null;
+  topg?: number | null;
+  efg?: number | null;
+  ts?: number | null;
+  three_pct?: number | null;
+  ft_pct?: number | null;
+};
+
+export const playerRecruitingStatRows = (stats: RecruitingStatSnapshot | null | undefined) => [
+  { key: "mpg", label: "MIN/G", value: stats?.mpg ?? null, percent: false },
+  { key: "ppg", label: "PTS/G", value: stats?.ppg ?? null, percent: false },
+  { key: "rpg", label: "REB/G", value: stats?.rpg ?? null, percent: false },
+  { key: "apg", label: "AST/G", value: stats?.apg ?? null, percent: false },
+  { key: "spg", label: "STL/G", value: stats?.spg ?? null, percent: false },
+  { key: "bpg", label: "BLK/G", value: stats?.bpg ?? null, percent: false },
+  { key: "topg", label: "TO/G", value: stats?.topg ?? null, percent: false },
+  { key: "efg", label: "eFG%", value: stats?.efg ?? null, percent: true },
+  { key: "ts", label: "TS%", value: stats?.ts ?? null, percent: true },
+  { key: "three_pct", label: "3P%", value: stats?.three_pct ?? null, percent: true },
+  { key: "ft_pct", label: "FT%", value: stats?.ft_pct ?? null, percent: true },
+] as const;

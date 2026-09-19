@@ -2905,6 +2905,31 @@ summary {
   letter-spacing: 0.06em;
   margin-top: 7px;
 }
+.recruiting-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(42px, 1fr));
+  gap: 6px 10px;
+  min-width: 270px;
+}
+.recruiting-stat-grid span {
+  display: block;
+  min-width: 0;
+}
+.recruiting-stat-grid strong {
+  display: block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.recruiting-stat-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  margin-top: 2px;
+}
 .recruiting-no-stats {
   min-height: 153px;
 }
@@ -3023,6 +3048,10 @@ summary {
   }
   .roster-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .recruiting-stat-grid {
+    grid-template-columns: repeat(3, minmax(42px, 1fr));
+    min-width: 220px;
   }
   .recruiting-views {
     gap: 18px;

@@ -3,6 +3,7 @@ import recruiting from "../../public/data/basketball/recruiting.json";
 import rosters from "../../public/data/basketball/rosters.json";
 import {
   parseLivePlayerRecruitingPayload,
+  playerRecruitingStatRows,
   playerRecruitingContext,
   playerRecruitingContextRequests,
 } from "./player-recruiting";
@@ -44,5 +45,27 @@ describe("player recruiting context", () => {
     const context = playerRecruitingContext("not-a-source-id", recruitingRelease, rosterRelease);
     expect(context.announcements).toEqual([]);
     expect(context.rosterObservations).toEqual([]);
+  });
+
+  it("keeps the recruiting handoff wide enough for a useful player review", () => {
+    const rows = playerRecruitingStatRows({
+      mpg: 31.2,
+      ppg: 18.4,
+      rpg: 7.1,
+      apg: 4.3,
+      spg: 1.2,
+      bpg: 0.6,
+      topg: 2.1,
+      efg: 0.57,
+      ts: 0.61,
+      three_pct: 0.39,
+      ft_pct: 0.82,
+    });
+    expect(rows.map((row) => row.label)).toEqual([
+      "MIN/G", "PTS/G", "REB/G", "AST/G", "STL/G", "BLK/G", "TO/G",
+      "eFG%", "TS%", "3P%", "FT%",
+    ]);
+    expect(rows.find((row) => row.key === "spg")?.value).toBe(1.2);
+    expect(rows.find((row) => row.key === "ts")?.percent).toBe(true);
   });
 });

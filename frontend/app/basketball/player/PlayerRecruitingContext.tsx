@@ -11,6 +11,7 @@ import {
   playerRecruitingContext,
   parseLivePlayerRecruitingPayload,
   playerRecruitingContextRequests,
+  playerRecruitingStatRows,
   type PlayerRecruitingContext as PlayerRecruitingContextData,
 } from "../../_lib/player-recruiting";
 
@@ -19,6 +20,28 @@ type ReleaseMeta = {
   reviewedAt: string;
   rosterFetchedAt: string | null;
 };
+
+function statValue(value: number | null, percent: boolean) {
+  if (value == null) return "—";
+  return percent ? `${(value * 100).toFixed(1)}%` : value.toFixed(1);
+}
+
+function RecruitingStatGrid({
+  stats,
+}: {
+  stats: Parameters<typeof playerRecruitingStatRows>[0];
+}) {
+  return (
+    <div className="recruiting-stat-grid">
+      {playerRecruitingStatRows(stats).map((metric) => (
+        <span key={metric.key}>
+          <strong>{statValue(metric.value, metric.percent)}</strong>
+          <small>{metric.label}</small>
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export default function PlayerRecruitingContext({
   id,
@@ -112,9 +135,9 @@ export default function PlayerRecruitingContext({
                     {row.latest ? <span>{publicationDate(row.latest.source.published_on)} · {row.latest.source.title}</span> : "No dated statement"}
                     <small>{row.latest?.summary || ""}</small>
                   </td>
-                  <td className="numeric">
-                    {row.stats?.ppg == null ? "—" : `${row.stats.ppg.toFixed(1)} PPG`}
-                    <small>{row.stats?.mpg == null ? "Prior minutes unavailable" : `${row.stats.mpg.toFixed(1)} MPG · ${row.stats.season - 1}–${String(row.stats.season).slice(-2)}`}</small>
+                  <td>
+                    {row.stats ? <RecruitingStatGrid stats={row.stats} /> : "—"}
+                    <small>{row.stats ? `${row.stats.games} GP · ${row.stats.season - 1}–${String(row.stats.season).slice(-2)}` : "Prior production unavailable"}</small>
                   </td>
                   <td>
                     {row.timeline.map((event) => (
@@ -138,7 +161,10 @@ export default function PlayerRecruitingContext({
                 <tr key={`${rosterSeason}-${row.team_id}`}>
                   <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{rosterSeason - 1}–{String(rosterSeason).slice(-2)} · {row.previous_teams.length ? `previous: ${row.previous_teams.join(", ")}` : "no prior program listed"}</small></td>
                   <td>{row.status || "Status unavailable"}<small>{[row.position, row.class_year, row.height, row.weight].filter(Boolean).join(" · ") || "Role fields unavailable"}</small></td>
-                  <td className="numeric">{row.prior_production?.mpg == null ? "—" : `${row.prior_production.mpg.toFixed(1)} MPG`}<small>{row.prior_production?.ppg == null ? "Prior points unavailable" : `${row.prior_production.ppg.toFixed(1)} PPG`}</small></td>
+                  <td>
+                    {row.prior_production ? <RecruitingStatGrid stats={row.prior_production} /> : "—"}
+                    <small>{row.prior_production ? `${row.prior_production.games} GP · ${rosterSeason - 1}–${String(rosterSeason).slice(-2)}` : "Prior production unavailable"}</small>
+                  </td>
                   <td>{row.source_url ? "Roster row retained" : "No roster receipt"}</td>
                 </tr>
               ))}
