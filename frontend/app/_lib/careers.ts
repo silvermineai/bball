@@ -87,6 +87,28 @@ export type CareerSummary = {
   tov_rate: number | null;
   three_rate: number | null;
 };
+
+/** Common season fields shown in the player production trail. */
+export const careerProductionMetrics = [
+  { key: "mpg", label: "MIN/G", percent: false },
+  { key: "ppg", label: "PTS/G", percent: false },
+  { key: "rpg", label: "REB/G", percent: false },
+  { key: "apg", label: "AST/G", percent: false },
+  { key: "spg", label: "STL/G", percent: false },
+  { key: "bpg", label: "BLK/G", percent: false },
+  { key: "topg", label: "TO/G", percent: false },
+  { key: "fpg", label: "PF/G", percent: false },
+  { key: "efg", label: "eFG%", percent: true },
+  { key: "ts", label: "TS%", percent: true },
+  { key: "three_pct", label: "3P%", percent: true },
+  { key: "ft_pct", label: "FT%", percent: true },
+] as const satisfies ReadonlyArray<{ key: keyof CareerSummary; label: string; percent: boolean }>;
+
+/** Preserve unavailable source fields while making percentage columns displayable. */
+export function careerProductionValue(summary: CareerSummary, metric: (typeof careerProductionMetrics)[number]) {
+  const value = summary[metric.key];
+  return typeof value === "number" && metric.percent ? value * 100 : value;
+}
 export type CareerProfile = {
   id: string;
   name: string;

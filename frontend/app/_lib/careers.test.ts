@@ -4,7 +4,10 @@ import {
   careerAvailability,
   identityReview,
   rankProduction,
+  careerProductionMetrics,
+  careerProductionValue,
   type CareerProfile,
+  type CareerSummary,
 } from "./careers";
 const profile = (
   season: number,
@@ -72,5 +75,15 @@ describe("historical player comparisons", () => {
     expect(ranked.map((p) => p.statRank)).toEqual([1, 1, 3, null]);
     expect(ranked.filter((p) => p.name === "A")[0].statRank).toBe(3);
     expect(players[0].name).toBe("A");
+  });
+
+  it("exposes the extended production trail without turning missing fields into zeroes", () => {
+    const summary = { efg: 0.575, ts: null, spg: 1.4, fpg: undefined } as CareerSummary;
+    expect(careerProductionMetrics.map((metric) => metric.label)).toContain("STL/G");
+    expect(careerProductionMetrics.map((metric) => metric.label)).toContain("FT%");
+    expect(careerProductionValue(summary, careerProductionMetrics[4])).toBe(1.4);
+    expect(careerProductionValue(summary, careerProductionMetrics[8])).toBeCloseTo(57.5, 8);
+    expect(careerProductionValue(summary, careerProductionMetrics[9])).toBeNull();
+    expect(careerProductionValue(summary, careerProductionMetrics[7])).toBeUndefined();
   });
 });

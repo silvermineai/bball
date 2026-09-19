@@ -13,6 +13,8 @@ import {
   type CareerData,
   type CareerCatalog,
   type StatKey,
+  careerProductionMetrics,
+  careerProductionValue,
 } from "../../_lib/careers";
 import LegacyRecords from "./LegacyRecords";
 import PlayerRecruitingContext from "./PlayerRecruitingContext";
@@ -400,19 +402,10 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    {[
-                      "Season / program",
-                      "GP",
-                      "MIN/G",
-                      "PTS/G",
-                      "REB/G",
-                      "AST/G",
-                      "eFG%",
-                      "TS%",
-                      "3PM/A",
-                    ].map((k) => (
-                      <th key={k}>{k}</th>
-                    ))}
+                    <th>Season / program</th>
+                    <th>GP</th>
+                    {careerProductionMetrics.map((metric) => <th key={metric.key}>{metric.label}</th>)}
+                    <th>3PM/A</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -438,17 +431,10 @@ export default function Player({ catalog }: { catalog: CareerCatalog }) {
                               : ""}
                           </small>
                         </td>
-                        {[
-                          t.games,
-                          t.mpg,
-                          t.ppg,
-                          t.rpg,
-                          t.apg,
-                          t.efg == null ? null : t.efg * 100,
-                          t.ts == null ? null : t.ts * 100,
-                        ].map((v, i) => (
-                          <td className="numeric" key={i}>
-                            {fmt(v, i === 0 ? 0 : 1)}
+                        <td className="numeric">{fmt(t.games, 0)}</td>
+                        {careerProductionMetrics.map((metric) => (
+                          <td className="numeric" key={metric.key}>
+                            {fmt(careerProductionValue(t, metric))}
                           </td>
                         ))}
                         <td className="numeric">
