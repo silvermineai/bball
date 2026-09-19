@@ -28,6 +28,7 @@ import {
   mergeBasketballScheduleClocks,
   type ScheduleClockResponse,
 } from "../../_lib/live-basketball-schedule";
+import MatchupPersonnelPanel from "./MatchupPersonnel";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -290,6 +291,7 @@ export default function Matchups({
           </div>
         </section>
       )}
+      {focusedGame && <MatchupPersonnelPanel game={focusedGame} />}
       <div className="toolbar">
         <label className="control">
           <span>TEAM</span>
@@ -549,14 +551,24 @@ export default function Matchups({
               publisherHomeRating={publisherRatings[g.home_id]}
               publisherAwayRating={publisherRatings[g.away_id]}
             />
-            <button
-              className="button secondary matchup-prep-toggle"
-              type="button"
-              aria-pressed={prepIds.includes(g.id)}
-              onClick={() => togglePrep(g.id)}
-            >
-              {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
-            </button>
+            <div className="matchup-card-actions">
+              <button
+                className="button secondary matchup-personnel-toggle"
+                type="button"
+                aria-pressed={focusedGameId === g.id}
+                onClick={() => { setFocusedGameId(g.id); setPage(0); }}
+              >
+                {focusedGameId === g.id ? "Personnel selected" : "View personnel"}
+              </button>
+              <button
+                className="button secondary matchup-prep-toggle"
+                type="button"
+                aria-pressed={prepIds.includes(g.id)}
+                onClick={() => togglePrep(g.id)}
+              >
+                {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
+              </button>
+            </div>
           </div>
         ))}
       </div>
