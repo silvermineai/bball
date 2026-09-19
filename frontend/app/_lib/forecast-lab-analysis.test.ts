@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -49,6 +49,22 @@ describe("forecast lab matchup signals", () => {
       probability_edge_pp: null,
       range_width: null,
     });
+  });
+
+  it("keeps the exact cold-start reason while rejecting duplicate or malformed names", () => {
+    expect(forecastUnknownTeams({
+      home_win_probability: 0.5,
+      margin_low: -20,
+      margin_high: 20,
+      estimate_type: "cold_start",
+      unknown_teams: ["  North Alabama ", "North Alabama", "", "  "],
+    })).toEqual(["North Alabama"]);
+    expect(forecastUnknownTeams({
+      home_win_probability: 0.5,
+      margin_low: -20,
+      margin_high: 20,
+      unknown_teams: ["Primary team"],
+    })).toEqual([]);
   });
 
   it("selects the largest finite factor gap with stable tie ordering", () => {

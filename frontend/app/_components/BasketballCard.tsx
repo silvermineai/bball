@@ -9,7 +9,7 @@ import type {
 import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel } from "../_lib/forecast-lab-analysis";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastUnknownTeams } from "../_lib/forecast-lab-analysis";
 
 export default function BasketballCard({
   game: g,
@@ -33,6 +33,7 @@ export default function BasketballCard({
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signal = p ? forecastSignal(p) : null;
+  const unknownTeams = forecastUnknownTeams(p);
   const contextLayers = [
     g.matchup_factors ? "four factors" : null,
     homeRating && awayRating ? "team ratings" : null,
@@ -103,9 +104,11 @@ export default function BasketballCard({
           </div>
           {coldStart && (
             <p className="forecast-caveat">
-              Exploratory cold-start estimate · at least one program is outside
-              the trained field. Range is calibrated wider from held-out games;
-              this estimate is not registered as a primary model forecast.
+              Exploratory cold-start estimate · {unknownTeams.length
+                ? `unmodeled program${unknownTeams.length === 1 ? "" : "s"}: ${unknownTeams.join(", ")}. `
+                : "at least one program is outside the trained field. "}
+              Range is calibrated wider from held-out games; this estimate is
+              not registered as a primary model forecast.
             </p>
           )}
           <div className="match-detail muted">

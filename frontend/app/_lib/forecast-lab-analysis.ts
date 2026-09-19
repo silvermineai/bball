@@ -36,6 +36,17 @@ export function forecastEvidenceDetail(evidence: ForecastEvidenceCoverage): stri
     : `${missing} No qualifying pregame market quote is attached; no market edge is inferred.`;
 }
 
+/** Preserve the model's explicit cold-start reason while rejecting malformed names. */
+export function forecastUnknownTeams(prediction: BBPrediction | null | undefined): string[] {
+  if (!prediction || prediction.estimate_type !== "cold_start" || !Array.isArray(prediction.unknown_teams)) return [];
+  return [...new Set(
+    prediction.unknown_teams
+      .filter((team): team is string => typeof team === "string")
+      .map((team) => team.trim())
+      .filter(Boolean),
+  )];
+}
+
 export type ForecastSignalContext = {
   estimate: "primary" | "cold-start" | "unavailable";
   label: "Strong signal" | "Lean signal" | "Near even" | "Cold-start estimate" | "Unavailable";
