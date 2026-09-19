@@ -181,6 +181,26 @@ def forecast_coverage(payload: dict, expected_season: int, expected_rows: int) -
     return total
 
 
+def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
+    """Require the roster challenger to name the exact primary forecast edition."""
+    model = payload.get("roster_model")
+    alignment = payload.get("roster_alignment")
+    if (
+        not isinstance(model, dict)
+        or model.get("primary_model_id") != expected_model_id
+        or not isinstance(model.get("scenario_games"), int)
+        or isinstance(model.get("scenario_games"), bool)
+        or model["scenario_games"] <= 0
+        or not isinstance(alignment, dict)
+        or alignment.get("resolved_model_id") != expected_model_id
+        or alignment.get("roster_primary_model_id") != expected_model_id
+        or alignment.get("compatible") is not True
+        or alignment.get("status") != "matched"
+    ):
+        raise ValueError("basketball roster challenger is not aligned to the latest forecast model")
+    return model["scenario_games"]
+
+
 def brief_archive_metadata(payload: dict) -> tuple[int, int]:
     """Validate the durable reading archive without downloading snapshots."""
     total = payload.get("total")
@@ -517,9 +537,10 @@ def check_live(
     probe_key = str(int(checked_at.timestamp()))
     upcoming_forecasts = get_json(
         base_url,
-        f"/api/basketball/research/forecasts?season=2027&status=upcoming&model={quote(model_id, safe='')}&limit=1&page=0&publication_check={probe_key}",
+        f"/api/basketball/research/forecasts?season=2027&status=upcoming&model={quote(model_id, safe='')}&roster=1&limit=1&page=0&publication_check={probe_key}",
     )
     upcoming_forecast_rows = forecast_coverage(upcoming_forecasts, 2027, latest["forecasts"])
+    roster_scenario_rows = roster_forecast_alignment(upcoming_forecasts, model_id)
     scorecard = get_json(
         base_url,
         f"/api/research/scorecard?sport=basketball&season=2027&status=excluded&limit=1&publication_check={probe_key}",
@@ -670,6 +691,7 @@ def check_live(
         "forecast_model": latest.get("model_id"),
         "forecast_rows": latest["forecasts"],
         "forecast_upcoming_rows": upcoming_forecast_rows,
+        "forecast_roster_scenario_rows": roster_scenario_rows,
         "forecast_age_hours": round(max(model_age, 0), 2),
         "scorecard_excluded_rows": scorecard.get("total", 0),
         "football_forecast_model": football_latest.get("model_id"),

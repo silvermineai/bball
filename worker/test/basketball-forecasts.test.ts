@@ -201,8 +201,9 @@ describe("basketball forecast availability", () => {
       { DB: { prepare }, ASSETS: { fetch } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { roster_model: Record<string, unknown>; rows: Array<Record<string, unknown>> };
+    const body = await response.json() as { roster_model: Record<string, unknown>; roster_alignment: Record<string, unknown>; rows: Array<Record<string, unknown>> };
     expect(body.roster_model).toMatchObject({ version: "basketball-roster-challenger-v2", primary_model_id: "basketball-efficiency-v2-test", scenario_games: 1, improvement_vs_prior_net: 0.5 });
+    expect(body.roster_alignment).toEqual({ resolved_model_id: "basketball-efficiency-v2-test", roster_primary_model_id: "basketball-efficiency-v2-test", compatible: true, status: "matched", matched_rows: 1 });
     expect(body.rows[0].roster_lens).toMatchObject({ game_id: "401902275", primary_model_id: "basketball-efficiency-v2-test", roster_margin: 5.1, margin_delta: 0.6, roster_home_win_probability: 0.64, roster_margin_low: -10.8, roster_margin_high: 21 });
     expect(fetch).toHaveBeenCalledOnce();
   });
@@ -238,7 +239,8 @@ describe("basketball forecast availability", () => {
       { DB: { prepare }, ASSETS: { fetch } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { rows: Array<Record<string, unknown>> };
+    const body = await response.json() as { roster_alignment: Record<string, unknown>; rows: Array<Record<string, unknown>> };
+    expect(body.roster_alignment).toEqual({ resolved_model_id: "basketball-efficiency-v2-old", roster_primary_model_id: "basketball-efficiency-v2-current", compatible: false, status: "model_mismatch", matched_rows: 0 });
     expect(body.rows[0].roster_lens).toBeNull();
   });
 });

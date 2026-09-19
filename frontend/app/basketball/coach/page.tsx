@@ -117,7 +117,7 @@ export default function Page() {
           </div>
           <Link href="/basketball/forecast-lab/">Compare scenarios →</Link>
         </div>
-        <LiveCoachSlate games={upcoming} rosterScenarios={rosterModel.scenarios} />
+        <LiveCoachSlate games={upcoming} rosterScenarios={rosterModel.scenarios} publishedModelId={basketball.model.id} />
       </section>
 
       <section className="section two-col" aria-labelledby="decision-lanes-title">

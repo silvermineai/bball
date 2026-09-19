@@ -11,6 +11,7 @@ export const metadata = {
 
 export default function Page() {
   const overview = getBasketball();
+  const rosterModel = getRosterModel();
   // The live D1 endpoint supplies the complete slate after hydration. Keep a
   // compact static fallback here so the first HTML response does not embed
   // matchup factor payloads, ratings, source receipts, or coefficient arrays
@@ -44,7 +45,8 @@ export default function Page() {
     <Suspense fallback={<p>Loading forecast lab…</p>}>
       <ForecastLab
         overview={labOverview}
-        scenarios={getRosterModel().scenarios}
+        scenarios={rosterModel.scenarios}
+        rosterPrimaryModelId={rosterModel.primary_model_id}
         markets={getBasketballMarketComparisons()}
         factorSignals={compactMatchupSignals(overview.upcoming)}
         factorSignalModelId={overview.model.id}

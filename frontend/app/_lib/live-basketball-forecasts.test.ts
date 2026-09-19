@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -181,6 +181,7 @@ describe("live basketball forecast merge", () => {
     ];
     const rows = [{
       game_id: "a",
+      model_id: "model-new",
       season: 2027,
       starts_at: "2026-11-02T06:00:00Z",
       home_id: "a-home",
@@ -200,6 +201,7 @@ describe("live basketball forecast merge", () => {
     const merged = mergeLiveBasketballForecasts(staticGames, rows);
     expect(merged.map((item) => item.id)).toEqual(["a", "b"]);
     expect(merged[0].prediction?.home_margin).toBe(9);
+    expect(merged[0].forecast_model_id).toBe("model-new");
     expect(merged[0].venue).toBe("Updated venue");
     expect(merged[0].source_start).toBe("2026-11-02T06:00:00Z");
     expect(merged[0].source_time_valid).toBe(true);
@@ -254,5 +256,25 @@ describe("live basketball forecast merge", () => {
     expect(publishedBasketballPrediction({ prediction: primary, fallback_prediction: fallback })).toBe(primary);
     expect(publishedBasketballPrediction({ prediction: null, fallback_prediction: fallback })).toBe(fallback);
     expect(publishedBasketballPrediction({ prediction: null, fallback_prediction: null })).toBeNull();
+  });
+
+  it("withholds a roster scenario calibrated against another forecast edition", () => {
+    const scenario = {
+      game_id: "a",
+      home_id: "a-home",
+      away_id: "a-away",
+      primary_model_id: "model-static",
+      base_margin: 4,
+      roster_margin: 5,
+      margin_delta: 1,
+      home_predicted_net: 10,
+      away_predicted_net: 5,
+      roster_home_win_probability: 0.64,
+      roster_margin_low: -6,
+      roster_margin_high: 16,
+    };
+    expect(matchingRosterScenario({}, scenario, "model-static")).toBe(scenario);
+    expect(matchingRosterScenario({ forecast_model_id: "model-live" }, scenario, "model-static")).toBeNull();
+    expect(matchingRosterScenario({ forecast_model_id: "model-static" }, scenario, "model-live")).toBe(scenario);
   });
 });

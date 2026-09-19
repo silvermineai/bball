@@ -19,6 +19,7 @@ import {
 import {
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
+  matchingRosterScenario,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
@@ -37,6 +38,7 @@ export default function Matchups({
   model,
   generatedAt,
   rosterScenarios = [],
+  rosterPrimaryModelId,
   teamRatings = {},
   scope = "all",
 }: {
@@ -46,6 +48,7 @@ export default function Matchups({
   model: BBOverview["model"];
   generatedAt: string;
   rosterScenarios?: BBRosterScenario[];
+  rosterPrimaryModelId: string;
   teamRatings?: Record<string, BBTeam>;
   scope?: "all" | "forecasted";
 }) {
@@ -235,6 +238,9 @@ export default function Matchups({
   );
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const latestModelId = liveCatalog?.models?.find((item) => item.target_season === 2027)?.model_id
+    || liveCatalog?.models?.[0]?.model_id
+    || model.id;
   const prepRows = prepIds
     .map((id) => scheduledGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
@@ -393,6 +399,7 @@ export default function Matchups({
           return `Live D1 catalog: ${latest.forecasts.toLocaleString()} rows · ${latest.last_created_at ? `last captured ${latest.last_created_at.slice(0, 10)}` : "capture clock unavailable"} · ${matches ? "matches this page" : `newer than this page (${latest.model_id})`}.`;
         })() : liveCatalogError ? `${liveCatalogError} Showing the static forecast edition.` : "Checking the live forecast catalog…"}
       </p>
+      {latestModelId !== rosterPrimaryModelId && <p className="notice" role="status">Roster lens withheld because its primary edition <span className="mono">{rosterPrimaryModelId}</span> does not match the live forecast edition <span className="mono">{latestModelId}</span>.</p>}
       <p className="note" role="status">
         {liveMarketComparisons
           ? `Live market comparisons: ${Object.values(liveMarketComparisons).filter((quotes) => quotes.length > 0).length.toLocaleString()} games with qualifying quotes.`
@@ -536,7 +543,7 @@ export default function Matchups({
               game={(liveMarketComparisons?.[g.id] || marketComparisons[g.id])?.length ? { ...g, market_comparisons: (liveMarketComparisons?.[g.id] || marketComparisons[g.id]) } : g}
               homeRoster={rosterByTeam.get(g.home_id)}
               awayRoster={rosterByTeam.get(g.away_id)}
-              rosterScenario={rosterScenarioByGame.get(g.id)}
+              rosterScenario={matchingRosterScenario(g, rosterScenarioByGame.get(g.id), model.id) || undefined}
               homeRating={teamRatings[g.home_id]}
               awayRating={teamRatings[g.away_id]}
               publisherHomeRating={publisherRatings[g.home_id]}

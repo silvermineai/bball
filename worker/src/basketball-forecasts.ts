@@ -409,6 +409,32 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     source_observed_at: string | null;
   }>(), DB_TIMEOUT_MS);
   const rosterArtifact = roster === "1" ? await readRosterLenses(c) : { lenses: new Map<string, RosterLens>(), model: null };
+  const resolvedModelIds = new Set(rows.results.map((row) => row.model_id));
+  const resolvedModelId = resolvedModelIds.size === 1 ? [...resolvedModelIds][0] : null;
+  const rosterPrimaryModelId = rosterArtifact.model?.primary_model_id || null;
+  const rosterCompatible = Boolean(resolvedModelId && rosterPrimaryModelId === resolvedModelId);
+  const responseRows = rows.results.map(({ prediction_json, ...row }) => {
+    let prediction: Record<string, unknown> | null = null;
+    try {
+      const parsed = JSON.parse(prediction_json) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        prediction = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // A malformed stored payload is withheld instead of failing the whole page.
+    }
+    return {
+      ...row,
+      source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
+      prediction,
+      ...(roster === "1" ? {
+        roster_lens: (() => {
+          const lens = rosterArtifact.lenses.get(row.game_id);
+          return lens?.primary_model_id === row.model_id ? lens : null;
+        })(),
+      } : {}),
+    };
+  });
   const response = c.json({
     season,
     status,
@@ -418,28 +444,14 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     page_size: limit,
     total: Number(count?.total || 0),
     roster_model: roster === "1" ? rosterArtifact.model : undefined,
-    rows: rows.results.map(({ prediction_json, ...row }) => {
-      let prediction: Record<string, unknown> | null = null;
-      try {
-        const parsed = JSON.parse(prediction_json) as unknown;
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          prediction = parsed as Record<string, unknown>;
-        }
-      } catch {
-        // A malformed stored payload is withheld instead of failing the whole page.
-      }
-      return {
-        ...row,
-        source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
-        prediction,
-        ...(roster === "1" ? {
-          roster_lens: (() => {
-            const lens = rosterArtifact.lenses.get(row.game_id);
-            return lens?.primary_model_id === row.model_id ? lens : null;
-          })(),
-        } : {}),
-      };
-    }),
+    roster_alignment: roster === "1" ? {
+      resolved_model_id: resolvedModelId,
+      roster_primary_model_id: rosterPrimaryModelId,
+      compatible: rosterCompatible,
+      status: rosterCompatible ? "matched" : rosterPrimaryModelId ? "model_mismatch" : "unavailable",
+      matched_rows: responseRows.filter((row) => row.roster_lens != null).length,
+    } : undefined,
+    rows: responseRows,
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

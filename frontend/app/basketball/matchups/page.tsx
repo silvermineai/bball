@@ -7,6 +7,7 @@ export const metadata = {
 export default function Page() {
   const d = getBasketball();
   const rosters = getRosters();
+  const rosterModel = getRosterModel();
   const modeledGames = d.coverage.forecast_games + (d.coverage.baseline_estimate_games || 0);
   return (
     <>
@@ -40,7 +41,7 @@ export default function Page() {
         <p className="note" style={{ marginTop: 14 }}>Primary estimates use opponent-adjusted efficiency and calibrated uncertainty. Cold-start rows remain labeled and wider; no missing line, roster field or timing observation is filled in by inference.</p>
       </section>
       <Suspense fallback={<p>Loading slate…</p>}>
-        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={getRosterModel().scenarios} teamRatings={Object.fromEntries(d.ratings.map((team) => [team.id, team]))} model={d.model} generatedAt={d.generated_at} />
+        <Matchups games={d.upcoming} marketComparisons={getBasketballMarketComparisons()} rosterSummaries={rosters.team_summaries || []} rosterScenarios={rosterModel.scenarios} rosterPrimaryModelId={rosterModel.primary_model_id} teamRatings={Object.fromEntries(d.ratings.map((team) => [team.id, team]))} model={d.model} generatedAt={d.generated_at} />
       </Suspense>
     </>
   );

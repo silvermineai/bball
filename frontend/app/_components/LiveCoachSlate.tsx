@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { BBGame, BBRosterScenario } from "../_lib/basketball-types";
-import { loadLiveBasketballForecasts, mergeLiveBasketballForecasts } from "../_lib/live-basketball-forecasts";
+import { loadLiveBasketballForecasts, matchingRosterScenario, mergeLiveBasketballForecasts } from "../_lib/live-basketball-forecasts";
 import { date, fmt } from "../_lib/format";
 
 /**
@@ -14,9 +14,11 @@ import { date, fmt } from "../_lib/format";
 export default function LiveCoachSlate({
   games,
   rosterScenarios,
+  publishedModelId,
 }: {
   games: BBGame[];
   rosterScenarios: BBRosterScenario[];
+  publishedModelId: string;
 }) {
   const [activeGames, setActiveGames] = useState(games);
 
@@ -41,7 +43,7 @@ export default function LiveCoachSlate({
     <div className="article-grid">
       {featured.map((game) => {
         const prediction = game.prediction || game.fallback_prediction;
-        const rosterScenario = scenarioByGame.get(game.id);
+        const rosterScenario = matchingRosterScenario(game, scenarioByGame.get(game.id), publishedModelId);
         const confidence = prediction?.home_win_probability == null
           ? null
           : Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability) * 100;

@@ -1,4 +1,4 @@
-import type { BBGame } from "./basketball-types";
+import type { BBGame, BBRosterScenario } from "./basketball-types";
 import type { Comparison } from "./research-types";
 
 export type LiveForecastRow = {
@@ -35,6 +35,20 @@ export function publishedBasketballPrediction(
   game: Pick<BBGame, "prediction" | "fallback_prediction">,
 ): NonNullable<BBGame["prediction"]> | null {
   return game.prediction || game.fallback_prediction || null;
+}
+
+/**
+ * Return a roster scenario only when it was calibrated against the exact
+ * primary forecast edition on the game. Static games use the explicitly
+ * supplied published edition; live-hydrated games carry their D1 edition.
+ */
+export function matchingRosterScenario(
+  game: Pick<BBGame, "forecast_model_id">,
+  scenario: BBRosterScenario | null | undefined,
+  publishedModelId: string,
+) {
+  const forecastModelId = game.forecast_model_id || publishedModelId;
+  return scenario?.primary_model_id === forecastModelId ? scenario : null;
 }
 
 const RETRY_DELAYS_MS = [150, 500] as const;
@@ -183,6 +197,7 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
         broadcast: row.broadcast || "",
         prediction: null,
       }),
+      forecast_model_id: row.model_id || base?.forecast_model_id || null,
       starts_at: row.starts_at,
       home_id: row.home_id,
       away_id: row.away_id,
@@ -230,6 +245,7 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
   const coldStart = row.prediction?.estimate_type === "cold_start";
   return {
     ...game,
+    forecast_model_id: row.model_id || game.forecast_model_id || null,
     starts_at: row.starts_at,
     home_id: row.home_id,
     away_id: row.away_id,

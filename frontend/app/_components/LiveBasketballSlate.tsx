@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import BasketballCard from "./BasketballCard";
 import type { BBGame, BBRosterScenario, BBRosterSummary } from "../_lib/basketball-types";
-import { fetchLiveForecast, mergeLiveForecast } from "../_lib/live-basketball-forecasts";
+import { fetchLiveForecast, matchingRosterScenario, mergeLiveForecast } from "../_lib/live-basketball-forecasts";
 
 /**
  * Refresh the small homepage slate without making the full static export
@@ -14,10 +14,12 @@ export default function LiveBasketballSlate({
   games,
   rosterSummaries,
   rosterScenarios,
+  publishedModelId,
 }: {
   games: BBGame[];
   rosterSummaries: BBRosterSummary[];
   rosterScenarios: BBRosterScenario[];
+  publishedModelId: string;
 }) {
   const [activeGames, setActiveGames] = useState(games);
 
@@ -54,7 +56,7 @@ export default function LiveBasketballSlate({
           game={game}
           homeRoster={rosterByTeam.get(game.home_id)}
           awayRoster={rosterByTeam.get(game.away_id)}
-          rosterScenario={scenarioByGame.get(game.id)}
+          rosterScenario={matchingRosterScenario(game, scenarioByGame.get(game.id), publishedModelId) || undefined}
         />
       ))}
     </div>

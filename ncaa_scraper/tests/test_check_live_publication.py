@@ -9,6 +9,7 @@ from scripts.check_live_publication import (
     DAILY_PUBLICATION_MAX_AGE_HOURS,
     check_live,
     forecast_coverage,
+    roster_forecast_alignment,
     market_metadata,
     player_box_field_metadata,
     validate_recruiting_destinations,
@@ -46,6 +47,21 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(forecast_coverage({"season": 2027, "status": "upcoming", "total": 12}, 2027, 12), 12)
         with self.assertRaisesRegex(ValueError, "every upcoming game"):
             forecast_coverage({"season": 2027, "status": "upcoming", "total": 11}, 2027, 12)
+
+    def test_roster_challenger_requires_the_exact_forecast_edition(self):
+        payload = {
+            "roster_model": {"primary_model_id": "model-1", "scenario_games": 90},
+            "roster_alignment": {
+                "resolved_model_id": "model-1",
+                "roster_primary_model_id": "model-1",
+                "compatible": True,
+                "status": "matched",
+            },
+        }
+        self.assertEqual(roster_forecast_alignment(payload, "model-1"), 90)
+        payload["roster_alignment"] = {**payload["roster_alignment"], "compatible": False, "status": "model_mismatch"}
+        with self.assertRaisesRegex(ValueError, "not aligned"):
+            roster_forecast_alignment(payload, "model-1")
 
     def test_get_json_honors_retry_after_for_transient_http_errors(self):
         class Response:
@@ -100,11 +116,20 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return {**value, "latest_observed_at": value.get("latest_observed_at", "2026-09-10T18:00:00Z")}
             if path.startswith("/api/basketball/research/forecasts?season=2027&status=upcoming&"):
                 model = responses.get("/api/basketball/research/forecasts?meta=1", {}).get("models", [{}])[0]
+                model_id = model.get("model_id")
                 return {
                     "season": 2027,
                     "status": "upcoming",
                     "total": model.get("forecasts", 0),
-                    "model": model.get("model_id"),
+                    "model": model_id,
+                    "roster_model": {"primary_model_id": model_id, "scenario_games": max(1, model.get("forecasts", 0))},
+                    "roster_alignment": {
+                        "resolved_model_id": model_id,
+                        "roster_primary_model_id": model_id,
+                        "compatible": True,
+                        "status": "matched",
+                        "matched_rows": 0,
+                    },
                     "rows": [],
                 }
             candidates = (
@@ -343,6 +368,7 @@ class LivePublicationCheckTest(unittest.TestCase):
             report = check_live("https://example.test", now=now)
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["forecast_upcoming_rows"], 100)
+        self.assertEqual(report["forecast_roster_scenario_rows"], 100)
         self.assertEqual(report["recruiting_intake_rows"], 0)
         self.assertEqual(report["recruiting_rows"], 2)
         self.assertEqual(report["recruiting_reviewed_players"], 96)

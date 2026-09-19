@@ -142,12 +142,14 @@ function sortRows(rows: Row[], sort: Sort) {
 export default function ForecastLab({
   overview,
   scenarios,
+  rosterPrimaryModelId,
   markets,
   factorSignals,
   factorSignalModelId,
 }: {
   overview: BBOverview;
   scenarios: BBRosterScenario[];
+  rosterPrimaryModelId: string;
   markets: Record<string, Comparison[]>;
   factorSignals: Record<string, ForecastMatchupSignal>;
   factorSignalModelId: string;
@@ -281,6 +283,7 @@ export default function ForecastLab({
       ? liveCatalog?.models[0]?.model_id || overview.model.id
       : modelSelection;
     const factorEditionMatches = selectedModelId === factorSignalModelId;
+    const rosterEditionMatches = selectedModelId === rosterPrimaryModelId;
     const latestById = new Map(
       (modelSelection === "latest" ? activeGames : latestGames || []).map((game) => [game.id, game]),
     );
@@ -288,7 +291,7 @@ export default function ForecastLab({
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
       .map((game) => modelRow(
         game,
-        modelSelection === "latest" ? scenarioByGame.get(game.id) : undefined,
+        modelSelection === "latest" && rosterEditionMatches ? scenarioByGame.get(game.id) : undefined,
         modelSelection === "latest" ? (liveMarkets || markets)[game.id] : undefined,
         modelSelection === "latest"
           ? null
@@ -319,7 +322,7 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, scenarioByGame, scheduleClockByGame, sort, view]);
+  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, rosterPrimaryModelId, scenarioByGame, scheduleClockByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.reduce(
@@ -334,6 +337,7 @@ export default function ForecastLab({
     ? liveCatalog?.models[0]?.model_id || overview.model.id
     : modelSelection;
   const factorEditionMatches = selectedModelId === factorSignalModelId;
+  const rosterEditionMatches = selectedModelId === rosterPrimaryModelId;
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const confirmedStartCount = modeledGames.filter((game) => !game.time_tbd).length;
   const unconfirmedStartCount = modeledGames.length - confirmedStartCount;
@@ -425,6 +429,7 @@ export default function ForecastLab({
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
       <p className="note">This board compares published model artifacts. Each row audits four core checks: a primary team model, confirmed tip time, same-edition Four Factors and an exact-ID roster continuity scenario. Missing market evidence is reported separately because no quote is not a zero edge or a failed forecast. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      {!rosterEditionMatches && <p className="notice" role="status">Roster scenarios are withheld: challenger edition <span className="mono">{rosterPrimaryModelId}</span> was calibrated against a different primary model than <span className="mono">{selectedModelId}</span>. Rebuild the challenger before using continuity deltas.</p>}
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>

@@ -11,6 +11,7 @@ export const metadata = {
 
 export default function Page() {
   const basketball = getBasketball();
+  const rosterModel = getRosterModel();
   return (
     <>
       <div className="page-title">
@@ -26,7 +27,8 @@ export default function Page() {
           games={basketball.upcoming}
           marketComparisons={getBasketballMarketComparisons()}
           rosterSummaries={getRosters().team_summaries || []}
-          rosterScenarios={getRosterModel().scenarios}
+          rosterScenarios={rosterModel.scenarios}
+          rosterPrimaryModelId={rosterModel.primary_model_id}
           teamRatings={Object.fromEntries(basketball.ratings.map((team) => [team.id, team]))}
           model={basketball.model}
           generatedAt={basketball.generated_at}

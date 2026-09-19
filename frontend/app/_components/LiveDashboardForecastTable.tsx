@@ -6,6 +6,7 @@ import type { BBFactorKey, BBGame, BBRosterScenario, BBTeam } from "../_lib/bask
 import { fmt, kick, date } from "../_lib/format";
 import {
   loadLiveBasketballForecasts,
+  matchingRosterScenario,
   mergeLiveBasketballForecasts,
 } from "../_lib/live-basketball-forecasts";
 import {
@@ -82,6 +83,7 @@ export function forecastCsvRows(
   marketComparisons: Record<string, Comparison[]> = {},
   rosterScenarios: BBRosterScenario[] = [],
   ratings: BBTeam[] = [],
+  publishedModelId = "",
 ): CsvCell[][] {
   const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
@@ -96,7 +98,7 @@ export function forecastCsvRows(
       prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
       prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
       factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
-      rosterByGame.get(game.id)?.roster_margin, market.spread, market.total, market.spreadGap, market.totalGap,
+      matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId)?.roster_margin, market.spread, market.total, market.spreadGap, market.totalGap,
       home?.adj_off, home?.adj_def, home?.adj_net, home?.adj_tempo,
       away?.adj_off, away?.adj_def, away?.adj_net, away?.adj_tempo,
     ];
@@ -138,10 +140,12 @@ export default function LiveDashboardForecastTable({
   initialGames,
   rosterScenarios = [],
   ratings = [],
+  publishedModelId,
 }: {
   initialGames: BBGame[];
   rosterScenarios?: BBRosterScenario[];
   ratings?: BBTeam[];
+  publishedModelId: string;
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
@@ -181,11 +185,11 @@ export default function LiveDashboardForecastTable({
   const orderedSignalGames = sortForecastBoard(signalGames, sort);
   const downloadVisibleCsv = () => downloadCsv(
     "basketball-forecast-board.csv",
-    toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios, ratings)),
+    toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios, ratings, publishedModelId)),
   );
   const downloadAllCsv = () => downloadCsv(
     "basketball-forecast-board-filtered.csv",
-    toCsv(forecastCsvHeaders, forecastCsvRows(orderedSignalGames, marketComparisons, rosterScenarios, ratings)),
+    toCsv(forecastCsvHeaders, forecastCsvRows(orderedSignalGames, marketComparisons, rosterScenarios, ratings, publishedModelId)),
   );
   return (
     <>
@@ -241,7 +245,7 @@ export default function LiveDashboardForecastTable({
         <tbody>
           {rows.map((game) => {
             const prediction = predictionFor(game)!;
-            const rosterScenario = rosterByGame.get(game.id);
+            const rosterScenario = matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId);
             const homeRating = ratingById.get(game.home_id);
             const awayRating = ratingById.get(game.away_id);
             const market = summarizeMarketLines(marketComparisons[game.id] || game.market_comparisons || []);
