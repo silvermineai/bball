@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combineTeamProduction, filterDivisionOneTeams } from "./LiveTeamProductionTable";
+import { combineTeamProduction, filterDivisionOneTeams, teamStatsUrl } from "./LiveTeamProductionTable";
 
 describe("live team production filtering", () => {
   it("keeps only teams in the model's Division I cohort", () => {
@@ -22,5 +22,11 @@ describe("live team production filtering", () => {
     expect(combineTeamProduction(points, stats)).toEqual([{
       ...points[0], rebounds: 36.5, assists: 14.2, fieldGoalPct: 48.1, turnovers: 10.4,
     }]);
+  });
+
+  it("keeps the live request tied to the dashboard's completed season", () => {
+    expect(teamStatsUrl(2026, "offensive", "avgPoints", ["41", "99"])).toBe(
+      "/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints&ids=41%2C99&limit=500&page=0",
+    );
   });
 });

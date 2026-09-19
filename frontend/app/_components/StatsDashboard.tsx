@@ -458,7 +458,7 @@ export default function StatsDashboard() {
           <p className="dashboard-caption">Latest completed-season team stats: adjusted offense, defense, net rating, pace, schedule strength and the four factors.</p>
           <TeamTable teams={overview.ratings} />
           <AdjustedFourFactorsTable teams={overview.ratings} />
-          <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} />
+          <LiveTeamProductionTable teamIds={overview.ratings.map((team) => team.id)} season={latestSeason} />
         </section>
           <section className="dashboard-section" aria-labelledby="dashboard-players">
           <div className="dashboard-section-heading"><div><span className="eyebrow">03 / PLAYER STATS</span><h2 id="dashboard-players">Player production leaders</h2></div><div className="button-row"><DashboardExportButton kind="players" season={latestSeason} headers={["Season", "Player", "Team", "Player ID", "Position", "Games", "Minutes", "MPG", "PTS/40", "PPG", "RPG", "ORPG", "DRPG", "APG", "A/TO", "SPG", "BPG", "PF/G", "TO/G", "TS%", "eFG%", "3P%", "FT%", "Qualified"]} rows={playerExportRows} /><Link href="/basketball/players/">Full player table →</Link></div></div>

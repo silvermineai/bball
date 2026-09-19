@@ -53,6 +53,19 @@ export function filterDivisionOneTeams(rows: TeamRow[], teamIds: ReadonlySet<str
   return rows.filter((row) => teamIds.has(String(row.id)));
 }
 
+/** Keep the live request and the linked browser on the same completed season. */
+export function teamStatsUrl(season: number, category: string, stat: TeamStatKey, teamIds: string[]) {
+  const params = new URLSearchParams({
+    season: String(season),
+    category,
+    stat,
+    ids: teamIds.join(","),
+    limit: "500",
+    page: "0",
+  });
+  return `/api/basketball/research/team-stats?${params.toString()}`;
+}
+
 export function combineTeamProduction(
   points: TeamRow[],
   stats: ReadonlyMap<string, ReadonlyMap<string, TeamRow>>,
@@ -66,7 +79,7 @@ export function combineTeamProduction(
   }));
 }
 
-export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[] }) {
+export default function LiveTeamProductionTable({ teamIds, season }: { teamIds: string[]; season: number }) {
   const [data, setData] = useState<TeamProductionRow[] | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const [stat, setStat] = useState<TeamStatKey>("avgPoints");
@@ -78,7 +91,7 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
     const controller = new AbortController();
     setStatus("checking");
     const stats = teamStatOptions.filter((option) => contextStatKeys.includes(option.key) || option.key === stat);
-    const requests = stats.map(({ category, key }) => fetch(`/api/basketball/research/team-stats?season=2026&category=${category}&stat=${key}&ids=${encodeURIComponent(teamIdKey)}&limit=500&page=0`, { signal: controller.signal })
+    const requests = stats.map(({ category, key }) => fetch(teamStatsUrl(season, category, key, teamIdKey.split(",").filter(Boolean)), { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Live team production unavailable");
         return response.json() as Promise<TeamStatsResponse>;
@@ -111,7 +124,7 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("unavailable");
       });
     return () => controller.abort();
-  }, [stat, teamIdKey]);
+  }, [season, stat, teamIdKey]);
 
   const contextColumns = [
     { key: "avgPoints" as const, label: "PPG", value: (row: TeamProductionRow) => row.points, unit: "per game" as const },
@@ -125,9 +138,9 @@ export default function LiveTeamProductionTable({ teamIds }: { teamIds: string[]
     <section className="dashboard-subsection" aria-labelledby="live-team-production">
       <div className="dashboard-section-heading">
         <div><span className="eyebrow">LIVE RAW TEAM DATA</span><h3 id="live-team-production">D1 team production</h3></div>
-        <Link href={`/basketball/team-stats/?season=2026&category=${activeStat.category}&stat=${activeStat.key}`}>Full team stat browser →</Link>
+        <Link href={`/basketball/team-stats/?season=${season}&category=${activeStat.category}&stat=${activeStat.key}`}>Full team stat browser →</Link>
       </div>
-      <p className="dashboard-caption">Current Division I team-season box-score production from the live archive. Choose the field to reorder the table; the surrounding columns remain attached for context.</p>
+      <p className="dashboard-caption">{season} Division I team-season box-score production from the live archive. Choose the field to reorder the table; the surrounding columns remain attached for context.</p>
       <div className="toolbar" style={{ marginBottom: 16 }}>
         <label className="control"><span>RANK BY</span><select value={stat} onChange={(event) => setStat(event.target.value as TeamStatKey)}>{teamStatOptions.map((option) => <option key={option.key} value={option.key}>{option.label} · {option.description}</option>)}</select></label>
         <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 8 | 16 | 24)}><option value={8}>8 teams</option><option value={16}>16 teams</option><option value={24}>24 teams</option></select></label>
