@@ -64,6 +64,7 @@ export type SportSummary = {
   exclusion_counts: Record<string, number>;
   metrics: Metrics;
   games_with_comparisons: number;
+  qualifying_market_observations?: number;
   market_metrics: {
     provider: string;
     bookmaker: string;
@@ -84,6 +85,8 @@ export type Ledger = {
   /** All immutable registrations; older editions may omit this field. */
   versions?: LedgerVersion[];
   market_observations: number;
+  /** Rows that pass the selected forecast's game, clock and freshness rules. */
+  qualifying_market_observations?: number;
   unmatched_events: number;
   selection: string;
   limitations: string[];

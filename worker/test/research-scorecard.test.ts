@@ -8,9 +8,9 @@ describe("live research scorecard", () => {
       sport: "basketball",
       game_id: "game-1",
       model_id: "model-1",
-      generated_at: "2026-10-01T00:00:00.000000Z",
-      registered_at: "2026-10-01T00:01:00.000000Z",
-      starts_at: "2026-10-02T00:00:00.000000Z",
+      generated_at: "2026-01-01T00:00:00.000000Z",
+      registered_at: "2026-01-01T00:01:00.000000Z",
+      starts_at: "2027-01-02T00:00:00.000000Z",
       time_tbd: 0,
       payload_json: JSON.stringify({
         home_id: "home",
@@ -23,13 +23,37 @@ describe("live research scorecard", () => {
       state_json: JSON.stringify({
         home_id: "home",
         away_id: "away",
-        starts_at: "2026-10-02T00:00:00.000000Z",
+        starts_at: "2027-01-02T00:00:00.000000Z",
         time_tbd: 0,
         completed: 0,
         home_score: null,
         away_score: null,
       }),
       exclusion: null,
+    };
+    const eligibleQuote = {
+      id: "quote-1",
+      sport: "basketball",
+      game_id: "game-1",
+      provider: "licensed-feed",
+      bookmaker: "book-1",
+      market: "spreads",
+      captured_at: "2026-01-01T12:00:00.000000Z",
+      updated_at: "2026-01-01T11:59:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home",
+        away_id: "away",
+        starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -3.5,
+        home_price: 1.91,
+        away_price: 1.91,
+      }),
+    };
+    const preRegistrationQuote = {
+      ...eligibleQuote,
+      id: "quote-before-registration",
+      captured_at: "2025-12-31T23:59:00.000000Z",
+      updated_at: "2025-12-31T23:58:00.000000Z",
     };
     const prepare = vi.fn((sql: string) => {
       const first = async () => {
@@ -43,7 +67,11 @@ describe("live research scorecard", () => {
         first,
         bind: (..._args: unknown[]) => ({
           first,
-          all: async () => sql.includes("ROW_NUMBER() OVER") ? { results: [selected] } : { results: [] },
+          all: async () => sql.includes("ROW_NUMBER() OVER")
+            ? { results: [selected] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: [eligibleQuote, preRegistrationQuote] }
+              : { results: [] },
         }),
       };
     });
@@ -53,13 +81,14 @@ describe("live research scorecard", () => {
       { RESEARCH_DB: { prepare } as never },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { live: boolean; total: number; market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
+    const body = await response.json() as { live: boolean; total: number; market_observations: number; qualifying_market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
     expect(body.live).toBe(true);
     expect(body.total).toBe(1);
     expect(body.market_observations).toBe(7);
+    expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
-    expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7 });
-    expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, games_with_comparisons: 0 });
+    expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
+    expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, games_with_comparisons: 1, qualifying_market_observations: 1 });
   });
 
   it("publishes settled probability reliability bins", async () => {

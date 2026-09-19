@@ -16,6 +16,7 @@ type MarketMetadata = {
 type ScorecardSummary = {
   games?: number;
   games_with_comparisons?: number;
+  qualifying_market_observations?: number;
   metrics?: {
     games?: number;
     winner_accuracy?: number | null;
@@ -26,6 +27,7 @@ type ScorecardSummary = {
 type ScorecardResponse = {
   generated_at?: string;
   market_observations?: number;
+  qualifying_market_observations?: number;
   unmatched_events?: number;
   sports?: { football?: ScorecardSummary };
 };
@@ -70,7 +72,7 @@ export default function LiveFootballMarketStatus() {
     <p className="note" role="status">
       {status === "live" && scorecard && summary
         ? <>
-            Live model-versus-market record: {(scorecard.market_observations || 0).toLocaleString()} qualifying quote observations · {(summary.games_with_comparisons || 0).toLocaleString()} games with matched lines · {(metrics?.games || 0).toLocaleString()} settled forecasts. {metrics?.winner_accuracy != null ? `${(metrics.winner_accuracy * 100).toFixed(1)}% winner accuracy` : "Winner accuracy pending"}{metrics?.margin_mae != null ? ` · ${metrics.margin_mae.toFixed(1)}-point margin MAE` : ""}. {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
+            Live model-versus-market record: {(scorecard.qualifying_market_observations || 0).toLocaleString()} qualifying quote observations from {(scorecard.market_observations || 0).toLocaleString()} retained rows · {(summary.games_with_comparisons || 0).toLocaleString()} games with matched lines · {(metrics?.games || 0).toLocaleString()} settled forecasts. {metrics?.winner_accuracy != null ? `${(metrics.winner_accuracy * 100).toFixed(1)}% winner accuracy` : "Winner accuracy pending"}{metrics?.margin_mae != null ? ` · ${metrics.margin_mae.toFixed(1)}-point margin MAE` : ""}. {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
           </>
         : status === "fallback"
           ? <>Live market record unavailable; the retained archive remains available. <Link href="/research/scorecard/?sport=football">Open the scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>

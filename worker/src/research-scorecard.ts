@@ -252,6 +252,10 @@ function summary(rows: Json[], registeredVersions: number): Json {
     exclusion_counts: Object.fromEntries(rows.filter((row) => row.exclusion).reduce((map, row) => map.set(String(row.exclusion), (map.get(String(row.exclusion)) || 0) + 1), new Map<string, number>())),
     metrics: metrics(rows),
     games_with_comparisons: rows.filter((row) => (row.comparisons as Json[]).length).length,
+    qualifying_market_observations: rows.reduce(
+      (total, row) => total + (row.comparisons as Json[]).length,
+      0,
+    ),
     market_metrics: marketMetrics,
   };
 }
@@ -372,6 +376,13 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
     live: true, generated_at: now, policy: POLICY, sport, season: season ?? null, status, query: q || null, page, page_size: limit, total: filtered.length,
     seasons: Object.fromEntries(report.loaded.map(({ code, season: target }) => [code, target])), sports: selectedSports, games: pageRows,
     market_observations: report.market_observations, unmatched_events: report.unmatched_events,
+    qualifying_market_observations: report.loaded.reduce(
+      (total, { data }) => total + data.rows.reduce(
+        (sportTotal, row) => sportTotal + ((row.comparisons as Json[]) || []).length,
+        0,
+      ),
+      0,
+    ),
     selection: "First eligible registration per game. Latest captured pregame quote per provider, bookmaker and market after registration; not a verified closing line.", limitations: LIMITATION,
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}, stale-while-revalidate=300`);

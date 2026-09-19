@@ -9,6 +9,7 @@ type ScorecardResponse = {
   generated_at?: string;
   total?: number;
   market_observations?: number;
+  qualifying_market_observations?: number;
 };
 
 type MarketMetadata = {
@@ -74,7 +75,8 @@ export default function LiveBasketballMarketStatus() {
     ? ` The latest public capture checked ${archive.research_capture.summary_count.toLocaleString()} future summaries; ${(archive.research_capture.summary_with_pickcenter || 0).toLocaleString()} included complete market quotes${archive.research_capture.accepted_markets != null ? ` and ${archive.research_capture.accepted_markets.toLocaleString()} markets passed validation` : ""}${archive.research_capture.rejected_records != null ? `; ${archive.research_capture.rejected_records.toLocaleString()} summaries were rejected` : ""}.`
     : "";
   const marketCount = scorecard?.market_observations || 0;
-  const marketAction = marketCount
+  const qualifyingCount = scorecard?.qualifying_market_observations || 0;
+  const marketAction = qualifyingCount
     ? <Link href="/research/scorecard/?sport=basketball">Open model scorecard →</Link>
     : <><span>No qualifying basketball quote is stored yet.</span> <Link href="/research/markets/#csv-import">Open authorized line preflight →</Link></>;
 
@@ -82,7 +84,7 @@ export default function LiveBasketballMarketStatus() {
     <p className="note" role="status">
       {status === "live" && scorecard
         ? <>
-            Model-versus-line tracking: {marketCount.toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable line feed{archive?.provider_capabilities?.length === 1 ? "" : "s"}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}{captureNote}{captureDiagnostic} Quotes require an authorized clock, exact participants and a pre-tip capture. {marketAction}
+            Model-versus-line tracking: {qualifyingCount.toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The scorecard retains {marketCount.toLocaleString()} accepted quote rows before its forecast-registration and freshness checks. The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable line feed{archive?.provider_capabilities?.length === 1 ? "" : "s"}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}{captureNote}{captureDiagnostic} Quotes require an authorized clock, exact participants and a pre-tip capture. {marketAction}
           </>
         : status === "fallback"
           ? <>Live model scorecard unavailable; the retained market archive remains available. <Link href="/research/scorecard/?sport=basketball">Open model scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
