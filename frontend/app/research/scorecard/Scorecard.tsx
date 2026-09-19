@@ -14,6 +14,9 @@ type RetrospectiveBenchmark = {
     archived_line: { margin_mae: number | null; winner_accuracy: number | null };
   };
 };
+type ForecastCatalog = {
+  models?: Array<{ model_id?: string; target_season?: number | null }>;
+};
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -24,6 +27,9 @@ export default function Scorecard() {
     [source, setSource] = useState<"live" | "edition">("edition"),
     [refreshing, setRefreshing] = useState(true);
   const [benchmark, setBenchmark] = useState<RetrospectiveBenchmark | null>(null);
+  // undefined = still checking, null = live catalog unavailable. A model
+  // edition is never presented as current until this immutable ID matches.
+  const [liveModelId, setLiveModelId] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
     [page, setPage] = useState(() => {
@@ -82,6 +88,29 @@ export default function Scorecard() {
       .catch(() => { if (!controller.signal.aborted) setBenchmark(null); });
     return () => controller.abort();
   }, [sport]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLiveModelId(undefined);
+    const season = sport === "basketball" ? 2027 : 2026;
+    const endpoint = sport === "basketball"
+      ? `/api/basketball/research/forecasts?season=${season}&meta=1`
+      : `/api/football/research/forecasts?season=${season}&meta=1`;
+    fetch(endpoint, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The live forecast catalog is unavailable.");
+        return response.json() as Promise<ForecastCatalog>;
+      })
+      .then((catalog) => {
+        const model = (catalog.models || []).find((candidate) => candidate.target_season === season)
+          || catalog.models?.[0];
+        if (!model?.model_id) throw new Error("The live forecast catalog has no model edition.");
+        if (!controller.signal.aborted) setLiveModelId(model.model_id);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveModelId(null);
+      });
+    return () => controller.abort();
+  }, [sport]);
   if (error)
     return (
       <p role="alert" className="status-error">
@@ -98,7 +127,7 @@ export default function Scorecard() {
     m = summary.metrics,
     marketObservations = summary.market_observations ?? 0,
     unmatchedEvents = summary.unmatched_events ?? 0,
-    reliabilityScope = modelReliabilityScope(summary);
+    reliabilityScope = modelReliabilityScope(summary, liveModelId);
   const rows = data.games.filter(
     (g) =>
       g.sport === sport &&
@@ -175,11 +204,21 @@ export default function Scorecard() {
           <span>Winner accuracy · selected editions · {m.winner_picks} picks</span>
         </div>
       </div>
-      {reliabilityScope.current && reliabilityScope.editionCount > 1 ? (
+      {reliabilityScope.lineage === "matched" && reliabilityScope.current && reliabilityScope.editionCount > 1 ? (
         <p className="note" role="status" style={{ marginTop: 12 }}>
           Headline reliability aggregates {reliabilityScope.aggregateSettled.toLocaleString()} settled eligible games across {reliabilityScope.editionCount.toLocaleString()} model editions. Current edition <code>{reliabilityScope.current.model_id}</code> has {reliabilityScope.current.settled_games.toLocaleString()} settled games and {reliabilityScope.current.eligible_forecasts.toLocaleString()} eligible forecasts; {reliabilityScope.priorSettled.toLocaleString()} settled games come from earlier editions.
         </p>
-      ) : null}
+      ) : reliabilityScope.lineage === "mismatch" ? (
+        <p className="notice" role="alert" style={{ marginTop: 12 }}>
+          Current-edition reliability is withheld. The live forecast catalog reports <code>{reliabilityScope.authoritativeModelId}</code>, but this scorecard has no selected ledger edition with that immutable model ID. Aggregate figures remain historical ledger evidence across the recorded editions.
+        </p>
+      ) : reliabilityScope.lineage === "unavailable" ? (
+        <p className="notice" role="status" style={{ marginTop: 12 }}>
+          Current-edition reliability is withheld because the live forecast catalog could not be verified. Aggregate figures remain historical ledger evidence; retry to confirm the active model edition.
+        </p>
+      ) : (
+        <p className="note" role="status" style={{ marginTop: 12 }}>Checking the live forecast catalog before labeling a scorecard edition current…</p>
+      )}
       <div className="ledger-metrics">
         <span>
           Brier score <b>{fmt(m.brier, 4)}</b>

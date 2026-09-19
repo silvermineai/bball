@@ -108,23 +108,42 @@ export type ModelReliabilityScope = {
   editionCount: number;
   aggregateSettled: number;
   priorSettled: number;
+  /** Whether the current edition was checked against the live forecast catalog. */
+  lineage: "unverified" | "matched" | "mismatch" | "unavailable";
+  authoritativeModelId: string | null;
 };
 
 /** Identify the newest registered edition before describing aggregate reliability. */
-export function modelReliabilityScope(summary: Pick<SportSummary, "metrics" | "model_metrics">): ModelReliabilityScope {
+export function modelReliabilityScope(
+  summary: Pick<SportSummary, "metrics" | "model_metrics">,
+  authoritativeModelId?: string | null,
+): ModelReliabilityScope {
   const editions = summary.model_metrics || [];
-  const current = editions.reduce<ModelEditionMetric | null>((latest, edition) => {
-    if (!latest) return edition;
-    const latestClock = latest.first_registered_at || latest.last_registered_at || "";
-    const editionClock = edition.first_registered_at || edition.last_registered_at || "";
-    return editionClock > latestClock ? edition : latest;
-  }, null);
+  const current = authoritativeModelId === undefined
+    ? editions.reduce<ModelEditionMetric | null>((latest, edition) => {
+      if (!latest) return edition;
+      const latestClock = latest.first_registered_at || latest.last_registered_at || "";
+      const editionClock = edition.first_registered_at || edition.last_registered_at || "";
+      return editionClock > latestClock ? edition : latest;
+    }, null)
+    : authoritativeModelId
+      ? editions.find((edition) => edition.model_id === authoritativeModelId) || null
+      : null;
   const aggregateSettled = summary.metrics.games;
+  const lineage = authoritativeModelId === undefined
+    ? "unverified"
+    : authoritativeModelId === null
+      ? "unavailable"
+      : current
+        ? "matched"
+        : "mismatch";
   return {
     current,
     editionCount: editions.length,
     aggregateSettled,
     priorSettled: Math.max(0, aggregateSettled - (current?.settled_games || 0)),
+    lineage,
+    authoritativeModelId: authoritativeModelId ?? null,
   };
 }
 
