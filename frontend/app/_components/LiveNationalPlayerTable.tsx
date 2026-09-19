@@ -38,7 +38,7 @@ const leaderMetrics: Array<{ key: NationalLeaderMetric; label: string; rankLabel
   { key: "ft_pct", label: "Free-throw percentage", rankLabel: "FT%" },
 ];
 
-type LiveLeader = {
+export type LiveLeader = {
   player_id?: number | string;
   name?: string | null;
   team_name?: string | null;
@@ -58,7 +58,7 @@ type LiveLeader = {
   payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null }) | null;
 };
 
-type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number };
+export type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number };
 
 export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | null {
   const payload = row.payload || {};
@@ -128,6 +128,43 @@ const metricRank = (row: LiveLeader, metric: NationalLeaderMetric) => {
   return typeof rank === "number" ? rank : null;
 };
 
+type RankedPlayer = NationalPlayerRow & { leader_rank: number | null };
+
+/**
+ * The bundled PPG leaders are an outage fallback for the unfiltered default
+ * view. They must never survive a search or metric change because those rows
+ * do not answer the reader's active query.
+ */
+export function bundledNationalLeaderRows(
+  initialPlayers: NationalPlayerRow[],
+  metric: NationalLeaderMetric,
+  query: string,
+): RankedPlayer[] {
+  if (metric !== "ppg" || query.trim()) return [];
+  return initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank }));
+}
+
+export function resolveNationalLeaderResponse(
+  payload: LiveLeaderResponse,
+  metric: NationalLeaderMetric,
+  query: string,
+) {
+  const rows = (payload.rows || []).flatMap((raw, index) => {
+    const row = normalizeNationalLeader(raw);
+    return row ? [{ ...row, leader_rank: metricRank(raw, metric) ?? index + 1 }] : [];
+  }).slice(0, 40);
+  const responseTotal = Number(payload.total);
+  return {
+    rows,
+    total: Number.isInteger(responseTotal) && responseTotal >= 0 ? responseTotal : rows.length,
+    emptyMessage: rows.length
+      ? ""
+      : query.trim()
+        ? "No Division I players match this search and field."
+        : "No Division I rows are available for this field.",
+  };
+}
+
 export default function LiveNationalPlayerTable({
   initialPlayers,
   season,
@@ -135,11 +172,10 @@ export default function LiveNationalPlayerTable({
   initialPlayers: NationalPlayerRow[];
   season: number;
 }) {
-  type RankedPlayer = NationalPlayerRow & { leader_rank: number | null };
   const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
   const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 40>(10);
-  const [players, setPlayers] = useState<RankedPlayer[]>(() => initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })));
+  const [players, setPlayers] = useState<RankedPlayer[]>(() => bundledNationalLeaderRows(initialPlayers, "ppg", ""));
   const [totalRows, setTotalRows] = useState(initialPlayers.length);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -153,10 +189,7 @@ export default function LiveNationalPlayerTable({
       nationalLeaderCsvRows(players.slice(0, rowLimit), metric),
     ));
   };
-  const normalizeRows = (rawRows: LiveLeader[], selected: NationalLeaderMetric) => rawRows.flatMap((raw, index) => {
-    const row = normalizeNationalLeader(raw);
-    return row ? [{ ...row, leader_rank: metricRank(raw, selected) ?? index + 1 }] : [];
-  });
+  const normalizeRows = (rawRows: LiveLeader[], selected: NationalLeaderMetric) => resolveNationalLeaderResponse({ rows: rawRows }, selected, "").rows;
   const downloadAllCsv = async () => {
     if (exporting) return;
     setExporting(true);
@@ -210,7 +243,8 @@ export default function LiveNationalPlayerTable({
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    setPlayers(metric === "ppg" ? initialPlayers.map((player) => ({ ...player, leader_rank: player.ppg_rank })) : []);
+    const fallbackRows = bundledNationalLeaderRows(initialPlayers, metric, query);
+    setPlayers(fallbackRows);
     const params = new URLSearchParams({ division: "1", stat: metric, page: "0" });
     if (query.trim()) params.set("q", query.trim());
     fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`, { signal: controller.signal })
@@ -220,15 +254,19 @@ export default function LiveNationalPlayerTable({
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        const rows = normalizeRows(payload.rows || [], metric).slice(0, 40);
-        setTotalRows(Number(payload.total || rows.length));
-        if (rows.length) setPlayers(rows);
-        else setError("No Division I rows are available for this field.");
+        const resolved = resolveNationalLeaderResponse(payload, metric, query);
+        setTotalRows(resolved.total);
+        setPlayers(resolved.rows);
+        setError(resolved.emptyMessage);
       })
       .catch((reason: unknown) => {
         // Keep the server-rendered leaderboard visible if D1 is unavailable.
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
-          setError("The live leaderboard is temporarily unavailable for this field.");
+          setPlayers(fallbackRows);
+          setTotalRows(fallbackRows.length);
+          setError(fallbackRows.length
+            ? "The live leaderboard is temporarily unavailable; showing the bundled points-per-game edition."
+            : "The live leaderboard is temporarily unavailable for this field.");
         }
       })
       .finally(() => {
@@ -265,7 +303,7 @@ export default function LiveNationalPlayerTable({
         <p className="note" role="status">{loading ? "Loading live Division I leaders…" : `Showing ${Math.min(rowLimit, players.length)} of ${totalRows.toLocaleString()} ${selectedMetric.label.toLowerCase()} leaders. The other columns stay attached for context.`}</p>
       </div>
       {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
-      {error && !players.length ? <p className="empty" role="status">{error} Try another field or return to points per game.</p> : null}
+      {error ? <p className={players.length ? "note" : "empty"} role="status">{error}{players.length ? "" : " Try another field or return to points per game."}</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
           <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>

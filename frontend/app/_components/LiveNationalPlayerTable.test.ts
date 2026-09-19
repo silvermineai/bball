@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { metricValue, nationalLeaderCsvHeaders, nationalLeaderCsvRows, normalizeNationalLeader } from "./LiveNationalPlayerTable";
+import { bundledNationalLeaderRows, metricValue, nationalLeaderCsvHeaders, nationalLeaderCsvRows, normalizeNationalLeader, resolveNationalLeaderResponse } from "./LiveNationalPlayerTable";
 
 describe("live national player normalization", () => {
   it("uses live fields and fills the display line from the retained payload", () => {
@@ -67,5 +67,27 @@ describe("live national player normalization", () => {
     expect(row[nationalLeaderCsvHeaders.indexOf("TO/G")]).toBe(1.5);
     expect(row[nationalLeaderCsvHeaders.indexOf("Selected metric")]).toBe("ppg");
     expect(row[nationalLeaderCsvHeaders.indexOf("Selected value")]).toBe(21.5);
+  });
+
+  it("uses bundled rows only for the unfiltered default leaderboard", () => {
+    const initial = [normalizeNationalLeader({
+      player_id: "42",
+      name: "A Player",
+      ppg: 21.5,
+      publisher_rank: 2,
+    })!];
+    expect(bundledNationalLeaderRows(initial, "ppg", "")).toEqual([
+      expect.objectContaining({ player_id: "42", leader_rank: 2 }),
+    ]);
+    expect(bundledNationalLeaderRows(initial, "ppg", "No Match")).toEqual([]);
+    expect(bundledNationalLeaderRows(initial, "rpg", "")).toEqual([]);
+  });
+
+  it("treats a successful empty search as zero matches without fallback rows", () => {
+    expect(resolveNationalLeaderResponse({ total: 0, rows: [] }, "ppg", "No Match")).toEqual({
+      rows: [],
+      total: 0,
+      emptyMessage: "No Division I players match this search and field.",
+    });
   });
 });
