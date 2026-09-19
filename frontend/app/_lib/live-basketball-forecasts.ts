@@ -31,6 +31,12 @@ type LiveScorecardResponse = {
   games: Array<{ game_id: string; comparisons?: Comparison[] }>;
 };
 
+export function publishedBasketballPrediction(
+  game: Pick<BBGame, "prediction" | "fallback_prediction">,
+): NonNullable<BBGame["prediction"]> | null {
+  return game.prediction || game.fallback_prediction || null;
+}
+
 const RETRY_DELAYS_MS = [150, 500] as const;
 
 function retryDelay(milliseconds: number, signal?: AbortSignal) {

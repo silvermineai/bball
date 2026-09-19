@@ -210,6 +210,24 @@ def register(conn, sport, game, model, generated_at, now):
     return identity
 
 
+def forecast_registration_games(overview):
+    """Yield every published estimate in the ledger's canonical game shape.
+
+    Basketball keeps exploratory cold-start estimates separate from primary
+    forecasts in the public artifact. The audit ledger still needs to retain
+    those published estimates, so normalize the selected estimate into the
+    existing registration shape without changing its payload or label.
+    """
+    for game in overview["upcoming"]:
+        primary = game.get("prediction")
+        fallback = game.get("fallback_prediction")
+        if primary is not None and fallback is not None:
+            raise ValueError("A game cannot publish primary and fallback predictions")
+        prediction = primary if primary is not None else fallback
+        if prediction is not None:
+            yield {**game, "prediction": prediction}
+
+
 def observe_state(conn, sport, game_id, state, now):
     if state is not None:
         state = dict(state)
@@ -255,11 +273,10 @@ def ingest_published(conn, now):
             if source is None:
                 continue
             refreshed.add(sport)
-            for game in overview["upcoming"]:
-                if game.get("prediction"):
-                    register(
-                        conn, sport, game, overview["model"], overview["generated_at"], now
-                    )
+            for game in forecast_registration_games(overview):
+                register(
+                    conn, sport, game, overview["model"], overview["generated_at"], now
+                )
             source.row_factory = sqlite3.Row
             prefix = "football" if sport == "football" else "bb"
             clock = "kickoff" if sport == "football" else "starts_at"

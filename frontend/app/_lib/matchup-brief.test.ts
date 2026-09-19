@@ -158,6 +158,58 @@ describe("matchup evidence and scenario handoff", () => {
       briefEvidence(game, overview, home, away, recruiting, ledger).ledger?.id,
     ).toBe(original.id);
   });
+  it("attaches an exact ledger record to a cold-start brief", () => {
+    const source = overview.upcoming.find(
+      (game) => game.prediction && profiles.has(game.home_id) && profiles.has(game.away_id),
+    )!;
+    const fallback = structuredClone(source);
+    fallback.prediction = null;
+    fallback.fallback_prediction = {
+      ...source.prediction!,
+      estimate_type: "cold_start",
+      unknown_teams: [source.away_id],
+    };
+    const record = {
+      ...(ledger.versions?.[0] || ledger.games[0]),
+      id: "cold-start-registration",
+      sport: "basketball" as const,
+      game_id: fallback.id,
+      model_id: overview.model.id,
+      starts_at: fallback.starts_at,
+      time_tbd: fallback.time_tbd,
+      home_name: fallback.home_name,
+      away_name: fallback.away_name,
+      home_margin: fallback.fallback_prediction.home_margin,
+      total: fallback.fallback_prediction.total,
+      home_win_probability: fallback.fallback_prediction.home_win_probability,
+      margin_low: fallback.fallback_prediction.margin_low,
+      margin_high: fallback.fallback_prediction.margin_high,
+    };
+    const coldLedger = { ...ledger, versions: [record] };
+    const result = briefEvidence(
+      fallback,
+      overview,
+      profiles.get(fallback.home_id)!,
+      profiles.get(fallback.away_id)!,
+      recruiting,
+      coldLedger,
+      rosters,
+    );
+    expect(result.ledger?.id).toBe("cold-start-registration");
+
+    coldLedger.versions[0] = { ...record, margin_high: record.margin_high! + 1 };
+    expect(
+      briefEvidence(
+        fallback,
+        overview,
+        profiles.get(fallback.home_id)!,
+        profiles.get(fallback.away_id)!,
+        recruiting,
+        coldLedger,
+        rosters,
+      ).ledger,
+    ).toBeNull();
+  });
   it("does not manufacture pressure points from missing or short samples", () => {
     const [first, second] = [...profiles.values()],
       profile = structuredClone(first);

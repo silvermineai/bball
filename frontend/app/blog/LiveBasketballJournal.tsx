@@ -12,6 +12,7 @@ import {
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
   mergeLiveBasketballForecasts,
+  publishedBasketballPrediction,
 } from "../_lib/live-basketball-forecasts";
 
 const PREP_LIST_KEY = "silvermine-basketball-prep-list-v1";
@@ -48,7 +49,8 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
 
   const toggleSaved = (gameId: string) => {
     const game = activeGames.find((item) => item.id === gameId);
-    if (!game?.prediction) return;
+    const prediction = game ? publishedBasketballPrediction(game) : null;
+    if (!game || !prediction) return;
     setSavedIds((current) => {
       const removing = current.includes(gameId);
       const next = removing ? current.filter((id) => id !== gameId) : [...current, gameId].slice(-30);
@@ -62,7 +64,7 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
           home_name: game.home_name,
           source_start: game.source_start,
           source_time_valid: game.source_time_valid,
-          prediction: game.prediction!,
+          prediction,
           marketContext: markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null,
         };
         try { window.localStorage.setItem(PREP_LIST_KEY, JSON.stringify({ ids: next, games: updated })); } catch { /* optional storage */ }
@@ -142,10 +144,10 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
       </div>}
       <div className="article-grid">
         {activeGames
-          .filter((g) => g.prediction)
+          .filter((g) => publishedBasketballPrediction(g))
           .slice(0, 6)
           .map((g) => {
-            const p = g.prediction;
+            const p = publishedBasketballPrediction(g);
             if (!p) return null;
             const lens = basketballEditorialLens(g);
             const sourceClock = g.source_time_valid && g.source_start ? ` · schedule clock ${kick(g.source_start)}` : "";
@@ -155,7 +157,9 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
               .filter((entry): entry is [BBFactorKey, number] => Number.isFinite(entry[1]))
               .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
             return <article className="article-card" key={g.id}>
-              <div className="eyebrow">{date(g.starts_at)} · Model brief{sourceClock}</div>
+              <div className="eyebrow">
+                {date(g.starts_at)} · {p.estimate_type === "cold_start" ? "Cold-start estimate" : "Model brief"}{sourceClock}
+              </div>
               <h2>
                 {g.away_name} vs {g.home_name}
               </h2>
@@ -165,6 +169,9 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
               <p className="note">
                 {p.margin_low.toFixed(1)} to {p.margin_high.toFixed(1)} home-margin range · {p.pace.toFixed(1)} possessions per 40 minutes.
               </p>
+              {p.estimate_type === "cold_start" && <p className="note">
+                Exploratory estimate: at least one program is outside the trained field, so use the wider range as the main context.
+              </p>}
               {(awayRating || homeRating || factorEdges.length > 0) && <dl className="journal-statline">
                 {(awayRating || homeRating) && <div><dt>Latest team net</dt><dd>{g.away_name} {awayRating ? fmt(awayRating.adj_net, 1) : "—"} · {g.home_name} {homeRating ? fmt(homeRating.adj_net, 1) : "—"}</dd></div>}
                 {factorEdges.length > 0 && <div><dt>Four Factor edges</dt><dd>{factorEdges.map(([key, edge]) => `${edge > 0 ? g.home_name : g.away_name} ${factorLabels[key]} ${fmt(Math.abs(edge) * 100, 1)}`).join(" · ")}</dd></div>}

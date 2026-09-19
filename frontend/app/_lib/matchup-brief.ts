@@ -312,6 +312,8 @@ export function briefEvidence(
   ledger: Ledger,
   rosters?: BBRosters,
 ) {
+  const prediction = game.prediction || game.fallback_prediction;
+  if (!prediction) throw Error("Matchup brief has no published forecast");
   for (const [profile, id] of [
     [home, game.home_id],
     [away, game.away_id],
@@ -339,9 +341,11 @@ export function briefEvidence(
     record.away_name === game.away_name &&
     Date.parse(record.starts_at) === Date.parse(game.starts_at) &&
     Boolean(record.time_tbd) === Boolean(game.time_tbd) &&
-    record.home_margin === game.prediction?.home_margin &&
-    record.total === game.prediction?.total &&
-    record.home_win_probability === game.prediction?.home_win_probability
+    record.home_margin === prediction.home_margin &&
+    record.total === prediction.total &&
+    record.home_win_probability === prediction.home_win_probability &&
+    record.margin_low === prediction.margin_low &&
+    record.margin_high === prediction.margin_high
       ? record
       : null;
   return {

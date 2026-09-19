@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, type LiveForecastRow } from "./live-basketball-forecasts";
+import { loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -245,5 +245,14 @@ describe("live basketball forecast merge", () => {
     const merged = mergeLiveBasketballForecasts([game("cold", "2026-11-04T05:00:00Z", null)], rows);
     expect(merged[0].prediction).toBeNull();
     expect(merged[0].fallback_prediction?.estimate_type).toBe("cold_start");
+    expect(publishedBasketballPrediction(merged[0])).toBe(merged[0].fallback_prediction);
+  });
+
+  it("selects the published primary estimate before fallback and excludes empty games", () => {
+    const primary = prediction(4);
+    const fallback = { ...prediction(-3), estimate_type: "cold_start" as const };
+    expect(publishedBasketballPrediction({ prediction: primary, fallback_prediction: fallback })).toBe(primary);
+    expect(publishedBasketballPrediction({ prediction: null, fallback_prediction: fallback })).toBe(fallback);
+    expect(publishedBasketballPrediction({ prediction: null, fallback_prediction: null })).toBeNull();
   });
 });

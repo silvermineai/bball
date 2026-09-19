@@ -1,6 +1,7 @@
 """Prospective evaluation invariants with explicit clocks and known outcomes."""
 
 import copy
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from ncaa_scraper.research_ledger import (
     ROOT,
     build_report,
     export_sql,
+    forecast_registration_games,
     observe_state,
     register,
     preserve_unpublished_sports,
@@ -140,6 +142,35 @@ class LedgerTests(unittest.TestCase):
             timestamp("2026-09-04T12:00:00")
         with self.assertRaises(ValueError):
             register(self.c, "football", game(), model("later"), T1, T0)
+
+    def test_published_cold_start_estimates_are_registered_without_relabeling(self):
+        cold = game()
+        cold["id"] = "cold"
+        cold["fallback_prediction"] = {
+            **cold.pop("prediction"),
+            "estimate_type": "cold_start",
+            "unknown_teams": ["2"],
+        }
+        missing = {**game(), "id": "missing", "prediction": None}
+        normalized = list(
+            forecast_registration_games({"upcoming": [game(), cold, missing]})
+        )
+        self.assertEqual([row["id"] for row in normalized], ["123", "cold"])
+        self.assertEqual(normalized[1]["prediction"]["estimate_type"], "cold_start")
+
+        register(self.c, "basketball", normalized[1], model(), T0, T0)
+        payload = json.loads(
+            self.c.execute(
+                "SELECT payload_json FROM audit_predictions WHERE sport='basketball'"
+            ).fetchone()[0]
+        )
+        self.assertEqual(payload["prediction"], cold["fallback_prediction"])
+
+    def test_published_game_cannot_have_two_estimate_types(self):
+        ambiguous = game()
+        ambiguous["fallback_prediction"] = copy.deepcopy(ambiguous["prediction"])
+        with self.assertRaisesRegex(ValueError, "primary and fallback"):
+            list(forecast_registration_games({"upcoming": [ambiguous]}))
 
     def test_first_eligible_registration_not_best_hindsight_model(self):
         g = game()
