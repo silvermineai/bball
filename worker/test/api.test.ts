@@ -1229,7 +1229,37 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ total: 12, non_null: 12 });
     const countSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("count(*) AS total"))?.[0]);
-    expect(countSql).toContain("count(json_extract(s.stats_json, ?))");
+    expect(countSql).toContain("count(json_extract(s.stats_json, '$.averages.avgFieldGoalsMade-avgFieldGoalsAttempted.display'))");
+  });
+
+  it("exposes sortable numeric components from retained shooting pairs", async () => {
+    const first = vi.fn(async () => ({ total: 12, non_null: 11 }));
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => sql.includes("count(*) AS total")
+        ? { first }
+        : { all: async () => ({ results: [] }) },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/publisher-stats?season=2026&category=totals&stat=fieldGoalsAttempted",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      total: 12,
+      non_null: 11,
+      field: {
+        key: "fieldGoalsAttempted",
+        derived_from: "fieldGoalsMade-fieldGoalsAttempted",
+        component: "attempted",
+      },
+    });
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("instr(trim(json_extract(s.stats_json, '$.totals.fieldGoalsMade-fieldGoalsAttempted.display')), '-')");
+    expect(sql).toContain("CAST(");
+    expect(sql).toContain("NOT GLOB '*[^0-9.]*'");
+    expect(sql).toContain("AS value");
+    expect(sql).toContain("DESC");
   });
 
   it("returns the exact publisher player-season source receipt", async () => {
@@ -1319,6 +1349,7 @@ describe("bball api", () => {
     expect(body.coverage[1]).toMatchObject({ observed: 8, missing: 2, share: 0.8 });
     expect(body.coverage[2]).toMatchObject({ observed: 0, missing: 10, share: 0 });
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(stats_json"));
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("fieldGoalsMade-fieldGoalsAttempted.display"));
   });
 
   it("returns retryable responses when the team-stat catalog or rows are busy", async () => {

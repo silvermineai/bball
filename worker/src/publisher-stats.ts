@@ -10,6 +10,8 @@ export type PublisherField = {
   key: string;
   label: string;
   unit: "per game" | "percent" | "count" | "ratio" | "text";
+  derived_from?: string;
+  component?: "made" | "attempted";
 };
 
 export type PublisherFieldCoverage = {
@@ -73,7 +75,68 @@ export const PUBLISHER_FIELDS: PublisherField[] = [
   key,
   label,
   unit: unit as PublisherField["unit"],
-}));
+})).concat([
+  // The publisher stores each shooting split as a single display string
+  // (for example, `60-168`) with a null numeric value. Expose each recorded
+  // component as a sortable number while keeping the original pair in the
+  // response's `display` field. These are lossless parses, not estimates.
+  ["averages", "avgFieldGoalsMade", "Field Goals Made Per Game", "per game", "avgFieldGoalsMade-avgFieldGoalsAttempted", "made"],
+  ["averages", "avgFieldGoalsAttempted", "Field Goals Attempted Per Game", "per game", "avgFieldGoalsMade-avgFieldGoalsAttempted", "attempted"],
+  ["averages", "avgThreePointFieldGoalsMade", "3-Point Field Goals Made Per Game", "per game", "avgThreePointFieldGoalsMade-avgThreePointFieldGoalsAttempted", "made"],
+  ["averages", "avgThreePointFieldGoalsAttempted", "3-Point Field Goals Attempted Per Game", "per game", "avgThreePointFieldGoalsMade-avgThreePointFieldGoalsAttempted", "attempted"],
+  ["averages", "avgFreeThrowsMade", "Free Throws Made Per Game", "per game", "avgFreeThrowsMade-avgFreeThrowsAttempted", "made"],
+  ["averages", "avgFreeThrowsAttempted", "Free Throws Attempted Per Game", "per game", "avgFreeThrowsMade-avgFreeThrowsAttempted", "attempted"],
+  ["totals", "fieldGoalsMade", "Field Goals Made", "count", "fieldGoalsMade-fieldGoalsAttempted", "made"],
+  ["totals", "fieldGoalsAttempted", "Field Goals Attempted", "count", "fieldGoalsMade-fieldGoalsAttempted", "attempted"],
+  ["totals", "threePointFieldGoalsMade", "3-Point Field Goals Made", "count", "threePointFieldGoalsMade-threePointFieldGoalsAttempted", "made"],
+  ["totals", "threePointFieldGoalsAttempted", "3-Point Field Goals Attempted", "count", "threePointFieldGoalsMade-threePointFieldGoalsAttempted", "attempted"],
+  ["totals", "freeThrowsMade", "Free Throws Made", "count", "freeThrowsMade-freeThrowsAttempted", "made"],
+  ["totals", "freeThrowsAttempted", "Free Throws Attempted", "count", "freeThrowsMade-freeThrowsAttempted", "attempted"],
+].map(([category, key, label, unit, derived_from, component]) => ({
+  category: category as PublisherField["category"],
+  key,
+  label,
+  unit: unit as PublisherField["unit"],
+  derived_from,
+  component: component as PublisherField["component"],
+})));
+
+function sourceKey(field: PublisherField) {
+  return field.derived_from || field.key;
+}
+
+function jsonPath(field: PublisherField, leaf: "value" | "display") {
+  return `$.${field.category}.${sourceKey(field)}.${leaf}`;
+}
+
+/**
+ * Return a numeric SQL expression for a source value. Paired shooting fields
+ * are parsed only when the selected component contains a non-negative decimal
+ * number. SQLite otherwise casts malformed text to zero, which would erase the
+ * distinction between an observed zero and an unusable source value.
+ */
+function numericExpression(field: PublisherField, column: string) {
+  if (!field.derived_from || !field.component) {
+    return `json_extract(${column}, '${jsonPath(field, "value")}')`;
+  }
+  const display = `trim(json_extract(${column}, '${jsonPath(field, "display")}'))`;
+  const delimiter = `instr(${display}, '-')`;
+  const part = field.component === "made"
+    ? `trim(substr(${display}, 1, ${delimiter} - 1))`
+    : `trim(substr(${display}, ${delimiter} + 1))`;
+  return `CASE WHEN ${delimiter} > 1 AND ${part} <> '' AND ${part} NOT GLOB '*[^0-9.]*' AND (length(${part}) - length(replace(${part}, '.', ''))) <= 1 THEN CAST(${part} AS REAL) END`;
+}
+
+function displayExpression(field: PublisherField, column: string) {
+  return `json_extract(${column}, '${jsonPath(field, "display")}')`;
+}
+
+function completenessExpression(field: PublisherField, column: string) {
+  if (field.derived_from) return numericExpression(field, column);
+  return field.unit === "text"
+    ? displayExpression(field, column)
+    : numericExpression(field, column);
+}
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2024).max(2035).default(2026),
@@ -123,10 +186,9 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
       // absent for some or every player, so the catalog must not imply that a
       // listed field has complete values. Compound made-attempted fields use
       // their source display string, matching the row endpoint.
-      const coverageColumns = PUBLISHER_FIELDS.map((field, index) => {
-        const leaf = field.unit === "text" ? "display" : "value";
-        return `sum(CASE WHEN json_extract(stats_json, '$.${field.category}.${field.key}.${leaf}') IS NOT NULL THEN 1 ELSE 0 END) AS field_${index}`;
-      }).join(",");
+      const coverageColumns = PUBLISHER_FIELDS.map((field, index) =>
+        `sum(CASE WHEN ${completenessExpression(field, "stats_json")} IS NOT NULL THEN 1 ELSE 0 END) AS field_${index}`
+      ).join(",");
       const [seasons, coverageRow] = await withTimeout(Promise.all([
         db.prepare(
           "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
@@ -162,8 +224,8 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   }
   const field = PUBLISHER_FIELDS.find((candidate) => candidate.category === category && candidate.key === stat);
   if (!field) return c.json({ error: "Unknown publisher field" }, 400);
-  const valuePath = `$.${field.category}.${field.key}.value`;
-  const displayPath = `$.${field.category}.${field.key}.display`;
+  const valueSql = numericExpression(field, "s.stats_json");
+  const displaySql = displayExpression(field, "s.stats_json");
   const search = q ? `%${q}%` : null;
   const conditions = ["s.season=?"];
   const binds: Array<string | number> = [season];
@@ -176,28 +238,28 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(min_games);
   }
   const where = conditions.join(" AND ");
-  // Compound made-attempted fields intentionally retain their publisher
-  // display string instead of inventing a numeric value. Count that display
-  // path for completeness so the browser reflects the source rows accurately.
-  const completenessPath = field.unit === "text" ? displayPath : valuePath;
+  // Raw compound fields count their publisher display string. Parsed
+  // components count only valid numeric halves, so malformed pairs remain
+  // missing rather than silently becoming zero.
+  const completenessSql = completenessExpression(field, "s.stats_json");
   try {
   const count = await withTimeout(db.prepare(
-    `SELECT count(*) AS total, count(json_extract(s.stats_json, ?)) AS non_null
+    `SELECT count(*) AS total, count(${completenessSql}) AS non_null
        FROM bb_player_season s
        LEFT JOIN bb_players p ON p.id=s.athlete_id
        LEFT JOIN (SELECT season,team_id,athlete_id,json_extract(profile_json,'$.team_display_name') AS team_name
                   FROM bb_rosters WHERE season=? GROUP BY season,team_id,athlete_id) r
          ON r.season=s.season AND r.team_id=s.team_id AND r.athlete_id=s.athlete_id
       WHERE ${where}`,
-  ).bind(completenessPath, season, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
-  const order = field.unit === "text"
+  ).bind(season, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
+  const order = field.unit === "text" && !field.derived_from
     ? "p.name ASC, s.athlete_id ASC"
-    : `json_extract(s.stats_json, '${valuePath}') IS NULL, json_extract(s.stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}, p.name ASC, s.athlete_id ASC`;
+    : `${valueSql} IS NULL, ${valueSql} ${direction === "asc" ? "ASC" : "DESC"}, p.name ASC, s.athlete_id ASC`;
   const rows = await withTimeout(db.prepare(
     `SELECT s.athlete_id AS id,p.name,p.position,s.team_id,
             COALESCE(r.team_name,s.team_id) AS team,
-            json_extract(s.stats_json, '${valuePath}') AS value,
-            json_extract(s.stats_json, '${displayPath}') AS display,
+            ${valueSql} AS value,
+            ${displaySql} AS display,
             json_extract(s.stats_json, '$.averages.gamesPlayed.value') AS games
        FROM bb_player_season s
        LEFT JOIN bb_players p ON p.id=s.athlete_id

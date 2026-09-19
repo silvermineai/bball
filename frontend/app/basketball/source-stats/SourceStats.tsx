@@ -9,6 +9,8 @@ type Field = {
   key: string;
   label: string;
   unit: "per game" | "percent" | "count" | "ratio" | "text";
+  derived_from?: string;
+  component?: "made" | "attempted";
 };
 type Row = {
   id: string;
@@ -205,7 +207,7 @@ export default function SourceStats() {
       const receipt = result.source_receipts[0];
       downloadCsv(
         `publisher-${result.field.key}-${season}-all.csv`,
-        toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Edition retrieved", "Edition SHA-256"], rows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, receipt?.fetched_at, receipt?.sha256])),
+        toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Original source display", "Edition retrieved", "Edition SHA-256"], rows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, row.display, receipt?.fetched_at, receipt?.sha256])),
       );
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} matching rows.`);
     } catch (reason) {
@@ -276,7 +278,7 @@ export default function SourceStats() {
         <button className="button secondary" type="button" onClick={share}>Copy stat link</button>
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
-      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. Percentages use the archive’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
+      {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. Percentages use the archive’s 0–100 scale. {field.derived_from ? <>This sortable number is the recorded {field.component} component parsed from <code>{field.derived_from}</code>; the original pair remains in the API and CSV.</> : field.unit === "text" ? "Compound made-attempted fields retain the original source string." : "Values use the source’s numeric field."} {minGames !== "0" ? `Showing records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
       {coverage.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}>
         <summary><strong>Field coverage for {Number(season) - 1}–{String(season).slice(-2)}</strong> · {coverage.length} retained fields across {coverageRecords.toLocaleString()} player/program records</summary>
         <p className="note" style={{ marginTop: 12 }}>Observed counts come from the selected retained edition. A missing value stays missing; it is never converted to zero. Select any row’s stat name above to inspect and export the underlying records.</p>
@@ -302,7 +304,7 @@ export default function SourceStats() {
           {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Archive receipt for the {result.season} edition</strong> · {result.source_receipts.length} edition{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td></tr>)}</tbody></table></div></details>}
           <div className="section-heading" style={{ marginBottom: 20 }}>
             <p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p>
-            <div className="button-row"><button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value])))}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={exportAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div>
+            <div className="button-row"><button className="button secondary" type="button" onClick={() => downloadCsv(`publisher-${result.field.key}-${season}.csv`, toCsv(["Player", "Source ID", "Program", "Program ID", "Position", "Games", result.field.label, "Raw numeric value", "Original source display"], exportRows.map((row) => [row.name, row.id, row.team, row.team_id, row.position, row.games, shown(row, result.field), row.value, row.display])))}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={exportAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div>
           </div>
           {exportMessage && <p className="note" role="status">{exportMessage}</p>}
           <div className="table-scroll">
@@ -313,7 +315,7 @@ export default function SourceStats() {
                 <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small></td>
                 <td>{row.position || "—"}</td>
                 <td className="numeric">{row.games == null ? "—" : fmt(row.games, 0)}</td>
-                <td className="numeric"><strong>{shown(row, result.field)}</strong></td>
+                <td className="numeric"><strong>{shown(row, result.field)}</strong>{result.field.derived_from && <small>Source pair {row.display || "—"}</small>}</td>
               </tr>)}</tbody>
             </table>
           </div>
