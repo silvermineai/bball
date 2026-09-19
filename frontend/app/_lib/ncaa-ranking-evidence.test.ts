@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import { rankingEvidence } from "./ncaa-ranking-evidence";
+
+describe("NCAA ranking source evidence", () => {
+  it("shows the full retained true-shooting formula inputs", () => {
+    expect(rankingEvidence("ts", { points: 400, fga: 300, fta: 80 })).toEqual({
+      primary: "400 PTS",
+      detail: "300 FGA + 0.475 × 80 FTA",
+    });
+  });
+
+  it("uses the denominator that qualifies each ranking rate", () => {
+    expect(rankingEvidence("three_pct", { tpm: 48, tpa: 120 })).toEqual({
+      primary: "48 3PM",
+      detail: "120 3PA",
+    });
+    expect(rankingEvidence("tov_rate", { turnovers: 37, possessions: 412.5 })).toEqual({
+      primary: "37 TO",
+      detail: "412.5 POSS",
+    });
+    expect(rankingEvidence("poss_share", { possessions: 400, team_possessions: 2_000 })).toEqual({
+      primary: "400 PLAYER POSS",
+      detail: "2,000 TEAM POSS",
+    });
+  });
+
+  it("withholds evidence when any required source input is unavailable", () => {
+    expect(rankingEvidence("efg", { fgm: 150, tpm: null, fga: 300 })).toBeNull();
+    expect(rankingEvidence("stocks40", { steals: 30, blocks: undefined, minutes: 600 })).toBeNull();
+  });
+
+  it("does not add an evidence column to directly recorded ranking totals", () => {
+    expect(rankingEvidence("ppg", { points: 400 })).toBeNull();
+  });
+});
