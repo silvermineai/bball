@@ -76,4 +76,92 @@ describe("NCAA player rankings availability", () => {
     });
     expect(fetch).toHaveBeenCalledOnce();
   });
+
+  it("keeps null published shooting fields unavailable instead of coercing them to zero", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const player = {
+      division: 1,
+      team_ncaa_id: 42,
+      team_name: "Example U",
+      class_year: "Jr.",
+      position: "G",
+      games: 20,
+      mins: 600,
+      pts: 300,
+      fga: 240,
+      fgm: 120,
+    };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { ...player, player_id: 7, name: "Missing Threes", tpm: null },
+        { ...player, player_id: 8, name: "Recorded Threes", tpm: 24 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=efg&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<Record<string, unknown>> };
+    expect(body.total).toBe(1);
+    expect(body.rows).toEqual([expect.objectContaining({
+      player_id: "8",
+      player_name: "Recorded Threes",
+      value: 55,
+    })]);
+  });
+
+  it("does not derive true shooting from an unavailable point total", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [{
+        player_id: 7,
+        division: 1,
+        name: "Missing Points",
+        team_name: "Example U",
+        team_ncaa_id: 42,
+        games: 20,
+        mins: 600,
+        pts: null,
+        ppg: null,
+        fga: 240,
+        fta: 80,
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ts&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ total: 0, rows: [] });
+  });
+
+  it("does not admit a published row with unavailable minutes at a zero-minute floor", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [{
+        player_id: 7,
+        division: 1,
+        name: "Missing Workload",
+        team_name: "Example U",
+        team_ncaa_id: 42,
+        games: 20,
+        mins: null,
+        mpg: null,
+        ppg: 18,
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ppg&minGames=5&minMinutes=0",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ total: 0, rows: [] });
+  });
 });

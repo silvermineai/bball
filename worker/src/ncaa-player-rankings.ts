@@ -80,8 +80,21 @@ type PublishedIndividualCatalog = {
 };
 
 const finite = (value: unknown): number | null => {
+  // JSON null and empty cells mean that the publisher did not retain a
+  // value. Number(null) and Number("") both equal zero, so coercing before
+  // checking availability would invent a recorded zero in the fallback
+  // leaderboard.
+  if (value == null || typeof value === "boolean" || (typeof value === "string" && value.trim() === "")) return null;
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) ? number : null;
+};
+
+const publishedMinutes = (player: PublishedIndividualPlayer): number | null => {
+  const minutes = finite(player.mins);
+  if (minutes != null) return minutes;
+  const games = finite(player.games);
+  const mpg = finite(player.mpg);
+  return games != null && games > 0 && mpg != null ? games * mpg : null;
 };
 
 const publishedSupportedMetrics = new Set<Metric>([
@@ -92,8 +105,9 @@ const publishedSupportedMetrics = new Set<Metric>([
 
 const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number | null => {
   const games = finite(player.games) || 0;
-  const minutes = finite(player.mins) ?? ((finite(player.mpg) ?? 0) * games);
-  const points = finite(player.pts) ?? ((finite(player.ppg) ?? 0) * games);
+  const ppg = finite(player.ppg);
+  const minutes = publishedMinutes(player);
+  const points = finite(player.pts) ?? (ppg != null && games > 0 ? ppg * games : null);
   const fga = finite(player.fga);
   const fta = finite(player.fta);
   const fgm = finite(player.fgm);
@@ -113,22 +127,22 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "spg": return finite(player.spg);
     case "bpg": return finite(player.bpg);
     case "fpg": return games > 0 && finite(player.pf) != null ? (finite(player.pf) as number) / games : null;
-    case "mpg": return finite(player.mpg) ?? (games > 0 ? minutes / games : null);
+    case "mpg": return finite(player.mpg) ?? (games > 0 && minutes != null ? minutes / games : null);
     case "topg": return games > 0 && turnovers != null ? turnovers / games : null;
-    case "ts": return fga != null && fta != null && (fga + 0.475 * fta) > 0 ? 100 * points / (2 * (fga + 0.475 * fta)) : null;
+    case "ts": return fga != null && fta != null && points != null && (fga + 0.475 * fta) > 0 ? 100 * points / (2 * (fga + 0.475 * fta)) : null;
     case "efg": return fga != null && fga > 0 && fgm != null && tpm != null ? 100 * (fgm + 0.5 * tpm) / fga : null;
-    case "per40": return minutes > 0 ? 40 * points / minutes : null;
+    case "per40": return minutes != null && minutes > 0 && points != null ? 40 * points / minutes : null;
     case "ast_to": return turnovers != null && turnovers > 0 && finite(player.ast) != null ? (finite(player.ast) as number) / turnovers : null;
-    case "stocks40": return minutes > 0 && finite(player.stl) != null && finite(player.blk) != null ? 40 * ((finite(player.stl) as number) + (finite(player.blk) as number)) / minutes : null;
+    case "stocks40": return minutes != null && minutes > 0 && finite(player.stl) != null && finite(player.blk) != null ? 40 * ((finite(player.stl) as number) + (finite(player.blk) as number)) / minutes : null;
     case "tov_rate": return possessions != null && possessions > 0 && turnovers != null ? 100 * turnovers / possessions : null;
     case "three_rate": return fga != null && fga > 0 && tpa != null ? 100 * tpa / fga : null;
     case "three_pct": return finite(player.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
     case "ft_pct": return finite(player.ft_pct) ?? (fta != null && fta > 0 && finite(player.ftm) != null ? 100 * (finite(player.ftm) as number) / fta : null);
     case "ft_rate": return fga != null && fga > 0 && fta != null ? 100 * fta / fga : null;
-    case "orb40": return minutes > 0 && orb != null ? 40 * orb / minutes : null;
-    case "drb40": return minutes > 0 && drb != null ? 40 * drb / minutes : null;
-    case "reb40": return minutes > 0 && finite(player.reb) != null ? 40 * (finite(player.reb) as number) / minutes : null;
-    case "points_poss": return possessions != null && possessions > 0 ? points / possessions : null;
+    case "orb40": return minutes != null && minutes > 0 && orb != null ? 40 * orb / minutes : null;
+    case "drb40": return minutes != null && minutes > 0 && drb != null ? 40 * drb / minutes : null;
+    case "reb40": return minutes != null && minutes > 0 && finite(player.reb) != null ? 40 * (finite(player.reb) as number) / minutes : null;
+    case "points_poss": return possessions != null && possessions > 0 && points != null ? points / possessions : null;
     case "ast_rate": return possessions != null && possessions > 0 && finite(player.ast) != null ? 100 * (finite(player.ast) as number) / possessions : null;
     case "poss_share": return null;
     case "rim_pct":
@@ -185,7 +199,11 @@ async function publishedRankingsFallback(
     };
     const rows = players
       .filter((player) => finite(player.division) === 1)
-      .filter((player) => (finite(player.games) || 0) >= args.minGames && ((finite(player.mins) ?? ((finite(player.mpg) || 0) * (finite(player.games) || 0))) >= args.minMinutes))
+      .filter((player) => {
+        const games = finite(player.games) || 0;
+        const minutes = publishedMinutes(player);
+        return games >= args.minGames && minutes != null && minutes >= args.minMinutes;
+      })
       .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
       .filter((player) => !args.classYear || player.class_year === args.classYear)
       .filter((player) => !args.position || player.position === args.position)
@@ -214,7 +232,7 @@ async function publishedRankingsFallback(
         position: typeof player.position === "string" ? player.position : null,
         class_year: typeof player.class_year === "string" ? player.class_year : null,
         games: finite(player.games) || 0,
-        minutes: finite(player.mins) ?? 0,
+        minutes: publishedMinutes(player),
         points: finite(player.pts),
         rebounds: finite(player.reb),
         offensive_rebounds: finite(player.orb),
