@@ -3,6 +3,7 @@ import type { BBGame, BBRoster, BBRosterScenario, BBTeam } from "../_lib/basketb
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
+import { summarizeNotebookRoster } from "./notebook-roster";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -81,6 +82,10 @@ export default function BasketballNotebook({
   const teamContextCount = Number(Boolean(homeTeam)) + Number(Boolean(awayTeam));
   const playerContextCount = Number(awayPlayers.length > 0) + Number(homePlayers.length > 0);
   const rosterListingCount = Number(homeRosterPlayers.length > 0) + Number(awayRosterPlayers.length > 0);
+  const rosterTransitionRows = [
+    { teamId: game.away_id, teamName: game.away_name, summary: summarizeNotebookRoster(awayRosterPlayers) },
+    { teamId: game.home_id, teamName: game.home_name, summary: summarizeNotebookRoster(homeRosterPlayers) },
+  ];
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -236,6 +241,23 @@ export default function BasketballNotebook({
           establish eligibility, availability, a commitment or a projected
           rotation.
         </p>
+        <div className="table-scroll" style={{ marginBottom: 20 }}>
+          <table className="data-table">
+            <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Roster transition view</caption>
+            <thead><tr><th>Program</th><th className="numeric">Listed</th><th className="numeric">Same program</th><th className="numeric">Different program</th><th className="numeric">New to dataset</th><th className="numeric">Ambiguous / other</th><th className="numeric">Prior stat profiles</th><th className="numeric">Recorded prior minutes</th></tr></thead>
+            <tbody>{rosterTransitionRows.map(({ teamId, teamName, summary }) => <tr key={teamId}>
+              <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(teamId)}/`}>{teamName}</Link><small><Link href={`/basketball/recruiting/?view=observations&team=${encodeURIComponent(teamId)}`}>Open exact roster observations →</Link></small></th>
+              <td className="numeric"><strong>{summary.listed.toLocaleString()}</strong></td>
+              <td className="numeric">{summary.sameProgram.toLocaleString()}</td>
+              <td className="numeric">{summary.differentProgram.toLocaleString()}</td>
+              <td className="numeric">{summary.newToDataset.toLocaleString()}</td>
+              <td className="numeric">{summary.ambiguousOrOther.toLocaleString()}</td>
+              <td className="numeric">{summary.priorProfiles.toLocaleString()} / {summary.listed.toLocaleString()}</td>
+              <td className="numeric">{summary.priorMinutes.toLocaleString()}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="note" style={{ marginBottom: 20 }}>Same-program, different-program and new-to-dataset are exact retained roster observations. Recorded prior minutes sum only valid attached stat profiles; they do not establish current availability, eligibility or role.</p>
         <div className="two-col">
           {([
             { teamName: game.away_name, players: awayRosterPlayers },
