@@ -138,6 +138,36 @@ class EspnPickcenterTests(unittest.TestCase):
             self.assertEqual(len(games), 1)
             self.assertEqual(games[0]["away_aliases"], {"away university"})
 
+    def test_schedule_matching_falls_back_when_basketball_database_is_incomplete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local = root / ".local"
+            local.mkdir()
+            # A failed refresh can leave a readable SQLite file without the
+            # canonical tables. The public schedule remains the safe matching
+            # source until the warehouse is rebuilt.
+            database = sqlite3.connect(local / "basketball.sqlite3")
+            database.execute("CREATE TABLE refresh_marker (id TEXT)")
+            database.close()
+            target = root / "frontend/public/data/basketball"
+            target.mkdir(parents=True)
+            (target / "overview.json").write_text(json.dumps({"upcoming": [
+                {
+                    "id": GAME["id"],
+                    "starts_at": GAME["starts_at"],
+                    "home_id": GAME["home_id"],
+                    "away_id": GAME["away_id"],
+                    "home_name": "Home University",
+                    "away_name": "Away University",
+                    "completed": 0,
+                    "time_tbd": 0,
+                }
+            ]}))
+            with patch("ncaa_scraper.odds_feed.ROOT", root):
+                games = schedules("basketball")
+            self.assertEqual(len(games), 1)
+            self.assertEqual(games[0]["home_aliases"], {"home university"})
+
     def test_football_schedule_falls_back_when_rebuild_left_empty_database(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

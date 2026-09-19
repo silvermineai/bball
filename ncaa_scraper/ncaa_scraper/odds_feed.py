@@ -86,7 +86,7 @@ def schedules(sport):
             }
             if not {"bb_rosters", "bb_games"}.issubset(tables):
                 conn.close()
-                return published_basketball_schedule()
+                return published_schedule()
             # Scheduled publication keeps a compact local model/forecast DB
             # after the source warehouse is cleaned up. It still contains the
             # table names, but no canonical game rows. Use the checked-in
