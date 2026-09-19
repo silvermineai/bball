@@ -205,7 +205,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       const ledgerPromise = (!football || hasResearchBinding)
         ? withTimeout(researchDb(c.env).batch([
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
-          researchDb(c.env).prepare("SELECT count(*) AS total, sum(is_pregame) AS pregame FROM audit_markets WHERE sport=?").bind(sport),
+          researchDb(c.env).prepare("SELECT count(*) AS total, sum(CASE WHEN datetime(m.captured_at) < datetime(g.starts_at) THEN 1 ELSE 0 END) AS pregame FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=?").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=?").bind(sport),
           researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider') IN ('ESPN Summary','CollegeBasketballData.com API') ORDER BY captured_at DESC LIMIT 1").bind(sport),
         ]), DB_TIMEOUT_MS)
