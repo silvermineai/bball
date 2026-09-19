@@ -456,6 +456,38 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(stats["future_rate"], 1.25)
         self.assertNotIn("future_missing", stats)
 
+    def test_ncaa_player_season_withholds_partial_stat_totals(self):
+        self.conn.executescript(
+            (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()
+        )
+        base = {
+            "team_ncaa_team_id": "22",
+            "player_id": "77",
+            "home": "Home",
+            "away": "Away",
+            "team": "Home",
+            "player": "A. Player",
+            "clean_name": "A Player",
+        }
+        ingest(
+            self.conn,
+            "ncaa_player_box",
+            2026,
+            [
+                {**base, "contest_id": "9001", "mins": "12", "pts": "8", "ast": "2"},
+                {**base, "contest_id": "9002", "mins": "14", "pts": None, "ast": "3"},
+            ],
+            {},
+        )
+        row = self.conn.execute(
+            "SELECT games,stats_json FROM bb_ncaa_player_season WHERE player_id='77'"
+        ).fetchone()
+        stats = json.loads(row["stats_json"])
+        self.assertEqual(row["games"], 2)
+        self.assertEqual(stats["mins"], 26)
+        self.assertEqual(stats["ast"], 5)
+        self.assertNotIn("pts", stats)
+
     def test_ncaa_player_box_export_keeps_all_game_seasons(self):
         self.conn.executescript(
             (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()

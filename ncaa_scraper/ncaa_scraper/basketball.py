@@ -519,7 +519,14 @@ def ingest(conn, dataset, year, rows, receipt):
                 "rimm_unast", "rima_unast", "midm_unast", "mida_unast",
             }
             valid = []
-            season_totals = defaultdict(lambda: {"games": set(), "totals": defaultdict(float), "player_name": None, "team_name": None})
+            season_totals = defaultdict(lambda: {
+                "games": set(),
+                "rows": 0,
+                "totals": defaultdict(float),
+                "observed": defaultdict(int),
+                "player_name": None,
+                "team_name": None,
+            })
             for i, r in enumerate(rows):
                 if not r.get("contest_id") or not r.get("team_ncaa_team_id") or not r.get("player_id"):
                     conn.execute(
@@ -543,12 +550,14 @@ def ingest(conn, dataset, year, rows, receipt):
                         stats[key] = value
                 summary = season_totals[(identity(r["player_id"]), identity(r["team_ncaa_team_id"]))]
                 summary["games"].add(identity(r["contest_id"]))
+                summary["rows"] += 1
                 summary["player_name"] = r.get("clean_name") or r.get("player")
                 summary["team_name"] = r.get("team")
                 for field in summary_fields:
                     value = number(r.get(field))
                     if value is not None:
                         summary["totals"][field] += value
+                        summary["observed"][field] += 1
                 valid.append(
                     (
                         year,
@@ -572,7 +581,14 @@ def ingest(conn, dataset, year, rows, receipt):
                     (
                         year, player_id, team_id, entry["player_name"], entry["team_name"],
                         len(entry["games"]),
-                        json.dumps({k: round(v, 4) for k, v in entry["totals"].items()}, separators=(",", ":")),
+                        json.dumps(
+                            {
+                                field: round(value, 4)
+                                for field, value in entry["totals"].items()
+                                if entry["observed"][field] == entry["rows"]
+                            },
+                            separators=(",", ":"),
+                        ),
                     )
                     for (player_id, team_id), entry in season_totals.items()
                 ],
