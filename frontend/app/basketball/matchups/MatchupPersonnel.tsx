@@ -36,7 +36,7 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
       </p>
       <div className="table-scroll">
         <table className="data-table personnel-table">
-          <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>
+          <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>
           <tbody>{rows.map((row) => (
             <tr key={row.key}>
               <td><Link href={`/basketball/player/?id=${encodeURIComponent(row.athlete_id)}&season=${priorSeason}`}><strong>{row.player}</strong></Link><small>{row.position || "Position unavailable"} · Profile ID {row.athlete_id}</small><small>FG {row.field_goals || "—"} · 3P {row.three_pointers || "—"} · FT {row.free_throws || "—"}</small></td>
@@ -47,6 +47,8 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
               <td className="numeric">{metric(row.ppg)}</td>
               <td className="numeric">{metric(row.rpg)}</td>
               <td className="numeric">{metric(row.apg)}</td>
+              <td className="numeric">{metric(row.spg)}</td>
+              <td className="numeric">{metric(row.bpg)}</td>
               <td className="numeric">{percentage(row.fg_pct)}</td>
               <td className="numeric">{percentage(row.three_pct)}</td>
               <td className="numeric">{percentage(row.ft_pct)}</td>

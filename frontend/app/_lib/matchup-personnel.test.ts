@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { matchupPersonnelRows, parseMatchupPersonnel, personnelStatusLabel } from "./matchup-personnel";
 
 function payload() {
-  const stats = { ppg: 12.4, rpg: null, apg: 3.1, spg: null, bpg: null, mpg: 28, fg_pct: null, three_pct: null, ft_pct: null, field_goals: null, three_pointers: null, free_throws: null };
+  const stats = { ppg: 12.4, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, mpg: 28, fg_pct: null, three_pct: null, ft_pct: null, field_goals: null, three_pointers: null, free_throws: null };
   const player = {
     team_id: "1", athlete_id: "10", name: "Player One", position: "G", class_year: "Sr.", height: "6-3", status: "incoming",
     prior_games: 30, prior_minutes: 800,
@@ -28,8 +28,8 @@ describe("matchup personnel client", () => {
   it("validates exact matchup identity and keeps multi-team stat lines separate", () => {
     const parsed = parseMatchupPersonnel(payload(), { gameId: "401", season: 2027, homeId: "1", awayId: "2" });
     expect(matchupPersonnelRows(parsed.home)).toEqual([
-      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Old U", minutes: 500, mpg: 28, ppg: 12.4, rpg: null, fg_pct: null, box_bpm: 2.4, box_obpm: 3, box_dbpm: -0.6 }),
-      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Older U", minutes: 300, mpg: 28, ppg: null, rpg: null, box_bpm: null, box_obpm: null, box_dbpm: null }),
+      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Old U", minutes: 500, mpg: 28, ppg: 12.4, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, fg_pct: null, box_bpm: 2.4, box_obpm: 3, box_dbpm: -0.6 }),
+      expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Older U", minutes: 300, mpg: 28, ppg: null, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, box_bpm: null, box_obpm: null, box_dbpm: null }),
     ]);
     expect(personnelStatusLabel("incoming")).toBe("IN");
   });

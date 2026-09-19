@@ -86,6 +86,8 @@ export type MatchupPersonnelTableRow = {
   ppg: number | null;
   rpg: number | null;
   apg: number | null;
+  spg: number | null;
+  bpg: number | null;
   fg_pct: number | null;
   three_pct: number | null;
   ft_pct: number | null;
@@ -239,6 +241,8 @@ export function matchupPersonnelRows(side: MatchupPersonnelSide): MatchupPersonn
       ppg: stint?.stats.ppg ?? null,
       rpg: stint?.stats.rpg ?? null,
       apg: stint?.stats.apg ?? null,
+      spg: stint?.stats.spg ?? null,
+      bpg: stint?.stats.bpg ?? null,
       fg_pct: stint?.stats.fg_pct ?? null,
       three_pct: stint?.stats.three_pct ?? null,
       ft_pct: stint?.stats.ft_pct ?? null,
