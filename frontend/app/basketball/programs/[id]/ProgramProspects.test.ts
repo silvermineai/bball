@@ -30,9 +30,10 @@ describe("program prospect evidence", () => {
     expect(PROGRAM_PROSPECT_CLASSES).toEqual([2025, 2026, 2027, 2028, 2029, 2030]);
   });
 
-  it("distinguishes a recorded commitment from a listed-school record", () => {
+  it("distinguishes commitments here, open school listings and commitments elsewhere", () => {
     expect(programProspectEvidence(prospect({ committed_team_id: "2755" }), "2755")).toBe("Recorded commitment");
     expect(programProspectEvidence(prospect(), "2755")).toBe("Listed school");
+    expect(programProspectEvidence(prospect({ committed_team_id: "999", committed_team_name: "Another U" }), "2755")).toBe("Committed elsewhere");
     expect(isExactProgramProspect(prospect(), "2755")).toBe(true);
     expect(isExactProgramProspect(prospect({ school_ids: ["999"] }), "2755")).toBe(false);
   });
@@ -94,15 +95,17 @@ describe("program prospect evidence", () => {
       { ...prospect({ athlete_id: "10", committed_team_id: "2755" }), season: 2026, evidence: "Recorded commitment" as const },
       { ...prospect({ athlete_id: "11", committed_team_id: null }), season: 2027, evidence: "Listed school" as const },
       { ...prospect({ athlete_id: "12", committed_team_id: "2755" }), season: 2027, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "13", committed_team_id: "999", committed_team_name: "Another U" }), season: 2027, evidence: "Committed elsewhere" as const },
     ];
     expect(summarizeProgramProspects(rows)).toEqual({
-      matched: 3,
+      matched: 4,
       committed: 2,
       listed: 1,
+      committedElsewhere: 1,
       editions: 2,
       byClass: [
-        { season: 2026, matched: 1, committed: 1, listed: 0 },
-        { season: 2027, matched: 2, committed: 1, listed: 1 },
+        { season: 2026, matched: 1, committed: 1, listed: 0, committedElsewhere: 0 },
+        { season: 2027, matched: 3, committed: 1, listed: 1, committedElsewhere: 1 },
       ],
     });
   });

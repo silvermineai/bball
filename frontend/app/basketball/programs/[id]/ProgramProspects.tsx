@@ -90,15 +90,16 @@ export async function loadProgramProspectClass(
 
 export type ProgramProspectRow = ProgramProspect & {
   season: number;
-  evidence: "Recorded commitment" | "Listed school";
+  evidence: "Recorded commitment" | "Listed school" | "Committed elsewhere";
 };
 
 export type ProgramProspectSummary = {
   matched: number;
   committed: number;
   listed: number;
+  committedElsewhere: number;
   editions: number;
-  byClass: Array<{ season: number; matched: number; committed: number; listed: number }>;
+  byClass: Array<{ season: number; matched: number; committed: number; listed: number; committedElsewhere: number }>;
 };
 
 /**
@@ -107,11 +108,12 @@ export type ProgramProspectSummary = {
  * here would overstate a program's recruiting footprint.
  */
 export function summarizeProgramProspects(rows: ProgramProspectRow[]): ProgramProspectSummary {
-  const byClass = new Map<number, { matched: number; committed: number; listed: number }>();
+  const byClass = new Map<number, { matched: number; committed: number; listed: number; committedElsewhere: number }>();
   for (const row of rows) {
-    const current = byClass.get(row.season) || { matched: 0, committed: 0, listed: 0 };
+    const current = byClass.get(row.season) || { matched: 0, committed: 0, listed: 0, committedElsewhere: 0 };
     current.matched += 1;
     if (row.evidence === "Recorded commitment") current.committed += 1;
+    else if (row.evidence === "Committed elsewhere") current.committedElsewhere += 1;
     else current.listed += 1;
     byClass.set(row.season, current);
   }
@@ -122,13 +124,16 @@ export function summarizeProgramProspects(rows: ProgramProspectRow[]): ProgramPr
     matched: rows.length,
     committed: rows.filter((row) => row.evidence === "Recorded commitment").length,
     listed: rows.filter((row) => row.evidence === "Listed school").length,
+    committedElsewhere: rows.filter((row) => row.evidence === "Committed elsewhere").length,
     editions: classRows.length,
     byClass: classRows,
   };
 }
 
 export function programProspectEvidence(row: ProgramProspect, teamId: string): ProgramProspectRow["evidence"] {
-  return row.committed_team_id === teamId ? "Recorded commitment" : "Listed school";
+  if (row.committed_team_id === teamId) return "Recorded commitment";
+  if (row.committed_team_id) return "Committed elsewhere";
+  return "Listed school";
 }
 
 export function isExactProgramProspect(row: ProgramProspect, teamId: string) {
@@ -189,7 +194,7 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
         <Link href="/basketball/recruiting/">Open the national board →</Link>
       </div>
       <p className="note">
-        Exact program IDs connect these prospect rows to the dossier. “Listed school” only means the program ID appears on that retained prospect record; it does not establish an offer, active interest, visit, commitment, roster spot or eligibility.
+        Exact program IDs connect these prospect rows to the dossier. “Listed school” means the program ID appears on an uncommitted retained prospect record; it does not establish an offer, active interest or visit. A recorded commitment to another program is separated so a closed recruitment never reads like an open target.
       </p>
       {status === "loading" ? (
         <p className="empty" role="status">Loading exact-ID prospect records…</p>
@@ -201,15 +206,16 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
         <>
           <div className="strip recruiting-strip">
             <div><strong>{summary.matched.toLocaleString()}</strong><span>Matched prospect rows</span></div>
-            <div><strong>{summary.committed.toLocaleString()}</strong><span>Recorded commitments</span></div>
-            <div><strong>{summary.listed.toLocaleString()}</strong><span>Other listed-school rows</span></div>
+            <div><strong>{summary.committed.toLocaleString()}</strong><span>Committed here</span></div>
+            <div><strong>{summary.listed.toLocaleString()}</strong><span>Uncommitted listed-school rows</span></div>
+            <div><strong>{summary.committedElsewhere.toLocaleString()}</strong><span>Committed elsewhere</span></div>
             <div><strong>{summary.editions.toLocaleString()}</strong><span>Class editions represented</span></div>
           </div>
           {summary.byClass.length > 0 && <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Matched rows by class</caption>
-              <thead><tr><th>Class</th><th className="numeric">Matched</th><th className="numeric">Recorded commitments</th><th className="numeric">Listed school only</th></tr></thead>
-              <tbody>{summary.byClass.map((item) => <tr key={item.season}><th scope="row">{item.season}</th><td className="numeric">{item.matched.toLocaleString()}</td><td className="numeric">{item.committed.toLocaleString()}</td><td className="numeric">{item.listed.toLocaleString()}</td></tr>)}</tbody>
+              <thead><tr><th>Class</th><th className="numeric">Matched</th><th className="numeric">Committed here</th><th className="numeric">Uncommitted / listed</th><th className="numeric">Committed elsewhere</th></tr></thead>
+              <tbody>{summary.byClass.map((item) => <tr key={item.season}><th scope="row">{item.season}</th><td className="numeric">{item.matched.toLocaleString()}</td><td className="numeric">{item.committed.toLocaleString()}</td><td className="numeric">{item.listed.toLocaleString()}</td><td className="numeric">{item.committedElsewhere.toLocaleString()}</td></tr>)}</tbody>
             </table>
           </div>}
           <div className="table-scroll" style={{ marginTop: 20 }}>
@@ -221,7 +227,11 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
                   <th scope="row">{row.name}<small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th>
                   <td className="numeric">{row.rank == null ? "—" : `#${row.rank}`}</td>
                   <td className="numeric">{row.grade == null || row.grade <= 0 ? "—" : row.grade.toFixed(0)}</td>
-                  <td><strong>{row.evidence}</strong>{row.evidence === "Recorded commitment" && row.committed_team_name ? <small>{row.committed_team_name}</small> : <small>Exact program ID on school list</small>}</td>
+                  <td><strong>{row.evidence}</strong>{row.evidence === "Recorded commitment" && row.committed_team_name
+                    ? <small>{row.committed_team_name}</small>
+                    : row.evidence === "Committed elsewhere"
+                      ? <small>{row.committed_team_name || `Recorded destination ${row.committed_team_id}`}</small>
+                      : <small>Exact program ID on school list</small>}</td>
                   <td>{row.hometown || "—"}</td>
                   <td><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${encodeURIComponent(row.athlete_id)}`}>Open dossier →</Link></td>
                 </tr>
