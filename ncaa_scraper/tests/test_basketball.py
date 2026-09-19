@@ -474,8 +474,8 @@ class BasketballIngestTests(unittest.TestCase):
             "ncaa_player_box",
             2026,
             [
-                {**base, "contest_id": "9001", "mins": "12", "pts": "8", "ast": "2"},
-                {**base, "contest_id": "9002", "mins": "14", "pts": None, "ast": "3"},
+                {**base, "contest_id": "9001", "mins": "12", "pts": "8", "ast": "2", "fga_half": "4", "fta_half": "2"},
+                {**base, "contest_id": "9002", "mins": "14", "pts": None, "ast": "3", "fga_half": "6", "fta_half": None},
             ],
             {},
         )
@@ -486,7 +486,9 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(row["games"], 2)
         self.assertEqual(stats["mins"], 26)
         self.assertEqual(stats["ast"], 5)
+        self.assertEqual(stats["fga_half"], 10)
         self.assertNotIn("pts", stats)
+        self.assertNotIn("fta_half", stats)
 
     def test_ncaa_player_box_export_keeps_all_game_seasons(self):
         self.conn.executescript(

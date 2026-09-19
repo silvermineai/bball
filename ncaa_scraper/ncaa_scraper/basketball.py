@@ -513,7 +513,7 @@ def ingest(conn, dataset, year, rows, receipt):
                 "mins", "o_poss", "pts", "orb", "drb", "ast", "stl", "blk", "tov", "pf",
                 "fgm", "fga", "tpm", "tpa", "ftm", "fta", "rimm", "rima", "midm", "mida",
                 "pbackm", "pbacka", "pts_trans", "orb_trans", "drb_trans", "ast_trans",
-                "stl_trans", "blk_trans", "tov_trans", "pts_half", "orb_half", "drb_half",
+                "stl_trans", "blk_trans", "tov_trans", "pts_half", "fga_half", "fta_half", "orb_half", "drb_half",
                 "ast_half", "stl_half", "blk_half", "tov_half", "pts_ast", "fgm_ast", "tpm_ast",
                 "rimm_ast", "midm_ast", "pts_unast", "fgm_unast", "fga_unast", "tpm_unast", "tpa_unast",
                 "rimm_unast", "rima_unast", "midm_unast", "mida_unast",
