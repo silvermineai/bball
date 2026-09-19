@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { rankingRecordedDetail, rankingStatLine, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
+import { rankingPlayerShotMapHref, rankingRecordedDetail, rankingStatLine, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
 
 describe("NCAA ranking stat context", () => {
+  it("hands exact ranking IDs directly to the player shot profile", () => {
+    expect(rankingPlayerShotMapHref("10007029", 2026)).toBe("/basketball/ncaa-player/?id=10007029&season=2026#shot-profile");
+    expect(rankingPlayerShotMapHref("source:player/42", 2025)).toBe("/basketball/ncaa-player/?id=source%3Aplayer%2F42&season=2025#shot-profile");
+  });
+
   it("keeps common per-game and shooting rates visible for every selected metric", () => {
     expect(rankingStatLine({
       games: 20, points: 300, rebounds: 100, assists: 60, steals: 20, blocks: 5,
