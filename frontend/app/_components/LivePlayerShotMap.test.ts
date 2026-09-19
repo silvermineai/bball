@@ -4,9 +4,10 @@ import { eligibleShotMapLeaders, playerCardShotLocations } from "./LivePlayerSho
 describe("homepage player shot map", () => {
   it("keeps only exact numeric player identities that have recorded coordinates", () => {
     const rows = [
-      { player_id: "42", player_name: "Mapped Player", team_name: "Example", value: 200, stats: { attempts: 200, coordinate_count: 198 } },
+      { player_id: "42", player_name: "Mapped Player", team_name: "Example", value: 200, stats: { attempts: 200, coordinate_count: 198, located_count: 198 } },
       { player_id: "source:name", player_name: "Label Only", team_name: "Example", value: 220, stats: { attempts: 220, coordinate_count: 220 } },
-      { player_id: "43", player_name: "No Coordinates", team_name: "Example", value: 180, stats: { attempts: 180, coordinate_count: 0 } },
+      { player_id: "43", player_name: "Placeholder Only", team_name: "Example", value: 180, stats: { attempts: 180, coordinate_count: 180, located_count: 0 } },
+      { player_id: "44", player_name: "No Coordinates", team_name: "Example", value: 170, stats: { attempts: 170, coordinate_count: 0, located_count: 0 } },
     ];
     expect(eligibleShotMapLeaders(rows)).toEqual([rows[0]]);
   });

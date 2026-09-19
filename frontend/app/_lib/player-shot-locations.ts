@@ -67,6 +67,10 @@ export type PlayerShotBand = "Rim" | "Paint" | "Midrange" | "3-point";
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
+/** The NCAA feed uses both basket-origin pairs as placeholders for unknown locations. */
+const isPlaceholderCourtCoordinate = (x: number, y: number) =>
+  (x === 0 && y === 0) || (x === 25 && y === 0);
+
 /** True when the shot has source coordinates inside the published chart bounds. */
 export function hasSourceCourtCoordinates(shot: Pick<PlayerShotLocation, "x" | "y" | "location_status">) {
   if (
@@ -79,6 +83,7 @@ export function hasSourceCourtCoordinates(shot: Pick<PlayerShotLocation, "x" | "
   ) {
     return false;
   }
+  if (isPlaceholderCourtCoordinate(shot.x, shot.y)) return false;
   const status = shot.location_status?.trim();
   return !status || status === "located";
 }

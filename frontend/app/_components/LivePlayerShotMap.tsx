@@ -54,7 +54,9 @@ type PlayerCardResponse = {
 
 export function eligibleShotMapLeaders(rows: ShootingLeader[]) {
   return rows
-    .filter((row) => /^\d{1,15}$/.test(row.player_id) && Boolean(row.player_name) && (row.stats.coordinate_count || row.stats.located_count || 0) > 0)
+    // coordinate_count includes retained rows with null/placeholder points;
+    // only a positive located_count can produce a useful map.
+    .filter((row) => /^\d{1,15}$/.test(row.player_id) && Boolean(row.player_name) && (row.stats.located_count || 0) > 0)
     .slice(0, 12);
 }
 
