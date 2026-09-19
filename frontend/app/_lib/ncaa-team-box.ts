@@ -1,6 +1,25 @@
-export type NcaaTeamBoxSort = "net_rtg" | "off_rtg" | "def_rtg" | "tempo" | "efg_pct" | "to_rate_derived" | "orb_pct" | "ft_rate" | "points";
+export type NcaaTeamBoxSort =
+  | "net_rtg"
+  | "off_rtg"
+  | "def_rtg"
+  | "tempo"
+  | "efg_pct"
+  | "def_efg_pct"
+  | "to_rate_derived"
+  | "def_to_rate_derived"
+  | "orb_pct"
+  | "def_orb_pct"
+  | "ft_rate"
+  | "def_ft_rate"
+  | "three_rate"
+  | "def_three_rate"
+  | "points";
 export type NcaaTeamBoxFilters = { season: number; query: string; minGames: string; sort: NcaaTeamBoxSort; direction: "asc" | "desc" };
-const sorts = new Set<NcaaTeamBoxSort>(["net_rtg", "off_rtg", "def_rtg", "tempo", "efg_pct", "to_rate_derived", "orb_pct", "ft_rate", "points"]);
+const sorts = new Set<NcaaTeamBoxSort>([
+  "net_rtg", "off_rtg", "def_rtg", "tempo", "efg_pct", "def_efg_pct",
+  "to_rate_derived", "def_to_rate_derived", "orb_pct", "def_orb_pct",
+  "ft_rate", "def_ft_rate", "three_rate", "def_three_rate", "points",
+]);
 const gameThresholds = new Set(["0", "10", "20", "30"]);
 export function parseNcaaTeamBoxFilters(search: string, seasons: number[], fallback: number): NcaaTeamBoxFilters {
   const params = new URLSearchParams(search);
@@ -50,6 +69,10 @@ export function sortNcaaTeamBox(rows: NcaaTeamBoxRow[], sort: NcaaTeamBoxSort, d
   return [...rows].sort((a, b) => {
     const av = a[sort] as number | null;
     const bv = b[sort] as number | null;
-    return multiplier * ((av ?? -Infinity) - (bv ?? -Infinity)) || a.team.localeCompare(b.team);
+    const aAvailable = typeof av === "number" && Number.isFinite(av);
+    const bAvailable = typeof bv === "number" && Number.isFinite(bv);
+    if (aAvailable !== bAvailable) return aAvailable ? -1 : 1;
+    if (!aAvailable || !bAvailable) return a.team.localeCompare(b.team);
+    return multiplier * (av - bv) || a.team.localeCompare(b.team);
   });
 }
