@@ -7,6 +7,7 @@ import PlayerShotLocationCourt from "./PlayerShotLocationCourt";
 
 type ShootingLeader = {
   player_id: string;
+  team_id: string;
   player_name: string | null;
   team_name: string | null;
   value: number;
@@ -60,9 +61,14 @@ export function eligibleShotMapLeaders(rows: ShootingLeader[]) {
     .slice(0, 12);
 }
 
-export function playerCardShotLocations(card: PlayerCardResponse, season: number, playerId: string): PlayerShotLocation[] {
+export function playerCardShotLocations(
+  card: PlayerCardResponse,
+  season: number,
+  playerId: string,
+  teamId?: string,
+): PlayerShotLocation[] {
   return (card.shooting || [])
-    .filter((row) => row.season === season)
+    .filter((row) => row.season === season && (!teamId || row.team_id === teamId))
     .flatMap((row) => (row.stats.coordinates || []).map((raw, index) => {
       const shot: CoordinateShot = Array.isArray(raw) ? {
         contest_id: raw[0],
@@ -149,7 +155,7 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
 
   const selected = leaders.find((row) => row.player_id === selectedId) || null;
   const shots = useMemo(
-    () => card && selected ? playerCardShotLocations(card, season, selected.player_id) : [],
+    () => card && selected ? playerCardShotLocations(card, season, selected.player_id, selected.team_id) : [],
     [card, season, selected],
   );
   const retry = () => setRetryNonce((value) => value + 1);

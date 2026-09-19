@@ -4,10 +4,10 @@ import { eligibleShotMapLeaders, playerCardShotLocations } from "./LivePlayerSho
 describe("homepage player shot map", () => {
   it("keeps only exact numeric player identities that have recorded coordinates", () => {
     const rows = [
-      { player_id: "42", player_name: "Mapped Player", team_name: "Example", value: 200, stats: { attempts: 200, coordinate_count: 198, located_count: 198 } },
-      { player_id: "source:name", player_name: "Label Only", team_name: "Example", value: 220, stats: { attempts: 220, coordinate_count: 220 } },
-      { player_id: "43", player_name: "Placeholder Only", team_name: "Example", value: 180, stats: { attempts: 180, coordinate_count: 180, located_count: 0 } },
-      { player_id: "44", player_name: "No Coordinates", team_name: "Example", value: 170, stats: { attempts: 170, coordinate_count: 0, located_count: 0 } },
+      { player_id: "42", team_id: "100", player_name: "Mapped Player", team_name: "Example", value: 200, stats: { attempts: 200, coordinate_count: 198, located_count: 198 } },
+      { player_id: "source:name", team_id: "source:team", player_name: "Label Only", team_name: "Example", value: 220, stats: { attempts: 220, coordinate_count: 220 } },
+      { player_id: "43", team_id: "100", player_name: "Placeholder Only", team_name: "Example", value: 180, stats: { attempts: 180, coordinate_count: 180, located_count: 0 } },
+      { player_id: "44", team_id: "100", player_name: "No Coordinates", team_name: "Example", value: 170, stats: { attempts: 170, coordinate_count: 0, located_count: 0 } },
     ];
     expect(eligibleShotMapLeaders(rows)).toEqual([rows[0]]);
   });
@@ -33,5 +33,17 @@ describe("homepage player shot map", () => {
     expect(shots).toHaveLength(2);
     expect(shots[0]).toMatchObject({ game: "game-1", player: "42", x: -4, y: 8, made: true, points: 2, location_status: "located" });
     expect(shots[1]).toMatchObject({ game: "game-2", x: null, y: null, location_status: "missing" });
+  });
+
+  it("keeps a selected program map from pooling another team stint", () => {
+    const card = {
+      shooting: [
+        { season: 2026, team_id: "100", stats: { coordinates: [["game-1", -4, 8, 9, "rim", "layup", true, 2] as [string, number, number, number, string, string, boolean, number]] } },
+        { season: 2026, team_id: "200", stats: { coordinates: [["game-2", 20, 24, 31, "abovebreak3", "three", false, 3] as [string, number, number, number, string, string, boolean, number]] } },
+      ],
+    };
+    const shots = playerCardShotLocations(card, 2026, "42", "100");
+    expect(shots).toHaveLength(1);
+    expect(shots[0]).toMatchObject({ id: "100-game-1-0", game: "game-1", x: -4, y: 8 });
   });
 });
