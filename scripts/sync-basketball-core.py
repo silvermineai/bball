@@ -13,6 +13,7 @@ impact partitions in D1; unset it for an empty-database bootstrap.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sqlite3
@@ -151,14 +152,38 @@ def roster_publication(artifact, model_id, forecast_game_ids):
     return metadata, scenarios
 
 
+def publication_manifest(
+    *,
+    model_id,
+    season,
+    batches,
+    forecast_rows,
+    roster_scenarios,
+    overview,
+    overview_path,
+    roster_artifact,
+    roster_path,
+):
+    """Describe the recoverable compact publication bundle by content hash."""
+    return {
+        "model_id": model_id,
+        "season": season,
+        "batches": [path.name for path in batches],
+        "forecast_rows": len(forecast_rows),
+        "roster_scenario_rows": len(roster_scenarios),
+        "overview_generated_at": overview.get("generated_at"),
+        "overview_sha256": hashlib.sha256(overview_path.read_bytes()).hexdigest(),
+        "roster_generated_at": roster_artifact.get("generated_at"),
+        "roster_sha256": hashlib.sha256(roster_path.read_bytes()).hexdigest(),
+    }
+
+
 def build(season=2023):
-    overview = json.loads(
-        (ROOT / "frontend/public/data/basketball/overview.json").read_text()
-    )
+    overview_path = ROOT / "frontend/public/data/basketball/overview.json"
+    roster_path = ROOT / "frontend/public/data/basketball/roster-model.json"
+    overview = json.loads(overview_path.read_text())
     model = overview["model"]
-    roster_artifact = json.loads(
-        (ROOT / "frontend/public/data/basketball/roster-model.json").read_text()
-    )
+    roster_artifact = json.loads(roster_path.read_text())
     incremental = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
     if not model.get("id", "").startswith("basketball-efficiency-v2-"):
         raise ValueError("Unexpected basketball model ID")
@@ -324,13 +349,17 @@ def build(season=2023):
     for old in OUT.parent.glob(f"{OUT.stem}*{OUT.suffix}"):
         old.unlink()
     batches = split_sql(statements, OUT)
-    manifest = {
-        "model_id": model["id"],
-        "season": season,
-        "batches": [path.name for path in batches],
-        "forecast_rows": len(forecast_rows),
-        "roster_scenario_rows": len(roster_scenarios),
-    }
+    manifest = publication_manifest(
+        model_id=model["id"],
+        season=season,
+        batches=batches,
+        forecast_rows=forecast_rows,
+        roster_scenarios=roster_scenarios,
+        overview=overview,
+        overview_path=overview_path,
+        roster_artifact=roster_artifact,
+        roster_path=roster_path,
+    )
     OUT.with_name("basketball-core-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n"
     )

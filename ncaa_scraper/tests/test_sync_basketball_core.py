@@ -1,5 +1,7 @@
 import importlib.util
+import hashlib
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -85,6 +87,36 @@ class BasketballCoreSyncTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "outside the forecast slate"):
             MODULE.roster_publication(artifact, "model-1", {"game-1"})
+
+    def test_publication_manifest_hashes_exact_recovery_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            overview_path = root / "overview.json"
+            roster_path = root / "roster-model.json"
+            overview_path.write_text('{"overview":true}')
+            roster_path.write_text('{"roster":true}')
+            manifest = MODULE.publication_manifest(
+                model_id="basketball-efficiency-v2-0123456789ab",
+                season=2023,
+                batches=[root / "basketball-core.sql"],
+                forecast_rows=[object(), object()],
+                roster_scenarios=[object()],
+                overview={"generated_at": "2026-09-19T00:00:00Z"},
+                overview_path=overview_path,
+                roster_artifact={"generated_at": "2026-09-19T00:00:01Z"},
+                roster_path=roster_path,
+            )
+        self.assertEqual(manifest["forecast_rows"], 2)
+        self.assertEqual(manifest["roster_scenario_rows"], 1)
+        self.assertEqual(manifest["batches"], ["basketball-core.sql"])
+        self.assertEqual(
+            manifest["overview_sha256"],
+            hashlib.sha256(b'{"overview":true}').hexdigest(),
+        )
+        self.assertEqual(
+            manifest["roster_sha256"],
+            hashlib.sha256(b'{"roster":true}').hexdigest(),
+        )
 
 
 if __name__ == "__main__":
