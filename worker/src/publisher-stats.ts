@@ -12,6 +12,14 @@ export type PublisherField = {
   unit: "per game" | "percent" | "count" | "ratio" | "text";
 };
 
+export type PublisherFieldCoverage = {
+  category: PublisherField["category"];
+  key: string;
+  observed: number;
+  missing: number;
+  share: number | null;
+};
+
 // These are the source fields present in the attributed SportsDataverse
 // player-season release. The allow-list keeps JSON paths out of SQL input and
 // makes the public browser honest about what the publisher actually supplied.
@@ -110,10 +118,41 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
   }
   if (meta === "1") {
     try {
-      const seasons = await withTimeout(db.prepare(
-        "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
-      ).all<{ season: number }>(), DB_TIMEOUT_MS);
-      const response = c.json({ seasons: seasons.results.map((row) => row.season), fields: PUBLISHER_FIELDS });
+      // Publish field-level completeness from the same retained edition used
+      // by the row browser. A field can exist in the schema while remaining
+      // absent for some or every player, so the catalog must not imply that a
+      // listed field has complete values. Compound made-attempted fields use
+      // their source display string, matching the row endpoint.
+      const coverageColumns = PUBLISHER_FIELDS.map((field, index) => {
+        const leaf = field.unit === "text" ? "display" : "value";
+        return `sum(CASE WHEN json_extract(stats_json, '$.${field.category}.${field.key}.${leaf}') IS NOT NULL THEN 1 ELSE 0 END) AS field_${index}`;
+      }).join(",");
+      const [seasons, coverageRow] = await withTimeout(Promise.all([
+        db.prepare(
+          "SELECT DISTINCT season FROM bb_player_season ORDER BY season DESC",
+        ).all<{ season: number }>(),
+        db.prepare(
+          `SELECT count(*) AS records,${coverageColumns} FROM bb_player_season WHERE season=?`,
+        ).bind(season).first<Record<string, number | null>>(),
+      ]), DB_TIMEOUT_MS);
+      const records = Number(coverageRow?.records || 0);
+      const coverage: PublisherFieldCoverage[] = PUBLISHER_FIELDS.map((field, index) => {
+        const observed = Number(coverageRow?.[`field_${index}`] || 0);
+        return {
+          category: field.category,
+          key: field.key,
+          observed,
+          missing: Math.max(0, records - observed),
+          share: records ? observed / records : null,
+        };
+      });
+      const response = c.json({
+        season,
+        seasons: seasons.results.map((row) => row.season),
+        records,
+        fields: PUBLISHER_FIELDS,
+        coverage,
+      });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;

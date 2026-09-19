@@ -1291,6 +1291,36 @@ describe("bball api", () => {
     expect(await rowResponse.json()).toEqual({ error: "The source statistics archive is temporarily unavailable." });
   });
 
+  it("reports publisher field completeness for the requested season", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT DISTINCT season")) {
+        return { all: async () => ({ results: [{ season: 2026 }, { season: 2025 }] }) };
+      }
+      return {
+        bind: (season: number) => ({
+          first: async () => ({ records: season === 2026 ? 10 : 0, field_0: 10, field_1: 8 }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/publisher-stats?meta=1&season=2026",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      season: number;
+      records: number;
+      coverage: Array<{ observed: number; missing: number; share: number | null }>;
+    };
+    expect(body.season).toBe(2026);
+    expect(body.records).toBe(10);
+    expect(body.coverage[0]).toMatchObject({ observed: 10, missing: 0, share: 1 });
+    expect(body.coverage[1]).toMatchObject({ observed: 8, missing: 2, share: 0.8 });
+    expect(body.coverage[2]).toMatchObject({ observed: 0, missing: 10, share: 0 });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(stats_json"));
+  });
+
   it("returns retryable responses when the team-stat catalog or rows are busy", async () => {
     const catalogResponse = await app.request(
       "/api/basketball/research/team-stats?meta=1",

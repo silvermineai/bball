@@ -30,6 +30,13 @@ type Result = {
   source_receipts: Array<{ dataset: string; season: number; url: string; fetched_at: string; sha256: string }>;
   rows: Row[];
 };
+type FieldCoverage = {
+  category: Field["category"];
+  key: string;
+  observed: number;
+  missing: number;
+  share: number | null;
+};
 
 const categoryLabels: Record<Field["category"], string> = {
   averages: "Averages",
@@ -46,6 +53,8 @@ function shown(row: Row, field: Field) {
 
 export default function SourceStats() {
   const [fields, setFields] = useState<Field[]>([]);
+  const [coverage, setCoverage] = useState<FieldCoverage[]>([]);
+  const [coverageRecords, setCoverageRecords] = useState(0);
   const [seasons, setSeasons] = useState<number[]>([]);
   const [season, setSeason] = useState("2026");
   const [fieldKey, setFieldKey] = useState("averages:avgPoints");
@@ -82,21 +91,26 @@ export default function SourceStats() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/publisher-stats?meta=1", { signal: controller.signal })
+    setCoverage([]);
+    setCoverageRecords(0);
+    setError("");
+    fetch(`/api/basketball/research/publisher-stats?meta=1&season=${season}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The player-field catalog is unavailable.");
-        return response.json() as Promise<{ seasons: number[]; fields: Field[] }>;
+        return response.json() as Promise<{ seasons: number[]; records: number; fields: Field[]; coverage: FieldCoverage[] }>;
       })
       .then((payload) => {
         setFields(payload.fields);
         setSeasons(payload.seasons);
+        setCoverage(payload.coverage || []);
+        setCoverageRecords(payload.records || 0);
         if (payload.seasons.length && !payload.seasons.includes(Number(season))) setSeason(String(payload.seasons[0]));
       })
       .catch((reason) => {
         if (reason.name !== "AbortError") setError(reason.message);
       });
     return () => controller.abort();
-  }, [retryNonce]);
+  }, [retryNonce, season]);
 
   useEffect(() => {
     if (!fields.length || fields.some((candidate) => `${candidate.category}:${candidate.key}` === fieldKey)) return;
@@ -263,6 +277,26 @@ export default function SourceStats() {
       </div>
       {copied && <p className="note" role="status">{copied}</p>}
       {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. Percentages use the archive’s 0–100 scale. Compound made-attempted fields remain display strings and sort alphabetically. {minGames !== "0" ? `Showing records with at least ${minGames} games played.` : "Use the minimum-games filter to remove very small samples."}</p>}
+      {coverage.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}>
+        <summary><strong>Field coverage for {Number(season) - 1}–{String(season).slice(-2)}</strong> · {coverage.length} retained fields across {coverageRecords.toLocaleString()} player/program records</summary>
+        <p className="note" style={{ marginTop: 12 }}>Observed counts come from the selected retained edition. A missing value stays missing; it is never converted to zero. Select any row’s stat name above to inspect and export the underlying records.</p>
+        <div className="table-scroll" style={{ marginTop: 16 }}>
+          <table className="data-table">
+            <thead><tr><th>Source field</th><th>Group</th><th className="numeric">Observed</th><th className="numeric">Missing</th><th className="numeric">Coverage</th></tr></thead>
+            <tbody>{coverage.map((item) => {
+              const definition = fields.find((candidate) => candidate.category === item.category && candidate.key === item.key);
+              const fieldValue = `${item.category}:${item.key}`;
+              return <tr key={fieldValue}>
+                <td><button className="career-season-link" type="button" onClick={() => reset(() => setFieldKey(fieldValue))}>{definition?.label || item.key} →</button><small><code>{item.key}</code></small></td>
+                <td>{categoryLabels[item.category]}</td>
+                <td className="numeric">{item.observed.toLocaleString()}</td>
+                <td className="numeric">{item.missing.toLocaleString()}</td>
+                <td className="numeric">{item.share == null ? "—" : `${fmt(item.share * 100, 1)}%`}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </details>}
       {error ? <div role="alert" className="status-error"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry player archive</button></div> : !result ? <p role="status" className="empty">Loading player statistics…</p> : (
         <>
           {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Archive receipt for the {result.season} edition</strong> · {result.source_receipts.length} edition{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>Player-season stats</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td></tr>)}</tbody></table></div></details>}
