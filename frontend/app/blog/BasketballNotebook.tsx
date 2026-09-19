@@ -57,6 +57,8 @@ export default function BasketballNotebook({
     { label: "ORB%", home: pct(homeTeam?.orb_rate), away: pct(awayTeam?.orb_rate) },
     { label: "FTR", home: pct(homeTeam?.ft_rate), away: pct(awayTeam?.ft_rate) },
   ];
+  const teamContextCount = Number(Boolean(homeTeam)) + Number(Boolean(awayTeam));
+  const playerContextCount = Number(awayPlayers.length > 0) + Number(homePlayers.length > 0);
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -85,6 +87,12 @@ export default function BasketballNotebook({
         stored factors and the questions still waiting for film or roster
         confirmation.
       </p>
+      <div className="coverage-readiness" role="status" aria-label="Game analysis coverage">
+        <div><strong>{prediction.estimate_type === "cold_start" ? "Cold start" : "Primary"}</strong><span>Forecast estimate</span></div>
+        <div><strong>{teamContextCount}/2</strong><span>Team profiles attached</span></div>
+        <div><strong>{playerContextCount}/2</strong><span>Historical player groups attached</span></div>
+        <div><strong>{rosterScenario ? "Ready" : "—"}</strong><span>Roster continuity scenario</span></div>
+      </div>
 
       <section className="paper-panel notebook-forecast" aria-label="Stored forecast">
         <div className="eyebrow">The baseline</div>
