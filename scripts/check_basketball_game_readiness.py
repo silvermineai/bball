@@ -67,6 +67,40 @@ def validate_prediction(value: Any, label: str) -> None:
         raise ValueError(f"{label} has a non-positive pace")
 
 
+def validate_cold_start(
+    prediction: Any,
+    game_id: str,
+    home_id: str,
+    away_id: str,
+    model_team_ids: set[str],
+) -> None:
+    validate_prediction(prediction, f"game {game_id} fallback prediction")
+    if (
+        not isinstance(prediction, dict)
+        or prediction.get("estimate_type") != "cold_start"
+    ):
+        raise ValueError(f"game {game_id} fallback prediction is not labeled cold_start")
+    unknown = prediction.get("unknown_teams")
+    if (
+        not isinstance(unknown, list)
+        or any(
+            not isinstance(team_id, str) or not ID_RE.fullmatch(team_id)
+            for team_id in unknown
+        )
+        or len(unknown) != len(set(unknown))
+    ):
+        raise ValueError(f"game {game_id} fallback prediction has malformed unknown teams")
+    expected = {
+        team_id
+        for team_id in (home_id, away_id)
+        if team_id not in model_team_ids
+    }
+    if set(unknown) != expected:
+        raise ValueError(
+            f"game {game_id} fallback unknown teams do not match the model field"
+        )
+
+
 def validate_profile(path: Path, team_id: str, label: str) -> None:
     profile = read_json(path)
     if profile.get("id") != team_id or not isinstance(profile.get("players"), list):
@@ -135,6 +169,19 @@ def check(root: Path) -> dict[str, Any]:
         raise ValueError("overview has no upcoming basketball games")
     if not isinstance(ratings, list) or not ratings:
         raise ValueError("overview has no team ratings")
+    model = overview.get("model")
+    model_teams = model.get("teams") if isinstance(model, dict) else None
+    if (
+        not isinstance(model_teams, list)
+        or not model_teams
+        or any(
+            not isinstance(team_id, str) or not ID_RE.fullmatch(team_id)
+            for team_id in model_teams
+        )
+        or len(model_teams) != len(set(model_teams))
+    ):
+        raise ValueError("overview model has invalid or duplicate team IDs")
+    model_team_ids = set(model_teams)
     rating_by_id = {str(row.get("id")): row for row in ratings if isinstance(row, dict)}
     roster_model = read_json(basketball / "roster-model.json")
     scenarios = {}
@@ -187,9 +234,13 @@ def check(root: Path) -> dict[str, Any]:
         elif game.get("fallback_prediction") is not None:
             fallback += 1
             fallback_prediction = game["fallback_prediction"]
-            validate_prediction(fallback_prediction, f"game {game_id} fallback prediction")
-            if not isinstance(fallback_prediction, dict) or fallback_prediction.get("estimate_type") != "cold_start":
-                raise ValueError(f"game {game_id} fallback prediction is not labeled cold_start")
+            validate_cold_start(
+                fallback_prediction,
+                game_id,
+                home_id,
+                away_id,
+                model_team_ids,
+            )
         else:
             raise ValueError(f"game {game_id} has neither a primary nor fallback prediction")
     expected = overview.get("coverage", {})
