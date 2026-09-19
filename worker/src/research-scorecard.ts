@@ -223,7 +223,7 @@ function metrics(rows: Json[]): Json {
   };
 }
 
-function summary(rows: Json[], registeredVersions: number): Json {
+function summary(rows: Json[], registeredVersions: number, marketObservations: number, unmatchedEvents: number): Json {
   const groups = new Map<string, Json[]>();
   for (const row of rows) for (const quote of (row.comparisons as Json[])) {
     if (row.status !== "settled") continue;
@@ -248,6 +248,8 @@ function summary(rows: Json[], registeredVersions: number): Json {
   return {
     games: rows.length,
     registered_versions: registeredVersions,
+    market_observations: marketObservations,
+    unmatched_events: unmatchedEvents,
     status_counts: counts,
     exclusion_counts: Object.fromEntries(rows.filter((row) => row.exclusion).reduce((map, row) => map.set(String(row.exclusion), (map.get(String(row.exclusion)) || 0) + 1), new Map<string, number>())),
     metrics: metrics(rows),
@@ -332,18 +334,29 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
 async function loadReport(db: D1Database, sport: Sport | "all", season: number | undefined, now: string) {
   const sports = sport === "all" ? SPORTS : [sport];
   const seasons = await Promise.all(sports.map(async (code) => ({ code, season: season ?? await latestSeason(db, code) })));
-  const loaded = await Promise.all(seasons.map(async ({ code, season: target }) => ({ code, season: target, data: target === null ? { rows: [], registeredVersions: 0 } : await loadSport(db, code, target, now) })));
+  const loaded = await Promise.all(seasons.map(async ({ code, season: target }) => {
+    const [data, marketCount, unmatchedCount] = await Promise.all([
+      target === null ? Promise.resolve({ rows: [], registeredVersions: 0 }) : loadSport(db, code, target, now),
+      db.prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(code).first<{ total: number }>(),
+      db.prepare("SELECT count(*) AS total FROM audit_unmatched WHERE sport=?").bind(code).first<{ total: number }>(),
+    ]);
+    return {
+      code,
+      season: target,
+      data,
+      marketObservations: Number(marketCount?.total || 0),
+      unmatchedEvents: Number(unmatchedCount?.total || 0),
+    };
+  }));
   const games = loaded.flatMap((item) => item.data.rows);
-  const summaries = Object.fromEntries(loaded.map(({ code, data }) => [code, summary(data.rows, data.registeredVersions)]));
-  // Keep top-level coverage counts aligned with the requested sport. Without
-  // this filter, a basketball scorecard would report football quotes once a
-  // licensed feed is active, which would make the landing-page market status
-  // misleading.
-  const scope = sport === "all" ? "" : " WHERE sport=?";
-  const scopeBinds = sport === "all" ? [] : [sport];
-  const marketCount = await db.prepare(`SELECT count(*) AS total FROM audit_markets${scope}`).bind(...scopeBinds).first<{ total: number }>();
-  const unmatchedCount = await db.prepare(`SELECT count(*) AS total FROM audit_unmatched${scope}`).bind(...scopeBinds).first<{ total: number }>();
-  return { loaded, games, summaries, market_observations: Number(marketCount?.total || 0), unmatched_events: Number(unmatchedCount?.total || 0) };
+  const summaries = Object.fromEntries(loaded.map(({ code, data, marketObservations, unmatchedEvents }) => [code, summary(data.rows, data.registeredVersions, marketObservations, unmatchedEvents)]));
+  return {
+    loaded,
+    games,
+    summaries,
+    market_observations: loaded.reduce((total, item) => total + item.marketObservations, 0),
+    unmatched_events: loaded.reduce((total, item) => total + item.unmatchedEvents, 0),
+  };
 }
 
 researchScorecard.get("/", zValidator("query", querySchema), async (c) => {

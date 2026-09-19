@@ -95,7 +95,9 @@ export default function Scorecard() {
       </p>
     );
   const summary = data.sports[sport],
-    m = summary.metrics;
+    m = summary.metrics,
+    marketObservations = summary.market_observations ?? 0,
+    unmatchedEvents = summary.unmatched_events ?? 0;
   const rows = data.games.filter(
     (g) =>
       g.sport === sport &&
@@ -191,10 +193,10 @@ export default function Scorecard() {
           </b>
         </span>
         <span>
-          Retained odds observations <b>{data.market_observations.toLocaleString()}</b>
+          Retained odds observations <b>{marketObservations.toLocaleString()}</b>
         </span>
         <span>
-          Unmatched feed events <b>{data.unmatched_events.toLocaleString()}</b>
+          Unmatched feed events <b>{unmatchedEvents.toLocaleString()}</b>
         </span>
       </div>
       {m.reliability?.length ? (
@@ -239,16 +241,16 @@ export default function Scorecard() {
       <section className="paper-panel" style={{ marginTop: 24 }} aria-live="polite">
         <div className="eyebrow">Licensed odds feed / capture status</div>
         <h3 style={{ marginTop: 8 }}>
-          {data.market_observations
-            ? data.market_observations.toLocaleString() + " retained market observations"
+          {marketObservations
+            ? marketObservations.toLocaleString() + " retained market observations"
             : "No licensed pregame quote has been captured"}
         </h3>
         <p>
-          {data.market_observations
-            ? data.unmatched_events.toLocaleString() + " feed events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
+          {marketObservations
+            ? unmatchedEvents.toLocaleString() + " feed events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
             : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
         </p>
-        {!data.market_observations && (
+        {!marketObservations && (
           <p className="note">
             A licensed odds feed must be configured by an operator; keys never
             enter frontend code or logs. Read the{" "}
@@ -281,7 +283,7 @@ export default function Scorecard() {
               : "The market record is still empty."}
           </h3>
           <p>
-            {data.market_observations
+            {marketObservations
               ? "No settled games have qualifying quotes for this sport yet."
               : "No timestamped odds-feed observations have been collected. Historical lines without a reliable pregame clock are excluded."}{" "}
             Model-versus-market errors will appear here once matched games

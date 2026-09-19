@@ -60,6 +60,10 @@ export type Metrics = {
 export type SportSummary = {
   games: number;
   registered_versions: number;
+  /** Retained odds rows for this sport, including rows that do not qualify for comparison. */
+  market_observations?: number;
+  /** Feed events for this sport that could not be joined safely. */
+  unmatched_events?: number;
   status_counts: Record<string, number>;
   exclusion_counts: Record<string, number>;
   metrics: Metrics;

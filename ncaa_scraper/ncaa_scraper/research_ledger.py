@@ -669,6 +669,12 @@ def build_report(conn, now):
             ]
         versions.append(item)
     versions.sort(key=lambda r: (r["starts_at"], r["sport"], r["game_id"], r["registered_at"], r["id"]))
+    market_counts = Counter(
+        row[0] for row in conn.execute("SELECT sport FROM audit_markets")
+    )
+    unmatched_counts = Counter(
+        row[0] for row in conn.execute("SELECT sport FROM audit_unmatched")
+    )
     summaries = {}
     for sport in SPORTS:
         subset = [r for r in rows if r["sport"] == sport]
@@ -711,6 +717,11 @@ def build_report(conn, now):
         summaries[sport] = {
             "games": len(subset),
             "registered_versions": sum(r["sport"] == sport for r in predictions),
+            "market_observations": market_counts[sport],
+            "unmatched_events": unmatched_counts[sport],
+            "qualifying_market_observations": sum(
+                len(r["comparisons"]) for r in subset
+            ),
             "status_counts": dict(Counter(r["status"] for r in subset)),
             "exclusion_counts": dict(
                 Counter(r["exclusion"] for r in subset if r["exclusion"])
