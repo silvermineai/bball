@@ -53,6 +53,11 @@ describe("forecast lab matchup signals", () => {
 
   it("keeps the exact cold-start reason while rejecting duplicate or malformed names", () => {
     expect(forecastUnknownTeams({
+      away_score: 70,
+      home_score: 70,
+      home_margin: 0,
+      total: 140,
+      pace: 68,
       home_win_probability: 0.5,
       margin_low: -20,
       margin_high: 20,
@@ -60,6 +65,11 @@ describe("forecast lab matchup signals", () => {
       unknown_teams: ["  North Alabama ", "North Alabama", "", "  "],
     })).toEqual(["North Alabama"]);
     expect(forecastUnknownTeams({
+      away_score: 70,
+      home_score: 70,
+      home_margin: 0,
+      total: 140,
+      pace: 68,
       home_win_probability: 0.5,
       margin_low: -20,
       margin_high: 20,
