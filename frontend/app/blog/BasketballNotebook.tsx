@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { BBGame } from "../_lib/basketball-types";
+import type { BBGame, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 
@@ -16,9 +16,15 @@ const percent = (value: number | null | undefined) =>
 export default function BasketballNotebook({
   game,
   generatedAt,
+  homeTeam,
+  awayTeam,
+  rosterScenario,
 }: {
   game: BBGame;
   generatedAt: string;
+  homeTeam?: BBTeam | null;
+  awayTeam?: BBTeam | null;
+  rosterScenario?: BBRosterScenario | null;
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -33,6 +39,19 @@ export default function BasketballNotebook({
     }));
   const coldStart = !game.prediction && !!game.fallback_prediction;
   const canonicalUrl = `https://bball.silvermine.dev/blog/basketball-game-${game.id}/`;
+  const pct = (value: number | null | undefined) =>
+    value == null ? "—" : `${fmt(value * 100, 1)}%`;
+  const ratingRows = [
+    { label: "Adj O", home: homeTeam?.adj_off, away: awayTeam?.adj_off },
+    { label: "Adj D", home: homeTeam?.adj_def, away: awayTeam?.adj_def },
+    { label: "NET", home: homeTeam?.adj_net, away: awayTeam?.adj_net },
+    { label: "PACE", home: homeTeam?.adj_tempo, away: awayTeam?.adj_tempo },
+    { label: "SOS", home: homeTeam?.sos, away: awayTeam?.sos },
+    { label: "eFG%", home: pct(homeTeam?.efg), away: pct(awayTeam?.efg) },
+    { label: "TO%", home: pct(homeTeam?.tov_rate), away: pct(awayTeam?.tov_rate) },
+    { label: "ORB%", home: pct(homeTeam?.orb_rate), away: pct(awayTeam?.orb_rate) },
+    { label: "FTR", home: pct(homeTeam?.ft_rate), away: pct(awayTeam?.ft_rate) },
+  ];
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -79,6 +98,42 @@ export default function BasketballNotebook({
             ? "Exploratory cold-start estimate: at least one program is outside the trained field, so the wider calibrated range is the primary context."
             : "Primary preseason estimate from the published efficiency model. The range describes held-out model error, not a promise about the final score."}
         </p>
+      </section>
+
+      <section className="section" aria-labelledby="notebook-team-snapshot">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Team snapshot</div>
+            <h2 id="notebook-team-snapshot">The numbers behind the estimate.</h2>
+          </div>
+          <Link href="/basketball/ratings/">Open the full ratings table →</Link>
+        </div>
+        <p className="note">
+          Latest completed-season team rates carried into this forecast edition.
+          They describe the inputs and context; they are not a claim about a
+          current lineup.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Metric</th><th className="numeric">{game.away_name}</th><th className="numeric">{game.home_name}</th></tr></thead>
+            <tbody>{ratingRows.map((row) => (
+              <tr key={row.label}>
+                <th scope="row">{row.label}</th>
+                <td className="numeric">{typeof row.away === "string" ? row.away : fmt(row.away)}</td>
+                <td className="numeric">{typeof row.home === "string" ? row.home : fmt(row.home)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        {rosterScenario ? (
+          <div className="raw-stat-grid">
+            <div><dt>Roster-lens margin</dt><dd>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)} home</dd></div>
+            <div><dt>Change vs baseline</dt><dd>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} pts</dd></div>
+            <div><dt>Scenario team net</dt><dd>{fmt(rosterScenario.away_predicted_net)} away · {fmt(rosterScenario.home_predicted_net)} home</dd></div>
+          </div>
+        ) : (
+          <p className="note">No same-edition roster continuity scenario is available for this game.</p>
+        )}
       </section>
 
       {lens && (

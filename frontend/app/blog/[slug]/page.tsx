@@ -98,7 +98,18 @@ export default async function Page({
     basketballGame = basketball.upcoming.find((game) => `basketball-game-${game.id}` === slug),
     p = g?.prediction;
   if (!titles[slug] && (!g || !p) && !basketballGame) notFound();
-  if (basketballGame) return <BasketballNotebook game={basketballGame} generatedAt={basketball.generated_at} />;
+  if (basketballGame) {
+    const rosterModel = getRosterModel();
+    return (
+      <BasketballNotebook
+        game={basketballGame}
+        generatedAt={basketball.generated_at}
+        homeTeam={basketball.ratings.find((team) => team.id === basketballGame.home_id)}
+        awayTeam={basketball.ratings.find((team) => team.id === basketballGame.away_id)}
+        rosterScenario={rosterModel.scenarios.find((scenario) => scenario.game_id === basketballGame.id)}
+      />
+    );
+  }
   if (g && p) return <FootballBrief game={g} overview={d} />;
   const canonicalUrl = `https://bball.silvermine.dev/blog/${slug}/`;
   const schema = {
