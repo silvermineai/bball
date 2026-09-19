@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { validateRecruitingExportPage, type RecruitingBoardResult } from "./RecruitingBoard";
+import {
+  currentRecruitingBoardResult,
+  recruitingBoardRequestSearch,
+  validateRecruitingExportPage,
+  type RecruitingBoardResult,
+} from "./RecruitingBoard";
 
 describe("recruiting board export pagination", () => {
   const row = {
@@ -43,5 +48,43 @@ describe("recruiting board export pagination", () => {
   it("rejects mismatched page metadata", () => {
     expect(() => validateRecruitingExportPage(page({ page: 1 }), 2027, 2, 1, "edition-1", 0, 2)).toThrow(/changed/);
     expect(() => validateRecruitingExportPage(page({ page_size: 2 }), 2027, 2, 1, "edition-1", 0, 2)).toThrow(/changed/);
+  });
+});
+
+describe("recruiting board request integrity", () => {
+  const request = (overrides: Partial<Parameters<typeof recruitingBoardRequestSearch>[0]> = {}) =>
+    recruitingBoardRequestSearch({
+      season: "2027",
+      page: 0,
+      committed: "all",
+      movement: "all",
+      query: "",
+      position: "",
+      rankMax: "",
+      ...overrides,
+    });
+
+  it("keeps a loaded response bound to its exact class and filters", () => {
+    const loaded = {
+      request: request(),
+      result: {
+        season: 2027,
+        page: 0,
+        page_size: 50,
+        total: 1,
+        edition: "edition-1",
+        captured_at: "2026-09-18T00:00:00Z",
+        rows: [],
+      },
+    };
+
+    expect(currentRecruitingBoardResult(loaded, request())).toBe(loaded.result);
+    expect(currentRecruitingBoardResult(loaded, request({ season: "2026" }))).toBeNull();
+    expect(currentRecruitingBoardResult(loaded, request({ query: "guard" }))).toBeNull();
+    expect(currentRecruitingBoardResult(loaded, request({ movement: "up" }))).toBeNull();
+  });
+
+  it("normalizes the query before creating the request identity", () => {
+    expect(request({ query: "  point guard  " })).toBe(request({ query: "point guard" }));
   });
 });

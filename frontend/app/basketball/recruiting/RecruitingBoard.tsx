@@ -65,6 +65,33 @@ export type RecruitingBoardResult = {
 };
 type Result = RecruitingBoardResult;
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
+export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
+
+export function recruitingBoardRequestSearch(filters: {
+  season: string;
+  page: number;
+  committed: string;
+  movement: string;
+  query: string;
+  position: string;
+  rankMax: string;
+}) {
+  const params = new URLSearchParams({
+    season: filters.season,
+    page: String(filters.page),
+    committed: filters.committed,
+    movement: filters.movement,
+  });
+  if (filters.query.trim()) params.set("q", filters.query.trim());
+  if (filters.position) params.set("position", filters.position);
+  if (filters.rankMax) params.set("rank_max", filters.rankMax);
+  return params.toString();
+}
+
+/** Never show or export a response under a different class or filter set. */
+export function currentRecruitingBoardResult(load: RecruitingBoardLoad | null, request: string) {
+  return load?.request === request ? load.result : null;
+}
 
 export function validateRecruitingExportPage(
   payload: RecruitingBoardResult,
@@ -123,8 +150,8 @@ export default function RecruitingBoard() {
   const [committed, setCommitted] = useState("all");
   const [movement, setMovement] = useState("all");
   const [page, setPage] = useState(0);
-  const [result, setResult] = useState<Result | null>(null);
-  const [error, setError] = useState("");
+  const [loadedResult, setLoadedResult] = useState<RecruitingBoardLoad | null>(null);
+  const [loadError, setLoadError] = useState<{ request: string; message: string } | null>(null);
   const [copied, setCopied] = useState("");
   const [classSnapshots, setClassSnapshots] = useState<ClassSnapshot[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -132,6 +159,9 @@ export default function RecruitingBoard() {
   const [exportMessage, setExportMessage] = useState("");
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [shortlistHydrated, setShortlistHydrated] = useState(false);
+  const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax });
+  const result = currentRecruitingBoardResult(loadedResult, boardRequest);
+  const error = loadError?.request === boardRequest ? loadError.message : "";
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("q");
@@ -255,20 +285,23 @@ export default function RecruitingBoard() {
   };
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ season, page: String(page), committed, movement });
-    if (query.trim()) params.set("q", query.trim());
-    if (position) params.set("position", position);
-    if (rankMax) params.set("rank_max", rankMax);
-    setError("");
-    fetchJson<Result>(`/api/basketball/research/recruiting-rankings?${params}`, { signal: controller.signal })
-      .then((value) => { if (!controller.signal.aborted) setResult(value); })
+    fetchJson<Result>(`/api/basketball/research/recruiting-rankings?${boardRequest}`, { signal: controller.signal })
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setLoadedResult({ request: boardRequest, result: value });
+          setLoadError(null);
+        }
+      })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
-          setError(reason instanceof Error ? reason.message : "The prospect release is unavailable.");
+          setLoadError({
+            request: boardRequest,
+            message: reason instanceof Error ? reason.message : "The prospect release is unavailable.",
+          });
         }
       });
     return () => controller.abort();
-  }, [committed, movement, page, position, query, rankMax, season]);
+  }, [boardRequest]);
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
