@@ -30,6 +30,13 @@ describe("forecast lab filters", () => {
     expect(forecastLabFilterSearch(filters)).toBe("?view=factor&sort=factor");
   });
 
+  it("round-trips the evidence-gap audit controls", () => {
+    const filters = parseForecastLabFilters("?view=coverage-gap&sort=coverage");
+    expect(filters.view).toBe("coverage-gap");
+    expect(filters.sort).toBe("coverage");
+    expect(forecastLabFilterSearch(filters)).toBe("?view=coverage-gap&sort=coverage");
+  });
+
   it("keeps repeated model versions auditable in the selector label", () => {
     expect(formatForecastModelOption({
       model_id: "basketball-efficiency-v2-65f2629d5bd3",

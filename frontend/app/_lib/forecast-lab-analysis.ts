@@ -14,6 +14,48 @@ export type ForecastMatchupSignal = {
   season: number;
 };
 
+export type ForecastEvidenceCoverage = {
+  present: number;
+  total: number;
+  missing: string[];
+  complete: boolean;
+  market: "verified" | "unavailable";
+};
+
+/**
+ * Summarize the evidence needed to turn a forecast row into a usable matchup
+ * brief. Market evidence stays separate because a missing quote is unknown
+ * context, not a defect in the basketball forecast itself.
+ */
+export function forecastEvidenceCoverage({
+  primary,
+  scheduled,
+  factors,
+  roster,
+  market,
+}: {
+  primary: boolean;
+  scheduled: boolean;
+  factors: boolean;
+  roster: boolean;
+  market: boolean;
+}): ForecastEvidenceCoverage {
+  const checks = [
+    [primary, "primary team model"],
+    [scheduled, "confirmed tip time"],
+    [factors, "same-edition Four Factors"],
+    [roster, "roster continuity scenario"],
+  ] as const;
+  const missing = checks.filter(([available]) => !available).map(([, label]) => label);
+  return {
+    present: checks.length - missing.length,
+    total: checks.length,
+    missing,
+    complete: missing.length === 0,
+    market: market ? "verified" : "unavailable",
+  };
+}
+
 /**
  * Keep one auditable Four Factor mismatch per game for the full-slate lab.
  * The value is a descriptive rate gap, not a point contribution to the model.

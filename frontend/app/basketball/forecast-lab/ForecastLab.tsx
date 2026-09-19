@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BBGame, BBOverview, BBRosterScenario } from "../../_lib/basketball-types";
 import type { Comparison } from "../../_lib/research-types";
-import type { ForecastMatchupSignal } from "../../_lib/forecast-lab-analysis";
+import {
+  forecastEvidenceCoverage,
+  type ForecastEvidenceCoverage,
+  type ForecastMatchupSignal,
+} from "../../_lib/forecast-lab-analysis";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
 import ManualMarketCheck from "../briefs/ManualMarketCheck";
@@ -36,6 +40,7 @@ type Row = {
   comparisons: Comparison[];
   modelDelta: ModelDelta | null;
   factorSignal: ForecastMatchupSignal | null;
+  evidence: ForecastEvidenceCoverage;
 };
 
 type ModelDelta = {
@@ -85,15 +90,36 @@ function modelRow(
   comparisons: Comparison[] | undefined,
   modelDelta: ModelDelta | null,
   factorSignal: ForecastMatchupSignal | undefined,
+  scheduled: boolean,
 ): Row | null {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
-  return { game, prediction, scenario: scenario || null, comparisons: comparisons || [], modelDelta, factorSignal: factorSignal || null };
+  const marketComparisons = comparisons || [];
+  return {
+    game,
+    prediction,
+    scenario: scenario || null,
+    comparisons: marketComparisons,
+    modelDelta,
+    factorSignal: factorSignal || null,
+    evidence: forecastEvidenceCoverage({
+      primary: !!game.prediction,
+      scheduled,
+      factors: !!factorSignal,
+      roster: !!scenario,
+      market: marketComparisons.length > 0,
+    }),
+  };
 }
 
 function sortRows(rows: Row[], sort: Sort) {
   return [...rows].sort((a, b) => {
     if (sort === "date") return a.game.starts_at.localeCompare(b.game.starts_at);
+    if (sort === "coverage") {
+      return a.evidence.present - b.evidence.present
+        || Number(a.evidence.market === "verified") - Number(b.evidence.market === "verified")
+        || a.game.starts_at.localeCompare(b.game.starts_at);
+    }
     if (sort === "disagreement") {
       return Math.max(Math.abs(b.scenario?.margin_delta || 0), Math.abs(b.modelDelta?.margin || 0))
         - Math.max(Math.abs(a.scenario?.margin_delta || 0), Math.abs(a.modelDelta?.margin || 0))
@@ -279,6 +305,7 @@ export default function ForecastLab({
                 : null;
             })(),
         factorEditionMatches ? factorSignals[game.id] : undefined,
+        scheduleClockByGame.get(game.id)?.source_time_valid === true || !game.time_tbd,
       ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
@@ -287,11 +314,12 @@ export default function ForecastLab({
         if (view === "market") return row.comparisons.length > 0;
         if (view === "model-delta") return !!row.modelDelta;
         if (view === "factor") return !!row.factorSignal;
+        if (view === "coverage-gap") return !row.evidence.complete;
         return true;
       }),
       sort,
     );
-  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, scenarioByGame, sort, view]);
+  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, scenarioByGame, scheduleClockByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.reduce(
@@ -300,6 +328,8 @@ export default function ForecastLab({
   );
   const modelDeltaCount = rows.filter((row) => row.modelDelta).length;
   const factorSignalCount = rows.filter((row) => row.factorSignal).length;
+  const evidenceCompleteCount = rows.filter((row) => row.evidence.complete).length;
+  const evidenceGapCount = rows.length - evidenceCompleteCount;
   const selectedModelId = modelSelection === "latest"
     ? liveCatalog?.models[0]?.model_id || overview.model.id
     : modelSelection;
@@ -331,13 +361,17 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
         scheduleClockByGame.get(row.game.id)?.source_time_valid == null ? null : scheduleClockByGame.get(row.game.id)!.source_time_valid ? "yes" : "no",
         row.game.away_name,
         row.game.home_name,
+        row.evidence.present,
+        row.evidence.total,
+        row.evidence.missing.join("; "),
+        row.evidence.market,
         row.game.prediction ? "primary" : "cold-start",
         row.prediction.home_margin,
         row.scenario?.roster_margin,
@@ -365,7 +399,7 @@ export default function ForecastLab({
         row.modelDelta?.total,
         row.modelDelta?.winProbability == null ? null : row.modelDelta.winProbability * 100,
         row.modelDelta?.latestModelId,
-        row.game.prediction ? `https://bball.silvermine.dev/basketball/briefs/${row.game.id}/` : null,
+        `https://bball.silvermine.dev/basketball/briefs/${row.game.id}/`,
       ]),
     ),
   );
@@ -383,14 +417,14 @@ export default function ForecastLab({
       <div className="toolbar">
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
         <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{formatForecastModelOption(model)}</option>)}</select></label>
-        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="factor">Four Factor evidence available</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
-        <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="factor">Largest Four Factor mismatch</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
+        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="coverage-gap">Core evidence gaps</option><option value="factor">Four Factor evidence available</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
+        <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="coverage">Fewest evidence checks first</option><option value="factor">Largest Four Factor mismatch</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
       </div>
       <div className="button-row" style={{ marginTop: 12 }}>
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      <p className="note">This board compares published model artifacts. Each row audits four core checks: a primary team model, confirmed tip time, same-edition Four Factors and an exact-ID roster continuity scenario. Missing market evidence is reported separately because no quote is not a zero edge or a failed forecast. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>
@@ -398,6 +432,8 @@ export default function ForecastLab({
         <div><strong>{(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()}</strong><span>Recorded source clocks confirmed</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
         <div><strong>{factorSignalCount.toLocaleString()}</strong><span>Games with factor context</span></div>
+        <div><strong>{evidenceCompleteCount.toLocaleString()}</strong><span>Core evidence complete</span></div>
+        <div><strong>{evidenceGapCount.toLocaleString()}</strong><span>Core evidence gaps</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
         <div><strong>{modelDeltaCount.toLocaleString()}</strong><span>Edition deltas in view</span></div>
@@ -477,12 +513,13 @@ export default function ForecastLab({
       </div>
       <div className="table-scroll">
       <table className="data-table">
-          <thead><tr><th>Game</th><th>Primary model</th><th>Largest factor mismatch</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th><th>Edition delta</th></tr></thead>
+          <thead><tr><th>Game</th><th>Evidence coverage</th><th>Primary model</th><th>Largest factor mismatch</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th><th>Edition delta</th></tr></thead>
           <tbody>{rows.map((row) => {
             const p = row.prediction;
             const confidence = Math.max(p.home_win_probability, 1 - p.home_win_probability);
             return <tr key={row.game.id}>
-              <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}{row.game.prediction && <small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small>}</td>
+              <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}<small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small></td>
+              <td><strong>{row.evidence.present}/{row.evidence.total} core checks</strong><small>{row.evidence.complete ? "Ready for full matchup review" : `Missing: ${row.evidence.missing.join(", ")}`}</small><small>{row.evidence.market === "verified" ? "Verified market lineage available" : "Market lineage unavailable"}</small></td>
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>

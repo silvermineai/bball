@@ -1,5 +1,5 @@
-export type ForecastLabView = "all" | "scenario" | "cold-start" | "market" | "model-delta" | "factor";
-export type ForecastLabSort = "date" | "disagreement" | "confidence" | "uncertainty" | "factor";
+export type ForecastLabView = "all" | "coverage-gap" | "scenario" | "cold-start" | "market" | "model-delta" | "factor";
+export type ForecastLabSort = "date" | "coverage" | "disagreement" | "confidence" | "uncertainty" | "factor";
 
 export type ForecastModelOption = {
   model_id: string;
@@ -28,8 +28,8 @@ export const formatForecastModelOption = (model: ForecastModelOption): string =>
   return `${model.version || "Unlabeled edition"} · ${date} · ${model.forecasts.toLocaleString()} rows${estimateMix} · ${fingerprint}${metadata}`;
 };
 
-const views = new Set<ForecastLabView>(["all", "scenario", "cold-start", "market", "model-delta", "factor"]);
-const sorts = new Set<ForecastLabSort>(["date", "disagreement", "confidence", "uncertainty", "factor"]);
+const views = new Set<ForecastLabView>(["all", "coverage-gap", "scenario", "cold-start", "market", "model-delta", "factor"]);
+const sorts = new Set<ForecastLabSort>(["date", "coverage", "disagreement", "confidence", "uncertainty", "factor"]);
 
 export const parseForecastLabFilters = (search: string) => {
   const params = new URLSearchParams(search);
