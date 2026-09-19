@@ -12,9 +12,12 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from dotenv import dotenv_values
+
 
 DEFAULT_API_BASE = "https://bball.silvermine.dev"
 DEFAULT_DB = Path(__file__).resolve().parents[2] / "data" / "ncaa_mbb.sqlite3"
+LOCAL_ENV = dotenv_values(Path.home() / ".env")
 TABLES: dict[str, list[str]] = {
     "seasons": ["id", "internal_id", "label", "sport_code", "division", "created_at"],
     "teams": ["ncaa_team_id", "internal_id", "org_id", "name", "season_label", "sport_code", "division", "record", "updated_at"],
@@ -126,7 +129,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Upload local NCAA SQLite scrape data to remote D1")
     parser.add_argument("--db", default=str(DEFAULT_DB), help="Path to local SQLite database")
     parser.add_argument("--api-base", default=os.environ.get("BBALL_REMOTE_API_BASE", DEFAULT_API_BASE))
-    parser.add_argument("--api-key", default=os.environ.get("BBALL_INGEST_API_KEY"))
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("BBALL_INGEST_API_KEY") or LOCAL_ENV.get("BBALL_INGEST_API_KEY"),
+        help="Ingest token; defaults to BBALL_INGEST_API_KEY or ~/.env",
+    )
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--table", choices=list(TABLES), action="append")
     parser.add_argument("--dry-run", action="store_true")
