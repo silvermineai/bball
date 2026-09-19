@@ -269,6 +269,43 @@ describe("bball api", () => {
     expect(prepare.mock.calls.some(([query]) => String(query).includes("g.season=?"))).toBe(true);
   });
 
+  it("accounts for every upcoming football game in forecast metadata", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        first: async () => sql.includes("FROM football_models m") ? {
+          id: "ridge-team-calibrated-v2-test",
+          created_at: "2026-09-09T02:00:00Z",
+          cutoff: "2026-09-09T02:00:00Z",
+          artifact_json: "{}",
+        } : null,
+      }),
+    }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [{ model_id: "ridge-team-calibrated-v2-test", forecasts: 660, first_created_at: "2026-09-09T02:00:00Z", last_created_at: "2026-09-09T02:00:00Z" }] },
+      { results: [{ upcoming_games: 699, forecast_games: 658, outside_fbs_field: 41, eligible_missing_prediction: 0 }] },
+    ]);
+    const response = await app.request(
+      "/api/football/research/forecasts?season=2026&meta=1",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      coverage: {
+        upcoming_games: 699,
+        forecast_games: 658,
+        outside_fbs_field: 41,
+        eligible_missing_prediction: 0,
+      },
+    });
+    const coverageSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("outside_fbs_field"));
+    expect(coverageSql).toContain("g.kickoff>?");
+    expect(coverageSql).toContain("g.home_division");
+    expect(coverageSql).toContain("g.away_division");
+    expect(prepare.mock.calls.map(([sql]) => String(sql)).some((sql) => sql.includes("GROUP BY p.model_id") && sql.includes("WHERE g.season=?"))).toBe(true);
+  });
+
   it("keeps calibrated football intervals when pagination pins an explicit model", async () => {
     const artifact = {
       id: "ridge-team-calibrated-v2-test",

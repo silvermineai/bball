@@ -74,11 +74,36 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       ).bind(model).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
 
   if (meta === "1") {
-    const [seasons, models] = await db.batch([
+    const now = new Date().toISOString();
+    const [seasons, models, currentCoverage] = await db.batch([
       db.prepare("SELECT DISTINCT season FROM football_games ORDER BY season DESC"),
       db.prepare(
-        "SELECT p.model_id,count(*) AS forecasts,MIN(p.created_at) AS first_created_at,MAX(p.created_at) AS last_created_at FROM football_predictions p GROUP BY p.model_id ORDER BY last_created_at DESC,model_id",
-      ),
+        `SELECT p.model_id,count(*) AS forecasts,
+                MIN(p.created_at) AS first_created_at,MAX(p.created_at) AS last_created_at
+           FROM football_predictions p
+           JOIN football_games g ON g.id=p.game_id
+          WHERE g.season=?
+          GROUP BY p.model_id
+          ORDER BY last_created_at DESC,model_id`,
+      ).bind(season),
+      db.prepare(
+        `SELECT count(DISTINCT g.id) AS upcoming_games,
+                count(DISTINCT CASE WHEN p.game_id IS NOT NULL THEN g.id END) AS forecast_games,
+                count(DISTINCT CASE
+                  WHEN p.game_id IS NULL
+                   AND (lower(coalesce(g.home_division,'')) <> 'fbs'
+                     OR lower(coalesce(g.away_division,'')) <> 'fbs')
+                  THEN g.id END) AS outside_fbs_field,
+                count(DISTINCT CASE
+                  WHEN p.game_id IS NULL
+                   AND lower(coalesce(g.home_division,'')) = 'fbs'
+                   AND lower(coalesce(g.away_division,'')) = 'fbs'
+                  THEN g.id END) AS eligible_missing_prediction
+           FROM football_games g
+           LEFT JOIN football_predictions p
+             ON p.game_id=g.id AND p.model_id=?
+          WHERE g.season=? AND g.completed=0 AND g.kickoff>?`,
+      ).bind(latestModel?.id || "__no_registered_model__", season, now),
     ]);
     const metadata = models.results.map((row) => {
       const item = row as Record<string, unknown>;
@@ -95,6 +120,15 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         created_at: latestModel.created_at,
         cutoff: latestModel.cutoff,
       } : null,
+      coverage: (() => {
+        const row = (currentCoverage.results[0] || {}) as Record<string, unknown>;
+        return {
+          upcoming_games: Number(row.upcoming_games || 0),
+          forecast_games: Number(row.forecast_games || 0),
+          outside_fbs_field: Number(row.outside_fbs_field || 0),
+          eligible_missing_prediction: Number(row.eligible_missing_prediction || 0),
+        };
+      })(),
       models: metadata,
     });
   }
