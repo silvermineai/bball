@@ -8,6 +8,7 @@ import {
   isPlottablePlayerShot,
   PLAYER_COURT,
   summarizePlayerShotBands,
+  summarizePlayerShotSides,
   toPlayerCourtPoint,
   type PlayerShotLocation,
 } from "../_lib/player-shot-locations";
@@ -37,6 +38,7 @@ export default function PlayerShotLocationCourt({
 }: PlayerShotLocationCourtProps) {
   const zones = useMemo(() => buildPlayerCourtZones(shots), [shots]);
   const bands = useMemo(() => summarizePlayerShotBands(shots), [shots]);
+  const sides = useMemo(() => summarizePlayerShotSides(shots), [shots]);
   const plotted = useMemo(() => shots.filter(isPlottablePlayerShot), [shots]);
   const missing = shots.filter((shot) => classifyPlayerShotLocation(shot) === "missing").length;
   const beyondHalfCourt = shots.filter((shot) => classifyPlayerShotLocation(shot) === "beyond_half_court").length;
@@ -138,6 +140,20 @@ export default function PlayerShotLocationCourt({
                 <div key={band.band} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span>{band.band}</span>
                   <span className="font-stat text-xs text-graphite">{band.attempts.toLocaleString()} · {band.makeRate == null ? "—" : `${(band.makeRate * 100).toFixed(1)}%`}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="eyebrow text-court">COURT-SIDE TENDENCY</p>
+            <p className="mt-1 text-xs leading-5 text-graphite">Chart left, middle and right are divided at the painted-lane edges (x = ±8 ft).</p>
+            <div className="mt-2 divide-y divide-line border-y border-line">
+              {sides.map((side) => (
+                <div key={side.side} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span>{side.side}</span>
+                  <span className="text-right font-stat text-xs text-graphite">
+                    {side.attempts.toLocaleString()} · {(side.share * 100).toFixed(1)}% plotted · {side.makeRate == null ? "—" : `${(side.makeRate * 100).toFixed(1)}% FG`}
+                  </span>
                 </div>
               ))}
             </div>

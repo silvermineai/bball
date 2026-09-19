@@ -63,6 +63,9 @@ export type PlayerCourtZone = {
 };
 
 export type PlayerShotBand = "Rim" | "Paint" | "Midrange" | "3-point";
+export type PlayerShotSide = "Chart left" | "Middle" | "Chart right";
+
+const PLAYER_COURT_LANE_EDGE_FT = 8;
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -145,6 +148,48 @@ export function summarizePlayerShotBands(shots: readonly PlayerShotLocation[]) {
   }
   const total = bands.reduce((sum, row) => sum + row.attempts, 0);
   return bands.map((row) => ({
+    ...row,
+    share: total ? row.attempts / total : 0,
+    makeRate: row.attempts ? row.makes / row.attempts : null,
+  }));
+}
+
+/**
+ * Divide the chart at the painted-lane edges to quantify lateral tendency.
+ * Labels describe the chart orientation and do not infer player handedness.
+ */
+export function playerShotSide(
+  shot: Pick<PlayerShotLocation, "x">,
+): PlayerShotSide | null {
+  if (!isFiniteNumber(shot.x)) return null;
+  if (shot.x < -PLAYER_COURT_LANE_EDGE_FT) return "Chart left";
+  if (shot.x > PLAYER_COURT_LANE_EDGE_FT) return "Chart right";
+  return "Middle";
+}
+
+export function summarizePlayerShotSides(shots: readonly PlayerShotLocation[]) {
+  const sides: Array<{
+    side: PlayerShotSide;
+    attempts: number;
+    makes: number;
+    share: number;
+    makeRate: number | null;
+  }> = [
+    { side: "Chart left", attempts: 0, makes: 0, share: 0, makeRate: null },
+    { side: "Middle", attempts: 0, makes: 0, share: 0, makeRate: null },
+    { side: "Chart right", attempts: 0, makes: 0, share: 0, makeRate: null },
+  ];
+  const bySide = new Map(sides.map((row) => [row.side, row]));
+  for (const shot of shots) {
+    if (!isPlottablePlayerShot(shot)) continue;
+    const side = playerShotSide(shot);
+    const row = side ? bySide.get(side) : undefined;
+    if (!row) continue;
+    row.attempts += 1;
+    row.makes += shot.made ? 1 : 0;
+  }
+  const total = sides.reduce((sum, row) => sum + row.attempts, 0);
+  return sides.map((row) => ({
     ...row,
     share: total ? row.attempts / total : 0,
     makeRate: row.attempts ? row.makes / row.attempts : null,

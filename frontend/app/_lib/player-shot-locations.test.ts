@@ -4,7 +4,9 @@ import {
   classifyPlayerShotLocation,
   isPlottablePlayerShot,
   playerShotBand,
+  playerShotSide,
   summarizePlayerShotBands,
+  summarizePlayerShotSides,
   toPlayerCourtPoint,
   type PlayerShotLocation,
 } from "./player-shot-locations";
@@ -65,5 +67,26 @@ describe("player shot location helpers", () => {
     expect(playerShotBand(shot({ x: 0, y: 30 }))).toBe("3-point");
     expect(bands.reduce((sum, band) => sum + band.attempts, 0)).toBe(3);
     expect(bands.find((band) => band.band === "Rim")?.makeRate).toBe(1);
+  });
+
+  it("quantifies chart-side tendency at the painted-lane edges", () => {
+    const sides = summarizePlayerShotSides([
+      shot({ x: -9, y: 15, made: true }),
+      shot({ x: -8, y: 15, made: false }),
+      shot({ x: 0, y: 15, made: true }),
+      shot({ x: 8, y: 15, made: false }),
+      shot({ x: 9, y: 15, made: true }),
+      shot({ x: 12, y: 60, made: true }),
+      shot({ x: null, y: null, made: true, location_status: "missing" }),
+    ]);
+
+    expect(playerShotSide(shot({ x: -8 }))).toBe("Middle");
+    expect(playerShotSide(shot({ x: 8 }))).toBe("Middle");
+    expect(playerShotSide(shot({ x: null }))).toBeNull();
+    expect(sides).toEqual([
+      { side: "Chart left", attempts: 1, makes: 1, share: 0.2, makeRate: 1 },
+      { side: "Middle", attempts: 3, makes: 1, share: 0.6, makeRate: 1 / 3 },
+      { side: "Chart right", attempts: 1, makes: 1, share: 0.2, makeRate: 1 },
+    ]);
   });
 });
