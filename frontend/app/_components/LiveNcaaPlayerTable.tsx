@@ -287,7 +287,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
             <tbody>{result.rows.slice(0, rowLimit).map((row) => (
               <tr key={`${row.player_id}-${row.team_name || ""}`}>
                 <td className="rank-number">{row.rank}</td>
-                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small></th>
+                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small></th>
                 <td>{row.team_name || "—"}</td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>

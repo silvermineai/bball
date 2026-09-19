@@ -40,6 +40,7 @@ function edgeCache() {
 
 type PublishedIndividualPlayer = {
   player_id?: unknown;
+  team_ncaa_id?: unknown;
   division?: unknown;
   name?: unknown;
   team_name?: unknown;
@@ -205,7 +206,9 @@ async function publishedRankingsFallback(
       total: rows.length,
       source: "published_fallback",
       rows: rows.slice(start, start + 50).map(({ player, value }, index) => ({
+        season: 2026,
         player_id: String(player.player_id || ""),
+        team_id: String(player.team_ncaa_id || ""),
         player_name: typeof player.name === "string" ? player.name : null,
         team_name: typeof player.team_name === "string" ? player.team_name : null,
         position: typeof player.position === "string" ? player.position : null,

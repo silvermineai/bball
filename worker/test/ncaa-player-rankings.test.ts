@@ -24,6 +24,7 @@ describe("NCAA player rankings availability", () => {
       players: [
         {
           player_id: 7,
+          team_ncaa_id: 42,
           division: 1,
           name: "Example Guard",
           team_name: "Example U",
@@ -64,7 +65,15 @@ describe("NCAA player rankings availability", () => {
     const body = await response.json() as { source: string; total: number; rows: Array<Record<string, unknown>> };
     expect(body.source).toBe("published_fallback");
     expect(body.total).toBe(1);
-    expect(body.rows[0]).toMatchObject({ player_id: "7", player_name: "Example Guard", value: 20, rank: 1 });
+    expect(body.rows[0]).toMatchObject({
+      season: 2026,
+      player_id: "7",
+      team_id: "42",
+      player_name: "Example Guard",
+      team_name: "Example U",
+      value: 20,
+      rank: 1,
+    });
     expect(fetch).toHaveBeenCalledOnce();
   });
 });
