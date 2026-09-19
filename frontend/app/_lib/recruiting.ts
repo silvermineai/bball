@@ -1,4 +1,4 @@
-import type { BBRoster } from "./basketball-types";
+import type { BBRoster, BBRosters } from "./basketball-types";
 
 export type AnnouncementSource = {
   id: string;
@@ -107,6 +107,34 @@ export type RecruitingProgramSummary = {
   prior_ppg: number;
   prior_mpg: number;
   high_workload: number;
+};
+
+export type RecruitingRosterProductionPlayer = {
+  name: string;
+  player_id: string | null;
+  prior_team_id: string | null;
+  prior_team: string | null;
+  season: number | null;
+  games: number | null;
+  minutes: number | null;
+  mpg: number | null;
+  ppg: number | null;
+  rpg: number | null;
+  apg: number | null;
+  ts: number | null;
+  box_bpm: number | null;
+  availability: AnnouncementEvent["kind"] | "same_program";
+};
+
+export type RecruitingRosterProductionComparison = {
+  team_id: string;
+  team_name: string;
+  incoming_players: number;
+  incoming_linked: number;
+  returning_players: number;
+  returning_linked: number;
+  incoming: RecruitingRosterProductionPlayer | null;
+  returning: RecruitingRosterProductionPlayer | null;
 };
 
 const recruitingKinds = new Set([
@@ -400,6 +428,96 @@ export function summarizeRecruitingPrograms(
       b.linked_profiles - a.linked_profiles ||
       a.team_name.localeCompare(b.team_name),
   );
+}
+
+/**
+ * Put reviewed additions and exact-ID same-program roster records on one
+ * program row. The selected players are workload leaders from their own
+ * evidence sets; missing historical links and missing production remain null.
+ */
+export function recruitingRosterProductionComparisons(
+  data: RecruitingRelease,
+  rosters: BBRosters,
+): RecruitingRosterProductionComparison[] {
+  const additions = recruitingRows(data);
+  const workloadOrder = <T extends { name: string }>(
+    rows: T[],
+    production: (row: T) => { mpg: number | null; ppg: number | null; minutes: number | null } | null,
+  ) => [...rows].sort((a, b) => {
+    const ap = production(a);
+    const bp = production(b);
+    if (Boolean(ap) !== Boolean(bp)) return ap ? -1 : 1;
+    return (
+      (bp?.mpg ?? -1) - (ap?.mpg ?? -1) ||
+      (bp?.minutes ?? -1) - (ap?.minutes ?? -1) ||
+      (bp?.ppg ?? -1) - (ap?.ppg ?? -1) ||
+      a.name.localeCompare(b.name)
+    );
+  });
+
+  return data.programs
+    .map((program) => {
+      const programAdditions = additions.filter((row) => row.team_id === program.id);
+      const programReturners = rosters.players.filter(
+        (player) => player.team_id === program.id && player.status === "same_program",
+      );
+      const incomingRow = workloadOrder(programAdditions, (row) => row.stats
+        ? { mpg: row.stats.mpg, ppg: row.stats.ppg, minutes: null }
+        : null)[0] ?? null;
+      const returningRow = workloadOrder(programReturners, (row) => row.prior_production
+        ? {
+            mpg: row.prior_production.mpg,
+            ppg: row.prior_production.ppg,
+            minutes: row.prior_production.minutes,
+          }
+        : null)[0] ?? null;
+      return {
+        team_id: program.id,
+        team_name: program.name,
+        incoming_players: programAdditions.length,
+        incoming_linked: programAdditions.filter((row) => row.stats).length,
+        returning_players: programReturners.length,
+        returning_linked: programReturners.filter((row) => row.prior_production).length,
+        incoming: incomingRow ? {
+          name: incomingRow.name,
+          player_id: incomingRow.stats?.id ?? null,
+          prior_team_id: incomingRow.stats?.team_id ?? null,
+          prior_team: incomingRow.stats?.team ?? incomingRow.previous_program,
+          season: incomingRow.stats?.season ?? null,
+          games: incomingRow.stats?.games ?? null,
+          minutes: null,
+          mpg: incomingRow.stats?.mpg ?? null,
+          ppg: incomingRow.stats?.ppg ?? null,
+          rpg: incomingRow.stats?.rpg ?? null,
+          apg: incomingRow.stats?.apg ?? null,
+          ts: incomingRow.stats?.ts ?? null,
+          box_bpm: null,
+          availability: incomingRow.latest.kind,
+        } : null,
+        returning: returningRow ? {
+          name: returningRow.name,
+          player_id: returningRow.id,
+          prior_team_id: returningRow.team_id,
+          prior_team: returningRow.team,
+          season: rosters.previous_season,
+          games: returningRow.prior_production?.games ?? null,
+          minutes: returningRow.prior_production?.minutes ?? null,
+          mpg: returningRow.prior_production?.mpg ?? null,
+          ppg: returningRow.prior_production?.ppg ?? null,
+          rpg: returningRow.prior_production?.rpg ?? null,
+          apg: returningRow.prior_production?.apg ?? null,
+          ts: returningRow.prior_production?.ts ?? null,
+          box_bpm: returningRow.prior_production?.box_bpm ?? null,
+          availability: "same_program",
+        } : null,
+      } satisfies RecruitingRosterProductionComparison;
+    })
+    .sort((a, b) =>
+      (b.incoming?.mpg ?? -1) - (a.incoming?.mpg ?? -1) ||
+      b.incoming_linked - a.incoming_linked ||
+      (b.returning?.mpg ?? -1) - (a.returning?.mpg ?? -1) ||
+      a.team_name.localeCompare(b.team_name),
+    );
 }
 
 export function publicationDate(day: string) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   recruitingRows,
+  recruitingRosterProductionComparisons,
   publicationDate,
   parseRecruitingCoverageFilters,
   parseRecruitingFilters,
@@ -13,6 +14,7 @@ import {
   rosterNameMatch,
   type RecruitingRelease,
 } from "./recruiting";
+import type { BBRosters } from "./basketball-types";
 const data = JSON.parse(
   readFileSync("public/data/basketball/recruiting.json", "utf8"),
 ) as RecruitingRelease;
@@ -150,6 +152,78 @@ describe("recruiting program summaries", () => {
         high_workload: 0,
       },
     ]);
+  });
+});
+
+describe("incoming and returning production bridge", () => {
+  it("keeps exact IDs and unavailable production visible across the two evidence sets", () => {
+    const release: RecruitingRelease = {
+      ...data,
+      programs: [
+        { id: "a", name: "Alpha", host: "", publisher: "" },
+        { id: "b", name: "Beta", host: "", publisher: "" },
+      ],
+      people: [
+        { key: "a-low", name: "Lower Workload", team_id: "a", category: "transfer", previous_program: "Old A", stats: { ...stat(18, 9), id: "101", team_id: "10", team: "Old A" } },
+        { key: "a-high", name: "Higher Workload", team_id: "a", category: "transfer", previous_program: "Old B", stats: { ...stat(31, 15), id: "102", team_id: "11", team: "Old B" } },
+        { key: "b-missing", name: "No Prior File", team_id: "b", category: "freshman", previous_program: null, stats: null },
+      ],
+      sources: [
+        { id: "s1", team_id: "a", url: "", title: "A", publisher: "", published_on: "2026-05-01", date_basis: "", checked_at: "", review_note: null },
+        { id: "s2", team_id: "b", url: "", title: "B", publisher: "", published_on: "2026-05-02", date_basis: "", checked_at: "", review_note: null },
+      ],
+      events: [
+        { id: "e1", person_key: "a-low", kind: "addition", source_id: "s1", summary: "" },
+        { id: "e2", person_key: "a-high", kind: "addition", source_id: "s1", summary: "" },
+        { id: "e3", person_key: "b-missing", kind: "addition", source_id: "s2", summary: "" },
+      ],
+    };
+    const rosterPlayer = (id: string, status: string, mpg: number) => ({
+      id,
+      name: `Roster ${id}`,
+      team_id: "a",
+      team: "Alpha",
+      previous_teams: ["Alpha"],
+      status,
+      position: "G",
+      class_year: "Junior",
+      height: null,
+      weight: null,
+      source_url: null,
+      prior_production: { games: 20, minutes: mpg * 20, mpg, ppg: mpg / 2, rpg: 4, apg: 3, ts: null, box_bpm: null, teams: ["Alpha"] },
+    });
+    const rosters: BBRosters = {
+      season: 2027,
+      previous_season: 2026,
+      teams_observed: 1,
+      players_observed: 3,
+      prior_players_not_observed: 0,
+      status_counts: {},
+      players: [
+        rosterPlayer("201", "same_program", 27),
+        rosterPlayer("202", "same_program", 12),
+        rosterPlayer("203", "different_program", 38),
+      ],
+    };
+
+    const rows = recruitingRosterProductionComparisons(release, rosters);
+    expect(rows.map((row) => row.team_name)).toEqual(["Alpha", "Beta"]);
+    expect(rows[0]).toMatchObject({
+      incoming_players: 2,
+      incoming_linked: 2,
+      returning_players: 2,
+      returning_linked: 2,
+      incoming: { name: "Higher Workload", player_id: "102", prior_team_id: "11", mpg: 31 },
+      returning: { name: "Roster 201", player_id: "201", prior_team_id: "a", mpg: 27 },
+    });
+    expect(rows[1]).toMatchObject({
+      incoming_players: 1,
+      incoming_linked: 0,
+      returning_players: 0,
+      returning_linked: 0,
+      incoming: { name: "No Prior File", player_id: null, mpg: null },
+      returning: null,
+    });
   });
 });
 

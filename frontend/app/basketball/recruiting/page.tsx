@@ -9,9 +9,27 @@ import MovementWatch from "./MovementWatch";
 import RecruitingBoard from "./RecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
-import { categoryLabels, recruitingRows, type RecruitingRelease } from "../../_lib/recruiting";
+import {
+  eventLabels,
+  recruitingRosterProductionComparisons,
+  type RecruitingRelease,
+  type RecruitingRosterProductionPlayer,
+} from "../../_lib/recruiting";
 import { fmt } from "../../_lib/format";
+import { comparisonParams } from "../../_lib/player-comparison";
 import { publicArchiveText } from "../../_lib/public-text";
+
+function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
+  if (!player) return <span className="note">No recorded player in this evidence set</span>;
+  const name = player.player_id && player.season
+    ? <Link href={`/basketball/player/?id=${encodeURIComponent(player.player_id)}&season=${player.season}`}>{player.name}</Link>
+    : player.name;
+  return <>
+    <strong>{name}</strong>
+    <small>{player.prior_team || "Prior program unavailable"} · {player.player_id ? `ID ${player.player_id}` : "Historical player ID unavailable"}</small>
+    {player.mpg == null ? <small>Prior production unavailable</small> : <small>{fmt(player.mpg)} MPG · {fmt(player.ppg)} PPG · {fmt(player.rpg)} RPG · {fmt(player.apg)} APG · {player.ts == null ? "TS unavailable" : `${fmt(player.ts * 100)}% TS`}</small>}
+  </>;
+}
 export const metadata = {
   title: "Basketball recruiting: rankings, movement and player production",
   description:
@@ -57,10 +75,7 @@ export default function Page() {
         .replace(/<img\b[^>]*>/gi, ""),
       categories: article.categories.map(publicArchiveText),
     }));
-  const productionRows = recruitingRows(data)
-    .filter((row) => row.stats)
-    .sort((a, b) => (b.stats?.mpg ?? -1) - (a.stats?.mpg ?? -1) || (b.stats?.ppg ?? -1) - (a.stats?.ppg ?? -1) || a.name.localeCompare(b.name))
-    .slice(0, 16);
+  const productionComparisons = recruitingRosterProductionComparisons(data, rosters);
   const continuityRows = (rosters.team_summaries || [])
     .filter((row) => row.represented_prior_minutes > 0)
     .sort((a, b) => b.represented_prior_minutes - a.represented_prior_minutes || a.team.localeCompare(b.team))
@@ -124,28 +139,31 @@ export default function Page() {
       <section className="section" aria-labelledby="recruiting-production">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Recruiting / linked production</div>
-            <h2 id="recruiting-production">Prior workload stays attached.</h2>
+            <div className="eyebrow">Recruiting / production bridge</div>
+            <h2 id="recruiting-production">Incoming production beside the returning core.</h2>
           </div>
           <Link href="/basketball/roster-board/">Open the full workload board →</Link>
         </div>
-        <p className="note">Top reviewed additions with a linked prior college stat file, ordered by recorded minutes per game. These rows describe the prior season; they do not establish eligibility, availability or a future role.</p>
+        <p className="note">For every reviewed program, this pairs the highest-workload addition with the highest-workload same-program returner. Players are joined only through recorded program and player IDs. An unavailable ID or stat stays unavailable; the pair is a study starting point, not a depth-chart or eligibility judgment.</p>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Player</th><th>Destination</th><th>Type</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead>
-            <tbody>{productionRows.map((row) => {
-              const stats = row.stats!;
-              return <tr key={row.key}>
-                <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(stats.id)}&season=${stats.season}`}>{row.name}</Link><small>{row.latest.source.published_on}</small></th>
-                <td><Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.program.name}</Link></td>
-                <td>{categoryLabels[row.category]}</td>
-                <td>{row.previous_program || "—"}</td>
-                <td className="numeric">{stats.games}</td>
-                <td className="numeric"><strong>{fmt(stats.mpg)}</strong></td>
-                <td className="numeric">{fmt(stats.ppg)}</td>
-                <td className="numeric">{fmt(stats.rpg)}</td>
-                <td className="numeric">{fmt(stats.apg)}</td>
-                <td className="numeric">{stats.ts == null ? "—" : `${fmt(stats.ts * 100)}%`}</td>
+            <thead><tr><th>Program</th><th>Incoming workload leader</th><th>Returning workload leader</th><th className="numeric">MPG difference</th><th>Player files</th></tr></thead>
+            <tbody>{productionComparisons.map((row) => {
+              const difference = row.incoming?.mpg != null && row.returning?.mpg != null
+                ? row.incoming.mpg - row.returning.mpg
+                : null;
+              const comparison = row.incoming?.player_id && row.incoming.prior_team_id && row.incoming.season && row.returning?.player_id && row.returning.prior_team_id && row.returning.season
+                ? `/basketball/compare-players/?${comparisonParams([
+                    { season: row.incoming.season, id: row.incoming.player_id, team_id: row.incoming.prior_team_id },
+                    { season: row.returning.season, id: row.returning.player_id, team_id: row.returning.prior_team_id },
+                  ], "perGame")}`
+                : null;
+              return <tr key={row.team_id}>
+                <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.team_name}</Link><small>{row.incoming_players} reviewed additions · {row.incoming_linked} with prior production</small><small>{row.returning_players} same-program players · {row.returning_linked} with prior production</small></th>
+                <td><ProductionEvidence player={row.incoming} /><small>{row.incoming ? eventLabels[row.incoming.availability as keyof typeof eventLabels] : "Addition unavailable"}</small></td>
+                <td><ProductionEvidence player={row.returning} /><small>{row.returning ? "Exact same-program player ID" : "Returning evidence unavailable"}</small></td>
+                <td className="numeric"><strong>{difference == null ? "—" : `${difference > 0 ? "+" : ""}${fmt(difference)} min`}</strong><small>{difference == null ? "Requires both MPG values" : "incoming minus returning"}</small></td>
+                <td>{comparison ? <Link href={comparison}>Compare exact player files →</Link> : <span className="note">Comparison unavailable</span>}</td>
               </tr>;
             })}</tbody>
           </table>
