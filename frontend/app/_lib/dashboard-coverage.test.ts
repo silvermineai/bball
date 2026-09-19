@@ -36,4 +36,18 @@ describe("coverageReceiptState", () => {
     expect(coverageReceiptState(dataset({ source_count: 3, latest_source_at: "not-a-date" }))).toBe("incomplete");
     expect(coverageReceiptState(dataset({ source_count: 0, latest_source_at: "2026-09-18T00:00:00Z" }))).toBe("incomplete");
   });
+
+  it("distinguishes a documented derived table from missing direct receipts", () => {
+    expect(coverageReceiptState(dataset({
+      key: "ncaa_player_season",
+      identity_note: "Derived from NCAA player boxes",
+      source_count: 0,
+      latest_source_at: null,
+    }))).toBe("derived");
+    expect(coverageReceiptState(dataset({
+      identity_note: "Derived from NCAA player boxes",
+      source_count: 1,
+      latest_source_at: null,
+    }))).toBe("incomplete");
+  });
 });

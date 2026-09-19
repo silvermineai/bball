@@ -327,7 +327,7 @@ function DataCoverageTable({ overview }: { overview: ReturnType<typeof getBasket
               <td className="numeric"><strong>{dataset.rows.toLocaleString()}</strong></td>
               <td className="numeric">{dataset.seasons.length}</td>
               <td className="numeric">{captured(dataset.latest_source_at)}</td>
-              <td><strong>{receiptState === "recorded" ? "Recorded" : receiptState === "missing" ? "Unavailable" : "Incomplete"}</strong><small>{dataset.source_count.toLocaleString()} capture receipt{dataset.source_count === 1 ? "" : "s"}</small></td>
+              <td><strong>{receiptState === "recorded" ? "Recorded" : receiptState === "derived" ? "Derived" : receiptState === "missing" ? "Unavailable" : "Incomplete"}</strong><small>{receiptState === "derived" ? "Provenance inherited from retained inputs" : `${dataset.source_count.toLocaleString()} capture receipt${dataset.source_count === 1 ? "" : "s"}`}</small></td>
             </tr>;
           })}
         </tbody>
@@ -486,7 +486,7 @@ export default function StatsDashboard() {
       <LiveBasketballProspectLeaders />
       <section className="dashboard-section" aria-labelledby="dashboard-coverage">
         <div className="dashboard-section-heading"><div><span className="eyebrow">06 / DATA COVERAGE</span><h2 id="dashboard-coverage">What the analysis can actually use</h2></div><Link href="/research/coverage/">Open the full integrity check →</Link></div>
-        <p className="dashboard-caption">Published row counts, season depth and capture receipts for every retained dataset behind this board. An unavailable or incomplete receipt remains visible even when the dataset contains rows; volume alone does not establish freshness or reproducibility.</p>
+        <p className="dashboard-caption">Published row counts, season depth and capture receipts for every retained dataset behind this board. Derived means the table is built from a retained input and has no separate capture receipt; unavailable or incomplete metadata remains visible rather than being inferred from row volume.</p>
         <DataCoverageTable overview={overview} />
       </section>
       <section className="dashboard-section" aria-labelledby="dashboard-secondary">
