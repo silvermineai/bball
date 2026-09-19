@@ -23,6 +23,13 @@ describe("forecast lab filters", () => {
     expect(forecastLabFilterSearch(filters)).toBe("?view=model-delta&model=model-2027-a");
   });
 
+  it("round-trips the compact matchup-factor controls", () => {
+    const filters = parseForecastLabFilters("?view=factor&sort=factor");
+    expect(filters.view).toBe("factor");
+    expect(filters.sort).toBe("factor");
+    expect(forecastLabFilterSearch(filters)).toBe("?view=factor&sort=factor");
+  });
+
   it("keeps repeated model versions auditable in the selector label", () => {
     expect(formatForecastModelOption({
       model_id: "basketball-efficiency-v2-65f2629d5bd3",

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getBasketball, getBasketballMarketComparisons, getRosterModel } from "../../_lib/basketball-data";
+import { compactMatchupSignals } from "../../_lib/forecast-lab-analysis";
 import ForecastLab from "./ForecastLab";
 
 export const metadata = {
@@ -41,7 +42,13 @@ export default function Page() {
       <div className="hero-actions"><Link className="button" href="/basketball/matchups/">Open full matchup slate ↗</Link><Link className="hero-link" href="/research/scorecard/?sport=basketball">Open forecast record →</Link><a className="hero-link" href="/api/basketball/research/forecasts?season=2027">Download forecast JSON ↗</a></div>
     </div>
     <Suspense fallback={<p>Loading forecast lab…</p>}>
-      <ForecastLab overview={labOverview} scenarios={getRosterModel().scenarios} markets={getBasketballMarketComparisons()} />
+      <ForecastLab
+        overview={labOverview}
+        scenarios={getRosterModel().scenarios}
+        markets={getBasketballMarketComparisons()}
+        factorSignals={compactMatchupSignals(overview.upcoming)}
+        factorSignalModelId={overview.model.id}
+      />
     </Suspense>
   </>;
 }

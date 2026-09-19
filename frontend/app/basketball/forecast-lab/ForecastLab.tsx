@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BBGame, BBOverview, BBRosterScenario } from "../../_lib/basketball-types";
 import type { Comparison } from "../../_lib/research-types";
+import type { ForecastMatchupSignal } from "../../_lib/forecast-lab-analysis";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt, kick } from "../../_lib/format";
 import ManualMarketCheck from "../briefs/ManualMarketCheck";
@@ -34,6 +35,7 @@ type Row = {
   scenario: BBRosterScenario | null;
   comparisons: Comparison[];
   modelDelta: ModelDelta | null;
+  factorSignal: ForecastMatchupSignal | null;
 };
 
 type ModelDelta = {
@@ -82,10 +84,11 @@ function modelRow(
   scenario: BBRosterScenario | undefined,
   comparisons: Comparison[] | undefined,
   modelDelta: ModelDelta | null,
+  factorSignal: ForecastMatchupSignal | undefined,
 ): Row | null {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
-  return { game, prediction, scenario: scenario || null, comparisons: comparisons || [], modelDelta };
+  return { game, prediction, scenario: scenario || null, comparisons: comparisons || [], modelDelta, factorSignal: factorSignal || null };
 }
 
 function sortRows(rows: Row[], sort: Sort) {
@@ -101,6 +104,10 @@ function sortRows(rows: Row[], sort: Sort) {
       const bc = Math.max(b.prediction.home_win_probability, 1 - b.prediction.home_win_probability);
       return bc - ac || a.game.starts_at.localeCompare(b.game.starts_at);
     }
+    if (sort === "factor") {
+      return Math.abs(b.factorSignal?.edge || 0) - Math.abs(a.factorSignal?.edge || 0)
+        || a.game.starts_at.localeCompare(b.game.starts_at);
+    }
     return (b.prediction.margin_high - b.prediction.margin_low) - (a.prediction.margin_high - a.prediction.margin_low)
       || a.game.starts_at.localeCompare(b.game.starts_at);
   });
@@ -110,10 +117,14 @@ export default function ForecastLab({
   overview,
   scenarios,
   markets,
+  factorSignals,
+  factorSignalModelId,
 }: {
   overview: BBOverview;
   scenarios: BBRosterScenario[];
   markets: Record<string, Comparison[]>;
+  factorSignals: Record<string, ForecastMatchupSignal>;
+  factorSignalModelId: string;
 }) {
   const params = useSearchParams();
   const initial = parseForecastLabFilters(params.toString());
@@ -240,6 +251,10 @@ export default function ForecastLab({
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
+    const selectedModelId = modelSelection === "latest"
+      ? liveCatalog?.models[0]?.model_id || overview.model.id
+      : modelSelection;
+    const factorEditionMatches = selectedModelId === factorSignalModelId;
     const latestById = new Map(
       (modelSelection === "latest" ? activeGames : latestGames || []).map((game) => [game.id, game]),
     );
@@ -263,6 +278,7 @@ export default function ForecastLab({
                   }
                 : null;
             })(),
+        factorEditionMatches ? factorSignals[game.id] : undefined,
       ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
@@ -270,11 +286,12 @@ export default function ForecastLab({
         if (view === "cold-start") return !row.game.prediction && !!row.game.fallback_prediction;
         if (view === "market") return row.comparisons.length > 0;
         if (view === "model-delta") return !!row.modelDelta;
+        if (view === "factor") return !!row.factorSignal;
         return true;
       }),
       sort,
     );
-  }, [activeGames, latestGames, liveCatalog, liveMarkets, markets, modelSelection, query, scenarioByGame, sort, view]);
+  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, scenarioByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.reduce(
@@ -282,6 +299,11 @@ export default function ForecastLab({
     0,
   );
   const modelDeltaCount = rows.filter((row) => row.modelDelta).length;
+  const factorSignalCount = rows.filter((row) => row.factorSignal).length;
+  const selectedModelId = modelSelection === "latest"
+    ? liveCatalog?.models[0]?.model_id || overview.model.id
+    : modelSelection;
+  const factorEditionMatches = selectedModelId === factorSignalModelId;
   const modeledGames = activeGames.filter((game) => game.prediction || game.fallback_prediction);
   const confirmedStartCount = modeledGames.filter((game) => !game.time_tbd).length;
   const unconfirmedStartCount = modeledGames.length - confirmedStartCount;
@@ -309,7 +331,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Estimate type", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Latest home spread", "Spread edge", "Latest total", "Total edge", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -327,6 +349,11 @@ export default function ForecastLab({
         row.scenario?.roster_margin_low,
         row.scenario?.roster_margin_high,
         row.scenario?.primary_model_id,
+        row.factorSignal?.label,
+        row.factorSignal == null || row.factorSignal.edge === 0 ? null : row.factorSignal.edge > 0 ? "home" : "away",
+        row.factorSignal == null ? null : Math.abs(row.factorSignal.edge) * 100,
+        row.factorSignal?.season,
+        row.factorSignal ? factorSignalModelId : null,
         row.comparisons.length,
         marketQuote(row.comparisons, "spreads")?.line,
         marketQuote(row.comparisons, "spreads")?.model_difference,
@@ -356,20 +383,21 @@ export default function ForecastLab({
       <div className="toolbar">
         <label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search either program" /></label>
         <label className="control"><span>MODEL EDITION</span><select value={modelSelection} onChange={(event) => { setModelSelection(event.target.value); setMarketGameId(""); }}><option value="latest">Latest registered model</option>{liveCatalog?.models.map((model) => <option value={model.model_id} key={model.model_id}>{formatForecastModelOption(model)}</option>)}</select></label>
-        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
-        <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
+        <label className="control"><span>VIEW</span><select value={view} onChange={(event) => setView(event.target.value as View)}><option value="all">All modeled games</option><option value="factor">Four Factor evidence available</option><option value="scenario">Roster challenger available</option><option value="cold-start">Cold-start estimates</option><option value="market">Verified market observations</option><option value="model-delta">Model edition delta</option></select></label>
+        <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)}><option value="date">Scheduled date</option><option value="factor">Largest Four Factor mismatch</option><option value="disagreement">Largest roster disagreement</option><option value="confidence">Strongest primary signal</option><option value="uncertainty">Widest primary range</option></select></label>
       </div>
       <div className="button-row" style={{ marginTop: 12 }}>
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      <p className="note">This board compares published model artifacts. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
         <div><strong>{confirmedStartCount.toLocaleString()}</strong><span>Canonical starts marked timed</span></div>
         <div><strong>{unconfirmedStartCount.toLocaleString()}</strong><span>Starts still marked TBD</span></div>
         <div><strong>{(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()}</strong><span>Recorded source clocks confirmed</span></div>
         <div><strong>{scenarioCount.toLocaleString()}</strong><span>Roster scenarios</span></div>
+        <div><strong>{factorSignalCount.toLocaleString()}</strong><span>Games with factor context</span></div>
         <div><strong>{disagreement ? `${numeric(disagreement)} pts` : "—"}</strong><span>Largest model/scenario shift</span></div>
         <div><strong>{liveModel?.version || (modelSelection === "latest" ? overview.model.version : modelSelection)}</strong><span>Selected model edition</span></div>
         <div><strong>{modelDeltaCount.toLocaleString()}</strong><span>Edition deltas in view</span></div>
@@ -449,13 +477,14 @@ export default function ForecastLab({
       </div>
       <div className="table-scroll">
       <table className="data-table">
-          <thead><tr><th>Game</th><th>Primary model</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th><th>Edition delta</th></tr></thead>
+          <thead><tr><th>Game</th><th>Primary model</th><th>Largest factor mismatch</th><th>Roster challenger</th><th>Range / confidence</th><th>Market comparison</th><th>Edition delta</th></tr></thead>
           <tbody>{rows.map((row) => {
             const p = row.prediction;
             const confidence = Math.max(p.home_win_probability, 1 - p.home_win_probability);
             return <tr key={row.game.id}>
               <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}{row.game.prediction && <small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small>}</td>
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.game.prediction ? "primary" : "cold-start"}</small></td>
+              <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
               <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong><small>{row.comparisons[0].bookmaker} · {row.comparisons[0].market}</small>{marketQuote(row.comparisons, "spreads") && <small>Spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>Total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>No-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}</> : <span className="muted">No verified market quote</span>}</td>
@@ -467,7 +496,7 @@ export default function ForecastLab({
       {!rows.length && <p className="empty">No modeled games match this view.</p>}
       <section className="section two-col" style={{ marginTop: 34 }}>
         <div className="paper-panel"><div className="eyebrow">Read the disagreement</div><h2>Primary model first. Scenario second.</h2><p>The primary forecast is the historical opponent-adjusted efficiency and tempo model. The roster challenger uses prior net efficiency plus exact source-athlete-ID continuity and prior minutes. Its adjusted probability and range use the same held-out calibration as the identified primary model edition, while remaining a research sensitivity rather than the registered forecast.</p></div>
-        <div className="paper-panel"><div className="eyebrow">Verify the inputs</div><h2>Every row has a trail.</h2><p>Open a matchup brief for Four Factors, historical workload, source roster observations and the research ledger. Market rows appear only when a licensed pregame quote matched the exact game, participants and start time.</p><p><Link href="/basketball/model/">Read the model notebook →</Link> · <Link href="/basketball/recruiting/">Review recruiting evidence →</Link></p></div>
+        <div className="paper-panel"><div className="eyebrow">Verify the inputs</div><h2>Every row has a trail.</h2><p>The factor column shows the largest descriptive rate mismatch from the completed-season profile; it is not a point contribution or a current-lineup claim. Open the matchup brief for all Four Factors, historical workload, source roster observations and the research ledger. Market rows appear only when a licensed pregame quote matched the exact game, participants and start time.</p><p><Link href="/basketball/model/">Read the model notebook →</Link> · <Link href="/basketball/recruiting/">Review recruiting evidence →</Link></p></div>
       </section>
     </>
   );
