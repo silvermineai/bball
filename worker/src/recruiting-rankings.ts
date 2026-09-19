@@ -9,6 +9,7 @@ const DB_TIMEOUT_MS = 5000;
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
   athlete_id: z.string().regex(/^\d{1,15}$/).optional(),
+  team_id: z.string().regex(/^\d{1,15}$/).optional(),
   q: z.string().trim().max(100).optional(),
   position: z.string().trim().max(12).optional(),
   rank_max: z.coerce.number().int().min(1).max(1000).optional(),
@@ -43,7 +44,7 @@ const withheldPlaceholderRank = (alias: string) =>
   `${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL`;
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, q, position, rank_max, committed, movement, history: includeHistory, page } = c.req.valid("query");
+  const { season, athlete_id, team_id, q, position, rank_max, committed, movement, history: includeHistory, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -69,13 +70,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     "r.season=?",
     "r.edition=c.edition",
     ...(athlete_id ? ["r.athlete_id=?"] : []),
+    ...(team_id ? ["(CAST(r.committed_team_id AS TEXT)=? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(r.school_ids_json) THEN r.school_ids_json ELSE '[]' END) school WHERE CAST(school.value AS TEXT)=?))"] : []),
     ...(search ? ["(r.name LIKE ? ESCAPE '\\' OR r.high_school LIKE ? ESCAPE '\\' OR r.hometown LIKE ? ESCAPE '\\' OR r.committed_team_name LIKE ? ESCAPE '\\')"] : []),
     ...(positionValue ? ["upper(r.position)=?"] : []),
     ...(rank_max != null ? [`${currentRank} IS NOT NULL AND ${currentRank}<=?`] : []),
     committedClause,
     movementClause,
   ].join(" AND ");
-  const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : []), ...(rank_max != null ? [rank_max] : [])];
+  const binds: Array<string | number> = [season, ...(athlete_id ? [athlete_id] : []), ...(team_id ? [team_id, team_id] : []), ...(search ? [search, search, search, search] : []), ...(positionValue ? [positionValue] : []), ...(rank_max != null ? [rank_max] : [])];
   const db = researchDb(c.env);
   const cache = typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
   const cacheKey = new Request(c.req.url, { method: "GET" });

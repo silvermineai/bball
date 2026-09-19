@@ -10,6 +10,7 @@ import Dossier from "./Dossier";
 import ProgramRecruiting from "./ProgramRecruiting";
 import PublisherProgramContext from "./PublisherProgramContext";
 import LiveProgramSchedule from "./LiveProgramSchedule";
+import ProgramProspects from "./ProgramProspects";
 import type { PossessionStyleCatalog, PossessionStyleRow } from "../../../_lib/possession-style";
 export function generateStaticParams() {
   return getScoutIndex().teams.map((t) => ({ id: t.id }));
@@ -136,6 +137,7 @@ export default async function Page({
         rosters={rosters}
         readiness={rosterReadiness}
       />
+      <ProgramProspects teamId={id} programName={p.name} />
       <section className="section">
         <div className="section-heading">
           <div>

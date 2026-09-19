@@ -73,6 +73,20 @@ describe("ESPN recruiting rankings", () => {
     expect((await response.json() as { total: number }).total).toBe(1);
   });
 
+  it("filters a program prospect board by exact retained school or commitment ID", async () => {
+    const bind = vi.fn(() => ({
+      first: vi.fn(async () => ({ total: 2, committed_total: 1, ranked_total: 2, grade_total: 2 })),
+      all: vi.fn(async () => ({ results: [] })),
+    }));
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => { sqlCalls.push(sql); return { bind }; });
+    const response = await recruitingRankings.request("/?season=2027&team_id=2755&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls[0]).toContain("CAST(r.committed_team_id AS TEXT)=?");
+    expect(sqlCalls[0]).toContain("json_each(CASE WHEN json_valid(r.school_ids_json)");
+    expect(bind.mock.calls[0]).toEqual([2027, "2755", "2755"]);
+  });
+
   it("returns the complete retained rank history for an exact athlete lookup", async () => {
     const history = [
       { edition: "august", captured_at: "2026-08-01T00:00:00Z", rank: 42, grade: 96, status: "", committed_team_id: null, committed_team_name: null, source_url: "https://espn.test/42" },
