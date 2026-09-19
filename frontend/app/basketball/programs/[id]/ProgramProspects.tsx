@@ -151,7 +151,8 @@ export function combineProgramProspectClasses(releases: RecruitingClass[], teamI
     );
 }
 
-const CLASSES = [2026, 2027, 2028, 2029] as const;
+/** Every recruiting class currently retained by the national board. */
+export const PROGRAM_PROSPECT_CLASSES = [2025, 2026, 2027, 2028, 2029, 2030] as const;
 
 export default function ProgramProspects({ teamId, programName }: { teamId: string; programName: string }) {
   const [releases, setReleases] = useState<RecruitingClass[]>([]);
@@ -159,13 +160,13 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled(CLASSES.map((season) => loadProgramProspectClass(season, teamId, controller.signal))).then((results) => {
+    Promise.allSettled(PROGRAM_PROSPECT_CLASSES.map((season) => loadProgramProspectClass(season, teamId, controller.signal))).then((results) => {
       if (controller.signal.aborted) return;
       const available = results.flatMap((result) =>
         result.status === "fulfilled"
         && result.value
-        && result.value.season >= CLASSES[0]
-        && result.value.season <= CLASSES[CLASSES.length - 1]
+        && result.value.season >= PROGRAM_PROSPECT_CLASSES[0]
+        && result.value.season <= PROGRAM_PROSPECT_CLASSES[PROGRAM_PROSPECT_CLASSES.length - 1]
           ? [result.value]
           : [],
       );
@@ -182,7 +183,7 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
     <section className="section paper-panel program-prospect-panel" aria-labelledby="program-prospect-title">
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Recorded prospect links / 2026–29</div>
+          <div className="eyebrow">Recorded prospect links / 2025–30</div>
           <h2 id="program-prospect-title">Who has {programName} on the retained board?</h2>
         </div>
         <Link href="/basketball/recruiting/">Open the national board →</Link>
@@ -195,7 +196,7 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
       ) : status === "unavailable" ? (
         <p className="empty" role="status">The program prospect index is temporarily unavailable.</p>
       ) : summary.matched === 0 ? (
-        <p className="empty" role="status">No 2026–29 prospect row in the retained classes includes this exact program ID. Missing evidence does not mean the program is inactive.</p>
+        <p className="empty" role="status">No 2025–30 prospect row in the retained classes includes this exact program ID. Missing evidence does not mean the program is inactive.</p>
       ) : (
         <>
           <div className="strip recruiting-strip">

@@ -4,6 +4,7 @@ import {
   isExactProgramProspect,
   loadProgramProspectClass,
   programProspectEvidence,
+  PROGRAM_PROSPECT_CLASSES,
   summarizeProgramProspects,
   type ProgramProspect,
   type RecruitingClass,
@@ -25,6 +26,10 @@ const prospect = (overrides: Partial<ProgramProspect> = {}): ProgramProspect => 
 });
 
 describe("program prospect evidence", () => {
+  it("covers every retained national recruiting class", () => {
+    expect(PROGRAM_PROSPECT_CLASSES).toEqual([2025, 2026, 2027, 2028, 2029, 2030]);
+  });
+
   it("distinguishes a recorded commitment from a listed-school record", () => {
     expect(programProspectEvidence(prospect({ committed_team_id: "2755" }), "2755")).toBe("Recorded commitment");
     expect(programProspectEvidence(prospect(), "2755")).toBe("Listed school");
