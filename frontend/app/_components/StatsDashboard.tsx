@@ -421,7 +421,7 @@ export default function StatsDashboard() {
               <tr><th scope="row">Roster lens</th><td className="numeric">{rosterModel.coverage.scenario_games.toLocaleString()}</td><td>continuity scenario</td></tr>
             </tbody>
           </table>
-          <small>Every upcoming row has a primary or cold-start estimate. The roster lens is a separately evaluated scenario and does not overwrite the primary forecast.</small>
+          <small>Primary rows are publication-gated on team ratings, scouting workload, all four factors and roster continuity. Cold-start rows stay labeled when that packet is unavailable; the roster lens is a separate scenario and never overwrites the primary forecast.</small>
           <div className="dashboard-model-rule" />
           <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
           <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
