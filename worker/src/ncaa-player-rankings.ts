@@ -190,12 +190,16 @@ async function publishedRankingsFallback(
       return response;
     }
     const search = args.q?.toLowerCase();
-    const volume = (player: PublishedIndividualPlayer) => {
+    const volume = (player: PublishedIndividualPlayer): number | null | undefined => {
       if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(player.fga);
       if (args.metric === "three_pct") return finite(player.tpa);
       if (args.metric === "ft_pct") return finite(player.fta);
+      if (args.metric === "ast_to") return finite(player.tov);
       if (["tov_rate", "ast_rate", "points_poss"].includes(args.metric)) return finite(player.o_poss);
-      return null;
+      // The D1 query ignores minVolume for counting and per-game metrics.
+      // Preserve that behavior in the published fallback: a rate cutoff can
+      // remain in a shared URL when the reader switches to PPG, APG, etc.
+      return undefined;
     };
     const rows = players
       .filter((player) => finite(player.division) === 1)
@@ -207,7 +211,10 @@ async function publishedRankingsFallback(
       .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
       .filter((player) => !args.classYear || player.class_year === args.classYear)
       .filter((player) => !args.position || player.position === args.position)
-      .filter((player) => (volume(player) ?? 0) >= args.minVolume)
+      .filter((player) => {
+        const sample = volume(player);
+        return sample === undefined || (sample != null && sample >= args.minVolume);
+      })
       .map((player) => ({ player, value: playerMetric(player, args.metric) }))
       .filter((row): row is { player: PublishedIndividualPlayer; value: number } => row.value != null)
       .sort((a, b) => (args.metric === "topg" || args.metric === "tov_rate" ? a.value - b.value : b.value - a.value) || String(a.player.name || "").localeCompare(String(b.player.name || "")));

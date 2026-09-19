@@ -164,4 +164,60 @@ describe("NCAA player rankings availability", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ total: 0, rows: [] });
   });
+
+  it("ignores a retained rate cutoff for a metric without a volume denominator", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [{
+        player_id: 7,
+        division: 1,
+        name: "Example Scorer",
+        team_name: "Example U",
+        team_ncaa_id: 42,
+        games: 20,
+        mins: 600,
+        ppg: 18,
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ppg&minGames=5&minMinutes=200&minVolume=400",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 1,
+      rows: [expect.objectContaining({ player_id: "7", value: 18 })],
+    });
+  });
+
+  it("uses recorded turnovers as the fallback sample for assist-to-turnover rankings", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const player = {
+      division: 1,
+      team_ncaa_id: 42,
+      team_name: "Example U",
+      games: 20,
+      mins: 600,
+      ast: 100,
+    };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { ...player, player_id: 7, name: "Small Sample", tov: 24 },
+        { ...player, player_id: 8, name: "Qualified Sample", tov: 50 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ast_to&minGames=5&minMinutes=200&minVolume=25",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 1,
+      rows: [expect.objectContaining({ player_id: "8", value: 2 })],
+    });
+  });
 });
