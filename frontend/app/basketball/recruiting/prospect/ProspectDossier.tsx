@@ -12,6 +12,7 @@ import {
 } from "../../../_lib/recruiting-shortlist";
 import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-schools";
 import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
+import { prospectClassContext, type ProspectClassContextPayload } from "./class-context";
 
 type Prospect = {
   athlete_id: string;
@@ -44,7 +45,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -62,6 +63,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const [history, setHistory] = useState<RecruitingHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
+  const [classContextPayload, setClassContextPayload] = useState<ProspectClassContextPayload | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [mentions, setMentions] = useState<PublisherMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -76,6 +78,10 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     if (!athleteId) return;
     const controller = new AbortController();
     setError("");
+    setProspect(null);
+    setHistory([]);
+    setEdition(null);
+    setClassContextPayload(null);
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The prospect record is unavailable.");
@@ -85,6 +91,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
         if (controller.signal.aborted) return;
         setSource(value.source);
         setEdition(value.edition || null);
+        setClassContextPayload(value.class_context || null);
         setHistory(value.history || []);
         if (value.unavailable_reason) setError(value.unavailable_reason);
         else if (!value.rows.length) setError("That prospect is not in the selected class edition.");
@@ -135,6 +142,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const destinationChanges = commitmentTransitions(history);
   const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
   const latestHistory = history.at(-1);
+  const classContext = prospectClassContext(classContextPayload, prospect?.rank ?? null);
   const toggleProspectShortlist = () => {
     if (!prospect) return;
     const entry: RecruitingShortlistEntry = {
@@ -179,6 +187,21 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <p className="note">{rankMovement ? `Previous national rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier edition for this exact athlete ID is retained yet. Future captures will establish the comparison baseline."}</p>
             </section>;
           })()}
+          <section className="paper-panel" aria-label="Prospect class context" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Class denominator / same retained edition</div><h2>{classContext?.nationalRank ? `#${classContext.nationalRank} of ${classContext.ranked.toLocaleString()} ranked` : "Rank denominator unavailable"}</h2></div>
+              <span className="note">{classContext ? `${classContext.total.toLocaleString()} class rows` : "Unavailable"}</span>
+            </div>
+            {classContext ? <>
+              <div className="raw-stat-grid">
+                <div><dt>National rank</dt><dd>{classContext.nationalRank == null ? "—" : `#${classContext.nationalRank}`}</dd></div>
+                <div><dt>Rank coverage</dt><dd>{classContext.ranked.toLocaleString()} / {classContext.total.toLocaleString()}<small>{(classContext.rankCoverage! * 100).toFixed(1)}%</small></dd></div>
+                <div><dt>Grade coverage</dt><dd>{classContext.graded.toLocaleString()} / {classContext.total.toLocaleString()}<small>{(classContext.gradeCoverage! * 100).toFixed(1)}%</small></dd></div>
+                <div><dt>Recorded commitments</dt><dd>{classContext.committed.toLocaleString()} / {classContext.total.toLocaleString()}<small>{(classContext.commitmentRate! * 100).toFixed(1)}%</small></dd></div>
+              </div>
+              <p className="note" style={{ marginTop: 12 }}>The denominator is the complete unfiltered class in this exact edition. Ranked, graded and committed counts describe recorded coverage; they are not scouting grades or enrollment claims. Edition <span className="source-hash">{edition}</span>.</p>
+            </> : <p className="empty">A valid unfiltered class denominator is not attached to this exact prospect response. The recorded rank remains visible without an inferred cohort size.</p>}
+          </section>
           <section className="paper-panel" aria-label="Prospect commitment history" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Destination history / exact athlete ID</div><h2>{latestHistory?.committed_team_name || prospect.committed_team_name || "No destination recorded"}</h2></div>

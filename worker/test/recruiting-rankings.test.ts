@@ -73,6 +73,37 @@ describe("ESPN recruiting rankings", () => {
     expect((await response.json() as { total: number }).total).toBe(1);
   });
 
+  it("adds an unfiltered same-edition class denominator to exact athlete responses", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn((...args: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("AS class_total")
+            ? { class_total: 383, class_committed_total: 132, class_ranked_total: 301, class_grade_total: 302 }
+            : sql.includes("WITH cohort_rows")
+              ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+              : sql.includes("SELECT edition")
+                ? { edition: "edition-1", captured_at: "2026-09-19T00:00:00Z" }
+                : { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 }),
+          all: vi.fn(async () => ({ results: sql.includes("SELECT r.athlete_id")
+            ? [{ athlete_id: "260236", name: "Oneal Delancy", rank: 36, school_ids_json: "[]" }]
+            : [] })),
+          args,
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&athlete_id=260236&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { total: number; cohort: { ranked: number }; class_context: { total: number; committed: number; ranked: number; graded: number } };
+
+    expect(response.status).toBe(200);
+    expect(body.total).toBe(1);
+    expect(body.cohort.ranked).toBe(1);
+    expect(body.class_context).toEqual({ total: 383, committed: 132, ranked: 301, graded: 302 });
+    const contextQuery = prepare.mock.calls.find(([sql]) => String(sql).includes("AS class_total"));
+    expect(contextQuery?.[0]).toContain("WHERE r.season=? AND r.edition=c.edition");
+  });
+
   it("filters a program prospect board by exact retained school or commitment ID", async () => {
     const bind = vi.fn(() => ({
       first: vi.fn(async () => ({ total: 2, committed_total: 1, ranked_total: 2, grade_total: 2 })),

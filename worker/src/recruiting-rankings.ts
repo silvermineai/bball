@@ -98,6 +98,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}`,
     ).bind(...binds).first<{ total: number; committed_total: number | null; ranked_total: number | null; grade_total: number | null }>(), DB_TIMEOUT_MS);
+    const classContext = athlete_id ? await withTimeout(db.prepare(
+      `SELECT count(*) AS class_total,
+              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS class_committed_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS class_ranked_total,
+              sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS class_grade_total
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE r.season=? AND r.edition=c.edition`,
+    ).bind(season).first<{ class_total: number; class_committed_total: number | null; class_ranked_total: number | null; class_grade_total: number | null }>(), DB_TIMEOUT_MS) : null;
     const fieldCoverage = await withTimeout(db.prepare(
       `SELECT count(*) AS total,
               sum(CASE WHEN NULLIF(TRIM(r.position),'') IS NOT NULL THEN 1 ELSE 0 END) AS position,
@@ -245,6 +253,12 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         ranked: Number(count?.ranked_total || 0),
         graded: Number(count?.grade_total || 0),
       },
+      class_context: classContext ? {
+        total: Number(classContext.class_total || 0),
+        committed: Number(classContext.class_committed_total || 0),
+        ranked: Number(classContext.class_ranked_total || 0),
+        graded: Number(classContext.class_grade_total || 0),
+      } : undefined,
       field_coverage: {
         total: Number(fieldCoverage?.total || count?.total || 0),
         position: Number(fieldCoverage?.position || 0),
