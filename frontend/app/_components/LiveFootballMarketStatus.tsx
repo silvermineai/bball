@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
+import { footballMarketStatusDetail } from "../_lib/football-market-status";
 
 type MarketMetadata = {
   total?: number;
@@ -22,6 +23,7 @@ type ScorecardSummary = {
     winner_accuracy?: number | null;
     margin_mae?: number | null;
   };
+  market_metrics?: Array<{ games?: number | null }>;
 };
 
 type ScorecardResponse = {
@@ -62,6 +64,8 @@ export default function LiveFootballMarketStatus() {
 
   const summary = scorecard?.sports?.football;
   const metrics = summary?.metrics;
+  const marketMetrics = summary?.market_metrics || [];
+  const settledMarketComparisons = marketMetrics.reduce((total, group) => total + (Number.isFinite(group.games) && (group.games || 0) > 0 ? Math.trunc(group.games || 0) : 0), 0);
   const caveat = archive?.source === "partial"
     ? "The market archive is partially available."
     : archive?.source === "unavailable"
@@ -72,7 +76,15 @@ export default function LiveFootballMarketStatus() {
     <p className="note" role="status">
       {status === "live" && scorecard && summary
         ? <>
-            Live model-versus-market record: {(scorecard.qualifying_market_observations || 0).toLocaleString()} qualifying quote observations from {(scorecard.market_observations || 0).toLocaleString()} retained rows · {(summary.games_with_comparisons || 0).toLocaleString()} games with matched lines · {(metrics?.games || 0).toLocaleString()} settled forecasts. {metrics?.winner_accuracy != null ? `${(metrics.winner_accuracy * 100).toFixed(1)}% winner accuracy` : "Winner accuracy pending"}{metrics?.margin_mae != null ? ` · ${metrics.margin_mae.toFixed(1)}-point margin MAE` : ""}. {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
+            {footballMarketStatusDetail({
+              qualifyingMarketObservations: scorecard.qualifying_market_observations || 0,
+              marketObservations: scorecard.market_observations || 0,
+              gamesWithComparisons: summary.games_with_comparisons || 0,
+              settledMarketComparisons,
+              settledModelGames: metrics?.games || 0,
+              winnerAccuracy: metrics?.winner_accuracy ?? null,
+              marginMae: metrics?.margin_mae ?? null,
+            })} {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
           </>
         : status === "fallback"
           ? <>Live market record unavailable; the retained archive remains available. <Link href="/research/scorecard/?sport=football">Open the scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
