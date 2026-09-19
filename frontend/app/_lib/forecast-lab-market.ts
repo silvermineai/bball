@@ -9,6 +9,7 @@ function clock(value: string | null | undefined) {
 
 function completeQuote(quote: Comparison, market: ForecastLabMarket) {
   if (quote.market !== market || !Number.isFinite(quote.model_difference)) return false;
+  if (clock(quote.captured_at) === Number.NEGATIVE_INFINITY && clock(quote.updated_at) === Number.NEGATIVE_INFINITY) return false;
   if (market === "h2h") return quote.market_home_probability != null && Number.isFinite(quote.market_home_probability);
   return quote.line != null && Number.isFinite(quote.line);
 }

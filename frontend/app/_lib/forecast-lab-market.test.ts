@@ -27,6 +27,9 @@ describe("Forecast Lab market quote selection", () => {
       quote({ model_difference: Number.NaN }),
       quote({ market: "totals", line: 145.5 }),
     ], "spreads")).toBeNull();
+    expect(latestForecastLabMarketQuote([
+      quote({ captured_at: "not-a-clock", updated_at: "also-not-a-clock" }),
+    ], "spreads")).toBeNull();
   });
 
   it("requires a no-vig probability for a moneyline quote", () => {

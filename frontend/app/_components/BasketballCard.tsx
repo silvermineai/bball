@@ -10,6 +10,7 @@ import { date, fmt, kick } from "../_lib/format";
 import { forecastSignal } from "../_lib/basketball-matchups";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastUnknownTeams } from "../_lib/forecast-lab-analysis";
+import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 
 export default function BasketballCard({
   game: g,
@@ -34,6 +35,9 @@ export default function BasketballCard({
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signal = p ? forecastSignal(p) : null;
   const unknownTeams = forecastUnknownTeams(p);
+  const marketQuotes = (["spreads", "totals", "h2h"] as const)
+    .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))
+    .filter((quote): quote is NonNullable<typeof quote> => quote !== null);
   const contextLayers = [
     g.matchup_factors ? "four factors" : null,
     homeRating && awayRating ? "team ratings" : null,
@@ -45,7 +49,7 @@ export default function BasketballCard({
     scheduled: !!(g.source_time_valid && g.source_start),
     factors: !!g.matchup_factors,
     roster: !!rosterScenario,
-    market: !!g.market_comparisons?.length,
+    market: marketQuotes.length > 0,
   });
   const scheduleLabel = g.source_time_valid && g.source_start
     ? "confirmed tip"
@@ -235,17 +239,17 @@ export default function BasketballCard({
             <Link className="note" href={`/basketball/programs/${encodeURIComponent(g.home_id)}/`}>Home program dossier ↗</Link>
             <Link className="note" href={`/blog/basketball-game-${encodeURIComponent(g.id)}/`}>Game notebook ↗</Link>
           </div>
-          {g.market_comparisons?.length ? (
+          {marketQuotes.length ? (
             <div className="market-quotes">
               <div className="match-detail">
                 <strong>Verified pregame lines</strong>
                 <span className="muted">verified line feed</span>
               </div>
-              {g.market_comparisons.slice(0, 3).map((quote) => (
+              {marketQuotes.map((quote) => (
                 <div className="market-quote" key={`${quote.provider}-${quote.bookmaker}-${quote.market}`}>
                   <span>
                     Verified line · {quote.market}
-                    <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
+                    <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)} · updated {quote.updated_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
                     {comparisonGapLabel(quote) && <small className={`market-gap-${comparisonGapDirection(quote)}`}>Model gap · {comparisonGapLabel(quote)}</small>}
                   </span>
                   <strong>
@@ -276,7 +280,7 @@ export default function BasketballCard({
         {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
         roster changes are not model features.
         <br />
-        {g.market_comparisons?.length ? "" : "No verified pregame market line imported. "}
+        {marketQuotes.length ? "" : "No verified pregame market line imported. "}
         <Link href="/research/scorecard/?sport=basketball">
           Check the forecast record →
         </Link>
