@@ -116,6 +116,14 @@ export default function BasketballCard({
             <span>{signal?.label}</span>
           </div>
           <div className="match-detail muted">
+            <span>Forecast edition</span>
+            <span>{g.forecast_model_id || "edition unavailable"}</span>
+          </div>
+          <div className="match-detail muted">
+            <span>Forecast generated</span>
+            <span>{g.forecast_created_at && Number.isFinite(Date.parse(g.forecast_created_at)) ? kick(g.forecast_created_at) : "clock unavailable"}</span>
+          </div>
+          <div className="match-detail muted">
             <span>Projected home margin</span>
             <span>{fmt(p.home_margin, 1)}</span>
           </div>

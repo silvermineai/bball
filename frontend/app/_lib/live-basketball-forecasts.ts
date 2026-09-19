@@ -212,6 +212,7 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
         prediction: null,
       }),
       forecast_model_id: row.model_id || base?.forecast_model_id || null,
+      forecast_created_at: row.created_at ?? base?.forecast_created_at ?? null,
       starts_at: row.starts_at,
       home_id: row.home_id,
       away_id: row.away_id,
@@ -260,6 +261,7 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
   return {
     ...game,
     forecast_model_id: row.model_id || game.forecast_model_id || null,
+    forecast_created_at: row.created_at ?? game.forecast_created_at ?? null,
     starts_at: row.starts_at,
     home_id: row.home_id,
     away_id: row.away_id,

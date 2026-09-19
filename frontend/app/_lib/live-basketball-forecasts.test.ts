@@ -188,6 +188,7 @@ describe("live basketball forecast merge", () => {
     const rows = [{
       game_id: "a",
       model_id: "model-new",
+      created_at: "2026-09-10T12:00:00Z",
       season: 2027,
       starts_at: "2026-11-02T06:00:00Z",
       home_id: "a-home",
@@ -208,6 +209,7 @@ describe("live basketball forecast merge", () => {
     expect(merged.map((item) => item.id)).toEqual(["a", "b"]);
     expect(merged[0].prediction?.home_margin).toBe(9);
     expect(merged[0].forecast_model_id).toBe("model-new");
+    expect(merged[0].forecast_created_at).toBe("2026-09-10T12:00:00Z");
     expect(merged[0].venue).toBe("Updated venue");
     expect(merged[0].source_start).toBe("2026-11-02T06:00:00Z");
     expect(merged[0].source_time_valid).toBe(true);

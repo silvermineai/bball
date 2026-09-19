@@ -29,6 +29,8 @@ export type BBGame = {
   id: string;
   /** Exact forecast edition attached by the live D1 response after hydration. */
   forecast_model_id?: string | null;
+  /** Forecast row creation clock from the same live edition. */
+  forecast_created_at?: string | null;
   season: number;
   starts_at: string;
   home_id: string;
