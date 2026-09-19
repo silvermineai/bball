@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { buildNcaaRecentForm } from "./ncaa-player-form";
+import { buildNcaaRecentForm, gameEvidenceWindowLabel } from "./ncaa-player-form";
 
 const game = (stats: Record<string, number | null | undefined>) => ({ stats });
 
 describe("NCAA player recent form", () => {
+  it("shows the loaded window against the recorded season total", () => {
+    expect(gameEvidenceWindowLabel(35, 12)).toBe("Latest 12 of 35 recorded games");
+    expect(gameEvidenceWindowLabel(12, 12)).toBe("12 recorded games");
+    expect(gameEvidenceWindowLabel(0, 0)).toBe("No recorded games");
+  });
+
   it("pools shooting efficiency and compares the newest window with the prior window", () => {
     const result = buildNcaaRecentForm([
       game({ pts: 20, mins: 30, fga: 10, fta: 4 }),

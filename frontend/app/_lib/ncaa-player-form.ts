@@ -14,6 +14,16 @@ export type NcaaRecentForm = {
   points_delta: number | null;
 };
 
+/** Describe the visible game-log window against the season total. */
+export function gameEvidenceWindowLabel(recordedGames: number, loadedRows: number) {
+  const total = Number.isFinite(recordedGames) && recordedGames >= 0 ? Math.trunc(recordedGames) : 0;
+  const loaded = Number.isFinite(loadedRows) && loadedRows >= 0 ? Math.trunc(loadedRows) : 0;
+  if (total > loaded && loaded > 0) return `Latest ${loaded} of ${total} recorded games`;
+  if (total > 0) return `${total} recorded games`;
+  if (loaded > 0) return `${loaded} retained rows`;
+  return "No recorded games";
+}
+
 function numberValue(stats: NcaaFormGame["stats"], key: string) {
   const value = stats[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
