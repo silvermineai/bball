@@ -12,6 +12,19 @@ export type ForecastModelOption = {
   target_season?: number | null;
 };
 
+/** Return a held-out baseline delta only when both MAEs are valid. */
+export function baselineMarginDelta(
+  modelMae: number | null | undefined,
+  baselineMae: number | null | undefined,
+) {
+  if (
+    modelMae == null || baselineMae == null
+    || !Number.isFinite(modelMae) || !Number.isFinite(baselineMae)
+    || modelMae < 0 || baselineMae <= 0
+  ) return null;
+  return Number((baselineMae - modelMae).toFixed(2));
+}
+
 /** Keep repeated model versions distinguishable in the audit selector. */
 export const formatForecastModelOption = (model: ForecastModelOption): string => {
   const captured = model.last_created_at

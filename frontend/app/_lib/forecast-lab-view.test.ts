@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastLabFilterSearch, formatForecastModelOption, parseForecastLabFilters } from "./forecast-lab-view";
+import { baselineMarginDelta, forecastLabFilterSearch, formatForecastModelOption, parseForecastLabFilters } from "./forecast-lab-view";
 
 describe("forecast lab filters", () => {
   it("round-trips a selected market game with the lab view", () => {
@@ -35,6 +35,13 @@ describe("forecast lab filters", () => {
     expect(filters.view).toBe("coverage-gap");
     expect(filters.sort).toBe("coverage");
     expect(forecastLabFilterSearch(filters)).toBe("?view=coverage-gap&sort=coverage");
+  });
+
+  it("calculates a signed holdout margin delta and fails closed on bad metadata", () => {
+    expect(baselineMarginDelta(10.2640704569, 11.9590124948)).toBe(1.69);
+    expect(baselineMarginDelta(12, 10)).toBe(-2);
+    expect(baselineMarginDelta(Number.NaN, 11)).toBeNull();
+    expect(baselineMarginDelta(10, 0)).toBeNull();
   });
 
   it("keeps repeated model versions auditable in the selector label", () => {
