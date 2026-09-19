@@ -145,7 +145,11 @@ ncaaShooting.get("/", zValidator("query", querySchema), async (c) => {
     } catch {
       // Preserve the ranked row while withholding a malformed shot payload.
     }
-    return { ...row, stats };
+    // Coordinate attempts are intentionally served by the exact player card,
+    // where the caller has selected one identity. Keep the ranking/table
+    // endpoint compact while exposing coverage counts for discovery.
+    const { coordinates: _coordinates, ...summary } = stats;
+    return { ...row, stats: summary };
   }) });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

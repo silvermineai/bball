@@ -386,6 +386,49 @@ class BasketballIngestTests(unittest.TestCase):
         self.assertEqual(
             self.conn.execute("SELECT count(*) FROM bb_unresolved").fetchone()[0], 0
         )
+
+    def test_numeric_ncaa_shots_retain_coordinates_with_coverage_counts(self):
+        ingest(
+            self.conn,
+            "ncaa_shots",
+            2026,
+            [{
+                "shooter_player_id": "12345",
+                "ncaa_team_id": "678",
+                "shooter_clean_name": "A Player",
+                "team": "A Team",
+                "contest_id": "9001",
+                "made": True,
+                "point_value": 3,
+                "shot_zone": "abovebreak3",
+                "shot_type": "unknown",
+                "dist_ft": 25.2,
+                "shot_x": -12.5,
+                "shot_y": 23.2,
+            }, {
+                "shooter_player_id": "12345",
+                "ncaa_team_id": "678",
+                "shooter_clean_name": "A Player",
+                "team": "A Team",
+                "contest_id": "9002",
+                "made": False,
+                "point_value": 2,
+                "shot_zone": "rim",
+                "shot_type": "unknown",
+                "dist_ft": 1.0,
+                "shot_x": None,
+                "shot_y": None,
+            }],
+            {},
+        )
+        stats = json.loads(self.conn.execute(
+            "SELECT stats_json FROM bb_ncaa_player_shooting WHERE player_id='12345'"
+        ).fetchone()[0])
+        self.assertEqual(stats["coordinate_count"], 2)
+        self.assertEqual(stats["located_count"], 1)
+        self.assertEqual(stats["coordinates"][0]["x"], -12.5)
+        self.assertEqual(stats["coordinates"][0]["contest_id"], "9001")
+
     def test_unknown_numeric_ncaa_source_stats_are_retained(self):
         self.conn.executescript(
             (ROOT / "worker/migrations/0021_basketball_ncaa_player_box.sql").read_text()

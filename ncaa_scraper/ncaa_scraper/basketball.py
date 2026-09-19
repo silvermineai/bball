@@ -666,6 +666,10 @@ def ingest(conn, dataset, year, rows, receipt):
                 "makes": 0, "points": 0, "distance_sum": 0.0,
                 "distance_count": 0, "zones": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
                 "types": defaultdict(lambda: {"attempts": 0, "makes": 0, "points": 0}),
+                # Keep the source attempt geometry alongside the aggregate
+                # profile.  The player card can therefore render a shot chart
+                # without joining on names or substituting another feed.
+                "coordinates": [],
             })
             for i, r in enumerate(rows):
                 canonical_player = source_label(r.get("shooter_player_id"))
@@ -711,6 +715,21 @@ def ingest(conn, dataset, year, rows, receipt):
                     item["attempts"] += 1
                     item["makes"] += int(made)
                     item["points"] += points
+                # Coordinates are retained only for rows with a canonical
+                # NCAA player ID.  Source-label identities remain available
+                # in the aggregate table but cannot be safely attached to a
+                # player card.  Preserve nulls so coverage remains auditable.
+                if not player_id.startswith("source:"):
+                    entry["coordinates"].append({
+                        "contest_id": source_label(r.get("contest_id")),
+                        "x": number(r.get("shot_x")),
+                        "y": number(r.get("shot_y")),
+                        "distance_ft": distance,
+                        "zone": source_label(r.get("shot_zone")) or "unknown",
+                        "type": source_label(r.get("shot_type")) or "unknown",
+                        "made": made,
+                        "points": points,
+                    })
             conn.executemany(
                 "INSERT OR REPLACE INTO bb_ncaa_player_shooting VALUES (?,?,?,?,?,?)",
                 [
@@ -720,6 +739,9 @@ def ingest(conn, dataset, year, rows, receipt):
                             "attempts": entry["attempts"], "makes": entry["makes"], "points": entry["points"],
                             "distance_sum": round(entry["distance_sum"], 4), "distance_count": entry["distance_count"],
                             "zones": entry["zones"], "types": entry["types"],
+                            "coordinates": entry["coordinates"],
+                            "coordinate_count": len(entry["coordinates"]),
+                            "located_count": sum(1 for shot in entry["coordinates"] if shot["x"] is not None and shot["y"] is not None),
                             "identity_basis": "source_label_only" if player_id.startswith("source:") else "ncaa_id",
                         }, separators=(",", ":")),
                     )
