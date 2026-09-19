@@ -31,6 +31,21 @@ type LiveScorecardResponse = {
   games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[] }>;
 };
 
+export type LiveMarketComparisonStatus = "checking_forecast" | "checking_market" | "ready" | "unavailable";
+
+/** Keep an empty market map from being presented as a completed zero-quote read. */
+export function liveMarketComparisonStatus(args: {
+  modelId: string | null;
+  forecastReady: boolean;
+  forecastError?: string;
+  marketError?: string;
+  comparisons: Record<string, Comparison[]> | null;
+}): LiveMarketComparisonStatus {
+  if (args.marketError || args.forecastError || (args.forecastReady && !args.modelId)) return "unavailable";
+  if (args.comparisons) return "ready";
+  return args.forecastReady ? "checking_market" : "checking_forecast";
+}
+
 /** Resolve one immutable forecast edition before attaching market evidence. */
 export function forecastModelId(rows: Pick<LiveForecastRow, "model_id">[]) {
   const ids = new Set(rows.map((row) => row.model_id).filter((value): value is string => Boolean(value)));

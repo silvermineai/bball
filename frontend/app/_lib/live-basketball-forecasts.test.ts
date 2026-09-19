@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { forecastModelId, loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -31,6 +31,14 @@ const game = (id: string, starts_at: string, current: BBGame["prediction"]): BBG
 });
 
 describe("live basketball forecast merge", () => {
+  it("withholds the market status until a forecast edition is verified", () => {
+    expect(liveMarketComparisonStatus({ modelId: null, forecastReady: false, comparisons: null })).toBe("checking_forecast");
+    expect(liveMarketComparisonStatus({ modelId: null, forecastReady: true, comparisons: null })).toBe("unavailable");
+    expect(liveMarketComparisonStatus({ modelId: "model-a", forecastReady: true, comparisons: null })).toBe("checking_market");
+    expect(liveMarketComparisonStatus({ modelId: "model-a", forecastReady: true, comparisons: {} })).toBe("ready");
+    expect(liveMarketComparisonStatus({ modelId: "model-a", forecastReady: true, marketError: "read failed", comparisons: null })).toBe("unavailable");
+  });
+
   it("requests a selected stored model edition without changing the endpoint contract", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,

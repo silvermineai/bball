@@ -20,6 +20,7 @@ import {
   forecastModelId,
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
+  liveMarketComparisonStatus,
   matchingRosterScenario,
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
@@ -134,6 +135,13 @@ export default function Matchups({
   }, [publisherTeamIds]);
 
   useEffect(() => {
+    if (!liveForecastModelId) {
+      setLiveMarketComparisons(null);
+      setLiveMarketsError("");
+      return;
+    }
+    setLiveMarketComparisons(null);
+    setLiveMarketsError("");
     const controller = new AbortController();
     setLiveForecastModelId(null);
     const load = async () => {
@@ -163,7 +171,7 @@ export default function Matchups({
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
-          setLiveMarketComparisons({});
+          setLiveMarketComparisons(null);
           setLiveMarketsError(reason instanceof Error ? reason.message : "Live market comparisons unavailable.");
         }
       });
@@ -247,6 +255,13 @@ export default function Matchups({
   const latestModelId = liveCatalog?.models?.find((item) => item.target_season === 2027)?.model_id
     || liveCatalog?.models?.[0]?.model_id
     || model.id;
+  const liveMarketStatus = liveMarketComparisonStatus({
+    modelId: liveForecastModelId,
+    forecastReady: liveGames !== null,
+    forecastError: liveGamesError,
+    marketError: liveMarketsError,
+    comparisons: liveMarketComparisons,
+  });
   const prepRows = prepIds
     .map((id) => scheduledGames.find((game) => game.id === id))
     .filter((game): game is BBGame => !!game);
@@ -408,11 +423,17 @@ export default function Matchups({
       </p>
       {latestModelId !== rosterPrimaryModelId && <p className="notice" role="status">Roster lens withheld because its primary edition <span className="mono">{rosterPrimaryModelId}</span> does not match the live forecast edition <span className="mono">{latestModelId}</span>.</p>}
       <p className="note" role="status">
-        {liveMarketComparisons
-          ? `Live market comparisons: ${Object.values(liveMarketComparisons).filter((quotes) => quotes.length > 0).length.toLocaleString()} games with qualifying quotes.`
-          : liveMarketsError
-            ? `${liveMarketsError} Showing the bundled market edition.`
-            : "Checking live market comparisons…"}
+        {liveMarketStatus === "ready"
+          ? `Live market comparisons: ${Object.values(liveMarketComparisons || {}).filter((quotes) => quotes.length > 0).length.toLocaleString()} games with qualifying quotes.`
+          : liveMarketStatus === "unavailable"
+            ? liveMarketsError
+              ? `${liveMarketsError} Market comparisons are withheld; showing the bundled market edition where available.`
+              : liveGamesError
+                ? `${liveGamesError} Market comparisons are withheld until a live forecast edition is verified.`
+                : "Market comparisons are withheld because the live forecast edition could not be verified."
+            : liveMarketStatus === "checking_market"
+              ? "Checking live market comparisons for the verified forecast edition…"
+              : "Checking the live forecast edition before loading market comparisons…"}
       </p>
       <p className="note" role="status">
         {liveGames
