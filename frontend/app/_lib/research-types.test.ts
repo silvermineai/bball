@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modelReliabilityScope, type SportSummary } from "./research-types";
+import { marketEvidenceState, modelReliabilityScope, type SportSummary } from "./research-types";
 
 const summary = (overrides: Partial<SportSummary> = {}): SportSummary => ({
   games: 3,
@@ -55,5 +55,21 @@ describe("model reliability scope", () => {
       ],
     }), "live");
     expect(scope).toMatchObject({ current: { model_id: "live" }, lineage: "matched", authoritativeModelId: "live" });
+  });
+});
+
+describe("market evidence state", () => {
+  it("keeps retained but rejected rows visible as captured evidence", () => {
+    expect(marketEvidenceState(7, 0)).toBe("retained_unqualified");
+  });
+
+  it("only labels a market quote qualified when a retained row exists", () => {
+    expect(marketEvidenceState(7, 1)).toBe("qualified");
+    expect(marketEvidenceState(0, 1)).toBe("inconsistent");
+  });
+
+  it("treats missing or empty counts as no captured evidence", () => {
+    expect(marketEvidenceState(undefined, undefined)).toBe("none");
+    expect(marketEvidenceState(Number.NaN, 0)).toBe("none");
   });
 });

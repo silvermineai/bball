@@ -101,6 +101,27 @@ export type SportSummary = {
   }[];
 };
 
+export type MarketEvidenceState = "none" | "retained_unqualified" | "qualified" | "inconsistent";
+
+/**
+ * Keep an archived quote distinct from a quote that survived the scorecard's
+ * forecast-registration, participant, kickoff, and freshness checks.
+ *
+ * A qualifying count without any retained rows is an invalid ledger state. It
+ * must not be rendered as evidence of a usable market quote.
+ */
+export function marketEvidenceState(
+  retained: number | null | undefined,
+  qualifying: number | null | undefined,
+): MarketEvidenceState {
+  const retainedCount = typeof retained === "number" && Number.isFinite(retained) ? retained : 0;
+  const qualifyingCount = typeof qualifying === "number" && Number.isFinite(qualifying) ? qualifying : 0;
+  if (qualifyingCount > 0 && retainedCount <= 0) return "inconsistent";
+  if (qualifyingCount > 0) return "qualified";
+  if (retainedCount > 0) return "retained_unqualified";
+  return "none";
+}
+
 export type ModelEditionMetric = NonNullable<SportSummary["model_metrics"]>[number];
 
 export type ModelReliabilityScope = {

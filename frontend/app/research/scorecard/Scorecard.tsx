@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
-import { modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
+import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
@@ -126,7 +126,9 @@ export default function Scorecard() {
   const summary = data.sports[sport],
     m = summary.metrics,
     marketObservations = summary.market_observations ?? 0,
+    qualifyingMarketObservations = summary.qualifying_market_observations ?? 0,
     unmatchedEvents = summary.unmatched_events ?? 0,
+    marketEvidence = marketEvidenceState(marketObservations, qualifyingMarketObservations),
     reliabilityScope = modelReliabilityScope(summary, liveModelId);
   const rows = data.games.filter(
     (g) =>
@@ -334,16 +336,24 @@ export default function Scorecard() {
       <section className="paper-panel" style={{ marginTop: 24 }} aria-live="polite">
         <div className="eyebrow">Licensed odds feed / capture status</div>
         <h3 style={{ marginTop: 8 }}>
-          {marketObservations
-            ? marketObservations.toLocaleString() + " retained market observations"
-            : "No licensed pregame quote has been captured"}
+          {marketEvidence === "qualified"
+            ? `${marketObservations.toLocaleString()} retained market observations`
+            : marketEvidence === "retained_unqualified"
+              ? `${marketObservations.toLocaleString()} retained observations · none qualify yet`
+              : marketEvidence === "inconsistent"
+                ? "Market evidence counts are inconsistent"
+                : "No licensed pregame quote has been captured"}
         </h3>
         <p>
-          {marketObservations
-            ? unmatchedEvents.toLocaleString() + " feed events remain unmatched or rejected for review. Only quotes that pass participant, kickoff and capture-time checks can enter a model comparison."
-            : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
+          {marketEvidence === "qualified"
+            ? `${qualifyingMarketObservations.toLocaleString()} observations passed the forecast-registration, participant, kickoff, and freshness checks. ${unmatchedEvents.toLocaleString()} feed events remain unmatched or rejected for review.`
+            : marketEvidence === "retained_unqualified"
+              ? `${marketObservations.toLocaleString()} quote rows were retained, but none passed the forecast-registration, participant, kickoff, and freshness checks. The scorecard withholds model-versus-market comparisons until a quote qualifies.`
+              : marketEvidence === "inconsistent"
+                ? "The ledger reports qualifying observations without retained rows. Model-versus-market comparisons are withheld until the ledger is repaired."
+                : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
         </p>
-        {!marketObservations && (
+        {marketEvidence === "none" && (
           <p className="note">
             A licensed odds feed must be configured by an operator; keys never
             enter frontend code or logs. Read the{" "}
@@ -376,9 +386,13 @@ export default function Scorecard() {
               : "The market record is still empty."}
           </h3>
           <p>
-            {marketObservations
+            {marketEvidence === "qualified"
               ? "No settled games have qualifying quotes for this sport yet."
-              : "No timestamped odds-feed observations have been collected. Historical lines without a reliable pregame clock are excluded."}{" "}
+              : marketEvidence === "retained_unqualified"
+                ? "Retained rows exist, but none qualify for a comparison because the required forecast, participant, kickoff, or freshness checks did not pass."
+                : marketEvidence === "inconsistent"
+                  ? "The ledger reports qualifying observations without retained rows, so comparisons remain withheld until the counts agree."
+                  : "No timestamped odds-feed observations have been collected. Historical lines without a reliable pregame clock are excluded."}{" "}
             Model-versus-market errors will appear here once matched games
             settle. Open the <Link href="/research/markets/">market archive</Link> for retained observations and its <Link href="/research/markets/#market-policy">capture policy</Link> for the licensed feed workflow.
           </p>
