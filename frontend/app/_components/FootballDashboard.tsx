@@ -8,6 +8,7 @@ import LiveFootballDashboardForecastTable from "./LiveFootballDashboardForecastT
 import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 import DashboardExportButton from "./DashboardExportButton";
+import { footballDivisionCoverage } from "../_lib/football-coverage";
 
 type Production = {
   games?: number | null;
@@ -22,6 +23,7 @@ type Production = {
 
 type Player = {
   id: string;
+  team_id: string;
   name: string;
   team: string;
   conference: string;
@@ -150,6 +152,7 @@ function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
 export default function FootballDashboard() {
   const overview = getOverview();
   const players = getPlayers(overview.season);
+  const divisionCoverage = footballDivisionCoverage(overview.upcoming, players);
   const forecasts = overview.upcoming.filter((game) => game.prediction);
   const completedPlayerSeason = overview.season - 1;
   const eventEditions = getEventEditions(overview.season);
@@ -226,6 +229,24 @@ export default function FootballDashboard() {
       <div><strong>{overview.coverage.upcoming_games.toLocaleString()}</strong><span>Upcoming games</span></div>
       <div><strong>{overview.coverage.ncaa_player_stats_rows.toLocaleString()}</strong><span>Player stat rows</span></div>
     </div>
+    <section className="dashboard-section" aria-labelledby="football-scope">
+      <div className="dashboard-section-heading"><div><span className="eyebrow">ARCHIVE SCOPE</span><h2 id="football-scope">Know what the board covers.</h2></div><Link href="/research/coverage/">Coverage details →</Link></div>
+      <p className="dashboard-caption">The football edition currently contains FBS and FCS rows. Player counts are unique source athlete IDs in the {completedPlayerSeason} player edition; game counts are {overview.season} upcoming games involving each division. A cross-division game appears in both rows, and games without a model prediction stay visible.</p>
+      <div className="dashboard-table-wrap">
+        <table className="data-table dashboard-table">
+          <thead><tr><th>Imported division</th><th className="numeric">Players</th><th className="numeric">Team rows</th><th className="numeric">Upcoming games</th><th className="numeric">Forecasts</th><th className="numeric">No forecast</th></tr></thead>
+          <tbody>{divisionCoverage.map((row) => <tr key={row.division}>
+            <th scope="row">{row.division.toUpperCase()}<small>{row.player_records.toLocaleString()} player records in the edition</small></th>
+            <td className="numeric">{row.players.toLocaleString()}</td>
+            <td className="numeric">{row.teams.toLocaleString()}</td>
+            <td className="numeric">{row.upcoming_games.toLocaleString()}</td>
+            <td className="numeric"><strong>{row.forecast_games.toLocaleString()}</strong></td>
+            <td className="numeric">{row.games_without_forecast.toLocaleString()}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <p className="note">Division II and Division III football are not imported into this edition. They are not represented by FBS or FCS rows.</p>
+    </section>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
       <p className="dashboard-caption">Every row has a Silvermine score projection, win probability, margin, calibrated range and total. Historical market comparisons stay on the matchup desk when an eligible quote is available.</p>
