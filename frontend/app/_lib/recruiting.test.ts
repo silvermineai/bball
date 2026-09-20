@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   recruitingRows,
+  parseRecruitingRelease,
   recruitingRosterProductionComparisons,
   publicationDate,
   parseRecruitingCoverageFilters,
@@ -42,6 +43,15 @@ const stat = (mpg: number, ppg: number) => ({
   identity_basis: "test",
 });
 describe("school announcement histories", () => {
+  it("accepts the complete source graph and withholds broken live packets", () => {
+    expect(parseRecruitingRelease(data)?.coverage).toEqual(data.coverage);
+    const broken = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
+    broken.events[0].source_id = "missing-source";
+    expect(parseRecruitingRelease(broken)).toBeNull();
+    const countMismatch = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
+    countMismatch.coverage.events -= 1;
+    expect(parseRecruitingRelease(countMismatch)).toBeNull();
+  });
   it("shows a later availability report and preserves the signing", () => {
     const row = recruitingRows(data).find(
       (p) => p.name === "Brandon McCoy Jr.",

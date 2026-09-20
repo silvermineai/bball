@@ -18,7 +18,7 @@ function publicRelease(value: unknown, season: number, firstRecordedAt: string):
   const release = value && typeof value === "object" && !Array.isArray(value)
     ? value as RecruitingRelease
     : {};
-  const { sources: _sources, stats_source: _statsSource, ...safe } = release;
+  const { sources: rawSources, stats_source: _statsSource, ...safe } = release;
   const programs = Array.isArray(safe.programs)
     ? safe.programs.flatMap((value) => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -37,10 +37,37 @@ function publicRelease(value: unknown, season: number, firstRecordedAt: string):
   const sourceCount = Number.isSafeInteger(coverage.sources) && Number(coverage.sources) >= 0
     ? Number(coverage.sources)
     : null;
+  // Keep the activity timeline resolvable without republishing provider URLs
+  // or names. The client only needs the retained source ID, publication and
+  // review clocks, title and source digest to explain the evidence row.
+  const sources = Array.isArray(rawSources)
+    ? rawSources.flatMap((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const source = value as Record<string, unknown>;
+      const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : null;
+      const teamId = source.team_id == null ? null : String(source.team_id);
+      const publishedOn = typeof source.published_on === "string" ? source.published_on : null;
+      const checkedAt = typeof source.checked_at === "string" ? source.checked_at : null;
+      if (!id || !teamId || !publishedOn || !checkedAt) return [];
+      return [{
+        id,
+        team_id: teamId,
+        url: "",
+        title: typeof source.title === "string" ? source.title : "",
+        publisher: "",
+        published_on: publishedOn,
+        date_basis: typeof source.date_basis === "string" ? source.date_basis : "",
+        checked_at: checkedAt,
+        review_note: typeof source.review_note === "string" ? source.review_note : null,
+        source_sha256: typeof source.source_sha256 === "string" && /^[a-f0-9]{64}$/i.test(source.source_sha256) ? source.source_sha256.toLowerCase() : null,
+      }];
+    })
+    : [];
   return {
     ...safe,
     first_recorded_at: firstRecordedAt,
     programs,
+    sources,
     source_receipt: {
       dataset: "basketball_recruiting",
       season,

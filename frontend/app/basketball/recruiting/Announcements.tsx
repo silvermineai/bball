@@ -14,6 +14,7 @@ import {
   summarizeRecruitingPrograms,
   summarizeRecruitingActivity,
   rosterNameMatch,
+  parseRecruitingRelease,
   type RecruitingSort,
   type RecruitingRelease,
 } from "../../_lib/recruiting";
@@ -62,10 +63,13 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
     fetch("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live recruiting edition is unavailable.");
-        return response.json() as Promise<RecruitingRelease>;
+        return response.json() as Promise<unknown>;
       })
       .then((value) => {
-        if (!controller.signal.aborted) setLiveData(value);
+        if (controller.signal.aborted) return;
+        const parsed = parseRecruitingRelease(value, 2027);
+        if (!parsed) throw new Error("The live recruiting edition failed source-graph integrity checks.");
+        setLiveData(parsed);
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {

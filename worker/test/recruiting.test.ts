@@ -30,6 +30,7 @@ describe("reviewed recruiting editions", () => {
       edition: "a".repeat(64),
       coverage: { sources: 1 },
       programs: [],
+      sources: [],
       first_recorded_at: "2026-09-05T00:00:00Z",
       source_receipt: {
         dataset: "basketball_recruiting",
@@ -46,12 +47,25 @@ describe("reviewed recruiting editions", () => {
   it("preserves recruiting facts while withholding provider references", async () => {
     const payload = {
       edition: "b".repeat(64),
-      coverage: { sources: 2 },
+      coverage: { sources: 1 },
       programs: [
         { id: 41, name: "UConn", host: "uconnhuskies.com", publisher: "UConn Athletics" },
         { id: 42, name: "", host: "empty.invalid" },
       ],
-      sources: [{ id: "uconn", url: "https://uconnhuskies.com/release", publisher: "UConn Athletics" }],
+      sources: [
+        {
+          id: "uconn",
+          team_id: 41,
+          url: "https://uconnhuskies.com/release",
+          title: "UConn release",
+          publisher: "UConn Athletics",
+          published_on: "2026-04-28",
+          date_basis: "Displayed publication date",
+          checked_at: "2026-09-20T00:00:00Z",
+          source_sha256: "c".repeat(64),
+        },
+        { id: "discarded", team_id: 41, url: "https://outside.invalid/ignored" },
+      ],
       stats_source: { publisher: "SportsDataverse", url: "https://example.invalid/stats" },
       people: [{ key: "41-player", name: "Player", stats: { ppg: 12.4 } }],
       events: [{ id: "event-1", kind: "addition", source_id: "uconn" }],
@@ -66,7 +80,19 @@ describe("reviewed recruiting editions", () => {
     expect(body.programs).toEqual([{ id: "41", name: "UConn" }]);
     expect(body.people).toEqual(payload.people);
     expect(body.events).toEqual(payload.events);
-    expect(body.source_receipt).toEqual(expect.objectContaining({ integrity: "verified", source_rows: 2 }));
+    expect(body.sources).toEqual([{
+      id: "uconn",
+      team_id: "41",
+      url: "",
+      title: "UConn release",
+      publisher: "",
+      published_on: "2026-04-28",
+      date_basis: "Displayed publication date",
+      checked_at: "2026-09-20T00:00:00Z",
+      review_note: null,
+      source_sha256: "c".repeat(64),
+    }]);
+    expect(body.source_receipt).toEqual(expect.objectContaining({ integrity: "verified", source_rows: 1 }));
     const text = JSON.stringify(body);
     expect(text).not.toContain("uconnhuskies.com");
     expect(text).not.toContain("SportsDataverse");

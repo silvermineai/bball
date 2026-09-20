@@ -66,7 +66,7 @@ export type RecruitingRelease = {
   people: RecruitingPerson[];
   sources: AnnouncementSource[];
   events: AnnouncementEvent[];
-  stats_source: {
+  stats_source?: {
     publisher: string;
     url: string;
     license: string;
@@ -74,6 +74,118 @@ export type RecruitingRelease = {
     release_sha256: string;
   };
 };
+
+const recruitingCategories = new Set<RecruitingPerson["category"]>(["transfer", "freshman", "international"]);
+const recruitingEventKinds = new Set<AnnouncementEvent["kind"]>(["addition", "redshirt_announced", "season_unavailable"]);
+const nonnegativeInteger = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+const nullableFinite = (value: unknown) => value == null || (typeof value === "number" && Number.isFinite(value));
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+/**
+ * Validate a live reviewed release before it can replace the bundled edition.
+ * Source IDs, person keys and program IDs must reconcile as one graph; a bad
+ * row invalidates the packet instead of silently changing recruiting counts.
+ */
+export function parseRecruitingRelease(value: unknown, expectedSeason = 2027): RecruitingRelease | null {
+  const payload = objectRecord(value);
+  const coverage = objectRecord(payload?.coverage);
+  if (!payload || !coverage
+    || payload.season !== expectedSeason
+    || typeof payload.edition !== "string" || !/^[a-f0-9]{64}$/i.test(payload.edition)
+    || typeof payload.reviewed_at !== "string" || !Number.isFinite(Date.parse(payload.reviewed_at))
+    || typeof payload.methodology !== "string"
+    || coverage.complete_national_coverage !== false
+    || !Array.isArray(payload.programs) || !Array.isArray(payload.sources)
+    || !Array.isArray(payload.people) || !Array.isArray(payload.events)
+    || !nonnegativeInteger(coverage.programs) || !nonnegativeInteger(coverage.players)
+    || !nonnegativeInteger(coverage.events) || !nonnegativeInteger(coverage.sources)
+    || !nonnegativeInteger(coverage.historical_links)) return null;
+
+  const programs: RecruitingRelease["programs"] = [];
+  const programIds = new Set<string>();
+  for (const candidate of payload.programs) {
+    const row = objectRecord(candidate);
+    const id = row?.id == null ? "" : String(row.id).trim();
+    if (!row || !id || typeof row.name !== "string" || !row.name.trim() || programIds.has(id)) return null;
+    programIds.add(id);
+    programs.push({ id, name: row.name, host: typeof row.host === "string" ? row.host : "", publisher: typeof row.publisher === "string" ? row.publisher : "" });
+  }
+
+  const sources: RecruitingRelease["sources"] = [];
+  const sourceIds = new Set<string>();
+  for (const candidate of payload.sources) {
+    const row = objectRecord(candidate);
+    const id = typeof row?.id === "string" ? row.id.trim() : "";
+    const teamId = row?.team_id == null ? "" : String(row.team_id).trim();
+    const digest = row?.source_sha256;
+    if (!row || !id || sourceIds.has(id) || !programIds.has(teamId)
+      || typeof row.published_on !== "string" || !Number.isFinite(Date.parse(row.published_on))
+      || typeof row.checked_at !== "string" || !Number.isFinite(Date.parse(row.checked_at))
+      || typeof digest !== "string" || !/^[a-f0-9]{64}$/i.test(digest)) return null;
+    sourceIds.add(id);
+    sources.push({
+      id,
+      team_id: teamId,
+      url: typeof row.url === "string" ? row.url : "",
+      title: typeof row.title === "string" ? row.title : "",
+      publisher: typeof row.publisher === "string" ? row.publisher : "",
+      published_on: row.published_on,
+      date_basis: typeof row.date_basis === "string" ? row.date_basis : "",
+      checked_at: row.checked_at,
+      review_note: row.review_note == null || typeof row.review_note === "string" ? row.review_note ?? null : null,
+      source_sha256: digest.toLowerCase(),
+    });
+  }
+
+  const people: RecruitingRelease["people"] = [];
+  const personKeys = new Set<string>();
+  let historicalLinks = 0;
+  for (const candidate of payload.people) {
+    const row = objectRecord(candidate);
+    if (!row || typeof row.key !== "string" || !row.key.trim() || personKeys.has(row.key)
+      || typeof row.name !== "string" || !row.name.trim()
+      || typeof row.team_id !== "string" || !programIds.has(row.team_id)
+      || typeof row.category !== "string" || !recruitingCategories.has(row.category as RecruitingPerson["category"])
+      || (row.previous_program != null && typeof row.previous_program !== "string")) return null;
+    const stats = row.stats;
+    if (stats != null) {
+      const statRow = objectRecord(stats);
+      if (!statRow || typeof statRow.id !== "string" || !statRow.id.trim() || typeof statRow.team_id !== "string" || !statRow.team_id.trim()
+        || typeof statRow.team !== "string" || !statRow.team.trim() || !nonnegativeInteger(statRow.season)
+        || !nonnegativeInteger(statRow.games) || !nullableFinite(statRow.mpg) || !nullableFinite(statRow.ppg)
+        || !nullableFinite(statRow.rpg) || !nullableFinite(statRow.apg) || !nullableFinite(statRow.spg)
+        || !nullableFinite(statRow.bpg) || !nullableFinite(statRow.topg) || !nullableFinite(statRow.efg)
+        || !nullableFinite(statRow.ts) || !nullableFinite(statRow.three_pct) || !nullableFinite(statRow.ft_pct)
+        || !nullableFinite(statRow.ft_rate) || !nullableFinite(statRow.three_rate) || !nullableFinite(statRow.tov_rate)
+        || !nonnegativeInteger(statRow.incomplete_box_games) || typeof statRow.identity_basis !== "string" || !statRow.identity_basis.trim()) return null;
+      historicalLinks += 1;
+    }
+    personKeys.add(row.key);
+    people.push(row as unknown as RecruitingPerson);
+  }
+
+  const events: RecruitingRelease["events"] = [];
+  const eventIds = new Set<string>();
+  for (const candidate of payload.events) {
+    const row = objectRecord(candidate);
+    if (!row || typeof row.id !== "string" || !row.id.trim() || eventIds.has(row.id)
+      || typeof row.person_key !== "string" || !personKeys.has(row.person_key)
+      || typeof row.source_id !== "string" || !sourceIds.has(row.source_id)
+      || typeof row.kind !== "string" || !recruitingEventKinds.has(row.kind as AnnouncementEvent["kind"])
+      || typeof row.summary !== "string" || !row.summary.trim()) return null;
+    const person = people.find((candidatePerson) => candidatePerson.key === row.person_key)!;
+    const source = sources.find((candidateSource) => candidateSource.id === row.source_id)!;
+    if (person.team_id !== source.team_id) return null;
+    eventIds.add(row.id);
+    events.push(row as unknown as AnnouncementEvent);
+  }
+  if (coverage.programs !== programs.length || coverage.players !== people.length || coverage.events !== events.length
+    || coverage.sources !== sources.length || coverage.historical_links !== historicalLinks) return null;
+  return { ...payload, programs, sources, people, events } as unknown as RecruitingRelease;
+}
 export const categoryLabels = {
   transfer: "College transfer",
   freshman: "Prep addition",
