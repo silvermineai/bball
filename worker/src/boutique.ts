@@ -117,14 +117,31 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
     const count = await withTimeout(db.prepare(
       `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
     ).bind(path, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
-    const order = `json_extract(p.stats_json, '${path}') IS NULL, json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
+    const valueOrder = `json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}`;
+    const order = `json_extract(p.stats_json, '${path}') IS NULL, ${valueOrder}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
     const select = kind === "ratings"
       ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
-      : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value`;
+      : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value, CASE WHEN json_extract(p.stats_json, '${path}') IS NULL THEN NULL ELSE RANK() OVER (ORDER BY json_extract(p.stats_json, '${path}') IS NULL, ${valueOrder}) END AS rank, COUNT(json_extract(p.stats_json, '${path}')) OVER () AS ranked_count`;
     const rows = await withTimeout(db.prepare(
       `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
     ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
-    const response = c.json({ kind, season, metric, page, page_size: limit, total: count?.total ?? 0, non_null: count?.non_null ?? 0, rows: rows.results });
+    const response = c.json({
+      kind,
+      season,
+      metric,
+      page,
+      page_size: limit,
+      total: count?.total ?? 0,
+      non_null: count?.non_null ?? 0,
+      ...(kind === "players" ? {
+        ranking: {
+          direction: sortDirection,
+          population: "filtered rows with a recorded metric value",
+          ranked_count: count?.non_null ?? 0,
+        },
+      } : {}),
+      rows: rows.results,
+    });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;

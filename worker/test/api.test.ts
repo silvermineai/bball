@@ -1545,6 +1545,42 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("p.team_id IN (?,?)"));
   });
 
+  it("returns player value ranks with the filtered cohort size", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total")) {
+        return { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 4, non_null: 3 }) }) };
+      }
+      return {
+        bind: (...args: unknown[]) => {
+          expect(args).toEqual([2026, 40, 0]);
+          return {
+            all: vi.fn().mockResolvedValue({ results: [
+              { id: "42", player: "Example Player", value: 8.2, rank: 1, ranked_count: 3 },
+            ] }),
+          };
+        },
+      };
+    });
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=players&season=2026&metric=box_bpm",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 4,
+      non_null: 3,
+      ranking: {
+        direction: "desc",
+        population: "filtered rows with a recorded metric value",
+        ranked_count: 3,
+      },
+      rows: [{ id: "42", rank: 1, ranked_count: 3 }],
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("RANK() OVER"));
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("COUNT(json_extract"));
+  });
+
   it("returns a retryable response when the boutique catalog is busy", async () => {
     const batch = vi.fn().mockRejectedValue(new Error("D1 busy"));
     const response = await app.request(
