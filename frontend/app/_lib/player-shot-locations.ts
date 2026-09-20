@@ -64,11 +64,22 @@ export type PlayerCourtZone = {
 
 export type PlayerShotBand = "Rim" | "Paint" | "Midrange" | "3-point";
 export type PlayerShotSide = "Chart left" | "Middle" | "Chart right";
+export type PlayerShotOutcomeFilter = "all" | "made" | "missed";
 
 const PLAYER_COURT_LANE_EDGE_FT = 8;
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
+
+/** Keep event-marker filtering strict: unknown outcomes never become misses. */
+export function matchesPlayerShotOutcome(
+  shot: Pick<PlayerShotLocation, "made">,
+  filter: PlayerShotOutcomeFilter,
+) {
+  if (filter === "all") return true;
+  if (filter === "made") return shot.made === true || shot.made === 1;
+  return shot.made === false || shot.made === 0;
+}
 
 /** The NCAA feed uses both basket-origin pairs as placeholders for unknown locations. */
 const isPlaceholderCourtCoordinate = (x: number, y: number) =>

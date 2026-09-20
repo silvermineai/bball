@@ -3,6 +3,7 @@ import {
   buildPlayerCourtZones,
   classifyPlayerShotLocation,
   isPlottablePlayerShot,
+  matchesPlayerShotOutcome,
   playerShotBand,
   playerShotSide,
   summarizePlayerShotBands,
@@ -28,6 +29,15 @@ const shot = (values: Partial<PlayerShotLocation>): PlayerShotLocation => ({
 });
 
 describe("player shot location helpers", () => {
+  it("filters event markers without treating unknown outcomes as misses", () => {
+    expect(matchesPlayerShotOutcome(shot({ made: true }), "all")).toBe(true);
+    expect(matchesPlayerShotOutcome(shot({ made: 1 }), "made")).toBe(true);
+    expect(matchesPlayerShotOutcome(shot({ made: false }), "missed")).toBe(true);
+    expect(matchesPlayerShotOutcome(shot({ made: 0 }), "missed")).toBe(true);
+    expect(matchesPlayerShotOutcome(shot({ made: null }), "missed")).toBe(false);
+    expect(matchesPlayerShotOutcome(shot({ made: null }), "made")).toBe(false);
+  });
+
   it("keeps source coordinates in the same SVG projection as the NCAA chart", () => {
     expect(toPlayerCourtPoint(shot({ x: 0, y: 0 }))).toEqual({ x: 250, y: 52.5 });
     expect(toPlayerCourtPoint(shot({ x: -25, y: 41.75 }))).toEqual({ x: 0, y: 470 });

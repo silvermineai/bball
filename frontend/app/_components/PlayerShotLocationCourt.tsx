@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { fmt } from "../_lib/format";
 import {
   buildPlayerCourtZones,
@@ -9,7 +9,9 @@ import {
   PLAYER_COURT,
   summarizePlayerShotBands,
   summarizePlayerShotSides,
+  matchesPlayerShotOutcome,
   toPlayerCourtPoint,
+  type PlayerShotOutcomeFilter,
   type PlayerShotLocation,
 } from "../_lib/player-shot-locations";
 
@@ -19,6 +21,8 @@ export type PlayerShotLocationCourtProps = {
   title?: string;
   compact?: boolean;
   showEvents?: boolean;
+  /** Initial marker filter; the density heatmap always remains all plotted attempts. */
+  eventFilter?: PlayerShotOutcomeFilter;
   className?: string;
 };
 
@@ -34,12 +38,18 @@ export default function PlayerShotLocationCourt({
   title = "Shot location profile",
   compact = false,
   showEvents = false,
+  eventFilter: initialEventFilter = "all",
   className = "",
 }: PlayerShotLocationCourtProps) {
+  const [eventFilter, setEventFilter] = useState<PlayerShotOutcomeFilter>(initialEventFilter);
   const zones = useMemo(() => buildPlayerCourtZones(shots), [shots]);
   const bands = useMemo(() => summarizePlayerShotBands(shots), [shots]);
   const sides = useMemo(() => summarizePlayerShotSides(shots), [shots]);
   const plotted = useMemo(() => shots.filter(isPlottablePlayerShot), [shots]);
+  const eventMarkers = useMemo(
+    () => plotted.filter((shot) => matchesPlayerShotOutcome(shot, eventFilter)),
+    [eventFilter, plotted],
+  );
   const missing = shots.filter((shot) => classifyPlayerShotLocation(shot) === "missing").length;
   const beyondHalfCourt = shots.filter((shot) => classifyPlayerShotLocation(shot) === "beyond_half_court").length;
   const maximumAttempts = Math.max(0, ...zones.map((zone) => zone.attempts));
@@ -71,7 +81,7 @@ export default function PlayerShotLocationCourt({
           >
             <title>{`${playerName} shot location concentration`}</title>
             <desc id={`${id}-description`}>
-              Warmer cells contain a larger share of this player&apos;s recorded attempts. Individual attempt markers are {showEvents ? "shown" : "hidden"}.
+              Warmer cells contain a larger share of this player&apos;s recorded attempts. {showEvents ? `Event markers show ${eventFilter === "all" ? "all recorded outcomes" : eventFilter === "made" ? "made attempts" : "missed attempts"}.` : "Individual attempt markers are hidden."}
             </desc>
             <CourtLines />
             <g aria-label="Attempt density by coordinate cell">
@@ -100,7 +110,7 @@ export default function PlayerShotLocationCourt({
             </g>
             {showEvents ? (
               <g aria-label="Individual recorded attempts">
-                {plotted.map((shot, index) => {
+                {eventMarkers.map((shot, index) => {
                   const point = toPlayerCourtPoint(shot);
                   if (!point) return null;
                   return (
@@ -122,7 +132,7 @@ export default function PlayerShotLocationCourt({
             ) : null}
           </svg>
           <p className="mt-2 text-xs leading-5 text-graphite">
-            Warmer cells mean more attempts. Counts and shooting rates use plotted coordinates only; unavailable locations remain in the attempt total below.
+            Warmer cells mean more attempts. The heatmap always uses all plotted attempts; the marker filter changes only the made/missed event dots. Counts and shooting rates use plotted coordinates only; unavailable locations remain in the attempt total below.
           </p>
         </div>
 
@@ -164,9 +174,24 @@ export default function PlayerShotLocationCourt({
           </p>
         </div>
       </div>
+      {showEvents ? (
+        <label className="mt-3 inline-flex items-center gap-2 text-xs font-stat uppercase tracking-[0.12em] text-graphite">
+          <span>Attempt markers</span>
+          <select
+            aria-label="Attempt marker outcome"
+            className="rounded border border-line bg-white px-2 py-1 text-xs normal-case tracking-normal text-ink"
+            value={eventFilter}
+            onChange={(event) => setEventFilter(event.target.value as PlayerShotOutcomeFilter)}
+          >
+            <option value="all">All outcomes</option>
+            <option value="made">Made only</option>
+            <option value="missed">Missed only</option>
+          </select>
+        </label>
+      ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-graphite" aria-label="Shot map legend">
         <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#ce612f]" aria-hidden="true" /> More attempts</span>
-        {showEvents ? <><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-make" aria-hidden="true" /> Made</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-miss" aria-hidden="true" /> Missed</span></> : null}
+        {showEvents ? <><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-make" aria-hidden="true" /> {eventFilter === "made" ? "Made markers" : eventFilter === "missed" ? "Made hidden" : "Made"}</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-miss" aria-hidden="true" /> {eventFilter === "missed" ? "Missed markers" : eventFilter === "made" ? "Missed hidden" : "Missed"}</span></> : null}
       </div>
     </section>
   );
