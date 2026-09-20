@@ -124,7 +124,13 @@ describe("bball api", () => {
                 dataset: "box",
                 category: "rushing",
                 team_id: "10",
-                stats_json: JSON.stringify({ game_id: "401" }),
+                stats_json: JSON.stringify({ game_id: "401", rushingAttempts: "12", rushingYards: "75", rushingTouchdowns: "2" }),
+              },
+              {
+                dataset: "box",
+                category: "defensive",
+                team_id: "10",
+                stats_json: JSON.stringify({ game_id: "402", totalTackles: "11", soloTackles: "4", sacks: "1", tacklesForLoss: "2", passesDefended: "3", hurries: "2", defensiveTouchdowns: "1" }),
               },
             ],
           }),
@@ -142,6 +148,7 @@ describe("bball api", () => {
       summary: {
         production: Array<{ category: string; epa: number; rank: number; yards_per_play: number; success_rate: number }>;
         box_categories: Array<{ category: string; games: number }>;
+        box_totals: Array<{ category: string; games: number; totals: Record<string, number> }>;
       };
       source_receipts: Array<Record<string, unknown>>;
     };
@@ -154,7 +161,12 @@ describe("bball api", () => {
       success_rate: 0.62,
     });
     expect(body.summary.box_categories).toEqual([
+      { category: "defensive", records: 1, games: 1 },
       { category: "rushing", records: 1, games: 1 },
+    ]);
+    expect(body.summary.box_totals).toEqual([
+      { category: "defensive", records: 1, games: 1, totals: { defensiveTouchdowns: 1, hurries: 2, passesDefended: 3, sacks: 1, soloTackles: 4, tacklesForLoss: 2, totalTackles: 11 } },
+      { category: "rushing", records: 1, games: 1, totals: { rushingAttempts: 12, rushingTouchdowns: 2, rushingYards: 75 } },
     ]);
     expect(body.source_receipts.every((receipt) => !("url" in receipt))).toBe(true);
   });

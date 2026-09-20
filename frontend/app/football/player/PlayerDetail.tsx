@@ -35,6 +35,12 @@ type Detail = {
   summary?: {
     production: Production[];
     box_categories: { category: string; records: number; games: number }[];
+    box_totals?: {
+      category: string;
+      records: number;
+      games: number;
+      totals: Record<string, number>;
+    }[];
   };
   source_receipts?: {
     dataset: string;
@@ -185,6 +191,28 @@ export default function PlayerDetail() {
                 <p className="note" style={{ marginTop: 16 }}>
                   Additional box-score coverage: {data.summary.box_categories.map((item) => `${label(item.category)} (${item.games} ${item.games === 1 ? "game" : "games"})`).join(" · ")}. These categories remain source rows and are not folded into the EPA ranking.
                 </p>
+              )}
+              {(data.summary.box_totals || []).length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div className="eyebrow">Exact-ID box totals</div>
+                  <p className="note">
+                    Additive counting fields summed from retained game rows. Rates, longest plays and unavailable source fields stay out of this total.
+                  </p>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead><tr><th>Category</th><th className="numeric">Games</th><th>Source totals</th></tr></thead>
+                      <tbody>{(data.summary.box_totals || []).map((item) => (
+                        <tr key={item.category}>
+                          <td><strong>{label(item.category)}</strong><small>{item.records} retained rows</small></td>
+                          <td className="numeric">{item.games.toLocaleString()}</td>
+                          <td>{Object.entries(item.totals).map(([key, value]) => (
+                            <span className="table-subrow" key={key}><strong>{label(key)}</strong><small>{Number.isInteger(value) ? fmt(value, 0) : fmt(value, 2)}</small></span>
+                          ))}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </div>
               )}
               <p className="note" style={{ marginTop: 10 }}>
                 EPA totals and ranks are publisher aggregates for this exact athlete/team-season record. Passing, rushing and receiving totals describe separate source categories and must not be added together.

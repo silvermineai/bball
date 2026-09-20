@@ -301,6 +301,73 @@ const footballPlayerQuery = z.object({
   page: z.coerce.number().int().min(0).max(200).default(0),
 });
 
+// These are source box-score counting fields. Rates, longest-play fields and
+// other non-additive values stay in the raw game log so a season total cannot
+// imply a rate or a best-of value that the source did not publish. A few older
+// releases encode made/attempted values in one slash-delimited field; those
+// are split into their two source components before summing.
+const FOOTBALL_BOX_METRICS: Record<string, Array<{ key: string; source?: string; part?: number }>> = {
+  passing: [
+    { key: "completions", source: "completions/passingAttempts", part: 0 },
+    { key: "passingAttempts", source: "completions/passingAttempts", part: 1 },
+    { key: "passingYards" },
+    { key: "passingTouchdowns" },
+    { key: "interceptions" },
+  ],
+  rushing: [
+    { key: "rushingAttempts" },
+    { key: "rushingYards" },
+    { key: "rushingTouchdowns" },
+  ],
+  receiving: [
+    { key: "receptions" },
+    { key: "receivingYards" },
+    { key: "receivingTouchdowns" },
+  ],
+  defensive: [
+    { key: "totalTackles" },
+    { key: "soloTackles" },
+    { key: "sacks" },
+    { key: "tacklesForLoss" },
+    { key: "passesDefended" },
+    { key: "hurries" },
+    { key: "defensiveTouchdowns" },
+  ],
+  interceptions: [
+    { key: "interceptions" },
+    { key: "interceptionYards" },
+    { key: "interceptionTouchdowns" },
+  ],
+  fumbles: [
+    { key: "fumbles" },
+    { key: "fumblesLost" },
+    { key: "fumblesRecovered" },
+  ],
+  kicking: [
+    { key: "fieldGoalsMade", source: "fieldGoalsMade/fieldGoalAttempts", part: 0 },
+    { key: "fieldGoalAttempts", source: "fieldGoalsMade/fieldGoalAttempts", part: 1 },
+    { key: "extraPointsMade", source: "extraPointsMade/extraPointAttempts", part: 0 },
+    { key: "extraPointAttempts", source: "extraPointsMade/extraPointAttempts", part: 1 },
+    { key: "totalKickingPoints" },
+  ],
+  punting: [
+    { key: "punts" },
+    { key: "puntYards" },
+    { key: "touchbacks" },
+    { key: "puntsInside20" },
+  ],
+  kickReturns: [
+    { key: "kickReturns" },
+    { key: "kickReturnYards" },
+    { key: "kickReturnTouchdowns" },
+  ],
+  puntReturns: [
+    { key: "puntReturns" },
+    { key: "puntReturnYards" },
+    { key: "puntReturnTouchdowns" },
+  ],
+};
+
 /**
  * Return the compact, exact-athlete career trail used by a player dossier.
  * The UI should not download the full career index just to open one player.
@@ -439,6 +506,35 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       };
     })
     .sort((a, b) => a.category.localeCompare(b.category));
+  const boxTotals = [...new Set(summaryRows.filter((row) => row.dataset === "box").map((row) => row.category))]
+    .map((category) => {
+      const categoryRows = summaryRows.filter((row) => row.dataset === "box" && row.category === category);
+      const totals: Record<string, number> = {};
+      for (const metric of FOOTBALL_BOX_METRICS[category] || []) {
+        let total = 0;
+        let observed = false;
+        for (const row of categoryRows) {
+          const raw = row.stats[metric.source || metric.key];
+          if (raw == null || raw === "") continue;
+          const value = metric.source
+            ? String(raw).split("/")[metric.part ?? 0]
+            : raw;
+          const parsed = number(value);
+          if (parsed == null) continue;
+          total += parsed;
+          observed = true;
+        }
+        if (observed) totals[metric.key] = total;
+      }
+      return {
+        category,
+        records: categoryRows.length,
+        games: new Set(categoryRows.map((row) => String(row.stats.game_id || "")).filter(Boolean)).size,
+        totals,
+      };
+    })
+    .filter((row) => Object.keys(row.totals).length > 0)
+    .sort((a, b) => a.category.localeCompare(b.category));
   const first = rows[0]?.stats || (summaryRows[0]?.stats as Record<string, string> | undefined);
   const name = first?.athlete_name ?? first?.passer_player_name ?? first?.rusher_player_name ?? first?.receiver_player_name ?? id;
   const sourceReceipts = receiptResult.results.flatMap((row) => {
@@ -451,7 +547,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       : [];
   });
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories }, source_receipts: sourceReceipts });
+  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories, box_totals: boxTotals }, source_receipts: sourceReceipts });
 });
 
 app.get("/api/football/coverage", async (c) => {
