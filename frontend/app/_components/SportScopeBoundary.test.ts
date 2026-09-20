@@ -22,6 +22,7 @@ describe("sport scope boundary", () => {
 
   it("keeps women’s basketball isolated on every route", () => {
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/players")).toBe(true);
+    expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/recruiting/")).toBe(true);
   });
 
   it("allows published men’s NCAA D2/D3 archives", () => {
