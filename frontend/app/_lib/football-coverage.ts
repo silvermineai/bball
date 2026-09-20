@@ -1,5 +1,7 @@
 export type FootballCoverageGame = {
   id: string;
+  home_id?: string;
+  away_id?: string;
   home_division: string;
   away_division: string;
   prediction: unknown | null;
@@ -21,6 +23,20 @@ export type FootballDivisionCoverage = {
   games_without_forecast: number;
 };
 
+const DIVISION_ALIASES: Record<string, string> = {
+  ii: "d2",
+  "d-ii": "d2",
+  "division ii": "d2",
+  iii: "d3",
+  "d-iii": "d3",
+  "division iii": "d3",
+};
+
+function canonicalDivision(value: string | null | undefined) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return DIVISION_ALIASES[normalized] || normalized;
+}
+
 /**
  * Build the dashboard's division coverage from the exact published editions.
  * A cross-division game is counted once for each division it involves; this
@@ -29,15 +45,22 @@ export type FootballDivisionCoverage = {
 export function footballDivisionCoverage(
   games: FootballCoverageGame[],
   players: FootballCoveragePlayer[],
-  divisions = ["fbs", "fcs"],
+  divisions = ["fbs", "fcs", "d2", "d3"],
 ): FootballDivisionCoverage[] {
   return divisions.map((division) => {
-    const divisionPlayers = players.filter((player) => player.division === division);
+    const divisionPlayers = players.filter((player) => canonicalDivision(player.division) === division);
     const divisionGames = games.filter((game) =>
-      new Set([game.home_division, game.away_division]).has(division),
+      new Set([canonicalDivision(game.home_division), canonicalDivision(game.away_division)]).has(division),
     );
     const playerIds = new Set(divisionPlayers.map((player) => player.id));
     const teamIds = new Set(divisionPlayers.map((player) => player.team_id));
+    // Schedule coverage remains useful even while a division's player
+    // edition is unavailable. Count teams from the published game identity;
+    // never manufacture player rows from this fallback.
+    for (const game of divisionGames) {
+      if (canonicalDivision(game.home_division) === division && game.home_id) teamIds.add(game.home_id);
+      if (canonicalDivision(game.away_division) === division && game.away_id) teamIds.add(game.away_id);
+    }
     const forecastGames = divisionGames.filter((game) => game.prediction != null).length;
     return {
       division,

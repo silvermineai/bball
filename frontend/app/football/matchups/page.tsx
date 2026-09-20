@@ -19,9 +19,11 @@ export default function Page() {
         <div className="eyebrow">The next possession starts here</div>
         <h1>The matchup desk.</h1>
         <p>
-          Every published upcoming game involving an FBS team. Forecasts cover
-          known FBS opponents, with score estimates and an 80% margin range. All
-          times Eastern; schedules can change.
+          Every published upcoming game in the retained FBS, FCS, Division II
+          and Division III schedule. Forecasts cover known FBS opponents, with
+          score estimates and an 80% margin range; lower-division rows remain
+          visible without an invented prediction. All times Eastern; schedules
+          can change.
         </p>
       </div>
       <section className="paper-panel" aria-labelledby="football-forecast-board" style={{ marginBottom: 24 }}>

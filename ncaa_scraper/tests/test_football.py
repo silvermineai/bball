@@ -5,7 +5,15 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from ncaa_scraper.football import ROOT, datasets_for_year, number, personnel_preview, store_rows
+from ncaa_scraper.football import (
+    ROOT,
+    datasets_for_year,
+    normalize_division,
+    normalize_game,
+    number,
+    personnel_preview,
+    store_rows,
+)
 from ncaa_scraper.football_model import (
     calibrate,
     eligible,
@@ -123,6 +131,27 @@ class ModelTests(unittest.TestCase):
 
 
 class ImportTests(unittest.TestCase):
+    def test_schedule_divisions_are_canonicalized_at_the_source_boundary(self):
+        self.assertEqual(normalize_division("ii"), "d2")
+        self.assertEqual(normalize_division("iii"), "d3")
+        self.assertEqual(normalize_division("fbs"), "fbs")
+        self.assertIsNone(normalize_division(""))
+
+    def test_schedule_rows_preserve_lower_division_identity_without_inventing_stats(self):
+        row = {
+            "game_id": "d2-game",
+            "season": "2026",
+            "start_date": "2026-09-01T00:00:00Z",
+            "home_id": "d2-home",
+            "away_id": "d2-away",
+            "home_division": "ii",
+            "away_division": "iii",
+            "completed": "false",
+        }
+        game_row = normalize_game(row)
+        self.assertEqual(game_row["home_division"], "d2")
+        self.assertEqual(game_row["away_division"], "d3")
+
     def test_dataset_selection_keeps_full_ncaa_player_history(self):
         self.assertEqual(datasets_for_year(2026, 2013), ["ncaa_player_stats"])
         self.assertIn("ncaa_player_stats", datasets_for_year(2026, 2022))

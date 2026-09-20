@@ -26,6 +26,27 @@ from .football_sources import (
 DB_PATH = ROOT / ".local" / "football.sqlite3"
 OUT = ROOT / "frontend" / "public" / "data" / "football"
 
+# SportsDataverse's ESPN schedule release uses ``ii``/``iii`` for the lower
+# NCAA divisions while the public board uses the unambiguous D2/D3 labels.
+# Keep this normalization at the source boundary so schedule coverage and
+# future imports cannot silently split one division into two spellings.
+DIVISION_ALIASES = {
+    "ii": "d2",
+    "d-ii": "d2",
+    "division ii": "d2",
+    "iii": "d3",
+    "d-iii": "d3",
+    "division iii": "d3",
+}
+SUPPORTED_SCHEDULE_DIVISIONS = frozenset({"fbs", "fcs", "d2", "d3"})
+
+
+def normalize_division(value):
+    if value in (None, ""):
+        return None
+    normalized = str(value).strip().lower()
+    return DIVISION_ALIASES.get(normalized, normalized)
+
 
 def number(value):
     try:
@@ -50,8 +71,8 @@ def normalize_game(row: dict) -> dict:
         "away_name": row.get("away_team"),
         "home_conference": row.get("home_conference"),
         "away_conference": row.get("away_conference"),
-        "home_division": row.get("home_division"),
-        "away_division": row.get("away_division"),
+        "home_division": normalize_division(row.get("home_division")),
+        "away_division": normalize_division(row.get("away_division")),
         "home_score": number(row.get("home_points")),
         "away_score": number(row.get("away_points")),
         "completed": int(row.get("completed") == "true"),
@@ -296,7 +317,10 @@ def build(conn, season=2026):
             g["season"] != season
             or g["completed"]
             or g["kickoff"] <= now
-            or not (g["home_division"] == "fbs" or g["away_division"] == "fbs")
+            or not (
+                g["home_division"] in SUPPORTED_SCHEDULE_DIVISIONS
+                or g["away_division"] in SUPPORTED_SCHEDULE_DIVISIONS
+            )
         ):
             continue
         prediction = (

@@ -7,6 +7,7 @@ describe("football division coverage", () => {
       [
         { id: "same", home_division: "fbs", away_division: "fbs", prediction: {} },
         { id: "cross", home_division: "fbs", away_division: "fcs", prediction: null },
+        { id: "lower", home_id: "d2-home", away_id: "d3-away", home_division: "ii", away_division: "iii", prediction: null },
       ],
       [
         { id: "p1", team_id: "t1", division: "fbs" },
@@ -29,6 +30,24 @@ describe("football division coverage", () => {
         division: "fcs",
         player_records: 1,
         players: 1,
+        teams: 1,
+        upcoming_games: 1,
+        forecast_games: 0,
+        games_without_forecast: 1,
+      },
+      {
+        division: "d2",
+        player_records: 0,
+        players: 0,
+        teams: 1,
+        upcoming_games: 1,
+        forecast_games: 0,
+        games_without_forecast: 1,
+      },
+      {
+        division: "d3",
+        player_records: 0,
+        players: 0,
         teams: 1,
         upcoming_games: 1,
         forecast_games: 0,

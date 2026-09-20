@@ -231,7 +231,7 @@ export default function FootballDashboard() {
     </div>
     <section className="dashboard-section" aria-labelledby="football-scope">
       <div className="dashboard-section-heading"><div><span className="eyebrow">ARCHIVE SCOPE</span><h2 id="football-scope">Know what the board covers.</h2></div><Link href="/research/coverage/">Coverage details →</Link></div>
-      <p className="dashboard-caption">The football edition currently contains FBS and FCS rows. Player counts are unique source athlete IDs in the {completedPlayerSeason} player edition; game counts are {overview.season} upcoming games involving each division. A cross-division game appears in both rows, and games without a model prediction stay visible.</p>
+      <p className="dashboard-caption">The football edition contains published FBS, FCS, Division II and Division III schedule rows. Player counts are unique source athlete IDs in the {completedPlayerSeason} identified player edition; game counts are {overview.season} upcoming games involving each division. A cross-division game appears in both rows, and games without a model prediction stay visible.</p>
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table">
           <thead><tr><th>Imported division</th><th className="numeric">Players</th><th className="numeric">Team rows</th><th className="numeric">Upcoming games</th><th className="numeric">Forecasts</th><th className="numeric">No forecast</th></tr></thead>
@@ -245,7 +245,7 @@ export default function FootballDashboard() {
           </tr>)}</tbody>
         </table>
       </div>
-      <p className="note">Division II and Division III football are not imported into this edition. They are not represented by FBS or FCS rows.</p>
+      <p className="note">Division II and Division III schedule coverage is available from the retained release. The current identified player production edition covers FBS and FCS only, so D2/D3 player counts remain unavailable. The Silvermine forecast is trained and published for FBS-versus-FBS games only.</p>
     </section>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
