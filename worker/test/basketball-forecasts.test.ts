@@ -1,7 +1,38 @@
 import { describe, expect, it, vi } from "vitest";
-import { basketballForecasts } from "../src/basketball-forecasts";
+import { basketballForecasts, parseForecastPrediction } from "../src/basketball-forecasts";
 
 describe("basketball forecast availability", () => {
+  it("withholds forecast objects with invalid known numeric fields", () => {
+    expect(parseForecastPrediction({
+      home_margin: 4,
+      home_win_probability: 1.01,
+      margin_low: -8,
+      margin_high: 12,
+    })).toEqual({ prediction: null, integrity: "invalid" });
+    expect(parseForecastPrediction({
+      home_margin: 14,
+      home_win_probability: 0.7,
+      margin_low: -4,
+      margin_high: 8,
+    })).toEqual({ prediction: null, integrity: "invalid" });
+    expect(parseForecastPrediction({
+      home_margin: 4,
+      home_win_probability: 0.62,
+      margin_low: -8,
+      margin_high: 12,
+      estimate_type: "primary",
+    })).toEqual({
+      prediction: {
+        home_margin: 4,
+        home_win_probability: 0.62,
+        margin_low: -8,
+        margin_high: 12,
+        estimate_type: "primary",
+      },
+      integrity: "valid",
+    });
+  });
+
   it("resolves latest from models that contain forecasts for the requested season", async () => {
     const countBinds: Array<string | number> = [];
     const prepare = vi.fn((sql: string) => {

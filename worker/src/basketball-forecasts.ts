@@ -162,6 +162,53 @@ type PublishedForecastOverview = {
   upcoming?: unknown;
 };
 
+const predictionNumericFields = [
+  "home_score",
+  "away_score",
+  "home_margin",
+  "total",
+  "pace",
+  "home_win_probability",
+  "margin_low",
+  "margin_high",
+  "margin_half_width",
+] as const;
+
+/**
+ * Keep malformed stored values from reaching forecast consumers as if they
+ * were model output. The warehouse intentionally remains the source of truth;
+ * this is a response boundary check for known scalar fields only, so adding a
+ * future model field does not silently discard an otherwise valid estimate.
+ */
+export function parseForecastPrediction(value: unknown): { prediction: Record<string, unknown> | null; integrity: "valid" | "invalid" } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  const row = value as Record<string, unknown>;
+  for (const field of predictionNumericFields) {
+    if (field in row && (typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) {
+      return { prediction: null, integrity: "invalid" };
+    }
+  }
+  const probability = row.home_win_probability;
+  if (typeof probability === "number" && (probability < 0 || probability > 1)) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  const low = row.margin_low;
+  const high = row.margin_high;
+  if (typeof low === "number" && typeof high === "number" && low > high) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  const margin = row.home_margin;
+  if (typeof margin === "number" && typeof low === "number" && typeof high === "number" && (margin < low || margin > high)) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  if ("estimate_type" in row && row.estimate_type !== "primary" && row.estimate_type !== "cold_start") {
+    return { prediction: null, integrity: "invalid" };
+  }
+  return { prediction: row, integrity: "valid" };
+}
+
 async function publishedForecastFallback(
   c: Context<{ Bindings: Bindings }>,
   args: { season: number; gameId?: string; status: string; q?: string; model: string; roster: string; page: number; limit: number },
@@ -191,11 +238,12 @@ async function publishedForecastFallback(
     const rows = upcoming
       .filter((value): value is Record<string, unknown> => Boolean(value && typeof value === "object"))
       .map((game) => {
-        const prediction = game.prediction && typeof game.prediction === "object" && !Array.isArray(game.prediction)
+        const rawPrediction = game.prediction && typeof game.prediction === "object" && !Array.isArray(game.prediction)
           ? game.prediction
           : game.fallback_prediction && typeof game.fallback_prediction === "object" && !Array.isArray(game.fallback_prediction)
             ? game.fallback_prediction
             : null;
+        const checkedPrediction = parseForecastPrediction(rawPrediction);
         return {
           game_id: typeof game.id === "string" ? game.id : String(game.id || ""),
           model_id: modelId,
@@ -216,7 +264,8 @@ async function publishedForecastFallback(
           source_start: null,
           source_time_valid: null,
           source_observed_at: null,
-          prediction,
+          prediction: checkedPrediction.prediction,
+          prediction_integrity: checkedPrediction.integrity,
         };
       });
     const start = args.page * args.limit;
@@ -476,11 +525,12 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const rosterCompatible = Boolean(resolvedModelId && rosterPrimaryModelId === resolvedModelId);
   const responseRows = rows.results.map(({ prediction_json, ...row }) => {
     let prediction: Record<string, unknown> | null = null;
+    let predictionIntegrity: "valid" | "invalid" = "invalid";
     try {
       const parsed = JSON.parse(prediction_json) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        prediction = parsed as Record<string, unknown>;
-      }
+      const checked = parseForecastPrediction(parsed);
+      prediction = checked.prediction;
+      predictionIntegrity = checked.integrity;
     } catch {
       // A malformed stored payload is withheld instead of failing the whole page.
     }
@@ -488,6 +538,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       ...row,
       source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
       prediction,
+      prediction_integrity: predictionIntegrity,
       ...(roster === "1" ? {
         roster_lens: (() => {
           const lens = rosterArtifact.lenses.get(row.game_id);

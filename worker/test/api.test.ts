@@ -592,12 +592,14 @@ describe("bball api", () => {
       model: string;
       page_size: number;
       total: number;
-      rows: Array<{ prediction: Record<string, unknown> | null; source_start?: string | null; source_time_valid?: boolean | null; source_observed_at?: string | null }>;
+      rows: Array<{ prediction: Record<string, unknown> | null; prediction_integrity: string; source_start?: string | null; source_time_valid?: boolean | null; source_observed_at?: string | null }>;
     };
     expect(body).toMatchObject({ season: 2027, status: "upcoming", model: "latest", page_size: 2, total: 2 });
     expect(body.rows[0].prediction).toEqual({ home_margin: 4.5, home_win_probability: 0.62 });
+    expect(body.rows[0].prediction_integrity).toBe("valid");
     expect(body.rows[0]).toMatchObject({ source_start: "2026-11-02T05:00:00.000Z", source_time_valid: true, source_observed_at: "2026-09-12T07:00:00.000Z" });
     expect(body.rows[1].prediction).toBeNull();
+    expect(body.rows[1].prediction_integrity).toBe("invalid");
     expect(prepare.mock.calls.some(([query]) => String(query).includes("ESCAPE"))).toBe(true);
     expect(prepare.mock.calls.some(([query]) => String(query).includes("bb_models"))).toBe(true);
     expect(prepare.mock.calls.some(([query]) => String(query).includes("audit_schedule_times") && String(query).includes("schedule_rank"))).toBe(true);
