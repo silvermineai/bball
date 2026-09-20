@@ -6,12 +6,10 @@ import { useEffect, useState } from "react";
 import {
   buildScopeHref,
   DIVISION_OPTIONS,
-  GENDER_OPTIONS,
   isNavItemActive,
   SPORT_NAVIGATION,
   sportAvailabilityMessage,
   sportForPathname,
-  sportSupportsGenderScope,
   type Division,
   type Gender,
 } from "../_lib/sport-navigation";
@@ -33,7 +31,11 @@ export default function SportNavigation() {
   const searchParams = new URLSearchParams(currentSearch);
   const currentSport = sportForPathname(pathname, searchParams.get("gender"));
   const config = SPORT_NAVIGATION[currentSport];
-  const gender = selectedGender(searchParams.get("gender"));
+  // Men's and women's basketball are separate sport tabs. Football is a
+  // men's archive, so normalize any manually-entered gender query before
+  // generating scope links instead of carrying an invalid women’s football
+  // URL through every sub-tab.
+  const gender = currentSport === "football" ? "men" : selectedGender(searchParams.get("gender"));
   const division = selectedDivision(searchParams.get("division"));
   // Preserve every requested scope on every tab. Route-level scope boundaries
   // show the correct unavailable state instead of silently falling back to D1.
@@ -96,18 +98,7 @@ export default function SportNavigation() {
         </nav>
         <div className="sport-scope" aria-label={`${config.label} data scope`}>
           <span className="sport-scope-label">Scope</span>
-          {sportSupportsGenderScope(currentSport) ? <div className="sport-scope-group" aria-label="Gender">
-            {GENDER_OPTIONS.map((option) => (
-              <Link
-                key={option.value}
-                href={scopeHref(option.value, division)}
-                className={gender === option.value ? "is-selected" : ""}
-                aria-current={gender === option.value ? "page" : undefined}
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div> : <span className="sport-scope-fixed" aria-label="Football gender">Men&apos;s</span>}
+          <span className="sport-scope-fixed" aria-label="Active sport edition">{config.label}</span>
           <div className="sport-scope-group" aria-label="NCAA division">
             {DIVISION_OPTIONS.map((option) => (
               <Link
