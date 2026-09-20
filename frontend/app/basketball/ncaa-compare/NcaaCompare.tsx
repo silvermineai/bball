@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { completeStatsSum, effectiveFieldGoal, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 
 type Stats = Record<string, number | null>;
 type SeasonRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; games: number; stats: Stats };
@@ -11,10 +11,45 @@ type RosterRow = { season: number; team_name: string | null; player_name: string
 type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; identity_note: string };
 type Impact = { season: number; player_id: string; orapm: number | null; drapm: number | null; rapm_net: number | null; qualified: boolean; rank: number | null };
 type SearchRow = { player_id: string; player_name: string | null; team_id: string; team_name: string | null; games: number; points: number | null };
+type SourceReceipt = { dataset: string; season: number; fetched_at: string; sha256: string };
+type ComparisonPayload = { season: number; requested_ids: string[]; missing_ids: string[]; cards: Card[]; source_receipts: SourceReceipt[]; identity_policy: string };
 
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const format = (value: number | null, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percent = (value: number | null) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+
+export function comparisonPossessionContext(rows: SeasonRow[]) {
+  const total = (key: string) => completeStatsSum(rows, key);
+  const points = total("pts");
+  const possessions = total("o_poss");
+  const assists = total("ast");
+  const turnovers = total("tov");
+  const fieldGoalAttempts = total("fga");
+  const threesMade = total("tpm");
+  const threesAttempted = total("tpa");
+  const freeThrowsMade = total("ftm");
+  const freeThrowsAttempted = total("fta");
+  return {
+    points,
+    possessions,
+    assists,
+    turnovers,
+    fieldGoalAttempts,
+    threesMade,
+    threesAttempted,
+    freeThrowsMade,
+    freeThrowsAttempted,
+    rates: playerAdvancedRates({
+      pts: points,
+      o_poss: possessions,
+      ast: assists,
+      tov: turnovers,
+      fga: fieldGoalAttempts,
+      tpa: threesAttempted,
+      fta: freeThrowsAttempted,
+    }),
+  };
+}
 
 function PlayerColumn({ card, season, impact }: { card: Card; season: number; impact: Impact | undefined }) {
   const rows = card.seasons.filter((row) => row.season === season);
@@ -30,10 +65,13 @@ function PlayerColumn({ card, season, impact }: { card: Card; season: number; im
     const fga = sum("fga");
     const fgm = sum("fgm");
     const tpm = sum("tpm");
+    const tpa = sum("tpa");
     const fta = sum("fta");
+    const ftm = sum("ftm");
     const turnovers = sum("tov");
     const fouls = sum("pf");
-    return { games, points, rebounds, assists, turnovers, fouls, minutes, fga, fgm, tpm, fta, ts: trueShooting({ pts: points, fga, fta }), efg: effectiveFieldGoal(fgm, tpm, fga) };
+    const possessionContext = comparisonPossessionContext(rows);
+    return { games, points, rebounds, assists, turnovers, fouls, minutes, fga, fgm, tpm, tpa, fta, ftm, ts: trueShooting({ pts: points, fga, fta }), efg: effectiveFieldGoal(fgm, tpm, fga), possessionContext };
   }, [rows]);
   const name = rows[0]?.player_name || roster?.player_name || `Player ${card.player_id}`;
   return <article className="paper-panel">
@@ -43,8 +81,9 @@ function PlayerColumn({ card, season, impact }: { card: Card; season: number; im
     <div className="hero-actions"><Link className="hero-link" href={`/basketball/ncaa-player/?id=${encodeURIComponent(card.player_id)}&season=${season}`}>Open full player card →</Link></div>
     {!totals ? <p className="empty">No source row for {label(season)}.</p> : <>
       <div className="strip"><div><strong>{totals.games || "—"}</strong><span>Games</span></div><div><strong>{format(totals.points == null || !totals.games ? null : totals.points / totals.games)}</strong><span>Points / game</span></div><div><strong>{format(totals.rebounds == null || !totals.games ? null : totals.rebounds / totals.games)}</strong><span>Rebounds / game</span></div><div><strong>{format(totals.assists == null || !totals.games ? null : totals.assists / totals.games)}</strong><span>Assists / game</span></div><div><strong>{format(totals.turnovers == null || !totals.games ? null : totals.turnovers / totals.games)}</strong><span>Turnovers / game</span></div><div><strong>{format(totals.fouls == null || !totals.games ? null : totals.fouls / totals.games)}</strong><span>Fouls / game</span></div></div>
-      <dl className="raw-stat-grid"><div><dt>True shooting</dt><dd>{percent(totals.ts)}</dd></div><div><dt>Effective FG</dt><dd>{percent(totals.efg)}</dd></div><div><dt>Minutes / game</dt><dd>{format(totals.minutes == null || !totals.games ? null : totals.minutes / totals.games)}</dd></div><div><dt>Class / position</dt><dd>{roster?.profile.class || "—"} · {roster?.profile.position || "—"}</dd></div><div><dt>Net RAPM</dt><dd>{format(impact?.rapm_net ?? null, 2)}</dd></div><div><dt>RAPM status</dt><dd>{impact?.qualified ? "Qualified sample" : "Unavailable / unqualified"}</dd></div></dl>
-      <p className="note">Totals pool the source&apos;s team rows for the selected season. Rates use only recorded attempts and remain unavailable when their denominator is missing.</p>
+      <dl className="raw-stat-grid"><div><dt>True shooting</dt><dd>{percent(totals.ts)}</dd></div><div><dt>Effective FG</dt><dd>{percent(totals.efg)}</dd></div><div><dt>Minutes / game</dt><dd>{format(totals.minutes == null || !totals.games ? null : totals.minutes / totals.games)}</dd></div><div><dt>Points / recorded possession</dt><dd>{format(totals.possessionContext.rates.pointsPerPossession, 3)}</dd></div><div><dt>Assists / recorded possession</dt><dd>{percent(totals.possessionContext.rates.assistRate)}</dd></div><div><dt>Turnovers / recorded possession</dt><dd>{percent(totals.possessionContext.rates.turnoverRate)}</dd></div><div><dt>3-point attempt rate</dt><dd>{percent(totals.possessionContext.rates.threePointAttemptRate)}</dd></div><div><dt>Free-throw attempt rate</dt><dd>{percent(totals.possessionContext.rates.freeThrowAttemptRate)}</dd></div><div><dt>Class / position</dt><dd>{roster?.profile.class || "—"} · {roster?.profile.position || "—"}</dd></div><div><dt>Net RAPM</dt><dd>{format(impact?.rapm_net ?? null, 2)}</dd></div><div><dt>RAPM status</dt><dd>{impact?.qualified ? "Qualified sample" : "Unavailable / unqualified"}</dd></div></dl>
+      <p className="note">Recorded evidence: {format(totals.possessionContext.points, 0)} PTS / {format(totals.possessionContext.possessions, 0)} POSS · {format(totals.assists, 0)} AST · {format(totals.turnovers, 0)} TO · FG {format(totals.fgm, 0)}/{format(totals.fga, 0)} · 3P {format(totals.tpm, 0)}/{format(totals.tpa, 0)} · FT {format(totals.ftm, 0)}/{format(totals.fta, 0)}.</p>
+      <p className="note">Totals pool exact-ID team rows for the selected season. Every derived rate requires its complete recorded numerator and denominator across all team stints; a missing source field keeps that rate unavailable.</p>
     </>}
   </article>;
 }
@@ -58,6 +97,9 @@ export default function NcaaCompare() {
   const [ids, setIds] = useState(() => (params.get("ids") || "").split(",").map((id) => id.trim()).filter((id) => /^\d{1,15}$/.test(id)).slice(0, 3));
   const [cards, setCards] = useState<Card[]>([]);
   const [impact, setImpact] = useState<Impact[]>([]);
+  const [sourceReceipts, setSourceReceipts] = useState<SourceReceipt[]>([]);
+  const [missingIds, setMissingIds] = useState<string[]>([]);
+  const [identityPolicy, setIdentityPolicy] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState("");
@@ -78,13 +120,13 @@ export default function NcaaCompare() {
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [search, season]);
   useEffect(() => {
-    if (!ids.length) { setCards([]); setImpact([]); return; }
+    if (!ids.length) { setCards([]); setImpact([]); setSourceReceipts([]); setMissingIds([]); setIdentityPolicy(""); return; }
     const controller = new AbortController();
     setLoading(true); setError("");
     Promise.all([
-      Promise.all(ids.map((id) => fetch(`/api/basketball/research/ncaa-player-card/${encodeURIComponent(id)}?season=${season}`, { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(`NCAA player ${id} was not found.`); return response.json() as Promise<Card>; }))),
+      fetch(`/api/basketball/research/ncaa-player-comparison?season=${season}&ids=${encodeURIComponent(ids.join(","))}`, { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error("The exact-ID player comparison could not be loaded."); return response.json() as Promise<ComparisonPayload>; }),
       fetch(`/data/basketball/impact-${season}.json`, { signal: controller.signal }).then((response) => response.ok ? response.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
-    ]).then(([nextCards, release]) => { if (!controller.signal.aborted) { setCards(nextCards); setImpact(release.players); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player comparison could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    ]).then(([comparison, release]) => { if (!controller.signal.aborted) { setCards(comparison.cards); setSourceReceipts(comparison.source_receipts); setMissingIds(comparison.missing_ids); setIdentityPolicy(comparison.identity_policy); setImpact(release.players); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player comparison could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [ids, season]);
   const submit = () => {
@@ -106,6 +148,7 @@ export default function NcaaCompare() {
     {error && <p className="status-error" role="alert">{error}</p>}
     {loading && <p className="empty" role="status">Loading source-native player cards…</p>}
     {!loading && !cards.length && <section className="paper-panel"><h2>Start with player IDs.</h2><p>Enter one to three numeric player IDs to compare their selected-season evidence side by side. A single ID is useful when you want a compact season summary before opening the full card.</p></section>}
-    {!loading && cards.length > 0 && <><div className="strip"><div><strong>{cards.length}</strong><span>Players compared</span></div><div><strong>{label(season)}</strong><span>Selected season</span></div><div><strong>Player IDs</strong><span>Identity namespace</span></div><div><strong>Exact ID</strong><span>Join method</span></div></div><section className="section"><div className="section-heading"><div><div className="eyebrow">Side-by-side evidence</div><h2>Read the shape of the season.</h2></div><div className="button-row"><span className="note">Rows pooled by player ID and season</span><button className="button secondary" type="button" onClick={share}>Copy comparison link</button></div></div>{copied && <p role="status">{copied}</p>}<div className="two-col">{cards.map((card) => <PlayerColumn key={card.player_id} card={card} season={season} impact={impact.find((row) => row.season === season && row.player_id === card.player_id)} />)}</div></section><p className="note">This comparison is descriptive evidence for scouting and study; it does not assert eligibility, current roster membership or identity beyond the selected player ID.</p></>}
+    {!loading && missingIds.length > 0 && <p className="note" role="status">No retained {label(season)} player-season row matched archive ID{missingIds.length === 1 ? "" : "s"} {missingIds.join(", ")}. The other exact-ID records remain visible.</p>}
+    {!loading && cards.length > 0 && <><div className="strip"><div><strong>{cards.length}</strong><span>Players compared</span></div><div><strong>{label(season)}</strong><span>Selected season</span></div><div><strong>{sourceReceipts.length}</strong><span>Shared edition receipts</span></div><div><strong>Exact ID</strong><span>Join method</span></div></div>{sourceReceipts.length > 0 && <details className="paper-panel" style={{ marginTop: 24 }}><summary><strong>Comparison edition receipts</strong> · same-season evidence shared by every column</summary><div className="table-scroll" style={{ marginTop: 14 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th></tr></thead><tbody>{sourceReceipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.sha256}`}><td>{receipt.dataset.replace(/^ncaa_/, "player ")}</td><td>{receipt.fetched_at}</td><td><code>{receipt.sha256.slice(0, 16)}…</code></td></tr>)}</tbody></table></div><p className="note">{identityPolicy}</p></details>}<section className="section"><div className="section-heading"><div><div className="eyebrow">Side-by-side evidence</div><h2>Read the shape of the season.</h2></div><div className="button-row"><span className="note">Rows pooled by player ID and season</span><button className="button secondary" type="button" onClick={share}>Copy comparison link</button></div></div>{copied && <p role="status">{copied}</p>}<div className="two-col">{cards.map((card) => <PlayerColumn key={card.player_id} card={card} season={season} impact={impact.find((row) => row.season === season && row.player_id === card.player_id)} />)}</div></section><p className="note">This comparison is descriptive evidence for scouting and study; it does not assert eligibility, current roster membership or identity beyond the selected player ID.</p></>}
   </>;
 }
