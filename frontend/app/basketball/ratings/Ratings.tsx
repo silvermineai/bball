@@ -8,6 +8,7 @@ import {
   sortTeamRatings,
   type RatingSortKey,
 } from "../../_lib/basketball-ratings";
+import TeamFactorRankings from "./TeamFactorRankings";
 
 type ArchivedRatingRow = { id: string; team?: string | null; value: number | null };
 type ArchivedRatingResponse = { rows?: ArchivedRatingRow[]; total?: number; page_size?: number };
@@ -251,6 +252,7 @@ export default function Ratings({ rows }: { rows: BBTeam[] }) {
       {!filtered.length && (
         <p className="empty">No programs match that search.</p>
       )}
+      <TeamFactorRankings teams={rows} />
     </>
   );
 }
