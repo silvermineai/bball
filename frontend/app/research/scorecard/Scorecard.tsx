@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
+import { marketReadinessLabel, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
@@ -27,6 +28,8 @@ export default function Scorecard() {
     [source, setSource] = useState<"live" | "edition">("edition"),
     [refreshing, setRefreshing] = useState(true);
   const [benchmark, setBenchmark] = useState<RetrospectiveBenchmark | null>(null);
+  const [marketMetadata, setMarketMetadata] = useState<MarketReadinessMetadata | null>(null);
+  const [marketMetadataStatus, setMarketMetadataStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   // undefined = still checking, null = live catalog unavailable. A model
   // edition is never presented as current until this immutable ID matches.
   const [liveModelId, setLiveModelId] = useState<string | null | undefined>(undefined);
@@ -37,6 +40,28 @@ export default function Scorecard() {
       return Number.isInteger(value) && value > 0 ? value : 0;
     });
   const [copied, setCopied] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    setMarketMetadata(null);
+    setMarketMetadataStatus("checking");
+    fetch(`/api/research/markets?meta=1&sport=${sport}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("market metadata unavailable");
+        return response.json() as Promise<MarketReadinessMetadata>;
+      })
+      .then((next) => {
+        if (!controller.signal.aborted) {
+          setMarketMetadata(next);
+          setMarketMetadataStatus(next.source === "unavailable" ? "unavailable" : "ready");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setMarketMetadataStatus("unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, [sport]);
   useEffect(() => {
     const next = new URLSearchParams({ sport });
     if (query.trim()) next.set("q", query.trim());
@@ -138,6 +163,10 @@ export default function Scorecard() {
       (g.home_name + " " + g.away_name)
         .toLowerCase()
         .includes(query.toLowerCase()),
+  );
+  const marketReadiness = marketReadinessState(
+    marketMetadata,
+    marketMetadataStatus === "checking",
   );
   const share = async () => {
     try {
@@ -362,6 +391,25 @@ export default function Scorecard() {
               : marketEvidence === "inconsistent"
                 ? "The ledger reports qualifying observations without retained rows. Model-versus-market comparisons are withheld until the ledger is repaired."
                 : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
+        </p>
+        <div className="ledger-metrics" style={{ marginTop: 16 }} aria-label="Market capture readiness">
+          <span>Capture readiness <b>{marketReadinessLabel(marketReadiness)}</b></span>
+          <span>Applicable feed contracts <b>{(marketMetadata?.provider_capabilities?.length || 0).toLocaleString()}</b></span>
+          <span>Capture receipts <b>{(marketMetadata?.research_receipts || 0).toLocaleString()}</b></span>
+          <span>Latest capture <b>{marketMetadata?.research_capture?.market_status ? "Recorded" : "Not recorded"}</b></span>
+        </div>
+        <p className="note" role="status" style={{ marginTop: 12 }}>
+          {marketReadiness === "validated"
+            ? "A capture reported at least one validated market. Each quote still needs exact forecast registration, participant identity, kickoff and freshness checks before it can enter this scorecard."
+            : marketReadiness === "captured_rejected"
+              ? "A capture ran, but its published quotes failed validation. The scorecard withholds model-versus-market comparisons until exact game and pregame clock evidence passes."
+              : marketReadiness === "captured_no_quotes"
+                ? "A capture ran without a validated quote. No line or model edge is inferred from the schedule or an unpriced summary."
+                : marketReadiness === "unavailable"
+                  ? "The market metadata read is unavailable. Quote readiness and model-versus-market comparisons remain unverified."
+                  : marketReadiness === "checking"
+                    ? "Checking the capture receipt before describing market readiness."
+                    : "No validated capture receipt is recorded for this sport. Quote readiness remains unverified."}
         </p>
         {readiness && (
           <>
