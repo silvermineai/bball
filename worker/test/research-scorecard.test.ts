@@ -55,6 +55,25 @@ describe("live research scorecard", () => {
       captured_at: "2025-12-31T23:59:00.000000Z",
       updated_at: "2025-12-31T23:58:00.000000Z",
     };
+    const supersededQuote = {
+      ...eligibleQuote,
+      id: "quote-superseded",
+      captured_at: "2026-01-01T11:00:00.000000Z",
+      updated_at: "2026-01-01T10:59:00.000000Z",
+    };
+    const invalidPricesQuote = {
+      ...eligibleQuote,
+      id: "quote-invalid-prices",
+      bookmaker: "book-2",
+      payload_json: JSON.stringify({
+        home_id: "home",
+        away_id: "away",
+        starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -4,
+        home_price: null,
+        away_price: 1.91,
+      }),
+    };
     const prepare = vi.fn((sql: string) => {
       const first = async () => {
         if (sql.includes("MAX(CAST")) return { season: 2027 };
@@ -70,7 +89,7 @@ describe("live research scorecard", () => {
           all: async () => sql.includes("ROW_NUMBER() OVER")
             ? { results: [selected] }
             : sql.includes("SELECT id,sport,game_id,provider")
-              ? { results: [eligibleQuote, preRegistrationQuote] }
+              ? { results: [supersededQuote, eligibleQuote, preRegistrationQuote, invalidPricesQuote] }
               : { results: [] },
         }),
       };
@@ -90,6 +109,19 @@ describe("live research scorecard", () => {
     expect(body.unmatched_events).toBe(3);
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
     expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, market_observations: 7, unmatched_events: 3, games_with_comparisons: 1, qualifying_market_observations: 1 });
+    expect(body.sports.basketball.comparison_readiness).toEqual({
+      retained_observations: 7,
+      selected_game_observations: 4,
+      outside_selected_cohort: 3,
+      eligible_observations: 3,
+      comparable_observations: 2,
+      superseded_observations: 1,
+      selected_comparisons: 1,
+      rejection_counts: {
+        captured_before_registration: 1,
+        invalid_prices: 1,
+      },
+    });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("p.model_id=?"))).toBe(true);
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("registered_at<=? AND model_id=?"))).toBe(true);
   });

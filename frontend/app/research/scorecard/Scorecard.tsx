@@ -128,6 +128,7 @@ export default function Scorecard() {
     marketObservations = summary.market_observations ?? 0,
     qualifyingMarketObservations = summary.qualifying_market_observations ?? 0,
     unmatchedEvents = summary.unmatched_events ?? 0,
+    readiness = summary.comparison_readiness,
     marketEvidence = marketEvidenceState(marketObservations, qualifyingMarketObservations),
     reliabilityScope = modelReliabilityScope(summary, liveModelId);
   const rows = data.games.filter(
@@ -362,6 +363,38 @@ export default function Scorecard() {
                 ? "The ledger reports qualifying observations without retained rows. Model-versus-market comparisons are withheld until the ledger is repaired."
                 : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
         </p>
+        {readiness && (
+          <>
+            <div className="ledger-metrics" style={{ marginTop: 16 }}>
+              <span>Selected-game quotes <b>{readiness.selected_game_observations.toLocaleString()}</b></span>
+              <span>Clock + identity eligible <b>{readiness.eligible_observations.toLocaleString()}</b></span>
+              <span>Comparable values <b>{readiness.comparable_observations.toLocaleString()}</b></span>
+              <span>Latest selected comparisons <b>{readiness.selected_comparisons.toLocaleString()}</b></span>
+              <span>Outside selected cohort <b>{readiness.outside_selected_cohort.toLocaleString()}</b></span>
+              <span>Superseded updates <b>{readiness.superseded_observations.toLocaleString()}</b></span>
+            </div>
+            {Object.keys(readiness.rejection_counts).length > 0 && (
+              <details style={{ marginTop: 16 }}>
+                <summary>Why selected-game quotes did not qualify</summary>
+                <div className="table-scroll" style={{ marginTop: 12 }}>
+                  <table className="data-table">
+                    <thead><tr><th>Integrity gate</th><th className="numeric">Quotes withheld</th></tr></thead>
+                    <tbody>
+                      {Object.entries(readiness.rejection_counts)
+                        .sort(([, left], [, right]) => right - left)
+                        .map(([reason, count]) => (
+                          <tr key={reason}><th scope="row">{reasons[reason] || reason}</th><td className="numeric">{count.toLocaleString()}</td></tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+            <p className="note" style={{ marginTop: 12 }}>
+              The funnel is scoped to the selected season and model cohort. Multiple valid updates for the same provider, bookmaker, and market are reduced to the latest captured quote; earlier updates remain counted as superseded evidence.
+            </p>
+          </>
+        )}
         {marketEvidence === "none" && (
           <p className="note">
             A licensed odds feed must be configured by an operator; keys never

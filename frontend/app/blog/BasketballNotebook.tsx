@@ -4,6 +4,7 @@ import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 import { notebookFormMetrics, type NotebookRecentForm } from "./notebook-form";
+import { buildNotebookGameRead } from "./notebook-game-read";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 
 /**
@@ -98,6 +99,13 @@ export default function BasketballNotebook({
     { teamId: game.home_id, teamName: game.home_name, context: notebookRosterRoleContext(homeRosterPlayers, game.home_id, rosterSeason, rosterSource) },
   ];
   const rosterRolesReady = rosterRoleContexts.every((row) => row.context != null);
+  const gameRead = buildNotebookGameRead(
+    game,
+    homeTeam,
+    awayTeam,
+    rosterScenario,
+    forecastIdentity.modelId,
+  );
   const formRows = recentForm ? [
     { team: recentForm.away, sample: "Season", values: recentForm.away.season },
     { team: recentForm.away, sample: "Last five", values: recentForm.away.lastFive },
@@ -171,6 +179,53 @@ export default function BasketballNotebook({
             : "Primary preseason estimate from the published efficiency model. The range describes held-out model error, not a promise about the final score."}
         </p>
       </section>
+
+      {gameRead.length > 0 && (
+        <section className="section" aria-labelledby="notebook-game-read">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Four-step game read</div>
+              <h2 id="notebook-game-read">Turn the forecast into questions.</h2>
+            </div>
+            <Link href="/basketball/learn/">Learn the metrics →</Link>
+          </div>
+          <p className="note">
+            Read these in order before opening the deeper tables. Each row is
+            arithmetic over the stored forecast, exact team ratings, matchup
+            factors or matched roster scenario. It does not add a new model.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Read</th>
+                  <th>Finding</th>
+                  <th>Stored evidence</th>
+                  <th>Question to take to film</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gameRead.map((row, index) => (
+                  <tr key={row.key}>
+                    <th scope="row">
+                      <span className="eyebrow">Step {index + 1}</span>
+                      {row.label}
+                    </th>
+                    <td><strong>{row.finding}</strong></td>
+                    <td>{row.evidence}</td>
+                    <td>{row.question}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Missing rows mean the exact supporting record did not pass the
+            notebook’s identity or numeric checks; absence is not scored as a
+            neutral signal.
+          </p>
+        </section>
+      )}
 
       <section className="section" aria-labelledby="notebook-team-snapshot">
         <div className="section-heading">

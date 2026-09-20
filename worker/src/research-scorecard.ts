@@ -117,7 +117,31 @@ function finalStatus(state: Json | null, now: string): string {
   return starts <= now ? "awaiting_result" : "scheduled";
 }
 
-function marketEligible(quote: Json, prediction: Json, state: Json, now: string): boolean {
+type MarketRejection =
+  | "forecast_excluded"
+  | "invalid_payload"
+  | "participants_changed"
+  | "schedule_changed"
+  | "invalid_clock"
+  | "captured_before_registration"
+  | "captured_after_start"
+  | "updated_after_capture"
+  | "captured_in_future"
+  | "updated_after_start"
+  | "stale_at_capture"
+  | "invalid_prices"
+  | "missing_model_output"
+  | "unsupported_market";
+
+type MarketComparisonReadiness = {
+  selected_game_observations: number;
+  eligible_observations: number;
+  comparable_observations: number;
+  selected_comparisons: number;
+  rejection_counts: Partial<Record<MarketRejection, number>>;
+};
+
+function marketExclusion(quote: Json, prediction: Json, state: Json, now: string): MarketRejection | null {
   const q = parse(quote.payload_json) || {};
   const starts = String(prediction.starts_at);
   const stateStarts = String(state.starts_at ?? "");
@@ -127,17 +151,34 @@ function marketEligible(quote: Json, prediction: Json, state: Json, now: string)
   const capturedTime = Date.parse(captured);
   const updatedTime = Date.parse(updated);
   const nowTime = Date.parse(now);
+  const boundaryTime = Date.parse(boundary);
+  const registeredTime = Date.parse(String(prediction.registered_at));
   const age = capturedTime - updatedTime;
-  return String(q.home_id ?? "") === String(state.home_id ?? "")
-    && String(q.away_id ?? "") === String(state.away_id ?? "")
-    && String(q.starts_at ?? "") === boundary
-    && String(prediction.registered_at) <= captured
-    && captured < boundary
-    && updated <= captured
-    && captured <= now
-    && updated < boundary
-    && Number.isFinite(age) && age <= 86400000
-    && Number.isFinite(nowTime);
+  if (!Object.keys(q).length) return "invalid_payload";
+  if (String(q.home_id ?? "") !== String(state.home_id ?? "") || String(q.away_id ?? "") !== String(state.away_id ?? "")) return "participants_changed";
+  if (String(q.starts_at ?? "") !== boundary) return "schedule_changed";
+  if (![capturedTime, updatedTime, nowTime, boundaryTime, registeredTime].every(Number.isFinite)) return "invalid_clock";
+  if (capturedTime < registeredTime) return "captured_before_registration";
+  if (capturedTime >= boundaryTime) return "captured_after_start";
+  if (updatedTime > capturedTime) return "updated_after_capture";
+  if (capturedTime > nowTime) return "captured_in_future";
+  if (updatedTime >= boundaryTime) return "updated_after_start";
+  if (age > 86400000) return "stale_at_capture";
+  return null;
+}
+
+function comparisonExclusion(prediction: Json, quote: Json): MarketRejection | null {
+  const p = parse(prediction.payload_json)?.prediction as Json | undefined;
+  const q = parse(quote.payload_json);
+  if (!p || !q) return "invalid_payload";
+  const market = String(quote.market);
+  if (market !== "spreads" && market !== "totals" && market !== "h2h") return "unsupported_market";
+  const first = number(market === "totals" ? q.over_price : q.home_price);
+  const second = number(market === "totals" ? q.under_price : q.away_price);
+  if (first === null || second === null || first <= 1 || second <= 1) return "invalid_prices";
+  if (market === "spreads") return number(p.home_margin) !== null && number(q.line) !== null ? null : "missing_model_output";
+  if (market === "totals") return number(p.total) !== null && number(q.line) !== null ? null : "missing_model_output";
+  return probability(p.home_win_probability) !== null ? null : "missing_model_output";
 }
 
 function compare(prediction: Json, quote: Json, state: Json): Json | null {
@@ -248,7 +289,7 @@ function metrics(rows: Json[]): Json {
   };
 }
 
-function summary(rows: Json[], registeredVersions: number, marketObservations: number, unmatchedEvents: number): Json {
+function summary(rows: Json[], registeredVersions: number, marketObservations: number, unmatchedEvents: number, readiness: MarketComparisonReadiness): Json {
   const groups = new Map<string, Json[]>();
   for (const row of rows) for (const quote of (row.comparisons as Json[])) {
     if (row.status !== "settled") continue;
@@ -318,6 +359,16 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
       (total, row) => total + (row.comparisons as Json[]).length,
       0,
     ),
+    comparison_readiness: {
+      retained_observations: marketObservations,
+      selected_game_observations: readiness.selected_game_observations,
+      outside_selected_cohort: Math.max(0, marketObservations - readiness.selected_game_observations),
+      eligible_observations: readiness.eligible_observations,
+      comparable_observations: readiness.comparable_observations,
+      superseded_observations: Math.max(0, readiness.comparable_observations - readiness.selected_comparisons),
+      selected_comparisons: readiness.selected_comparisons,
+      rejection_counts: readiness.rejection_counts,
+    },
     model_metrics: modelMetrics,
     market_metrics: marketMetrics,
   };
@@ -328,7 +379,7 @@ async function latestSeason(db: D1Database, sport: Sport): Promise<number | null
   return row?.season == null ? null : Number(row.season);
 }
 
-async function loadSport(db: D1Database, sport: Sport, season: number, now: string, modelId?: string): Promise<{ rows: Json[]; registeredVersions: number }> {
+async function loadSport(db: D1Database, sport: Sport, season: number, now: string, modelId?: string): Promise<{ rows: Json[]; registeredVersions: number; comparisonReadiness: MarketComparisonReadiness }> {
   const modelClause = modelId ? " AND model_id=?" : "";
   const countBinds: Array<string | number> = [sport, season, now];
   if (modelId) countBinds.push(modelId);
@@ -370,6 +421,16 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     quotesByGame.set(key, [...(quotesByGame.get(key) || []), quote]);
   }
   const rows: Json[] = [];
+  const comparisonReadiness: MarketComparisonReadiness = {
+    selected_game_observations: 0,
+    eligible_observations: 0,
+    comparable_observations: 0,
+    selected_comparisons: 0,
+    rejection_counts: {},
+  };
+  const reject = (reason: MarketRejection) => {
+    comparisonReadiness.rejection_counts[reason] = (comparisonReadiness.rejection_counts[reason] || 0) + 1;
+  };
   for (const row of rawRows) {
     const payload = parse(row.payload_json) || {};
     const state = parse(row.state_json);
@@ -388,16 +449,33 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,
       actual_total: status === "settled" && homeScore !== null && awayScore !== null ? homeScore + awayScore : null, comparisons: [],
     };
+    const gameQuotes = quotesByGame.get(String(row.game_id)) || [];
+    comparisonReadiness.selected_game_observations += gameQuotes.length;
     if (!exclusion && state) {
       const chosen = new Map<string, Json>();
-      for (const quote of quotesByGame.get(String(row.game_id)) || []) {
-        if (marketEligible(quote, { ...row, payload_json: row.payload_json }, state, now)) chosen.set(`${quote.provider}|${quote.bookmaker}|${quote.market}`, quote);
+      for (const quote of gameQuotes) {
+        const marketReason = marketExclusion(quote, { ...row, payload_json: row.payload_json }, state, now);
+        if (marketReason) {
+          reject(marketReason);
+          continue;
+        }
+        comparisonReadiness.eligible_observations += 1;
+        const comparisonReason = comparisonExclusion({ ...row, payload_json: row.payload_json }, quote);
+        if (comparisonReason) {
+          reject(comparisonReason);
+          continue;
+        }
+        comparisonReadiness.comparable_observations += 1;
+        chosen.set(`${quote.provider}|${quote.bookmaker}|${quote.market}`, quote);
       }
       item.comparisons = [...chosen.values()].map((quote) => compare({ ...row, payload_json: row.payload_json }, quote, state)).filter((quote): quote is Json => quote !== null);
+      comparisonReadiness.selected_comparisons += (item.comparisons as Json[]).length;
+    } else {
+      for (const _quote of gameQuotes) reject("forecast_excluded");
     }
     rows.push(item);
   }
-  return { rows, registeredVersions: Number(count?.total || 0) };
+  return { rows, registeredVersions: Number(count?.total || 0), comparisonReadiness };
 }
 
 async function loadReport(db: D1Database, sport: Sport | "all", season: number | undefined, now: string, modelId?: string) {
@@ -405,7 +483,11 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
   const seasons = await Promise.all(sports.map(async (code) => ({ code, season: season ?? await latestSeason(db, code) })));
   const loaded = await Promise.all(seasons.map(async ({ code, season: target }) => {
     const [data, marketCount, unmatchedCount] = await Promise.all([
-      target === null ? Promise.resolve({ rows: [], registeredVersions: 0 }) : loadSport(db, code, target, now, modelId),
+      target === null ? Promise.resolve({
+        rows: [],
+        registeredVersions: 0,
+        comparisonReadiness: { selected_game_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} },
+      }) : loadSport(db, code, target, now, modelId),
       db.prepare("SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(code).first<{ total: number }>(),
       db.prepare("SELECT count(*) AS total FROM audit_unmatched WHERE sport=?").bind(code).first<{ total: number }>(),
     ]);
@@ -418,7 +500,7 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
     };
   }));
   const games = loaded.flatMap((item) => item.data.rows);
-  const summaries = Object.fromEntries(loaded.map(({ code, data, marketObservations, unmatchedEvents }) => [code, summary(data.rows, data.registeredVersions, marketObservations, unmatchedEvents)]));
+  const summaries = Object.fromEntries(loaded.map(({ code, data, marketObservations, unmatchedEvents }) => [code, summary(data.rows, data.registeredVersions, marketObservations, unmatchedEvents, data.comparisonReadiness)]));
   return {
     loaded,
     games,

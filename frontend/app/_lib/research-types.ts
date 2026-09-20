@@ -73,6 +73,17 @@ export type SportSummary = {
   metrics: Metrics;
   games_with_comparisons: number;
   qualifying_market_observations?: number;
+  /** Reconciled quote funnel for the selected season/model cohort. */
+  comparison_readiness?: {
+    retained_observations: number;
+    selected_game_observations: number;
+    outside_selected_cohort: number;
+    eligible_observations: number;
+    comparable_observations: number;
+    superseded_observations: number;
+    selected_comparisons: number;
+    rejection_counts: Record<string, number>;
+  };
   /** Results remain separated by the model selected under the ledger policy. */
   model_metrics?: {
     model_id: string;
@@ -201,4 +212,15 @@ export const reasons: Record<string, string> = {
   scheduled: "Scheduled",
   settled: "Settled",
   excluded: "Excluded",
+  forecast_excluded: "Selected forecast is ineligible",
+  invalid_payload: "Malformed quote payload",
+  captured_before_registration: "Captured before forecast registration",
+  captured_after_start: "Captured at or after tip",
+  updated_after_capture: "Provider update follows capture",
+  captured_in_future: "Capture clock is in the future",
+  updated_after_start: "Provider update is at or after tip",
+  stale_at_capture: "Provider quote was over 24 hours old",
+  invalid_prices: "Missing or invalid paired prices",
+  missing_model_output: "Required model or line value is missing",
+  unsupported_market: "Unsupported market type",
 };
