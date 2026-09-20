@@ -48,7 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <footer className="site-footer">
           <div>
             <strong>Silvermine</strong>
-            <p>College basketball stats and model forecasts.</p>
+            <p>College sports stats and model forecasts.</p>
           </div>
           <p>
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>

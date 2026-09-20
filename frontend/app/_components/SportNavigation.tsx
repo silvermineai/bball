@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   buildScopeHref,
   DIVISION_OPTIONS,
@@ -23,12 +24,15 @@ function selectedDivision(value: string | null): Division {
 
 export default function SportNavigation() {
   const pathname = usePathname() || "/";
-  const searchParams = useSearchParams();
+  const [currentSearch, setCurrentSearch] = useState("");
+  useEffect(() => {
+    setCurrentSearch(window.location.search);
+  }, [pathname]);
+  const searchParams = new URLSearchParams(currentSearch);
   const currentSport = sportForPathname(pathname, searchParams.get("gender"));
   const config = SPORT_NAVIGATION[currentSport];
   const gender = selectedGender(searchParams.get("gender"));
   const division = selectedDivision(searchParams.get("division"));
-  const currentSearch = searchParams.toString();
 
   const hrefWithScope = (href: string) => buildScopeHref(href, currentSearch, gender, division);
   const scopeHref = (nextGender: Gender, nextDivision: Division) =>
