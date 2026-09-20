@@ -62,6 +62,16 @@ const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+/** Find retained fields by either their archive key or readable label. */
+export function filterSourceFields(fields: readonly string[], query: string): string[] {
+  const needle = query.trim().toLowerCase();
+  return fields.filter((field) => {
+    if (!needle) return true;
+    const groupLabels = sourceFieldGroups.filter((group) => group.fields.some(([key]) => key === field)).map((group) => group.label).join(" ");
+    return `${field} ${prettySourceField(field)} ${groupLabels}`.toLowerCase().includes(needle);
+  });
+}
+
 export type FieldAvailability = "complete" | "partial" | "unavailable";
 
 /** Classify only coherent retained counts; malformed coverage stays unavailable. */
@@ -140,6 +150,7 @@ export default function NcaaPlayerBox() {
   const [season, setSeason] = useState(initial?.get("season") === "all" ? "all" : initial?.get("season") || "2026");
   const [archive, setArchive] = useState<"auto" | "games" | "season">(initial?.get("archive") === "season" ? "season" : initial?.get("archive") === "games" ? "games" : "auto");
   const [query, setQuery] = useState(initial?.get("q") || "");
+  const [fieldQuery, setFieldQuery] = useState(initial?.get("fieldQ") || "");
   const [field, setField] = useState(() => /^[a-z][a-z0-9_]{0,39}$/.test(initial?.get("field") || "") ? initial!.get("field")! : "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [fieldCoverage, setFieldCoverage] = useState<FieldCoverage | null>(null);
@@ -159,9 +170,10 @@ export default function NcaaPlayerBox() {
     if (archive !== "auto") params.set("archive", archive);
     if (query.trim()) params.set("q", query.trim());
     if (field) params.set("field", field);
+    if (fieldQuery.trim()) params.set("fieldQ", fieldQuery.trim());
     if (page) params.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [archive, field, season, query, page]);
+  }, [archive, field, fieldQuery, season, query, page]);
 
   useEffect(() => {
     fetch("/data/basketball/ncaa-player-box-fields.json")
@@ -195,6 +207,7 @@ export default function NcaaPlayerBox() {
   const selectedSeasonLabel = season === "all" ? "all retained seasons" : label(Number(season));
   const sparseEdition = (meta?.total ?? selectedCoverage?.rows ?? 0) < 10000;
   const sourceFields = fieldCoverage?.fields || [];
+  const visibleSourceFields = filterSourceFields(sourceFields, fieldQuery);
   const availability = selectedCoverage ? sourceFields.reduce<Record<FieldAvailability, number>>((summary, sourceField) => {
     const status = fieldAvailability(selectedCoverage.rows, selectedCoverage.fields[sourceField]?.observed ?? 0);
     summary[status] += 1;
@@ -292,7 +305,8 @@ export default function NcaaPlayerBox() {
       <p className="note">Observed counts include recorded zeroes. A blank or null value is unavailable and is never converted into zero.</p>
       {availability && numericAvailability && <div className="strip" style={{ marginBottom: 18 }}><div><strong>{availability.complete}</strong><span>Recorded complete</span></div><div><strong>{numericAvailability.complete}</strong><span>Numeric usable</span></div><div><strong>{numericAvailability.partial}</strong><span>Numeric partial</span></div><div><strong>{numericAvailability.unavailable}</strong><span>Numeric unavailable</span></div><div><strong>{field || "All"}</strong><span>Active field filter</span></div></div>}
       {sparseEdition && <p className="status-error" role="status">This retained edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the archive receipt before comparing it with later seasons.</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th>Recorded</th><th>Numeric usable</th><th className="numeric">Observed</th><th className="numeric">Numeric</th><th>Inspect</th></tr></thead><tbody>{fieldCoverage?.fields.map((sourceField) => {
+      <div className="toolbar" style={{ marginBottom: 16 }}><label className="control" style={{ flex: 1 }}><span>FIND ARCHIVE FIELD</span><input type="search" maxLength={80} value={fieldQuery} onChange={(event) => setFieldQuery(event.target.value)} placeholder="Try rim, transition, or o_poss" /></label><span className="note">Showing {visibleSourceFields.length} of {sourceFields.length} fields</span></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th>Recorded</th><th>Numeric usable</th><th className="numeric">Observed</th><th className="numeric">Numeric</th><th>Inspect</th></tr></thead><tbody>{visibleSourceFields.map((sourceField) => {
         const value = selectedCoverage.fields[sourceField];
         const status = fieldAvailability(selectedCoverage.rows, value?.observed ?? 0);
         const numericObserved = value?.numeric_observed ?? value?.observed ?? 0;
@@ -300,7 +314,7 @@ export default function NcaaPlayerBox() {
         const share = value && Number.isInteger(value.observed) && value.observed >= 0 && value.observed <= selectedCoverage.rows && selectedCoverage.rows > 0 ? value.observed / selectedCoverage.rows : null;
         const numericShare = value && Number.isInteger(numericObserved) && numericObserved >= 0 && numericObserved <= selectedCoverage.rows && selectedCoverage.rows > 0 ? numericObserved / selectedCoverage.rows : null;
         return <tr key={sourceField}><td><strong>{prettySourceField(sourceField)}</strong><small><code>{sourceField}</code></small></td><td>{status === "complete" ? "Complete" : status === "partial" ? "Partial" : "Unavailable"}</td><td>{numericStatus === "complete" ? "Complete" : numericStatus === "partial" ? "Partial" : "Unavailable"}</td><td className="numeric">{value?.observed.toLocaleString() || "0"}<small>{share == null ? "" : ` · ${(share * 100).toFixed(1)}%`}</small></td><td className="numeric">{numericObserved.toLocaleString()}<small>{numericShare == null ? "" : ` · ${(numericShare * 100).toFixed(1)}%`}</small></td><td><button className="button secondary" type="button" onClick={() => { setField(sourceField); setPage(0); }} disabled={numericObserved === 0}>{field === sourceField ? "Active" : numericObserved === 0 ? "No numeric rows" : "Inspect rows →"}</button></td></tr>;
-      })}</tbody></table></div>
+      })}</tbody></table></div>{fieldQuery.trim() && !visibleSourceFields.length && <p className="empty" role="status">No archive fields match “{fieldQuery}”. Try an archive key such as <code>o_poss</code> or a label such as “transition”.</p>}
     </section>}
       {result?.archive_mode === "games" && meta?.validation && <section className="paper-panel" style={{ marginBottom: 24 }}>
       <div className="section-heading">

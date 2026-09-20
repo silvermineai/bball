@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldAvailability, numericFieldAvailability, validatePlayerBoxExportPage, type PlayerBoxResult } from "./NcaaPlayerBox";
+import { fieldAvailability, filterSourceFields, numericFieldAvailability, validatePlayerBoxExportPage, type PlayerBoxResult } from "./NcaaPlayerBox";
 
 describe("player box export pagination", () => {
   const page = (overrides: Partial<PlayerBoxResult> = {}): PlayerBoxResult => ({
@@ -46,5 +46,13 @@ describe("player box field availability", () => {
     expect(numericFieldAvailability(100, 4)).toBe("partial");
     expect(numericFieldAvailability(100, 0)).toBe("unavailable");
     expect(numericFieldAvailability(100, 101)).toBe("unavailable");
+  });
+
+  it("finds archive fields by key or readable label without changing field order", () => {
+    const fields = ["o_poss", "pts_trans", "ts_pct_half", "rima"];
+    expect(filterSourceFields(fields, "transition")).toEqual(["pts_trans"]);
+    expect(filterSourceFields(fields, "O POSS")).toEqual(["o_poss"]);
+    expect(filterSourceFields(fields, "")).toEqual(fields);
+    expect(filterSourceFields(fields, "missing")).toEqual([]);
   });
 });
