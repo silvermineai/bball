@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { basketballForecasts, parseForecastPrediction } from "../src/basketball-forecasts";
+import { basketballForecasts, parseForecastMatchupFactors, parseForecastPrediction } from "../src/basketball-forecasts";
 
 describe("basketball forecast availability", () => {
   it("withholds forecast objects with invalid known numeric fields", () => {
@@ -31,6 +31,94 @@ describe("basketball forecast availability", () => {
       },
       integrity: "valid",
     });
+  });
+
+  it("validates four-factor matchup context and keeps malformed context unavailable", () => {
+    const valid = parseForecastMatchupFactors({
+      season: 2026,
+      factors: {
+        efg: { home_offense: 0.53, home_defense: 0.5, away_offense: 0.49, away_defense: 0.52 },
+        tov: { home_offense: 0.16, home_defense: 0.15, away_offense: 0.17, away_defense: 0.16 },
+        orb: { home_offense: 0.3, home_defense: 0.28, away_offense: 0.25, away_defense: 0.3 },
+        ftr: { home_offense: 0.38, home_defense: 0.26, away_offense: 0.31, away_defense: 0.32 },
+      },
+      edges: { efg: 0.02, tov: 0.01, orb: 0.03, ftr: -0.01 },
+    });
+    expect(valid.integrity).toBe("valid");
+    expect(valid.factors?.factors.efg.home_offense).toBe(0.53);
+    expect(parseForecastMatchupFactors({
+      season: 2026,
+      factors: { efg: { home_offense: 1.3 } },
+      edges: { efg: 0.02 },
+    })).toEqual({ factors: null, integrity: "invalid" });
+    expect(parseForecastMatchupFactors(null)).toEqual({ factors: null, integrity: "unavailable" });
+  });
+
+  it("adds published four-factor context to a live D1 forecast row", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({ results: [{
+            game_id: "401",
+            model_id: "basketball-efficiency-v2-current",
+            created_at: "2026-09-19T00:00:00Z",
+            prediction_json: JSON.stringify({ home_margin: 4.5, home_win_probability: 0.62 }),
+            season: 2027,
+            starts_at: "2026-11-02T05:00:00Z",
+            home_id: "1",
+            away_id: "2",
+            home_name: "Home",
+            away_name: "Away",
+            home_score: null,
+            away_score: null,
+            completed: 0,
+            neutral: 0,
+            time_tbd: 0,
+            venue: null,
+            broadcast: null,
+            source_start: null,
+            source_time_valid: null,
+            source_observed_at: null,
+          }] }),
+        }),
+      };
+    });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2027,
+      generated_at: "2026-09-17T10:00:00Z",
+      model: { id: "basketball-efficiency-v2-published" },
+      upcoming: [{
+        id: "401",
+        matchup_factors: {
+          season: 2026,
+          factors: {
+            efg: { home_offense: 0.53, home_defense: 0.5, away_offense: 0.49, away_defense: 0.52 },
+            tov: { home_offense: 0.16, home_defense: 0.15, away_offense: 0.17, away_defense: 0.16 },
+            orb: { home_offense: 0.3, home_defense: 0.28, away_offense: 0.25, away_defense: 0.3 },
+            ftr: { home_offense: 0.38, home_defense: 0.26, away_offense: 0.31, away_defense: 0.32 },
+          },
+          edges: { efg: 0.02, tov: 0.01, orb: 0.03, ftr: -0.01 },
+        },
+      }],
+    }), { status: 200 }));
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&model=latest&limit=1",
+      {},
+      { DB: { prepare }, ASSETS: { fetch } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rows: Array<Record<string, unknown>> };
+    expect(body.rows[0]).toMatchObject({
+      matchup_factors_integrity: "valid",
+      matchup_factors_source: "published_asset",
+      matchup_factors_model_id: "basketball-efficiency-v2-published",
+      matchup_factors_generated_at: "2026-09-17T10:00:00Z",
+      matchup_factors: { season: 2026, edges: { efg: 0.02 } },
+    });
+    expect(fetch).toHaveBeenCalledOnce();
   });
 
   it("resolves latest from models that contain forecasts for the requested season", async () => {

@@ -162,6 +162,67 @@ type PublishedForecastOverview = {
   upcoming?: unknown;
 };
 
+const matchupFactorKeys = ["efg", "tov", "orb", "ftr"] as const;
+const matchupFactorValueKeys = ["home_offense", "home_defense", "away_offense", "away_defense"] as const;
+type MatchupFactorKey = (typeof matchupFactorKeys)[number];
+type MatchupFactors = {
+  season: number;
+  factors: Record<MatchupFactorKey, Record<(typeof matchupFactorValueKeys)[number], number>>;
+  edges: Record<MatchupFactorKey, number>;
+};
+type MatchupFactorRead = {
+  factors: MatchupFactors | null;
+  integrity: "valid" | "invalid" | "unavailable";
+  source: "forecast_payload" | "published_asset" | null;
+  model_id: string | null;
+  generated_at: string | null;
+};
+
+/**
+ * Validate the four-factor context independently of the score prediction.
+ * The publisher uses rates in [0,1] and signed home-team edges; retaining only
+ * this fixed shape prevents arbitrary source JSON from becoming model context.
+ */
+export function parseForecastMatchupFactors(value: unknown): {
+  factors: MatchupFactors | null;
+  integrity: "valid" | "invalid" | "unavailable";
+} {
+  if (value == null) return { factors: null, integrity: "unavailable" };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { factors: null, integrity: "invalid" };
+  const row = value as Record<string, unknown>;
+  const season = row.season;
+  if (typeof season !== "number" || !Number.isInteger(season) || season < 1900 || season > 2200) {
+    return { factors: null, integrity: "invalid" };
+  }
+  const sourceFactors = row.factors;
+  const sourceEdges = row.edges;
+  if (!sourceFactors || typeof sourceFactors !== "object" || Array.isArray(sourceFactors)
+    || !sourceEdges || typeof sourceEdges !== "object" || Array.isArray(sourceEdges)) {
+    return { factors: null, integrity: "invalid" };
+  }
+  const factors = {} as MatchupFactors["factors"];
+  const edges = {} as MatchupFactors["edges"];
+  for (const key of matchupFactorKeys) {
+    const source = (sourceFactors as Record<string, unknown>)[key];
+    const edge = (sourceEdges as Record<string, unknown>)[key];
+    if (!source || typeof source !== "object" || Array.isArray(source)
+      || typeof edge !== "number" || !Number.isFinite(edge) || edge < -1 || edge > 1) {
+      return { factors: null, integrity: "invalid" };
+    }
+    const parsed = {} as MatchupFactors["factors"][MatchupFactorKey];
+    for (const field of matchupFactorValueKeys) {
+      const metric = (source as Record<string, unknown>)[field];
+      if (typeof metric !== "number" || !Number.isFinite(metric) || metric < 0 || metric > 1) {
+        return { factors: null, integrity: "invalid" };
+      }
+      parsed[field] = metric;
+    }
+    factors[key] = parsed;
+    edges[key] = edge;
+  }
+  return { factors: { season, factors, edges }, integrity: "valid" };
+}
+
 const predictionNumericFields = [
   "home_score",
   "away_score",
@@ -244,6 +305,7 @@ async function publishedForecastFallback(
             ? game.fallback_prediction
             : null;
         const checkedPrediction = parseForecastPrediction(rawPrediction);
+        const checkedFactors = parseForecastMatchupFactors(game.matchup_factors);
         return {
           game_id: typeof game.id === "string" ? game.id : String(game.id || ""),
           model_id: modelId,
@@ -266,6 +328,11 @@ async function publishedForecastFallback(
           source_observed_at: null,
           prediction: checkedPrediction.prediction,
           prediction_integrity: checkedPrediction.integrity,
+          matchup_factors: checkedFactors.factors,
+          matchup_factors_integrity: checkedFactors.integrity,
+          matchup_factors_source: checkedFactors.factors ? "published_asset" : null,
+          matchup_factors_model_id: checkedFactors.factors ? modelId : null,
+          matchup_factors_generated_at: checkedFactors.factors ? createdAt : null,
         };
       });
     const start = args.page * args.limit;
@@ -284,6 +351,58 @@ async function publishedForecastFallback(
     return response;
   } catch {
     return null;
+  }
+}
+
+async function publishedMatchupFactors(
+  c: Context<{ Bindings: Bindings }>,
+  args: { season: number; status: string; gameId?: string; q?: string; model: string; roster: string },
+  gameIds: string[],
+): Promise<Map<string, MatchupFactorRead>> {
+  const result = new Map<string, MatchupFactorRead>();
+  // Factors are a published upcoming-board context. Do not attach the asset
+  // to filtered, historical, explicitly selected, or roster-challenger reads.
+  if (
+    !c.env.ASSETS
+    || args.season !== 2027
+    || args.status !== "upcoming"
+    || args.gameId
+    || args.q
+    || args.model !== "latest"
+    || args.roster !== "0"
+    || !gameIds.length
+  ) return result;
+  try {
+    const asset = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/basketball/overview.json", c.req.url))),
+      PUBLISHED_FORECAST_TIMEOUT_MS,
+    );
+    if (!asset.ok) return result;
+    const overview = await asset.json() as PublishedForecastOverview;
+    const overviewSeason = typeof overview.season === "number" && Number.isInteger(overview.season)
+      ? overview.season
+      : null;
+    if (overviewSeason !== args.season) return result;
+    const modelId = typeof overview.model?.id === "string" ? overview.model.id : null;
+    const generatedAt = typeof overview.generated_at === "string" ? overview.generated_at : null;
+    const wanted = new Set(gameIds);
+    for (const value of Array.isArray(overview.upcoming) ? overview.upcoming : []) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const game = value as Record<string, unknown>;
+      const id = typeof game.id === "string" ? game.id : String(game.id || "");
+      if (!wanted.has(id)) continue;
+      const checked = parseForecastMatchupFactors(game.matchup_factors);
+      result.set(id, {
+        factors: checked.factors,
+        integrity: checked.integrity,
+        source: checked.factors ? "published_asset" : null,
+        model_id: checked.factors ? modelId : null,
+        generated_at: checked.factors ? generatedAt : null,
+      });
+    }
+    return result;
+  } catch {
+    return result;
   }
 }
 
@@ -528,6 +647,11 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     source_time_valid: number | null;
     source_observed_at: string | null;
   }>(), DB_TIMEOUT_MS);
+  const publishedFactors = await publishedMatchupFactors(
+    c,
+    { season, status, gameId, q, model, roster },
+    rows.results.map((row) => row.game_id),
+  );
   const resolvedModelIds = new Set(rows.results.map((row) => row.model_id));
   const resolvedModelId = resolvedModelIds.size === 1 ? [...resolvedModelIds][0] : null;
   const rosterArtifact = roster === "1"
@@ -538,19 +662,46 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const responseRows = rows.results.map(({ prediction_json, ...row }) => {
     let prediction: Record<string, unknown> | null = null;
     let predictionIntegrity: "valid" | "invalid" = "invalid";
+    let matchupRead: MatchupFactorRead = {
+      factors: null,
+      integrity: "unavailable",
+      source: null,
+      model_id: null,
+      generated_at: null,
+    };
     try {
       const parsed = JSON.parse(prediction_json) as unknown;
       const checked = parseForecastPrediction(parsed);
       prediction = checked.prediction;
       predictionIntegrity = checked.integrity;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && "matchup_factors" in parsed) {
+        const factors = parseForecastMatchupFactors((parsed as Record<string, unknown>).matchup_factors);
+        matchupRead = {
+          factors: factors.factors,
+          integrity: factors.integrity,
+          source: factors.factors ? "forecast_payload" : null,
+          model_id: null,
+          generated_at: null,
+        };
+      } else {
+        matchupRead = publishedFactors.get(row.game_id) || matchupRead;
+      }
     } catch {
       // A malformed stored payload is withheld instead of failing the whole page.
+    }
+    if (matchupRead.integrity === "unavailable") {
+      matchupRead = publishedFactors.get(row.game_id) || matchupRead;
     }
     return {
       ...row,
       source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
       prediction,
       prediction_integrity: predictionIntegrity,
+      matchup_factors: matchupRead.factors,
+      matchup_factors_integrity: matchupRead.integrity,
+      matchup_factors_source: matchupRead.source,
+      matchup_factors_model_id: matchupRead.model_id,
+      matchup_factors_generated_at: matchupRead.generated_at,
       ...(roster === "1" ? {
         roster_lens: (() => {
           const lens = rosterArtifact.lenses.get(row.game_id);
