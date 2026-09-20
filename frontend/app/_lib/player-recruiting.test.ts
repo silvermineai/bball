@@ -6,6 +6,7 @@ import {
   playerRecruitingStatRows,
   playerRecruitingContext,
   playerRecruitingContextRequests,
+  playerRecruitingReadiness,
 } from "./player-recruiting";
 import type { RecruitingRelease } from "./recruiting";
 import type { BBRosters } from "./basketball-types";
@@ -45,6 +46,22 @@ describe("player recruiting context", () => {
     const context = playerRecruitingContext("not-a-source-id", recruitingRelease, rosterRelease);
     expect(context.announcements).toEqual([]);
     expect(context.rosterObservations).toEqual([]);
+  });
+
+  it("reports exact-ID recruiting readiness without inferring missing evidence", () => {
+    const linked = recruitingRelease.people.find((person) => person.stats)?.stats?.id;
+    expect(linked).toBeTruthy();
+    const complete = playerRecruitingReadiness(playerRecruitingContext(linked!, recruitingRelease, rosterRelease));
+    expect(complete.every((check) => check.status === "recorded")).toBe(true);
+    expect(complete.map((check) => check.label)).toEqual([
+      "Dated school evidence",
+      "Prior college production",
+      "Current roster observation",
+    ]);
+
+    const missing = playerRecruitingReadiness({ announcements: [], rosterObservations: [] });
+    expect(missing.map((check) => check.status)).toEqual(["unavailable", "unavailable", "unavailable"]);
+    expect(missing[2].detail).toBe("No exact-ID roster row");
   });
 
   it("keeps the recruiting handoff wide enough for a useful player review", () => {

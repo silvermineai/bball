@@ -74,6 +74,50 @@ export function playerRecruitingContext(
 export type PlayerRecruitingContext = ReturnType<typeof playerRecruitingContext>;
 export type PlayerRosterObservation = BBRoster;
 
+export type PlayerRecruitingReadiness = {
+  key: "announcement" | "production" | "roster";
+  label: string;
+  status: "recorded" | "unavailable";
+  detail: string;
+};
+
+/**
+ * Compress the exact-ID handoff into three auditable preparation checks.
+ * Missing evidence remains unavailable; a missing roster row is never turned
+ * into a departure or eligibility conclusion.
+ */
+export function playerRecruitingReadiness(
+  context: Pick<PlayerRecruitingContext, "announcements" | "rosterObservations">,
+): PlayerRecruitingReadiness[] {
+  const productionRows = context.announcements.filter((row) => row.stats);
+  return [
+    {
+      key: "announcement",
+      label: "Dated school evidence",
+      status: context.announcements.length ? "recorded" : "unavailable",
+      detail: context.announcements.length
+        ? `${context.announcements.length} reviewed program record${context.announcements.length === 1 ? "" : "s"}`
+        : "No exact-ID announcement record",
+    },
+    {
+      key: "production",
+      label: "Prior college production",
+      status: productionRows.length ? "recorded" : "unavailable",
+      detail: productionRows.length
+        ? `${productionRows.length} exact-ID stat profile${productionRows.length === 1 ? "" : "s"}`
+        : "No exact-ID prior stat profile",
+    },
+    {
+      key: "roster",
+      label: "Current roster observation",
+      status: context.rosterObservations.length ? "recorded" : "unavailable",
+      detail: context.rosterObservations.length
+        ? `${context.rosterObservations.length} source-listed roster row${context.rosterObservations.length === 1 ? "" : "s"}`
+        : "No exact-ID roster row",
+    },
+  ];
+}
+
 /**
  * The compact stat set shown when a recruiting record is handed off to a
  * player profile.  Keep the labels and denominator visible so the profile

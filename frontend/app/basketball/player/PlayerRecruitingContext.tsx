@@ -11,6 +11,7 @@ import {
   playerRecruitingContext,
   parseLivePlayerRecruitingPayload,
   playerRecruitingContextRequests,
+  playerRecruitingReadiness,
   playerRecruitingStatRows,
   type PlayerRecruitingContext as PlayerRecruitingContextData,
 } from "../../_lib/player-recruiting";
@@ -91,6 +92,7 @@ export default function PlayerRecruitingContext({
   if (!context) return <p className="empty" role="status">Loading dated recruiting evidence…</p>;
 
   const { announcements, rosterObservations, rosterSeason } = context;
+  const readiness = playerRecruitingReadiness(context);
   return (
     <section className="section paper-panel player-recruiting-context">
       <div className="section-heading">
@@ -114,6 +116,22 @@ export default function PlayerRecruitingContext({
           {releaseMeta.rosterFetchedAt ? ` · roster receipt ${releaseMeta.rosterFetchedAt.slice(0, 10)}` : ""}
         </p>
       ) : null}
+      <section className="player-recruiting-readiness" aria-label="Player recruiting evidence readiness">
+        <div>
+          <div className="eyebrow">Staff handoff / evidence readiness</div>
+          <h3>Three checks before using the player story.</h3>
+          <p className="note">Recorded means the exact source ID is present in that release. Unavailable means the release did not provide the evidence; it does not establish absence, eligibility or a future role.</p>
+        </div>
+        <div className="player-recruiting-readiness-grid">
+          {readiness.map((check) => (
+            <div className={`player-recruiting-readiness-card is-${check.status}`} key={check.key}>
+              <span className="eyebrow">{check.status === "recorded" ? "Recorded" : "Unavailable"}</span>
+              <strong>{check.label}</strong>
+              <small>{check.detail}</small>
+            </div>
+          ))}
+        </div>
+      </section>
       <div className="strip">
         <div><strong>{announcements.length}</strong><span>Reviewed announcement records</span></div>
         <div><strong>{announcements.reduce((sum, row) => sum + row.timeline.length, 0)}</strong><span>Dated source events</span></div>
