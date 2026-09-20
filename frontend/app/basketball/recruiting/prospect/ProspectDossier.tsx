@@ -16,6 +16,7 @@ import { prospectClassContext, type ProspectClassContextPayload } from "./class-
 import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-context";
 import { prospectLearningChecks } from "./learning-questions";
 import { recordedProspectFields } from "./recorded-fields";
+import ProspectProductionBridge from "./ProspectProductionBridge";
 
 type Prospect = {
   athlete_id: string;
@@ -243,6 +244,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <p className="note" style={{ marginTop: 12 }}>The denominator is the complete unfiltered class in this exact edition. Ranked, graded and committed counts describe recorded coverage; they are not scouting grades or enrollment claims. Edition <span className="source-hash">{edition}</span>.</p>
             </> : <p className="empty">A valid unfiltered class denominator is not attached to this exact prospect response. The recorded rank remains visible without an inferred cohort size.</p>}
           </section>
+          <ProspectProductionBridge athleteId={prospect.athlete_id} season={Number(season)} />
           <section className="paper-panel" aria-label="Prospect position peer context" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Position peers / same retained edition</div><h2>{peerContext ? `${peerContext.position} measurements in context.` : "Position peer context unavailable"}</h2></div>
