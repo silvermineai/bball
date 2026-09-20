@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getFootballEfficiencyModel, getOverview } from "../../_lib/data";
-import { fmt, kick } from "../../_lib/format";
+import { fmt, kick, signed } from "../../_lib/format";
 import { getFootballBriefEvidence } from "../../_lib/football-brief-data";
 import { footballSlateIntel } from "../../_lib/football-brief";
 import MatchupBrowser from "./MatchupBrowser";
+import { footballModelFactors } from "../../_lib/football-model-factors";
 export const metadata = { title: "2026 football matchups and forecasts" };
 export default function Page() {
   const d = getOverview();
@@ -48,7 +49,22 @@ export default function Page() {
                 <td className="numeric">{prediction?.home_win_probability == null ? "—" : `${fmt(prediction.home_win_probability * 100)}%`}</td>
                 <td className="numeric">{fmt(prediction?.home_margin)}</td>
                 <td className="numeric">{fmt(prediction?.total)}</td>
-                <td>Primary<small>{prediction?.margin_low == null || prediction.margin_high == null ? "Range unavailable" : `Range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`}</small></td>
+                <td>
+                  <strong>Primary</strong>
+                  <small>{prediction?.margin_low == null || prediction.margin_high == null ? "Range unavailable" : `Range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`}</small>
+                  {prediction && (() => {
+                    const factors = footballModelFactors(d.model, game);
+                    return <details className="forecast-factor-disclosure">
+                      <summary>Explain estimate</summary>
+                      {factors ? <dl className="raw-stat-grid">
+                        <div><dt>Margin components</dt><dd>{signed(factors.margin.intercept)} intercept · {signed(factors.margin.venue)} venue · {signed(factors.margin.home_team)} home · {signed(factors.margin.away_team)} away</dd></div>
+                        <div><dt>Raw margin</dt><dd>{signed(factors.margin.estimate)}</dd></div>
+                        <div><dt>Total components</dt><dd>{signed(factors.total.intercept)} intercept · {signed(factors.total.venue)} venue · {signed(factors.total.home_team)} home · {signed(factors.total.away_team)} away</dd></div>
+                        <div><dt>Raw total</dt><dd>{fmt(factors.total.estimate)}</dd></div>
+                      </dl> : <p className="note">Registered coefficients unavailable for this game.</p>}
+                    </details>;
+                  })()}
+                </td>
               </tr>;
             })}</tbody>
           </table>
