@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -197,11 +198,11 @@ ncaaRosters.get("/", zValidator("query", querySchema), async (c) => {
       total: Number((count.results[0] as { total: number }).total || 0),
       source: (() => {
         const row = source.results[0] as { url?: unknown; fetched_at?: unknown; sha256?: unknown } | undefined;
-        return {
+        return publicReceipt({
           url: typeof row?.url === "string" ? row.url : null,
           fetched_at: typeof row?.fetched_at === "string" ? row.fetched_at : null,
           sha256: typeof row?.sha256 === "string" ? row.sha256 : null,
-        };
+        });
       })(),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

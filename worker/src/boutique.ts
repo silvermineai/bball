@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -80,7 +81,7 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
         try {
           const receipt = JSON.parse(item.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
           if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
-          return [{ season: item.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+          return [publicReceipt({ season: item.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 })];
         } catch {
           return [];
         }

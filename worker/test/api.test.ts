@@ -1158,7 +1158,7 @@ describe("bball api", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      source_receipts: [{ dataset: "ncaa_player_box", season: 2026, url: "https://example.test/ncaa-box.parquet", sha256: "a".repeat(64) }],
+      source_receipts: [{ dataset: "ncaa_player_box", season: 2026, sha256: "a".repeat(64) }],
       career_source_receipts: [
         { dataset: "ncaa_player_box", season: 2026, sha256: "a".repeat(64) },
         { dataset: "player_season", season: 2025, sha256: "b".repeat(64) },
@@ -1320,7 +1320,7 @@ describe("bball api", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      source_receipts: [{ dataset: "player_season", season: 2026, url: "https://example.test/player-season.parquet", sha256: "a".repeat(64) }],
+      source_receipts: [{ dataset: "player_season", season: 2026, sha256: "a".repeat(64) }],
     });
   });
 
@@ -1468,7 +1468,7 @@ describe("bball api", () => {
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      source_receipts: [{ season: 2026, url: "https://example.test/ratings.parquet", sha256: "c".repeat(64) }],
+      source_receipts: [{ season: 2026, sha256: "c".repeat(64) }],
     });
   });
 
@@ -1712,7 +1712,7 @@ describe("bball api", () => {
     await expect(response.json()).resolves.toMatchObject({
       seasons: [2026],
       total: 456,
-      source: { url: "https://example.test/ncaa-rosters.parquet", fetched_at: "2026-09-08T02:48:45Z" },
+      source: { fetched_at: "2026-09-08T02:48:45Z" },
     });
     expect(batch).toHaveBeenCalledOnce();
   });
@@ -2165,7 +2165,7 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       total: 99,
-      source: { url: "https://example.test/player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) },
+      source: { fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) },
       validation: { total_rows: 99, missing_names: 1, zero_minutes_with_stats: 2 },
     });
     expect(batch).toHaveBeenCalledOnce();

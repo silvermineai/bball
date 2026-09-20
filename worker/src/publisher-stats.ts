@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -276,7 +277,7 @@ publisherStats.get("/", zValidator("query", querySchema), async (c) => {
     try {
       const receipt = JSON.parse(row.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
       if (typeof receipt.url !== "string" || typeof receipt.fetched_at !== "string" || typeof receipt.sha256 !== "string") return [];
-      return [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+      return [publicReceipt({ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 })];
     } catch {
       return [];
     }

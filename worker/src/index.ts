@@ -45,6 +45,7 @@ import { scheduleTimes } from "./schedule-times";
 import { basketballRosters } from "./basketball-rosters";
 import { matchupPersonnel } from "./matchup-personnel";
 import { footballDb } from "./football-db";
+import { publicReceipt } from "./public-receipts";
 
 type Bindings = Env;
 
@@ -569,7 +570,7 @@ app.get(
     const sourceReceipts = receipts.results.flatMap((row) => {
       const receipt = parseObject(row.receipt_json);
       return typeof receipt.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
-        ? [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
+        ? [publicReceipt({ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 })]
         : [];
     });
     return c.json({

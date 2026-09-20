@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -7,7 +8,6 @@ type Bindings = Env;
 type SourceReceipt = {
   dataset: string;
   season: number;
-  url: string;
   fetched_at: string;
   sha256: string;
 };
@@ -116,7 +116,7 @@ const parseReceipt = (dataset: string, season: number, value: string): SourceRec
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
     return typeof parsed.url === "string" && typeof parsed.fetched_at === "string" && typeof parsed.sha256 === "string"
-      ? { dataset, season, url: parsed.url, fetched_at: parsed.fetched_at, sha256: parsed.sha256 }
+      ? publicReceipt({ dataset, season, url: parsed.url, fetched_at: parsed.fetched_at, sha256: parsed.sha256 })
       : null;
   } catch {
     return null;

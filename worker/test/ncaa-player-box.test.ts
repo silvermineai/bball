@@ -78,7 +78,7 @@ describe("NCAA player source archive", () => {
       total: 7,
       game_rows: 7,
       season_rows: 3,
-      source: { url: "https://example.test/player-box.parquet", sha256: digest },
+      source: { sha256: digest },
       validation: { total_rows: 7 },
     });
     expect(gamePrepare).toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe("NCAA player source archive", () => {
       total: 120174,
       game_rows: 120174,
       metadata_source: "bundled_catalog",
-      source: { url: "https://source.test/2026.parquet", sha256: digest },
+      source: { sha256: digest },
       validation: null,
     });
   });

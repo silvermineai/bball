@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 
 const query = z.object({
   season: z.coerce.number().int().min(2010).max(2026).optional(),
@@ -63,7 +64,7 @@ possessionStyle.get("/", zValidator("query", query), async (c) => {
       try {
         const receipt = JSON.parse(row.receipt_json) as { url?: unknown; fetched_at?: unknown; sha256?: unknown };
         return typeof receipt.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
-          ? [{ season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
+          ? [publicReceipt({ season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 })]
           : [];
       } catch {
         return [];

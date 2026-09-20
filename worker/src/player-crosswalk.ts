@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 
 type Bindings = Env;
 
@@ -74,11 +75,11 @@ playerCrosswalk.get("/", zValidator("query", querySchema), async (c) => {
       players: Number(count?.players || 0),
       fox_ids: Number(count?.fox_ids || 0),
       yahoo_ids: Number(count?.yahoo_ids || 0),
-      source: {
+      source: publicReceipt({
         url: typeof receipt?.url === "string" ? receipt.url : null,
         fetched_at: typeof receipt?.fetched_at === "string" ? receipt.fetched_at : null,
         sha256: typeof receipt?.sha256 === "string" ? receipt.sha256 : null,
-      },
+      }),
       identity_note: "Source-published ESPN/Fox/Yahoo identifiers with match method and confidence retained. No NCAA ID join is asserted.",
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

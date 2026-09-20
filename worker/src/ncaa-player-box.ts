@@ -125,7 +125,7 @@ async function catalogMetaFallback(c: { env: Bindings; req: { url: string } }, s
       seasons: entries.map((entry) => entry.season),
       total,
       game_rows: total,
-      source: { url: latest.source_url, fetched_at: latest.fetched_at, sha256: latest.sha256 },
+      source: { fetched_at: latest.fetched_at, sha256: latest.sha256 },
       validation: null,
       metadata_source: "bundled_catalog",
       catalog_generated_at: typeof catalog.generated_at === "string" ? catalog.generated_at : null,
@@ -211,7 +211,6 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
           game_rows: Number(gameCount?.total || 0),
           season_rows: Number(seasonCount?.total || 0),
           source: {
-            url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
             fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
             sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
           },
@@ -247,7 +246,6 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
           seasons: legacySeasons.results.map((row) => Number((row as { season: number }).season)),
           total: Number((count.results[0] as { total: number }).total || 0),
           source: {
-            url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
             fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
             sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
           },
@@ -287,7 +285,6 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
         game_rows: Number(gameCount?.total || 0),
         season_rows: Number(seasonCount?.total || 0),
         source: {
-          url: typeof sourceRow?.url === "string" ? sourceRow.url : null,
           fetched_at: typeof sourceRow?.fetched_at === "string" ? sourceRow.fetched_at : null,
           sha256: typeof sourceRow?.sha256 === "string" ? sourceRow.sha256 : null,
         },

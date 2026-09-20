@@ -1,4 +1,5 @@
 import { ncaaBoxDb, researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -53,7 +54,7 @@ function validReceipt(row: { dataset: string; season: number; receipt_json: stri
     && Number.isFinite(fetchedAt)
     && typeof receipt?.sha256 === "string"
     && /^[a-f0-9]{64}$/i.test(receipt.sha256)
-      ? { dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }
+      ? publicReceipt({ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 })
       : null;
 }
 

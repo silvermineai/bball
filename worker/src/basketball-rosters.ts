@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2025).max(2035).default(2027),
@@ -224,7 +225,7 @@ basketballRosters.get("/", zValidator("query", querySchema), async (c) => {
     players_returned: filteredPlayers.length,
     players_truncated: filteredPlayers.length < availablePlayers.length,
     player_filter: q ? { status, q, limit } : { status, limit },
-    source: receipt ? { dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null } : null,
+    source: receipt ? publicReceipt({ dataset: sourceDataset, url: receipt.url ?? null, fetched_at: receipt.fetched_at ?? null, sha256: receipt.sha256 ?? null }) : null,
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

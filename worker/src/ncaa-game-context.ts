@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { ncaaBoxDb, researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 
 type Bindings = Env;
 const querySchema = z.object({
@@ -59,7 +60,7 @@ ncaaGameContext.get("/", zValidator("query", querySchema), async (c) => {
         season,
         seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
         total: Number(count?.total || 0),
-        source: source ?? null,
+        source: source && typeof source === "object" ? publicReceipt(source as Record<string, unknown>) : null,
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

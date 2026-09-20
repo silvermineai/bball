@@ -1,4 +1,5 @@
 import { researchDb } from "./research-db";
+import { publicReceipt } from "./public-receipts";
 import { Context, Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -533,7 +534,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         metrics,
         classes: classes.results.map((row) => String((row as { value: string }).value)),
         positions: positions.results.map((row) => String((row as { value: string }).value)),
-        sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => ({
+        sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => publicReceipt({
           dataset: String(row.dataset || ""),
           url: typeof row.url === "string" ? row.url : null,
           fetched_at: typeof row.fetched_at === "string" ? row.fetched_at : null,
