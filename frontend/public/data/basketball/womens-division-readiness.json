@@ -273,6 +273,44 @@
       "scope_status": "no_explicit_division_field"
     }
   ],
+  "source_contracts": [
+    {
+      "key": "sportsdataverse_wbb_bulk",
+      "label": "Retained women’s bulk releases",
+      "status": "blocked",
+      "scope": "women’s basketball · D2/D3",
+      "source_url": "https://github.com/sportsdataverse/sportsdataverse-data/releases",
+      "evidence": {
+        "assets_inspected": 13,
+        "assets_with_explicit_division": 0,
+        "assets_with_valid_receipt": 13
+      },
+      "required": [
+        "explicit division=2 or division=3",
+        "stable team and athlete IDs",
+        "receipt URL and SHA-256 digest"
+      ],
+      "reason": "The retained WBB bulk files have source receipts and stable D1 identities, but no explicit D2/D3 field."
+    },
+    {
+      "key": "ncaa_wbb_national_rankings",
+      "label": "NCAA national individual/team rankings",
+      "status": "candidate_unverified",
+      "scope": "women’s basketball · D2/D3",
+      "source_url": "https://stats.ncaa.org/rankings/national_ranking",
+      "evidence": {
+        "capture_present": false,
+        "rows_published": 0,
+        "receipt_verified": false
+      },
+      "required": [
+        "robots-permitted capture for the exact season and division",
+        "stable player/team IDs and explicit division value",
+        "immutable response SHA-256 receipt"
+      ],
+      "reason": "This is an eligible source candidate, but no permitted, receipt-backed WBB capture is retained yet; no rows are published from it."
+    }
+  ],
   "published": {
     "division": "1",
     "status": "published",

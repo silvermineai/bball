@@ -21,6 +21,12 @@ EDITION = ROOT / "frontend/public/data/basketball/womens-edition.json"
 SCHEDULE = ROOT / ".local/womens-basketball/wbb_schedule_2027.parquet"
 OUT = ROOT / "frontend/public/data/basketball/womens-division-readiness.json"
 
+# The NCAA national-ranking endpoint is a lawful candidate source for a
+# lower-division player/team edition.  It is deliberately recorded as an
+# intake candidate until a robots-permitted, receipt-backed capture exists;
+# the endpoint itself never turns a non-D1 signal into a D2/D3 classification.
+NCAA_NATIONAL_RANKING_URL = "https://stats.ncaa.org/rankings/national_ranking"
+
 # These are the only fields that can establish a lower-division scope.  A
 # source flag such as ``away_non_div1_team`` is deliberately excluded: it
 # tells us only that a row is outside Division I.
@@ -200,6 +206,44 @@ def build_readiness(
     assets = asset_evidence or []
     assets_with_division = [asset for asset in assets if asset.get("division_fields")]
     assets_with_receipts = [asset for asset in assets if (asset.get("receipt") or {}).get("valid") is True]
+    source_contracts = [
+        {
+            "key": "sportsdataverse_wbb_bulk",
+            "label": "Retained women’s bulk releases",
+            "status": "blocked",
+            "scope": "women’s basketball · D2/D3",
+            "source_url": "https://github.com/sportsdataverse/sportsdataverse-data/releases",
+            "evidence": {
+                "assets_inspected": len(assets),
+                "assets_with_explicit_division": len(assets_with_division),
+                "assets_with_valid_receipt": len(assets_with_receipts),
+            },
+            "required": [
+                "explicit division=2 or division=3",
+                "stable team and athlete IDs",
+                "receipt URL and SHA-256 digest",
+            ],
+            "reason": "The retained WBB bulk files have source receipts and stable D1 identities, but no explicit D2/D3 field.",
+        },
+        {
+            "key": "ncaa_wbb_national_rankings",
+            "label": "NCAA national individual/team rankings",
+            "status": "candidate_unverified",
+            "scope": "women’s basketball · D2/D3",
+            "source_url": NCAA_NATIONAL_RANKING_URL,
+            "evidence": {
+                "capture_present": False,
+                "rows_published": 0,
+                "receipt_verified": False,
+            },
+            "required": [
+                "robots-permitted capture for the exact season and division",
+                "stable player/team IDs and explicit division value",
+                "immutable response SHA-256 receipt",
+            ],
+            "reason": "This is an eligible source candidate, but no permitted, receipt-backed WBB capture is retained yet; no rows are published from it.",
+        },
+    ]
     audit = {
         "status": "blocked_by_missing_explicit_division_labels" if assets and not assets_with_division else "needs_review",
         "assets_inspected": len(assets),
@@ -216,6 +260,7 @@ def build_readiness(
         "source": source,
         "asset_audit": audit,
         "retained_assets": assets,
+        "source_contracts": source_contracts,
         "published": {
             "division": "1",
             "status": "published",

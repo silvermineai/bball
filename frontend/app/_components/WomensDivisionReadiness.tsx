@@ -18,6 +18,16 @@ type RetainedAsset = {
   receipt: { valid: boolean; sha256?: string | null };
   scope_status?: string;
 };
+type SourceContract = {
+  key: string;
+  label: string;
+  status: "blocked" | "candidate_unverified" | "ready";
+  scope: string;
+  source_url: string;
+  evidence: Record<string, number | boolean>;
+  required: string[];
+  reason: string;
+};
 type Readiness = {
   generated_at: string;
   published: { division: string; player_rows: number; team_rows: number; upcoming_games: number };
@@ -25,6 +35,7 @@ type Readiness = {
   non_division_one_schedule_signals: { rows: number; classification: string; note: string; games: Signal[] };
   asset_audit?: { status: string; assets_inspected: number; assets_with_explicit_division: number; assets_with_valid_receipt: number; explicit_division_fields: string[]; method: string };
   retained_assets?: RetainedAsset[];
+  source_contracts?: SourceContract[];
   import_contract: { acceptance_rules: string[]; next_required_inputs: string[]; required_scope_fields?: string[]; required_identity_fields?: string[]; required_receipt_fields?: string[]; accepted_division_values?: Array<number | string> };
 };
 
@@ -55,7 +66,13 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
         <div className="eyebrow">RETAINED ASSET AUDIT</div>
         <h3>{publication.asset_audit.assets_inspected.toLocaleString()} files inspected · {publication.asset_audit.assets_with_explicit_division.toLocaleString()} explicit division labels</h3>
         <p className="note">{publication.asset_audit.method} {publication.asset_audit.assets_with_valid_receipt.toLocaleString()} files have a valid source receipt.</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Retained asset</th><th className="numeric">Rows</th><th>Division field</th><th>Identity fields</th><th>Receipt</th></tr></thead><tbody>{publication.retained_assets.map((asset) => <tr key={asset.asset}><th scope="row">{asset.asset}<small>{asset.dataset || "source file"}{asset.season ? ` · ${asset.season}` : ""}</small></th><td className="numeric">{asset.rows.toLocaleString()}</td><td>{asset.division_fields.length ? asset.division_fields.join(", ") : <span className="status-error">none</span>}</td><td>{asset.identity_fields?.length ? asset.identity_fields.join(", ") : "—"}</td><td>{asset.receipt.valid ? "valid" : <span className="status-error">missing / invalid</span>}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Retained asset</th><th className="numeric">Rows</th><th>Division field</th><th>Identity fields</th><th>Receipt</th></tr></thead><tbody>{publication.retained_assets.map((asset) => <tr key={asset.asset}><th scope="row">{asset.asset}<small>{asset.dataset || "source file"}{asset.season ? ` · ${asset.season}` : ""}</small></th><td className="numeric">{asset.rows.toLocaleString()}</td><td>{asset.division_fields.length ? asset.division_fields.join(", ") : <span className="status-error">none</span>}</td><td>{asset.identity_fields?.length ? asset.identity_fields.join(", ") : "—"}</td><td>{asset.receipt.valid ? <><span>valid</span>{asset.receipt.sha256 ? <small title={asset.receipt.sha256}><code>{asset.receipt.sha256.slice(0, 12)}…</code></small> : null}</> : <span className="status-error">missing / invalid</span>}</td></tr>)}</tbody></table></div>
+      </div> : null}
+      {publication.source_contracts?.length ? <div className="paper-panel" style={{ marginTop: 18 }} aria-label="Women&apos;s lower-division source contracts">
+        <div className="eyebrow">LOWER-DIVISION SOURCE INTAKE</div>
+        <h3>Evidence required before D{division} rows can be published</h3>
+        <p className="note">A source candidate is a lead for a future capture, not evidence of current coverage. Counts stay at zero until the exact division, identity fields, and receipt pass validation.</p>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Source</th><th>Status</th><th>Evidence</th><th>Required before import</th></tr></thead><tbody>{publication.source_contracts.map((contract) => <tr key={contract.key}><th scope="row">{contract.label}<small>{contract.scope}</small></th><td><span className={`readiness-state readiness-state-${contract.status === "ready" ? "ready" : "missing"}`}>{contract.status === "candidate_unverified" ? "Candidate · unverified" : contract.status === "ready" ? "Ready" : "Blocked"}</span></td><td>{contract.reason}<small>Capture: {contract.evidence.capture_present === true ? "present" : "none"} · verified receipt: {contract.evidence.receipt_verified === true ? "yes" : "no"}</small></td><td>{contract.required.join(" · ")}</td></tr>)}</tbody></table></div>
       </div> : null}
       {publication.retained_assets?.length ? (() => {
         const playerReadiness = divisionPlayerReadiness(publication.retained_assets);

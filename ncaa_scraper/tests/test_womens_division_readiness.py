@@ -67,6 +67,20 @@ def test_asset_audit_records_missing_labels_without_reclassifying_signals():
     assert result["divisions"]["2"]["rows"] == result["divisions"]["3"]["rows"] == 0
 
 
+def test_source_contract_exposes_auditable_candidate_without_publishing_rows():
+    result = MODULE.build_readiness({"coverage": {}}, [], [])
+    contracts = {item["key"]: item for item in result["source_contracts"]}
+    assert contracts["sportsdataverse_wbb_bulk"]["status"] == "blocked"
+    assert contracts["sportsdataverse_wbb_bulk"]["evidence"]["assets_with_explicit_division"] == 0
+    assert contracts["ncaa_wbb_national_rankings"]["status"] == "candidate_unverified"
+    assert contracts["ncaa_wbb_national_rankings"]["evidence"] == {
+        "capture_present": False,
+        "rows_published": 0,
+        "receipt_verified": False,
+    }
+    assert result["divisions"]["2"]["rows"] == result["divisions"]["3"]["rows"] == 0
+
+
 def test_next_input_contract_accepts_explicit_scope_and_rejects_conflicts():
     receipt = {"url": "https://example.test/release.parquet", "sha256": "a" * 64}
     row = {
