@@ -9,9 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ncaa_scraper"))
-from ncaa_scraper.womens_player_rankings import build_rankings
+from ncaa_scraper.womens_player_rankings import build_box_rankings, build_rankings
 
 EDITION = ROOT / "frontend/public/data/basketball/womens-edition.json"
+BOX_EDITION = ROOT / "frontend/public/data/basketball/womens-box-player-stats.json"
 OUT = ROOT / "frontend/public/data/basketball/womens-rankings.json"
 
 
@@ -20,8 +21,12 @@ def main():
     if edition.get("sport") != "basketball" or edition.get("gender") != "women":
         raise SystemExit("women's edition has the wrong scope")
     rankings = build_rankings(edition.get("players", []))
+    box_edition = json.loads(BOX_EDITION.read_text())
+    if box_edition.get("sport") != "basketball" or box_edition.get("gender") != "women":
+        raise SystemExit("women's box edition has the wrong scope")
+    box_rankings = build_box_rankings(box_edition.get("players", []))
     publication = {
-        "schema_version": 1,
+        "schema_version": 2,
         "sport": "basketball",
         "gender": "women",
         "season": edition.get("observed_player_season"),
@@ -32,10 +37,22 @@ def main():
         "metrics": rankings["metrics"],
         "coverage": rankings["coverage"],
         "leaderboards": rankings["leaderboards"],
+        "box_archive": {
+            "season": box_edition.get("season"),
+            "generated_at": box_edition.get("generated_at"),
+            "coverage": box_edition.get("coverage", {}),
+            "min_games": box_rankings["min_games"],
+            "qualification": box_rankings["qualification"],
+            "metrics": box_rankings["metrics"],
+            "coverage_by_metric": box_rankings["coverage"],
+            "leaderboards": box_rankings["leaderboards"],
+            "receipt": box_edition.get("receipt", {}),
+        },
         "limitations": [
             "Each board ranks one recorded stat independently; there is no opaque overall grade.",
             "Players below the minimum game threshold or without a recorded value remain outside that board.",
             "Qualification uses the source-reported gamesPlayed field; this release does not independently reconcile it to a schedule-game census.",
+            "The box archive boards use exact athlete IDs from played game rows and expand coverage beyond the player-season release; DNP rows remain excluded from totals and qualification.",
         ],
         "receipts": edition.get("receipts", {}),
     }
