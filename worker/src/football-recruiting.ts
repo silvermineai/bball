@@ -23,6 +23,7 @@ type RecruitSummaryRow = {
   two_or_less_star: number | null;
   stars_unavailable: number | null;
 };
+type PublicReceipt = { dataset: Dataset; season: number; fetched_at: string; sha256: string };
 const query = z.object({
   view: z.enum(["rosters", "recruits", "talent", "returning"]).default("rosters"),
   season: z.coerce.number().int().min(2002).max(2035).default(2026),
@@ -69,6 +70,14 @@ function number(row: Record<string, unknown>, ...keys: string[]) {
     if (Number.isFinite(value)) return value;
   }
   return null;
+}
+
+/** Keep provider locators in the private receipt store, not public API JSON. */
+function publicReceipt(row: { dataset: Dataset; season: number; receipt_json: string }): PublicReceipt | null {
+  const receipt = parseJson(row.receipt_json);
+  return receipt?.fetched_at && receipt.sha256
+    ? { dataset: row.dataset, season: row.season, fetched_at: String(receipt.fetched_at), sha256: String(receipt.sha256) }
+    : null;
 }
 
 function shape(view: View, row: Record<string, unknown>, raw: Record<string, unknown>) {
@@ -143,8 +152,8 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
         seasons: seasons.results.map((row) => Number(row.season)),
         datasets: datasets.results,
         receipts: receipts.results.flatMap((row) => {
-          const receipt = parseJson(row.receipt_json);
-          return receipt?.url && receipt.fetched_at && receipt.sha256 ? [{ dataset: row.dataset, season: row.season, url: String(receipt.url), fetched_at: String(receipt.fetched_at), sha256: String(receipt.sha256) }] : [];
+          const receipt = publicReceipt(row);
+          return receipt ? [receipt] : [];
         }),
         views: Object.entries(views).map(([view, value]) => ({ view, dataset: value.dataset, label: value.label })),
         coverage: {
@@ -199,8 +208,8 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
     total: Number(count?.total || 0),
     filters: { q: q.q, team: q.team ?? null },
     source_receipts: receipts.results.flatMap((row) => {
-      const receipt = parseJson(row.receipt_json);
-      return receipt?.url && receipt.fetched_at && receipt.sha256 ? [{ dataset: row.dataset, season: row.season, url: String(receipt.url), fetched_at: String(receipt.fetched_at), sha256: String(receipt.sha256) }] : [];
+      const receipt = publicReceipt(row);
+      return receipt ? [receipt] : [];
     }),
     summary: selected.dataset === "recruits" && recruitSummary ? {
       total: Number(recruitSummary.total || 0),

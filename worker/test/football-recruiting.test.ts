@@ -40,7 +40,9 @@ describe("football recruiting desk", () => {
     }));
     const response = await footballRecruiting.request("/?view=rosters&season=2026", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ total: 1, source_receipts: [{ dataset: "rosters" }], rows: [{ id: "123", name: "Example Player", team: "UAB Blazers", position: "Quarterback", active: true, raw: { full_name: "Example Player" } }] });
+    const body = await response.json() as { total: number; source_receipts: Array<Record<string, unknown>>; rows: Array<Record<string, unknown>> };
+    expect(body).toMatchObject({ total: 1, source_receipts: [{ dataset: "rosters" }], rows: [{ id: "123", name: "Example Player", team: "UAB Blazers", position: "Quarterback", active: true, raw: { full_name: "Example Player" } }] });
+    expect(body.source_receipts[0]).not.toHaveProperty("url");
   });
 
   it("returns a retryable response when the recruiting warehouse is busy", async () => {
@@ -54,6 +56,8 @@ describe("football recruiting desk", () => {
     const prepare = vi.fn((sql: string) => ({ all: async () => ({ results: sql.includes("DISTINCT season") ? [{ season: 2026 }] : sql.includes("count(*)") ? [{ dataset: "team_talent", season: 2026, rows: 1 }] : [{ dataset: "team_talent", season: 2026, receipt_json: receipt }] }) }));
     const response = await footballRecruiting.request("/?meta=1", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ seasons: [2026], receipts: [{ dataset: "team_talent", sha256: "a".repeat(64) }], coverage: { completeness: "not_established" } });
+    const body = await response.json() as { receipts: Array<Record<string, unknown>>; seasons: number[]; coverage: Record<string, unknown> };
+    expect(body).toMatchObject({ seasons: [2026], receipts: [{ dataset: "team_talent", sha256: "a".repeat(64) }], coverage: { completeness: "not_established" } });
+    expect(body.receipts[0]).not.toHaveProperty("url");
   });
 });

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
 
 type View = "rosters" | "recruits" | "talent" | "returning";
-type Receipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
+type Receipt = { dataset: string; season: number; fetched_at: string; sha256: string };
 type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }>; coverage?: { completeness: "not_established"; note: string } };
 type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; raw?: Record<string, unknown>; record_key?: string };
 type Result = {
