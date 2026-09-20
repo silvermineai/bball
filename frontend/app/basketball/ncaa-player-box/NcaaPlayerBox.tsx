@@ -11,7 +11,7 @@ type Row = {
   game_date: string | null; team_name: string | null; opponent_name: string | null;
   player_name: string | null; stats: Record<string, number | null>;
 };
-export type PlayerBoxResult = { season: number | "all"; archive_mode: "games" | "season"; page: number; page_size: number; total: number; rows: Row[] };
+export type PlayerBoxResult = { season: number | "all"; archive_mode: "games" | "season"; field_filter: string | null; page: number; page_size: number; total: number; rows: Row[] };
 type Result = PlayerBoxResult;
 type ArchiveValidation = {
   total_rows: number;
@@ -54,10 +54,20 @@ const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+export type FieldAvailability = "complete" | "partial" | "unavailable";
+
+/** Classify only coherent retained counts; malformed coverage stays unavailable. */
+export function fieldAvailability(rows: number, observed: number): FieldAvailability {
+  if (!Number.isInteger(rows) || rows <= 0 || !Number.isInteger(observed) || observed < 0 || observed > rows) return "unavailable";
+  if (observed === rows) return "complete";
+  return observed > 0 ? "partial" : "unavailable";
+}
+
 export function validatePlayerBoxExportPage(
   payload: PlayerBoxResult,
   expectedSeason: string,
   expectedArchiveMode: "games" | "season",
+  expectedField: string | null,
   expectedTotal: number,
   expectedPageSize: number,
   page: number,
@@ -66,6 +76,7 @@ export function validatePlayerBoxExportPage(
   if (
     String(payload.season) !== expectedSeason
     || payload.archive_mode !== expectedArchiveMode
+    || payload.field_filter !== expectedField
     || Number(payload.page) !== page
     || !Number.isInteger(Number(payload.total))
     || Number(payload.total) !== expectedTotal
@@ -116,6 +127,7 @@ export default function NcaaPlayerBox() {
   const [season, setSeason] = useState(initial?.get("season") === "all" ? "all" : initial?.get("season") || "2026");
   const [archive, setArchive] = useState<"auto" | "games" | "season">(initial?.get("archive") === "season" ? "season" : initial?.get("archive") === "games" ? "games" : "auto");
   const [query, setQuery] = useState(initial?.get("q") || "");
+  const [field, setField] = useState(() => /^[a-z][a-z0-9_]{0,39}$/.test(initial?.get("field") || "") ? initial!.get("field")! : "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [fieldCoverage, setFieldCoverage] = useState<FieldCoverage | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -133,9 +145,10 @@ export default function NcaaPlayerBox() {
     const params = new URLSearchParams({ season });
     if (archive !== "auto") params.set("archive", archive);
     if (query.trim()) params.set("q", query.trim());
+    if (field) params.set("field", field);
     if (page) params.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [archive, season, query, page]);
+  }, [archive, field, season, query, page]);
 
   useEffect(() => {
     fetch("/data/basketball/ncaa-player-box-fields.json")
@@ -155,19 +168,25 @@ export default function NcaaPlayerBox() {
     const controller = new AbortController();
     const params = new URLSearchParams({ season, page: String(page), archive });
     if (query.trim()) params.set("q", query.trim());
+    if (field) params.set("field", field);
     setResult(null);
     fetch(`/api/basketball/research/ncaa-player-box?${params}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw Error("The player archive could not be loaded."); return r.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [archive, page, query, retryNonce, season]);
+  }, [archive, field, page, query, retryNonce, season]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const selectedCoverage = season === "all" ? undefined : fieldCoverage?.seasons.find((entry) => entry.season === Number(season));
   const selectedSeasonLabel = season === "all" ? "all retained seasons" : label(Number(season));
   const sparseEdition = (meta?.total ?? selectedCoverage?.rows ?? 0) < 10000;
   const sourceFields = fieldCoverage?.fields || [];
+  const availability = selectedCoverage ? sourceFields.reduce<Record<FieldAvailability, number>>((summary, sourceField) => {
+    const status = fieldAvailability(selectedCoverage.rows, selectedCoverage.fields[sourceField]?.observed ?? 0);
+    summary[status] += 1;
+    return summary;
+  }, { complete: 0, partial: 0, unavailable: 0 }) : null;
   const csvHeaders = [...exportHeaders, ...sourceFields.map((field) => `Archive ${field}`)];
   const share = async () => {
     try {
@@ -202,10 +221,11 @@ export default function NcaaPlayerBox() {
         const params = new URLSearchParams({ season, page: String(requestedPage), archive });
         params.set("cohort", cohort);
         if (query.trim()) params.set("q", query.trim());
+        if (field) params.set("field", field);
         const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-player-box?${params.toString()}`);
         if (!response.ok) throw new Error("The complete player export could not be loaded.");
         const payload = await response.json() as Result;
-        rows.push(...validatePlayerBoxExportPage(payload, season, result.archive_mode, result.total, result.page_size, requestedPage, totalPages));
+        rows.push(...validatePlayerBoxExportPage(payload, season, result.archive_mode, field || null, result.total, result.page_size, requestedPage, totalPages));
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${result.total.toLocaleString()} rows…`);
       }
       if (rows.length !== result.total) throw new Error("The player box release returned an incomplete export.");
@@ -238,6 +258,7 @@ export default function NcaaPlayerBox() {
     <div className="toolbar">
       <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}><option value="all">All retained seasons</option>{(meta?.seasons || [2026]).map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label className="control"><span>ARCHIVE GRAIN</span><select value={archive} onChange={(e) => { setArchive(e.target.value as typeof archive); setPage(0); }}><option value="auto">Automatic (game rows when available)</option><option value="games">Game logs</option><option value="season">Season totals</option></select></label>
+      <label className="control"><span>RECORDED STAT FIELD</span><select value={field} onChange={(e) => { setField(e.target.value); setPage(0); }}><option value="">All rows</option>{field && !sourceFields.includes(field) && <option value={field}>{field} · not in manifest</option>}{sourceFields.map((sourceField) => <option key={sourceField} value={sourceField}>{prettySourceField(sourceField)} · {sourceField}</option>)}</select></label>
       <label className="control"><span>PLAYER, TEAM OR ID</span><input type="search" maxLength={120} placeholder="Search a player, team or archive ID" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
     </div>
     {selectedCoverage && <section className="paper-panel" style={{ marginBottom: 24 }}>
@@ -249,10 +270,13 @@ export default function NcaaPlayerBox() {
         <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} archive keys</span>
       </div>
       <p className="note">Observed counts include recorded zeroes. A blank or null value is unavailable and is never converted into zero.</p>
+      {availability && <div className="strip" style={{ marginBottom: 18 }}><div><strong>{availability.complete}</strong><span>Complete fields</span></div><div><strong>{availability.partial}</strong><span>Partial fields</span></div><div><strong>{availability.unavailable}</strong><span>Unavailable fields</span></div><div><strong>{field || "All"}</strong><span>Active field filter</span></div></div>}
       {sparseEdition && <p className="status-error" role="status">This retained edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the archive receipt before comparing it with later seasons.</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th className="numeric">Observed</th><th className="numeric">Coverage</th></tr></thead><tbody>{fieldCoverage?.fields.map((field) => {
-        const value = selectedCoverage.fields[field];
-        return <tr key={field}><td><code>{field}</code></td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{value ? (value.share * 100).toFixed(1) + "%" : "0.0%"}</td></tr>;
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th>Status</th><th className="numeric">Observed</th><th className="numeric">Coverage</th><th>Inspect</th></tr></thead><tbody>{fieldCoverage?.fields.map((sourceField) => {
+        const value = selectedCoverage.fields[sourceField];
+        const status = fieldAvailability(selectedCoverage.rows, value?.observed ?? 0);
+        const share = value && Number.isInteger(value.observed) && value.observed >= 0 && value.observed <= selectedCoverage.rows && selectedCoverage.rows > 0 ? value.observed / selectedCoverage.rows : null;
+        return <tr key={sourceField}><td><strong>{prettySourceField(sourceField)}</strong><small><code>{sourceField}</code></small></td><td>{status === "complete" ? "Complete" : status === "partial" ? "Partial" : "Unavailable"}</td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{share == null ? "—" : (share * 100).toFixed(1) + "%"}</td><td><button className="button secondary" type="button" onClick={() => { setField(sourceField); setPage(0); }}>{field === sourceField ? "Active" : "Inspect rows →"}</button></td></tr>;
       })}</tbody></table></div>
     </section>}
       {result?.archive_mode === "games" && meta?.validation && <section className="paper-panel" style={{ marginBottom: 24 }}>
@@ -278,7 +302,7 @@ export default function NcaaPlayerBox() {
       <p className="note">The retained edition carries team/opponent labels and dates, but no venue or home/away field. Location-dependent analysis therefore stays on the schedule archive; these checks flag unusable matchup context and impossible player totals before a row is used for ranking or coaching review.</p>
     </section>}
     {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retryLiveArchive}>Retry live archive</button></div> : !result ? <p className="empty" role="status">Loading player rows…</p> : <>
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the retained edition.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>{season !== "all" && <a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download player archive ↓</a>}<button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching {result.archive_mode === "games" ? "game rows" : "season summaries"}{field ? <> with numeric <code>{field}</code></> : null} · page {page + 1} of {pages} · points, minutes, rebounds, assists and shooting splits come from the retained edition.</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button>{field && <button className="button secondary" type="button" onClick={() => { setField(""); setPage(0); }}>Clear field filter</button>}{season !== "all" && <a className="button secondary" href={`/api/basketball/research/ncaa-player-box/source?season=${encodeURIComponent(season)}`}>Download player archive ↓</a>}<button className="button secondary" type="button" onClick={share}>Copy archive link</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {copied && <p role="status">{copied}</p>}
       <p className="note">CSV exports include the compact audit columns plus every retained field listed above as a separate <code>Archive …</code> column; the original JSON payload remains attached for exact replay.</p>

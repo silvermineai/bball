@@ -138,6 +138,43 @@ describe("NCAA player source archive", () => {
     expect(researchPrepare.mock.calls.some(([sql]) => String(sql).includes("FROM bb_ncaa_player_season"))).toBe(true);
   });
 
+  it("filters rows by an exact numeric retained field using a bound JSON path", async () => {
+    const bound: unknown[][] = [];
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn((...args: unknown[]) => {
+        bound.push(args);
+        return {
+          first: async () => ({ total: 1 }),
+          all: async () => ({ results: [{ season: 2026, contest_id: null, team_id: "7", player_id: "42", game_date: null, team_name: "Example U", opponent_name: null, player_name: "Example Shooter", stats_json: JSON.stringify({ rim_pct: 0.65 }) }] }),
+        };
+      }),
+    }));
+    const response = await ncaaPlayerBox.request(
+      "/?season=2026&archive=season&field=rim_pct",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      field_filter: "rim_pct",
+      total: 1,
+      rows: [{ player_id: "42", stats: { rim_pct: 0.65 } }],
+    });
+    expect(prepare.mock.calls.every(([sql]) => String(sql).includes("CASE WHEN json_valid(stats_json)=1 THEN json_type(stats_json, ?) END IN ('integer','real')"))).toBe(true);
+    expect(bound.every((args) => args.includes("$.rim_pct"))).toBe(true);
+  });
+
+  it("rejects unsafe field selectors before querying the archive", async () => {
+    const prepare = vi.fn();
+    const response = await ncaaPlayerBox.request(
+      "/?season=2026&archive=season&field=rim_pct')%20OR%201=1--",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(400);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("searches all retained seasons at season-total grain", async () => {
     const researchPrepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({

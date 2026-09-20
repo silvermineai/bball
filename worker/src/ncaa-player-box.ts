@@ -66,6 +66,7 @@ function parseValidation(row: Record<string, unknown> | undefined): ArchiveValid
 const querySchema = z.object({
   season: z.union([z.coerce.number().int().min(2010).max(2026), z.literal("all")]).default(2026),
   q: z.string().trim().max(120).optional(),
+  field: z.string().trim().regex(/^[a-z][a-z0-9_]{0,39}$/).optional(),
   page: z.coerce.number().int().min(0).max(10000).default(0),
   archive: z.enum(["auto", "games", "season"]).default("auto"),
   meta: z.enum(["0", "1"]).default("0"),
@@ -174,7 +175,7 @@ ncaaPlayerBox.get("/source", zValidator("query", sourceSchema), async (c) => {
 });
 
 ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, q, page, archive, meta } = c.req.valid("query");
+  const { season, q, field, page, archive, meta } = c.req.valid("query");
   const db = researchDb(c.env);
   const gameDb = ncaaBoxDb(c.env);
   const cache = edgeCache();
@@ -324,9 +325,10 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
     if (allSeasons && archiveMode === "games") {
       const gameSeasons = await withTimeout(gameDb.prepare("SELECT DISTINCT season FROM bb_ncaa_player_box ORDER BY season DESC").all<{ season: number }>(), CROSS_SEASON_TIMEOUT_MS);
       const search = q ? `%${q}%` : null;
+      const fieldPath = field ? `$.${field}` : null;
       const countStatements = gameSeasons.results.map((row) => gameDb.prepare(
-        `SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}`,
-      ).bind(...([row.season, ...(search ? [search, search, search, search, search] : [])] as Array<string | number>)));
+        `SELECT count(*) AS total FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}${fieldPath ? " AND CASE WHEN json_valid(stats_json)=1 THEN json_type(stats_json, ?) END IN ('integer','real')" : ""}`,
+      ).bind(...([row.season, ...(search ? [search, search, search, search, search] : []), ...(fieldPath ? [fieldPath] : [])] as Array<string | number>)));
       const counted = await withTimeout(gameDb.batch(countStatements), CROSS_SEASON_TIMEOUT_MS);
       const counts = gameSeasons.results.map((row, index) => ({ season: row.season, total: Number((counted[index]?.results?.[0] as { total?: number } | undefined)?.total || 0) }));
       const total = counts.reduce((sum, row) => sum + row.total, 0);
@@ -347,15 +349,15 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       const rowsByPartition = await withTimeout(Promise.all(requests.map(async (request) => {
         const statement = gameDb.prepare(
           `SELECT season,contest_id,team_id,player_id,game_date,team_name,opponent_name,player_name,stats_json
-           FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}
+           FROM bb_ncaa_player_box WHERE season=?${search ? " AND (player_name LIKE ? OR team_name LIKE ? OR opponent_name LIKE ? OR player_id LIKE ? OR team_id LIKE ?)" : ""}${fieldPath ? " AND CASE WHEN json_valid(stats_json)=1 THEN json_type(stats_json, ?) END IN ('integer','real')" : ""}
            ORDER BY game_date DESC, player_name ASC, contest_id ASC LIMIT ? OFFSET ?`,
-        ).bind(...([request.season, ...(search ? [search, search, search, search, search] : []), request.limit, request.offset] as Array<string | number>));
+        ).bind(...([request.season, ...(search ? [search, search, search, search, search] : []), ...(fieldPath ? [fieldPath] : []), request.limit, request.offset] as Array<string | number>));
         const result = await statement.all();
         return result.results;
       })), CROSS_SEASON_TIMEOUT_MS);
       const merged = rowsByPartition.flat().slice(0, 50) as Array<Record<string, unknown>>;
       const response = c.json({
-        season, archive_mode: archiveMode, page, page_size: 50, total,
+        season, archive_mode: archiveMode, field_filter: field || null, page, page_size: 50, total,
         rows: merged.map(({ stats_json, ...row }) => {
           let stats: Record<string, unknown> = {};
           try {
@@ -381,6 +383,10 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
       const search = `%${q}%`;
       binds.push(...(archiveMode === "games" ? [search, search, search, search, search] : [search, search, search, search]));
     }
+    if (field) {
+      clauses.push("CASE WHEN json_valid(stats_json)=1 THEN json_type(stats_json, ?) END IN ('integer','real')");
+      binds.push(`$.${field}`);
+    }
     const where = clauses.length ? clauses.join(" AND ") : "1=1";
     const queryDb = archiveMode === "games" ? gameDb : db;
     const count = await withTimeout(queryDb.prepare(`SELECT count(*) AS total FROM ${table} WHERE ${where}`).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
@@ -394,7 +400,7 @@ ncaaPlayerBox.get("/", zValidator("query", querySchema), async (c) => {
            ORDER BY season DESC, player_name ASC, team_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
     ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
     const response = c.json({
-      season, archive_mode: archiveMode,
+      season, archive_mode: archiveMode, field_filter: field || null,
       page,
       page_size: 50,
       total: Number(count?.total || 0),
