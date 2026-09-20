@@ -34,6 +34,7 @@ import { withinImpactSource } from "./within-impact-source";
 import { impactSource } from "./impact-source";
 import { lineupSource } from "./lineup-source";
 import { basketballForecasts } from "./basketball-forecasts";
+import { womensBasketballForecasts } from "./womens-basketball-forecasts";
 import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
 import { footballRecruiting } from "./football-recruiting";
@@ -276,6 +277,10 @@ app.route("/api/basketball/research/impact-within-team", withinImpactSource);
 app.route("/api/basketball/research/impact", impactSource);
 app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/basketball/research/forecasts", basketballForecasts);
+// Women’s forecasts are a separately trained, source-native edition. Keep
+// their static publication boundary explicit so the men’s D1 warehouse can
+// never be selected as a fallback for WBB.
+app.route("/api/basketball/research/womens-forecasts", womensBasketballForecasts);
 app.route("/api/basketball/research/possession-style", possessionStyle);
 app.route("/api/basketball/research/news", news);
 app.route("/api/research/markets", markets);
