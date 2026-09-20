@@ -49,7 +49,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; sha256_scope: "release_edition" | "unavailable"; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -327,7 +327,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <span className="note">No inferred values</span>
             </div>
             <p className="note">This table exposes the fields returned for this exact athlete ID and edition. “Unavailable” means the retained row did not provide a usable value; it is not a zero, ranking assumption or eligibility conclusion.</p>
-            {sourceReceipt && <p className="note">Release digest {sourceReceipt.sha256 ? <code>{sourceReceipt.sha256}</code> : "unavailable"} · {sourceReceipt.source_rows.toLocaleString()} retained rows · integrity {sourceReceipt.integrity}.</p>}
+            {sourceReceipt && <p className="note">Release edition digest {sourceReceipt.sha256 ? <code>{sourceReceipt.sha256}</code> : "unavailable"} · {sourceReceipt.source_rows.toLocaleString()} retained rows · hash scope {sourceReceipt.sha256_scope} · integrity {sourceReceipt.integrity}.</p>}
             <div className="table-scroll"><table className="data-table"><thead><tr><th>Field</th><th>Recorded value</th></tr></thead><tbody>{recordedProspectFields(prospect).map((field) => <tr key={field.key}><th scope="row">{field.label}</th><td><code>{field.value}</code></td></tr>)}</tbody></table></div>
           </section>
           <section className="section paper-panel" id="recorded-schools" aria-labelledby="recorded-schools-title">

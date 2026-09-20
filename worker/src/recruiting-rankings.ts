@@ -331,14 +331,32 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const current = await withTimeout(db.prepare(
       `SELECT edition,captured_at,
               (SELECT count(*) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_rows,
-              (SELECT count(DISTINCT NULLIF(TRIM(r.source_sha256),'')) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_hashes,
-              (SELECT min(r.source_sha256) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_sha256
+              (SELECT COALESCE(sum(CASE
+                WHEN typeof(r.source_sha256) <> 'text'
+                  OR length(trim(r.source_sha256)) <> 64
+                  OR lower(trim(r.source_sha256)) GLOB '*[^0-9a-f]*'
+                THEN 1 ELSE 0 END), 0)
+                 FROM bb_espn_recruiting r
+                WHERE r.season=c.season AND r.edition=c.edition) AS invalid_source_hashes
          FROM bb_espn_recruiting_current c
         WHERE season=?`,
-    ).bind(season).first<{ edition: string; captured_at: string; source_rows?: number | null; source_hashes?: number | null; source_sha256?: string | null }>(), DB_TIMEOUT_MS);
-    const sourceSha256 = typeof current?.source_sha256 === "string" && /^[a-f0-9]{64}$/i.test(current.source_sha256) && Number(current.source_hashes || 0) === 1
-      ? current.source_sha256
+    ).bind(season).first<{ edition: string; captured_at: string; source_rows?: number | null; invalid_source_hashes?: number | null }>(), DB_TIMEOUT_MS);
+    // The collector stores the SHA-256 of each detail response on its row,
+    // so those values are expected to differ. The release-level digest is the
+    // `edition` itself: fetch_release derives it from the complete normalized
+    // record set. Only publish that digest when the edition is a valid
+    // non-empty release and every retained row still has a valid per-row
+    // response hash. A malformed edition or row hash stays unavailable.
+    const editionSha256 = typeof current?.edition === "string" && /^[a-f0-9]{64}$/i.test(current.edition)
+      ? current.edition.toLowerCase()
       : null;
+    const sourceRows = Number(current?.source_rows || 0);
+    const invalidSourceHashes = Number(current?.invalid_source_hashes || 0);
+    const sourceReceiptVerified = editionSha256 !== null
+      && Number.isSafeInteger(sourceRows)
+      && sourceRows > 0
+      && Number.isSafeInteger(invalidSourceHashes)
+      && invalidSourceHashes === 0;
     const historyRows = athlete_id && includeHistory === "1"
       ? await withTimeout(db.prepare(
         `SELECT h.edition,h.captured_at,${effectiveRank("h")} AS rank,h.grade,h.status,h.committed_team_id,h.committed_team_name,h.source_url
@@ -449,9 +467,10 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       source_receipt: current ? {
         dataset: "recruiting_rankings",
         captured_at: current.captured_at,
-        source_rows: Number(current.source_rows || 0),
-        sha256: sourceSha256,
-        integrity: sourceSha256 ? "verified" : "unavailable",
+        source_rows: sourceRows,
+        sha256: sourceReceiptVerified ? editionSha256 : null,
+        sha256_scope: sourceReceiptVerified ? "release_edition" : "unavailable",
+        integrity: sourceReceiptVerified ? "verified" : "unavailable",
       } : null,
       history: historyRows
         ? historyRows.results.map((row) => ({
