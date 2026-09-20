@@ -20,6 +20,7 @@ type ForecastModel = {
   evaluation_baseline_margin_mae?: number | null;
   evaluation_interval_coverage?: number | null;
   evaluation_games?: number | null;
+  evaluation_unscored_games?: number | null;
 };
 type ForecastMeta = { models?: ForecastModel[] };
 type ForecastSlice = { total?: number; status?: string; model?: string };
@@ -27,6 +28,26 @@ type ForecastSlice = { total?: number; status?: string; model?: string };
 export function formatForecastCoverage(modelRows: number | null | undefined, upcomingRows: number | null | undefined) {
   if (!Number.isInteger(modelRows) || (modelRows ?? 0) < 0 || !Number.isInteger(upcomingRows) || (upcomingRows ?? 0) < 0) return "";
   return `${(modelRows ?? 0).toLocaleString()} model rows for ${(upcomingRows ?? 0).toLocaleString()} upcoming games`;
+}
+
+export function formatEvaluationCoverage(
+  evaluationGames: number | null | undefined,
+  evaluationUnscoredGames: number | null | undefined,
+) {
+  if (
+    !Number.isInteger(evaluationGames) ||
+    (evaluationGames ?? 0) < 0 ||
+    !Number.isInteger(evaluationUnscoredGames) ||
+    (evaluationUnscoredGames ?? 0) < 0 ||
+    (evaluationUnscoredGames ?? 0) > (evaluationGames ?? 0)
+  ) {
+    return "";
+  }
+
+  const total = evaluationGames ?? 0;
+  const unscored = evaluationUnscoredGames ?? 0;
+  const scored = total - unscored;
+  return `${total.toLocaleString()} held-out rows (${scored.toLocaleString()} scored${unscored ? `, ${unscored.toLocaleString()} unscored` : ""})`;
 }
 
 export function forecastEditionNotice(
@@ -80,13 +101,14 @@ export default function LiveBasketballForecastStatus({
   const coverageSummary = coverage ? ` · ${coverage}` : "";
   const editionNotice = forecastEditionNotice(model?.model_id, publishedModelId, publishedEdition);
   const baselineDelta = baselineMarginDelta(model?.evaluation_margin_mae, model?.evaluation_baseline_margin_mae);
+  const evaluationCoverage = formatEvaluationCoverage(model?.evaluation_games, model?.evaluation_unscored_games);
 
   return (
     <p className="note" role="status">
       {status === "live" && model
         ? `Live D1 forecast index: ${rowSummary}${coverageSummary} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
             (model.evaluation_winner_accuracy * 100).toFixed(1)
-          }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${baselineDelta == null ? "" : ` / ${Math.abs(baselineDelta).toFixed(1)} points ${baselineDelta >= 0 ? "lower" : "higher"} than baseline`}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
+          }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${baselineDelta == null ? "" : ` / ${Math.abs(baselineDelta).toFixed(1)} points ${baselineDelta >= 0 ? "lower" : "higher"} than baseline`}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${evaluationCoverage ? ` across ${evaluationCoverage}` : model.evaluation_games != null ? ` across ${model.evaluation_games.toLocaleString()} games` : ""}` : ""}.`
         + (editionNotice ? ` ${editionNotice}` : "")
         : status === "fallback"
           ? <>Live forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
