@@ -33,11 +33,9 @@ export default function SportNavigation() {
   const config = SPORT_NAVIGATION[currentSport];
   const gender = selectedGender(searchParams.get("gender"));
   const division = selectedDivision(searchParams.get("division"));
-  const publishedScope = config.available && gender === "men" && division === "1";
-
-  // Keep unavailable gender/division selections on the scope gate. This
-  // prevents a scope link from falling through to the default men's D1 data.
-  const hrefWithScope = (href: string) => buildScopeHref(publishedScope ? href : config.home, currentSearch, gender, division);
+  // Preserve every requested scope on every tab. Route-level scope boundaries
+  // show the correct unavailable state instead of silently falling back to D1.
+  const hrefWithScope = (href: string) => buildScopeHref(href, currentSearch, gender, division);
   const scopeHref = (nextGender: Gender, nextDivision: Division) =>
     buildScopeHref(pathname, currentSearch, nextGender, nextDivision);
 
