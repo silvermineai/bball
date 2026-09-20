@@ -117,6 +117,22 @@ class MarketCsvTests(unittest.TestCase):
             )
 
     @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_import_rejects_provider_update_at_or_after_tip(self, _schedules):
+        with self.assertRaisesRegex(ValueError, "updated_at must be before scheduled start"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [self.row(updated_at="2026-11-10T02:00:00Z")],
+                "e" * 64,
+                "lines.csv",
+                "Licensed Feed",
+                "https://provider.example/terms",
+                "2026-11-10T01:01:00Z",
+            )
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 0)
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
     def test_import_rejects_duplicate_quote_identity_before_writing(self, _schedules):
         with self.assertRaisesRegex(ValueError, "duplicate game/bookmaker/market/capture identity"):
             import_rows(

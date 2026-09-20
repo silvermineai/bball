@@ -63,6 +63,12 @@ describe("market import preflight", () => {
     expect(result.errors).toContain("Row 2: updated_at must be no more than 24 hours before captured_at.");
   });
 
+  it("rejects a provider update at tip even when capture was pregame", () => {
+    const csv = `${header}\n401,spreads,2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2027-01-01T20:00:00Z,Home,Away,Book,-3,1.91,1.91,,,,,,,event-1`;
+    const result = validateMarketImportCsv(csv, new Date("2027-01-01T21:00:00Z"));
+    expect(result.errors).toContain("Row 2: updated_at must be before starts_at.");
+  });
+
   it("normalizes decimal and American prices for a browser comparison preview", () => {
     const csv = `${header}\n${["401", "h2h", "2027-01-01T20:00:00Z", "2026-12-31T20:00:00Z", "2026-12-31T19:59:00Z", "Home", "Away", "Book", "", "", "", "", "", "-120", "105", "", "", "event-1"].join(",")}`;
     expect(parseMarketImportRows(csv)).toMatchObject([{

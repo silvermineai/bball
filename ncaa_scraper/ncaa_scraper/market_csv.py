@@ -68,6 +68,8 @@ def event_and_market(
     imported = timestamp(imported_at)
     if captured >= game["starts_at"]:
         raise ValueError(f"row {row_number}: captured_at must be before scheduled start")
+    if updated >= game["starts_at"]:
+        raise ValueError(f"row {row_number}: updated_at must be before scheduled start")
     if captured > imported:
         raise ValueError(f"row {row_number}: captured_at cannot be after import time")
     if updated > captured:
