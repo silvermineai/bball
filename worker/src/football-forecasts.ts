@@ -29,6 +29,41 @@ function asNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+type FootballForecastIntegrity = "valid" | "invalid" | "unavailable";
+
+function forecastValues(item: Record<string, unknown>, intervalWidth: number | null) {
+  const rawFields = ["home_margin", "total", "home_win_probability"];
+  const malformed = rawFields.some((field) => item[field] != null && asNumber(item[field]) === null);
+  const homeMargin = asNumber(item.home_margin);
+  const total = asNumber(item.total);
+  const homeWinProbability = asNumber(item.home_win_probability);
+  const complete = homeMargin !== null && total !== null && homeWinProbability !== null;
+  const validProbability = homeWinProbability === null || (homeWinProbability >= 0 && homeWinProbability <= 1);
+  const validTotal = total === null || total >= 0;
+  if (malformed || !validProbability || !validTotal) {
+    return {
+      home_margin: null,
+      total: null,
+      home_win_probability: null,
+      home_score: null,
+      away_score: null,
+      margin_low: null,
+      margin_high: null,
+      prediction_integrity: "invalid" as FootballForecastIntegrity,
+    };
+  }
+  return {
+    home_margin: homeMargin,
+    total,
+    home_win_probability: homeWinProbability,
+    home_score: homeMargin === null || total === null ? null : round((total + homeMargin) / 2, 1),
+    away_score: homeMargin === null || total === null ? null : round((total - homeMargin) / 2, 1),
+    margin_low: homeMargin === null || intervalWidth === null ? null : round(homeMargin - intervalWidth, 1),
+    margin_high: homeMargin === null || intervalWidth === null ? null : round(homeMargin + intervalWidth, 1),
+    prediction_integrity: complete ? "valid" as FootballForecastIntegrity : "unavailable" as FootballForecastIntegrity,
+  };
+}
+
 function round(value: number, digits: number) {
   const scale = 10 ** digits;
   return Math.round((value + Number.EPSILON) * scale) / scale;
@@ -186,17 +221,9 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     latest_model: latestModel ? { model_id: latestModel.id, created_at: latestModel.created_at, cutoff: latestModel.cutoff } : null,
     rows: rows.results.map((row) => {
       const item = row as Record<string, unknown>;
-      const homeMargin = asNumber(item.home_margin);
-      const total = asNumber(item.total);
       return {
         ...item,
-        home_margin: homeMargin,
-        total,
-        home_win_probability: asNumber(item.home_win_probability),
-        home_score: homeMargin === null || total === null ? null : round((total + homeMargin) / 2, 1),
-        away_score: homeMargin === null || total === null ? null : round((total - homeMargin) / 2, 1),
-        margin_low: homeMargin === null || intervalWidth === null ? null : round(homeMargin - intervalWidth, 1),
-        margin_high: homeMargin === null || intervalWidth === null ? null : round(homeMargin + intervalWidth, 1),
+        ...forecastValues(item, intervalWidth),
       };
     }),
   });

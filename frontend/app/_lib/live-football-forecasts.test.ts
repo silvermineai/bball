@@ -86,6 +86,18 @@ describe("live football forecast merge", () => {
     globalThis.fetch = originalFetch;
   });
 
+  it("rejects live rows with an out-of-range probability", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      total: 1,
+      page_size: 100,
+      rows: [{ ...liveRow(0), home_win_probability: 1.2 }],
+    }), { status: 200 })) as typeof fetch;
+    await expect(loadLiveFootballForecasts(undefined, { maxPages: 1, cacheBust: "invalid-probability" }))
+      .rejects.toThrow("invalid prediction values");
+    globalThis.fetch = originalFetch;
+  });
+
   it("indexes exact ledger market comparisons by game", async () => {
     const originalFetch = globalThis.fetch;
     let requested = "";
@@ -276,5 +288,24 @@ describe("live football forecast merge", () => {
       margin_high: null,
     }]);
     expect(merged[0]).toEqual(game(null));
+  });
+
+  it("does not let an invalid live value overwrite a published prediction", () => {
+    const published = game({
+      home_margin: 3,
+      total: 48,
+      home_score: 25.5,
+      away_score: 22.5,
+      home_win_probability: 0.58,
+      margin_low: -20,
+      margin_high: 26,
+    });
+    const merged = mergeLiveFootballForecasts([published], [{
+      ...liveRow(1),
+      game_id: "game-1",
+      home_win_probability: 1.4,
+      prediction_integrity: "invalid",
+    }]);
+    expect(merged[0]).toEqual(published);
   });
 });

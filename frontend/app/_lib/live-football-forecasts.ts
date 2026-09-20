@@ -17,6 +17,7 @@ export type LiveFootballForecastRow = {
   away_score: number | null;
   margin_low: number | null;
   margin_high: number | null;
+  prediction_integrity?: "valid" | "invalid" | "unavailable";
 };
 
 type LiveFootballForecastPage = {
@@ -24,6 +25,30 @@ type LiveFootballForecastPage = {
   page_size: number;
   rows: LiveFootballForecastRow[];
 };
+
+function finiteOrNull(value: unknown) {
+  return value === null || value === undefined || (typeof value === "number" && Number.isFinite(value));
+}
+
+/** Keep malformed live scalars from overwriting a source-linked static card. */
+export function validLiveFootballForecast(row: LiveFootballForecastRow) {
+  const numeric = [
+    row.home_margin,
+    row.total,
+    row.home_win_probability,
+    row.home_score,
+    row.away_score,
+    row.margin_low,
+    row.margin_high,
+  ];
+  if (!numeric.every(finiteOrNull)) return false;
+  if (row.home_win_probability != null && (row.home_win_probability < 0 || row.home_win_probability > 1)) return false;
+  if (row.total != null && row.total < 0) return false;
+  if (row.margin_low != null && row.margin_high != null && row.margin_low > row.margin_high) return false;
+  if (row.home_margin != null && row.margin_low != null && row.margin_high != null
+    && (row.home_margin < row.margin_low || row.home_margin > row.margin_high)) return false;
+  return row.prediction_integrity !== "invalid";
+}
 
 type LiveFootballScorecardResponse = {
   live?: boolean;
@@ -62,6 +87,9 @@ export async function loadLiveFootballForecasts(
   if (first.rows.length > 0 && firstModelIds.size !== 1) {
     throw new Error("Live football forecasts did not identify one model edition.");
   }
+  if (first.rows.some((row) => !row.model_id || !validLiveFootballForecast(row))) {
+    throw new Error("Live football forecasts returned invalid prediction values.");
+  }
   const resolvedModelId = [...firstModelIds][0];
   const modelQuery = resolvedModelId ? `&model=${encodeURIComponent(resolvedModelId)}` : "";
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -90,6 +118,9 @@ export async function loadLiveFootballForecasts(
     }
     if (resolvedModelId && payload.rows.some((row) => row.model_id !== resolvedModelId)) {
       throw new Error("Live football forecasts mixed model editions.");
+    }
+    if (payload.rows.some((row) => !row.model_id || !validLiveFootballForecast(row))) {
+      throw new Error("Live football forecasts returned invalid prediction values.");
     }
   });
   const rows = pages.flatMap((page) => page.rows);
@@ -174,6 +205,7 @@ export function mergeLiveFootballForecasts(games: Game[], rows: LiveFootballFore
   return games.map((game) => {
     const live = liveById.get(game.id);
     if (!live) return game;
+    if (!validLiveFootballForecast(live)) return game;
     const completeLivePrediction = live.home_margin !== null
       && live.total !== null
       && live.home_win_probability !== null

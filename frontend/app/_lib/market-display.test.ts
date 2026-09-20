@@ -54,4 +54,12 @@ describe("market comparison display", () => {
     expect(summary).toMatchObject({ spread: null, total: null, homeProbability: 0.512, winProbabilityGap: 0.043, capturedAt: "2026-09-12T15:35:00Z" });
     expect(hasQualifiedMarketComparison(summary)).toBe(true);
   });
+
+  it("withholds impossible market totals and probabilities", () => {
+    const summary = summarizeMarketLines([
+      { ...comparison("totals", 4), line: -2 },
+      { ...comparison("h2h", 0.2), market_home_probability: 1.2 },
+    ]);
+    expect(summary).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
+  });
 });

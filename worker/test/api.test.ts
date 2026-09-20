@@ -266,9 +266,54 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { total: number; rows: Array<{ home_margin: number; total: number; home_win_probability: number; home_score: number; away_score: number; margin_low: number; margin_high: number }> };
     expect(body.total).toBe(1);
-    expect(body.rows[0]).toMatchObject({ home_margin: 6.5, total: 48.25, home_win_probability: 0.64, home_score: 27.4, away_score: 20.9, margin_low: -13.5, margin_high: 26.5 });
+    expect(body.rows[0]).toMatchObject({ home_margin: 6.5, total: 48.25, home_win_probability: 0.64, home_score: 27.4, away_score: 20.9, margin_low: -13.5, margin_high: 26.5, prediction_integrity: "valid" });
     expect(prepare.mock.calls.some(([query]) => String(query).includes("g.kickoff>?"))).toBe(true);
     expect(prepare.mock.calls.some(([query]) => String(query).includes("g.season=?"))).toBe(true);
+  });
+
+  it("withholds football rows with invalid probability or total values", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("FROM football_models m")) {
+        return { bind: () => ({ first: async () => ({ id: "football-model", created_at: "2026-09-09T02:00:00Z", cutoff: "2026-09-09T02:00:00Z", artifact_json: JSON.stringify({ calibration: { margin_half_width: 20 } }) }) }) };
+      }
+      if (sql.includes("count(*) AS total FROM football_predictions")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({ results: [{
+            game_id: "401900002",
+            model_id: "football-model",
+            created_at: "2026-09-09T02:00:00Z",
+            home_margin: 6,
+            total: -1,
+            home_win_probability: 1.2,
+            season: 2026,
+            kickoff: "2026-09-12T19:00:00Z",
+            home_id: "1",
+            away_id: "2",
+            home_name: "Home",
+            away_name: "Away",
+          }] }),
+        }),
+      };
+    });
+    const response = await app.request(
+      "/api/football/research/forecasts?season=2026&status=upcoming&limit=2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      rows: [{
+        home_margin: null,
+        total: null,
+        home_win_probability: null,
+        home_score: null,
+        away_score: null,
+        prediction_integrity: "invalid",
+      }],
+    });
   });
 
   it("accounts for every upcoming football game in forecast metadata", async () => {
