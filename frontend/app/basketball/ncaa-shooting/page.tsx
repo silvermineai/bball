@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import NcaaShooting from "./NcaaShooting";
 
 export const metadata = {
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <NcaaShooting />;
+  return <Suspense fallback={<p>Loading shooting profiles…</p>}><NcaaShooting /></Suspense>;
 }

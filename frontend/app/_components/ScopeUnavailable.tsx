@@ -34,7 +34,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const lowerFootball = lowerFootballDivision(sport, scope);
   const womenDivisionReadiness = isWomen && sport === "basketball" && (scope.division === "2" || scope.division === "3") ? scope.division : null;
   const lowerBasketballSummary = !isWomen && sport === "basketball" && (scope.division === "2" || scope.division === "3") && !divisionPlayers && !divisionTeams ? scope.division : null;
-  const sportName = sport === "basketball" ? "Women's basketball" : "football";
+  const sportName = sport === "basketball" ? `${isWomen ? "Women's" : "Men's"} basketball` : "football";
   const publishedWomenDivisionOne = isWomen && sport === "basketball" && scope.division === "1";
   const detail = isWomen
     ? scope.division === "1"

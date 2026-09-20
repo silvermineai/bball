@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { safeSum } from "../../_lib/ncaa-player-box";
 import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
 import { playerCardShotLocations } from "../../_components/LivePlayerShotMap";
+import ScopeUnavailable from "../../_components/ScopeUnavailable";
+import { parseSportScopeSearch } from "../../_lib/sport-scope";
 import { coordinateCoverage } from "./coordinateCoverage";
+import { shootingArchiveAvailable, shootingArchiveScopeParams } from "./ncaa-shooting-scope";
 
 type Metric = "volume" | "fg_pct" | "3p_pct" | "rim_pct" | "mid_pct" | "distance";
 type Zone = { attempts: number; makes: number; points: number };
@@ -34,16 +38,18 @@ const pct = (zone: Zone | undefined) => zone && zone.attempts ? `${(100 * zone.m
 const sourceLabelRow = (row: Row) => row.player_id.startsWith("source:") || row.team_id.startsWith("source:");
 
 export default function NcaaShooting() {
-  const initial = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-  const initialMetric = initial?.get("metric");
-  const [season, setSeason] = useState(initial?.get("season") || "2026");
+  const searchParams = useSearchParams();
+  const scopeSearch = searchParams.toString();
+  const scope = useMemo(() => parseSportScopeSearch(scopeSearch), [scopeSearch]);
+  const initialMetric = searchParams.get("metric");
+  const [season, setSeason] = useState(searchParams.get("season") || "2026");
   const [metric, setMetric] = useState<Metric>(initialMetric && Object.prototype.hasOwnProperty.call(labels, initialMetric) ? initialMetric as Metric : "volume");
-  const [minAttempts, setMinAttempts] = useState(initial?.get("minAttempts") || "50");
-  const [query, setQuery] = useState(initial?.get("q") || "");
+  const [minAttempts, setMinAttempts] = useState(searchParams.get("minAttempts") || "50");
+  const [query, setQuery] = useState(searchParams.get("q") || "");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(() => {
-    const value = Number(initial?.get("page") || 0);
+    const value = Number(searchParams.get("page") || 0);
     return Number.isInteger(value) && value > 0 ? value : 0;
   });
   const [error, setError] = useState("");
@@ -53,9 +59,9 @@ export default function NcaaShooting() {
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
   const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
-  useEffect(() => { const params = new URLSearchParams({ season, metric, minAttempts }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minAttempts, query, page]);
-  useEffect(() => { fetch(`/api/basketball/research/ncaa-shooting?meta=1&season=${season}`).then((r) => { if (!r.ok) throw Error("The College shooting catalog could not be loaded."); return r.json() as Promise<Meta>; }).then(setMeta).catch((e) => setError(e.message)); }, [retryNonce, season]);
-  useEffect(() => { const controller = new AbortController(); const params = new URLSearchParams({ season, metric, minAttempts, page: String(page) }); if (query.trim()) params.set("q", query.trim()); setResult(null); fetch(`/api/basketball/research/ncaa-shooting?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw Error("The College shooting profiles could not be loaded."); return r.json() as Promise<Result>; }).then((v) => { if (!controller.signal.aborted) setResult(v); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [metric, minAttempts, page, query, retryNonce, season]);
+  useEffect(() => { if (!shootingArchiveAvailable(scope)) return; const params = new URLSearchParams({ season, metric, minAttempts }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); shootingArchiveScopeParams(scope).forEach((value, key) => params.set(key, value)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minAttempts, query, page, scope]);
+  useEffect(() => { if (!shootingArchiveAvailable(scope)) return; fetch(`/api/basketball/research/ncaa-shooting?meta=1&season=${season}`).then((r) => { if (!r.ok) throw Error("The College shooting catalog could not be loaded."); return r.json() as Promise<Meta>; }).then(setMeta).catch((e) => setError(e.message)); }, [retryNonce, season, scope]);
+  useEffect(() => { if (!shootingArchiveAvailable(scope)) return; const controller = new AbortController(); const params = new URLSearchParams({ season, metric, minAttempts, page: String(page) }); if (query.trim()) params.set("q", query.trim()); setResult(null); fetch(`/api/basketball/research/ncaa-shooting?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw Error("The College shooting profiles could not be loaded."); return r.json() as Promise<Result>; }).then((v) => { if (!controller.signal.aborted) setResult(v); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [metric, minAttempts, page, query, retryNonce, season, scope]);
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
   const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
@@ -127,6 +133,7 @@ export default function NcaaShooting() {
       setExporting(false);
     }
   };
+  if (!shootingArchiveAvailable(scope)) return <ScopeUnavailable sport="basketball" scope={scope} />;
   return <>
     <div className="page-title"><div className="eyebrow">Player shooting archive</div><h1>Follow the<br /><em>shot profile.</em></h1><p>Compare where players shoot, how often they convert and how their shot diet changes across seasons. Zone buckets and distance come from the retained shot edition.</p></div>
     <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Qualified player/team profiles</span></div><div><strong>{result?.min_attempts ?? minAttempts}</strong><span>Minimum attempts</span></div><div><strong>{meta?.seasons.length ?? "—"}</strong><span>Shot seasons</span></div><div><strong>IDs</strong><span>Identity namespaces</span></div></div>
