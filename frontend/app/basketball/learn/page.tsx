@@ -6,6 +6,9 @@ import ScoreProjectionCalculator from "./ScoreProjectionCalculator";
 import MetricExplorer from "./MetricExplorer";
 import LearningProgress from "./LearningProgress";
 import LearningCheckpoint from "./LearningCheckpoint";
+import UpcomingGameLesson from "./UpcomingGameLesson";
+import { nextUpcomingGameLesson } from "./upcoming-game-lesson";
+import { getBasketball } from "../../_lib/basketball-data";
 import type { LearningMetric, LearningTopic } from "../../_lib/metric-explorer";
 
 export const metadata = {
@@ -368,6 +371,7 @@ const learningTracks = [
 ];
 
 export default function Page() {
+  const nextGameLesson = nextUpcomingGameLesson(getBasketball().upcoming);
   return (
     <>
       <div className="dateline eyebrow">
@@ -493,6 +497,8 @@ export default function Page() {
       <section className="section" aria-label="Basketball analytics learning checkpoint">
         <LearningCheckpoint />
       </section>
+
+      <UpcomingGameLesson lesson={nextGameLesson} />
 
       <section className="section two-col" id="forecasting">
         <article className="paper-panel">

@@ -1692,10 +1692,25 @@ th,
 .learning-checkpoint-result { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 18px; }
 .learning-checkpoint-result h3 { margin: 8px 0; font-size: 2rem; }
 .learning-checkpoint-result p { margin: 0; max-width: 650px; }
+.learning-next-game { border-top: 3px solid var(--orange); }
+.learning-next-game-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 20px 0 18px; }
+.learning-next-game-header h3 { margin: 6px 0 0; font-size: clamp(1.65rem, 4vw, 2.6rem); letter-spacing: -.025em; }
+.learning-next-game-header p { margin: 8px 0 0; }
+.learning-next-game-strip { margin: 0 0 22px; }
+.learning-next-game-strip strong { font-size: 1.35rem; }
+.learning-next-game-columns { margin-bottom: 18px; }
+.learning-next-game-columns .paper-panel { margin: 0; }
+.learning-next-game-columns h3 { margin: 7px 0 9px; }
+.learning-next-game-question { margin: 0; }
+.learning-next-game-question h3 { margin: 7px 0 11px; }
+.learning-next-game-question ol { margin: 0; padding-left: 22px; }
+.learning-next-game-question li { margin: 7px 0; }
 @media (max-width: 700px) {
   .learning-checkpoint-heading, .learning-checkpoint-result { display: block; }
   .learning-checkpoint-progress { display: block; margin-top: 16px; }
   .learning-checkpoint-result .button { margin-top: 18px; }
+  .learning-next-game-header { display: block; }
+  .learning-next-game-header .button { display: inline-block; margin-top: 15px; }
 }
 .article {
   max-width: 760px;
