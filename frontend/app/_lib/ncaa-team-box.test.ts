@@ -11,6 +11,14 @@ describe("NCAA team box archive filters", () => {
     expect(sortNcaaTeamBox([row("Beta", 2), row("Alpha", 8)], "net_rtg", "desc").map((r) => r.team)).toEqual(["Alpha", "Beta"]);
     expect(parseNcaaTeamBoxFilters("?season=1900&minGames=999&sort=nope", [2019, 2026], 2026)).toEqual({ season: 2026, query: "", minGames: "10", sort: "net_rtg", direction: "desc" });
   });
+  it("sorts retained true-shooting fields and preserves unavailable values", () => {
+    const efficient = { ...row("Efficient", 4), ts_pct: .64, def_ts_pct: .47 };
+    const average = { ...row("Average", 5), ts_pct: .56, def_ts_pct: .52 };
+    const missing = { ...row("Missing", 6), ts_pct: null, def_ts_pct: null };
+    expect(sortNcaaTeamBox([average, missing, efficient], "ts_pct", "desc").map((r) => r.team)).toEqual(["Efficient", "Average", "Missing"]);
+    expect(sortNcaaTeamBox([average, missing, efficient], "def_ts_pct", "asc").map((r) => r.team)).toEqual(["Efficient", "Average", "Missing"]);
+    expect(parseNcaaTeamBoxFilters("?sort=def_ts_pct&direction=asc", [2026], 2026).sort).toBe("def_ts_pct");
+  });
   it("sorts every retained defensive Four Factor and leaves unavailable values last", () => {
     const alpha = row("Alpha", 8);
     const beta = { ...row("Beta", 2), def_to_rate_derived: .24, def_orb_pct: .22, def_ft_rate: .31 };

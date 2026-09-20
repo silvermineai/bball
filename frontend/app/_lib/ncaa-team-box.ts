@@ -5,6 +5,8 @@ export type NcaaTeamBoxSort =
   | "tempo"
   | "efg_pct"
   | "def_efg_pct"
+  | "ts_pct"
+  | "def_ts_pct"
   | "to_rate_derived"
   | "def_to_rate_derived"
   | "orb_pct"
@@ -16,7 +18,7 @@ export type NcaaTeamBoxSort =
   | "points";
 export type NcaaTeamBoxFilters = { season: number; query: string; minGames: string; sort: NcaaTeamBoxSort; direction: "asc" | "desc" };
 const sorts = new Set<NcaaTeamBoxSort>([
-  "net_rtg", "off_rtg", "def_rtg", "tempo", "efg_pct", "def_efg_pct",
+  "net_rtg", "off_rtg", "def_rtg", "tempo", "efg_pct", "def_efg_pct", "ts_pct", "def_ts_pct",
   "to_rate_derived", "def_to_rate_derived", "orb_pct", "def_orb_pct",
   "ft_rate", "def_ft_rate", "three_rate", "def_three_rate", "points",
 ]);
