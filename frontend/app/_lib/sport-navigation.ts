@@ -24,6 +24,7 @@ const BASKETBALL_ITEMS: SportNavItem[] = [
   { label: "Recruiting", href: "/basketball/recruiting/", match: ["/basketball/recruiting"] },
   { label: "Games", href: "/basketball/matchups/", match: ["/basketball/matchups", "/basketball/games", "/basketball/briefs", "/basketball/gameplan"] },
   { label: "Predictions", href: "/basketball/forecast-lab/", match: ["/basketball/forecast-lab", "/research/scorecard"] },
+  { label: "Learn", href: "/basketball/learn/", match: ["/basketball/learn"] },
   { label: "Rankings", href: "/basketball/rankings/", match: ["/basketball/rankings", "/basketball/ncaa-rankings"] },
   { label: "Division", href: "/research/coverage/?sport=basketball", match: ["/research/coverage"] },
 ];
@@ -69,6 +70,7 @@ export const SPORT_NAVIGATION: Record<Sport, SportNavConfig> = {
       { label: "Recruiting", href: "/football/recruiting/", match: ["/football/recruiting"] },
       { label: "Games", href: "/football/matchups/", match: ["/football/matchups"] },
       { label: "Predictions", href: "/football/", match: ["/football", "/football/"], exact: true },
+      { label: "Learn", href: "/football/methodology/", match: ["/football/methodology"] },
       { label: "Rankings", href: "/football/ratings/", match: ["/football/ratings"] },
       { label: "Division", href: "/research/coverage/?sport=football", match: ["/research/coverage"] },
     ],

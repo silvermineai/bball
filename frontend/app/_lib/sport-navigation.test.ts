@@ -45,15 +45,24 @@ describe("sport navigation", () => {
   it("keeps the core stat tabs consistent across each sport tab", () => {
     const labels = Object.values(SPORT_NAVIGATION).map((config) => config.items.map((item) => item.label));
     expect(labels).toEqual([
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
     ]);
 
     expect(SPORT_NAVIGATION["womens-basketball"].items.find((item) => item.label === "Division")?.href)
       .toBe("/research/coverage/?sport=basketball");
     expect(SPORT_NAVIGATION.football.items.find((item) => item.label === "Division")?.href)
       .toBe("/research/coverage/?sport=football");
+  });
+
+  it("links each sport edition to its own learning resource", () => {
+    const basketballLearn = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Learn");
+    const footballLearn = SPORT_NAVIGATION.football.items.find((item) => item.label === "Learn");
+    expect(basketballLearn?.href).toBe("/basketball/learn/");
+    expect(footballLearn?.href).toBe("/football/methodology/");
+    expect(isNavItemActive("/basketball/learn/metric-explorer", basketballLearn!)).toBe(true);
+    expect(isNavItemActive("/football/methodology", footballLearn!)).toBe(true);
   });
 
   it("surfaces validated player shooting and recruiting-fit labs in Explore", () => {
