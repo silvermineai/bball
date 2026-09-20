@@ -56,6 +56,8 @@ describe("football source statistics", () => {
       dataset: "box",
       season: 2025,
       total: 1,
+      field_catalog: [{ key: "athlete_name", observed_rows: 1, share: 1 }, { key: "yards", observed_rows: 1, share: 1 }],
+      field_catalog_scope: "returned_page",
       rows: [{
         athlete_id: "123",
         stats: { athlete_name: "Example Player", yards: "91" },

@@ -197,32 +197,54 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       return [];
     }
   });
+  const parsedRows = rows.results.flatMap(({ stats_json, ...row }) => {
+    try {
+      const stats = JSON.parse(stats_json) as unknown;
+      // A source record is useful to the browser only when its retained
+      // payload is an object.  Failing closed here also keeps the field
+      // catalog from presenting array indexes or scalar values as fields.
+      if (!stats || typeof stats !== "object" || Array.isArray(stats)) return [];
+      return [{
+        ...row,
+        stats: stats as Record<string, unknown>,
+        game: row.game_id && row.kickoff ? {
+          id: row.game_id,
+          kickoff: row.kickoff,
+          home_name: row.home_name,
+          away_name: row.away_name,
+          home_score: row.home_score,
+          away_score: row.away_score,
+        } : null,
+      }];
+    } catch {
+      return [];
+    }
+  });
+  const fieldCounts = new Map<string, number>();
+  for (const row of parsedRows) {
+    for (const key of Object.keys(row.stats)) fieldCounts.set(key, (fieldCounts.get(key) || 0) + 1);
+  }
+  const fieldCatalog = [...fieldCounts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, observedRows]) => ({
+      key,
+      observed_rows: observedRows,
+      share: parsedRows.length ? observedRows / parsedRows.length : null,
+    }));
   const response = c.json({
     dataset: q.dataset,
     season: q.season,
     page: q.page,
     page_size: 40,
     total: count?.total ?? 0,
+    // This is deliberately scoped to the returned page.  It is a discovery
+    // aid for heterogeneous source releases, not a claim that a field exists
+    // on every row in the retained archive.
+    field_catalog: fieldCatalog,
+    field_catalog_scope: "returned_page",
     source_receipts: sourceReceipts,
     filters: { q: q.q, team: q.team ?? null, game: q.game ?? null },
-    rows: rows.results.flatMap(({ stats_json, ...row }) => {
-      try {
-        return [{
-          ...row,
-          stats: JSON.parse(stats_json) as Record<string, unknown>,
-          game: row.game_id && row.kickoff ? {
-            id: row.game_id,
-            kickoff: row.kickoff,
-            home_name: row.home_name,
-            away_name: row.away_name,
-            home_score: row.home_score,
-            away_score: row.away_score,
-          } : null,
-        }];
-      } catch {
-        return [];
-      }
-    }),
+    rows: parsedRows,
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
