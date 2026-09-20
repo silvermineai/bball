@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, isNavItemActive, SPORT_NAVIGATION, sportForPathname } from "./sport-navigation";
+import { buildScopeHref, isNavItemActive, SPORT_NAVIGATION, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -26,5 +26,11 @@ describe("sport navigation", () => {
 
   it("advertises the published women's D1 sport tab", () => {
     expect(SPORT_NAVIGATION["womens-basketball"].available).toBe(true);
+  });
+
+  it("does not offer a nonexistent women's football scope", () => {
+    expect(sportSupportsGenderScope("football")).toBe(false);
+    expect(sportSupportsGenderScope("mens-basketball")).toBe(true);
+    expect(sportSupportsGenderScope("womens-basketball")).toBe(true);
   });
 });

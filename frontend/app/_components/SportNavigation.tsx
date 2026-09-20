@@ -10,6 +10,7 @@ import {
   isNavItemActive,
   SPORT_NAVIGATION,
   sportForPathname,
+  sportSupportsGenderScope,
   type Division,
   type Gender,
 } from "../_lib/sport-navigation";
@@ -94,7 +95,7 @@ export default function SportNavigation() {
         </nav>
         <div className="sport-scope" aria-label={`${config.label} data scope`}>
           <span className="sport-scope-label">Scope</span>
-          <div className="sport-scope-group" aria-label="Gender">
+          {sportSupportsGenderScope(currentSport) ? <div className="sport-scope-group" aria-label="Gender">
             {GENDER_OPTIONS.map((option) => (
               <Link
                 key={option.value}
@@ -105,7 +106,7 @@ export default function SportNavigation() {
                 {option.label}
               </Link>
             ))}
-          </div>
+          </div> : <span className="sport-scope-fixed" aria-label="Football gender">Men&apos;s</span>}
           <div className="sport-scope-group" aria-label="NCAA division">
             {DIVISION_OPTIONS.map((option) => (
               <Link

@@ -95,6 +95,10 @@ export function sportForPathname(pathname: string, gender: string | null = null)
   return gender === "women" ? "womens-basketball" : "mens-basketball";
 }
 
+export function sportSupportsGenderScope(sport: Sport): boolean {
+  return sport !== "football";
+}
+
 export function isNavItemActive(pathname: string, item: SportNavItem): boolean {
   return item.match.some((prefix) => item.exact
     ? pathname === prefix
