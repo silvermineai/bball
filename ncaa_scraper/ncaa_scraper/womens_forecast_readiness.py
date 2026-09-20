@@ -16,6 +16,10 @@ from pathlib import Path
 
 WBB_RELEASE_ROOT = "https://github.com/sportsdataverse/sportsdataverse-data/releases/download"
 DEFAULT_TARGET_SEASON = 2027
+# The WBB challenger fits 2023–25 and uses 2026 as a chronological holdout.
+# Schedule history is not required for the fit because the team-box release
+# carries stable game IDs and final scores; the target schedule remains a
+# separate input for upcoming rows.
 HISTORICAL_SEASONS = (2023, 2024, 2025, 2026)
 
 RELEASES = {
@@ -63,14 +67,16 @@ def _asset_status(cache: Path, dataset: str, season: int) -> dict:
     }
 
 
-def assess(cache: Path, target_season: int = DEFAULT_TARGET_SEASON) -> dict:
+def assess(
+    cache: Path,
+    target_season: int = DEFAULT_TARGET_SEASON,
+    forecast_path: Path | None = None,
+) -> dict:
     """Return a publication gate for a WBB target season.
 
-    Four completed historical seasons are intentional: the efficiency model
-    fits before the calibration season, calibrates on the next season, and
-    retains a following season as an independent check before issuing target
-    forecasts.  The target schedule is useful context but cannot provide a
-    training outcome.
+    Three seasons fit the ratings and the latest completed season is a
+    chronological holdout. A separately fitted probability calibration
+    artifact is required before forecast rows can be treated as publishable.
     """
 
     historical = [
@@ -84,29 +90,29 @@ def assess(cache: Path, target_season: int = DEFAULT_TARGET_SEASON) -> dict:
             "key": "historical_schedule",
             "label": "Completed WBB schedules",
             "status": "ready" if all(row["status"] == "ready" for row in historical if row["dataset"] == "schedule") else "missing",
-            "detail": "2023–26 schedules are required to build chronological training, calibration and test cohorts.",
-            "required": "schedule rows with game ID, season, teams, final scores, status and neutral-site flag",
+            "detail": "2023–26 schedules provide the game IDs and chronology needed to reconcile team boxes.",
+            "required": "season, teams, stable game IDs and final status for every retained historical edition",
         },
         {
             "key": "historical_team_box",
             "label": "Completed WBB team boxes",
             "status": "ready" if all(row["status"] == "ready" for row in historical if row["dataset"] == "team_box") else "missing",
-            "detail": "2023–26 team-box rows are required to compute paired efficiency and pace inputs.",
-            "required": "two final team rows per game keyed by game ID and team ID, with FGA, FTA, offensive rebounds and turnovers",
+            "detail": "2023–25 ratings and a chronological 2026 holdout are required to compute team strength and outcomes.",
+            "required": "two final team rows per game keyed by game ID and team ID, with scores and stable team IDs",
         },
         {
             "key": "paired_games",
             "label": "Paired completed games",
             "status": "blocked",
-            "detail": "Cannot count valid joins until every historical schedule and team-box release is imported and reconciled.",
-            "required": "at least 100 valid completed games after score, period and pace checks",
+            "detail": "Cannot count valid joins until the two team-box releases are reconciled.",
+            "required": "at least 100 valid completed games after score and duplicate checks",
         },
         {
-            "key": "wbb_calibration",
-            "label": "Women’s calibration and holdout",
+            "key": "wbb_probability_calibration",
+            "label": "Women’s probability calibration",
             "status": "blocked",
-            "detail": "No WBB coefficients or probabilities are published until calibration is fit on women’s games and a later season remains independent.",
-            "required": "independent calibration season plus a later held-out evaluation with winner, margin and interval metrics",
+            "detail": "The published artifact must carry women’s-only calibration coefficients and held-out probability metrics.",
+            "required": "women’s calibration coefficients, calibration-game count and held-out Brier/log-loss evidence",
         },
         {
             "key": "target_schedule",
@@ -128,21 +134,60 @@ def assess(cache: Path, target_season: int = DEFAULT_TARGET_SEASON) -> dict:
         for row in historical
         if row["status"] != "ready"
     ]
-    ready = not missing and all(check["status"] == "ready" for check in checks[:2])
+    forecast = {}
+    if forecast_path and forecast_path.exists():
+        try:
+            forecast = json.loads(forecast_path.read_text())
+        except (OSError, ValueError):
+            forecast = {}
+    validation = forecast.get("validation")
+    paired_games_ready = (
+        isinstance(validation, dict)
+        and isinstance(validation.get("games"), (int, float))
+        and validation["games"] >= 100
+    )
+    paired_check = next(check for check in checks if check["key"] == "paired_games")
+    paired_check["status"] = "ready" if paired_games_ready and not missing else "blocked"
+    if paired_games_ready:
+        paired_check["detail"] = f"The artifact reports {int(validation['games']):,} completed 2026 holdout games after the multi-season model join."
+    calibration = forecast.get("calibration")
+    calibration_ready = (
+        isinstance(calibration, dict)
+        and isinstance(calibration.get("games"), (int, float))
+        and calibration["games"] >= 100
+        and isinstance(calibration.get("logistic_coefficients"), list)
+        and len(calibration["logistic_coefficients"]) == 2
+        and isinstance(calibration.get("brier"), (int, float))
+        and isinstance(calibration.get("log_loss"), (int, float))
+    )
+    calibration_check = next(check for check in checks if check["key"] == "wbb_probability_calibration")
+    calibration_check["status"] = "ready" if calibration_ready and not missing else "blocked"
+    if calibration_ready:
+        calibration_check["detail"] = "A women’s calibration record is attached to the multi-season artifact and can be audited against its holdout."
+    if not calibration_ready:
+        missing.append({
+            "dataset": "model_calibration",
+            "season": target_season - 1,
+            "release_tag": "silvermine-wbb-model",
+            "asset": "womens-forecast.json#calibration",
+            "url": "",
+            "next_step": "Fit and persist women’s calibration coefficients with Brier and log-loss evidence before publishing probabilities.",
+        })
+    ready = not missing and all(check["status"] == "ready" for check in checks)
     return {
         "schema_version": 1,
         "sport": "basketball",
         "gender": "women",
         "target_season": target_season,
         "status": "ready_for_fit" if ready else "blocked",
-        "model_id": None,
-        "forecast_rows": 0,
-        "model_boundary": "No women’s forecast is published. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
+        "model_id": forecast.get("model_id") if ready else None,
+        "forecast_rows": len(forecast.get("forecasts", [])) if ready else 0,
+        "model_boundary": "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted." if ready else "No women’s forecast is published. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
         "checks": checks,
         "assets": historical + [target_schedule],
         "missing_inputs": missing,
         "next_steps": [
-            "Import and hash-verify all 2023–26 women’s schedule and team-box releases under their exact release tags.",
+            "Import and hash-verify the 2023–26 women’s schedule and team-box releases under their exact release tags.",
             "Join only on stable game and team IDs; retain unmatched, duplicate and invalid rows in the audit output.",
             "Run a women’s-only chronological fit, then calibrate on one completed season and evaluate on the following season.",
             "Register a WBB model ID and expose game probabilities only after the held-out metrics and source clocks pass publication checks.",

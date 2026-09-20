@@ -10,6 +10,7 @@ _SPEC.loader.exec_module(_MODULE)
 evaluate = _MODULE.evaluate
 fit_team_ratings = _MODULE.fit_team_ratings
 prediction = _MODULE.prediction
+fit_probability_calibration = _MODULE.fit_probability_calibration
 
 
 def rows_for_game(game_id, home_score, away_score):
@@ -28,3 +29,15 @@ def test_womens_model_has_explicit_training_and_prediction_contract():
     metrics = evaluate(rows, ratings, home_advantage)
     assert metrics["games"] == 2
     assert metrics["brier_score"] is not None
+
+
+def test_womens_probability_calibration_is_fitted_on_training_games():
+    rows = []
+    for index in range(8):
+        rows.extend(rows_for_game(str(index), 80 + index, 60))
+    ratings, home_advantage = fit_team_ratings(rows)
+    calibration = fit_probability_calibration(rows, ratings, home_advantage)
+    assert calibration["games"] == 8
+    assert len(calibration["logistic_coefficients"]) == 2
+    calibrated = prediction("home", "away", ratings, home_advantage, calibration)
+    assert 0 < calibrated["home_win_probability"] < 1

@@ -17,19 +17,11 @@ from ncaa_scraper.womens_forecast_readiness import assess  # noqa: E402
 
 CACHE = ROOT / ".local/womens-basketball"
 OUT = ROOT / "frontend/public/data/basketball/womens-forecast-readiness.json"
+FORECAST = ROOT / "frontend/public/data/basketball/womens-forecast.json"
 
 
 def main() -> None:
-    result = assess(CACHE)
-    forecast_path = ROOT / "frontend/public/data/basketball/womens-forecast.json"
-    if forecast_path.exists():
-        forecast = json.loads(forecast_path.read_text())
-        result["baseline_model_id"] = forecast.get("model_id")
-        result["baseline_forecast_rows"] = len(forecast.get("forecasts") or [])
-        result["model_boundary"] = (
-            "A women’s-only baseline forecast is published from validated team-box history. "
-            "This readiness board tracks the additional multi-season inputs needed for a richer efficiency fit."
-        )
+    result = assess(CACHE, forecast_path=FORECAST)
     OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     print(
         f"WBB forecast readiness: {result['status']} "

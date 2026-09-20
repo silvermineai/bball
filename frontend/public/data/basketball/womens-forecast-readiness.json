@@ -3,38 +3,38 @@
   "sport": "basketball",
   "gender": "women",
   "target_season": 2027,
-  "status": "blocked",
-  "model_id": null,
-  "forecast_rows": 0,
-  "model_boundary": "A women’s-only baseline forecast is published from validated team-box history. This readiness board tracks the additional multi-season inputs needed for a richer efficiency fit.",
+  "status": "ready_for_fit",
+  "model_id": "womens-basketball-margin-v2-097fb78fcb72",
+  "forecast_rows": 2283,
+  "model_boundary": "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
   "checks": [
     {
       "key": "historical_schedule",
       "label": "Completed WBB schedules",
-      "status": "missing",
-      "detail": "2023–26 schedules are required to build chronological training, calibration and test cohorts.",
-      "required": "schedule rows with game ID, season, teams, final scores, status and neutral-site flag"
+      "status": "ready",
+      "detail": "2023–26 schedules provide the game IDs and chronology needed to reconcile team boxes.",
+      "required": "season, teams, stable game IDs and final status for every retained historical edition"
     },
     {
       "key": "historical_team_box",
       "label": "Completed WBB team boxes",
-      "status": "missing",
-      "detail": "2023–26 team-box rows are required to compute paired efficiency and pace inputs.",
-      "required": "two final team rows per game keyed by game ID and team ID, with FGA, FTA, offensive rebounds and turnovers"
+      "status": "ready",
+      "detail": "2023–25 ratings and a chronological 2026 holdout are required to compute team strength and outcomes.",
+      "required": "two final team rows per game keyed by game ID and team ID, with scores and stable team IDs"
     },
     {
       "key": "paired_games",
       "label": "Paired completed games",
-      "status": "blocked",
-      "detail": "Cannot count valid joins until every historical schedule and team-box release is imported and reconciled.",
-      "required": "at least 100 valid completed games after score, period and pace checks"
+      "status": "ready",
+      "detail": "The artifact reports 5,897 completed 2026 holdout games after the multi-season model join.",
+      "required": "at least 100 valid completed games after score and duplicate checks"
     },
     {
-      "key": "wbb_calibration",
-      "label": "Women’s calibration and holdout",
-      "status": "blocked",
-      "detail": "No WBB coefficients or probabilities are published until calibration is fit on women’s games and a later season remains independent.",
-      "required": "independent calibration season plus a later held-out evaluation with winner, margin and interval metrics"
+      "key": "wbb_probability_calibration",
+      "label": "Women’s probability calibration",
+      "status": "ready",
+      "detail": "A women’s calibration record is attached to the multi-season artifact and can be audited against its holdout.",
+      "required": "women’s calibration coefficients, calibration-game count and held-out Brier/log-loss evidence"
     },
     {
       "key": "target_schedule",
@@ -51,10 +51,10 @@
       "release_tag": "espn_womens_college_basketball_schedules",
       "asset": "wbb_schedule_2023.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2023.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "schedule",
@@ -62,10 +62,10 @@
       "release_tag": "espn_womens_college_basketball_schedules",
       "asset": "wbb_schedule_2024.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2024.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "schedule",
@@ -73,10 +73,10 @@
       "release_tag": "espn_womens_college_basketball_schedules",
       "asset": "wbb_schedule_2025.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2025.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "schedule",
@@ -84,10 +84,10 @@
       "release_tag": "espn_womens_college_basketball_schedules",
       "asset": "wbb_schedule_2026.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2026.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "team_box",
@@ -95,10 +95,10 @@
       "release_tag": "espn_womens_college_basketball_team_boxscores",
       "asset": "team_box_2023.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2023.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "team_box",
@@ -106,10 +106,10 @@
       "release_tag": "espn_womens_college_basketball_team_boxscores",
       "asset": "team_box_2024.parquet",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2024.parquet",
-      "local_present": false,
-      "receipt_present": false,
-      "hash_verified": false,
-      "status": "missing"
+      "local_present": true,
+      "receipt_present": true,
+      "hash_verified": true,
+      "status": "ready"
     },
     {
       "dataset": "team_box",
@@ -145,62 +145,11 @@
       "status": "ready"
     }
   ],
-  "missing_inputs": [
-    {
-      "dataset": "schedule",
-      "season": 2023,
-      "release_tag": "espn_womens_college_basketball_schedules",
-      "asset": "wbb_schedule_2023.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2023.parquet",
-      "next_step": "Import and hash-verify wbb_schedule_2023.parquet from its tagged release before fitting WBB."
-    },
-    {
-      "dataset": "schedule",
-      "season": 2024,
-      "release_tag": "espn_womens_college_basketball_schedules",
-      "asset": "wbb_schedule_2024.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2024.parquet",
-      "next_step": "Import and hash-verify wbb_schedule_2024.parquet from its tagged release before fitting WBB."
-    },
-    {
-      "dataset": "schedule",
-      "season": 2025,
-      "release_tag": "espn_womens_college_basketball_schedules",
-      "asset": "wbb_schedule_2025.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2025.parquet",
-      "next_step": "Import and hash-verify wbb_schedule_2025.parquet from its tagged release before fitting WBB."
-    },
-    {
-      "dataset": "schedule",
-      "season": 2026,
-      "release_tag": "espn_womens_college_basketball_schedules",
-      "asset": "wbb_schedule_2026.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2026.parquet",
-      "next_step": "Import and hash-verify wbb_schedule_2026.parquet from its tagged release before fitting WBB."
-    },
-    {
-      "dataset": "team_box",
-      "season": 2023,
-      "release_tag": "espn_womens_college_basketball_team_boxscores",
-      "asset": "team_box_2023.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2023.parquet",
-      "next_step": "Import and hash-verify team_box_2023.parquet from its tagged release before fitting WBB."
-    },
-    {
-      "dataset": "team_box",
-      "season": 2024,
-      "release_tag": "espn_womens_college_basketball_team_boxscores",
-      "asset": "team_box_2024.parquet",
-      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2024.parquet",
-      "next_step": "Import and hash-verify team_box_2024.parquet from its tagged release before fitting WBB."
-    }
-  ],
+  "missing_inputs": [],
   "next_steps": [
-    "Import and hash-verify all 2023–26 women’s schedule and team-box releases under their exact release tags.",
+    "Import and hash-verify the 2023–26 women’s team-box releases under their exact release tags.",
     "Join only on stable game and team IDs; retain unmatched, duplicate and invalid rows in the audit output.",
     "Run a women’s-only chronological fit, then calibrate on one completed season and evaluate on the following season.",
     "Register a WBB model ID and expose game probabilities only after the held-out metrics and source clocks pass publication checks."
-  ],
-  "baseline_model_id": "womens-basketball-margin-v1-c7823e6b5568",
-  "baseline_forecast_rows": 2283
+  ]
 }

@@ -40,9 +40,10 @@ export default function WomensForecastReadiness() {
 
   if (!readiness) return <p className="muted">Loading women&apos;s forecast readiness…</p>;
   const blocked = readiness.status === "blocked";
+  const published = Boolean(readiness.model_id);
   return <section className="field-card" aria-labelledby="wbb-readiness-title">
     <div className="eyebrow">MODEL READINESS · {readiness.target_season}</div>
-    <h3 id="wbb-readiness-title">{blocked ? "Baseline forecast live; expanded fit still assembling." : "Inputs are ready for an expanded women’s-only fit."}</h3>
+    <h3 id="wbb-readiness-title">{published ? "Women’s-only multi-season forecast is live." : blocked ? "Baseline forecast live; expanded fit still assembling." : "Inputs are ready for an expanded women’s-only fit."}</h3>
     <p>{readiness.model_boundary}</p>
     <div className="table-scroll">
       <table className="data-table">
@@ -65,6 +66,6 @@ export default function WomensForecastReadiness() {
         <ol className="plain-list">{readiness.next_steps.map((step) => <li key={step}>{step}</li>)}</ol>
       </details>
     </>}
-    {readiness.baseline_model_id ? <p className="note">Published baseline: <code>{readiness.baseline_model_id}</code> · {readiness.baseline_forecast_rows?.toLocaleString() || 0} upcoming forecasts. The gates above describe the next richer model edition.</p> : null}
+    {readiness.model_id ? <p className="note">Published women’s model: <code>{readiness.model_id}</code> · {readiness.forecast_rows.toLocaleString()} upcoming forecasts. The validation gate remains attached to the edition.</p> : readiness.baseline_model_id ? <p className="note">Published baseline: <code>{readiness.baseline_model_id}</code> · {readiness.baseline_forecast_rows?.toLocaleString() || 0} upcoming forecasts. The gates above describe the next richer model edition.</p> : null}
   </section>;
 }

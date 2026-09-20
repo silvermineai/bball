@@ -29,19 +29,33 @@ def test_wbb_readiness_lists_exact_missing_history_without_model_fallback(tmp_pa
         ("team_box", 2024),
         ("team_box", 2025),
         ("team_box", 2026),
+        ("model_calibration", 2026),
     ]
 
 
 def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
-    for dataset in ("schedule", "team_box"):
-        template = "wbb_schedule_{season}.parquet" if dataset == "schedule" else "team_box_{season}.parquet"
-        for season in (2023, 2024, 2025, 2026):
-            retain_asset(tmp_path, dataset, season, template.format(season=season))
+    for season in (2023, 2024, 2025, 2026):
+        retain_asset(tmp_path, "team_box", season, f"team_box_{season}.parquet")
+        retain_asset(tmp_path, "schedule", season, f"wbb_schedule_{season}.parquet")
     retain_asset(tmp_path, "schedule", 2027, "wbb_schedule_2027.parquet")
 
-    result = assess(tmp_path)
+    forecast = tmp_path / "forecast.json"
+    forecast.write_text(json.dumps({
+        "model_id": "wbb-test",
+        "validation": {"games": 100},
+        "calibration": {
+            "games": 100,
+            "logistic_coefficients": [0.0, 0.1],
+            "brier": 0.2,
+            "log_loss": 0.6,
+        },
+        "forecasts": [{"game_id": "g1"}],
+    }))
+    result = assess(tmp_path, forecast_path=forecast)
     assert result["status"] == "ready_for_fit"
     assert result["missing_inputs"] == []
+    assert result["model_id"] == "wbb-test"
+    assert result["forecast_rows"] == 1
     assert result["checks"][-1]["status"] == "ready"
     assert release_url("team_box", 2026).endswith(
         "/espn_womens_college_basketball_team_boxscores/team_box_2026.parquet"

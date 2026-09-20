@@ -65,6 +65,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/basketball/matchups/",
     "/basketball/briefs/",
     "/basketball/forecast-lab/",
+    "/basketball/wbb-readiness/",
     "/basketball/pressroom/",
     "/basketball/news/",
     "/basketball/gameplan/",

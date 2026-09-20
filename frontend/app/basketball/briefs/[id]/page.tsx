@@ -745,7 +745,7 @@ export default async function Page({
           </div>
           <p className="note brief-explainer">
             These rows join the historical contributors above to the retained
-            NCAA shot archive by exact player and team ID. Attempt and located
+            Retained shot archive by exact player and team ID. Attempt and located
             counts stay visible so the question follows the evidence. This is
             historical preparation context, not a projected rotation or a
             forecast input.

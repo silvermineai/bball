@@ -107,6 +107,7 @@ jobs:
           path: |
             .local/basketball
             .local/football
+            .local/womens-basketball
             ncaa_scraper/ncaa_scraper/cache
           key: research-source-cache-${{ runner.os }}-${{ hashFiles('ncaa_scraper/ncaa_scraper/*sources.py', 'ncaa_scraper/ncaa_scraper/fetcher.py') }}
           restore-keys: |
@@ -161,6 +162,17 @@ jobs:
             python -m ncaa_scraper.espn_recruiting --season "$season" --workers 4
             python scripts/sync-espn-recruiting.py
           done
+
+      - name: Refresh women’s basketball edition and forecast
+        # Keep the women’s namespace independent from the men’s publisher. The
+        # tagged bulk releases are cached with durable receipts, then the
+        # edition, calibrated forecast and readiness gate are regenerated as a
+        # single publication unit.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: |
+          python scripts/publish-womens-basketball-edition.py
+          python scripts/publish-womens-basketball-model.py
+          python scripts/check-womens-basketball-forecast-readiness.py
 
       - name: Refresh selected sources, models and publication
         env:
