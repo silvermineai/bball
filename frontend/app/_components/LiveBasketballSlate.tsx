@@ -57,6 +57,7 @@ export default function LiveBasketballSlate({
           homeRoster={rosterByTeam.get(game.home_id)}
           awayRoster={rosterByTeam.get(game.away_id)}
           rosterScenario={matchingRosterScenario(game, scenarioByGame.get(game.id), publishedModelId) || undefined}
+          forecastModelId={publishedModelId}
         />
       ))}
     </div>

@@ -10,6 +10,7 @@ import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
+import { resolveForecastEdition } from "../_lib/forecast-edition";
 
 export default function BasketballCard({
   game: g,
@@ -20,6 +21,8 @@ export default function BasketballCard({
   awayRating,
   publisherHomeRating,
   publisherAwayRating,
+  forecastModelId,
+  forecastCreatedAt,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
@@ -29,8 +32,14 @@ export default function BasketballCard({
   awayRating?: BBTeam;
   publisherHomeRating?: { team: string; value: number | null };
   publisherAwayRating?: { team: string; value: number | null };
+  forecastModelId?: string | null;
+  forecastCreatedAt?: string | null;
 }) {
   const p = g.prediction || g.fallback_prediction || null;
+  const forecastEdition = resolveForecastEdition(g, {
+    modelId: forecastModelId,
+    generatedAt: forecastCreatedAt,
+  });
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signalContext = forecastSignalContext(p, !!g.prediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors);
@@ -125,11 +134,11 @@ export default function BasketballCard({
           </div>
           <div className="match-detail muted">
             <span>Forecast edition</span>
-            <span>{g.forecast_model_id || "edition unavailable"}</span>
+            <span>{forecastEdition.modelId || "edition unavailable"}</span>
           </div>
           <div className="match-detail muted">
             <span>Forecast generated</span>
-            <span>{g.forecast_created_at && Number.isFinite(Date.parse(g.forecast_created_at)) ? kick(g.forecast_created_at) : "clock unavailable"}</span>
+            <span>{forecastEdition.generatedAt ? kick(forecastEdition.generatedAt) : "clock unavailable"}</span>
           </div>
           <div className="match-detail muted">
             <span>Projected home margin</span>

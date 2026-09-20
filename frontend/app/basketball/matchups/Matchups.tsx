@@ -31,6 +31,7 @@ import {
   type ScheduleClockResponse,
 } from "../../_lib/live-basketball-schedule";
 import MatchupPersonnelPanel from "./MatchupPersonnel";
+import { resolveForecastEdition } from "../../_lib/forecast-edition";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -495,35 +496,38 @@ export default function Matchups({
                   "Qualifying market quote count",
                   "Market quote snapshots",
                 ],
-                rows.map((g) => [
-                  g.starts_at,
-                  g.source_start,
-                  g.source_time_valid == null ? null : g.source_time_valid ? "yes" : "no",
-                  g.away_name,
-                  g.home_name,
-                  g.venue,
-                  (g.prediction || g.fallback_prediction)?.away_score,
-                  (g.prediction || g.fallback_prediction)?.home_score,
-                  (g.prediction || g.fallback_prediction)?.home_win_probability == null
-                    ? null
-                    : (g.prediction || g.fallback_prediction)!.home_win_probability * 100,
-                  (g.prediction || g.fallback_prediction)?.home_margin,
-                  (g.prediction || g.fallback_prediction)?.total,
-                  (g.prediction || g.fallback_prediction)?.margin_low,
-                  (g.prediction || g.fallback_prediction)?.margin_high,
-                  (g.prediction || g.fallback_prediction)?.pace,
-                  g.prediction ? "primary" : g.fallback_prediction ? "cold-start" : null,
-                  g.forecast_model_id,
-                  g.forecast_created_at,
-                  teamRatings[g.away_id]?.adj_net,
-                  teamRatings[g.home_id]?.adj_net,
-                  publisherRatings[g.away_id]?.value,
-                  publisherRatings[g.home_id]?.value,
-                  publisherRatings[g.away_id]?.id || g.away_id,
-                  publisherRatings[g.home_id]?.id || g.home_id,
-                  (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).length,
-                  (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).map(comparisonQuoteSummary).join(" | "),
-                ]),
+                rows.map((g) => {
+                  const edition = resolveForecastEdition(g, { modelId: model.id, generatedAt });
+                  return [
+                    g.starts_at,
+                    g.source_start,
+                    g.source_time_valid == null ? null : g.source_time_valid ? "yes" : "no",
+                    g.away_name,
+                    g.home_name,
+                    g.venue,
+                    (g.prediction || g.fallback_prediction)?.away_score,
+                    (g.prediction || g.fallback_prediction)?.home_score,
+                    (g.prediction || g.fallback_prediction)?.home_win_probability == null
+                      ? null
+                      : (g.prediction || g.fallback_prediction)!.home_win_probability * 100,
+                    (g.prediction || g.fallback_prediction)?.home_margin,
+                    (g.prediction || g.fallback_prediction)?.total,
+                    (g.prediction || g.fallback_prediction)?.margin_low,
+                    (g.prediction || g.fallback_prediction)?.margin_high,
+                    (g.prediction || g.fallback_prediction)?.pace,
+                    g.prediction ? "primary" : g.fallback_prediction ? "cold-start" : null,
+                    edition.modelId,
+                    edition.generatedAt,
+                    teamRatings[g.away_id]?.adj_net,
+                    teamRatings[g.home_id]?.adj_net,
+                    publisherRatings[g.away_id]?.value,
+                    publisherRatings[g.home_id]?.value,
+                    publisherRatings[g.away_id]?.id || g.away_id,
+                    publisherRatings[g.home_id]?.id || g.home_id,
+                    (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).length,
+                    (liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] ?? []).map(comparisonQuoteSummary).join(" | "),
+                  ];
+                }),
               ),
             )
           }
@@ -581,6 +585,8 @@ export default function Matchups({
               awayRating={teamRatings[g.away_id]}
               publisherHomeRating={publisherRatings[g.home_id]}
               publisherAwayRating={publisherRatings[g.away_id]}
+              forecastModelId={model.id}
+              forecastCreatedAt={generatedAt}
             />
             <div className="matchup-card-actions">
               <button
