@@ -95,4 +95,25 @@ describe("market import preflight", () => {
     expect(validateMarketImportCsv(csv, new Date("2026-12-31T21:00:00Z"))).toMatchObject({ rows: 1, markets: { spreads: 1 }, errors: [] });
     expect(parseMarketImportRows(csv)[0].line).toBe(-3.5);
   });
+
+  it("previews totals that use the server's total_line alias", () => {
+    const aliasHeader = header.replace("line,", "home_spread,total_line,");
+    const cells = new Array<string>(aliasHeader.split(",").length).fill("");
+    Object.assign(cells, {
+      0: "401",
+      1: "totals",
+      2: "2027-01-01T20:00:00Z",
+      3: "2026-12-31T20:00:00Z",
+      4: "2026-12-31T19:59:00Z",
+      5: "North State",
+      6: "South State",
+      7: "Book",
+      9: "155.5",
+      12: "1.91",
+      13: "1.91",
+      19: "event-total-1",
+    });
+    const csv = `${aliasHeader}\n${cells.join(",")}`;
+    expect(parseMarketImportRows(csv)[0]).toMatchObject({ market: "totals", line: 155.5, overPrice: 1.91, underPrice: 1.91 });
+  });
 });

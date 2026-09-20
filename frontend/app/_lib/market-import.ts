@@ -122,7 +122,7 @@ export function parseMarketImportRows(text: string): MarketImportRow[] {
       homeName: value("home_name"),
       awayName: value("away_name"),
       bookmaker: value("bookmaker"),
-      line: number(value("line")) ?? number(value("home_spread")),
+      line: number(value("line")) ?? number(value("home_spread")) ?? number(value("total_line")),
       homePrice: decimalPrice(value("home_price"), value("home_american")),
       awayPrice: decimalPrice(value("away_price"), value("away_american")),
       overPrice: decimalPrice(value("over_price"), value("over_american")),
