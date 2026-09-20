@@ -66,6 +66,44 @@ export function parseRecruitingFitRosterPayload(payload: unknown, expectedSeason
   return payload as unknown as BBRosters;
 }
 
+export type RecruitingFitSourceReceipt = {
+  dataset: string;
+  fetchedAt: string | null;
+  sha256: string;
+};
+
+/** Normalize a receipt before the fit board describes an edition as verified. */
+export function recruitingFitSourceReceipt(rosters: BBRosters): RecruitingFitSourceReceipt | null {
+  const source = rosters.source;
+  const sha256 = source?.sha256?.trim().toLowerCase() || "";
+  if (!source || source.dataset.trim() !== "rosters" || !/^[a-f0-9]{64}$/.test(sha256)) return null;
+  const fetchedAt = source.fetched_at?.trim() || null;
+  if (fetchedAt != null && !Number.isFinite(Date.parse(fetchedAt))) return null;
+  return { dataset: source.dataset.trim(), fetchedAt, sha256 };
+}
+
+export type RecruitingFitCoverage = {
+  listedPlayers: number;
+  priorProductionRows: number;
+  priorProductionMissing: number;
+  teamsObserved: number | null;
+};
+
+/** Count only fields present on the retained player rows; no missing value is inferred. */
+export function recruitingFitCoverage(rosters: BBRosters): RecruitingFitCoverage {
+  const listedPlayers = rosters.players.length;
+  const priorProductionRows = rosters.players.filter((player) => player.prior_production != null).length;
+  const teamsObserved = Number.isSafeInteger(rosters.teams_observed) && rosters.teams_observed >= 0
+    ? rosters.teams_observed
+    : null;
+  return {
+    listedPlayers,
+    priorProductionRows,
+    priorProductionMissing: listedPlayers - priorProductionRows,
+    teamsObserved,
+  };
+}
+
 export type FitRole = "guard" | "wing" | "big" | "any";
 export type FitFocus = "creation" | "shooting" | "rebounding" | "defense" | "workload";
 

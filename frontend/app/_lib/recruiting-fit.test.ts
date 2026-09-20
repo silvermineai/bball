@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecruitingFit, buildRoleSummaries, parseRecruitingFitRosterPayload, positionRole, prioritizeRoleSummaries } from "./recruiting-fit";
+import { buildRecruitingFit, buildRoleSummaries, parseRecruitingFitRosterPayload, positionRole, prioritizeRoleSummaries, recruitingFitCoverage, recruitingFitSourceReceipt } from "./recruiting-fit";
 import type { BBRoster } from "./basketball-types";
 
 const player = (patch: Partial<BBRoster>): BBRoster => ({
@@ -30,6 +30,23 @@ describe("recruiting fit", () => {
     expect(parseRecruitingFitRosterPayload(liveRoster({ players: [liveRoster().players[0], liveRoster().players[0]] }))).toBeNull();
     expect(parseRecruitingFitRosterPayload(liveRoster({ source: { dataset: "rosters", url: null, fetched_at: null, sha256: "bad" } }))).toBeNull();
     expect(parseRecruitingFitRosterPayload(liveRoster({ players: [{ ...liveRoster().players[0], name: "" }] }))).toBeNull();
+  });
+
+  it("normalizes only a complete roster receipt and exposes row-level production coverage", () => {
+    const digest = "A".repeat(64);
+    const roster = liveRoster({
+      teams_observed: 3,
+      players: [
+        { ...liveRoster().players[0], prior_production: { games: 10, minutes: 200, teams: ["Prior Team"] } },
+        { ...liveRoster().players[0], id: "source-43", prior_production: null },
+      ],
+      source: { dataset: "rosters", url: null, fetched_at: "2026-09-20T12:00:00Z", sha256: digest },
+    });
+    const parsed = parseRecruitingFitRosterPayload(roster);
+    expect(parsed).not.toBeNull();
+    expect(recruitingFitSourceReceipt(parsed!)).toEqual({ dataset: "rosters", fetchedAt: "2026-09-20T12:00:00Z", sha256: digest.toLowerCase() });
+    expect(recruitingFitCoverage(parsed!)).toEqual({ listedPlayers: 2, priorProductionRows: 1, priorProductionMissing: 1, teamsObserved: 3 });
+    expect(recruitingFitSourceReceipt({ ...parsed!, source: { ...parsed!.source!, sha256: "bad" } })).toBeNull();
   });
 
   it("normalizes source positions into coach roles", () => {
