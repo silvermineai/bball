@@ -8,6 +8,7 @@ not a women’s forecast model and never reuses the men’s model or identifiers
 from __future__ import annotations
 
 import json
+import math
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -22,7 +23,8 @@ OUT = ROOT / "frontend/public/data/basketball/womens-edition.json"
 
 def num(value):
     try:
-        return float(value)
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
     except (TypeError, ValueError):
         return None
 
@@ -108,7 +110,7 @@ def main():
         },
         "players": sorted(
             [
-                {**player, "stats": {key: round(value, 2) for key, value in player["stats"].items()}}
+                {**player, "stats": {key: round(value, 2) if math.isfinite(value) else None for key, value in player["stats"].items()}}
                 for player in players.values()
             ],
             key=lambda player: (-player["stats"].get("avgPoints", -1), player["name"]),
@@ -128,7 +130,7 @@ def main():
         ],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(edition, ensure_ascii=False, indent=2) + "\n")
+    OUT.write_text(json.dumps(edition, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     print(f"Published {OUT} ({len(players):,} players, {len(upcoming):,} upcoming games)")
 
 
