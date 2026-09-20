@@ -109,6 +109,24 @@ type Result = RecruitingBoardResult;
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
 
+/**
+ * Keep the cross-class table tied to the same denominator as each board
+ * response. Missing coverage stays unavailable instead of being treated as
+ * zero, so the comparison remains useful when a class release is partial.
+ */
+export function classSnapshotCoverage(snapshot: ClassSnapshot) {
+  const total = Number.isSafeInteger(snapshot.total) && snapshot.total > 0 ? snapshot.total : null;
+  const share = (value: number | undefined) => total != null && typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= total
+    ? value / total
+    : null;
+  return {
+    total,
+    ranked: share(snapshot.cohort?.ranked),
+    graded: share(snapshot.cohort?.graded),
+    committed: share(snapshot.cohort?.committed),
+  };
+}
+
 export function recruitingBoardRequestSearch(filters: {
   season: string;
   page: number;
@@ -468,6 +486,31 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           </button>)}
         </div>
       </div>}
+      {classSnapshots.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-class-table-title" style={{ marginTop: 20, marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Class audit / retained editions</div><h3 id="recruiting-class-table-title">Compare the recruiting pipeline before opening a name.</h3></div>
+          <span className="note">{classSnapshots.length} retained classes</span>
+        </div>
+        <p className="note">Each row uses the complete unfiltered denominator returned for that class. Coverage percentages describe recorded fields in that edition; they do not turn rank, grade or commitment into a Silvermine evaluation.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Prospects</th><th className="numeric">Rank coverage</th><th className="numeric">Grade coverage</th><th className="numeric">Commitment coverage</th><th>Top recorded destination</th><th>Captured</th><th>Open</th></tr></thead>
+          <tbody>{classSnapshots.map((snapshot) => {
+            const coverage = classSnapshotCoverage(snapshot);
+            const destination = snapshot.commitment_destinations?.[0];
+            const coverageCell = (count: number | undefined, share: number | null) => count == null || share == null ? "Unavailable" : <><strong>{count.toLocaleString()}</strong><small>{(share * 100).toFixed(0)}% of class</small></>;
+            return <tr key={`class-table-${snapshot.season}`}>
+              <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(snapshot.season); setPage(0); }}>{snapshot.season}</button></th>
+              <td className="numeric">{coverage.total == null ? "Unavailable" : coverage.total.toLocaleString()}</td>
+              <td className="numeric">{coverageCell(snapshot.cohort?.ranked, coverage.ranked)}</td>
+              <td className="numeric">{coverageCell(snapshot.cohort?.graded, coverage.graded)}</td>
+              <td className="numeric">{coverageCell(snapshot.cohort?.committed, coverage.committed)}</td>
+              <td>{destination ? destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team}</Link> : destination.team : "Unavailable"}{destination && <small>{destination.total.toLocaleString()} recorded commitment{destination.total === 1 ? "" : "s"}{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}</small>}</td>
+              <td><small>{snapshot.captured_at ? `${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small></td>
+              <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
+            </tr>;
+          })}</tbody>
+        </table></div>
+      </section>}
       {copied && <p className="note" role="status">{copied}</p>}
       {error ? <p className="status-error" role="alert">{error}</p> : !result ? <p className="empty" role="status">Loading recorded prospects…</p> : result.unavailable_reason ? <p className="empty">{result.unavailable_reason}</p> : (
         <>

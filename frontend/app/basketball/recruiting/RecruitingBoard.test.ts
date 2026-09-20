@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classSnapshotCoverage,
   currentRecruitingBoardResult,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
@@ -92,6 +93,22 @@ describe("recruiting rank landscape", () => {
     expect(validRecruitingRankDistribution({ ...base, edition: null })).toBeNull();
     expect(validRecruitingRankDistribution({ ...base, rank_distribution: bands.slice(0, 5) })).toBeNull();
     expect(validRecruitingRankDistribution({ ...base, rank_distribution: bands.map((band, index) => index === 0 ? { ...band, total: -1 } : band) })).toBeNull();
+  });
+});
+
+describe("recruiting class coverage", () => {
+  it("keeps coverage percentages bound to a valid class denominator", () => {
+    const snapshot = {
+      season: "2027",
+      total: 100,
+      cohort: { ranked: 80, graded: 75, committed: 40 },
+      captured_at: "2026-09-18T00:00:00Z",
+      position_breakdown: [],
+      commitment_destinations: [],
+    };
+    expect(classSnapshotCoverage(snapshot)).toEqual({ total: 100, ranked: 0.8, graded: 0.75, committed: 0.4 });
+    expect(classSnapshotCoverage({ ...snapshot, total: 0 })).toEqual({ total: null, ranked: null, graded: null, committed: null });
+    expect(classSnapshotCoverage({ ...snapshot, cohort: { ranked: 101, graded: 75, committed: 40 } })).toEqual({ total: 100, ranked: null, graded: 0.75, committed: 0.4 });
   });
 });
 
