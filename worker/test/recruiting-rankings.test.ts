@@ -314,6 +314,22 @@ describe("ESPN recruiting rankings", () => {
     expect(bind.mock.calls.some((args) => args.some((value) => value === "%100\\%\\_under%"))).toBe(true);
   });
 
+  it("withholds non-positive retained ranks from public rank filters", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&rank_max=25&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    expect(sqlCalls.some((sql) => sql.includes("r.rank <= 0") && sql.includes("ELSE r.rank END"))).toBe(true);
+  });
+
   it("applies a bounded source-rank cutoff", async () => {
     const bind = vi.fn((..._args: unknown[]) => ({
       first: vi.fn(async () => ({ total: 27, committed_total: 10, ranked_total: 27, grade_total: 27 })),
@@ -390,7 +406,7 @@ describe("ESPN recruiting rankings", () => {
     expect(body.cohort.ranked).toBe(0);
     expect(body.rank_quality.withheld_placeholder_rows).toBe(2);
     expect(body.rows[0].rank).toBeNull();
-    expect(sqlCalls.some((sql) => sql.includes("CASE WHEN r.rank IS NOT NULL AND r.grade = 0") && sql.includes("AS rank"))).toBe(true);
-    expect(sqlCalls.some((sql) => sql.includes("CASE WHEN p.rank IS NOT NULL AND p.grade = 0"))).toBe(true);
+    expect(sqlCalls.some((sql) => sql.includes("CASE WHEN r.rank IS NULL OR r.rank <= 0") && sql.includes("AS rank"))).toBe(true);
+    expect(sqlCalls.some((sql) => sql.includes("CASE WHEN p.rank IS NULL OR p.rank <= 0"))).toBe(true);
   });
 });

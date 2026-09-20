@@ -38,7 +38,7 @@ function escapeLike(value: string) {
 // Normalize it at read time as unavailable so a stale source placeholder can
 // never become the public #1 prospect, a rank filter hit, or class-rank points.
 const effectiveRank = (alias: string) =>
-  `CASE WHEN ${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL THEN NULL ELSE ${alias}.rank END`;
+  `CASE WHEN ${alias}.rank IS NULL OR ${alias}.rank <= 0 OR (${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL) THEN NULL ELSE ${alias}.rank END`;
 
 const withheldPlaceholderRank = (alias: string) =>
   `${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL`;

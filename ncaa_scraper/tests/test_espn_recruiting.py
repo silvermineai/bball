@@ -94,7 +94,9 @@ class EspnRecruitingTests(unittest.TestCase):
             ):
                 fetch_release(2027, workers=1)
 
-    def test_ungraded_source_placeholder_is_not_a_national_rank(self):
+    def test_invalid_and_ungraded_source_ranks_are_not_national_ranks(self):
+        self.assertIsNone(_national_rank({"rank": 0}, 95))
+        self.assertIsNone(_national_rank({"rank": -4}, 95))
         self.assertIsNone(_national_rank({"rank": 1}, 0))
         self.assertEqual(_national_rank({"rank": 1, "positionRank": 1}, 0), 1)
         self.assertEqual(_national_rank({"rank": 1}, 95), 1)

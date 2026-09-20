@@ -134,9 +134,15 @@ def _number(value: object, *, integer: bool = False) -> float | int | None:
     return int(parsed) if integer else parsed
 
 
+def _rank(value: object) -> int | None:
+    """Keep only positive integer ranks; zero and negative values are source errors."""
+    rank = _number(value, integer=True)
+    return rank if isinstance(rank, int) and rank > 0 else None
+
+
 def _national_rank(attributes: dict[str, object], grade: float | int | None) -> int | None:
-    """Discard source placeholder ranks on otherwise entirely ungraded rows."""
-    rank = _number(attributes.get("rank"), integer=True)
+    """Discard invalid and source placeholder national ranks."""
+    rank = _rank(attributes.get("rank"))
     if rank is not None and grade == 0 and all(
         attributes.get(field) in (None, "")
         for field in ("positionRank", "stateRank", "regionRank")
@@ -273,9 +279,9 @@ def normalize_detail(detail: dict, season: int, captured_at: str, team_names: di
         "position": (athlete.get("position") or {}).get("abbreviation") if isinstance(athlete.get("position"), dict) else None,
         "grade": grade,
         "rank": _national_rank(attributes, grade),
-        "position_rank": _number(attributes.get("positionRank"), integer=True),
-        "state_rank": _number(attributes.get("stateRank"), integer=True),
-        "region_rank": _number(attributes.get("regionRank"), integer=True),
+        "position_rank": _rank(attributes.get("positionRank")),
+        "state_rank": _rank(attributes.get("stateRank")),
+        "region_rank": _rank(attributes.get("regionRank")),
         "status": (detail.get("status") or {}).get("description") if isinstance(detail.get("status"), dict) else None,
         "committed_team_id": committed_id,
         "committed_team_name": committed_name,
