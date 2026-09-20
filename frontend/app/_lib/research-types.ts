@@ -29,6 +29,8 @@ export type LedgerGame = {
   home_margin: number;
   total: number;
   home_win_probability: number;
+  /** Distinguishes calibrated primary output from exploratory cold-start output. */
+  estimate_type?: "primary" | "cold_start" | "unknown";
   margin_low: number | null;
   margin_high: number | null;
   status: string;
@@ -87,6 +89,26 @@ export type SportSummary = {
   /** Results remain separated by the model selected under the ledger policy. */
   model_metrics?: {
     model_id: string;
+    selected_forecasts: number;
+    eligible_forecasts: number;
+    settled_games: number;
+    first_registered_at: string | null;
+    last_registered_at: string | null;
+    margin_mae: number | null;
+    total_mae: number | null;
+    winner_accuracy: number | null;
+    winner_picks: number;
+    brier: number | null;
+    log_loss: number | null;
+    interval_games: number;
+    interval_coverage: number | null;
+    interval_mean_width?: number | null;
+    expected_calibration_error?: number | null;
+  }[];
+  /** Performance split by output type so cold-start rows never hide inside primary-model results. */
+  estimate_metrics?: {
+    model_id: string;
+    estimate_type: "primary" | "cold_start" | "unknown";
     selected_forecasts: number;
     eligible_forecasts: number;
     settled_games: number;

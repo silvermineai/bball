@@ -63,6 +63,17 @@ function parse(value: unknown): Json | null {
   try { return object(JSON.parse(value)); } catch { return null; }
 }
 
+type EstimateType = "primary" | "cold_start" | "unknown";
+
+/** Keep exploratory cold-start rows out of the primary-model performance label. */
+function estimateType(payload: Json): EstimateType {
+  const prediction = object(payload.prediction);
+  if (!prediction) return "unknown";
+  if (prediction.estimate_type === "cold_start") return "cold_start";
+  if (prediction.estimate_type === undefined || prediction.estimate_type === "primary") return "primary";
+  return "unknown";
+}
+
 function number(value: unknown): number | null {
   // JSON null, booleans and blank strings are missing evidence, not zero.
   // Number(null), Number(false) and Number("") all coerce to 0, which could
@@ -346,6 +357,46 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
   }).sort((left, right) =>
     String(right.last_registered_at || "").localeCompare(String(left.last_registered_at || ""))
       || left.model_id.localeCompare(right.model_id));
+  const estimateGroups = new Map<string, { modelId: string; estimateType: EstimateType; rows: Json[] }>();
+  for (const row of rows) {
+    const modelId = String(row.model_id || "");
+    const type = row.estimate_type === "primary" || row.estimate_type === "cold_start" || row.estimate_type === "unknown"
+      ? row.estimate_type
+      : estimateType(parse(row.payload_json) || {});
+    const key = `${modelId}|${type}`;
+    const group = estimateGroups.get(key);
+    if (group) group.rows.push(row);
+    else estimateGroups.set(key, { modelId, estimateType: type, rows: [row] });
+  }
+  const estimateMetrics = [...estimateGroups.values()].map(({ modelId, estimateType: type, rows: selected }) => {
+    const measured = metrics(selected);
+    const registered = selected
+      .map((row) => iso(row.registered_at))
+      .filter((value): value is string => value !== null)
+      .sort();
+    return {
+      model_id: modelId,
+      estimate_type: type,
+      selected_forecasts: selected.length,
+      eligible_forecasts: selected.filter((row) => !row.exclusion).length,
+      settled_games: measured.games,
+      first_registered_at: registered[0] || null,
+      last_registered_at: registered.at(-1) || null,
+      margin_mae: measured.margin_mae,
+      total_mae: measured.total_mae,
+      winner_accuracy: measured.winner_accuracy,
+      winner_picks: measured.winner_picks,
+      brier: measured.brier,
+      log_loss: measured.log_loss,
+      interval_games: measured.interval_games,
+      interval_coverage: measured.interval_coverage,
+      interval_mean_width: measured.interval_mean_width,
+      expected_calibration_error: measured.expected_calibration_error,
+    };
+  }).sort((left, right) =>
+    String(right.last_registered_at || "").localeCompare(String(left.last_registered_at || ""))
+      || left.model_id.localeCompare(right.model_id)
+      || left.estimate_type.localeCompare(right.estimate_type));
   return {
     games: rows.length,
     registered_versions: registeredVersions,
@@ -370,6 +421,7 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
       rejection_counts: readiness.rejection_counts,
     },
     model_metrics: modelMetrics,
+    estimate_metrics: estimateMetrics,
     market_metrics: marketMetrics,
   };
 }
@@ -447,7 +499,9 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       time_tbd: Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
       home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: probability(prediction.home_win_probability), margin_low: validMarginInterval ? marginLow : null, margin_high: validMarginInterval ? marginHigh : null,
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,
-      actual_total: status === "settled" && homeScore !== null && awayScore !== null ? homeScore + awayScore : null, comparisons: [],
+      actual_total: status === "settled" && homeScore !== null && awayScore !== null ? homeScore + awayScore : null,
+      estimate_type: estimateType(payload),
+      comparisons: [],
     };
     const gameQuotes = quotesByGame.get(String(row.game_id)) || [];
     comparisonReadiness.selected_game_observations += gameQuotes.length;

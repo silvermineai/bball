@@ -6,8 +6,8 @@ import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
 import { marketReadinessLabel, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
-const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
+const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
+const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.estimate_type || "unknown", g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
 type RetrospectiveBenchmark = {
   coverage: { evaluation_games: number; market_games: number; pregame_market_games: number };
   metrics: {
@@ -326,6 +326,52 @@ export default function Scorecard() {
                         ? "—"
                         : `${fmt(edition.interval_coverage * 100)}% · ${fmt(edition.interval_mean_width)} pts (${edition.interval_games.toLocaleString()})`}
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+      {summary.estimate_metrics?.length ? (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="estimate-type-record-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Forecast output type / integrity split</div>
+              <h2 id="estimate-type-record-title">Primary and cold-start records stay separate.</h2>
+            </div>
+            <span className="note">Settled eligible games only</span>
+          </div>
+          <p className="note">
+            Primary rows use the trained team field. Cold-start rows are exploratory estimates for teams outside that field and carry wider uncertainty; they are reported separately so they cannot improve or weaken the primary model record.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model / output</th>
+                  <th className="numeric">Selected</th>
+                  <th className="numeric">Eligible</th>
+                  <th className="numeric">Settled</th>
+                  <th className="numeric">Margin MAE</th>
+                  <th className="numeric">Winner accuracy</th>
+                  <th className="numeric">Brier</th>
+                  <th className="numeric">Calibration error</th>
+                  <th className="numeric">80% range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.estimate_metrics.map((estimate) => (
+                  <tr key={`${estimate.model_id}|${estimate.estimate_type}`}>
+                    <th scope="row"><code>{estimate.model_id}</code><small>{estimate.estimate_type === "cold_start" ? "Cold-start estimate" : estimate.estimate_type === "primary" ? "Primary model" : "Unknown output type"}</small></th>
+                    <td className="numeric">{estimate.selected_forecasts.toLocaleString()}</td>
+                    <td className="numeric">{estimate.eligible_forecasts.toLocaleString()}</td>
+                    <td className="numeric">{estimate.settled_games.toLocaleString()}</td>
+                    <td className="numeric">{fmt(estimate.margin_mae)}</td>
+                    <td className="numeric">{estimate.winner_accuracy == null ? "—" : `${fmt(estimate.winner_accuracy * 100)}%`}</td>
+                    <td className="numeric">{fmt(estimate.brier, 4)}</td>
+                    <td className="numeric">{estimate.expected_calibration_error == null ? "—" : `${fmt(estimate.expected_calibration_error * 100, 1)} pts`}</td>
+                    <td className="numeric">{estimate.interval_coverage == null ? "—" : `${fmt(estimate.interval_coverage * 100)}% · ${fmt(estimate.interval_mean_width)} pts (${estimate.interval_games.toLocaleString()})`}</td>
                   </tr>
                 ))}
               </tbody>

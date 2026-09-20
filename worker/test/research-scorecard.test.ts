@@ -153,7 +153,7 @@ describe("live research scorecard", () => {
       starts_at: "2026-01-04T00:00:00.000000Z",
       payload_json: JSON.stringify({
         home_id: "home-2", away_id: "away-2", home_name: "Home 2", away_name: "Away 2", season: 2027,
-        prediction: { home_margin: -3, total: 132, home_win_probability: 0.2, margin_low: -15, margin_high: 9 },
+        prediction: { home_margin: -3, total: 132, home_win_probability: 0.2, margin_low: -15, margin_high: 9, estimate_type: "cold_start" },
       }),
       state_json: JSON.stringify({ home_id: "home-2", away_id: "away-2", starts_at: "2026-01-04T00:00:00.000000Z", time_tbd: 0, completed: 1, home_score: 60, away_score: 70 }),
     };
@@ -189,10 +189,11 @@ describe("live research scorecard", () => {
     });
     const response = await researchScorecard.request("/?sport=basketball&season=2027&limit=5000", {}, { RESEARCH_DB: { prepare } as never });
     expect(response.status).toBe(200);
-    const body = await response.json() as { sports: { basketball: {
+    const body = await response.json() as { games: Array<Record<string, unknown>>; sports: { basketball: {
       metrics: { reliability: Array<{ lower: number; upper: number; games: number; predicted: number; observed: number }> };
       model_metrics: Array<Record<string, unknown>>;
       market_metrics: Array<Record<string, unknown>>;
+      estimate_metrics: Array<Record<string, unknown>>;
     } } };
     expect(body.sports.basketball.metrics.reliability).toEqual([
       { lower: 0.2, upper: 0.3, games: 1, predicted: 0.2, observed: 0 },
@@ -212,6 +213,11 @@ describe("live research scorecard", () => {
     expect(body.sports.basketball.model_metrics[1].expected_calibration_error).toBeCloseTo(0.3);
     expect(body.sports.basketball.model_metrics[0].brier).toBeCloseTo(0.04);
     expect(body.sports.basketball.model_metrics[1].brier).toBeCloseTo(0.09);
+    expect(body.sports.basketball.estimate_metrics).toMatchObject([
+      { model_id: "model-2", estimate_type: "cold_start", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 7 },
+      { model_id: "model-1", estimate_type: "primary", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 5 },
+    ]);
+    expect(body.games?.[0]?.estimate_type).toBe("primary");
     expect(body.sports.basketball.market_metrics).toMatchObject([
       { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8 },
       { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9 },
