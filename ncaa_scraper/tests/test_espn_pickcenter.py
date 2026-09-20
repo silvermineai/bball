@@ -50,7 +50,7 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertTrue(BASE_URL.startswith("https://site.web.api.espn.com/"))
 
     def test_cli_defaults_to_the_scheduled_capture_horizon(self):
-        self.assertEqual(build_parser().parse_args([]).horizon_days, 60)
+        self.assertEqual(build_parser().parse_args([]).horizon_days, 90)
 
     def test_capture_counts_distinguish_empty_pickcenter_summaries(self):
         self.assertEqual(summary_capture_counts([

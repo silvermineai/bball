@@ -31,7 +31,10 @@ BASE_URL = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-co
 DOCS_URL = "https://www.espn.com/mens-college-basketball/"
 CACHE = ROOT / ".local/odds"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
-DEFAULT_HORIZON_DAYS = 60
+# Basketball lines can be published well before tip. Use the existing request
+# cap so scheduled captures inspect more of the upcoming slate while remaining
+# bounded and prospective; identity and clock checks still gate every quote.
+DEFAULT_HORIZON_DAYS = 90
 REQUEST_DELAY_SECONDS = 0.2
 
 
