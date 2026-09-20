@@ -66,6 +66,7 @@ export type RecruitingRelease = {
   people: RecruitingPerson[];
   sources: AnnouncementSource[];
   events: AnnouncementEvent[];
+  review_queue?: RecruitingReviewQueue;
   stats_source?: {
     publisher: string;
     url: string;
@@ -75,10 +76,42 @@ export type RecruitingRelease = {
   };
 };
 
+export type RecruitingReviewQueueRow = {
+  team_id: string;
+  team: string;
+  evidence_status: "reviewed" | "roster_observation";
+  listed_players: number;
+  returning_players: number;
+  transfer_players: number;
+  new_players: number;
+  ambiguous_players: number;
+  prior_minutes: number;
+  returning_minutes: number;
+  incoming_prior_minutes: number;
+  represented_prior_minutes: number;
+  unrepresented_prior_minutes: number;
+  returning_minutes_share: number | null;
+  represented_prior_minutes_share: number | null;
+};
+
+export type RecruitingReviewQueue = {
+  season: number;
+  source_dataset: string;
+  source_captured_at: string;
+  source_sha256: string;
+  reviewed_programs: number;
+  source_reviewed_programs: number;
+  reviewed_not_observed_programs: number;
+  observed_programs: number;
+  unreviewed_programs: number;
+  rows: RecruitingReviewQueueRow[];
+};
+
 const recruitingCategories = new Set<RecruitingPerson["category"]>(["transfer", "freshman", "international"]);
 const recruitingEventKinds = new Set<AnnouncementEvent["kind"]>(["addition", "redshirt_announced", "season_unavailable"]);
-const nonnegativeInteger = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-const nullableFinite = (value: unknown) => value == null || (typeof value === "number" && Number.isFinite(value));
+const nonnegativeInteger = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+const nullableFinite = (value: unknown): value is number | null => value == null || (typeof value === "number" && Number.isFinite(value));
+const nonnegativeFinite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
 
 function objectRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -182,9 +215,89 @@ export function parseRecruitingRelease(value: unknown, expectedSeason = 2027): R
     eventIds.add(row.id);
     events.push(row as unknown as AnnouncementEvent);
   }
+  let reviewQueue: RecruitingReviewQueue | undefined;
+  if (payload.review_queue !== undefined) {
+    const queue = objectRecord(payload.review_queue);
+    const queueRows = queue?.rows;
+    const sourceSha = queue?.source_sha256;
+    const sourceCaptured = queue?.source_captured_at;
+    const sourceDataset = queue?.source_dataset;
+    if (!queue
+      || queue.season !== expectedSeason
+      || typeof sourceDataset !== "string" || !sourceDataset.trim()
+      || typeof sourceCaptured !== "string" || !Number.isFinite(Date.parse(sourceCaptured))
+      || typeof sourceSha !== "string" || !/^[a-f0-9]{64}$/i.test(sourceSha)
+      || !nonnegativeInteger(queue.reviewed_programs)
+      || !nonnegativeInteger(queue.source_reviewed_programs)
+      || !nonnegativeInteger(queue.reviewed_not_observed_programs)
+      || !nonnegativeInteger(queue.observed_programs)
+      || !nonnegativeInteger(queue.unreviewed_programs)
+      || queue.observed_programs !== (Array.isArray(queueRows) ? queueRows.length : -1)
+      || queue.reviewed_programs + queue.unreviewed_programs !== queue.observed_programs
+      || queue.reviewed_programs + queue.reviewed_not_observed_programs !== queue.source_reviewed_programs
+      || !Array.isArray(queueRows)) return null;
+    const reviewedPrograms = queue.reviewed_programs;
+    const sourceReviewedPrograms = queue.source_reviewed_programs;
+    const reviewedNotObservedPrograms = queue.reviewed_not_observed_programs;
+    const observedPrograms = queue.observed_programs;
+    const unreviewedPrograms = queue.unreviewed_programs;
+    const seenQueuePrograms = new Set<string>();
+    const normalizedRows: RecruitingReviewQueueRow[] = [];
+    for (const candidateRow of queueRows) {
+      const row = objectRecord(candidateRow);
+      const teamId = row?.team_id == null ? "" : String(row.team_id).trim();
+      const evidenceStatus = row?.evidence_status;
+      const returningShare = row?.returning_minutes_share;
+      const representedShare = row?.represented_prior_minutes_share;
+      const numericFields = [
+        "listed_players", "returning_players", "transfer_players", "new_players", "ambiguous_players",
+        "prior_minutes", "returning_minutes", "incoming_prior_minutes", "represented_prior_minutes",
+        "unrepresented_prior_minutes",
+      ];
+      if (!row || !teamId || seenQueuePrograms.has(teamId)
+        || typeof row.team !== "string" || !row.team.trim()
+        || (evidenceStatus !== "reviewed" && evidenceStatus !== "roster_observation")
+        || numericFields.some((field) => !nonnegativeFinite(row[field]))
+        || !nullableFinite(returningShare) || !nullableFinite(representedShare)
+        || (returningShare != null && (returningShare < 0 || returningShare > 1))
+        || (representedShare != null && (representedShare < 0 || representedShare > 1))) return null;
+      seenQueuePrograms.add(teamId);
+      normalizedRows.push({
+        team_id: teamId,
+        team: row.team,
+        evidence_status: evidenceStatus,
+        listed_players: Number(row.listed_players),
+        returning_players: Number(row.returning_players),
+        transfer_players: Number(row.transfer_players),
+        new_players: Number(row.new_players),
+        ambiguous_players: Number(row.ambiguous_players),
+        prior_minutes: Number(row.prior_minutes),
+        returning_minutes: Number(row.returning_minutes),
+        incoming_prior_minutes: Number(row.incoming_prior_minutes),
+        represented_prior_minutes: Number(row.represented_prior_minutes),
+        unrepresented_prior_minutes: Number(row.unrepresented_prior_minutes),
+        returning_minutes_share: returningShare == null ? null : Number(returningShare),
+        represented_prior_minutes_share: representedShare == null ? null : Number(representedShare),
+      });
+    }
+    const reviewedRows = normalizedRows.filter((row) => row.evidence_status === "reviewed").length;
+    if (reviewedRows !== reviewedPrograms) return null;
+    reviewQueue = {
+      season: expectedSeason,
+      source_dataset: sourceDataset,
+      source_captured_at: sourceCaptured,
+      source_sha256: sourceSha.toLowerCase(),
+      reviewed_programs: reviewedPrograms,
+      source_reviewed_programs: sourceReviewedPrograms,
+      reviewed_not_observed_programs: reviewedNotObservedPrograms,
+      observed_programs: observedPrograms,
+      unreviewed_programs: unreviewedPrograms,
+      rows: normalizedRows,
+    };
+  }
   if (coverage.programs !== programs.length || coverage.players !== people.length || coverage.events !== events.length
     || coverage.sources !== sources.length || coverage.historical_links !== historicalLinks) return null;
-  return { ...payload, programs, sources, people, events } as unknown as RecruitingRelease;
+  return { ...payload, programs, sources, people, events, review_queue: reviewQueue } as unknown as RecruitingRelease;
 }
 export const categoryLabels = {
   transfer: "College transfer",

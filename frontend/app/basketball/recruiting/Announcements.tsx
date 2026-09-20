@@ -619,6 +619,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   <p>
                     These recorded programs have no dated school announcement in this edition. The order uses prior minutes that are not represented by a reviewed addition, so it is a research queue rather than a recruiting grade.
                   </p>
+                  {release.review_queue && (
+                    <p className="note">
+                      Queue receipt: {release.review_queue.observed_programs.toLocaleString()} roster programs tied to the retained roster digest <code>{release.review_queue.source_sha256.slice(0, 12)}…</code>. {release.review_queue.reviewed_not_observed_programs ? `${release.review_queue.reviewed_not_observed_programs} reviewed source program${release.review_queue.reviewed_not_observed_programs === 1 ? " is" : "s are"} not present in this roster edition.` : "Every reviewed source program is present in this roster edition."}
+                    </p>
+                  )}
                   <button
                     className="button secondary"
                     type="button"

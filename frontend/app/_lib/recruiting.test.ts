@@ -45,12 +45,23 @@ const stat = (mpg: number, ppg: number) => ({
 describe("school announcement histories", () => {
   it("accepts the complete source graph and withholds broken live packets", () => {
     expect(parseRecruitingRelease(data)?.coverage).toEqual(data.coverage);
+    expect(parseRecruitingRelease(data)?.review_queue).toMatchObject({
+      season: 2027,
+      observed_programs: 354,
+      reviewed_programs: 13,
+      source_reviewed_programs: 14,
+      reviewed_not_observed_programs: 1,
+      unreviewed_programs: 341,
+    });
     const broken = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
     broken.events[0].source_id = "missing-source";
     expect(parseRecruitingRelease(broken)).toBeNull();
     const countMismatch = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
     countMismatch.coverage.events -= 1;
     expect(parseRecruitingRelease(countMismatch)).toBeNull();
+    const queueMismatch = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
+    queueMismatch.review_queue!.unreviewed_programs += 1;
+    expect(parseRecruitingRelease(queueMismatch)).toBeNull();
   });
   it("shows a later availability report and preserves the signing", () => {
     const row = recruitingRows(data).find(

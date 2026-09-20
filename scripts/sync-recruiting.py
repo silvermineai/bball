@@ -14,10 +14,12 @@ from ncaa_scraper.basketball_recruiting import PUBLIC, SOURCE, SQL, build, sql_e
 
 box = json.loads((PUBLIC.parent / "players.json").read_text())
 overview = json.loads((PUBLIC.parent / "overview.json").read_text())
+rosters = json.loads((PUBLIC.parent / "rosters.json").read_text())
 expected = build(
     json.loads(SOURCE.read_text()),
     box,
     {p["id"]: p["name"] for p in overview["ratings"]},
+    rosters,
 )
 if json.loads(PUBLIC.read_text()) != expected or SQL.read_text() != sql_export(
     expected

@@ -20,6 +20,9 @@ class RecruitingTests(unittest.TestCase):
             (ROOT / "frontend/public/data/basketball/overview.json").read_text()
         )
         cls.programs = {p["id"]: p["name"] for p in overview["ratings"]}
+        cls.rosters = json.loads(
+            (ROOT / "frontend/public/data/basketball/rosters.json").read_text()
+        )
 
     def test_reviewed_links_and_missing_stats(self):
         release = build(self.doc, self.box, self.programs)
@@ -41,6 +44,25 @@ class RecruitingTests(unittest.TestCase):
     def test_parse_timestamp_accepts_utc_z_on_older_python(self):
         parsed = parse_timestamp("2026-09-16T06:56:40.313742Z")
         self.assertEqual(parsed.utcoffset().total_seconds(), 0)
+
+    def test_review_queue_reconciles_reviewed_ids_to_roster_edition(self):
+        release = build(self.doc, self.box, self.programs, self.rosters)
+        queue = release["review_queue"]
+        self.assertEqual(queue["season"], 2027)
+        self.assertEqual(queue["observed_programs"], len(self.rosters["team_summaries"]))
+        self.assertEqual(queue["observed_programs"], len(queue["rows"]))
+        self.assertEqual(queue["reviewed_programs"] + queue["unreviewed_programs"], queue["observed_programs"])
+        self.assertEqual(queue["source_reviewed_programs"], len(self.doc["programs"]))
+        self.assertEqual(queue["reviewed_not_observed_programs"], 1)
+        self.assertEqual(queue["reviewed_programs"] + queue["reviewed_not_observed_programs"], queue["source_reviewed_programs"])
+        self.assertEqual(queue["rows"][0]["evidence_status"], "roster_observation")
+        self.assertGreater(queue["rows"][0]["unrepresented_prior_minutes"], 0)
+
+    def test_review_queue_rejects_unreceipted_roster_release(self):
+        rosters = copy.deepcopy(self.rosters)
+        del rosters["source"]["sha256"]
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            build(self.doc, self.box, self.programs, rosters)
 
     def test_redshirt_and_same_name_prep_do_not_inherit_college_production(self):
         release = build(self.doc, self.box, self.programs)

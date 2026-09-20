@@ -64,7 +64,96 @@ def keyed(rows, field):
     return result
 
 
-def build(document, box_release, rated_programs):
+def _review_queue(document, roster_release):
+    """Build a receipt-backed human review queue from the target roster edition.
+
+    This is a coverage queue, not a transaction classifier.  A roster row can
+    be new to the retained roster release without being a transfer or an
+    available player, so the queue only reports the source's recorded workload
+    and whether the program has a reviewed school-announcement record.
+    """
+    if not isinstance(roster_release, dict):
+        raise ValueError("Roster release is required to build the review queue")
+    if roster_release.get("season") != document["season"]:
+        raise ValueError("Recruiting and roster releases use different seasons")
+    summaries = roster_release.get("team_summaries")
+    if not isinstance(summaries, list):
+        raise ValueError("Roster release has no team summaries")
+    source = roster_release.get("source")
+    if not isinstance(source, dict):
+        raise ValueError("Roster release has no source receipt")
+    source_sha256 = str(source.get("sha256") or "").strip().lower()
+    if not re.fullmatch(r"[a-f0-9]{64}", source_sha256):
+        raise ValueError("Roster release source receipt is not a SHA-256 digest")
+    source_captured_at = source.get("fetched_at")
+    if not isinstance(source_captured_at, str) or not source_captured_at.strip():
+        raise ValueError("Roster release source receipt has no capture clock")
+
+    reviewed_programs = {str(program["id"]) for program in document["programs"]}
+    rows = []
+    seen = set()
+    numeric_fields = (
+        "listed_players", "returning_players", "transfer_players", "new_players",
+        "ambiguous_players", "prior_minutes", "returning_minutes",
+        "incoming_prior_minutes", "represented_prior_minutes",
+        "unrepresented_prior_minutes",
+    )
+    for summary in summaries:
+        if not isinstance(summary, dict):
+            raise ValueError("Roster review queue contains a malformed summary")
+        team_id = str(summary.get("team_id") or "").strip()
+        team = str(summary.get("team") or "").strip()
+        if not team_id or not team or team_id in seen:
+            raise ValueError("Roster review queue contains duplicate or blank program identity")
+        seen.add(team_id)
+        values = {}
+        for field in numeric_fields:
+            value = summary.get(field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                raise ValueError(f"Roster review queue has invalid {field} for {team_id}")
+            values[field] = value
+        returning_share = summary.get("returning_minutes_share")
+        represented_share = summary.get("represented_prior_minutes_share")
+        for field, value in (("returning_minutes_share", returning_share), ("represented_prior_minutes_share", represented_share)):
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1):
+                raise ValueError(f"Roster review queue has invalid {field} for {team_id}")
+        rows.append({
+            "team_id": team_id,
+            "team": team,
+            "evidence_status": "reviewed" if team_id in reviewed_programs else "roster_observation",
+            **values,
+            "returning_minutes_share": returning_share,
+            "represented_prior_minutes_share": represented_share,
+        })
+    rows.sort(
+        key=lambda row: (
+            row["evidence_status"] == "reviewed",
+            -float(row["unrepresented_prior_minutes"]),
+            -float(row["prior_minutes"]),
+            row["team"].casefold(),
+            row["team_id"],
+        )
+    )
+    reviewed_program_count = sum(row["evidence_status"] == "reviewed" for row in rows)
+    return {
+        "season": document["season"],
+        "source_dataset": source.get("dataset") or "rosters",
+        "source_captured_at": source_captured_at,
+        "source_sha256": source_sha256,
+        # ``reviewed_programs`` is the count that can be reconciled to this
+        # roster edition. Keep source-only reviewed IDs explicit rather than
+        # inflating the queue denominator with a program that has no roster
+        # row in the target release.
+        "reviewed_programs": reviewed_program_count,
+        "source_reviewed_programs": len(reviewed_programs),
+        "reviewed_not_observed_programs": len(reviewed_programs) - reviewed_program_count,
+        "observed_programs": len(rows),
+        "unreviewed_programs": sum(row["evidence_status"] == "roster_observation" for row in rows),
+        "rows": rows,
+    }
+
+
+def build(document, box_release, rated_programs, roster_release=None):
     """Require reviewed identities and dates; never infer status from roster absence."""
     if document["schema_version"] != 1 or document["season"] != 2027:
         raise ValueError("Unsupported announcement schema/season")
@@ -221,6 +310,8 @@ def build(document, box_release, rated_programs):
         "people": output_people,
         "events": document["events"],
     }
+    if roster_release is not None:
+        result["review_queue"] = _review_queue(document, roster_release)
     result["edition"] = digest(result)
     return result
 
@@ -276,8 +367,12 @@ def main():
     document = json.loads(SOURCE.read_text())
     box_release = json.loads((PUBLIC.parent / "players.json").read_text())
     overview = json.loads((PUBLIC.parent / "overview.json").read_text())
+    rosters = json.loads((PUBLIC.parent / "rosters.json").read_text())
     release = build(
-        document, box_release, {p["id"]: p["name"] for p in overview["ratings"]}
+        document,
+        box_release,
+        {p["id"]: p["name"] for p in overview["ratings"]},
+        rosters,
     )
     PUBLIC.write_text(
         json.dumps(release, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
