@@ -342,7 +342,9 @@ describe("live basketball forecast merge", () => {
       ...row,
       matchup_factors_model_id: "model-old",
     }], "model-static");
-    expect(mismatched[0].matchup_factors).toBeNull();
+    expect(mismatched[0].matchup_factors).toEqual(factors);
+    expect(mismatched[0].matchup_factors_model_id).toBe("model-old");
+    expect(mismatched[0].matchup_factors_same_edition).toBe(false);
 
     const sameStaticEdition = mergeLiveBasketballForecasts([staticGame], [{
       ...row,
@@ -351,6 +353,8 @@ describe("live basketball forecast merge", () => {
       model_id: "model-static",
     }], "model-static");
     expect(sameStaticEdition[0].matchup_factors).toEqual(factors);
+    expect(sameStaticEdition[0].matchup_factors_model_id).toBe("model-static");
+    expect(sameStaticEdition[0].matchup_factors_same_edition).toBe(true);
   });
 
   it("adds a newly registered game and orders the complete slate by start time", () => {

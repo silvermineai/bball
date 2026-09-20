@@ -48,6 +48,12 @@ export type BBGame = {
   prediction: BBPrediction | null;
   fallback_prediction?: BBPrediction | null;
   matchup_factors?: BBMatchupFactors | null;
+  /** Edition that produced the descriptive Four Factor context, when present. */
+  matchup_factors_model_id?: string | null;
+  /** Capture clock for the descriptive Four Factor context, when present. */
+  matchup_factors_generated_at?: string | null;
+  /** False means context is retained but did not produce this forecast edition. */
+  matchup_factors_same_edition?: boolean | null;
   /** Licensed, pregame-only quotes matched by the immutable research ledger. */
   market_comparisons?: import("./research-types").Comparison[];
 };

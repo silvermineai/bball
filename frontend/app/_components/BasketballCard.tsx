@@ -48,7 +48,9 @@ export default function BasketballCard({
     .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))
     .filter((quote): quote is NonNullable<typeof quote> => quote !== null);
   const contextLayers = [
-    g.matchup_factors ? "four factors" : null,
+    g.matchup_factors
+      ? g.matchup_factors_same_edition === false ? "factor context · other edition" : "four factors"
+      : null,
     homeRating && awayRating ? "team ratings" : null,
     homeRoster && awayRoster ? "roster minutes" : null,
     rosterScenario ? "roster scenario" : null,
@@ -56,7 +58,7 @@ export default function BasketballCard({
   const evidence = forecastEvidenceCoverage({
     primary: !!g.prediction,
     scheduled: !!(g.source_time_valid && g.source_start),
-    factors: !!g.matchup_factors,
+    factors: !!g.matchup_factors && g.matchup_factors_same_edition !== false,
     roster: !!rosterScenario,
     market: marketQuotes.length > 0,
   });
@@ -234,6 +236,8 @@ export default function BasketballCard({
               factors={g.matchup_factors}
               homeName={g.home_name}
               awayName={g.away_name}
+              modelId={g.matchup_factors_model_id}
+              sameEdition={g.matchup_factors_same_edition !== false}
             />
           )}
           {(homeRoster || awayRoster) && (
@@ -335,10 +339,14 @@ function MatchupFactorSummary({
   factors,
   homeName,
   awayName,
+  modelId,
+  sameEdition,
 }: {
   factors: NonNullable<BBGame["matchup_factors"]>;
   homeName: string;
   awayName: string;
+  modelId?: string | null;
+  sameEdition: boolean;
 }) {
   const rows = FACTOR_META.flatMap((meta) => {
     const values = factors.factors[meta.key];
@@ -350,8 +358,9 @@ function MatchupFactorSummary({
     <div className="matchup-factors">
       <div className="match-detail">
         <strong>Why the model tilts</strong>
-        <span className="muted">four-factor edge</span>
+        <span className="muted">{sameEdition ? "four-factor edge" : "descriptive context"}</span>
       </div>
+      {!sameEdition && <small className="status-warn">These rates come from context edition {modelId || "unavailable"}; they did not generate this forecast and are not counted as same-edition evidence.</small>}
       {rows.map((row) => (
         <div className="matchup-factor-row" key={row.key}>
           <div className="match-detail">
