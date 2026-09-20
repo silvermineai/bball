@@ -57,6 +57,9 @@ class RecruitingTests(unittest.TestCase):
         self.assertEqual(queue["reviewed_programs"] + queue["reviewed_not_observed_programs"], queue["source_reviewed_programs"])
         self.assertEqual(queue["rows"][0]["evidence_status"], "roster_observation")
         self.assertGreater(queue["rows"][0]["unrepresented_prior_minutes"], 0)
+        self.assertEqual(queue["rows"][0]["review_priority"], "urgent")
+        self.assertIn("lack a reviewed school record", queue["rows"][0]["review_reason"])
+        self.assertTrue(all(row["review_priority"] != "covered" for row in queue["rows"] if row["evidence_status"] == "roster_observation"))
 
     def test_review_queue_rejects_unreceipted_roster_release(self):
         rosters = copy.deepcopy(self.rosters)

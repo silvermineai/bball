@@ -180,10 +180,13 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const coverageBaseRows = (rosters.team_summaries || [])
     .map((summary) => {
       const reviewed = release.programs.some((program) => program.id === summary.team_id);
+      const queueRow = release.review_queue?.rows.find((candidate) => candidate.team_id === summary.team_id);
       const additions = programSummary.find((row) => row.team_id === summary.team_id);
       return {
         ...summary,
         reviewed,
+        reviewPriority: queueRow?.review_priority || (reviewed ? "covered" : "monitor"),
+        reviewReason: queueRow?.review_reason || (reviewed ? "Reviewed school evidence is present" : "Roster observation only"),
         additions: additions?.additions || 0,
         linkedProfiles: additions?.linked_profiles || 0,
         latestReviewed: latestProgramPublication.get(summary.team_id) || null,
@@ -572,8 +575,8 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   downloadCsv(
                     "basketball-recruiting-program-coverage.csv",
                     toCsv(
-                      ["Program", "Program ID", "Evidence status", "Latest reviewed publication", "Announced additions", "Linked prior profiles", "Listed players", "Returning minutes share", "Prior minutes", "Unrepresented prior minutes"],
-                      coverageRows.map((row) => [row.team, row.team_id, row.reviewed ? "Reviewed school announcements" : "Roster observation only", row.latestReviewed, row.additions, row.linkedProfiles, row.listed_players, row.returning_minutes_share == null ? null : row.returning_minutes_share * 100, row.prior_minutes, row.unrepresented_prior_minutes]),
+                      ["Program", "Program ID", "Evidence status", "Review priority", "Review reason", "Latest reviewed publication", "Announced additions", "Linked prior profiles", "Listed players", "Returning minutes share", "Prior minutes", "Unrepresented prior minutes"],
+                      coverageRows.map((row) => [row.team, row.team_id, row.reviewed ? "Reviewed school announcements" : "Roster observation only", row.reviewPriority, row.reviewReason, row.latestReviewed, row.additions, row.linkedProfiles, row.listed_players, row.returning_minutes_share == null ? null : row.returning_minutes_share * 100, row.prior_minutes, row.unrepresented_prior_minutes]),
                     ),
                   )
                 }
@@ -641,7 +644,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     <li key={row.team_id}>
                       <div>
                         <Link href={`/basketball/programs/${row.team_id}/`}><strong>{row.team}</strong> ↗</Link>
-                        <span>{row.unrepresented_prior_minutes ? `${Math.round(row.unrepresented_prior_minutes).toLocaleString()} prior min unrepresented` : "No linked prior minutes"} · {row.listed_players} listed</span>
+                        <span><strong>{row.reviewPriority.replaceAll("_", " ")}</strong> · {row.reviewReason} · {row.unrepresented_prior_minutes ? `${Math.round(row.unrepresented_prior_minutes).toLocaleString()} prior min unrepresented` : "No linked prior minutes"} · {row.listed_players} listed</span>
                       </div>
                       <Link href={`/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(row.team)}`}>Review roster rows →</Link>
                     </li>
@@ -651,10 +654,11 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
             )}
             <div className="table-scroll" id="recruiting-coverage-table">
               <table className="data-table">
-                <thead><tr><th>Program</th><th>Evidence status</th><th>Latest reviewed publication</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th></tr></thead>
+                <thead><tr><th>Program</th><th>Evidence status</th><th>Review priority</th><th>Latest reviewed publication</th><th className="numeric">Additions</th><th className="numeric">Linked profiles</th><th className="numeric">Listed</th><th className="numeric">Returning share</th><th className="numeric">Prior minutes</th><th className="numeric">Unrepresented</th></tr></thead>
                 <tbody>{coverageRows.map((row) => <tr key={row.team_id}>
                   <td><Link href={`/basketball/programs/${row.team_id}/`}>{row.team}</Link><small>{row.team_id}</small><small><Link href={`/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(row.team)}`}>Review roster rows →</Link></small></td>
                   <td>{row.reviewed ? "Reviewed school announcements" : "Roster observation only"}</td>
+                  <td><strong>{row.reviewPriority.replaceAll("_", " ")}</strong><small>{row.reviewReason}</small></td>
                   <td>{row.latestReviewed ? publicationDate(row.latestReviewed) : "No reviewed statement"}</td>
                   <td className="numeric">{row.additions || "—"}</td>
                   <td className="numeric">{row.linkedProfiles || "—"}</td>

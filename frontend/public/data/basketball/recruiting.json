@@ -3108,7 +3108,9 @@
         "represented_prior_minutes": 2726.0,
         "unrepresented_prior_minutes": 4524.0,
         "returning_minutes_share": 0.376,
-        "represented_prior_minutes_share": 0.376
+        "represented_prior_minutes_share": 0.376,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2599",
@@ -3125,7 +3127,9 @@
         "represented_prior_minutes": 3145.0,
         "unrepresented_prior_minutes": 4279.0,
         "returning_minutes_share": 0.4236,
-        "represented_prior_minutes_share": 0.4236
+        "represented_prior_minutes_share": 0.4236,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "97",
@@ -3142,7 +3146,9 @@
         "represented_prior_minutes": 3369.0,
         "unrepresented_prior_minutes": 3631.0,
         "returning_minutes_share": 0.4813,
-        "represented_prior_minutes_share": 0.4813
+        "represented_prior_minutes_share": 0.4813,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "84",
@@ -3159,7 +3165,9 @@
         "represented_prior_minutes": 2998.0,
         "unrepresented_prior_minutes": 3477.0,
         "returning_minutes_share": 0.463,
-        "represented_prior_minutes_share": 0.463
+        "represented_prior_minutes_share": 0.463,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2633",
@@ -3176,7 +3184,9 @@
         "represented_prior_minutes": 4208.0,
         "unrepresented_prior_minutes": 3267.0,
         "returning_minutes_share": 0.5629,
-        "represented_prior_minutes_share": 0.5629
+        "represented_prior_minutes_share": 0.5629,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2567",
@@ -3193,7 +3203,9 @@
         "represented_prior_minutes": 3631.0,
         "unrepresented_prior_minutes": 3219.0,
         "returning_minutes_share": 0.5301,
-        "represented_prior_minutes_share": 0.5301
+        "represented_prior_minutes_share": 0.5301,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2390",
@@ -3210,7 +3222,9 @@
         "represented_prior_minutes": 3859.0,
         "unrepresented_prior_minutes": 3141.0,
         "returning_minutes_share": 0.5513,
-        "represented_prior_minutes_share": 0.5513
+        "represented_prior_minutes_share": 0.5513,
+        "review_priority": "urgent",
+        "review_reason": "3,000+ prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2579",
@@ -3227,7 +3241,9 @@
         "represented_prior_minutes": 3562.0,
         "unrepresented_prior_minutes": 2914.0,
         "returning_minutes_share": 0.55,
-        "represented_prior_minutes_share": 0.55
+        "represented_prior_minutes_share": 0.55,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "52",
@@ -3244,7 +3260,9 @@
         "represented_prior_minutes": 3780.0,
         "unrepresented_prior_minutes": 2820.0,
         "returning_minutes_share": 0.5727,
-        "represented_prior_minutes_share": 0.5727
+        "represented_prior_minutes_share": 0.5727,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2132",
@@ -3261,7 +3279,9 @@
         "represented_prior_minutes": 3872.0,
         "unrepresented_prior_minutes": 2753.0,
         "returning_minutes_share": 0.5845,
-        "represented_prior_minutes_share": 0.5845
+        "represented_prior_minutes_share": 0.5845,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2641",
@@ -3278,7 +3298,9 @@
         "represented_prior_minutes": 4379.0,
         "unrepresented_prior_minutes": 2446.0,
         "returning_minutes_share": 0.6416,
-        "represented_prior_minutes_share": 0.6416
+        "represented_prior_minutes_share": 0.6416,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2250",
@@ -3295,7 +3317,9 @@
         "represented_prior_minutes": 4581.0,
         "unrepresented_prior_minutes": 2444.0,
         "returning_minutes_share": 0.6521,
-        "represented_prior_minutes_share": 0.6521
+        "represented_prior_minutes_share": 0.6521,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "251",
@@ -3312,7 +3336,9 @@
         "represented_prior_minutes": 5048.0,
         "unrepresented_prior_minutes": 2202.0,
         "returning_minutes_share": 0.6963,
-        "represented_prior_minutes_share": 0.6963
+        "represented_prior_minutes_share": 0.6963,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "221",
@@ -3329,7 +3355,9 @@
         "represented_prior_minutes": 4485.0,
         "unrepresented_prior_minutes": 2165.0,
         "returning_minutes_share": 0.6744,
-        "represented_prior_minutes_share": 0.6744
+        "represented_prior_minutes_share": 0.6744,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "66",
@@ -3346,7 +3374,9 @@
         "represented_prior_minutes": 5244.0,
         "unrepresented_prior_minutes": 2156.0,
         "returning_minutes_share": 0.7086,
-        "represented_prior_minutes_share": 0.7086
+        "represented_prior_minutes_share": 0.7086,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "151",
@@ -3363,7 +3393,9 @@
         "represented_prior_minutes": 4126.0,
         "unrepresented_prior_minutes": 2149.0,
         "returning_minutes_share": 0.6575,
-        "represented_prior_minutes_share": 0.6575
+        "represented_prior_minutes_share": 0.6575,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "158",
@@ -3380,7 +3412,9 @@
         "represented_prior_minutes": 4923.0,
         "unrepresented_prior_minutes": 2127.0,
         "returning_minutes_share": 0.6983,
-        "represented_prior_minutes_share": 0.6983
+        "represented_prior_minutes_share": 0.6983,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "194",
@@ -3397,7 +3431,9 @@
         "represented_prior_minutes": 4799.0,
         "unrepresented_prior_minutes": 2076.0,
         "returning_minutes_share": 0.698,
-        "represented_prior_minutes_share": 0.698
+        "represented_prior_minutes_share": 0.698,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "99",
@@ -3414,7 +3450,9 @@
         "represented_prior_minutes": 4582.0,
         "unrepresented_prior_minutes": 1993.0,
         "returning_minutes_share": 0.6969,
-        "represented_prior_minutes_share": 0.6969
+        "represented_prior_minutes_share": 0.6969,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2116",
@@ -3431,7 +3469,9 @@
         "represented_prior_minutes": 4670.0,
         "unrepresented_prior_minutes": 1980.0,
         "returning_minutes_share": 0.7023,
-        "represented_prior_minutes_share": 0.7023
+        "represented_prior_minutes_share": 0.7023,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "127",
@@ -3448,7 +3488,9 @@
         "represented_prior_minutes": 5144.0,
         "unrepresented_prior_minutes": 1906.0,
         "returning_minutes_share": 0.7296,
-        "represented_prior_minutes_share": 0.7296
+        "represented_prior_minutes_share": 0.7296,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "183",
@@ -3465,7 +3507,9 @@
         "represented_prior_minutes": 4624.0,
         "unrepresented_prior_minutes": 1901.0,
         "returning_minutes_share": 0.7087,
-        "represented_prior_minutes_share": 0.7087
+        "represented_prior_minutes_share": 0.7087,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2541",
@@ -3482,7 +3526,9 @@
         "represented_prior_minutes": 5171.0,
         "unrepresented_prior_minutes": 1853.0,
         "returning_minutes_share": 0.7362,
-        "represented_prior_minutes_share": 0.7362
+        "represented_prior_minutes_share": 0.7362,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "152",
@@ -3499,7 +3545,9 @@
         "represented_prior_minutes": 5073.0,
         "unrepresented_prior_minutes": 1800.0,
         "returning_minutes_share": 0.7381,
-        "represented_prior_minutes_share": 0.7381
+        "represented_prior_minutes_share": 0.7381,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "222",
@@ -3516,7 +3564,9 @@
         "represented_prior_minutes": 4919.0,
         "unrepresented_prior_minutes": 1754.0,
         "returning_minutes_share": 0.7371,
-        "represented_prior_minutes_share": 0.7371
+        "represented_prior_minutes_share": 0.7371,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "139",
@@ -3533,7 +3583,9 @@
         "represented_prior_minutes": 5248.0,
         "unrepresented_prior_minutes": 1752.0,
         "returning_minutes_share": 0.7497,
-        "represented_prior_minutes_share": 0.7497
+        "represented_prior_minutes_share": 0.7497,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "245",
@@ -3550,7 +3602,9 @@
         "represented_prior_minutes": 5207.0,
         "unrepresented_prior_minutes": 1743.0,
         "returning_minutes_share": 0.7492,
-        "represented_prior_minutes_share": 0.7492
+        "represented_prior_minutes_share": 0.7492,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2294",
@@ -3567,7 +3621,9 @@
         "represented_prior_minutes": 5812.0,
         "unrepresented_prior_minutes": 1613.0,
         "returning_minutes_share": 0.7828,
-        "represented_prior_minutes_share": 0.7828
+        "represented_prior_minutes_share": 0.7828,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "57",
@@ -3584,7 +3640,9 @@
         "represented_prior_minutes": 5537.0,
         "unrepresented_prior_minutes": 1463.0,
         "returning_minutes_share": 0.791,
-        "represented_prior_minutes_share": 0.791
+        "represented_prior_minutes_share": 0.791,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "269",
@@ -3601,7 +3659,9 @@
         "represented_prior_minutes": 5166.0,
         "unrepresented_prior_minutes": 1309.0,
         "returning_minutes_share": 0.7978,
-        "represented_prior_minutes_share": 0.7978
+        "represented_prior_minutes_share": 0.7978,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2",
@@ -3618,7 +3678,9 @@
         "represented_prior_minutes": 6467.0,
         "unrepresented_prior_minutes": 1208.0,
         "returning_minutes_share": 0.8426,
-        "represented_prior_minutes_share": 0.8426
+        "represented_prior_minutes_share": 0.8426,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2460",
@@ -3635,7 +3697,9 @@
         "represented_prior_minutes": 6044.0,
         "unrepresented_prior_minutes": 1206.0,
         "returning_minutes_share": 0.8337,
-        "represented_prior_minutes_share": 0.8337
+        "represented_prior_minutes_share": 0.8337,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2856",
@@ -3652,7 +3716,9 @@
         "represented_prior_minutes": 5678.0,
         "unrepresented_prior_minutes": 1198.0,
         "returning_minutes_share": 0.8258,
-        "represented_prior_minutes_share": 0.8258
+        "represented_prior_minutes_share": 0.8258,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "77",
@@ -3669,7 +3735,9 @@
         "represented_prior_minutes": 5649.0,
         "unrepresented_prior_minutes": 1176.0,
         "returning_minutes_share": 0.8277,
-        "represented_prior_minutes_share": 0.8277
+        "represented_prior_minutes_share": 0.8277,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "239",
@@ -3686,7 +3754,9 @@
         "represented_prior_minutes": 5654.0,
         "unrepresented_prior_minutes": 1146.0,
         "returning_minutes_share": 0.8315,
-        "represented_prior_minutes_share": 0.8315
+        "represented_prior_minutes_share": 0.8315,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "279",
@@ -3703,7 +3773,9 @@
         "represented_prior_minutes": 5484.0,
         "unrepresented_prior_minutes": 1141.0,
         "returning_minutes_share": 0.8278,
-        "represented_prior_minutes_share": 0.8278
+        "represented_prior_minutes_share": 0.8278,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "156",
@@ -3720,7 +3792,9 @@
         "represented_prior_minutes": 5705.0,
         "unrepresented_prior_minutes": 1120.0,
         "returning_minutes_share": 0.8359,
-        "represented_prior_minutes_share": 0.8359
+        "represented_prior_minutes_share": 0.8359,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "275",
@@ -3737,7 +3811,9 @@
         "represented_prior_minutes": 5981.0,
         "unrepresented_prior_minutes": 1119.0,
         "returning_minutes_share": 0.8424,
-        "represented_prior_minutes_share": 0.8424
+        "represented_prior_minutes_share": 0.8424,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "142",
@@ -3754,7 +3830,9 @@
         "represented_prior_minutes": 5534.0,
         "unrepresented_prior_minutes": 1117.0,
         "returning_minutes_share": 0.8321,
-        "represented_prior_minutes_share": 0.8321
+        "represented_prior_minutes_share": 0.8321,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2623",
@@ -3771,7 +3849,9 @@
         "represented_prior_minutes": 5787.0,
         "unrepresented_prior_minutes": 1113.0,
         "returning_minutes_share": 0.8387,
-        "represented_prior_minutes_share": 0.8387
+        "represented_prior_minutes_share": 0.8387,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "189",
@@ -3788,7 +3868,9 @@
         "represented_prior_minutes": 5334.0,
         "unrepresented_prior_minutes": 1091.0,
         "returning_minutes_share": 0.8302,
-        "represented_prior_minutes_share": 0.8302
+        "represented_prior_minutes_share": 0.8302,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "24",
@@ -3805,7 +3887,9 @@
         "represented_prior_minutes": 5536.0,
         "unrepresented_prior_minutes": 1088.0,
         "returning_minutes_share": 0.8357,
-        "represented_prior_minutes_share": 0.8357
+        "represented_prior_minutes_share": 0.8357,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2086",
@@ -3822,7 +3906,9 @@
         "represented_prior_minutes": 5422.0,
         "unrepresented_prior_minutes": 1076.0,
         "returning_minutes_share": 0.8344,
-        "represented_prior_minutes_share": 0.8344
+        "represented_prior_minutes_share": 0.8344,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2378",
@@ -3839,7 +3925,9 @@
         "represented_prior_minutes": 5581.0,
         "unrepresented_prior_minutes": 1069.0,
         "returning_minutes_share": 0.8392,
-        "represented_prior_minutes_share": 0.8392
+        "represented_prior_minutes_share": 0.8392,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2440",
@@ -3856,7 +3944,9 @@
         "represented_prior_minutes": 6434.0,
         "unrepresented_prior_minutes": 1066.0,
         "returning_minutes_share": 0.8579,
-        "represented_prior_minutes_share": 0.8579
+        "represented_prior_minutes_share": 0.8579,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "264",
@@ -3873,7 +3963,9 @@
         "represented_prior_minutes": 5639.0,
         "unrepresented_prior_minutes": 1036.0,
         "returning_minutes_share": 0.8448,
-        "represented_prior_minutes_share": 0.8448
+        "represented_prior_minutes_share": 0.8448,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2634",
@@ -3890,7 +3982,9 @@
         "represented_prior_minutes": 5590.0,
         "unrepresented_prior_minutes": 1034.0,
         "returning_minutes_share": 0.8439,
-        "represented_prior_minutes_share": 0.8439
+        "represented_prior_minutes_share": 0.8439,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "193",
@@ -3907,7 +4001,9 @@
         "represented_prior_minutes": 5872.0,
         "unrepresented_prior_minutes": 1028.0,
         "returning_minutes_share": 0.851,
-        "represented_prior_minutes_share": 0.851
+        "represented_prior_minutes_share": 0.851,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "154",
@@ -3924,7 +4020,9 @@
         "represented_prior_minutes": 6056.0,
         "unrepresented_prior_minutes": 1019.0,
         "returning_minutes_share": 0.856,
-        "represented_prior_minutes_share": 0.856
+        "represented_prior_minutes_share": 0.856,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2752",
@@ -3941,7 +4039,9 @@
         "represented_prior_minutes": 5639.0,
         "unrepresented_prior_minutes": 1012.0,
         "returning_minutes_share": 0.8478,
-        "represented_prior_minutes_share": 0.8478
+        "represented_prior_minutes_share": 0.8478,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2253",
@@ -3958,7 +4058,9 @@
         "represented_prior_minutes": 5417.0,
         "unrepresented_prior_minutes": 1007.0,
         "returning_minutes_share": 0.8432,
-        "represented_prior_minutes_share": 0.8432
+        "represented_prior_minutes_share": 0.8432,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "43",
@@ -3975,7 +4077,9 @@
         "represented_prior_minutes": 5272.0,
         "unrepresented_prior_minutes": 1003.0,
         "returning_minutes_share": 0.8402,
-        "represented_prior_minutes_share": 0.8402
+        "represented_prior_minutes_share": 0.8402,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "277",
@@ -3992,7 +4096,9 @@
         "represented_prior_minutes": 6125.0,
         "unrepresented_prior_minutes": 1000.0,
         "returning_minutes_share": 0.8596,
-        "represented_prior_minutes_share": 0.8596
+        "represented_prior_minutes_share": 0.8596,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2507",
@@ -4009,7 +4115,9 @@
         "represented_prior_minutes": 5786.0,
         "unrepresented_prior_minutes": 991.0,
         "returning_minutes_share": 0.8538,
-        "represented_prior_minutes_share": 0.8538
+        "represented_prior_minutes_share": 0.8538,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2272",
@@ -4026,7 +4134,9 @@
         "represented_prior_minutes": 6282.0,
         "unrepresented_prior_minutes": 968.0,
         "returning_minutes_share": 0.8665,
-        "represented_prior_minutes_share": 0.8665
+        "represented_prior_minutes_share": 0.8665,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2229",
@@ -4043,7 +4153,9 @@
         "represented_prior_minutes": 5508.0,
         "unrepresented_prior_minutes": 967.0,
         "returning_minutes_share": 0.8507,
-        "represented_prior_minutes_share": 0.8507
+        "represented_prior_minutes_share": 0.8507,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "21",
@@ -4060,7 +4172,9 @@
         "represented_prior_minutes": 5763.0,
         "unrepresented_prior_minutes": 962.0,
         "returning_minutes_share": 0.857,
-        "represented_prior_minutes_share": 0.857
+        "represented_prior_minutes_share": 0.857,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2670",
@@ -4077,7 +4191,9 @@
         "represented_prior_minutes": 6269.0,
         "unrepresented_prior_minutes": 956.0,
         "returning_minutes_share": 0.8677,
-        "represented_prior_minutes_share": 0.8677
+        "represented_prior_minutes_share": 0.8677,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "26",
@@ -4094,7 +4210,9 @@
         "represented_prior_minutes": 6339.0,
         "unrepresented_prior_minutes": 936.0,
         "returning_minutes_share": 0.8713,
-        "represented_prior_minutes_share": 0.8713
+        "represented_prior_minutes_share": 0.8713,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "276",
@@ -4111,7 +4229,9 @@
         "represented_prior_minutes": 5468.0,
         "unrepresented_prior_minutes": 932.0,
         "returning_minutes_share": 0.8544,
-        "represented_prior_minutes_share": 0.8544
+        "represented_prior_minutes_share": 0.8544,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "58",
@@ -4128,7 +4248,9 @@
         "represented_prior_minutes": 5996.0,
         "unrepresented_prior_minutes": 929.0,
         "returning_minutes_share": 0.8658,
-        "represented_prior_minutes_share": 0.8658
+        "represented_prior_minutes_share": 0.8658,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2006",
@@ -4145,7 +4267,9 @@
         "represented_prior_minutes": 6077.0,
         "unrepresented_prior_minutes": 923.0,
         "returning_minutes_share": 0.8681,
-        "represented_prior_minutes_share": 0.8681
+        "represented_prior_minutes_share": 0.8681,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2335",
@@ -4162,7 +4286,9 @@
         "represented_prior_minutes": 5937.0,
         "unrepresented_prior_minutes": 912.0,
         "returning_minutes_share": 0.8668,
-        "represented_prior_minutes_share": 0.8668
+        "represented_prior_minutes_share": 0.8668,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "328",
@@ -4179,7 +4305,9 @@
         "represented_prior_minutes": 6331.0,
         "unrepresented_prior_minutes": 894.0,
         "returning_minutes_share": 0.8763,
-        "represented_prior_minutes_share": 0.8763
+        "represented_prior_minutes_share": 0.8763,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "257",
@@ -4196,7 +4324,9 @@
         "represented_prior_minutes": 5546.0,
         "unrepresented_prior_minutes": 879.0,
         "returning_minutes_share": 0.8632,
-        "represented_prior_minutes_share": 0.8632
+        "represented_prior_minutes_share": 0.8632,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "59",
@@ -4213,7 +4343,9 @@
         "represented_prior_minutes": 5347.0,
         "unrepresented_prior_minutes": 878.0,
         "returning_minutes_share": 0.859,
-        "represented_prior_minutes_share": 0.859
+        "represented_prior_minutes_share": 0.859,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "145",
@@ -4230,7 +4362,9 @@
         "represented_prior_minutes": 6274.0,
         "unrepresented_prior_minutes": 851.0,
         "returning_minutes_share": 0.8806,
-        "represented_prior_minutes_share": 0.8806
+        "represented_prior_minutes_share": 0.8806,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "314",
@@ -4247,7 +4381,9 @@
         "represented_prior_minutes": 5688.0,
         "unrepresented_prior_minutes": 837.0,
         "returning_minutes_share": 0.8717,
-        "represented_prior_minutes_share": 0.8717
+        "represented_prior_minutes_share": 0.8717,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "201",
@@ -4264,7 +4400,9 @@
         "represented_prior_minutes": 6672.0,
         "unrepresented_prior_minutes": 829.0,
         "returning_minutes_share": 0.8895,
-        "represented_prior_minutes_share": 0.8895
+        "represented_prior_minutes_share": 0.8895,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "98",
@@ -4281,7 +4419,9 @@
         "represented_prior_minutes": 5621.0,
         "unrepresented_prior_minutes": 829.0,
         "returning_minutes_share": 0.8715,
-        "represented_prior_minutes_share": 0.8715
+        "represented_prior_minutes_share": 0.8715,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "87",
@@ -4298,7 +4438,9 @@
         "represented_prior_minutes": 5476.0,
         "unrepresented_prior_minutes": 824.0,
         "returning_minutes_share": 0.8692,
-        "represented_prior_minutes_share": 0.8692
+        "represented_prior_minutes_share": 0.8692,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "120",
@@ -4315,7 +4457,9 @@
         "represented_prior_minutes": 5824.0,
         "unrepresented_prior_minutes": 801.0,
         "returning_minutes_share": 0.8791,
-        "represented_prior_minutes_share": 0.8791
+        "represented_prior_minutes_share": 0.8791,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "45",
@@ -4332,7 +4476,9 @@
         "represented_prior_minutes": 6233.0,
         "unrepresented_prior_minutes": 792.0,
         "returning_minutes_share": 0.8873,
-        "represented_prior_minutes_share": 0.8873
+        "represented_prior_minutes_share": 0.8873,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2565",
@@ -4349,7 +4495,9 @@
         "represented_prior_minutes": 5665.0,
         "unrepresented_prior_minutes": 785.0,
         "returning_minutes_share": 0.8783,
-        "represented_prior_minutes_share": 0.8783
+        "represented_prior_minutes_share": 0.8783,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "259",
@@ -4366,7 +4514,9 @@
         "represented_prior_minutes": 5906.0,
         "unrepresented_prior_minutes": 669.0,
         "returning_minutes_share": 0.8983,
-        "represented_prior_minutes_share": 0.8983
+        "represented_prior_minutes_share": 0.8983,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2539",
@@ -4383,7 +4533,9 @@
         "represented_prior_minutes": 6084.0,
         "unrepresented_prior_minutes": 566.0,
         "returning_minutes_share": 0.9149,
-        "represented_prior_minutes_share": 0.9149
+        "represented_prior_minutes_share": 0.9149,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2608",
@@ -4400,7 +4552,9 @@
         "represented_prior_minutes": 6066.0,
         "unrepresented_prior_minutes": 534.0,
         "returning_minutes_share": 0.9191,
-        "represented_prior_minutes_share": 0.9191
+        "represented_prior_minutes_share": 0.9191,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "130183",
@@ -4417,7 +4571,9 @@
         "represented_prior_minutes": 550.0,
         "unrepresented_prior_minutes": 50.0,
         "returning_minutes_share": 0.9167,
-        "represented_prior_minutes_share": 0.9167
+        "represented_prior_minutes_share": 0.9167,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "254",
@@ -4434,7 +4590,9 @@
         "represented_prior_minutes": 6379.0,
         "unrepresented_prior_minutes": 46.0,
         "returning_minutes_share": 0.9928,
-        "represented_prior_minutes_share": 0.9928
+        "represented_prior_minutes_share": 0.9928,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "502",
@@ -4451,7 +4609,9 @@
         "represented_prior_minutes": 374.0,
         "unrepresented_prior_minutes": 26.0,
         "returning_minutes_share": 0.935,
-        "represented_prior_minutes_share": 0.935
+        "represented_prior_minutes_share": 0.935,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2428",
@@ -4468,7 +4628,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 25.0,
         "returning_minutes_share": 0.9961,
-        "represented_prior_minutes_share": 0.9961
+        "represented_prior_minutes_share": 0.9961,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "3242",
@@ -4485,7 +4647,9 @@
         "represented_prior_minutes": 383.0,
         "unrepresented_prior_minutes": 17.0,
         "returning_minutes_share": 0.9575,
-        "represented_prior_minutes_share": 0.9575
+        "represented_prior_minutes_share": 0.9575,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2029",
@@ -4502,7 +4666,9 @@
         "represented_prior_minutes": 6423.0,
         "unrepresented_prior_minutes": 2.0,
         "returning_minutes_share": 0.9997,
-        "represented_prior_minutes_share": 0.9997
+        "represented_prior_minutes_share": 0.9997,
+        "review_priority": "high",
+        "review_reason": "Prior minutes lack a reviewed school record"
       },
       {
         "team_id": "2168",
@@ -4519,7 +4685,9 @@
         "represented_prior_minutes": 7475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "290",
@@ -4536,7 +4704,9 @@
         "represented_prior_minutes": 7475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2504",
@@ -4553,7 +4723,9 @@
         "represented_prior_minutes": 7425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "167",
@@ -4570,7 +4742,9 @@
         "represented_prior_minutes": 7400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2724",
@@ -4587,7 +4761,9 @@
         "represented_prior_minutes": 7349.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "70",
@@ -4604,7 +4780,9 @@
         "represented_prior_minutes": 7225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2329",
@@ -4621,7 +4799,9 @@
         "represented_prior_minutes": 7225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2449",
@@ -4638,7 +4818,9 @@
         "represented_prior_minutes": 7100.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "82",
@@ -4655,7 +4837,9 @@
         "represented_prior_minutes": 7100.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "300",
@@ -4672,7 +4856,9 @@
         "represented_prior_minutes": 7076.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "231",
@@ -4689,7 +4875,9 @@
         "represented_prior_minutes": 7075.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "197",
@@ -4706,7 +4894,9 @@
         "represented_prior_minutes": 7075.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2439",
@@ -4723,7 +4913,9 @@
         "represented_prior_minutes": 7074.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "338",
@@ -4740,7 +4932,9 @@
         "represented_prior_minutes": 7052.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "228",
@@ -4757,7 +4951,9 @@
         "represented_prior_minutes": 7050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2275",
@@ -4774,7 +4970,9 @@
         "represented_prior_minutes": 7050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "155",
@@ -4791,7 +4989,9 @@
         "represented_prior_minutes": 7050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2572",
@@ -4808,7 +5008,9 @@
         "represented_prior_minutes": 7050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2511",
@@ -4825,7 +5027,9 @@
         "represented_prior_minutes": 7049.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2653",
@@ -4842,7 +5046,9 @@
         "represented_prior_minutes": 7049.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "112358",
@@ -4859,7 +5065,9 @@
         "represented_prior_minutes": 7025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2547",
@@ -4876,7 +5084,9 @@
         "represented_prior_minutes": 7025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2561",
@@ -4893,7 +5103,9 @@
         "represented_prior_minutes": 7025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2750",
@@ -4910,7 +5122,9 @@
         "represented_prior_minutes": 7025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "104",
@@ -4927,7 +5141,9 @@
         "represented_prior_minutes": 6976.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2110",
@@ -4944,7 +5160,9 @@
         "represented_prior_minutes": 6925.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2309",
@@ -4961,7 +5179,9 @@
         "represented_prior_minutes": 6925.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2385",
@@ -4978,7 +5198,9 @@
         "represented_prior_minutes": 6899.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "3084",
@@ -4995,7 +5217,9 @@
         "represented_prior_minutes": 6876.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "526",
@@ -5012,7 +5236,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "46",
@@ -5029,7 +5255,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2348",
@@ -5046,7 +5274,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2771",
@@ -5063,7 +5293,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2405",
@@ -5080,7 +5312,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2426",
@@ -5097,7 +5331,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "164",
@@ -5114,7 +5350,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2582",
@@ -5131,7 +5369,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "261",
@@ -5148,7 +5388,9 @@
         "represented_prior_minutes": 6875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2430",
@@ -5165,7 +5407,9 @@
         "represented_prior_minutes": 6873.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2193",
@@ -5182,7 +5426,9 @@
         "represented_prior_minutes": 6850.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "94",
@@ -5199,7 +5445,9 @@
         "represented_prior_minutes": 6850.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "179",
@@ -5216,7 +5464,9 @@
         "represented_prior_minutes": 6850.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2501",
@@ -5233,7 +5483,9 @@
         "represented_prior_minutes": 6849.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2463",
@@ -5250,7 +5502,9 @@
         "represented_prior_minutes": 6827.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2217",
@@ -5267,7 +5521,9 @@
         "represented_prior_minutes": 6825.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "119",
@@ -5284,7 +5540,9 @@
         "represented_prior_minutes": 6825.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2097",
@@ -5301,7 +5559,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "36",
@@ -5318,7 +5578,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2534",
@@ -5335,7 +5597,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2900",
@@ -5352,7 +5616,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "28",
@@ -5369,7 +5635,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "350",
@@ -5386,7 +5654,9 @@
         "represented_prior_minutes": 6800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "149",
@@ -5403,7 +5673,9 @@
         "represented_prior_minutes": 6799.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2649",
@@ -5420,7 +5692,9 @@
         "represented_prior_minutes": 6799.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2142",
@@ -5437,7 +5711,9 @@
         "represented_prior_minutes": 6750.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "113",
@@ -5454,7 +5730,9 @@
         "represented_prior_minutes": 6750.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2523",
@@ -5471,7 +5749,9 @@
         "represented_prior_minutes": 6725.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "6",
@@ -5488,7 +5768,9 @@
         "represented_prior_minutes": 6725.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2643",
@@ -5505,7 +5787,9 @@
         "represented_prior_minutes": 6725.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2184",
@@ -5522,7 +5806,9 @@
         "represented_prior_minutes": 6700.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "61",
@@ -5539,7 +5825,9 @@
         "represented_prior_minutes": 6700.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "284",
@@ -5556,7 +5844,9 @@
         "represented_prior_minutes": 6700.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "38",
@@ -5573,7 +5863,9 @@
         "represented_prior_minutes": 6675.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2197",
@@ -5590,7 +5882,9 @@
         "represented_prior_minutes": 6675.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2226",
@@ -5607,7 +5901,9 @@
         "represented_prior_minutes": 6675.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2506",
@@ -5624,7 +5920,9 @@
         "represented_prior_minutes": 6675.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "292",
@@ -5641,7 +5939,9 @@
         "represented_prior_minutes": 6675.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "301",
@@ -5658,7 +5958,9 @@
         "represented_prior_minutes": 6674.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "256",
@@ -5675,7 +5977,9 @@
         "represented_prior_minutes": 6651.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2443",
@@ -5692,7 +5996,9 @@
         "represented_prior_minutes": 6651.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2413",
@@ -5709,7 +6015,9 @@
         "represented_prior_minutes": 6651.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2739",
@@ -5726,7 +6034,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2296",
@@ -5743,7 +6053,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2400",
@@ -5760,7 +6072,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "295",
@@ -5777,7 +6091,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "198",
@@ -5794,7 +6110,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "302",
@@ -5811,7 +6129,9 @@
         "represented_prior_minutes": 6650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2000",
@@ -5828,7 +6148,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "13",
@@ -5845,7 +6167,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "304",
@@ -5862,7 +6186,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2350",
@@ -5879,7 +6205,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2437",
@@ -5896,7 +6224,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "23",
@@ -5913,7 +6243,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2546",
@@ -5930,7 +6262,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "56",
@@ -5947,7 +6281,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "357",
@@ -5964,7 +6300,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2630",
@@ -5981,7 +6319,9 @@
         "represented_prior_minutes": 6625.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2010",
@@ -5998,7 +6338,9 @@
         "represented_prior_minutes": 6624.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2529",
@@ -6015,7 +6357,9 @@
         "represented_prior_minutes": 6624.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "9",
@@ -6032,7 +6376,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "325",
@@ -6049,7 +6395,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2182",
@@ -6066,7 +6414,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2241",
@@ -6083,7 +6433,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2755",
@@ -6100,7 +6452,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "107",
@@ -6117,7 +6471,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "93",
@@ -6134,7 +6490,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2885",
@@ -6151,7 +6509,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2349",
@@ -6168,7 +6528,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2751",
@@ -6185,7 +6547,9 @@
         "represented_prior_minutes": 6600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2815",
@@ -6202,7 +6566,9 @@
         "represented_prior_minutes": 6599.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "309",
@@ -6219,7 +6585,9 @@
         "represented_prior_minutes": 6599.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2550",
@@ -6236,7 +6604,9 @@
         "represented_prior_minutes": 6599.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "68",
@@ -6253,7 +6623,9 @@
         "represented_prior_minutes": 6550.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2127",
@@ -6270,7 +6642,9 @@
         "represented_prior_minutes": 6550.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "324",
@@ -6287,7 +6661,9 @@
         "represented_prior_minutes": 6550.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2393",
@@ -6304,7 +6680,9 @@
         "represented_prior_minutes": 6550.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "349",
@@ -6321,7 +6699,9 @@
         "represented_prior_minutes": 6525.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "282",
@@ -6338,7 +6718,9 @@
         "represented_prior_minutes": 6525.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2379",
@@ -6355,7 +6737,9 @@
         "represented_prior_minutes": 6525.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2198",
@@ -6372,7 +6756,9 @@
         "represented_prior_minutes": 6500.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2515",
@@ -6389,7 +6775,9 @@
         "represented_prior_minutes": 6500.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2908",
@@ -6406,7 +6794,9 @@
         "represented_prior_minutes": 6500.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "233",
@@ -6423,7 +6813,9 @@
         "represented_prior_minutes": 6499.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2210",
@@ -6440,7 +6832,9 @@
         "represented_prior_minutes": 6498.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2698",
@@ -6457,7 +6851,9 @@
         "represented_prior_minutes": 6476.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2032",
@@ -6474,7 +6870,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "299",
@@ -6491,7 +6889,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2363",
@@ -6508,7 +6908,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "344",
@@ -6525,7 +6927,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "166",
@@ -6542,7 +6946,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2535",
@@ -6559,7 +6965,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "79",
@@ -6576,7 +6984,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2619",
@@ -6593,7 +7003,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2627",
@@ -6610,7 +7022,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "250",
@@ -6627,7 +7041,9 @@
         "represented_prior_minutes": 6475.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2065",
@@ -6644,7 +7060,9 @@
         "represented_prior_minutes": 6474.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2351",
@@ -6661,7 +7079,9 @@
         "represented_prior_minutes": 6474.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2427",
@@ -6678,7 +7098,9 @@
         "represented_prior_minutes": 6474.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "91",
@@ -6695,7 +7117,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2084",
@@ -6712,7 +7136,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "232",
@@ -6729,7 +7155,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "339",
@@ -6746,7 +7174,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2261",
@@ -6763,7 +7193,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "294",
@@ -6780,7 +7212,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "55",
@@ -6797,7 +7231,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "235",
@@ -6814,7 +7250,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "227",
@@ -6831,7 +7269,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2433",
@@ -6848,7 +7288,9 @@
         "represented_prior_minutes": 6450.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "195",
@@ -6865,7 +7307,9 @@
         "represented_prior_minutes": 6449.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2016",
@@ -6882,7 +7326,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2026",
@@ -6899,7 +7345,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2130",
@@ -6916,7 +7364,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2230",
@@ -6933,7 +7383,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2247",
@@ -6950,7 +7402,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "85",
@@ -6967,7 +7421,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "322",
@@ -6984,7 +7440,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "288",
@@ -7001,7 +7459,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "116",
@@ -7018,7 +7478,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2454",
@@ -7035,7 +7497,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2466",
@@ -7052,7 +7516,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2571",
@@ -7069,7 +7535,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "253",
@@ -7086,7 +7554,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "218",
@@ -7103,7 +7573,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2747",
@@ -7120,7 +7592,9 @@
         "represented_prior_minutes": 6425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "161",
@@ -7137,7 +7611,9 @@
         "represented_prior_minutes": 6424.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2754",
@@ -7154,7 +7630,9 @@
         "represented_prior_minutes": 6424.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2569",
@@ -7171,7 +7649,9 @@
         "represented_prior_minutes": 6401.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2729",
@@ -7188,7 +7668,9 @@
         "represented_prior_minutes": 6401.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2005",
@@ -7205,7 +7687,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2011",
@@ -7222,7 +7706,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "44",
@@ -7239,7 +7725,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "236",
@@ -7256,7 +7744,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2172",
@@ -7273,7 +7763,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2174",
@@ -7290,7 +7782,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2837",
@@ -7307,7 +7801,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2306",
@@ -7324,7 +7820,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2330",
@@ -7341,7 +7839,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2031",
@@ -7358,7 +7858,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "311",
@@ -7375,7 +7877,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "270",
@@ -7392,7 +7896,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2450",
@@ -7409,7 +7915,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2464",
@@ -7426,7 +7934,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2473",
@@ -7443,7 +7953,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2870",
@@ -7460,7 +7972,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "399",
@@ -7477,7 +7991,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "27",
@@ -7494,7 +8010,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2678",
@@ -7511,7 +8029,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "265",
@@ -7528,7 +8048,9 @@
         "represented_prior_minutes": 6400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "305",
@@ -7545,7 +8067,9 @@
         "represented_prior_minutes": 6399.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "278",
@@ -7562,7 +8086,9 @@
         "represented_prior_minutes": 6399.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2382",
@@ -7579,7 +8105,9 @@
         "represented_prior_minutes": 6399.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "213",
@@ -7596,7 +8124,9 @@
         "represented_prior_minutes": 6399.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2066",
@@ -7613,7 +8143,9 @@
         "represented_prior_minutes": 6325.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "48",
@@ -7630,7 +8162,9 @@
         "represented_prior_minutes": 6325.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2681",
@@ -7647,7 +8181,9 @@
         "represented_prior_minutes": 6325.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "103",
@@ -7664,7 +8200,9 @@
         "represented_prior_minutes": 6300.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2803",
@@ -7681,7 +8219,9 @@
         "represented_prior_minutes": 6275.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2638",
@@ -7698,7 +8238,9 @@
         "represented_prior_minutes": 6275.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2199",
@@ -7715,7 +8257,9 @@
         "represented_prior_minutes": 6251.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2050",
@@ -7732,7 +8276,9 @@
         "represented_prior_minutes": 6250.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2169",
@@ -7749,7 +8295,9 @@
         "represented_prior_minutes": 6250.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2717",
@@ -7766,7 +8314,9 @@
         "represented_prior_minutes": 6250.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2099",
@@ -7783,7 +8333,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2154",
@@ -7800,7 +8352,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "50",
@@ -7817,7 +8371,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "140",
@@ -7834,7 +8390,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2368",
@@ -7851,7 +8409,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "111",
@@ -7868,7 +8428,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2545",
@@ -7885,7 +8447,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2710",
@@ -7902,7 +8466,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2711",
@@ -7919,7 +8485,9 @@
         "represented_prior_minutes": 6225.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "16",
@@ -7936,7 +8504,9 @@
         "represented_prior_minutes": 6224.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2046",
@@ -7953,7 +8523,9 @@
         "represented_prior_minutes": 6200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2117",
@@ -7970,7 +8542,9 @@
         "represented_prior_minutes": 6200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2441",
@@ -7987,7 +8561,9 @@
         "represented_prior_minutes": 6200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2635",
@@ -8004,7 +8580,9 @@
         "represented_prior_minutes": 6200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2916",
@@ -8021,7 +8599,9 @@
         "represented_prior_minutes": 6198.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "160",
@@ -8038,7 +8618,9 @@
         "represented_prior_minutes": 6151.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2640",
@@ -8055,7 +8637,9 @@
         "represented_prior_minutes": 6100.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2453",
@@ -8072,7 +8656,9 @@
         "represented_prior_minutes": 6050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "219",
@@ -8089,7 +8675,9 @@
         "represented_prior_minutes": 6050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "88",
@@ -8106,7 +8694,9 @@
         "represented_prior_minutes": 6050.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2115",
@@ -8123,7 +8713,9 @@
         "represented_prior_minutes": 6025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "315",
@@ -8140,7 +8732,9 @@
         "represented_prior_minutes": 6025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2448",
@@ -8157,7 +8751,9 @@
         "represented_prior_minutes": 6025.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2459",
@@ -8174,7 +8770,9 @@
         "represented_prior_minutes": 6000.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2636",
@@ -8191,7 +8789,9 @@
         "represented_prior_minutes": 6000.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "108",
@@ -8208,7 +8808,9 @@
         "represented_prior_minutes": 5875.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "163",
@@ -8225,7 +8827,9 @@
         "represented_prior_minutes": 5850.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2612",
@@ -8242,7 +8846,9 @@
         "represented_prior_minutes": 5850.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2520",
@@ -8259,7 +8865,9 @@
         "represented_prior_minutes": 5800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "171",
@@ -8276,7 +8884,9 @@
         "represented_prior_minutes": 5650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "172",
@@ -8293,7 +8903,9 @@
         "represented_prior_minutes": 5650.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "225",
@@ -8310,7 +8922,9 @@
         "represented_prior_minutes": 5500.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "159",
@@ -8327,7 +8941,9 @@
         "represented_prior_minutes": 5425.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "124946",
@@ -8344,7 +8960,9 @@
         "represented_prior_minutes": 1000.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2648",
@@ -8361,7 +8979,9 @@
         "represented_prior_minutes": 800.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "3243",
@@ -8378,7 +8998,9 @@
         "represented_prior_minutes": 600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "3107",
@@ -8395,7 +9017,9 @@
         "represented_prior_minutes": 600.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2215",
@@ -8412,7 +9036,9 @@
         "represented_prior_minutes": 400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "353",
@@ -8429,7 +9055,9 @@
         "represented_prior_minutes": 400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "124942",
@@ -8446,7 +9074,9 @@
         "represented_prior_minutes": 400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "178",
@@ -8463,7 +9093,9 @@
         "represented_prior_minutes": 400.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "111902",
@@ -8480,7 +9112,9 @@
         "represented_prior_minutes": 397.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2855",
@@ -8497,7 +9131,9 @@
         "represented_prior_minutes": 396.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "108820",
@@ -8514,7 +9150,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "486",
@@ -8531,7 +9169,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "6183",
@@ -8548,7 +9188,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2374",
@@ -8565,7 +9207,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2381",
@@ -8582,7 +9226,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2384",
@@ -8599,7 +9245,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2880",
@@ -8616,7 +9264,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "289",
@@ -8633,7 +9283,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2496",
@@ -8650,7 +9302,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "128531",
@@ -8667,7 +9321,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2595",
@@ -8684,7 +9340,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2660",
@@ -8701,7 +9359,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2684",
@@ -8718,7 +9378,9 @@
         "represented_prior_minutes": 200.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "594",
@@ -8735,7 +9397,9 @@
         "represented_prior_minutes": 188.0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": 1.0,
-        "represented_prior_minutes_share": 1.0
+        "represented_prior_minutes_share": 1.0,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2800",
@@ -8752,7 +9416,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "508",
@@ -8769,7 +9435,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "366",
@@ -8786,7 +9454,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2391",
@@ -8803,7 +9473,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "3109",
@@ -8820,7 +9492,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "128344",
@@ -8837,7 +9511,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "2697",
@@ -8854,7 +9530,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "111242",
@@ -8871,7 +9549,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "122196",
@@ -8888,7 +9568,9 @@
         "represented_prior_minutes": 0,
         "unrepresented_prior_minutes": 0.0,
         "returning_minutes_share": null,
-        "represented_prior_minutes_share": null
+        "represented_prior_minutes_share": null,
+        "review_priority": "monitor",
+        "review_reason": "Roster observation has no linked prior workload"
       },
       {
         "team_id": "12",
@@ -8905,7 +9587,9 @@
         "represented_prior_minutes": 2839.0,
         "unrepresented_prior_minutes": 4986.0,
         "returning_minutes_share": 0.3628,
-        "represented_prior_minutes_share": 0.3628
+        "represented_prior_minutes_share": 0.3628,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "130",
@@ -8922,7 +9606,9 @@
         "represented_prior_minutes": 3264.0,
         "unrepresented_prior_minutes": 4761.0,
         "returning_minutes_share": 0.4067,
-        "represented_prior_minutes_share": 0.4067
+        "represented_prior_minutes_share": 0.4067,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "2509",
@@ -8939,7 +9625,9 @@
         "represented_prior_minutes": 3333.0,
         "unrepresented_prior_minutes": 4492.0,
         "returning_minutes_share": 0.4259,
-        "represented_prior_minutes_share": 0.4259
+        "represented_prior_minutes_share": 0.4259,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "248",
@@ -8956,7 +9644,9 @@
         "represented_prior_minutes": 3025.0,
         "unrepresented_prior_minutes": 4400.0,
         "returning_minutes_share": 0.4074,
-        "represented_prior_minutes_share": 0.4074
+        "represented_prior_minutes_share": 0.4074,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "8",
@@ -8973,7 +9663,9 @@
         "represented_prior_minutes": 3306.0,
         "unrepresented_prior_minutes": 4194.0,
         "returning_minutes_share": 0.4408,
-        "represented_prior_minutes_share": 0.4408
+        "represented_prior_minutes_share": 0.4408,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "150",
@@ -8990,7 +9682,9 @@
         "represented_prior_minutes": 4482.0,
         "unrepresented_prior_minutes": 3118.0,
         "returning_minutes_share": 0.5897,
-        "represented_prior_minutes_share": 0.5897
+        "represented_prior_minutes_share": 0.5897,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "2305",
@@ -9007,7 +9701,9 @@
         "represented_prior_minutes": 4040.0,
         "unrepresented_prior_minutes": 3010.0,
         "returning_minutes_share": 0.573,
-        "represented_prior_minutes_share": 0.573
+        "represented_prior_minutes_share": 0.573,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "356",
@@ -9024,7 +9720,9 @@
         "represented_prior_minutes": 4509.0,
         "unrepresented_prior_minutes": 2991.0,
         "returning_minutes_share": 0.6012,
-        "represented_prior_minutes_share": 0.6012
+        "represented_prior_minutes_share": 0.6012,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "333",
@@ -9041,7 +9739,9 @@
         "represented_prior_minutes": 4369.0,
         "unrepresented_prior_minutes": 2681.0,
         "returning_minutes_share": 0.6197,
-        "represented_prior_minutes_share": 0.6197
+        "represented_prior_minutes_share": 0.6197,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "153",
@@ -9058,7 +9758,9 @@
         "represented_prior_minutes": 4116.0,
         "unrepresented_prior_minutes": 2509.0,
         "returning_minutes_share": 0.6213,
-        "represented_prior_minutes_share": 0.6213
+        "represented_prior_minutes_share": 0.6213,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "41",
@@ -9075,7 +9777,9 @@
         "represented_prior_minutes": 5720.0,
         "unrepresented_prior_minutes": 2330.0,
         "returning_minutes_share": 0.7106,
-        "represented_prior_minutes_share": 0.7106
+        "represented_prior_minutes_share": 0.7106,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "96",
@@ -9092,7 +9796,9 @@
         "represented_prior_minutes": 5981.0,
         "unrepresented_prior_minutes": 1244.0,
         "returning_minutes_share": 0.8278,
-        "represented_prior_minutes_share": 0.8278
+        "represented_prior_minutes_share": 0.8278,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       },
       {
         "team_id": "62",
@@ -9109,9 +9815,11 @@
         "represented_prior_minutes": 5952.0,
         "unrepresented_prior_minutes": 698.0,
         "returning_minutes_share": 0.895,
-        "represented_prior_minutes_share": 0.895
+        "represented_prior_minutes_share": 0.895,
+        "review_priority": "covered",
+        "review_reason": "Reviewed school evidence is present"
       }
     ]
   },
-  "edition": "6a586bd8af3fea91f34d9a65a4b6365c6305209a5cab8821c365a1285bda5de4"
+  "edition": "3daac596ab5c4372de84abbb6b2e77728f220ab7e8eacdee39ffabf31570f70e"
 }

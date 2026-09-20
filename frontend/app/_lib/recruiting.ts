@@ -92,6 +92,8 @@ export type RecruitingReviewQueueRow = {
   unrepresented_prior_minutes: number;
   returning_minutes_share: number | null;
   represented_prior_minutes_share: number | null;
+  review_priority: "covered" | "urgent" | "high" | "identity_check" | "monitor";
+  review_reason: string;
 };
 
 export type RecruitingReviewQueue = {
@@ -249,6 +251,7 @@ export function parseRecruitingRelease(value: unknown, expectedSeason = 2027): R
       const evidenceStatus = row?.evidence_status;
       const returningShare = row?.returning_minutes_share;
       const representedShare = row?.represented_prior_minutes_share;
+      const reviewPriority = row?.review_priority;
       const numericFields = [
         "listed_players", "returning_players", "transfer_players", "new_players", "ambiguous_players",
         "prior_minutes", "returning_minutes", "incoming_prior_minutes", "represented_prior_minutes",
@@ -258,6 +261,8 @@ export function parseRecruitingRelease(value: unknown, expectedSeason = 2027): R
         || typeof row.team !== "string" || !row.team.trim()
         || (evidenceStatus !== "reviewed" && evidenceStatus !== "roster_observation")
         || numericFields.some((field) => !nonnegativeFinite(row[field]))
+        || !["covered", "urgent", "high", "identity_check", "monitor"].includes(String(reviewPriority))
+        || typeof row.review_reason !== "string" || !row.review_reason.trim()
         || !nullableFinite(returningShare) || !nullableFinite(representedShare)
         || (returningShare != null && (returningShare < 0 || returningShare > 1))
         || (representedShare != null && (representedShare < 0 || representedShare > 1))) return null;
@@ -278,6 +283,8 @@ export function parseRecruitingRelease(value: unknown, expectedSeason = 2027): R
         unrepresented_prior_minutes: Number(row.unrepresented_prior_minutes),
         returning_minutes_share: returningShare == null ? null : Number(returningShare),
         represented_prior_minutes_share: representedShare == null ? null : Number(representedShare),
+        review_priority: reviewPriority as RecruitingReviewQueueRow["review_priority"],
+        review_reason: row.review_reason,
       });
     }
     const reviewedRows = normalizedRows.filter((row) => row.evidence_status === "reviewed").length;

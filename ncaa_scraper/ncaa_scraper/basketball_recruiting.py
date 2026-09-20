@@ -117,6 +117,26 @@ def _review_queue(document, roster_release):
         for field, value in (("returning_minutes_share", returning_share), ("represented_prior_minutes_share", represented_share)):
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1):
                 raise ValueError(f"Roster review queue has invalid {field} for {team_id}")
+        # The queue is meant to guide finite review time.  Keep the tier tied
+        # to source-reported prior minutes and roster ambiguity so it remains
+        # auditable; it is not a recruiting grade or a transaction claim.
+        unrepresented = float(values["unrepresented_prior_minutes"])
+        ambiguous = int(values["ambiguous_players"])
+        if team_id in reviewed_programs:
+            review_priority = "covered"
+            review_reason = "Reviewed school evidence is present"
+        elif unrepresented >= 3000:
+            review_priority = "urgent"
+            review_reason = "3,000+ prior minutes lack a reviewed school record"
+        elif unrepresented > 0:
+            review_priority = "high"
+            review_reason = "Prior minutes lack a reviewed school record"
+        elif ambiguous > 0:
+            review_priority = "identity_check"
+            review_reason = "Roster identity remains ambiguous"
+        else:
+            review_priority = "monitor"
+            review_reason = "Roster observation has no linked prior workload"
         rows.append({
             "team_id": team_id,
             "team": team,
@@ -124,6 +144,8 @@ def _review_queue(document, roster_release):
             **values,
             "returning_minutes_share": returning_share,
             "represented_prior_minutes_share": represented_share,
+            "review_priority": review_priority,
+            "review_reason": review_reason,
         })
     rows.sort(
         key=lambda row: (
