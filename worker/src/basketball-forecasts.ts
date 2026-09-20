@@ -478,6 +478,18 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const count = await withTimeout(researchDb(c.env).prepare(
     `SELECT count(*) AS total FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id WHERE ${where}`,
   ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+  // D1 can briefly return a healthy but empty forecast slice while a publish
+  // is being replicated. For the default published board, serve the bundled
+  // edition instead of turning that transient state into a blank homepage.
+  // Filtered, historical, and explicitly selected model requests remain
+  // fail-closed because the asset cannot answer those queries faithfully.
+  if (Number(count?.total || 0) === 0) {
+    const fallback = await publishedForecastFallback(c, { season, gameId, status, q, model, roster, page, limit });
+    if (fallback) {
+      if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, fallback.clone()).catch(() => undefined));
+      return fallback;
+    }
+  }
   const rows = await withTimeout(researchDb(c.env).prepare(
     `WITH latest_schedule AS (
         SELECT game_id,source_start,source_time_valid,observed_at,
