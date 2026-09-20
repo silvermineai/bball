@@ -8,7 +8,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 
@@ -357,10 +357,14 @@ function MatchupFactorSummary({
   return (
     <div className="matchup-factors">
       <div className="match-detail">
-        <strong>Why the model tilts</strong>
+        <strong>{sameEdition ? "Why the model tilts" : "Why this matchup is worth studying"}</strong>
         <span className="muted">{sameEdition ? "four-factor edge" : "descriptive context"}</span>
       </div>
       {!sameEdition && <small className="status-warn">These rates come from context edition {modelId || "unavailable"}; they did not generate this forecast and are not counted as same-edition evidence.</small>}
+      <small className="factor-source">
+        {sameEdition ? "Use the largest contrast to choose the first film question." : "Use this retained contrast as a study prompt; it is separate from the forecast edition."} {" "}
+        <Link href="/basketball/learn/#four-factors">Learn how to read Four Factors →</Link>
+      </small>
       {rows.map((row) => (
         <div className="matchup-factor-row" key={row.key}>
           <div className="match-detail">
@@ -375,6 +379,8 @@ function MatchupFactorSummary({
             {homeName} attack {pct(row.values.home_offense)} · {awayName} defense {pct(row.values.away_defense)}
             <br />
             {awayName} attack {pct(row.values.away_offense)} · {homeName} defense {pct(row.values.home_defense)}
+            <br />
+            <strong>Study:</strong> {matchupFactorStudyQuestion(row.key)}
           </small>
         </div>
       ))}

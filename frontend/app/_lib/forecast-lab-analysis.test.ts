@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -134,6 +134,13 @@ describe("forecast lab matchup signals", () => {
   it("returns null when no factor evidence is available", () => {
     expect(strongestMatchupSignal(null)).toBeNull();
     expect(strongestMatchupSignal({ season: 2026, factors: {}, edges: {} })).toBeNull();
+  });
+
+  it("turns each factor into an actionable film question", () => {
+    expect(matchupFactorStudyQuestion("efg")).toContain("efficient looks");
+    expect(matchupFactorStudyQuestion("tov")).toContain("live-ball or dead-ball");
+    expect(matchupFactorStudyQuestion("orb")).toContain("second chances");
+    expect(matchupFactorStudyQuestion("ftr")).toContain("without fouling");
   });
 
   it("builds a compact exact-game-ID lookup", () => {

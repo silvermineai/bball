@@ -7,6 +7,22 @@ const FACTORS: ReadonlyArray<{ key: BBFactorKey; label: string }> = [
   { key: "ftr", label: "Free-throw pressure" },
 ];
 
+/**
+ * Turn a Four Factor contrast into a film question. These prompts are
+ * deliberately descriptive: they teach the reader what to inspect without
+ * treating a historical rate, or a stale context edition, as a forecast input.
+ */
+const FACTOR_STUDY_QUESTIONS: Record<BBFactorKey, string> = {
+  efg: "Which actions create efficient looks, and which coverage takes them away?",
+  tov: "Which ball handlers face pressure, and are the losses live-ball or dead-ball?",
+  orb: "Who earns second chances without giving up transition at the other end?",
+  ftr: "Which actions draw shooting fouls, and which defenders can contain without fouling?",
+};
+
+export function matchupFactorStudyQuestion(factor: BBFactorKey): string {
+  return FACTOR_STUDY_QUESTIONS[factor];
+}
+
 export type ForecastMatchupSignal = {
   factor: BBFactorKey;
   label: string;
