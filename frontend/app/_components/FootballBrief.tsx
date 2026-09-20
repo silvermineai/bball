@@ -4,6 +4,7 @@ import { getFootballBriefEvidence } from "../_lib/football-brief-data";
 import { date, fmt, kick, signed } from "../_lib/format";
 import FootballMatchupEvidence from "./FootballMatchupEvidence";
 import BriefNotebook from "../basketball/briefs/BriefNotebook";
+import { footballModelFactors, type FootballModelFactor } from "../_lib/football-model-factors";
 const tasks = [
   "Confirm the quarterback, offensive line and current availability for both programs.",
   "Review passing efficiency alongside protection and coverage on film.",
@@ -21,6 +22,7 @@ export default function FootballBrief({
   const favorite = p.home_margin > 0 ? g.home_name : g.away_name;
   const uncertain = p.margin_low <= 0 && p.margin_high >= 0;
   const evidence = getFootballBriefEvidence(g);
+  const factors = footballModelFactors(d.model, g);
   const record = `/research/game/?sport=football&id=${g.id}`;
   return (
     <article className="matchup-brief football-brief">
@@ -100,6 +102,29 @@ export default function FootballBrief({
           explicit model features.
         </p>
       </div>
+      <section className="section football-model-factors" aria-labelledby="football-model-factors-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Model explainability / registered coefficients</div>
+            <h2 id="football-model-factors-title">What builds the point estimate?</h2>
+          </div>
+          <span className="note">{d.model.id}</span>
+        </div>
+        {factors ? (
+          <>
+            <p className="note">These additive components reconstruct the published raw margin and total before probability calibration. They are a transparent view of the fitted model, not extra evidence or a second prediction.</p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead><tr><th>Estimate</th><th className="numeric">Intercept</th><th className="numeric">Venue</th><th className="numeric">Home team</th><th className="numeric">Away team</th><th className="numeric">Reconstructed</th></tr></thead>
+                <tbody>
+                  <ModelFactorRow label="Home margin" factor={factors.margin} />
+                  <ModelFactorRow label="Game total" factor={factors.total} />
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : <p className="empty">Coefficient-level explanation is unavailable for this forecast edition.</p>}
+      </section>
       <FootballMatchupEvidence data={evidence} />
       <section
         className="section football-market"
@@ -171,4 +196,15 @@ export default function FootballBrief({
       </section>
     </article>
   );
+}
+
+function ModelFactorRow({ label, factor }: { label: string; factor: FootballModelFactor }) {
+  return <tr>
+    <th scope="row">{label}</th>
+    <td className="numeric">{signed(factor.intercept)}</td>
+    <td className="numeric">{signed(factor.venue)}</td>
+    <td className="numeric">{signed(factor.home_team)}</td>
+    <td className="numeric">{signed(factor.away_team)}</td>
+    <td className="numeric"><strong>{signed(factor.estimate)}</strong></td>
+  </tr>;
 }

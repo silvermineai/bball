@@ -97,6 +97,9 @@ export type Overview = {
     pregame_market_observations: number;
   };
   model: {
+    teams: string[];
+    margin_coef?: number[];
+    total_coef?: number[];
     id: string;
     version: string;
     cutoff: string;
