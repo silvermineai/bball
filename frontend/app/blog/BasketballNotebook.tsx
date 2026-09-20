@@ -1,9 +1,9 @@
 import Link from "next/link";
-import type { BBGame, BBRoster, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
+import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
-import { summarizeNotebookRoster } from "./notebook-roster";
+import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -40,6 +40,8 @@ export default function BasketballNotebook({
   awayPlayers = [],
   homeRosterPlayers = [],
   awayRosterPlayers = [],
+  rosterSeason,
+  rosterSource,
 }: {
   game: BBGame;
   generatedAt: string;
@@ -51,6 +53,8 @@ export default function BasketballNotebook({
   awayPlayers?: ScoutPlayer[];
   homeRosterPlayers?: BBRoster[];
   awayRosterPlayers?: BBRoster[];
+  rosterSeason: number;
+  rosterSource: BBRosters["source"];
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -86,6 +90,11 @@ export default function BasketballNotebook({
     { teamId: game.away_id, teamName: game.away_name, summary: summarizeNotebookRoster(awayRosterPlayers) },
     { teamId: game.home_id, teamName: game.home_name, summary: summarizeNotebookRoster(homeRosterPlayers) },
   ];
+  const rosterRoleContexts = [
+    { teamId: game.away_id, teamName: game.away_name, context: notebookRosterRoleContext(awayRosterPlayers, game.away_id, rosterSeason, rosterSource) },
+    { teamId: game.home_id, teamName: game.home_name, context: notebookRosterRoleContext(homeRosterPlayers, game.home_id, rosterSeason, rosterSource) },
+  ];
+  const rosterRolesReady = rosterRoleContexts.every((row) => row.context != null);
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -258,6 +267,24 @@ export default function BasketballNotebook({
           </table>
         </div>
         <p className="note" style={{ marginBottom: 20 }}>Same-program, different-program and new-to-dataset are exact retained roster observations. Recorded prior minutes sum only valid attached stat profiles; they do not establish current availability, eligibility or role.</p>
+        <section className="paper-panel" aria-label="Roster role workload comparison" style={{ marginBottom: 20 }}>
+          <div className="section-heading" style={{ marginBottom: 8 }}>
+            <div><div className="eyebrow">Role workload / retained roster edition</div><h3>Where is prior experience attached?</h3></div>
+            <Link href="/basketball/roster-lab/">Compare every program →</Link>
+          </div>
+          <p className="note">Source positions group each current listing as guard, forward, center or unreported. Minutes belong to retained prior-season stat profiles and stay separated by same-program, different-program and other observation status. They are context for film review, not a projected rotation.</p>
+          {rosterRolesReady ? <>
+            <div className="table-scroll" style={{ marginTop: 14 }}><table className="data-table">
+              <thead><tr><th>Program</th><th>Source role</th><th className="numeric">Listed</th><th className="numeric">Prior profiles</th><th className="numeric">Prior minutes</th><th className="numeric">Same-program minutes</th><th className="numeric">Different-program minutes</th><th className="numeric">Other-status minutes</th></tr></thead>
+              <tbody>{rosterRoleContexts.flatMap(({ teamId, teamName, context }) => context!.roles.map((role) => <tr key={`${teamId}-${role.role}`}>
+                <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(teamId)}/`}>{teamName}</Link></th>
+                <td>{role.role === "unreported" ? "Unreported" : role.role[0].toUpperCase() + role.role.slice(1)}</td>
+                <td className="numeric">{role.listed}</td><td className="numeric">{role.priorProfiles}</td><td className="numeric">{Math.round(role.priorMinutes).toLocaleString()}</td><td className="numeric">{Math.round(role.sameProgramMinutes).toLocaleString()}</td><td className="numeric">{Math.round(role.differentProgramMinutes).toLocaleString()}</td><td className="numeric">{Math.round(role.otherPriorMinutes).toLocaleString()}</td>
+              </tr>))}</tbody>
+            </table></div>
+            <p className="note" style={{ marginTop: 10 }}>Roster season {rosterSeason} · receipt <span className="source-hash">{rosterRoleContexts[0].context!.receipt.sha256}</span>{rosterRoleContexts[0].context!.receipt.fetched_at ? ` · captured ${date(rosterRoleContexts[0].context!.receipt.fetched_at)}` : ""}.</p>
+          </> : <p className="empty">The two exact-team roster groups or their release receipt did not pass validation, so the role comparison is withheld.</p>}
+        </section>
         <div className="two-col">
           {([
             { teamName: game.away_name, players: awayRosterPlayers },

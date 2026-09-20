@@ -125,6 +125,8 @@ export default async function Page({
         awayPlayers={loadPersonnel(basketballGame.away_id)}
         homeRosterPlayers={rosterPlayersFor(basketballGame.home_id)}
         awayRosterPlayers={rosterPlayersFor(basketballGame.away_id)}
+        rosterSeason={rosters.season}
+        rosterSource={rosters.source}
       />
     );
   }
