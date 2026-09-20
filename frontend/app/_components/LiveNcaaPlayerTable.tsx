@@ -6,7 +6,7 @@ import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
-export type LiveNCAAMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fpg" | "topg" | "ts" | "efg" | "three_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "poss_share" | "rapm_net" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
@@ -68,23 +68,42 @@ export function validatePlayerExportPage(
 const metrics: Array<{ key: Metric; label: string; description: string; volume: number }> = [
   { key: "ppg", label: "Scoring", description: "points per game", volume: 0 },
   { key: "rpg", label: "Rebounding", description: "rebounds per game", volume: 0 },
+  { key: "orpg", label: "Offensive rebounding", description: "offensive rebounds per game", volume: 0 },
+  { key: "drpg", label: "Defensive rebounding", description: "defensive rebounds per game", volume: 0 },
   { key: "apg", label: "Playmaking", description: "assists per game", volume: 0 },
   { key: "spg", label: "Steals", description: "steals per game", volume: 0 },
   { key: "bpg", label: "Blocks", description: "blocks per game", volume: 0 },
   { key: "fpg", label: "Fouls", description: "fouls per game", volume: 0 },
+  { key: "mpg", label: "Workload", description: "minutes per game", volume: 0 },
   { key: "topg", label: "Ball security", description: "fewer turnovers per game", volume: 0 },
   { key: "ts", label: "True shooting", description: "scoring efficiency", volume: 100 },
   { key: "efg", label: "Effective FG", description: "shot efficiency", volume: 100 },
+  { key: "half_ts", label: "Half-court TS", description: "half-court true shooting", volume: 100 },
   { key: "three_pct", label: "3-point accuracy", description: "3P%", volume: 50 },
+  { key: "two_pct", label: "2-point accuracy", description: "2P%", volume: 50 },
   { key: "ft_pct", label: "Free-throw accuracy", description: "FT%", volume: 50 },
   { key: "per40", label: "Scoring rate", description: "points per 40 minutes", volume: 200 },
   { key: "ast_to", label: "Assist control", description: "assist / turnover ratio", volume: 0 },
+  { key: "ast_rate", label: "Assist rate", description: "assist possession rate", volume: 50 },
+  { key: "points_poss", label: "Points per possession", description: "points per possession", volume: 0 },
   { key: "stocks40", label: "Defensive events", description: "steals + blocks per 40", volume: 200 },
   { key: "tov_rate", label: "Turnover rate", description: "turnovers per possession", volume: 50 },
   { key: "three_rate", label: "3-point shot rate", description: "3PA / FGA", volume: 50 },
   { key: "ft_rate", label: "Free-throw rate", description: "FTA / FGA", volume: 50 },
   { key: "poss_share", label: "Possession share", description: "share of team possessions", volume: 50 },
+  { key: "orb40", label: "Offensive rebounds rate", description: "offensive rebounds per 40", volume: 200 },
+  { key: "drb40", label: "Defensive rebounds rate", description: "defensive rebounds per 40", volume: 200 },
+  { key: "reb40", label: "Rebounds rate", description: "rebounds per 40", volume: 200 },
+  { key: "rim_pct", label: "Rim finishing", description: "rim field-goal percentage", volume: 50 },
+  { key: "mid_pct", label: "Midrange accuracy", description: "midrange field-goal percentage", volume: 50 },
+  { key: "putback_pct", label: "Putback finishing", description: "putback field-goal percentage", volume: 50 },
+  { key: "rim_rate", label: "Rim attempt rate", description: "rim share of attempts", volume: 50 },
+  { key: "transition_share", label: "Transition share", description: "transition possession share", volume: 50 },
+  { key: "unassisted_rate", label: "Unassisted rate", description: "unassisted scoring rate", volume: 50 },
+  { key: "unassisted_share", label: "Unassisted share", description: "unassisted scoring share", volume: 50 },
   { key: "rapm_net", label: "Net RAPM", description: "regularized lineup impact", volume: 0 },
+  { key: "orapm", label: "Offensive RAPM", description: "regularized offensive impact", volume: 0 },
+  { key: "drapm", label: "Defensive RAPM", description: "regularized defensive impact", volume: 0 },
   { key: "impact_index", label: "Impact index", description: "RAPM + scoring rate", volume: 200 },
   { key: "balanced_index", label: "All-around", description: "balanced production index", volume: 0 },
 ];
@@ -92,23 +111,42 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
 const metricGuidance: Record<Metric, string> = {
   ppg: "Points per game rewards scoring volume and uses recorded games as the denominator.",
   rpg: "Rebounds per game keeps offensive and defensive rebounds together.",
+  orpg: "Offensive rebounds per game uses recorded offensive rebounds divided by source games.",
+  drpg: "Defensive rebounds per game uses recorded defensive rebounds divided by source games.",
   apg: "Assists per game is a recorded playmaking rate; it does not estimate potential assists.",
   spg: "Steals per game is a box-score defensive event rate.",
   bpg: "Blocks per game is a box-score rim-protection event rate.",
   fpg: "Fouls per game is a recorded personal-foul rate; missing foul totals remain unavailable.",
+  mpg: "Minutes per game uses the recorded minute total and source game count.",
   topg: "Lower turnovers per game appear first; turnover rate is available when possession data is recorded.",
   ts: "True shooting uses points divided by twice (FGA + 0.475 × FTA); rows without attempts stay unavailable.",
   efg: "Effective field-goal percentage credits a made three as 1.5 field goals: (FGM + 0.5 × 3PM) / FGA.",
+  half_ts: "Half-court true shooting is a source-provided shot-context efficiency rate.",
   three_pct: "Three-point accuracy is 3PM / 3PA and keeps players without attempts out of the qualified ranking.",
+  two_pct: "Two-point accuracy is made two-point shots divided by two-point attempts.",
   ft_pct: "Free-throw accuracy is FTM / FTA and keeps players without attempts out of the qualified ranking.",
   per40: "Points per 40 normalizes scoring by recorded minutes, which helps compare different workloads.",
   ast_to: "Assist control is assists divided by turnovers; players with no recorded turnovers remain unavailable.",
+  ast_rate: "Assist rate is the source possession-based playmaking rate.",
+  points_poss: "Points per possession uses recorded points and offensive possessions.",
   stocks40: "Defensive events per 40 combines steals and blocks, normalized by recorded minutes.",
   tov_rate: "Turnover rate is recorded turnovers divided by recorded offensive possessions.",
   three_rate: "Three-point shot rate is 3PA / FGA, a shot-selection measure rather than accuracy.",
   ft_rate: "Free-throw rate is FTA / FGA, a foul-pressure and shot-profile measure.",
   poss_share: "Possession share is a player’s recorded offensive possessions divided by team possessions.",
+  orb40: "Offensive rebound rate normalizes recorded offensive rebounds by 40 minutes.",
+  drb40: "Defensive rebound rate normalizes recorded defensive rebounds by 40 minutes.",
+  reb40: "Rebound rate normalizes recorded total rebounds by 40 minutes.",
+  rim_pct: "Rim finishing is the source-attributed field-goal percentage at the rim.",
+  mid_pct: "Midrange accuracy is the source-attributed field-goal percentage in the midrange.",
+  putback_pct: "Putback finishing is the source-attributed field-goal percentage on putbacks.",
+  rim_rate: "Rim attempt rate is the source-attributed share of attempts at the rim.",
+  transition_share: "Transition share is the source-attributed share of transition possessions.",
+  unassisted_rate: "Unassisted rate is the source-attributed rate of unassisted scoring.",
+  unassisted_share: "Unassisted share is the source-attributed share of scoring without an assist.",
   rapm_net: "Net RAPM is the exact-ID lineup impact estimate; it requires qualified offensive and defensive possession samples.",
+  orapm: "Offensive RAPM is the exact-ID regularized offensive lineup impact estimate.",
+  drapm: "Defensive RAPM is the exact-ID regularized defensive lineup impact estimate.",
   impact_index: "Impact index averages standardized Net RAPM and scoring rate when both qualified sources are present.",
   balanced_index: "The all-around index averages standardized scoring, rebounding, playmaking, defense, shooting and per-40 components that are observed.",
 };
@@ -210,7 +248,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   }, [metric, query, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
-  const percentageMetric = ["ts", "efg", "three_pct", "ft_pct", "tov_rate", "three_rate", "ft_rate", "poss_share"].includes(metric);
+  const percentageMetric = ["ts", "efg", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
   const displayMetric = (row: PlayerRow) => {
     if (metric === "balanced_index") return fmt(row.value, 2);
     const value = row.value;
