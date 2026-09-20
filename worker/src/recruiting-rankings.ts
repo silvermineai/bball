@@ -250,6 +250,52 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         GROUP BY CAST(r.committed_team_id AS TEXT), COALESCE(NULLIF(upper(r.position),''),'Unknown')
         ORDER BY total DESC, position ASC`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const recordedSchools = await withTimeout(db.prepare(
+      `WITH school_rows AS (
+        SELECT DISTINCT c.edition,r.athlete_id,CAST(school.value AS TEXT) AS school_id,
+               r.committed_team_id,COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position,
+               ${currentRank} AS rank
+          FROM bb_espn_recruiting r
+          JOIN bb_espn_recruiting_current c ON c.season=r.season
+          JOIN json_each(CASE WHEN json_valid(r.school_ids_json) THEN r.school_ids_json ELSE '[]' END) school
+         WHERE ${filters}
+           AND TRIM(CAST(school.value AS TEXT)) <> ''
+           AND CAST(school.value AS TEXT) NOT GLOB '*[^0-9]*'
+      )
+      SELECT edition,school_id,count(*) AS prospect_total,
+             sum(CASE WHEN NULLIF(TRIM(CAST(committed_team_id AS TEXT)),'') IS NULL THEN 1 ELSE 0 END) AS uncommitted_total,
+             sum(CASE WHEN TRIM(CAST(committed_team_id AS TEXT))=school_id THEN 1 ELSE 0 END) AS committed_here_total,
+             sum(CASE WHEN rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
+             sum(CASE WHEN rank IS NOT NULL AND rank<=100 THEN 1 ELSE 0 END) AS top100_total,
+             min(rank) AS best_rank,avg(rank) AS average_rank
+        FROM school_rows
+       GROUP BY edition,school_id
+       ORDER BY prospect_total DESC,top100_total DESC,best_rank ASC,school_id ASC
+       LIMIT 15`,
+    ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const recordedSchoolPositions = await withTimeout(db.prepare(
+      `WITH school_rows AS (
+        SELECT DISTINCT c.edition,r.athlete_id,CAST(school.value AS TEXT) AS school_id,
+               COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position
+          FROM bb_espn_recruiting r
+          JOIN bb_espn_recruiting_current c ON c.season=r.season
+          JOIN json_each(CASE WHEN json_valid(r.school_ids_json) THEN r.school_ids_json ELSE '[]' END) school
+         WHERE ${filters}
+           AND TRIM(CAST(school.value AS TEXT)) <> ''
+           AND CAST(school.value AS TEXT) NOT GLOB '*[^0-9]*'
+      )
+      SELECT edition,school_id,position,count(*) AS total
+        FROM school_rows
+       GROUP BY edition,school_id,position
+       ORDER BY school_id,total DESC,position ASC`,
+    ).bind(...binds).all(), DB_TIMEOUT_MS);
+    const recordedSchoolPositionsById = new Map<string, Array<{ position: string; total: number }>>();
+    for (const row of recordedSchoolPositions.results) {
+      const key = `${String(row.edition || "")}:${String(row.school_id || "")}`;
+      const list = recordedSchoolPositionsById.get(key) || [];
+      list.push({ position: String(row.position || "Unknown"), total: Number(row.total || 0) });
+      recordedSchoolPositionsById.set(key, list);
+    }
     const positionsByTeam = new Map<string, Array<{ position: string; total: number }>>();
     for (const row of destinationPositions.results) {
       const teamId = row.team_id == null ? "" : String(row.team_id);
@@ -335,6 +381,18 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         average_rank: row.average_rank == null ? null : Number(row.average_rank),
         position_breakdown: row.team_id == null ? [] : positionsByTeam.get(String(row.team_id)) || [],
       })),
+      recorded_school_programs: recordedSchools.results.map((row) => ({
+        edition: String(row.edition || ""),
+        school_id: String(row.school_id || ""),
+        prospect_total: Number(row.prospect_total || 0),
+        uncommitted_total: Number(row.uncommitted_total || 0),
+        committed_here_total: Number(row.committed_here_total || 0),
+        ranked_total: Number(row.ranked_total || 0),
+        top100_total: Number(row.top100_total || 0),
+        best_rank: row.best_rank == null ? null : Number(row.best_rank),
+        average_rank: row.average_rank == null ? null : Number(row.average_rank),
+        position_breakdown: recordedSchoolPositionsById.get(`${String(row.edition || "")}:${String(row.school_id || "")}`) || [],
+      })),
       rank_movement: {
         total: Number(movement?.total || 0),
         new_to_release: Number(movement?.new_to_release || 0),
@@ -376,6 +434,6 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], commitment_destinations: [], rows: [], source: "unavailable", unavailable_reason: "The ESPN recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], commitment_destinations: [], recorded_school_programs: [], rows: [], source: "unavailable", unavailable_reason: "The recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
   }
 });

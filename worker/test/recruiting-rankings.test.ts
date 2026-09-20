@@ -52,6 +52,45 @@ describe("ESPN recruiting rankings", () => {
     expect(destinationSql).toContain("ORDER BY source_rank_points DESC");
   });
 
+  it("aggregates exact school-list IDs inside the current edition", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("count(*)")
+            ? { total: 1, committed_total: 0, ranked_total: 1, grade_total: 1 }
+            : { edition: "edition-1", captured_at: "2026-09-19T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: sql.includes("AS prospect_total")
+            ? [{ edition: "edition-1", school_id: "150", prospect_total: 8, uncommitted_total: 5, committed_here_total: 2, ranked_total: 7, top100_total: 4, best_rank: 8, average_rank: 73.4 }]
+            : sql.includes("SELECT edition,school_id,position")
+              ? [{ edition: "edition-1", school_id: "150", position: "PG", total: 8 }]
+              : [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { recorded_school_programs: Array<Record<string, unknown>> };
+    expect(response.status).toBe(200);
+    expect(body.recorded_school_programs).toEqual([{
+      edition: "edition-1",
+      school_id: "150",
+      prospect_total: 8,
+      uncommitted_total: 5,
+      committed_here_total: 2,
+      ranked_total: 7,
+      top100_total: 4,
+      best_rank: 8,
+      average_rank: 73.4,
+      position_breakdown: [{ position: "PG", total: 8 }],
+    }]);
+    const aggregate = sqlCalls.find((sql) => sql.includes("AS prospect_total"));
+    expect(aggregate).toContain("SELECT DISTINCT c.edition,r.athlete_id");
+    expect(aggregate).toContain("r.edition=c.edition");
+    expect(aggregate).toContain("NULLIF(TRIM(CAST(committed_team_id AS TEXT)),'') IS NULL");
+    expect(aggregate).toContain("TRIM(CAST(committed_team_id AS TEXT))=school_id");
+  });
+
   it("fails closed with a 200 unavailable response when D1 is unavailable", async () => {
     const response = await recruitingRankings.request("/?season=2027", {}, { RESEARCH_DB: { prepare: vi.fn(() => { throw new Error("busy"); }) } });
     expect(response.status).toBe(200);

@@ -13,6 +13,7 @@ import {
   type RecruitingShortlistEntry,
 } from "../../_lib/recruiting-shortlist";
 import { prospectSchools, type ProspectProgram } from "../../_lib/prospect-schools";
+import { recordedSchoolPrograms, type RecordedSchoolProgramRow } from "../../_lib/recorded-school-board";
 
 type Prospect = {
   athlete_id: string;
@@ -57,6 +58,7 @@ export type RecruitingBoardResult = {
   };
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
+  recorded_school_programs?: RecordedSchoolProgramRow[];
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
   rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number; withheld_placeholder_rows?: number };
   edition: string | null;
@@ -163,6 +165,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [shortlistHydrated, setShortlistHydrated] = useState(false);
   const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax });
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
+  const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
   const error = loadError?.request === boardRequest ? loadError.message : "";
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -465,6 +468,27 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               </article>)}
             </div>
             <p className="note" style={{ marginTop: 12 }}>Counts use the recorded committed-team field and the same season, rank, position, search and status filters as the table. Rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official class ranking or confirmation of enrollment or eligibility.</p>
+          </section>}
+          {schoolPrograms.length > 0 && <section className="paper-panel" aria-labelledby="recorded-school-board-title" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Recorded school lists / active cohort</div><h3 id="recorded-school-board-title">See which program IDs recur across the class.</h3></div>
+              <span className="note">Top {schoolPrograms.length} exact IDs</span>
+            </div>
+            <p className="note">Every count comes from the prospect rows in edition <span className="source-hash">{result.edition}</span> under the active filters. A school-list appearance is only a retained field on that row; it does not establish an offer, active interest or contact.</p>
+            <div className="table-scroll"><table className="data-table">
+              <thead><tr><th>Program ID</th><th className="numeric">Listed prospects</th><th className="numeric">Uncommitted</th><th className="numeric">Committed here</th><th className="numeric">Ranked</th><th className="numeric">Top 100</th><th>Rank range</th><th>Position mix</th></tr></thead>
+              <tbody>{schoolPrograms.map((program) => <tr key={program.school_id}>
+                <th scope="row">{program.resolved ? <Link href={`/basketball/programs/${encodeURIComponent(program.school_id)}/`}>{program.name}</Link> : program.name}<small>ID {program.school_id}</small></th>
+                <td className="numeric"><strong>{program.prospect_total}</strong></td>
+                <td className="numeric">{program.uncommitted_total}</td>
+                <td className="numeric">{program.committed_here_total}</td>
+                <td className="numeric">{program.ranked_total}</td>
+                <td className="numeric">{program.top100_total}</td>
+                <td>{program.best_rank == null ? "—" : `Best #${program.best_rank}`}<small>{program.average_rank == null ? "Average unavailable" : `Average #${program.average_rank.toFixed(0)}`}</small></td>
+                <td>{program.position_breakdown.map((item) => `${item.position} ${item.total}`).join(" · ")}</td>
+              </tr>)}</tbody>
+            </table></div>
+            <p className="note" style={{ marginTop: 12 }}>“Committed here” requires the prospect’s exact committed-team ID to equal the recorded school ID. “Uncommitted” means the committed-team field is empty in this edition. Neither count predicts enrollment or eligibility.</p>
           </section>}
           <div className="table-wrap">
             <table className="data-table">
