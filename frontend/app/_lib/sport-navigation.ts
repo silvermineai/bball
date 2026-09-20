@@ -19,10 +19,10 @@ export type SportNavConfig = {
 };
 
 const BASKETBALL_ITEMS: SportNavItem[] = [
-  { label: "Teams", href: "/basketball/ratings/", match: ["/basketball/ratings"] },
-  { label: "Players", href: "/basketball/players/", match: ["/basketball/players", "/basketball/player"] },
+  { label: "Teams", href: "/basketball/ratings/", match: ["/basketball/ratings", "/basketball/teams", "/basketball/team-stats", "/basketball/standings"] },
+  { label: "Players", href: "/basketball/players/", match: ["/basketball/players", "/basketball/player", "/basketball/ncaa", "/basketball/ncaa-rosters"] },
   { label: "Recruiting", href: "/basketball/recruiting/", match: ["/basketball/recruiting"] },
-  { label: "Games", href: "/basketball/matchups/", match: ["/basketball/matchups", "/basketball/briefs", "/basketball/gameplan"] },
+  { label: "Games", href: "/basketball/matchups/", match: ["/basketball/matchups", "/basketball/games", "/basketball/briefs", "/basketball/gameplan"] },
   { label: "Predictions", href: "/basketball/forecast-lab/", match: ["/basketball/forecast-lab", "/research/scorecard"] },
   { label: "Rankings", href: "/basketball/rankings/", match: ["/basketball/rankings", "/basketball/ncaa-rankings"] },
 ];

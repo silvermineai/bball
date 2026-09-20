@@ -11,10 +11,21 @@ describe("sport navigation", () => {
 
   it("matches nested section routes without fuzzy names", () => {
     const games = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Games");
+    const teams = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Teams");
+    const players = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Players");
+    const rankings = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Rankings");
     const footballPredictions = SPORT_NAVIGATION.football.items.find((item) => item.label === "Predictions");
     expect(games).toBeDefined();
+    expect(teams).toBeDefined();
+    expect(players).toBeDefined();
+    expect(rankings).toBeDefined();
     expect(isNavItemActive("/basketball/briefs/abc", games!)).toBe(true);
+    expect(isNavItemActive("/basketball/games", games!)).toBe(true);
     expect(isNavItemActive("/basketball/programs/abc", games!)).toBe(false);
+    expect(isNavItemActive("/basketball/team-stats/", teams!)).toBe(true);
+    expect(isNavItemActive("/basketball/ncaa/", players!)).toBe(true);
+    expect(isNavItemActive("/basketball/ncaa-rankings/", players!)).toBe(false);
+    expect(isNavItemActive("/basketball/ncaa-rankings/", rankings!)).toBe(true);
     expect(isNavItemActive("/football/ratings/", footballPredictions!)).toBe(false);
     expect(isNavItemActive("/football/", footballPredictions!)).toBe(true);
   });
