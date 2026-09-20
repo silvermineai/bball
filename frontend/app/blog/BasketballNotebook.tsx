@@ -9,6 +9,7 @@ import { buildNotebookGameRead } from "./notebook-game-read";
 import { notebookModelValidation } from "./notebook-model-validation";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 import { buildNotebookShotPrep } from "./notebook-shot-prep";
+import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -52,6 +53,7 @@ export default function BasketballNotebook({
   shotSeason,
   modelEvaluation,
   modelTrainingSeasons,
+  model,
 }: {
   game: BBGame;
   generatedAt: string;
@@ -70,9 +72,11 @@ export default function BasketballNotebook({
   shotSeason?: number;
   modelEvaluation?: BBOverview["model"]["evaluation"] | null;
   modelTrainingSeasons?: number[];
+  model?: Pick<BBOverview["model"], "teams" | "efficiency" | "tempo"> | null;
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
+  const scoreExplanation = explainBasketballPrediction(model, game, prediction);
   const forecastIdentity = notebookForecastIdentity(modelId || game.forecast_model_id, generatedAt);
   const lens = basketballEditorialLens(game);
   const factorRows = Object.entries(game.matchup_factors?.factors || {})
@@ -204,6 +208,36 @@ export default function BasketballNotebook({
             : "Primary preseason estimate from the published efficiency model. The range describes held-out model error, not a promise about the final score."}
         </p>
       </section>
+
+      {scoreExplanation && (
+        <section className="section" aria-labelledby="notebook-score-construction">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Model arithmetic / exact edition</div>
+              <h2 id="notebook-score-construction">How the projected score is built.</h2>
+            </div>
+            <Link href="/basketball/model/">Read the model record →</Link>
+          </div>
+          <p className="note">
+            This table reconstructs the stored ridge model from its published coefficient arrays. Each efficiency term is points per 100 possessions; the final score is efficiency × projected pace ÷ 100. It is an explanation of the estimate, not an additional forecast.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Term</th><th className="numeric">{scoreExplanation.away.team}</th><th className="numeric">{scoreExplanation.home.team}</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">League baseline</th><td className="numeric">{fmt(scoreExplanation.away.league, 2)}</td><td className="numeric">{fmt(scoreExplanation.home.league, 2)}</td></tr>
+                <tr><th scope="row">Own offense effect</th><td className="numeric">{scoreExplanation.away.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.ownOffense, 2)}</td><td className="numeric">{scoreExplanation.home.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.ownOffense, 2)}</td></tr>
+                <tr><th scope="row">Opponent defense effect</th><td className="numeric">{scoreExplanation.away.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.opponentDefense, 2)}</td><td className="numeric">{scoreExplanation.home.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.opponentDefense, 2)}</td></tr>
+                <tr><th scope="row">Venue effect</th><td className="numeric">{scoreExplanation.away.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.away.venue, 2)}</td><td className="numeric">{scoreExplanation.home.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.home.venue, 2)}</td></tr>
+                <tr><th scope="row"><strong>Projected efficiency</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.efficiency, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.efficiency, 2)}</strong></td></tr>
+                <tr><th scope="row">Projected pace</th><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td></tr>
+                <tr><th scope="row"><strong>Score from equation</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.projectedScore, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.projectedScore, 2)}</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="note">A neutral-site game has zero venue effect. A missing or edition-mismatched coefficient set suppresses this table rather than presenting stale arithmetic.</p>
+        </section>
+      )}
 
       <section className="section" aria-labelledby="notebook-model-validation">
         <div className="section-heading">

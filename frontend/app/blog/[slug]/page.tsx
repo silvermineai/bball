@@ -135,6 +135,7 @@ export default async function Page({
         shotSeason={basketball.season - 1}
         modelEvaluation={basketball.model.evaluation}
         modelTrainingSeasons={basketball.model.training_seasons}
+        model={basketball.model}
       />
     );
   }
