@@ -531,7 +531,14 @@ def build(conn, season=2026):
     # construct genuinely lagged feature states for its dated holdouts.
     all_games = [dict(r) for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")]
     efficiency_model = build_efficiency_model(conn, all_games, model, upcoming, season)
-    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model, "lower-division-results-" + str(season): lower_division_results(games, season, now)}
+    lower_results = lower_division_results(games, season, now)
+    schedule_receipt = next((source for source in sources if source.get("dataset") == "schedule" and int(source.get("season", -1)) == season), None)
+    if schedule_receipt:
+        lower_results["source"] = {
+            key: schedule_receipt.get(key)
+            for key in ("dataset", "season", "url", "fetched_at", "sha256", "last_modified")
+        }
+    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model, "lower-division-results-" + str(season): lower_results}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
     artifacts[f"personnel-preview-{season}"] = personnel_preview(conn, season)
