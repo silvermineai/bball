@@ -62,6 +62,9 @@ describe("school announcement histories", () => {
     const queueMismatch = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
     queueMismatch.review_queue!.unreviewed_programs += 1;
     expect(parseRecruitingRelease(queueMismatch)).toBeNull();
+    const priorityMismatch = JSON.parse(JSON.stringify(data)) as RecruitingRelease;
+    priorityMismatch.review_queue!.rows[0].review_priority = "made_up" as never;
+    expect(parseRecruitingRelease(priorityMismatch)).toBeNull();
   });
   it("shows a later availability report and preserves the signing", () => {
     const row = recruitingRows(data).find(
