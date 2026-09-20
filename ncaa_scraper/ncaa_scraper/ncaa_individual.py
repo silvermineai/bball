@@ -286,6 +286,23 @@ def export_release(conn: sqlite3.Connection) -> dict:
         item["team_ncaa_id"] = item.get("team_ncaa_id") or team_ids.get((item["division"], team_key(item.get("team_name"))))
         item = {k: _json_number(v) if isinstance(v, (int, float)) and k not in {"player_id", "division", "games", "pts", "reb", "ast", "fgm", "fga", "three_fgm", "three_fga", "ftm", "ppg_rank", "rpg_rank", "apg_rank"} else v for k, v in item.items()}
         players.append(item)
+    teams = []
+    for row in conn.execute(
+        "SELECT team_ncaa_id,division,name,conference,games,wins,losses,ppg FROM ncaa_team_directory ORDER BY division,name,team_ncaa_id"
+    ):
+        team_id, division, name, conference, games, wins, losses, ppg = row
+        if team_id is None or division not in (1, 2, 3) or not name:
+            continue
+        teams.append({
+            "team_ncaa_id": int(team_id),
+            "division": int(division),
+            "name": name,
+            "conference": conference,
+            "games": games,
+            "wins": wins,
+            "losses": losses,
+            "ppg": ppg,
+        })
     coverage = {}
     for division in (1, 2, 3):
         rows = [p for p in players if p["division"] == division]
@@ -315,8 +332,9 @@ def export_release(conn: sqlite3.Connection) -> dict:
             "source": "https://stats.ncaa.org/rankings/national_ranking",
             "method": "Cached final national-ranking snapshots fetched with robots.txt checks; normalized measures and complete retained source rows are a public derivative, not a page mirror.",
         },
-        "coverage": {"players": len(players), "divisions": coverage},
+        "coverage": {"players": len(players), "teams": len(teams), "divisions": coverage},
         "players": players,
+        "teams": teams,
     }
 
 

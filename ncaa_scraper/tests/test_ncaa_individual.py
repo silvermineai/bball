@@ -64,6 +64,8 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["stl"], 0)
         self.assertEqual(release["coverage"]["divisions"]["2"]["fta"], 0)
+        self.assertEqual(release["coverage"]["teams"], 1)
+        self.assertEqual(release["teams"][0]["team_ncaa_id"], 42)
         self.assertEqual(release["players"][0]["name"], "A Player")
         self.assertEqual(release["players"][0]["team_ncaa_id"], 42)
         self.assertEqual(release["generated_at"], "2026-06-12T23:00:00Z")
