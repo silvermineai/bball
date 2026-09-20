@@ -60,6 +60,33 @@ describe("market archive metadata", () => {
     expect(JSON.stringify(body)).not.toContain("CollegeBasketballData.com");
   });
 
+  it("preserves the distinction between ESPN odds payloads and pickcenter quotes", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 0, pregame: 0 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "ESPN Summary",
+        sport: "basketball",
+        season: 2027,
+        summary_count: 71,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        accepted_markets: 0,
+        rejected_records: 0,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: {
+        summary_count: 71,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        market_status: "no_quotes_published",
+      },
+    });
+  });
+
   it("does not label postgame ledger observations as pregame coverage", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },

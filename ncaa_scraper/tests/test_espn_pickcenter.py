@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ncaa_scraper.espn_pickcenter import BASE_URL, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts
+from ncaa_scraper.espn_pickcenter import BASE_URL, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
 from ncaa_scraper.odds_feed import schedules
 
 
@@ -58,6 +58,14 @@ class EspnPickcenterTests(unittest.TestCase):
             {"event_id": "two", "summary": summary()},
             {"event_id": "three", "summary": {}},
         ]), (3, 1))
+
+    def test_capture_diagnostics_separate_odds_payloads_from_complete_quotes(self):
+        with_odds = {"event_id": "one", "summary": {"pickcenter": [], "odds": [{"provider": {"name": "A book"}}]}}
+        self.assertEqual(summary_capture_diagnostics([with_odds, {"event_id": "two", "summary": summary()}]), {
+            "summary_count": 2,
+            "summary_with_pickcenter": 1,
+            "summary_with_odds": 1,
+        })
 
     def test_american_conversion_rejects_sentinels(self):
         self.assertAlmostEqual(american_to_decimal("+120"), 2.2)

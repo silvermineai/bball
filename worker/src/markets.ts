@@ -85,6 +85,7 @@ type ResearchCapture = {
   season?: number;
   summary_count?: number;
   summary_with_pickcenter?: number;
+  summary_with_odds?: number;
   source_rows?: number;
   rows_with_lines?: number;
   accepted_markets?: number;
@@ -118,6 +119,9 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.summary_with_pickcenter === "number" && Number.isInteger(payload.summary_with_pickcenter) && payload.summary_with_pickcenter >= 0) {
       result.summary_with_pickcenter = payload.summary_with_pickcenter;
+    }
+    if (typeof payload.summary_with_odds === "number" && Number.isInteger(payload.summary_with_odds) && payload.summary_with_odds >= 0) {
+      result.summary_with_odds = payload.summary_with_odds;
     }
     if (typeof payload.source_rows === "number" && Number.isInteger(payload.source_rows) && payload.source_rows >= 0) {
       result.source_rows = payload.source_rows;

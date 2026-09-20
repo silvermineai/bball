@@ -220,6 +220,18 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
 
 def summary_capture_counts(summaries: list[dict]) -> tuple[int, int]:
     """Return fetched summary and non-empty pickcenter counts for a receipt."""
+    diagnostics = summary_capture_diagnostics(summaries)
+    return diagnostics["summary_count"], diagnostics["summary_with_pickcenter"]
+
+
+def summary_capture_diagnostics(summaries: list[dict]) -> dict[str, int]:
+    """Count fetched summaries and the two provider quote containers separately.
+
+    ESPN can expose a summary while leaving both ``pickcenter`` and ``odds``
+    empty, especially before a market is published. Keep this diagnostic
+    separate from accepted ledger rows so an empty provider payload is not
+    confused with a validation failure.
+    """
     with_pickcenter = sum(
         1
         for item in summaries
@@ -228,7 +240,19 @@ def summary_capture_counts(summaries: list[dict]) -> tuple[int, int]:
         and isinstance(item["summary"].get("pickcenter"), list)
         and bool(item["summary"].get("pickcenter"))
     )
-    return len(summaries), with_pickcenter
+    with_odds = sum(
+        1
+        for item in summaries
+        if isinstance(item, dict)
+        and isinstance(item.get("summary"), dict)
+        and isinstance(item["summary"].get("odds"), list)
+        and bool(item["summary"].get("odds"))
+    )
+    return {
+        "summary_count": len(summaries),
+        "summary_with_pickcenter": with_pickcenter,
+        "summary_with_odds": with_odds,
+    }
 
 
 def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS, limit: int = 120) -> tuple[list[dict], dict]:
@@ -269,7 +293,7 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
                 summaries.append({"event_id": event_id, "summary": summary, "url": url})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
             continue
-    summary_count, pickcenter_count = summary_capture_counts(summaries)
+    diagnostics = summary_capture_diagnostics(summaries)
     receipt = {
         "provider": PROVIDER,
         "sport": SPORT,
@@ -278,8 +302,7 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],
-        "summary_count": summary_count,
-        "summary_with_pickcenter": pickcenter_count,
+        **diagnostics,
         "timing_basis": "summary_capture",
         "sha256": digest(summaries),
     }
