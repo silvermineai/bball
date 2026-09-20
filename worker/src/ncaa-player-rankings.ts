@@ -13,6 +13,10 @@ const querySchema = z.object({
   minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
   minVolume: z.coerce.number().int().min(0).max(10000).default(0),
   q: z.string().trim().max(120).optional(),
+  // Comparison views may request a small exact-ID cohort. Keep this bounded
+  // and numeric so the endpoint cannot turn a name search into an identity
+  // join or accept arbitrary SQL fragments.
+  playerIds: z.string().trim().regex(/^\d{1,15}(,\d{1,15}){0,2}$/).optional(),
   classYear: z.string().trim().regex(/^[A-Za-z0-9. -]{0,20}$/).optional(),
   position: z.string().trim().regex(/^[A-Za-z0-9 -]{0,20}$/).optional(),
   page: z.coerce.number().int().min(0).max(1000).default(0),
@@ -170,7 +174,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
 
 async function publishedRankingsFallback(
   c: Context<{ Bindings: Bindings }>,
-  args: { season: number; metric: Metric; minGames: number; minMinutes: number; minVolume: number; q?: string; classYear?: string; position?: string; page: number; meta: string },
+  args: { season: number; metric: Metric; minGames: number; minMinutes: number; minVolume: number; q?: string; playerIds?: string[]; classYear?: string; position?: string; page: number; meta: string },
 ): Promise<Response | null> {
   if (!c.env.ASSETS || args.season !== 2026 || (args.meta !== "1" && !publishedSupportedMetrics.has(args.metric))) return null;
   try {
@@ -199,6 +203,7 @@ async function publishedRankingsFallback(
       return response;
     }
     const search = args.q?.toLowerCase();
+    const playerIds = args.playerIds;
     const volume = (player: PublishedIndividualPlayer): number | null | undefined => {
       if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(player.fga);
       if (args.metric === "three_pct") return finite(player.tpa);
@@ -223,6 +228,7 @@ async function publishedRankingsFallback(
         return games >= args.minGames && minutes != null && minutes >= args.minMinutes;
       })
       .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
+      .filter((player) => !playerIds?.length || playerIds.includes(String(player.player_id || "")))
       .filter((player) => !args.classYear || player.class_year === args.classYear)
       .filter((player) => !args.position || player.position === args.position)
       .filter((player) => {
@@ -499,7 +505,8 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 };
 
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta } = c.req.valid("query");
+  const { season, metric, minGames, minMinutes, minVolume, q, playerIds: playerIdsQuery, classYear, position, page, meta } = c.req.valid("query");
+  const playerIds = playerIdsQuery?.split(",").filter(Boolean) || [];
   const cache = edgeCache();
   const cacheKey = new Request(c.req.url, { method: "GET" });
   if (cache) {
@@ -534,7 +541,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
     } catch {
-      const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta });
+      const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
       if (fallback) return fallback;
       return c.json({ error: "The NCAA player rankings catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
@@ -545,6 +552,10 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     clauses.push("(s.player_name LIKE ? OR s.team_name LIKE ? OR s.player_id LIKE ? OR s.team_id LIKE ?)");
     const search = `%${q}%`;
     binds.push(search, search, search, search);
+  }
+  if (playerIds.length) {
+    clauses.push(`s.player_id IN (${playerIds.map(() => "?").join(",")})`);
+    binds.push(...playerIds);
   }
   if (classYear) {
     clauses.push("EXISTS (SELECT 1 FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id AND json_extract(r.profile_json,'$.class')=?)");
@@ -600,7 +611,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;
   } catch {
-    const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, classYear, position, page, meta });
+    const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
     if (fallback) return fallback;
     return c.json({ error: "The NCAA player rankings are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }

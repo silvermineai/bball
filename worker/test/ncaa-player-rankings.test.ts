@@ -42,6 +42,34 @@ describe("NCAA player rankings availability", () => {
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
   });
 
+  it("adds bounded exact player IDs to ranking SQL for comparison cohorts", async () => {
+    const prepare = vi.fn((_query: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => ({ total: 0 })),
+        all: vi.fn(async () => ({ results: [] })),
+      })),
+    }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ppg&playerIds=42,43&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("s.player_id IN (?,?)");
+  });
+
+  it("rejects an unbounded or nonnumeric exact-ID list", async () => {
+    const prepare = vi.fn();
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ppg&playerIds=42,not-an-id",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(400);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("returns a retryable status when the rankings catalog is unavailable", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await ncaaPlayerRankings.request(
