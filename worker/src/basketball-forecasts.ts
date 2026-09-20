@@ -333,6 +333,7 @@ async function publishedForecastFallback(
           matchup_factors_source: checkedFactors.factors ? "published_asset" : null,
           matchup_factors_model_id: checkedFactors.factors ? modelId : null,
           matchup_factors_generated_at: checkedFactors.factors ? createdAt : null,
+          matchup_factors_same_edition: checkedFactors.factors ? true : null,
         };
       });
     const start = args.page * args.limit;
@@ -704,6 +705,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       matchup_factors_source: matchupRead.source,
       matchup_factors_model_id: matchupRead.model_id,
       matchup_factors_generated_at: matchupRead.generated_at,
+      matchup_factors_same_edition: matchupRead.factors && matchupRead.model_id
+        ? matchupRead.model_id === row.model_id
+        : null,
       ...(roster === "1" ? {
         roster_lens: (() => {
           const lens = rosterArtifact.lenses.get(row.game_id);

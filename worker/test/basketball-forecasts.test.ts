@@ -116,6 +116,7 @@ describe("basketball forecast availability", () => {
       matchup_factors_source: "published_asset",
       matchup_factors_model_id: "basketball-efficiency-v2-published",
       matchup_factors_generated_at: "2026-09-17T10:00:00Z",
+      matchup_factors_same_edition: false,
       matchup_factors: { season: 2026, edges: { efg: 0.02 } },
     });
     expect(fetch).toHaveBeenCalledOnce();
@@ -175,6 +176,7 @@ describe("basketball forecast availability", () => {
       matchup_factors_source: "forecast_payload",
       matchup_factors_model_id: "model-embedded",
       matchup_factors_generated_at: "2026-09-20T00:00:00Z",
+      matchup_factors_same_edition: true,
       matchup_factors: factors,
     });
   });
