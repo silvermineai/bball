@@ -4,7 +4,7 @@
   "sport": "basketball",
   "season": 2027,
   "observed_player_season": 2026,
-  "generated_at": "2026-09-20T09:13:00.073858Z",
+  "generated_at": "2026-09-20T21:37:33.467058Z",
   "model_status": "not_published",
   "coverage": {
     "player_season_rows": 41919,
@@ -16,7 +16,14 @@
     "team_stats_fields": 45,
     "roster_rows": 5616,
     "teams": 400,
-    "upcoming_games": 25
+    "upcoming_games": 25,
+    "player_box_rows": 168228,
+    "player_box_players": 9870,
+    "player_box_games": 6029,
+    "player_box_played_rows": 122138,
+    "player_box_dnp_rows": 46088,
+    "player_box_skipped_rows": 2,
+    "player_box_teams": 663
   },
   "players": [
     {
@@ -201481,11 +201488,16 @@
     "schedule": {
       "sha256": "d7186f8e8a5e75b65b349f98d2ca9ade5ab4b492f65c7deeb22cf988b3ef350d",
       "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2027.parquet"
+    },
+    "player_box": {
+      "sha256": "4dd400b63296ba589066c60c2ef5078fb26cef7a3237a8aa615130eeade94210",
+      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_player_boxscores/player_box_2026.parquet"
     }
   },
   "limitations": [
     "This edition is source-native women’s data and does not substitute men’s rows.",
     "A women’s game forecast model is not published until its own training and calibration checks pass.",
-    "The observed player season is 2026; the 2027 roster and schedule are upcoming context."
+    "The observed player season is 2026; the 2027 roster and schedule are upcoming context.",
+    "Game-level player aggregates are published separately from the player-season release; DNP rows are counted as observed source rows and excluded from played-game totals."
   ]
 }

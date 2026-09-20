@@ -19,6 +19,26 @@ sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 from ncaa_scraper.womens_basketball_sources import client
 
 OUT = ROOT / "frontend/public/data/basketball/womens-edition.json"
+BOX_OUT = ROOT / "frontend/public/data/basketball/womens-box-player-stats.json"
+
+BOX_STAT_FIELDS = (
+    ("minutes", "minutes"),
+    ("points", "points"),
+    ("rebounds", "rebounds"),
+    ("offensive_rebounds", "offensive_rebounds"),
+    ("defensive_rebounds", "defensive_rebounds"),
+    ("assists", "assists"),
+    ("steals", "steals"),
+    ("blocks", "blocks"),
+    ("turnovers", "turnovers"),
+    ("fouls", "fouls"),
+    ("field_goals_made", "field_goals_made"),
+    ("field_goals_attempted", "field_goals_attempted"),
+    ("three_point_field_goals_made", "three_point_field_goals_made"),
+    ("three_point_field_goals_attempted", "three_point_field_goals_attempted"),
+    ("free_throws_made", "free_throws_made"),
+    ("free_throws_attempted", "free_throws_attempted"),
+)
 
 
 def num(value):
@@ -27,6 +47,112 @@ def num(value):
         return parsed if math.isfinite(parsed) else None
     except (TypeError, ValueError):
         return None
+
+
+def build_player_box_stats(rows):
+    """Aggregate retained WBB player box rows without inventing appearances.
+
+    The player-season release currently covers only a subset of the player IDs
+    present in the source's game-level box file.  Keep those game rows in a
+    separate, receipt-backed publication so box-score-only athletes remain
+    discoverable.  DNP rows count as observed source rows but do not contribute
+    to games played or any numeric total.
+    """
+    grouped = {}
+    games = set()
+    dnp_rows = 0
+    played_rows = 0
+    skipped_rows = 0
+    for row in rows:
+        athlete_id = str(row.get("athlete_id") or "")
+        game_id = str(row.get("game_id") or "")
+        if not athlete_id or not game_id:
+            skipped_rows += 1
+            continue
+        games.add(game_id)
+        player = grouped.setdefault(
+            athlete_id,
+            {
+                "player_id": athlete_id,
+                "name": row.get("athlete_display_name") or athlete_id,
+                "team": row.get("team_display_name") or "Unknown team",
+                "team_id": str(row.get("team_id") or ""),
+                "position": row.get("athlete_position_abbreviation") or "",
+                "box_rows": 0,
+                "dnp_rows": 0,
+                "games_played": 0,
+                "starts": 0,
+                "totals": {output: 0.0 for _, output in BOX_STAT_FIELDS},
+                "present_fields": set(),
+            },
+        )
+        player["box_rows"] += 1
+        if str(row.get("did_not_play") or "").casefold() == "true":
+            dnp_rows += 1
+            player["dnp_rows"] += 1
+            continue
+        # A played box row has a finite points value in this source.  Rows
+        # without one are retained as observed rows but cannot be treated as
+        # appearances or converted into a zero stat line.
+        if num(row.get("points")) is None:
+            skipped_rows += 1
+            continue
+        played_rows += 1
+        player["games_played"] += 1
+        player["starts"] += int(str(row.get("starter") or "").casefold() == "true")
+        for source, output in BOX_STAT_FIELDS:
+            value = num(row.get(source))
+            if value is None:
+                continue
+            player["totals"][output] += value
+            player["present_fields"].add(output)
+
+    output = []
+    for player in grouped.values():
+        games_played = player["games_played"]
+        totals = {
+            key: round(value, 4)
+            for key, value in player["totals"].items()
+            if key in player["present_fields"]
+        }
+        per_game = {
+            key: round(value / games_played, 4)
+            for key, value in totals.items()
+        } if games_played else {}
+
+        def pct(made, attempted):
+            attempts = totals.get(attempted)
+            makes = totals.get(made)
+            return round(makes / attempts * 100.0, 4) if attempts else None
+
+        output.append({
+            "player_id": player["player_id"],
+            "name": player["name"],
+            "team": player["team"],
+            "team_id": player["team_id"],
+            "position": player["position"],
+            "box_rows": player["box_rows"],
+            "dnp_rows": player["dnp_rows"],
+            "games_played": games_played,
+            "starts": player["starts"],
+            "totals": totals,
+            "per_game": per_game,
+            "shooting": {
+                "field_goal_pct": pct("field_goals_made", "field_goals_attempted"),
+                "three_point_pct": pct("three_point_field_goals_made", "three_point_field_goals_attempted"),
+                "free_throw_pct": pct("free_throws_made", "free_throws_attempted"),
+            },
+        })
+    output.sort(key=lambda player: (-player["games_played"], -player["totals"].get("points", 0), player["name"], player["player_id"]))
+    return output, {
+        "rows": len(rows),
+        "players": len(output),
+        "games": len(games),
+        "played_rows": played_rows,
+        "dnp_rows": dnp_rows,
+        "skipped_rows": skipped_rows,
+        "teams": len({player["team_id"] for player in output if player["team_id"]}),
+    }
 
 
 def build_team_stats(rows):
@@ -86,7 +212,9 @@ def main():
     team_season_rows, team_season_receipt = source.load("team_season", 2026)
     roster_rows, roster_receipt = source.load("rosters", 2027)
     schedule_rows, schedule_receipt = source.load("schedule", 2027)
+    player_box_rows, player_box_receipt = source.load("player_box", 2026)
     team_stats, team_stats_coverage = build_team_stats(team_season_rows)
+    box_players, box_player_coverage = build_player_box_stats(player_box_rows)
 
     players = {}
     for row in season_rows:
@@ -165,6 +293,13 @@ def main():
             "roster_rows": len(roster_rows),
             "teams": len(team_counts),
             "upcoming_games": len(upcoming),
+            "player_box_rows": box_player_coverage["rows"],
+            "player_box_players": box_player_coverage["players"],
+            "player_box_games": box_player_coverage["games"],
+            "player_box_played_rows": box_player_coverage["played_rows"],
+            "player_box_dnp_rows": box_player_coverage["dnp_rows"],
+            "player_box_skipped_rows": box_player_coverage["skipped_rows"],
+            "player_box_teams": box_player_coverage["teams"],
         },
         "players": sorted(
             [
@@ -182,16 +317,34 @@ def main():
             "team_season": {"sha256": team_season_receipt.get("sha256"), "url": team_season_receipt.get("url")},
             "rosters": {"sha256": roster_receipt.get("sha256"), "url": roster_receipt.get("url")},
             "schedule": {"sha256": schedule_receipt.get("sha256"), "url": schedule_receipt.get("url")},
+            "player_box": {"sha256": player_box_receipt.get("sha256"), "url": player_box_receipt.get("url")},
         },
         "limitations": [
             "This edition is source-native women’s data and does not substitute men’s rows.",
             "A women’s game forecast model is not published until its own training and calibration checks pass.",
             "The observed player season is 2026; the 2027 roster and schedule are upcoming context.",
+            "Game-level player aggregates are published separately from the player-season release; DNP rows are counted as observed source rows and excluded from played-game totals.",
         ],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(edition, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
-    print(f"Published {OUT} ({len(players):,} players, {len(upcoming):,} upcoming games)")
+    BOX_OUT.write_text(json.dumps({
+        "schema_version": 1,
+        "sport": "basketball",
+        "gender": "women",
+        "season": 2026,
+        "generated_at": edition["generated_at"],
+        "source": "player_box",
+        "coverage": box_player_coverage,
+        "players": box_players,
+        "receipt": {"sha256": player_box_receipt.get("sha256"), "url": player_box_receipt.get("url")},
+        "limitations": [
+            "Aggregates are arithmetic sums and per-played-game averages of source box rows.",
+            "DNP rows remain counted in box_rows and dnp_rows but do not count as games played or enter totals.",
+            "This source release does not carry an explicit division field; no D2/D3 classification is inferred.",
+        ],
+    }, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n")
+    print(f"Published {OUT} ({len(players):,} season players, {len(box_players):,} box players, {len(upcoming):,} upcoming games)")
 
 
 if __name__ == "__main__":

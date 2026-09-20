@@ -10,6 +10,82 @@ _MODULE = importlib.util.module_from_spec(_SPEC)
 assert _SPEC and _SPEC.loader
 _SPEC.loader.exec_module(_MODULE)
 build_team_stats = _MODULE.build_team_stats
+build_player_box_stats = _MODULE.build_player_box_stats
+
+
+def test_player_box_stats_keep_played_rows_and_exclude_dnp_from_aggregates():
+    rows = [
+        {
+            "athlete_id": "7",
+            "athlete_display_name": "Example Guard",
+            "athlete_position_abbreviation": "G",
+            "team_id": "11",
+            "team_display_name": "Example Eagles",
+            "game_id": "g1",
+            "points": "10",
+            "minutes": "20",
+            "field_goals_made": "4",
+            "field_goals_attempted": "8",
+            "three_point_field_goals_made": "2",
+            "three_point_field_goals_attempted": "4",
+            "free_throws_made": "0",
+            "free_throws_attempted": "0",
+            "starter": "true",
+            "did_not_play": "false",
+        },
+        {
+            "athlete_id": "7",
+            "athlete_display_name": "Example Guard",
+            "athlete_position_abbreviation": "G",
+            "team_id": "11",
+            "team_display_name": "Example Eagles",
+            "game_id": "g2",
+            "points": "6",
+            "minutes": "10",
+            "field_goals_made": "2",
+            "field_goals_attempted": "5",
+            "three_point_field_goals_made": "0",
+            "three_point_field_goals_attempted": "1",
+            "free_throws_made": "2",
+            "free_throws_attempted": "2",
+            "starter": "false",
+            "did_not_play": "false",
+        },
+        {
+            "athlete_id": "7",
+            "athlete_display_name": "Example Guard",
+            "athlete_position_abbreviation": "G",
+            "team_id": "11",
+            "team_display_name": "Example Eagles",
+            "game_id": "g3",
+            "points": "",
+            "starter": "false",
+            "did_not_play": "true",
+        },
+    ]
+
+    players, coverage = build_player_box_stats(rows)
+
+    assert coverage == {
+        "rows": 3,
+        "players": 1,
+        "games": 3,
+        "played_rows": 2,
+        "dnp_rows": 1,
+        "skipped_rows": 0,
+        "teams": 1,
+    }
+    player = players[0]
+    assert player["games_played"] == 2
+    assert player["dnp_rows"] == 1
+    assert player["starts"] == 1
+    assert player["totals"]["points"] == 16.0
+    assert player["per_game"]["points"] == 8.0
+    assert player["shooting"] == {
+        "field_goal_pct": 46.1538,
+        "three_point_pct": 40.0,
+        "free_throw_pct": 100.0,
+    }
 
 
 def test_team_stats_preserve_all_numeric_source_fields_and_receipt_shape():
