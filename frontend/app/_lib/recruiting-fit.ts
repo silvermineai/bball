@@ -8,6 +8,10 @@ function finiteNonNegative(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
+function nonNegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0;
+}
+
 function validRosterPlayer(value: unknown): value is BBRoster {
   if (!isRecord(value)
     || typeof value.id !== "string" || value.id.trim() === ""
@@ -42,18 +46,32 @@ export function parseRecruitingFitRosterPayload(payload: unknown, expectedSeason
   if (!isRecord(payload)
     || payload.season !== expectedSeason
     || payload.previous_season !== expectedSeason - 1
-    || !finiteNonNegative(payload.teams_observed)
-    || !finiteNonNegative(payload.players_observed)
-    || !finiteNonNegative(payload.prior_players_not_observed)
+    || !nonNegativeInteger(payload.teams_observed)
+    || !nonNegativeInteger(payload.players_observed)
+    || !nonNegativeInteger(payload.prior_players_not_observed)
     || !isRecord(payload.status_counts)
     || !Array.isArray(payload.players)) return null;
   if (!Object.values(payload.status_counts).every(finiteNonNegative)) return null;
+  // The fit board calculates cohort percentiles. A bounded API page would
+  // make those ranks look complete while silently omitting candidates, so a
+  // declared truncation is withheld as a whole. Optional count fields are
+  // checked when present to keep future endpoint changes fail-closed.
+  if (payload.players_returned !== undefined
+    && (!nonNegativeInteger(payload.players_returned) || payload.players_returned !== payload.players.length)) return null;
+  if (payload.players_available !== undefined && !nonNegativeInteger(payload.players_available)) return null;
+  if (payload.players_available !== undefined && payload.players_available < payload.players.length) return null;
+  if (payload.players_truncated !== undefined && typeof payload.players_truncated !== "boolean") return null;
+  if (payload.players_truncated === true
+    || (payload.players_available !== undefined && payload.players_available !== payload.players.length)
+    || (payload.players_available !== undefined && payload.players_truncated !== (payload.players.length < payload.players_available))) return null;
   const ids = new Set<string>();
   for (const player of payload.players) {
     if (!validRosterPlayer(player)) return null;
     if (ids.has(player.id)) return null;
     ids.add(player.id);
   }
+  const statusTotal = Object.values(payload.status_counts).reduce<number>((sum, value) => sum + Number(value), 0);
+  if (payload.players_observed !== ids.size || statusTotal !== payload.players.length) return null;
   if (payload.source !== null && payload.source !== undefined) {
     if (!isRecord(payload.source) || typeof payload.source.dataset !== "string" || payload.source.dataset.trim() === "") return null;
     for (const key of ["url", "fetched_at"]) {

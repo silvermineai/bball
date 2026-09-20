@@ -25,6 +25,26 @@ describe("recruiting fit", () => {
     expect(parsed?.source?.dataset).toBe("rosters");
   });
 
+  it("withholds a truncated roster before calculating fit percentiles", () => {
+    const complete = liveRoster({
+      players_available: 3,
+      players_returned: 1,
+      players_truncated: true,
+    });
+    expect(parseRecruitingFitRosterPayload(complete)).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({
+      players_available: 2,
+      players_returned: 1,
+      players_truncated: false,
+    }))).toBeNull();
+  });
+
+  it("requires roster counts and status counts to reconcile", () => {
+    expect(parseRecruitingFitRosterPayload(liveRoster({ players_observed: 2 }))).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({ status_counts: { same_program: 0 } }))).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({ players_returned: 2 }))).toBeNull();
+  });
+
   it("withholds malformed or duplicate source rows instead of changing the fit denominator", () => {
     expect(parseRecruitingFitRosterPayload(liveRoster({ season: 2026 }))).toBeNull();
     expect(parseRecruitingFitRosterPayload(liveRoster({ players: [liveRoster().players[0], liveRoster().players[0]] }))).toBeNull();
@@ -36,6 +56,8 @@ describe("recruiting fit", () => {
     const digest = "A".repeat(64);
     const roster = liveRoster({
       teams_observed: 3,
+      players_observed: 2,
+      status_counts: { same_program: 2 },
       players: [
         { ...liveRoster().players[0], prior_production: { games: 10, minutes: 200, teams: ["Prior Team"] } },
         { ...liveRoster().players[0], id: "source-43", prior_production: null },
