@@ -73,6 +73,70 @@ describe("market archive metadata", () => {
     expect((prepare.mock.calls as unknown as Array<[unknown]>).map(([sql]) => String(sql)).join("\n")).toContain("json_extract(m.payload_json,'$.starts_at')");
   });
 
+  it("derives each retained ledger row's pregame flag from its capture clock", async () => {
+    const prepare = vi.fn((sql: string) => {
+      const bound = {
+        first: vi.fn().mockResolvedValue(sql.includes("count(*)") ? { total: 2 } : null),
+        all: vi.fn().mockResolvedValue({ results: [
+          {
+            game_id: "game-before-tip",
+            season: 2027,
+            kickoff: "2027-01-02T20:00:00Z",
+            home_name: "Home University",
+            away_name: "Away University",
+            home_spread: -2.5,
+            total: null,
+            home_price: 1.9,
+            away_price: 1.9,
+            over_price: null,
+            under_price: null,
+            observed_at: "2027-01-02T18:00:00Z",
+            updated_at: "2027-01-02T18:01:00Z",
+            source: "licensed-feed",
+            is_pregame: 1,
+            market: "spreads",
+            bookmaker: "book",
+            provider: "licensed-feed",
+          },
+          {
+            game_id: "game-after-tip",
+            season: 2027,
+            kickoff: "2027-01-02T20:00:00Z",
+            home_name: "Home University",
+            away_name: "Away University",
+            home_spread: -2.5,
+            total: null,
+            home_price: 1.9,
+            away_price: 1.9,
+            over_price: null,
+            under_price: null,
+            observed_at: "2027-01-02T21:00:00Z",
+            updated_at: "2027-01-02T21:01:00Z",
+            source: "licensed-feed",
+            is_pregame: 0,
+            market: "spreads",
+            bookmaker: "book",
+            provider: "licensed-feed",
+          },
+        ] }),
+      };
+      return { bind: vi.fn(() => bound) };
+    });
+    const response = await markets.request(
+      "/?sport=basketball&season=2027&page=0&publication_check=row-clock",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rows: Array<{ game_id: string; is_pregame: number }> };
+    expect(body.rows.map((row) => [row.game_id, row.is_pregame])).toEqual([
+      ["game-before-tip", 1],
+      ["game-after-tip", 0],
+    ]);
+    const sql = (prepare.mock.calls as unknown as Array<[string]>).map(([statement]) => statement).join("\n");
+    expect(sql).toContain("CASE WHEN datetime(m.captured_at) < datetime(g.starts_at) THEN 1 ELSE 0 END AS is_pregame");
+  });
+
   it("classifies quote validation outcomes from the capture receipt", async () => {
     const makeResponse = async (capture: Record<string, number>) => {
       const batch = vi.fn().mockResolvedValue([

@@ -324,7 +324,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(m.payload_json,'$.away_price') AS away_price,
                 json_extract(m.payload_json,'$.over_price') AS over_price,
                 json_extract(m.payload_json,'$.under_price') AS under_price,
-                m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,1 AS is_pregame,
+                m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,
+                CASE WHEN datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at')) THEN 1 ELSE 0 END AS is_pregame,
                 m.market,m.bookmaker,m.provider
            FROM audit_markets m
           WHERE ${where}
@@ -336,7 +337,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(m.payload_json,'$.away_price') AS away_price,
                 json_extract(m.payload_json,'$.over_price') AS over_price,
                 json_extract(m.payload_json,'$.under_price') AS under_price,
-                m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,1 AS is_pregame,
+                m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,
+                CASE WHEN datetime(m.captured_at) < datetime(g.starts_at) THEN 1 ELSE 0 END AS is_pregame,
                 m.market,m.bookmaker,m.provider
            FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
           WHERE ${where}
