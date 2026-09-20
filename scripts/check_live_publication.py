@@ -488,22 +488,47 @@ def validate_reviewed_recruiting_release(
     checked_at: datetime,
     max_age_hours: float,
 ) -> tuple[dict, float]:
-    """Validate that the reviewed recruiting edition is present and non-empty."""
+    """Validate the provider-neutral reviewed recruiting edition.
+
+    The public Worker deliberately removes the raw ``sources`` array and
+    exposes only a receipt summary.  Keep accepting the older internal shape
+    for archived monitor fixtures, while validating the safe public contract
+    when it is present.
+    """
     release_coverage = payload.get("coverage")
     required_counts = ("programs", "players", "events", "sources")
     sources = payload.get("sources")
+    source_receipt = payload.get("source_receipt")
+    reviewed_at = payload.get("reviewed_at") or payload.get("first_recorded_at")
+    coverage_source_count = release_coverage.get("sources") if isinstance(release_coverage, dict) else None
+    if isinstance(source_receipt, dict):
+        source_count = source_receipt.get("source_rows")
+        receipt_hash = source_receipt.get("sha256")
+        receipt_valid = (
+            source_receipt.get("integrity") == "verified"
+            and isinstance(source_count, int)
+            and source_count > 0
+            and isinstance(receipt_hash, str)
+            and re.fullmatch(r"[0-9a-f]{64}", receipt_hash) is not None
+            and isinstance(reviewed_at, str)
+        )
+        source_shape_valid = receipt_valid and source_count == coverage_source_count
+    else:
+        source_shape_valid = (
+            isinstance(reviewed_at, str)
+            and isinstance(sources, list)
+            and len(sources) == coverage_source_count
+            and all(
+                isinstance(source, dict)
+                and isinstance(source.get("source_sha256"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", source["source_sha256"]) is not None
+                for source in sources
+            )
+        )
     if (
         payload.get("season") != 2027
         or not isinstance(release_coverage, dict)
-        or not isinstance(payload.get("reviewed_at"), str)
-        or not isinstance(sources, list)
-        or len(sources) != release_coverage.get("sources")
-        or any(
-            not isinstance(source, dict)
-            or not isinstance(source.get("source_sha256"), str)
-            or not re.fullmatch(r"[0-9a-f]{64}", source["source_sha256"])
-            for source in sources
-        )
+        or not source_shape_valid
         or any(
             not isinstance(release_coverage.get(key), int)
             or release_coverage[key] <= 0
@@ -511,7 +536,7 @@ def validate_reviewed_recruiting_release(
         )
     ):
         raise ValueError("reviewed recruiting release is malformed or empty")
-    age = (checked_at - timestamp(payload["reviewed_at"])).total_seconds() / 3600
+    age = (checked_at - timestamp(reviewed_at)).total_seconds() / 3600
     if age < -24 or age > max_age_hours:
         raise ValueError(f"reviewed recruiting release is {max(age, 0):.1f} hours old")
     return release_coverage, age

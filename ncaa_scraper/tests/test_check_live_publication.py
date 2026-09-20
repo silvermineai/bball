@@ -313,6 +313,26 @@ class LivePublicationCheckTest(unittest.TestCase):
                 240,
             )
 
+    def test_accepts_provider_neutral_public_recruiting_receipt(self):
+        now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
+        coverage = {"programs": 14, "players": 96, "events": 98, "sources": 44}
+        payload = {
+            "season": 2027,
+            "first_recorded_at": "2026-09-10T18:00:00Z",
+            "coverage": coverage,
+            "source_receipt": {
+                "dataset": "basketball_recruiting",
+                "captured_at": "2026-09-10T18:00:00Z",
+                "source_rows": 44,
+                "sha256": "a" * 64,
+                "integrity": "verified",
+            },
+        }
+        self.assertEqual(
+            validate_reviewed_recruiting_release(payload, now, 240),
+            (coverage, 2.0),
+        )
+
     def test_checks_both_sports_forecast_clock_and_recruiting_shape(self):
         now = datetime(2026, 9, 10, 20, tzinfo=timezone.utc)
         responses = {
