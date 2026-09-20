@@ -169,6 +169,12 @@ export default function Page() {
   const ncaa = JSON.parse(
     fs.readFileSync(path.join(dataDir, "ncaa-individual.json"), "utf8"),
   ) as { coverage: { players: number; divisions: Record<string, unknown> } };
+  const womensEdition = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "womens-edition.json"), "utf8"),
+  ) as { coverage: { players: number; teams: number; upcoming_games: number } };
+  const womensForecast = JSON.parse(
+    fs.readFileSync(path.join(dataDir, "womens-forecast.json"), "utf8"),
+  ) as { coverage: { forecast_rows: number; primary_rows: number; cold_start_rows: number }; model_id: string };
   const basketballScopeRows = {
     d1: Number((ncaa.coverage.divisions["1"] as { players?: number } | undefined)?.players ?? 0),
     d2: Number((ncaa.coverage.divisions["2"] as { players?: number } | undefined)?.players ?? 0),
@@ -512,7 +518,9 @@ export default function Page() {
               <tr><td><strong>Men&apos;s basketball</strong></td><td>D1</td><td className="numeric">{count(basketballScopeRows.d1)}</td><td>Forecasts, player archive, ratings, recruiting and shot evidence</td><td><Link href="/basketball/">Open desk →</Link></td></tr>
               <tr><td><strong>Men&apos;s basketball</strong></td><td>D2</td><td className="numeric">{count(basketballScopeRows.d2)}</td><td>National NCAA leaderboard records; no D2 forecast slate published</td><td><Link href="/basketball/ncaa/?division=2">Open D2 records →</Link></td></tr>
               <tr><td><strong>Men&apos;s basketball</strong></td><td>D3</td><td className="numeric">{count(basketballScopeRows.d3)}</td><td>National NCAA leaderboard records; no D3 forecast slate published</td><td><Link href="/basketball/ncaa/?division=3">Open D3 records →</Link></td></tr>
-              <tr><td><strong>Women&apos;s basketball</strong></td><td>D1–D3</td><td className="numeric">0</td><td>Awaiting a reviewed women&apos;s edition; no men&apos;s rows are substituted</td><td><Link href="/basketball/?gender=women&division=1">View boundary →</Link></td></tr>
+              <tr><td><strong>Women&apos;s basketball</strong></td><td>D1</td><td className="numeric">{count(womensEdition.coverage.players)}</td><td>Observed player tables, roster/schedule context and {count(womensForecast.coverage.forecast_rows)} women-only forecasts</td><td><Link href="/basketball/?gender=women&division=1">Open women&apos;s desk →</Link></td></tr>
+              <tr><td><strong>Women&apos;s basketball</strong></td><td>D2</td><td className="numeric">0</td><td>Not imported; no D1 rows are substituted</td><td><Link href="/basketball/?gender=women&division=2">View boundary →</Link></td></tr>
+              <tr><td><strong>Women&apos;s basketball</strong></td><td>D3</td><td className="numeric">0</td><td>Not imported; no D1 rows are substituted</td><td><Link href="/basketball/?gender=women&division=3">View boundary →</Link></td></tr>
               <tr><td><strong>Football</strong></td><td>D1 (FBS/FCS)</td><td className="numeric">{count(footballScopeRows.d1)}</td><td>Player archive, team ratings, forecasts and game evidence</td><td><Link href="/football/">Open desk →</Link></td></tr>
               <tr><td><strong>Football</strong></td><td>D2–D3</td><td className="numeric">{count(footballScopeRows.d2 + footballScopeRows.d3)}</td><td>Not present in the retained football edition</td><td><Link href="/football/?gender=men&division=2">View boundary →</Link></td></tr>
             </tbody>
