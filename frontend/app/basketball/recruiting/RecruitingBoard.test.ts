@@ -3,6 +3,7 @@ import {
   currentRecruitingBoardResult,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
+  validRecruitingRankDistribution,
   validateRecruitingExportPage,
   type RecruitingBoardResult,
 } from "./RecruitingBoard";
@@ -49,6 +50,48 @@ describe("recruiting board export pagination", () => {
   it("rejects mismatched page metadata", () => {
     expect(() => validateRecruitingExportPage(page({ page: 1 }), 2027, 2, 1, "edition-1", 0, 2)).toThrow(/changed/);
     expect(() => validateRecruitingExportPage(page({ page_size: 2 }), 2027, 2, 1, "edition-1", 0, 2)).toThrow(/changed/);
+  });
+});
+
+describe("recruiting rank landscape", () => {
+  const bands = [
+    { key: "top_10" as const, label: "Top 10", min_rank: 1, max_rank: 10, total: 1 },
+    { key: "ranks_11_25" as const, label: "11–25", min_rank: 11, max_rank: 25, total: 1 },
+    { key: "ranks_26_50" as const, label: "26–50", min_rank: 26, max_rank: 50, total: 1 },
+    { key: "ranks_51_100" as const, label: "51–100", min_rank: 51, max_rank: 100, total: 1 },
+    { key: "ranks_101_plus" as const, label: "101+", min_rank: 101, max_rank: null, total: 1 },
+    { key: "unranked" as const, label: "Rank unavailable", min_rank: null, max_rank: null, total: 1 },
+  ];
+
+  it("accepts a complete distribution tied to the active edition denominator", () => {
+    const result = {
+      season: 2027,
+      page: 0,
+      page_size: 50,
+      total: 6,
+      edition: "edition-1",
+      captured_at: "2026-09-18T00:00:00Z",
+      rows: [],
+      rank_distribution: bands,
+    } satisfies RecruitingBoardResult;
+    expect(validRecruitingRankDistribution(result)).toEqual(bands);
+  });
+
+  it("withholds malformed or non-reconciling distributions", () => {
+    const base = {
+      season: 2027,
+      page: 0,
+      page_size: 50,
+      total: 6,
+      edition: "edition-1",
+      captured_at: "2026-09-18T00:00:00Z",
+      rows: [],
+      rank_distribution: bands,
+    } satisfies RecruitingBoardResult;
+    expect(validRecruitingRankDistribution({ ...base, total: 5 })).toBeNull();
+    expect(validRecruitingRankDistribution({ ...base, edition: null })).toBeNull();
+    expect(validRecruitingRankDistribution({ ...base, rank_distribution: bands.slice(0, 5) })).toBeNull();
+    expect(validRecruitingRankDistribution({ ...base, rank_distribution: bands.map((band, index) => index === 0 ? { ...band, total: -1 } : band) })).toBeNull();
   });
 });
 

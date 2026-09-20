@@ -62,12 +62,48 @@ export type RecruitingBoardResult = {
   recorded_school_programs?: RecordedSchoolProgramRow[];
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
   rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number; withheld_placeholder_rows?: number };
+  rank_distribution?: RecruitingRankDistributionBand[];
   edition: string | null;
   captured_at: string | null;
   rows: Prospect[];
   source?: { provider: string; methodology: string; url?: string };
   unavailable_reason?: string;
 };
+export type RecruitingRankDistributionBand = {
+  key: "top_10" | "ranks_11_25" | "ranks_26_50" | "ranks_51_100" | "ranks_101_plus" | "unranked";
+  label: string;
+  min_rank: number | null;
+  max_rank: number | null;
+  total: number;
+};
+
+const recruitingRankDistributionShape: Array<Pick<RecruitingRankDistributionBand, "key" | "label" | "min_rank" | "max_rank">> = [
+  { key: "top_10", label: "Top 10", min_rank: 1, max_rank: 10 },
+  { key: "ranks_11_25", label: "11–25", min_rank: 11, max_rank: 25 },
+  { key: "ranks_26_50", label: "26–50", min_rank: 26, max_rank: 50 },
+  { key: "ranks_51_100", label: "51–100", min_rank: 51, max_rank: 100 },
+  { key: "ranks_101_plus", label: "101+", min_rank: 101, max_rank: null },
+  { key: "unranked", label: "Rank unavailable", min_rank: null, max_rank: null },
+];
+
+const nonNegativeInteger = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+
+/** Admit a rank landscape only when it reconciles to the same edition-bound cohort. */
+export function validRecruitingRankDistribution(result: RecruitingBoardResult): RecruitingRankDistributionBand[] | null {
+  if (!result.edition?.trim() || !nonNegativeInteger(result.total) || !Array.isArray(result.rank_distribution) || result.rank_distribution.length !== recruitingRankDistributionShape.length) {
+    return null;
+  }
+  const valid = result.rank_distribution.every((band, index) => {
+    const expected = recruitingRankDistributionShape[index];
+    return band.key === expected.key
+      && band.label === expected.label
+      && band.min_rank === expected.min_rank
+      && band.max_rank === expected.max_rank
+      && nonNegativeInteger(band.total);
+  });
+  if (!valid || result.rank_distribution.reduce((sum, band) => sum + band.total, 0) !== result.total) return null;
+  return result.rank_distribution;
+}
 type Result = RecruitingBoardResult;
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
@@ -191,6 +227,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
   const evidenceGuide = result ? recruitingEvidenceGuide(result, schoolPrograms) : [];
+  const rankDistribution = result ? validRecruitingRankDistribution(result) : null;
   const error = loadError?.request === boardRequest ? loadError.message : "";
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -462,6 +499,26 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             {" "}The edition identifier lets a staff member reproduce this exact board after a later refresh.
           </p>
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.{result.rank_quality.withheld_placeholder_rows ? ` ${result.rank_quality.withheld_placeholder_rows.toLocaleString()} ungraded source placeholder rank${result.rank_quality.withheld_placeholder_rows === 1 ? " was" : "s were"} withheld.` : ""}</p>}
+          {rankDistribution && <section className="paper-panel recruiting-rank-distribution" aria-labelledby="recruiting-rank-distribution-title" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Rank landscape / active cohort</div><h3 id="recruiting-rank-distribution-title">Learn where this class sits before you compare names.</h3></div>
+              <span className="note">{result.total.toLocaleString()} rows reconciled</span>
+            </div>
+            <p className="note">These mutually exclusive bands use the recorded national rank in the exact edition <span className="source-hash">{result.edition}</span> and the active filters above. They describe the cohort distribution; they do not create a talent grade or adjust a prospect&apos;s source rank.</p>
+            <div className="table-scroll"><table className="data-table">
+              <thead><tr><th>Recorded rank band</th><th className="numeric">Prospects</th><th className="numeric">Share</th><th>Distribution</th></tr></thead>
+              <tbody>{rankDistribution.map((band) => {
+                const share = result.total > 0 ? band.total / result.total : 0;
+                return <tr key={band.key}>
+                  <th scope="row">{band.label}</th>
+                  <td className="numeric"><strong>{band.total.toLocaleString()}</strong></td>
+                  <td className="numeric">{(share * 100).toFixed(1)}%</td>
+                  <td><progress max={result.total} value={band.total} aria-label={`${band.label}: ${band.total.toLocaleString()} of ${result.total.toLocaleString()} prospects`} /></td>
+                </tr>;
+              })}</tbody>
+            </table></div>
+            <p className="note" style={{ marginTop: 12 }}>An unavailable rank remains in its own band. A filtered view changes the denominator, so compare landscapes only when the season, filters and edition match.</p>
+          </section>}
           {evidenceGuide.length > 0 && <section className="paper-panel" aria-labelledby="recruiting-evidence-guide-title" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 10 }}>
               <div><div className="eyebrow">Board method / exact edition</div><h3 id="recruiting-evidence-guide-title">Read each signal at its evidence boundary.</h3></div>

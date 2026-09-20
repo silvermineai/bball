@@ -2,6 +2,39 @@ import { describe, expect, it, vi } from "vitest";
 import { recruitingRankings } from "../src/recruiting-rankings";
 
 describe("ESPN recruiting rankings", () => {
+  it("returns an edition-bound, mutually exclusive rank landscape", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("AS top_10")
+            ? { top_10: 1, ranks_11_25: 1, ranks_26_50: 1, ranks_51_100: 1, ranks_101_plus: 1, unranked: 1 }
+            : sql.includes("WITH cohort_rows")
+              ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+              : sql.includes("count(*)")
+                ? { total: 6, committed_total: 2, ranked_total: 5, grade_total: 6 }
+                : { edition: "edition-1", captured_at: "2026-09-18T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { rank_distribution: Array<{ key: string; total: number; min_rank: number | null; max_rank: number | null }> };
+    expect(response.status).toBe(200);
+    expect(body.rank_distribution).toEqual([
+      { key: "top_10", label: "Top 10", min_rank: 1, max_rank: 10, total: 1 },
+      { key: "ranks_11_25", label: "11–25", min_rank: 11, max_rank: 25, total: 1 },
+      { key: "ranks_26_50", label: "26–50", min_rank: 26, max_rank: 50, total: 1 },
+      { key: "ranks_51_100", label: "51–100", min_rank: 51, max_rank: 100, total: 1 },
+      { key: "ranks_101_plus", label: "101+", min_rank: 101, max_rank: null, total: 1 },
+      { key: "unranked", label: "Rank unavailable", min_rank: null, max_rank: null, total: 1 },
+    ]);
+    const distributionQuery = sqlCalls.find((sql) => sql.includes("AS top_10"));
+    expect(distributionQuery).toContain("r.edition=c.edition");
+    expect(distributionQuery).toContain("WHERE r.season=?");
+  });
+
   it("returns source-labeled ranked prospects with parsed school IDs", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({

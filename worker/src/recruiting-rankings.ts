@@ -218,7 +218,28 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       SELECT (SELECT count(*) FROM tied_ranks) AS tied_rank_values,
              (SELECT COALESCE(sum(rows),0) FROM tied_ranks) AS tied_rows,
              (SELECT COALESCE(sum(placeholder_withheld),0) FROM cohort_rows) AS withheld_placeholder_rows`,
-    ).bind(...binds).first<{ tied_rank_values: number | null; tied_rows: number | null; withheld_placeholder_rows: number | null }>(), DB_TIMEOUT_MS);
+      ).bind(...binds).first<{ tied_rank_values: number | null; tied_rows: number | null; withheld_placeholder_rows: number | null }>(), DB_TIMEOUT_MS);
+    // Keep the rank landscape tied to the same filters and current edition as
+    // the table. These are mutually exclusive bands so their counts can be
+    // reconciled to the active cohort denominator in the client.
+    const rankDistribution = await withTimeout(db.prepare(
+      `SELECT
+          COALESCE(sum(CASE WHEN ${currentRank} BETWEEN 1 AND 10 THEN 1 ELSE 0 END),0) AS top_10,
+          COALESCE(sum(CASE WHEN ${currentRank} BETWEEN 11 AND 25 THEN 1 ELSE 0 END),0) AS ranks_11_25,
+          COALESCE(sum(CASE WHEN ${currentRank} BETWEEN 26 AND 50 THEN 1 ELSE 0 END),0) AS ranks_26_50,
+          COALESCE(sum(CASE WHEN ${currentRank} BETWEEN 51 AND 100 THEN 1 ELSE 0 END),0) AS ranks_51_100,
+          COALESCE(sum(CASE WHEN ${currentRank} > 100 THEN 1 ELSE 0 END),0) AS ranks_101_plus,
+          COALESCE(sum(CASE WHEN ${currentRank} IS NULL THEN 1 ELSE 0 END),0) AS unranked
+         FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+        WHERE ${filters}`,
+    ).bind(...binds).first<{
+      top_10: number | null;
+      ranks_11_25: number | null;
+      ranks_26_50: number | null;
+      ranks_51_100: number | null;
+      ranks_101_plus: number | null;
+      unranked: number | null;
+    }>(), DB_TIMEOUT_MS);
     const positions = await withTimeout(db.prepare(
       `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -407,6 +428,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         tied_rows: Number(rankQuality?.tied_rows || 0),
         withheld_placeholder_rows: Number(rankQuality?.withheld_placeholder_rows || 0),
       },
+      rank_distribution: [
+        { key: "top_10", label: "Top 10", min_rank: 1, max_rank: 10, total: Number(rankDistribution?.top_10 || 0) },
+        { key: "ranks_11_25", label: "11–25", min_rank: 11, max_rank: 25, total: Number(rankDistribution?.ranks_11_25 || 0) },
+        { key: "ranks_26_50", label: "26–50", min_rank: 26, max_rank: 50, total: Number(rankDistribution?.ranks_26_50 || 0) },
+        { key: "ranks_51_100", label: "51–100", min_rank: 51, max_rank: 100, total: Number(rankDistribution?.ranks_51_100 || 0) },
+        { key: "ranks_101_plus", label: "101+", min_rank: 101, max_rank: null, total: Number(rankDistribution?.ranks_101_plus || 0) },
+        { key: "unranked", label: "Rank unavailable", min_rank: null, max_rank: null, total: Number(rankDistribution?.unranked || 0) },
+      ],
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
       history: historyRows
