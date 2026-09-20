@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlayerIndexFilters, playerIndexFilterSearch, playerIndexScopeSearch, rankPlayerProfiles } from "./player-index-view";
+import { parsePlayerIndexFilters, playerIndexFilterSearch, playerIndexScopeSearch, playerProfileCoverageLabel, rankPlayerProfiles } from "./player-index-view";
 
 describe("historical player index URL state", () => {
   it("parses supported season, search, sort, qualification and page", () => {
@@ -55,5 +55,11 @@ describe("historical player index URL state", () => {
     ]);
     expect(rows.every((row) => row.profileScore === null && row.profileRank === null)).toBe(true);
     expect(rows.every((row) => row.profileComponents === 3)).toBe(true);
+  });
+
+  it("reports the ranked component denominator without filling missing evidence", () => {
+    expect(playerProfileCoverageLabel({ score: 75, components: 6 })).toBe("6/8 ranked components");
+    expect(playerProfileCoverageLabel({ score: null, components: 3 })).toBe("3/8 ranked components");
+    expect(playerProfileCoverageLabel(null)).toBe("Ranked components unavailable");
   });
 });

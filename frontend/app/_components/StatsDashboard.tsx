@@ -9,7 +9,7 @@ import {
 } from "../_lib/basketball-leaders";
 import type { BBGame, BBRoster, BBTeam } from "../_lib/basketball-types";
 import { date, fmt } from "../_lib/format";
-import { rankPlayerProfiles } from "../_lib/player-index-view";
+import { playerProfileCoverageLabel, rankPlayerProfiles } from "../_lib/player-index-view";
 import { priorProductionIndex } from "../_lib/roster-observations";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
@@ -176,7 +176,7 @@ function PlayerTable({ players, season }: { players: BasketballLeaderPlayer[]; s
               <td className="numeric">{fmt(player.apg)}</td>
               <td className="numeric">{player.ts == null ? "—" : `${fmt(player.ts * 100)}%`}</td>
               <td className="numeric">{player.efg == null ? "—" : `${fmt(player.efg * 100)}%`}</td>
-              <td className="numeric">{profile?.profileScore == null ? "—" : fmt(profile.profileScore)}<small>{profile?.profileRank ? `#${profile.profileRank} all-around` : "Insufficient fields"}</small></td>
+              <td className="numeric">{profile?.profileScore == null ? "—" : fmt(profile.profileScore)}<small>{profile?.profileRank ? `#${profile.profileRank} all-around` : "Insufficient ranked fields"}</small><small>{playerProfileCoverageLabel(profile ? { score: profile.profileScore, components: profile.profileComponents } : null)}</small></td>
             </tr>
             );
           })}

@@ -53,6 +53,24 @@ const profileMetrics: Array<{ key: PlayerProfileMetric; higherIsBetter: boolean 
   { key: "tov_rate", higherIsBetter: false },
 ];
 
+/** Number of cohort-relative components available to the all-around index. */
+export const playerProfileMetricCount = profileMetrics.length;
+
+/**
+ * Describe the evidence denominator behind an all-around score. A component
+ * counts only when its source value can be ranked within the supplied cohort;
+ * the label therefore explains a missing or partial score without treating a
+ * missing field as zero.
+ */
+export function playerProfileCoverageLabel(
+  profile: PlayerProfileScore | null | undefined,
+) {
+  if (!profile || !Number.isInteger(profile.components) || profile.components < 0) {
+    return "Ranked components unavailable";
+  }
+  return `${Math.min(profile.components, playerProfileMetricCount)}/${playerProfileMetricCount} ranked components`;
+}
+
 const profileKey = (player: { id: string; team_id: string }) => `${player.id}-${player.team_id}`;
 
 const lowerBound = (values: number[], target: number) => {
