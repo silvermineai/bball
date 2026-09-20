@@ -52,6 +52,7 @@ export type ForecastSignalContext = {
   label: "Strong signal" | "Lean signal" | "Near even" | "Cold-start estimate" | "Unavailable";
   probability_edge_pp: number | null;
   range_width: number | null;
+  range_context: "Range crosses even" | "Range stays home side" | "Range stays away side" | "Unavailable";
 };
 
 /**
@@ -65,9 +66,10 @@ export function forecastSignalContext(
   primary: boolean,
 ): ForecastSignalContext {
   if (!prediction) {
-    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null };
+    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null, range_context: "Unavailable" };
   }
   const values = [
+    prediction.home_margin,
     prediction.home_win_probability,
     prediction.margin_low,
     prediction.margin_high,
@@ -77,17 +79,25 @@ export function forecastSignalContext(
     || prediction.home_win_probability < 0
     || prediction.home_win_probability > 1
     || prediction.margin_low > prediction.margin_high
+    || prediction.home_margin < prediction.margin_low
+    || prediction.home_margin > prediction.margin_high
   ) {
-    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null };
+    return { estimate: "unavailable", label: "Unavailable", probability_edge_pp: null, range_width: null, range_context: "Unavailable" };
   }
   const probabilityEdge = Math.abs(prediction.home_win_probability - 0.5) * 100;
   const rangeWidth = prediction.margin_high - prediction.margin_low;
+  const rangeContext = prediction.margin_low <= 0 && prediction.margin_high >= 0
+    ? "Range crosses even"
+    : prediction.margin_low > 0
+      ? "Range stays home side"
+      : "Range stays away side";
   if (!primary || prediction.estimate_type === "cold_start") {
     return {
       estimate: "cold-start",
       label: "Cold-start estimate",
       probability_edge_pp: Number(probabilityEdge.toFixed(1)),
       range_width: Number(rangeWidth.toFixed(1)),
+      range_context: rangeContext,
     };
   }
   const strongestProbability = Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability);
@@ -101,6 +111,7 @@ export function forecastSignalContext(
     label,
     probability_edge_pp: Number(probabilityEdge.toFixed(1)),
     range_width: Number(rangeWidth.toFixed(1)),
+    range_context: rangeContext,
   };
 }
 

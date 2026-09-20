@@ -120,6 +120,10 @@ export default function BasketballCard({
             <span>{signalContext.label}</span>
           </div>
           <div className="match-detail muted">
+            <span>Range context</span>
+            <span>{signalContext.range_context}</span>
+          </div>
+          <div className="match-detail muted">
             <span>Forecast edition</span>
             <span>{g.forecast_model_id || "edition unavailable"}</span>
           </div>

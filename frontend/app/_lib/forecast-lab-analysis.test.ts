@@ -11,6 +11,7 @@ const factors: BBMatchupFactors = {
 describe("forecast lab matchup signals", () => {
   it("labels primary probability strength without turning it into a recommendation", () => {
     expect(forecastSignalContext({
+      home_margin: 4.25,
       home_win_probability: 0.78,
       margin_low: -4.25,
       margin_high: 12.75,
@@ -19,8 +20,10 @@ describe("forecast lab matchup signals", () => {
       label: "Strong signal",
       probability_edge_pp: 28,
       range_width: 17,
+      range_context: "Range crosses even",
     });
     expect(forecastSignalContext({
+      home_margin: 0,
       home_win_probability: 0.56,
       margin_low: -8,
       margin_high: 8,
@@ -29,6 +32,7 @@ describe("forecast lab matchup signals", () => {
 
   it("keeps cold-start and malformed estimates visibly separate", () => {
     expect(forecastSignalContext({
+      home_margin: 0,
       home_win_probability: 0.82,
       margin_low: -25,
       margin_high: 25,
@@ -38,6 +42,7 @@ describe("forecast lab matchup signals", () => {
       label: "Cold-start estimate",
       probability_edge_pp: 32,
       range_width: 50,
+      range_context: "Range crosses even",
     });
     expect(forecastSignalContext({
       home_win_probability: Number.NaN,
@@ -48,6 +53,7 @@ describe("forecast lab matchup signals", () => {
       label: "Unavailable",
       probability_edge_pp: null,
       range_width: null,
+      range_context: "Unavailable",
     });
     expect(forecastSignalContext({
       home_win_probability: 0.62,
@@ -56,7 +62,38 @@ describe("forecast lab matchup signals", () => {
     } as BBGame["prediction"], true)).toMatchObject({
       label: "Unavailable",
       range_width: null,
+      range_context: "Unavailable",
     });
+  });
+
+  it("withholds a signal when the point estimate falls outside its stored range", () => {
+    expect(forecastSignalContext({
+      home_margin: 12,
+      home_win_probability: 0.78,
+      margin_low: -4,
+      margin_high: 8,
+    } as BBGame["prediction"], true)).toEqual({
+      estimate: "unavailable",
+      label: "Unavailable",
+      probability_edge_pp: null,
+      range_width: null,
+      range_context: "Unavailable",
+    });
+  });
+
+  it("separates a one-sided range from a range that crosses the pick", () => {
+    expect(forecastSignalContext({
+      home_margin: 7,
+      home_win_probability: 0.76,
+      margin_low: 1,
+      margin_high: 13,
+    } as BBGame["prediction"], true).range_context).toBe("Range stays home side");
+    expect(forecastSignalContext({
+      home_margin: -7,
+      home_win_probability: 0.24,
+      margin_low: -13,
+      margin_high: -1,
+    } as BBGame["prediction"], true).range_context).toBe("Range stays away side");
   });
 
   it("keeps the exact cold-start reason while rejecting duplicate or malformed names", () => {
