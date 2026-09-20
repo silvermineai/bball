@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marginDisagreementBands, pairedFootballMarketErrors, type FootballMarketBenchmarkRow } from "./football-market-benchmark";
+import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, type FootballMarketBenchmarkRow } from "./football-market-benchmark";
 
 const row = (values: Partial<FootballMarketBenchmarkRow>): FootballMarketBenchmarkRow => ({
   actual_margin: 0,
@@ -31,5 +31,23 @@ describe("football market benchmark analysis", () => {
     ]);
     expect(bands.map(({ key, games }) => [key, games])).toEqual([["under-3", 1], ["3-to-7", 1], ["7-plus", 1]]);
     expect(bands[2]).toMatchObject({ model_better: 0, archive_better: 1, ties: 0, model_mae: 10, archive_mae: 1 });
+  });
+
+  it("keeps directional disagreement buckets paired and excludes missing lines", () => {
+    const directions = marginDisagreementDirections([
+      row({ actual_margin: 4, model_margin: 5, archived_margin: 2 }),
+      row({ actual_margin: -4, model_margin: -8, archived_margin: -2 }),
+      row({ actual_margin: 8, model_margin: 3, archived_margin: 3 }),
+      row({ actual_margin: 8, model_margin: 8, archived_margin: null }),
+      row({ actual_margin: 8, model_margin: Number.NaN, archived_margin: 4 }),
+    ]);
+    expect(directions.map(({ key, games }) => [key, games])).toEqual([
+      ["model-above", 1],
+      ["model-below", 1],
+      ["same", 1],
+    ]);
+    expect(directions[0]).toMatchObject({ model_better: 1, archive_better: 0, ties: 0, model_mae: 1, archive_mae: 2 });
+    expect(directions[1]).toMatchObject({ model_better: 0, archive_better: 1, ties: 0, model_mae: 4, archive_mae: 2 });
+    expect(directions[2]).toMatchObject({ model_better: 0, archive_better: 0, ties: 1, model_mae: 5, archive_mae: 5 });
   });
 });

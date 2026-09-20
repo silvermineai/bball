@@ -21,6 +21,11 @@ export type MarginDisagreementBand = PairedErrorRecord & {
   label: string;
 };
 
+export type MarginDisagreementDirection = PairedErrorRecord & {
+  key: "model-above" | "model-below" | "same";
+  label: string;
+};
+
 const average = (values: number[]) => values.length
   ? values.reduce((total, value) => total + value, 0) / values.length
   : null;
@@ -69,5 +74,30 @@ export function marginDisagreementBands(rows: FootballMarketBenchmarkRow[]): Mar
       && Number.isFinite(row.model_margin)
       && band.matches(Math.abs(row.model_margin - row.archived_margin)));
     return { key: band.key, label: band.label, ...pairedErrorRecord(selected, (row) => row.model_margin, (row) => row.archived_margin, (row) => row.actual_margin) };
+  });
+}
+
+/**
+ * Separate model/line disagreement by direction so a reader can see a
+ * systematic lean without turning an archival comparison into a wager.
+ * Rows with a missing or non-finite archived estimate stay out of every
+ * direction bucket; exact equality is retained as its own bucket.
+ */
+export function marginDisagreementDirections(rows: FootballMarketBenchmarkRow[]): MarginDisagreementDirection[] {
+  const directions = [
+    { key: "model-above" as const, label: "Model above archived line", matches: (gap: number) => gap > 0 },
+    { key: "model-below" as const, label: "Model below archived line", matches: (gap: number) => gap < 0 },
+    { key: "same" as const, label: "Model equals archived line", matches: (gap: number) => gap === 0 },
+  ];
+  return directions.map((direction) => {
+    const selected = rows.filter((row) => {
+      if (row.archived_margin == null || !Number.isFinite(row.archived_margin) || !Number.isFinite(row.model_margin)) return false;
+      return direction.matches(row.model_margin - row.archived_margin);
+    });
+    return {
+      key: direction.key,
+      label: direction.label,
+      ...pairedErrorRecord(selected, (row) => row.model_margin, (row) => row.archived_margin, (row) => row.actual_margin),
+    };
   });
 }
