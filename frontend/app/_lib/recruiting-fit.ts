@@ -13,6 +13,9 @@ export type FitTeam = {
 export type FitRow = {
   player: BBRoster;
   role: FitRole | "unknown";
+  /** Ordinal within the complete role/workload-qualified cohort, before search filtering. */
+  cohortRank: number;
+  cohortTotal: number;
   score: number;
   skillPercentile: number | null;
   skillComponents: number;
@@ -179,9 +182,11 @@ export function buildRecruitingFit(
       skillBreakdown: skill.breakdown,
       workloadPercentile: workloadPercentile == null ? null : Math.round(workloadPercentile * 1000) / 10,
       primaryValue: skill.primary,
-    } satisfies FitRow;
+    };
   });
-  return scored
-    .filter((row) => !query || `${row.player.name} ${row.player.team} ${row.player.previous_teams.join(" ")}`.toLowerCase().includes(query))
-    .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name));
+  const ordered = scored
+    .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name))
+    .map((row, index) => ({ ...row, cohortRank: index + 1, cohortTotal: scored.length }));
+  return ordered
+    .filter((row) => !query || `${row.player.name} ${row.player.team} ${row.player.previous_teams.join(" ")}`.toLowerCase().includes(query));
 }

@@ -25,6 +25,19 @@ describe("recruiting fit", () => {
     expect(result[0].score).toBeGreaterThan(result[1].score);
   });
 
+  it("keeps cohort rank and denominator stable when a name filter hides candidates", () => {
+    const rows = [
+      player({ id: "target", team_id: "target", status: "same_program" }),
+      player({ id: "a", name: "Lead Creator", team_id: "2", prior_production: { games: 30, minutes: 900, mpg: 30, ppg: 18, rpg: 4, apg: 8, spg: 1, bpg: 0, teams: ["A"] } }),
+      player({ id: "b", name: "Other Creator", team_id: "3", prior_production: { games: 30, minutes: 500, mpg: 17, ppg: 10, rpg: 3, apg: 2, spg: 0.5, bpg: 0, teams: ["B"] } }),
+    ];
+    const full = buildRecruitingFit(rows, { teamId: "target", role: "guard", focus: "creation", minimumMinutes: 400 });
+    const filtered = buildRecruitingFit(rows, { teamId: "target", role: "guard", focus: "creation", minimumMinutes: 400, query: "other" });
+    expect(full.map((row) => row.cohortRank)).toEqual([1, 2]);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]).toMatchObject({ player: { id: "b" }, cohortRank: 2, cohortTotal: 2 });
+  });
+
   it("reports how much of the selected skill evidence is available", () => {
     const result = buildRecruitingFit([
       player({ id: "target", team_id: "target" }),
