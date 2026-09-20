@@ -12,6 +12,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from .research_ledger import brief_bundle, build_report, connect, digest, encode
 
 MARKETS = {"spreads", "totals", "h2h"}
 REQUIRED = {"game_id", "market", "captured_at", "updated_at", "home_name", "away_name", "starts_at"}
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def decimal_price(row: dict[str, str], side: str) -> float | None:
@@ -122,6 +124,11 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
         raise ValueError("sport must be football or basketball")
     if not provider.strip() or not license_url.strip():
         raise ValueError("provider and license_url are required")
+    source_sha256 = source_sha256.strip().lower()
+    if not SHA256.fullmatch(source_sha256):
+        raise ValueError("source_sha256 must be a 64-character hexadecimal SHA-256 digest")
+    if not source_name.strip():
+        raise ValueError("source_name is required")
     games = {str(game["id"]): game for game in schedules(sport)}
     receipt = {
         "provider": provider,
@@ -139,6 +146,7 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
     )
     accepted = 0
     errors = []
+    seen_quotes = set()
     for row_number, row in enumerate(rows, start=2):
         try:
             game_id = (row.get("game_id") or "").strip()
@@ -156,6 +164,12 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
                 captured,
                 receipt_id,
             )
+            quote_identity = (game_id, bookmaker, market["key"], captured)
+            if quote_identity in seen_quotes:
+                raise ValueError(
+                    f"row {row_number}: duplicate game/bookmaker/market/capture identity"
+                )
+            seen_quotes.add(quote_identity)
             key = digest([sport, game_id, "CSV:" + provider, bookmaker, market["key"], captured, payload])
             conn.execute(
                 "INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)",
@@ -176,11 +190,25 @@ def read_csv(path: Path):
     digest_hex = hashlib.sha256(raw).hexdigest()
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
-        fields = set(reader.fieldnames or [])
-        missing = REQUIRED - fields
+        raw_fields = reader.fieldnames or []
+        fields = [field.strip() for field in raw_fields]
+        if not fields or any(not field for field in fields):
+            raise ValueError("CSV contains a blank header")
+        if len(fields) != len(set(fields)):
+            duplicates = sorted({field for field in fields if fields.count(field) > 1})
+            raise ValueError("CSV contains duplicate headers: " + ", ".join(duplicates))
+        # DictReader otherwise silently keeps the last duplicate key and stores
+        # surplus cells under None. Normalize the header once so the strict
+        # shape checks below apply to every row exactly as the browser preflight.
+        reader.fieldnames = fields
+        missing = REQUIRED - set(fields)
         if missing:
             raise ValueError("CSV is missing required columns: " + ", ".join(sorted(missing)))
-        rows = list(reader)
+        rows = []
+        for row_number, row in enumerate(reader, start=2):
+            if None in row:
+                raise ValueError(f"row {row_number}: more cells than the header defines")
+            rows.append(row)
     if not rows:
         raise ValueError("CSV contains no rows")
     return rows, digest_hex

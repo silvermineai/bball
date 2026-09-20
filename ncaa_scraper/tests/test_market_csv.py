@@ -1,8 +1,10 @@
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from ncaa_scraper.market_csv import import_rows
+from ncaa_scraper.market_csv import import_rows, read_csv
 
 
 GAME = {
@@ -112,6 +114,51 @@ class MarketCsvTests(unittest.TestCase):
             self.assertEqual(
                 self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0],
                 0,
+            )
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_import_rejects_duplicate_quote_identity_before_writing(self, _schedules):
+        with self.assertRaisesRegex(ValueError, "duplicate game/bookmaker/market/capture identity"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [self.row(), self.row(line="-4.0")],
+                "d" * 64,
+                "lines.csv",
+                "Licensed Feed",
+                "https://provider.example/terms",
+                "2026-11-10T01:01:00Z",
+            )
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 0)
+
+    def test_read_csv_rejects_ambiguous_headers_and_surplus_cells(self):
+        with tempfile.TemporaryDirectory() as directory:
+            duplicate = Path(directory) / "duplicate.csv"
+            duplicate.write_text("game_id,game_id,market\n1,2,spreads\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate headers"):
+                read_csv(duplicate)
+
+            surplus = Path(directory) / "surplus.csv"
+            surplus.write_text(
+                "game_id,market,captured_at,updated_at,home_name,away_name,starts_at\n"
+                "1,spreads,2026-11-09T20:00:00Z,2026-11-09T19:59:00Z,Home,Away,2026-11-10T02:00:00Z,extra\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "more cells than the header defines"):
+                read_csv(surplus)
+
+    def test_import_requires_a_real_source_digest(self):
+        with self.assertRaisesRegex(ValueError, "64-character hexadecimal"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [],
+                "not-a-digest",
+                "lines.csv",
+                "Licensed Feed",
+                "https://provider.example/terms",
+                "2026-11-10T01:01:00Z",
             )
 
 
