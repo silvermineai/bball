@@ -220,7 +220,7 @@ async function publishedRankingsFallback(
       // remain in a shared URL when the reader switches to PPG, APG, etc.
       return undefined;
     };
-    const rows = players
+    const filteredPlayers = players
       .filter((player) => finite(player.division) === 1)
       .filter((player) => {
         const games = finite(player.games) || 0;
@@ -228,7 +228,6 @@ async function publishedRankingsFallback(
         return games >= args.minGames && minutes != null && minutes >= args.minMinutes;
       })
       .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
-      .filter((player) => !playerIds?.length || playerIds.includes(String(player.player_id || "")))
       .filter((player) => !args.classYear || player.class_year === args.classYear)
       .filter((player) => !args.position || player.position === args.position)
       .filter((player) => {
@@ -239,6 +238,10 @@ async function publishedRankingsFallback(
       .filter((row): row is { player: PublishedIndividualPlayer; value: number } => row.value != null)
       .sort((a, b) => (args.metric === "topg" || args.metric === "tov_rate" ? a.value - b.value : b.value - a.value) || String(a.player.name || "").localeCompare(String(b.player.name || "")));
     const start = args.page * 50;
+    const rankedRows = filteredPlayers.map((row, index) => ({ ...row, rank: index + 1 }));
+    const visibleRows = args.playerIds?.length
+      ? rankedRows.filter(({ player }) => args.playerIds!.includes(String(player.player_id || "")))
+      : rankedRows.slice(start, start + 50);
     const response = c.json({
       season: 2026,
       metric: args.metric,
@@ -248,9 +251,9 @@ async function publishedRankingsFallback(
       min_volume: args.minVolume,
       page: args.page,
       page_size: 50,
-      total: rows.length,
+      total: rankedRows.length,
       source: "published_fallback",
-      rows: rows.slice(start, start + 50).map(({ player, value }, index) => ({
+      rows: visibleRows.slice(0, 50).map(({ player, value, rank }) => ({
         season: 2026,
         player_id: String(player.player_id || ""),
         team_id: String(player.team_ncaa_id || ""),
@@ -276,7 +279,7 @@ async function publishedRankingsFallback(
         fta: finite(player.fta),
         ftm: finite(player.ftm),
         value,
-        rank: start + index + 1,
+        rank,
       })),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
@@ -553,10 +556,6 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     const search = `%${q}%`;
     binds.push(search, search, search, search);
   }
-  if (playerIds.length) {
-    clauses.push(`s.player_id IN (${playerIds.map(() => "?").join(",")})`);
-    binds.push(...playerIds);
-  }
   if (classYear) {
     clauses.push("EXISTS (SELECT 1 FROM bb_ncaa_rosters r WHERE r.season=s.season AND r.player_id=s.player_id AND r.team_id=s.team_id AND json_extract(r.profile_json,'$.class')=?)");
     binds.push(classYear);
@@ -566,6 +565,10 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
     binds.push(position);
   }
   const where = clauses.join(" AND ");
+  // Keep the full filtered cohort for `total` and rank assignment. Exact IDs
+  // constrain only the returned rows, otherwise a comparison card would
+  // incorrectly report each selected player as #1 of the selected set.
+  const targetClause = playerIds.length ? ` AND player_id IN (${playerIds.map(() => "?").join(",")})` : "";
   const expression = metric === "balanced_index" || metric === "impact_index" ? null : metricExpression(metric);
   const direction = rankingDirection(metric);
   const rankOrder = direction === "asc" ? "ASC" : "DESC";
@@ -590,12 +593,14 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const rows = metric === "balanced_index"
     ? await withTimeout((() => {
       const query = balancedQueries(where, minGames, minMinutes);
-      return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
+      const rowsQuery = query.rows.replace("WHERE value IS NOT NULL ORDER BY", `WHERE value IS NOT NULL${targetClause} ORDER BY`);
+      return researchDb(c.env).prepare(rowsQuery).bind(...binds, ...query.binds, ...playerIds, page * 50).all();
     })(), DB_TIMEOUT_MS)
     : metric === "impact_index"
       ? await withTimeout((() => {
         const query = impactQueries(where, minGames, minMinutes);
-        return researchDb(c.env).prepare(query.rows).bind(...binds, ...query.binds, page * 50).all();
+        const rowsQuery = query.rows.replace("WHERE value IS NOT NULL ORDER BY", `WHERE value IS NOT NULL${targetClause} ORDER BY`);
+        return researchDb(c.env).prepare(rowsQuery).bind(...binds, ...query.binds, ...playerIds, page * 50).all();
       })(), DB_TIMEOUT_MS)
     : await withTimeout(researchDb(c.env).prepare(
       `WITH aggregate AS (${aggregate(where)}), ranked AS (
@@ -603,9 +608,9 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}
       )
       SELECT *, RANK() OVER (ORDER BY value ${rankOrder}) AS rank FROM ranked
-      WHERE value IS NOT NULL ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
+      WHERE value IS NOT NULL${targetClause} ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
-    ).bind(...binds, minGames, minMinutes, ...volumeBinds, page * 50).all(), DB_TIMEOUT_MS);
+    ).bind(...binds, minGames, minMinutes, ...volumeBinds, ...playerIds, page * 50).all(), DB_TIMEOUT_MS);
   const response = c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

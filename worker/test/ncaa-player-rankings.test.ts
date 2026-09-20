@@ -55,8 +55,10 @@ describe("NCAA player rankings availability", () => {
       { DB: { prepare } } as never,
     );
     expect(response.status).toBe(200);
-    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
-    expect(sql).toContain("s.player_id IN (?,?)");
+    const countSql = String(prepare.mock.calls[0]?.[0] || "");
+    const rowSql = prepare.mock.calls.map(([query]) => String(query)).find((query) => query.includes("player_id IN (?,?)")) || "";
+    expect(rowSql).toContain("player_id IN (?,?)");
+    expect(countSql).not.toContain("player_id IN (?,?)");
   });
 
   it("rejects an unbounded or nonnumeric exact-ID list", async () => {
@@ -143,6 +145,28 @@ describe("NCAA player rankings availability", () => {
       rank: 1,
     });
     expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the published exact-ID response ranked against the full cohort", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const player = { division: 1, team_ncaa_id: 42, team_name: "Example U", games: 20, mins: 600 };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { ...player, player_id: 7, name: "Leader", pts: 400, ppg: 20 },
+        { ...player, player_id: 8, name: "Selected", pts: 200, ppg: 10 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ppg&playerIds=8&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 2,
+      rows: [expect.objectContaining({ player_id: "8", rank: 2, value: 10 })],
+    });
   });
 
   it("keeps null published shooting fields unavailable instead of coercing them to zero", async () => {

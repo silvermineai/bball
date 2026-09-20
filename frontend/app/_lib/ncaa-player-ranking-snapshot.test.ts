@@ -61,7 +61,7 @@ describe("NCAA player ranking snapshot", () => {
       minGames: "5",
       minMinutes: "200",
       minVolume: "100",
-      q: "42",
+      playerIds: "42",
     }));
     expect(new URLSearchParams(rankingSnapshotSearch("ppg", 2026, "42")).get("minVolume")).toBe("0");
   });

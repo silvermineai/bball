@@ -53,7 +53,7 @@ export function rankingSnapshotSearch(metric: SnapshotMetric, season: number, pl
     minGames: "5",
     minMinutes: "200",
     minVolume: String(definition?.minVolume ?? 0),
-    q: playerId,
+    playerIds: playerId,
   });
   return params.toString();
 }
@@ -124,7 +124,7 @@ export async function loadNcaaPlayerRankingSnapshot(
         metric: definition.metric,
         minGames: "5",
         minMinutes: "200",
-        q: playerId,
+          playerIds: playerId,
       });
       if (definition.minVolume != null) params.set("minVolume", String(definition.minVolume));
       try {
