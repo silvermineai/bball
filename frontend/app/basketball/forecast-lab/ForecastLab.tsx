@@ -71,10 +71,17 @@ type LiveModel = {
   calibration_season?: number | null;
   calibration_games?: number | null;
   margin_half_width?: number | null;
+  fallback_margin_half_width?: number | null;
+  fallback_games?: number | null;
   evaluation_season?: number | null;
   evaluation_games?: number | null;
+  evaluation_unscored_games?: number | null;
   evaluation_winner_accuracy?: number | null;
   evaluation_margin_mae?: number | null;
+  evaluation_margin_rmse?: number | null;
+  evaluation_total_mae?: number | null;
+  evaluation_brier?: number | null;
+  evaluation_log_loss?: number | null;
   evaluation_baseline_margin_mae?: number | null;
   evaluation_interval_coverage?: number | null;
 };
@@ -508,6 +515,11 @@ export default function ForecastLab({
             <div><span>Holdout result</span><strong>{liveModel.evaluation_winner_accuracy != null ? `${numeric(liveModel.evaluation_winner_accuracy * 100)}% winner` : "—"}</strong></div>
             <div><span>Margin MAE vs baseline</span><strong>{holdoutBaselineDelta == null ? "—" : `${holdoutBaselineDelta >= 0 ? "−" : "+"}${numeric(Math.abs(holdoutBaselineDelta), 2)} pts`}</strong></div>
             <div><span>Range coverage</span><strong>{liveModel.evaluation_interval_coverage != null ? `${numeric(liveModel.evaluation_interval_coverage * 100)}%` : "—"}</strong></div>
+            <div><span>Holdout Brier score</span><strong>{liveModel.evaluation_brier != null ? numeric(liveModel.evaluation_brier, 4) : "—"}</strong></div>
+            <div><span>Holdout log loss</span><strong>{liveModel.evaluation_log_loss != null ? numeric(liveModel.evaluation_log_loss, 4) : "—"}</strong></div>
+            <div><span>Holdout margin RMSE</span><strong>{liveModel.evaluation_margin_rmse != null ? `${numeric(liveModel.evaluation_margin_rmse, 2)} pts` : "—"}</strong></div>
+            <div><span>Holdout total MAE</span><strong>{liveModel.evaluation_total_mae != null ? `${numeric(liveModel.evaluation_total_mae, 2)} pts` : "—"}</strong></div>
+            <div><span>Unscored holdout games</span><strong>{liveModel.evaluation_unscored_games != null ? liveModel.evaluation_unscored_games.toLocaleString() : "—"}</strong></div>
           </div>}
           <p className="note"><Link href="/research/scorecard/?sport=basketball">Open the forecast record →</Link> · <Link href="/basketball/model/">Read the model notebook →</Link></p>
         </div>

@@ -66,7 +66,7 @@ describe("basketball forecast availability", () => {
   });
 
   it("keeps a newer partial publication behind the latest complete edition", async () => {
-    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const prepare = vi.fn((sql: string) => ({ bind: vi.fn(() => ({})) }));
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2027 }] },
       { results: [
@@ -75,7 +75,11 @@ describe("basketball forecast availability", () => {
       ] },
       { results: [
         { model_id: "partial", model_created_at: "2026-09-09T00:00:00Z", target_season: 2027, expected_forecasts: 12 },
-        { model_id: "complete", model_created_at: "2026-09-08T00:00:00Z", target_season: 2027, expected_forecasts: 12 },
+        { model_id: "complete", model_created_at: "2026-09-08T00:00:00Z", target_season: 2027, expected_forecasts: 12,
+          calibration_games: 5701, margin_half_width: 15.92, fallback_margin_half_width: 23.88, fallback_games: 50,
+          evaluation_games: 5734, evaluation_unscored_games: 0, evaluation_winner_accuracy: 0.676,
+          evaluation_margin_mae: 10.26, evaluation_margin_rmse: 13.1, evaluation_total_mae: 12.4,
+          evaluation_brier: 0.21, evaluation_log_loss: 0.61 },
       ] },
     ]);
 
@@ -88,9 +92,16 @@ describe("basketball forecast availability", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { models: Array<Record<string, unknown>> };
     expect(body.models).toMatchObject([
-      { model_id: "complete", forecasts: 12, expected_forecasts: 12, publication_complete: true },
+      { model_id: "complete", forecasts: 12, expected_forecasts: 12, publication_complete: true,
+        fallback_margin_half_width: 23.88, fallback_games: 50,
+        evaluation_unscored_games: 0, evaluation_margin_rmse: 13.1,
+        evaluation_total_mae: 12.4, evaluation_brier: 0.21, evaluation_log_loss: 0.61 },
       { model_id: "partial", forecasts: 1, expected_forecasts: 12, publication_complete: false },
     ]);
+    const metadataSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("FROM bb_models"))?.[0]);
+    expect(metadataSql).toContain("$.evaluation.brier");
+    expect(metadataSql).toContain("$.evaluation.log_loss");
+    expect(metadataSql).toContain("$.calibration.fallback_games");
   });
 
   it("returns a retryable status when the D1 catalog is unavailable", async () => {
