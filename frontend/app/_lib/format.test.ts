@@ -15,5 +15,6 @@ describe("numeric display formatting", () => {
     expect(fmt(1234.5, 1)).toBe("1,234.5");
     expect(signed(2.5)).toBe("+2.5");
     expect(signed(-2.5)).toBe("-2.5");
+    expect(signed(2.345, 2)).toBe("+2.35");
   });
 });

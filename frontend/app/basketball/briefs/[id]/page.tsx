@@ -31,6 +31,7 @@ import { buildNotebookShotPrep } from "../../../blog/notebook-shot-prep";
 import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
 import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
+import { explainBasketballPrediction } from "../../../_lib/basketball-prediction-explanation";
 
 const emptySplit = () => ({
   games: 0,
@@ -186,6 +187,7 @@ export default async function Page({
   const evidence = briefEvidence(g, d, home, away, recruiting, ledger, rosters),
     headToHead = headToHeadSummary(home, away),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
+  const predictionExplanation = explainBasketballPrediction(d.model, g, p);
   const shotSeason = d.season - 1;
   const shotProfiles = getBasketballShootingSeason(shotSeason)?.players || [];
   const shotPrep = evidence.programs.map(({ profile, personnel }) => ({
@@ -344,6 +346,78 @@ export default async function Page({
           and may change. Model edition: {date(d.generated_at)}.
         </p>
       </div>
+      <section className="section" aria-labelledby="brief-model-equation">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Model transparency / published equation</div>
+            <h2 id="brief-model-equation">How the model gets the score.</h2>
+          </div>
+          <span className="note">Edition matched</span>
+        </div>
+        {predictionExplanation ? (
+          <>
+            <p className="note brief-explainer">
+              The published forecast rebuilds each score from the league baseline,
+              each team&apos;s offense, the opponent&apos;s defense, and the venue
+              adjustment. These are the exact coefficient terms behind this game,
+              not a second forecast or a hand-written explanation.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Published term</th>
+                    <th className="numeric">{g.away_name}</th>
+                    <th className="numeric">{g.home_name}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">League baseline</th>
+                    <td className="numeric">{fmt(predictionExplanation.away.league, 2)}</td>
+                    <td className="numeric">{fmt(predictionExplanation.home.league, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Team offense</th>
+                    <td className="numeric">{signed(predictionExplanation.away.ownOffense, 2)}</td>
+                    <td className="numeric">{signed(predictionExplanation.home.ownOffense, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Opponent defense</th>
+                    <td className="numeric">{signed(predictionExplanation.away.opponentDefense, 2)}</td>
+                    <td className="numeric">{signed(predictionExplanation.home.opponentDefense, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Venue adjustment</th>
+                    <td className="numeric">{signed(predictionExplanation.away.venue, 2)}</td>
+                    <td className="numeric">{signed(predictionExplanation.home.venue, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Modeled efficiency</th>
+                    <td className="numeric">{fmt(predictionExplanation.away.efficiency, 2)}</td>
+                    <td className="numeric">{fmt(predictionExplanation.home.efficiency, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Projected score</th>
+                    <td className="numeric"><strong>{fmt(predictionExplanation.away.projectedScore, 2)}</strong></td>
+                    <td className="numeric"><strong>{fmt(predictionExplanation.home.projectedScore, 2)}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="note">
+              Shared pace baseline: <strong>{fmt(predictionExplanation.paceBaseline, 2)} possessions</strong>.
+              The equation is shown only when the coefficient edition reproduces
+              the published score within rounding tolerance.
+            </p>
+          </>
+        ) : (
+          <p className="empty">
+            The coefficient archive does not reproduce this forecast edition, so
+            the component terms are withheld rather than inferred.
+          </p>
+        )}
+      </section>
       <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} />
       <section className="brief-readiness" aria-label="Pre-tip readiness">
         <div className="section-heading">

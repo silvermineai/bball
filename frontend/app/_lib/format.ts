@@ -20,4 +20,4 @@ export const kick = (value: string) =>
     minute: "2-digit",
     timeZone: "America/New_York",
   }).format(new Date(value)) + " ET";
-export const signed = (n: number) => n == null || !Number.isFinite(n) ? "—" : `${n > 0 ? "+" : ""}${fmt(n)}`;
+export const signed = (n: number, d = 1) => n == null || !Number.isFinite(n) ? "—" : `${n > 0 ? "+" : ""}${fmt(n, d)}`;
