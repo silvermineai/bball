@@ -6,6 +6,10 @@ describe("sport scope boundary", () => {
     expect(scopeBoundaryView(false, "basketball", { gender: "women", division: "1" }, "/basketball/rankings")).toBe("loading");
   });
 
+  it("renders the unqualified men's default for static reading routes", () => {
+    expect(scopeBoundaryView(false, "basketball", { gender: "men", division: "1" }, "/basketball/briefs/401", false)).toBe("published");
+  });
+
   it.each([
     "/basketball/rankings",
     "/basketball/players",

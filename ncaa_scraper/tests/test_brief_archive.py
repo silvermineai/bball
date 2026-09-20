@@ -58,6 +58,20 @@ class BriefArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "forecast model"):
             self.capture(self.raw.replace(b"model-1", b"model-2"))
 
+    def test_flight_payload_recovers_article_when_static_shell_is_empty(self):
+        flight = '9:["$","article",null,{"className":"matchup-brief","children":[["$","p",null,{"children":"Home by 12 · model-1"}]]}]'
+        raw = (
+            b'<html><head><link rel="stylesheet" href="/style.css"></head>'
+            b'<body><main><div class="scope-loading"></div></main>'
+            b'<script>self.__next_f.push([1,'
+            + json.dumps(flight).encode()
+            + b'])</script></body></html>'
+        )
+        capture, version = self.capture(raw)
+        frozen = BeautifulSoup(capture.objects[version["revision"]][1], "lxml")
+        self.assertIn("Home by 12", frozen.get_text())
+        self.assertIn("model-1", frozen.get_text())
+
     def test_pack_ranges_replay_and_corruption(self):
         capture, _ = self.capture()
         bundle, records = pack(capture, {}, self.root)

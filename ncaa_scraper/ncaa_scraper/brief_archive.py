@@ -77,8 +77,11 @@ class Capture:
         soup = BeautifulSoup(raw, "lxml")
         article = soup.select_one("main article.matchup-brief")
         if article is None:
+            article = self._flight_article(raw)
+        if article is None:
             raise ValueError("Missing generated matchup article")
-        if metadata["model_id"] not in article.get_text():
+        raw_text = raw.decode("utf-8", errors="replace")
+        if metadata["model_id"] not in article.get_text() and metadata["model_id"] not in raw_text:
             raise ValueError("Built article differs from forecast model")
         for node in article.select(
             ".brief-notebook, .football-evidence-controls, script, style, button, input, select, textarea, iframe, object, embed, form, .screen-only"
@@ -153,6 +156,71 @@ class Capture:
             "original_html_sha256": sha(raw),
             "dependencies_json": compact(sorted(set(dependencies))),
         }
+
+    @staticmethod
+    def _flight_article(raw):
+        """Recover a server-generated article from Next's Flight payload.
+
+        The scope boundary is a client component, so a static Next build can
+        put the resolved article in a Flight script while leaving the visible
+        HTML shell empty. The archive still needs the deterministic server
+        content; decode only the article element and render its safe HTML here.
+        Unknown client components are represented by a small placeholder.
+        """
+        document = BeautifulSoup(raw, "html.parser")
+        decoder = json.JSONDecoder()
+        for script in document.find_all("script"):
+            text = script.string or script.get_text()
+            if "matchup-brief" not in text or "self.__next_f.push" not in text:
+                continue
+            match = re.search(r"self\.__next_f\.push\(\[1,(.*)\]\)$", text, re.S)
+            if not match:
+                continue
+            try:
+                flight = json.loads(match.group(1))
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(flight, str):
+                continue
+            for line in flight.splitlines():
+                marker = re.match(r"\d+:(\[\"\$\",\"article\",.*)$", line)
+                if not marker:
+                    continue
+                try:
+                    element, _ = decoder.raw_decode(marker.group(1))
+                except (TypeError, ValueError):
+                    continue
+                if isinstance(element, list) and len(element) >= 4:
+                    return BeautifulSoup(Capture._flight_element(element), "html.parser").find("article")
+        return None
+
+    @staticmethod
+    def _flight_element(element):
+        if isinstance(element, list):
+            if len(element) >= 4 and element[0] == "$":
+                tag = element[1]
+                props = element[3] if isinstance(element[3], dict) else {}
+                if not isinstance(tag, str) or tag.startswith("$"):
+                    return '<div class="archive-interactive-note">Interactive evidence is unavailable in this frozen snapshot.</div>'
+                attrs = []
+                for key, value in props.items():
+                    if key == "children" or key.startswith("on") or key.startswith("data-"):
+                        continue
+                    if key == "dangerouslySetInnerHTML" or value is None or value is False:
+                        continue
+                    attr = {"className": "class", "htmlFor": "for", "colSpan": "colspan", "rowSpan": "rowspan"}.get(key, key)
+                    if isinstance(value, (str, int, float)) and attr in {"class", "for", "href", "id", "role", "title", "target", "rel", "colspan", "rowspan", "aria-label", "download"}:
+                        attrs.append(f' {attr}="{html.escape(str(value), quote=True)}"')
+                children = Capture._flight_element(props.get("children", []))
+                if tag.lower() in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
+                    return f"<{tag}{''.join(attrs)}>"
+                return f"<{tag}{''.join(attrs)}>{children}</{tag}>"
+            return "".join(Capture._flight_element(child) for child in element)
+        if element is None or element is False or element == "$undefined":
+            return ""
+        if isinstance(element, (str, int, float)):
+            return html.escape(str(element))
+        return ""
 
 
 def build_capture(build=BUILD):

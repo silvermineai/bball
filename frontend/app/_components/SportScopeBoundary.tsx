@@ -48,8 +48,13 @@ export function scopeBoundaryView(
   sport: Props["sport"],
   scope: SportScope,
   pathname: string,
+  explicitScope = true,
 ): ScopeBoundaryView {
-  if (!hydrated) return "loading";
+  // An unqualified URL is the published men's Division I default. It is safe
+  // to render that default on the server and keeps static reading archives
+  // capturable. Explicit gender/division URLs stay behind the loading shell
+  // until their requested scope has been resolved.
+  if (!hydrated && explicitScope) return "loading";
   return isPublishedBoundary(sport, scope, pathname) ? "unavailable" : "published";
 }
 
@@ -66,7 +71,13 @@ export default function SportScopeBoundary({ sport, children }: Props) {
     setHydrated(true);
   }, []);
 
-  const view = scopeBoundaryView(hydrated, sport, scope, pathname);
+  const requestedGender = searchParams.get("gender");
+  const requestedDivision = searchParams.get("division");
+  const explicitScope = requestedGender === "men"
+    || requestedGender === "women"
+    || requestedDivision === "2"
+    || requestedDivision === "3";
+  const view = scopeBoundaryView(hydrated, sport, scope, pathname, explicitScope);
   if (view === "loading") return <div className="scope-loading" aria-busy="true" />;
   return view === "unavailable" ? <ScopeUnavailable sport={sport} scope={scope} /> : children;
 }
