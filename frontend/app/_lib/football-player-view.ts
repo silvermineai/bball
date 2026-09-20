@@ -40,6 +40,65 @@ export function parseFootballPlayerScope(search: string) {
 export const footballPlayerSorts = ["rank", "epa", "epa_per_play", "yards_per_play", "success_rate", "plays"] as const;
 export type FootballPlayerSort = (typeof footballPlayerSorts)[number];
 
+/**
+ * Return an inclusive, cohort-relative percentile for an observed player
+ * value.  The cohort is supplied by the caller so filters can define the
+ * comparison set explicitly; unavailable and non-finite values are omitted.
+ * This is a descriptive context measure, not a composite player grade.
+ */
+export function footballCohortPercentile(
+  value: number | null | undefined,
+  peers: Array<number | null | undefined>,
+  direction: "higher" | "lower" = "higher",
+) {
+  if (value == null || !Number.isFinite(value)) return null;
+  const values = peers.filter(
+    (peer): peer is number => peer != null && Number.isFinite(peer),
+  );
+  if (!values.length) return null;
+  const betterOrEqual = values.filter((peer) =>
+    direction === "higher" ? peer <= value : peer >= value,
+  ).length;
+  return Math.round((betterOrEqual / values.length) * 1000) / 10;
+}
+
+/** Compute the same descriptive percentile for a whole cohort in O(n log n). */
+export function footballCohortPercentiles(
+  values: Array<number | null | undefined>,
+  direction: "higher" | "lower" = "higher",
+) {
+  const sorted = values
+    .filter((value): value is number => value != null && Number.isFinite(value))
+    .sort((left, right) => left - right);
+  const lowerBound = (value: number) => {
+    let low = 0;
+    let high = sorted.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (sorted[middle] < value) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  const upperBound = (value: number) => {
+    let low = 0;
+    let high = sorted.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (sorted[middle] <= value) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  return values.map((value) => {
+    if (value == null || !Number.isFinite(value) || !sorted.length) return null;
+    const count = direction === "higher"
+      ? upperBound(value)
+      : sorted.length - lowerBound(value);
+    return Math.round((count / sorted.length) * 1000) / 10;
+  });
+}
+
 const footballEventCategoryMap: Partial<
   Record<FootballPlayerCategory, "defense" | "specialists">
 > = {

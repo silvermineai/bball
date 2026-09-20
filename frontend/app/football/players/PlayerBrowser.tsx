@@ -10,6 +10,7 @@ import {
 import {
   hasRankedProduction,
   computeFcsEpaRanks,
+  footballCohortPercentiles,
   footballPlayerRankKey,
   footballPlayerCategories,
   footballEventDataset,
@@ -43,7 +44,7 @@ const sortLabels: Record<FootballPlayerSort, string> = {
   success_rate: "Success rate",
   plays: "Volume (plays)",
 };
-const exportHeaders = ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "Ranked threshold plays", "Qualified"];
+const exportHeaders = ["Season", "Division", "Category", "Rank", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "EPA per play percentile", "Ranked threshold plays", "Qualified"];
 type Player = {
   id: string;
   team_id: string;
@@ -153,15 +154,31 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     if (division !== "fcs") return null;
     return fcsRanks.get(footballPlayerRankKey(player.id, player.team_id, selected.category));
   };
-  const rows = (data?.season === +season ? data.players : []).filter(
+  const cohortRows = (data?.season === +season ? data.players : []).filter(
     (p) =>
-      (p.name + " " + p.team + " " + p.conference)
-        .toLowerCase()
-        .includes(query.toLowerCase()) &&
       (division === "all" || p.division === division) &&
       (category === "all" || p.categories.includes(category)) &&
       (!qualified || (division === "fcs" ? selectedRank(p, productionForCategory(p, category)) != null : hasRankedProduction(p, category))),
   );
+  const rows = cohortRows.filter(
+    (p) =>
+      (p.name + " " + p.team + " " + p.conference)
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const efficiencyPercentiles = useMemo(() => {
+    const peers = cohortRows.map((player) => productionForCategory(player, category)?.stats.epa_per_play);
+    const percentiles = footballCohortPercentiles(peers);
+    return new Map(
+      cohortRows.map((player, index) => {
+        const selected = productionForCategory(player, category);
+        return [
+          footballPlayerRankKey(player.id, player.team_id, selected?.category || category),
+          percentiles[index],
+        ];
+      }),
+    );
+  }, [category, cohortRows]);
   const sortValue = (player: Player) => {
     const stats = productionForCategory(player, category)?.stats;
     if (!stats) return null;
@@ -189,7 +206,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     const selected = productionForCategory(p, category), s = selected?.stats;
     const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
     const rank = selectedRank(p, selected);
-    return [season, p.division, selected?.category || category, rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no"];
+    return [season, p.division, selected?.category || category, rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)), data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no"];
   };
   const download = (all = false) => {
     const selectedRows = all ? rows : rows.slice(page * 40, page * 40 + 40);
@@ -348,7 +365,10 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           : "Historical coverage varies by division and category."}{" "}
         Category games, yards per play and success rate come from the same
         source production record; a dash means unranked or unavailable, never
-        zero. {division === "fcs" ? "FCS rank is a Silvermine ordering of retained EPA after the same category play threshold; the publisher does not provide a source FCS rank." : "FBS rank is the retained source rank."}
+        zero. The EPA / play percentile compares observed values within the
+        selected season, division and category cohort; it is a descriptive rate
+        context and does not replace the source rank or create a composite grade.
+        {division === "fcs" ? " FCS rank is a Silvermine ordering of retained EPA after the same category play threshold; the publisher does not provide a source FCS rank." : " FBS rank is the retained source rank."}
       </p>
       {eventDataset ? (
         <section className="section paper-panel">
@@ -398,6 +418,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                   <th className="numeric">Success rate</th>
                   <th className="numeric">Total EPA</th>
                   <th className="numeric">EPA / play</th>
+                  <th className="numeric">EPA / play percentile</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,6 +453,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                       <td className="numeric">{fmt(s?.success_rate == null ? null : s.success_rate * 100, 1)}{s?.success_rate == null ? "" : "%"}</td>
                       <td className="numeric">{fmt(s?.epa)}</td>
                       <td className="numeric">{fmt(s?.epa_per_play, 2)}</td>
+                      <td className="numeric">{efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)) == null ? "—" : `${fmt(efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)), 1)}%`}</td>
                     </tr>
                   );
                 })}

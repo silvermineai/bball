@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   footballEventDataset,
+  footballCohortPercentile,
+  footballCohortPercentiles,
   computeFcsEpaRanks,
   footballPlayerRankKey,
   footballPlayerFilterSearch,
@@ -42,6 +44,14 @@ describe("football player index scope boundary", () => {
 });
 
 describe("football player index category selection", () => {
+  it("keeps efficiency percentiles descriptive and unavailable-safe", () => {
+    expect(footballCohortPercentile(0.4, [0.1, 0.4, 0.4, null])).toBe(100);
+    expect(footballCohortPercentile(0.1, [0.1, 0.4, 0.4, null])).toBe(33.3);
+    expect(footballCohortPercentile(0.4, [0.1, 0.4], "lower")).toBe(50);
+    expect(footballCohortPercentile(null, [0.1, 0.4])).toBeNull();
+    expect(footballCohortPercentiles([0.4, 0.1, null, 0.4])).toEqual([100, 33.3, null, 100]);
+  });
+
   it("hands off name-attributed event categories to their source notebooks", () => {
     expect(footballEventDataset("defensive")).toBe("defense");
     expect(footballEventDataset("interceptions")).toBe("defense");
