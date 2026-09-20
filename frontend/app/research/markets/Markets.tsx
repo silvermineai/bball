@@ -21,6 +21,18 @@ type Meta = {
     latest_no_quote_capture_at: string | null;
     latest_failed_validation_at: string | null;
   };
+  research_capture_history?: Array<{
+    captured_at: string;
+    season?: number;
+    summary_count?: number;
+    summary_with_pickcenter?: number;
+    summary_with_odds?: number;
+    source_rows?: number;
+    rows_with_lines?: number;
+    accepted_markets?: number;
+    rejected_records?: number;
+    market_status?: MarketCaptureStatus;
+  }>;
   research_capture?: {
     provider?: string;
     captured_at?: string;
@@ -261,6 +273,23 @@ export default function Markets() {
         {meta?.research_capture_summary?.latest_no_quote_capture_at && meta.research_capture_summary.latest_validated_capture_at ? <p className="note" role="status">
           The latest capture had no published quote, while the archive retains an earlier validated capture from {clock(meta.research_capture_summary.latest_validated_capture_at)}. Current availability and historical evidence are shown separately.
         </p> : null}
+        {meta?.research_capture_history?.length ? <details className="note" style={{ marginTop: 14 }}>
+          <summary>Recent capture attempts</summary>
+          <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="data-table">
+              <thead><tr><th>Captured (UTC)</th><th>Season</th><th>Status</th><th className="numeric">Summaries / rows</th><th className="numeric">Quotes accepted</th><th className="numeric">Rejected</th></tr></thead>
+              <tbody>{meta.research_capture_history.map((capture, index) => <tr key={`${capture.captured_at}-${capture.season || "all"}-${index}`}>
+                <th scope="row">{clock(capture.captured_at)}</th>
+                <td>{capture.season ?? "—"}</td>
+                <td>{capture.market_status ? marketCaptureStatusLabel(capture.market_status) : "Unclassified"}</td>
+                <td className="numeric">{(capture.summary_count ?? capture.source_rows ?? 0).toLocaleString()}<small>{capture.summary_with_pickcenter != null ? `${capture.summary_with_pickcenter.toLocaleString()} complete quotes` : `${(capture.rows_with_lines ?? 0).toLocaleString()} rows with lines`}</small></td>
+                <td className="numeric">{(capture.accepted_markets ?? 0).toLocaleString()}</td>
+                <td className="numeric">{(capture.rejected_records ?? 0).toLocaleString()}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p style={{ marginTop: 12 }}>This provider-neutral record describes retained capture evidence and does not infer a line when a source returned no quote.</p>
+        </details> : null}
         {archivePartial ? <p className="note" role="status">This archive read is partial while {unavailableSources.length ? unavailableSources.join(", ") : "one binding"} is busy. Counts reflect only the feed that answered; missing observations remain unavailable.</p> : null}
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market feed capabilities">
           {meta.provider_capabilities.map((capability, index) => <span key={`${capability.provider}-${index}`}>

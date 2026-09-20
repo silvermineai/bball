@@ -294,6 +294,12 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         research_latest_capture_at: ledgerReceipts.latest_captured_at || null,
         ...(latestCapture ? { research_capture: (({ provider: _provider, ...capture }) => capture)(latestCapture) } : {}),
         research_capture_summary: captureSummary,
+        // Keep a short, provider-neutral audit trail so operators can tell
+        // whether an empty comparison set reflects a fresh no-quote run,
+        // rejected rows, or an older validated capture. Provider identities
+        // stay out of the public response; the receipt and status evidence do
+        // not require publishing a vendor name.
+        research_capture_history: captureHistory.slice(0, 12).map(({ provider: _provider, ...capture }) => capture),
         provider_capabilities: publicCapabilities,
         archive_receipts: publicReceipts,
         ...(legacyFailed || ledgerFailed
@@ -312,6 +318,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         research_receipts: 0,
         research_latest_capture_at: null,
         provider_capabilities: providerCapabilities.filter((item) => item.sports.includes(sport)).map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability),
+        research_capture_history: [],
         source: "unavailable",
         unavailable_reason: "The market archive warehouse did not respond within the read window.",
       }, 200, { "Cache-Control": "no-store" });

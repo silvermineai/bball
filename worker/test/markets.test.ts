@@ -203,6 +203,10 @@ describe("market archive metadata", () => {
         latest_validated_capture_at: "2026-09-15T18:00:00Z",
         latest_no_quote_capture_at: "2026-09-16T18:00:00Z",
       },
+      research_capture_history: [
+        expect.objectContaining({ captured_at: "2026-09-16T18:00:00Z", market_status: "no_quotes_published" }),
+        expect.objectContaining({ captured_at: "2026-09-15T18:00:00Z", market_status: "validated_quotes", accepted_markets: 3 }),
+      ],
     });
   });
 
