@@ -29,11 +29,32 @@ export default function Page() {
   ) as {
     seasons: {
       season: number;
+      file?: string;
       box_rows: number;
       box_games: number;
       player_team_records: number;
     }[];
   };
+  const latestFootballPlayers = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "public/data/football",
+        footballPlayerCatalog.seasons.at(-1)?.file ?? "players-2026.json",
+      ),
+      "utf8",
+    ),
+  ) as { players?: Array<{ division?: string | null }> };
+  const footballScopeRows = (latestFootballPlayers.players ?? []).reduce(
+    (counts, player) => {
+      const division = String(player.division ?? "").toLowerCase();
+      if (division === "fbs" || division === "fcs") counts.d1 += 1;
+      else if (division === "d2" || division === "2") counts.d2 += 1;
+      else if (division === "d3" || division === "3") counts.d3 += 1;
+      return counts;
+    },
+    { d1: 0, d2: 0, d3: 0 },
+  );
   const footballArchiveRows = footballPlayerCatalog.seasons.reduce(
     (sum, season) => sum + season.box_rows,
     0,
@@ -148,6 +169,11 @@ export default function Page() {
   const ncaa = JSON.parse(
     fs.readFileSync(path.join(dataDir, "ncaa-individual.json"), "utf8"),
   ) as { coverage: { players: number; divisions: Record<string, unknown> } };
+  const basketballScopeRows = {
+    d1: Number((ncaa.coverage.divisions["1"] as { players?: number } | undefined)?.players ?? 0),
+    d2: Number((ncaa.coverage.divisions["2"] as { players?: number } | undefined)?.players ?? 0),
+    d3: Number((ncaa.coverage.divisions["3"] as { players?: number } | undefined)?.players ?? 0),
+  };
   const impact = JSON.parse(
     fs.readFileSync(path.join(dataDir, "impact.json"), "utf8"),
   ) as { players: unknown[] };
@@ -465,6 +491,32 @@ export default function Page() {
               <Link href="/basketball/model/">Open basketball methods →</Link>
             </p>
           </article>
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="scope-matrix">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Scope matrix</div>
+            <h2 id="scope-matrix">Choose a sport, then trust the boundary.</h2>
+          </div>
+          <span className="note">Rows are counted by the current retained edition</span>
+        </div>
+        <p className="note">
+          The navigation keeps men&apos;s, women&apos;s and division choices explicit. A published row count means the archive has records for that scope; an unavailable state stays visible instead of falling through to another division or gender.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Sport tab</th><th>Scope</th><th className="numeric">Player rows</th><th>Published use</th><th>Open</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Men&apos;s basketball</strong></td><td>D1</td><td className="numeric">{count(basketballScopeRows.d1)}</td><td>Forecasts, player archive, ratings, recruiting and shot evidence</td><td><Link href="/basketball/">Open desk →</Link></td></tr>
+              <tr><td><strong>Men&apos;s basketball</strong></td><td>D2</td><td className="numeric">{count(basketballScopeRows.d2)}</td><td>National NCAA leaderboard records; no D2 forecast slate published</td><td><Link href="/basketball/ncaa/?division=2">Open D2 records →</Link></td></tr>
+              <tr><td><strong>Men&apos;s basketball</strong></td><td>D3</td><td className="numeric">{count(basketballScopeRows.d3)}</td><td>National NCAA leaderboard records; no D3 forecast slate published</td><td><Link href="/basketball/ncaa/?division=3">Open D3 records →</Link></td></tr>
+              <tr><td><strong>Women&apos;s basketball</strong></td><td>D1–D3</td><td className="numeric">0</td><td>Awaiting a reviewed women&apos;s edition; no men&apos;s rows are substituted</td><td><Link href="/basketball/?gender=women&division=1">View boundary →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D1 (FBS/FCS)</td><td className="numeric">{count(footballScopeRows.d1)}</td><td>Player archive, team ratings, forecasts and game evidence</td><td><Link href="/football/">Open desk →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D2–D3</td><td className="numeric">{count(footballScopeRows.d2 + footballScopeRows.d3)}</td><td>Not present in the retained football edition</td><td><Link href="/football/?gender=men&division=2">View boundary →</Link></td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
