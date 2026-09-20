@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchJson } from "../../../_lib/fetch-json";
+import type { BBRosters } from "../../../_lib/basketball-types";
+import { rosterPositionGroup, type RosterLabRow, type RosterPositionGroup } from "../../../_lib/roster-readiness";
 
 export type ProgramProspect = {
   athlete_id: string;
@@ -114,6 +116,84 @@ export type ProgramProspectSummary = {
   }>;
 };
 
+export type ProgramRoleContext = {
+  rosterSeason: number;
+  rosterReceipt: NonNullable<BBRosters["source"]>;
+  classes: number[];
+  roles: Array<{
+    role: RosterPositionGroup;
+    listed: number;
+    priorMinutes: number;
+    returningMinutes: number;
+    returningShare: number | null;
+    commitments: Record<number, { total: number; ranked: number; bestRank: number | null }>;
+  }>;
+};
+
+const roleOrder: RosterPositionGroup[] = ["guard", "forward", "center", "unreported"];
+
+/**
+ * Put exact-program commitments beside the program's current roster role
+ * context. The two evidence lanes remain separate: this never treats a
+ * commitment as enrollment or adds a prospect to the roster.
+ */
+export function buildProgramRoleContext(
+  rows: ProgramProspectRow[],
+  teamId: string,
+  readiness: RosterLabRow | undefined,
+  rosterSeason: number,
+  rosterSource: BBRosters["source"],
+): ProgramRoleContext | null {
+  if (
+    !readiness
+    || readiness.teamId !== teamId
+    || !Number.isInteger(rosterSeason)
+    || rosterSeason < 2025
+    || !rosterSource
+    || typeof rosterSource.dataset !== "string"
+    || !rosterSource.dataset.trim()
+    || typeof rosterSource.sha256 !== "string"
+    || !/^[a-f0-9]{64}$/.test(rosterSource.sha256)
+  ) return null;
+  if (roleOrder.reduce((sum, role) => sum + readiness.positionCounts[role], 0) !== readiness.listed) return null;
+
+  const classes = [...new Set(rows.filter((row) => row.evidence === "Recorded commitment").map((row) => row.season))].sort((a, b) => a - b);
+  const roles = roleOrder.map((role) => {
+    const listed = readiness.positionCounts[role];
+    const workload = readiness.positionWorkload[role];
+    if (
+      !workload
+      || !Number.isInteger(listed)
+      || listed < 0
+      || !Number.isFinite(workload.priorMinutes)
+      || workload.priorMinutes < 0
+      || !Number.isFinite(workload.returningMinutes)
+      || workload.returningMinutes < 0
+      || workload.returningMinutes > workload.priorMinutes
+      || (workload.returningShare != null && (!Number.isFinite(workload.returningShare) || workload.returningShare < 0 || workload.returningShare > 1))
+    ) return null;
+    const commitments = Object.fromEntries(classes.map((season) => {
+      const matches = rows.filter((row) => {
+        if (row.evidence !== "Recorded commitment" || row.season !== season) return false;
+        if (row.committed_team_id !== teamId) return false;
+        return rosterPositionGroup(row.position) === role;
+      });
+      const ranks = matches.map((row) => row.rank).filter(recordedRank);
+      return [season, { total: matches.length, ranked: ranks.length, bestRank: ranks.length ? Math.min(...ranks) : null }];
+    }));
+    return {
+      role,
+      listed,
+      priorMinutes: workload.priorMinutes,
+      returningMinutes: workload.returningMinutes,
+      returningShare: workload.returningShare,
+      commitments,
+    };
+  });
+  if (roles.some((role) => role == null)) return null;
+  return { rosterSeason, rosterReceipt: rosterSource, classes, roles: roles as ProgramRoleContext["roles"] };
+}
+
 const recordedRank = (value: number | null): value is number => Number.isInteger(value) && (value ?? 0) > 0;
 
 const rankProfile = (ranks: number[]) => ({
@@ -201,7 +281,19 @@ export function combineProgramProspectClasses(releases: RecruitingClass[], teamI
 /** Every recruiting class currently retained by the national board. */
 export const PROGRAM_PROSPECT_CLASSES = [2025, 2026, 2027, 2028, 2029, 2030] as const;
 
-export default function ProgramProspects({ teamId, programName }: { teamId: string; programName: string }) {
+export default function ProgramProspects({
+  teamId,
+  programName,
+  readiness,
+  rosterSeason,
+  rosterSource,
+}: {
+  teamId: string;
+  programName: string;
+  readiness?: RosterLabRow;
+  rosterSeason: number;
+  rosterSource: BBRosters["source"];
+}) {
   const [releases, setReleases] = useState<RecruitingClass[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
 
@@ -225,6 +317,7 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
 
   const rows = combineProgramProspectClasses(releases, teamId);
   const summary = summarizeProgramProspects(rows);
+  const roleContext = buildProgramRoleContext(rows, teamId, readiness, rosterSeason, rosterSource);
 
   return (
     <section className="section paper-panel program-prospect-panel" aria-labelledby="program-prospect-title">
@@ -253,6 +346,27 @@ export default function ProgramProspects({ teamId, programName }: { teamId: stri
             <div><strong>{summary.committedElsewhere.toLocaleString()}</strong><span>Committed elsewhere</span></div>
             <div><strong>{summary.editions.toLocaleString()}</strong><span>Class editions represented</span></div>
           </div>
+          <section className="paper-panel" style={{ marginTop: 20 }} aria-label="Program recruiting and roster role context">
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Program context / separate evidence lanes</div><h3>Where do recorded commitments sit beside roster workload?</h3></div>
+              <Link href={`/basketball/roster-lab/?q=${encodeURIComponent(programName)}`}>Open roster lab →</Link>
+            </div>
+            <p className="note">Roster counts and prior minutes describe the {rosterSeason} source listing. Commitment counts come from exact program IDs in each retained recruiting class. The table does not add a prospect to a roster, predict a role or establish enrollment, eligibility or availability.</p>
+            {roleContext ? <>
+              <div className="table-scroll" style={{ marginTop: 14 }}><table className="data-table">
+                <thead><tr><th>Source role</th><th className="numeric">Roster listed</th><th className="numeric">Prior minutes</th><th className="numeric">Same-program minutes</th><th className="numeric">Same-program share</th>{roleContext.classes.map((season) => <th className="numeric" key={season}>{season} commitments</th>)}</tr></thead>
+                <tbody>{roleContext.roles.map((role) => <tr key={role.role}>
+                  <th scope="row">{role.role === "unreported" ? "Unreported" : role.role[0].toUpperCase() + role.role.slice(1)}</th>
+                  <td className="numeric">{role.listed}</td>
+                  <td className="numeric">{role.priorMinutes ? Math.round(role.priorMinutes).toLocaleString() : "—"}</td>
+                  <td className="numeric">{role.returningMinutes ? Math.round(role.returningMinutes).toLocaleString() : "—"}</td>
+                  <td className="numeric">{role.returningShare == null ? "—" : `${(role.returningShare * 100).toFixed(0)}%`}</td>
+                  {roleContext.classes.map((season) => { const cell = role.commitments[season]; return <td className="numeric" key={season}>{cell.total ? <><strong>{cell.total}</strong><small>{cell.bestRank == null ? "Rank unavailable" : `Best #${cell.bestRank} · ${cell.ranked}/${cell.total} ranked`}</small></> : "—"}</td>; })}
+                </tr>)}</tbody>
+              </table></div>
+              <p className="note" style={{ marginTop: 10 }}>Roster receipt <span className="source-hash">{roleContext.rosterReceipt.sha256}</span>{roleContext.rosterReceipt.fetched_at ? ` · captured ${new Date(roleContext.rosterReceipt.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. Recruiting editions: {releases.map((release) => `${release.season} ${release.edition || "unavailable"}`).join(" · ")}.</p>
+            </> : <p className="empty">The roster role context or its release receipt did not pass validation, so the program-level join is withheld.</p>}
+          </section>
           {summary.byClass.length > 0 && <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <caption className="eyebrow" style={{ captionSide: "top", textAlign: "left", padding: "0 0 8px" }}>Class rank profile / exact program matches</caption>

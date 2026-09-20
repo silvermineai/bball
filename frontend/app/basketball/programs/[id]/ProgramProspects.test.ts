@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildProgramRoleContext,
   combineProgramProspectClasses,
   isExactProgramProspect,
   loadProgramProspectClass,
@@ -9,6 +10,7 @@ import {
   type ProgramProspect,
   type RecruitingClass,
 } from "./ProgramProspects";
+import type { RosterLabRow } from "../../../_lib/roster-readiness";
 
 const prospect = (overrides: Partial<ProgramProspect> = {}): ProgramProspect => ({
   athlete_id: "1",
@@ -132,5 +134,54 @@ describe("program prospect evidence", () => {
       listedAverageRank: 7,
       committedElsewhere: 1,
     });
+  });
+
+  it("places exact-program commitments beside receipted roster role workload", () => {
+    const rows = combineProgramProspectClasses([{ season: 2027, total: 3, edition: "recruiting-a", captured_at: "2026-09-19", rows: [
+      prospect({ athlete_id: "10", position: "PG", rank: 20, committed_team_id: "2755" }),
+      prospect({ athlete_id: "11", position: "SG", rank: null, committed_team_id: "2755" }),
+      prospect({ athlete_id: "12", position: "C", rank: 80, committed_team_id: "999", school_ids: ["2755"] }),
+    ] }], "2755");
+    const readiness = {
+      teamId: "2755",
+      listed: 5,
+      positionCounts: { guard: 2, forward: 1, center: 1, unreported: 1 },
+      positionWorkload: {
+        guard: { priorMinutes: 1000, returningMinutes: 400, incomingPriorMinutes: 200, returningShare: 0.4 },
+        forward: { priorMinutes: 500, returningMinutes: 500, incomingPriorMinutes: 0, returningShare: 1 },
+        center: { priorMinutes: 300, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: 0 },
+        unreported: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+      },
+    } as RosterLabRow;
+    const context = buildProgramRoleContext(rows, "2755", readiness, 2027, { dataset: "rosters", url: null, fetched_at: "2026-09-19T00:00:00Z", sha256: "a".repeat(64) });
+
+    expect(context?.classes).toEqual([2027]);
+    expect(context?.roles.find((role) => role.role === "guard")).toEqual(expect.objectContaining({
+      listed: 2,
+      priorMinutes: 1000,
+      returningMinutes: 400,
+      commitments: { 2027: { total: 2, ranked: 1, bestRank: 20 } },
+    }));
+    expect(context?.roles.find((role) => role.role === "center")?.commitments[2027].total).toBe(0);
+  });
+
+  it("withholds program role context on a mismatched program, malformed workload or missing receipt", () => {
+    const rows = [{ ...prospect({ athlete_id: "10", committed_team_id: "2755" }), season: 2027, evidence: "Recorded commitment" as const }];
+    const readiness = {
+      teamId: "2755",
+      listed: 1,
+      positionCounts: { guard: 1, forward: 0, center: 0, unreported: 0 },
+      positionWorkload: {
+        guard: { priorMinutes: 100, returningMinutes: 80, incomingPriorMinutes: 0, returningShare: 0.8 },
+        forward: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+        center: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+        unreported: { priorMinutes: 0, returningMinutes: 0, incomingPriorMinutes: 0, returningShare: null },
+      },
+    } as RosterLabRow;
+    const receipt = { dataset: "rosters", url: null, fetched_at: null, sha256: "a".repeat(64) };
+
+    expect(buildProgramRoleContext(rows, "999", readiness, 2027, receipt)).toBeNull();
+    expect(buildProgramRoleContext(rows, "2755", { ...readiness, positionWorkload: { ...readiness.positionWorkload, guard: { ...readiness.positionWorkload.guard, returningMinutes: 120 } } }, 2027, receipt)).toBeNull();
+    expect(buildProgramRoleContext(rows, "2755", readiness, 2027, { ...receipt, sha256: null })).toBeNull();
   });
 });

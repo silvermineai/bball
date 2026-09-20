@@ -137,7 +137,13 @@ export default async function Page({
         rosters={rosters}
         readiness={rosterReadiness}
       />
-      <ProgramProspects teamId={id} programName={p.name} />
+      <ProgramProspects
+        teamId={id}
+        programName={p.name}
+        readiness={rosterReadiness}
+        rosterSeason={rosters.season}
+        rosterSource={rosters.source}
+      />
       <section className="section">
         <div className="section-heading">
           <div>
