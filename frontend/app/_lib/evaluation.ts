@@ -29,6 +29,11 @@ export type EvaluationMetrics = {
   interval_coverage: number | null;
   margin_bias: number | null;
 };
+export type ConfidenceMetrics = EvaluationMetrics & {
+  label: string;
+  minimum: number;
+  maximum: number;
+};
 export type EvaluationSummary = {
   id: string;
   generated_at: string;
@@ -41,6 +46,16 @@ export type EvaluationSummary = {
     bootstrap_replicates: number;
   };
   metrics: Record<Method, EvaluationMetrics>;
+  confidence_metrics?: Record<
+    Method,
+    Array<
+      EvaluationMetrics & {
+        label: string;
+        minimum: number;
+        maximum: number;
+      }
+    >
+  >;
   season_results?: {
     season: number;
     calibration_season: number;
@@ -177,6 +192,38 @@ export function evaluate(
     interval_coverage: covered / n,
     margin_bias: bias / n,
   };
+}
+
+const confidenceBands = [
+  { label: "50–59%", minimum: 0.5, maximum: 0.6 },
+  { label: "60–69%", minimum: 0.6, maximum: 0.7 },
+  { label: "70–79%", minimum: 0.7, maximum: 0.8 },
+  { label: "80–89%", minimum: 0.8, maximum: 0.9 },
+  { label: "90–100%", minimum: 0.9, maximum: 1.01 },
+] as const;
+
+/**
+ * Evaluate fixed confidence bands on held-out rows. The band is selected from
+ * the probability attached to each prediction and never from its result.
+ */
+export function confidenceMetrics(
+  rows: EvaluationGame[],
+  method: Method,
+): ConfidenceMetrics[] {
+  return confidenceBands.map((band) => {
+    const selected = rows.filter((row) => {
+      const probability = row[method].home_win_probability;
+      if (!Number.isFinite(probability)) return false;
+      const confidence = Math.max(probability, 1 - probability);
+      return confidence >= band.minimum && confidence < band.maximum;
+    });
+    return {
+      label: band.label,
+      minimum: band.minimum,
+      maximum: band.maximum,
+      ...evaluate(selected, method),
+    };
+  });
 }
 
 export function reliability(rows: EvaluationGame[], method: Method) {

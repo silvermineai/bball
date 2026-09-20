@@ -3,6 +3,7 @@ import unittest
 from datetime import datetime, timezone
 
 from ncaa_scraper.basketball_evaluation import (
+    confidence_metrics,
     metrics,
     paired_difference,
     rolling_predictions,
@@ -183,6 +184,38 @@ class EvaluationTest(unittest.TestCase):
         )
         self.assertIsNone(metrics([], "weekly")["margin_mae"])
         self.assertIsNone(paired_difference(rows[:1])["low"])
+
+    def test_confidence_metrics_use_fixed_probability_bands(self):
+        def row(probability, actual_margin):
+            prediction = {
+                "home_margin": 0,
+                "total": 140,
+                "home_win_probability": probability,
+                "margin_low": -5,
+                "margin_high": 5,
+            }
+            return {
+                "home_score": 70 + actual_margin,
+                "away_score": 70,
+                "starts_at": "2025-01-06T20:00:00Z",
+                "preseason": prediction,
+                "weekly": prediction,
+            }
+
+        rows = [
+            row(0.55, 5),   # 50–59% confidence
+            row(0.65, -5),  # 60–69% confidence (the underdog wins)
+            row(0.35, -5),  # also 60–69% confidence, away favored
+            row(0.90, 10),  # 90–100% confidence, outside interval
+        ]
+        bands = confidence_metrics(rows, "weekly")
+        by_label = {band["label"]: band for band in bands}
+        self.assertEqual(by_label["50–59%"]["games"], 1)
+        self.assertEqual(by_label["60–69%"]["games"], 2)
+        self.assertEqual(by_label["60–69%"]["winner_accuracy"], 0.5)
+        self.assertEqual(by_label["90–100%"]["games"], 1)
+        self.assertEqual(by_label["90–100%"]["interval_coverage"], 0)
+        self.assertEqual(by_label["80–89%"]["games"], 0)
 
 
 if __name__ == "__main__":

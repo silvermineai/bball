@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  confidenceMetrics,
   evaluate,
   evaluationHighlights,
   evaluationCsv,
@@ -91,6 +92,21 @@ describe("same-game model evaluation", () => {
         (b) => b.predicted === null && b.observed === null,
       ),
     ).toBe(true);
+  });
+  it("groups by fixed model certainty without using the final score", () => {
+    const sample = games.slice(0, 40);
+    const before = confidenceMetrics(sample, "weekly");
+    const changed = sample.map((game) => ({
+      ...game,
+      home_score: game.away_score + 100,
+      away_score: game.home_score,
+    }));
+    const after = confidenceMetrics(changed, "weekly");
+    expect(before.map((band) => band.games)).toEqual(
+      after.map((band) => band.games),
+    );
+    expect(before.reduce((sum, band) => sum + band.games, 0)).toBe(sample.length);
+    expect(before.every((band) => band.minimum <= band.maximum)).toBe(true);
   });
   it("publishes separate independent season transitions", () => {
     expect(summary.season_results).toHaveLength(3);

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
 import {
   evaluate,
+  confidenceMetrics,
   evaluationCsv,
   evaluationHighlights,
   filterEvaluation,
@@ -218,6 +219,10 @@ export default function Evaluation({
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
+  const confidenceBands = useMemo(
+    () => confidenceMetrics(games || [], "weekly"),
+    [games],
+  );
   return (
     <>
       <div className="page-title">
@@ -275,6 +280,55 @@ export default function Evaluation({
           </p>
         </div>
       </div>
+      {confidenceBands.length ? (
+        <section className="section paper-panel" aria-labelledby="confidence-bands">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Held-out model behavior / Fixed bands</div>
+              <h2 id="confidence-bands">How reliable is the model at each confidence level?</h2>
+            </div>
+            <span className="note">2025–26 weekly challenger · {summary.coverage.compared_games.toLocaleString()} games</span>
+          </div>
+          <p>
+            These fixed bands group the weekly model by its certainty at the
+            time of each historical forecast. A 35% home probability belongs
+            to the 60–69% confidence band because the away team was favored.
+            Results describe the held-out replay and do not retune the live
+            forecast.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table evaluation-metrics">
+              <thead>
+                <tr>
+                  <th>Model confidence</th>
+                  <th className="numeric">Games</th>
+                  <th className="numeric">Margin MAE</th>
+                  <th className="numeric">Winner accuracy</th>
+                  <th className="numeric">Brier</th>
+                  <th className="numeric">80% range coverage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {confidenceBands.map((band) => (
+                  <tr key={band.label}>
+                    <th scope="row">{band.label}</th>
+                    <td className="numeric">{band.games.toLocaleString()}</td>
+                    <td className="numeric">{fmt(band.margin_mae, 2)}</td>
+                    <td className="numeric">{percent(band.winner_accuracy)}</td>
+                    <td className="numeric">{fmt(band.brier, 4)}</td>
+                    <td className="numeric">{percent(band.interval_coverage)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Empty bands remain in the published artifact with zero games. Lower
+            MAE and Brier are better; confidence is fixed before outcomes are
+            evaluated, so small bands should be read with their sample size.
+          </p>
+        </section>
+      ) : null}
       {summary.season_results?.length ? (
         <section className="section">
           <div className="section-heading">

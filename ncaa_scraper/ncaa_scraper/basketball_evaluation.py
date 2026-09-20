@@ -204,6 +204,50 @@ def metrics(rows, method):
     }
 
 
+# Confidence is computed from the probability available at prediction time,
+# then evaluated only against the held-out result.  Keeping these bands in the
+# published experiment makes it possible to judge how the model behaves on a
+# prospective game without selecting a threshold after seeing its outcome.
+CONFIDENCE_BANDS = (
+    ("50–59%", 0.50, 0.60),
+    ("60–69%", 0.60, 0.70),
+    ("70–79%", 0.70, 0.80),
+    ("80–89%", 0.80, 0.90),
+    ("90–100%", 0.90, 1.01),
+)
+
+
+def confidence_metrics(rows, method):
+    """Return held-out metrics grouped by model certainty.
+
+    Certainty is max(p(home win), 1 - p(home win)); therefore a 30% home
+    probability is evaluated in the 70–79% band.  The buckets are fixed
+    before looking at outcomes, and each bucket reuses :func:`metrics` so its
+    scoring definitions cannot drift from the headline evaluation.
+    """
+    result = []
+    for label, minimum, maximum in CONFIDENCE_BANDS:
+        bucket = [
+            row
+            for row in rows
+            if minimum
+            <= max(
+                float(row[method]["home_win_probability"]),
+                1.0 - float(row[method]["home_win_probability"]),
+            )
+            < maximum
+        ]
+        result.append(
+            {
+                "label": label,
+                "minimum": minimum,
+                "maximum": maximum,
+                **metrics(bucket, method),
+            }
+        )
+    return result
+
+
 def paired_difference(rows, replicates=5000):
     weeks = defaultdict(list)
     for row in rows:
@@ -552,6 +596,10 @@ def build(conn, overview, output=DIRECTORY):
         "sources": sources,
         "implementation_sha256": implementation,
         "metrics": summary_metrics,
+        "confidence_metrics": {
+            method: confidence_metrics(rows, method)
+            for method in ("preseason", "weekly")
+        },
         "season_results": season_results,
         "calibration": {"preseason": prior_calibration, "weekly": calibration},
         "paired_mae_difference": paired_difference(
@@ -588,6 +636,7 @@ def build(conn, overview, output=DIRECTORY):
             "The preseason team's field is frozen before each season. New programs outside it are excluded from both methods.",
             "No roster, availability, injury, recruiting or bookmaker inputs. This experiment does not replace live preseason forecasts or enter the prospective ledger.",
             "The week-block bootstrap describes sampling variation within this one season. It is not a guarantee across future seasons or protection against shared-team dependence between weeks.",
+            "Confidence bands are fixed probability buckets from the 2025–26 held-out rows; they are descriptive and do not retune the live model or imply a betting edge.",
             "Fixed penalties, yearly weights and update cadence; no parameter search was performed. This is a new exploratory comparison on a season already used for the published baseline evaluation.",
         ],
     }
