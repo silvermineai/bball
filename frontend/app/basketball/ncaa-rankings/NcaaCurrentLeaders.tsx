@@ -67,6 +67,18 @@ export function playersForDivision(players: IndividualPlayer[], division: "1" | 
   return players.filter((player) => player.division === Number(division));
 }
 
+export const leaderCoverageFields = ["ppg", "rpg", "apg", "spg", "bpg", "mpg", "fg_pct", "three_pct", "ft_pct"] as const;
+export type LeaderCoverageField = (typeof leaderCoverageFields)[number];
+
+export function divisionCoverage(players: IndividualPlayer[], division: "1" | "2" | "3") {
+  const rows = playersForDivision(players, division);
+  const fields = Object.fromEntries(leaderCoverageFields.map((field) => {
+    const observed = rows.filter((player) => typeof player[field] === "number" && Number.isFinite(player[field])).length;
+    return [field, { observed, total: rows.length, share: rows.length ? observed / rows.length : null }];
+  })) as Record<LeaderCoverageField, { observed: number; total: number; share: number | null }>;
+  return { records: rows.length, fields };
+}
+
 export function currentScoringLeaders(players: IndividualPlayer[], division: "1" | "2" | "3") {
   return playersForDivision(players, division)
     .filter((player) => player.games && player.ppg != null)
@@ -110,7 +122,14 @@ export default function NcaaCurrentLeaders({ players }: { players: IndividualPla
   const division = scope.division;
   const leaders = currentScoringLeaders(players, division);
   const categoryLeaders = currentCategoryLeaders(players, division);
+  const coverage = divisionCoverage(players, division);
   return <>
+    <section className="paper-panel" aria-labelledby="leader-coverage" style={{ marginBottom: 24 }}>
+      <div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Published row coverage / {scopeLabel(scope)}</div><h2 id="leader-coverage">See what the edition actually contains.</h2></div><span className="note">Missing values stay unavailable</span></div>
+      <div className="strip"><div><strong>{coverage.records.toLocaleString()}</strong><span>Published player rows</span></div><div><strong>{coverage.fields.ppg.observed.toLocaleString()} / {coverage.fields.ppg.total.toLocaleString()}</strong><span>PPG rows observed</span></div><div><strong>{coverage.fields.apg.observed.toLocaleString()} / {coverage.fields.apg.total.toLocaleString()}</strong><span>APG rows observed</span></div><div><strong>{coverage.fields.fg_pct.observed.toLocaleString()} / {coverage.fields.fg_pct.total.toLocaleString()}</strong><span>FG% rows observed</span></div></div>
+      <div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Field</th><th className="numeric">Observed</th><th className="numeric">Share</th></tr></thead><tbody>{leaderCoverageFields.map((field) => <tr key={field}><th scope="row">{field.replaceAll("_", " ").toUpperCase()}</th><td className="numeric">{coverage.fields[field].observed.toLocaleString()} / {coverage.fields[field].total.toLocaleString()}</td><td className="numeric">{coverage.fields[field].share == null ? "—" : `${(coverage.fields[field].share * 100).toFixed(1)}%`}</td></tr>)}</tbody></table></div>
+      <p className="note" style={{ marginTop: 12 }}>Counts come from the selected division&apos;s retained NCAA individual rows. A blank source field remains unavailable and is excluded from that field&apos;s observed count.</p>
+    </section>
     <section className="paper-panel" aria-labelledby="category-leaders" style={{ marginBottom: 24 }}>
       <div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Current season / {scopeLabel(scope)}</div><h2 id="category-leaders">National category leaders</h2></div><span className="note">Rate leaders use simple attempt and game minimums</span></div>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Category</th><th>Leader</th><th>Program</th><th className="numeric">Value</th><th className="numeric">GP</th><th className="numeric">Rank</th></tr></thead><tbody>{categoryLeaders.map((entry) => { const rank = entry.player[`${String(entry.field)}_rank` as keyof IndividualPlayer]; return <tr key={entry.field}><th scope="row">{entry.label}</th><td>{playerLabel(entry.player, scope)}<small>{entry.player.position || "Position unavailable"}</small>{division !== "1" && <small>Published leader row · Archive ID {entry.player.player_id}</small>}</td><td><strong>{entry.player.team_name || "—"}</strong><small>{entry.player.conference || "Conference unavailable"}</small></td><td className="numeric"><strong>{number(entry.value)}{entry.suffix || ""}</strong></td><td className="numeric">{number(entry.player.games, 0)}</td><td className="numeric">{typeof rank === "number" ? number(rank, 0) : "—"}</td></tr>; })}</tbody></table></div>

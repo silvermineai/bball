@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentCategoryLeaders, currentScoringLeaders, playersForDivision, type IndividualPlayer } from "./NcaaCurrentLeaders";
+import { currentCategoryLeaders, currentScoringLeaders, divisionCoverage, playersForDivision, type IndividualPlayer } from "./NcaaCurrentLeaders";
 
 const player = (id: number, division: number, name: string, ppg: number): IndividualPlayer => ({
   player_id: id,
@@ -31,5 +31,18 @@ describe("NCAA current leader cohorts", () => {
     ];
     const leaders = currentCategoryLeaders(rows, "2");
     expect(leaders.find((entry) => entry.field === "fg_pct")?.player.name).toBe("D2 qualified");
+  });
+
+  it("reports selected-division field coverage without turning missing values into zero", () => {
+    const rows = [
+      player(1, 2, "Recorded", 20),
+      { ...player(2, 2, "Sparse", 15), apg: null, fg_pct: null },
+      player(3, 1, "Other division", 30),
+    ];
+    const coverage = divisionCoverage(rows, "2");
+    expect(coverage.records).toBe(2);
+    expect(coverage.fields.ppg).toEqual({ observed: 2, total: 2, share: 1 });
+    expect(coverage.fields.apg).toEqual({ observed: 1, total: 2, share: 0.5 });
+    expect(coverage.fields.fg_pct).toEqual({ observed: 1, total: 2, share: 0.5 });
   });
 });
