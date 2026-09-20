@@ -5,6 +5,9 @@ import { fmt } from "../_lib/format";
 import {
   buildPlayerCourtZones,
   classifyPlayerShotLocation,
+  isMadePlayerShot,
+  isMissedPlayerShot,
+  hasKnownPlayerShotOutcome,
   isPlottablePlayerShot,
   PLAYER_COURT,
   summarizePlayerShotBands,
@@ -54,7 +57,9 @@ export default function PlayerShotLocationCourt({
   const beyondHalfCourt = shots.filter((shot) => classifyPlayerShotLocation(shot) === "beyond_half_court").length;
   const maximumAttempts = Math.max(0, ...zones.map((zone) => zone.attempts));
   const totalAttempts = shots.length;
-  const made = plotted.filter((shot) => shot.made).length;
+  const made = plotted.filter(isMadePlayerShot).length;
+  const knownOutcomes = plotted.filter(hasKnownPlayerShotOutcome).length;
+  const unknownOutcomes = plotted.length - knownOutcomes;
   const id = `player-shot-location-${playerName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "profile"}`;
 
   return (
@@ -97,7 +102,7 @@ export default function PlayerShotLocationCourt({
                     strokeWidth="1"
                   >
                     <title>
-                      {`${zone.attempts.toLocaleString()} attempts · ${zone.makes.toLocaleString()} makes${zone.makeRate == null ? "" : ` · ${(zone.makeRate * 100).toFixed(1)}% made`} · ${(zone.share * 100).toFixed(1)}% of plotted attempts`}
+                      {`${zone.attempts.toLocaleString()} attempts · ${zone.makes.toLocaleString()} makes${zone.makeRate == null ? "" : ` · ${(zone.makeRate * 100).toFixed(1)}% made`}${zone.attempts > zone.knownOutcomes ? ` · ${zone.attempts - zone.knownOutcomes} outcome unknown` : ""} · ${(zone.share * 100).toFixed(1)}% of plotted attempts`}
                     </title>
                   </rect>
                   {!compact && zone.attempts > 0 ? (
@@ -119,12 +124,12 @@ export default function PlayerShotLocationCourt({
                       cx={point.x}
                       cy={point.y}
                       r="2.4"
-                      fill={shot.made ? "#1f8a62" : "#c94d3f"}
+                      fill={isMadePlayerShot(shot) ? "#1f8a62" : isMissedPlayerShot(shot) ? "#c94d3f" : "#7b8790"}
                       fillOpacity=".72"
                       stroke="#fff"
                       strokeWidth=".7"
                     >
-                      <title>{`${shot.made ? "Made" : "Missed"} ${shot.points}-point attempt${shot.text ? ` · ${shot.text}` : ""}`}</title>
+                      <title>{`${isMadePlayerShot(shot) ? "Made" : isMissedPlayerShot(shot) ? "Missed" : "Outcome unavailable"} ${shot.points ?? ""}-point attempt${shot.text ? ` · ${shot.text}` : ""}`}</title>
                     </circle>
                   );
                 })}
@@ -132,7 +137,7 @@ export default function PlayerShotLocationCourt({
             ) : null}
           </svg>
           <p className="mt-2 text-xs leading-5 text-graphite">
-            Warmer cells mean more attempts. The heatmap always uses all plotted attempts; the marker filter changes only the made/missed event dots. Counts and shooting rates use plotted coordinates only; unavailable locations remain in the attempt total below.
+            Warmer cells mean more attempts. The heatmap always uses all plotted attempts; the marker filter changes only the made/missed event dots. Counts and shooting rates use plotted coordinates only; unknown outcomes are excluded from makes and rates, and unavailable locations remain in the attempt total below.
           </p>
         </div>
 
@@ -140,7 +145,7 @@ export default function PlayerShotLocationCourt({
           <div className="grid grid-cols-3 border-y border-line py-3 font-stat text-[10px] uppercase tracking-[0.12em] text-graphite">
             <div><span className="block">All attempts</span><strong className="mt-1 block text-lg tracking-normal text-ink">{totalAttempts.toLocaleString()}</strong></div>
             <div><span className="block">Plotted</span><strong className="mt-1 block text-lg tracking-normal text-ink">{plotted.length.toLocaleString()}</strong></div>
-            <div><span className="block">Plotted FG%</span><strong className="mt-1 block text-lg tracking-normal text-ink">{plotted.length ? `${fmt((made / plotted.length) * 100, 1)}%` : "—"}</strong></div>
+            <div><span className="block">Plotted FG% · known</span><strong className="mt-1 block text-lg tracking-normal text-ink">{knownOutcomes ? `${fmt((made / knownOutcomes) * 100, 1)}%` : "—"}</strong></div>
           </div>
           <div className="mt-4">
             <p className="eyebrow text-court">GEOMETRIC BANDS</p>
@@ -149,7 +154,7 @@ export default function PlayerShotLocationCourt({
               {bands.map((band) => (
                 <div key={band.band} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span>{band.band}</span>
-                  <span className="font-stat text-xs text-graphite">{band.attempts.toLocaleString()} · {band.makeRate == null ? "—" : `${(band.makeRate * 100).toFixed(1)}%`}</span>
+                  <span className="font-stat text-xs text-graphite">{band.attempts.toLocaleString()} · {band.makeRate == null ? "—" : `${(band.makeRate * 100).toFixed(1)}%`}{band.attempts > band.knownOutcomes ? ` · ${band.attempts - band.knownOutcomes} unknown` : ""}</span>
                 </div>
               ))}
             </div>
@@ -162,7 +167,7 @@ export default function PlayerShotLocationCourt({
                 <div key={side.side} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span>{side.side}</span>
                   <span className="text-right font-stat text-xs text-graphite">
-                    {side.attempts.toLocaleString()} · {(side.share * 100).toFixed(1)}% plotted · {side.makeRate == null ? "—" : `${(side.makeRate * 100).toFixed(1)}% FG`}
+                    {side.attempts.toLocaleString()} · {(side.share * 100).toFixed(1)}% plotted · {side.makeRate == null ? "—" : `${(side.makeRate * 100).toFixed(1)}% FG`}{side.attempts > side.knownOutcomes ? ` · ${side.attempts - side.knownOutcomes} unknown` : ""}
                   </span>
                 </div>
               ))}
@@ -170,7 +175,7 @@ export default function PlayerShotLocationCourt({
           </div>
           <p className="mt-3 text-xs leading-5 text-graphite">
             {missing.toLocaleString()} attempt{missing === 1 ? "" : "s"} lack a usable coordinate
-            {beyondHalfCourt ? `; ${beyondHalfCourt.toLocaleString()} beyond the half-court drawing` : ""}. They are retained in All attempts and omitted from the map.
+            {beyondHalfCourt ? `; ${beyondHalfCourt.toLocaleString()} beyond the half-court drawing` : ""}. They are retained in All attempts and omitted from the map. {unknownOutcomes.toLocaleString()} plotted outcome{unknownOutcomes === 1 ? "" : "s"} remain excluded from shooting rates.
           </p>
         </div>
       </div>
@@ -191,7 +196,7 @@ export default function PlayerShotLocationCourt({
       ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-graphite" aria-label="Shot map legend">
         <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#ce612f]" aria-hidden="true" /> More attempts</span>
-        {showEvents ? <><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-make" aria-hidden="true" /> {eventFilter === "made" ? "Made markers" : eventFilter === "missed" ? "Made hidden" : "Made"}</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-miss" aria-hidden="true" /> {eventFilter === "missed" ? "Missed markers" : eventFilter === "made" ? "Missed hidden" : "Missed"}</span></> : null}
+        {showEvents ? <><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-make" aria-hidden="true" /> {eventFilter === "made" ? "Made markers" : eventFilter === "missed" ? "Made hidden" : "Made"}</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-miss" aria-hidden="true" /> {eventFilter === "missed" ? "Missed markers" : eventFilter === "made" ? "Missed hidden" : "Missed"}</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-[#7b8790]" aria-hidden="true" /> Unknown outcome</span></> : null}
       </div>
     </section>
   );

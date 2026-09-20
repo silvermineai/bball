@@ -57,6 +57,7 @@ export type PlayerCourtZone = {
   width: number;
   height: number;
   attempts: number;
+  knownOutcomes: number;
   makes: number;
   makeRate: number | null;
   share: number;
@@ -71,14 +72,28 @@ const PLAYER_COURT_LANE_EDGE_FT = 8;
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
+/** Treat only source-explicit made values as makes; null/unknown is not a miss. */
+export function isMadePlayerShot(shot: Pick<PlayerShotLocation, "made">) {
+  return shot.made === true || shot.made === 1;
+}
+
+/** Treat only source-explicit missed values as misses; null/unknown stays unknown. */
+export function isMissedPlayerShot(shot: Pick<PlayerShotLocation, "made">) {
+  return shot.made === false || shot.made === 0;
+}
+
+export function hasKnownPlayerShotOutcome(shot: Pick<PlayerShotLocation, "made">) {
+  return isMadePlayerShot(shot) || isMissedPlayerShot(shot);
+}
+
 /** Keep event-marker filtering strict: unknown outcomes never become misses. */
 export function matchesPlayerShotOutcome(
   shot: Pick<PlayerShotLocation, "made">,
   filter: PlayerShotOutcomeFilter,
 ) {
   if (filter === "all") return true;
-  if (filter === "made") return shot.made === true || shot.made === 1;
-  return shot.made === false || shot.made === 0;
+  if (filter === "made") return isMadePlayerShot(shot);
+  return isMissedPlayerShot(shot);
 }
 
 /** The NCAA feed uses both basket-origin pairs as placeholders for unknown locations. */
@@ -142,11 +157,11 @@ export function playerShotBand(
 }
 
 export function summarizePlayerShotBands(shots: readonly PlayerShotLocation[]) {
-  const bands: Array<{ band: PlayerShotBand; attempts: number; makes: number; share: number; makeRate: number | null }> = [
-    { band: "Rim", attempts: 0, makes: 0, share: 0, makeRate: null },
-    { band: "Paint", attempts: 0, makes: 0, share: 0, makeRate: null },
-    { band: "Midrange", attempts: 0, makes: 0, share: 0, makeRate: null },
-    { band: "3-point", attempts: 0, makes: 0, share: 0, makeRate: null },
+  const bands: Array<{ band: PlayerShotBand; attempts: number; knownOutcomes: number; makes: number; share: number; makeRate: number | null }> = [
+    { band: "Rim", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
+    { band: "Paint", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
+    { band: "Midrange", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
+    { band: "3-point", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
   ];
   const byBand = new Map(bands.map((row) => [row.band, row]));
   for (const shot of shots) {
@@ -155,13 +170,14 @@ export function summarizePlayerShotBands(shots: readonly PlayerShotLocation[]) {
     const row = band ? byBand.get(band) : undefined;
     if (!row) continue;
     row.attempts += 1;
-    row.makes += shot.made ? 1 : 0;
+    row.knownOutcomes += hasKnownPlayerShotOutcome(shot) ? 1 : 0;
+    row.makes += isMadePlayerShot(shot) ? 1 : 0;
   }
   const total = bands.reduce((sum, row) => sum + row.attempts, 0);
   return bands.map((row) => ({
     ...row,
     share: total ? row.attempts / total : 0,
-    makeRate: row.attempts ? row.makes / row.attempts : null,
+    makeRate: row.knownOutcomes ? row.makes / row.knownOutcomes : null,
   }));
 }
 
@@ -182,13 +198,14 @@ export function summarizePlayerShotSides(shots: readonly PlayerShotLocation[]) {
   const sides: Array<{
     side: PlayerShotSide;
     attempts: number;
+    knownOutcomes: number;
     makes: number;
     share: number;
     makeRate: number | null;
   }> = [
-    { side: "Chart left", attempts: 0, makes: 0, share: 0, makeRate: null },
-    { side: "Middle", attempts: 0, makes: 0, share: 0, makeRate: null },
-    { side: "Chart right", attempts: 0, makes: 0, share: 0, makeRate: null },
+    { side: "Chart left", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
+    { side: "Middle", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
+    { side: "Chart right", attempts: 0, knownOutcomes: 0, makes: 0, share: 0, makeRate: null },
   ];
   const bySide = new Map(sides.map((row) => [row.side, row]));
   for (const shot of shots) {
@@ -197,13 +214,14 @@ export function summarizePlayerShotSides(shots: readonly PlayerShotLocation[]) {
     const row = side ? bySide.get(side) : undefined;
     if (!row) continue;
     row.attempts += 1;
-    row.makes += shot.made ? 1 : 0;
+    row.knownOutcomes += hasKnownPlayerShotOutcome(shot) ? 1 : 0;
+    row.makes += isMadePlayerShot(shot) ? 1 : 0;
   }
   const total = sides.reduce((sum, row) => sum + row.attempts, 0);
   return sides.map((row) => ({
     ...row,
     share: total ? row.attempts / total : 0,
-    makeRate: row.attempts ? row.makes / row.attempts : null,
+    makeRate: row.knownOutcomes ? row.makes / row.knownOutcomes : null,
   }));
 }
 
@@ -227,6 +245,7 @@ export function buildPlayerCourtZones(
       width: width * 10,
       height: height * 10,
       attempts: 0,
+      knownOutcomes: 0,
       makes: 0,
       makeRate: null,
       share: 0,
@@ -238,12 +257,13 @@ export function buildPlayerCourtZones(
     const row = Math.min(rows - 1, Math.max(0, Math.floor((shot.y! - PLAYER_COURT.yMin) / height)));
     const cell = cells[row * columns + column];
     cell.attempts += 1;
-    cell.makes += shot.made ? 1 : 0;
+    cell.knownOutcomes += hasKnownPlayerShotOutcome(shot) ? 1 : 0;
+    cell.makes += isMadePlayerShot(shot) ? 1 : 0;
   }
   const total = cells.reduce((sum, cell) => sum + cell.attempts, 0);
   return cells.map((cell) => ({
     ...cell,
-    makeRate: cell.attempts ? cell.makes / cell.attempts : null,
+    makeRate: cell.knownOutcomes ? cell.makes / cell.knownOutcomes : null,
     share: total ? cell.attempts / total : 0,
   }));
 }

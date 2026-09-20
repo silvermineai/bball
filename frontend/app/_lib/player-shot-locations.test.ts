@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildPlayerCourtZones,
   classifyPlayerShotLocation,
+  isMadePlayerShot,
+  isMissedPlayerShot,
   isPlottablePlayerShot,
   matchesPlayerShotOutcome,
   playerShotBand,
@@ -36,6 +38,20 @@ describe("player shot location helpers", () => {
     expect(matchesPlayerShotOutcome(shot({ made: 0 }), "missed")).toBe(true);
     expect(matchesPlayerShotOutcome(shot({ made: null }), "missed")).toBe(false);
     expect(matchesPlayerShotOutcome(shot({ made: null }), "made")).toBe(false);
+  });
+
+  it("keeps unknown outcomes out of makes and shooting rates", () => {
+    expect(isMadePlayerShot(shot({ made: null }))).toBe(false);
+    expect(isMissedPlayerShot(shot({ made: null }))).toBe(false);
+    const zones = buildPlayerCourtZones([
+      shot({ x: 0, y: 1, made: true }),
+      shot({ x: 0, y: 1, made: null }),
+      shot({ x: 0, y: 1, made: false }),
+    ]);
+    const rim = zones.find((zone) => zone.attempts === 3);
+    expect(rim?.makes).toBe(1);
+    expect(rim?.knownOutcomes).toBe(2);
+    expect(rim?.makeRate).toBeCloseTo(1 / 2);
   });
 
   it("keeps source coordinates in the same SVG projection as the NCAA chart", () => {
@@ -94,9 +110,9 @@ describe("player shot location helpers", () => {
     expect(playerShotSide(shot({ x: 8 }))).toBe("Middle");
     expect(playerShotSide(shot({ x: null }))).toBeNull();
     expect(sides).toEqual([
-      { side: "Chart left", attempts: 1, makes: 1, share: 0.2, makeRate: 1 },
-      { side: "Middle", attempts: 3, makes: 1, share: 0.6, makeRate: 1 / 3 },
-      { side: "Chart right", attempts: 1, makes: 1, share: 0.2, makeRate: 1 },
+      { side: "Chart left", attempts: 1, knownOutcomes: 1, makes: 1, share: 0.2, makeRate: 1 },
+      { side: "Middle", attempts: 3, knownOutcomes: 3, makes: 1, share: 0.6, makeRate: 1 / 3 },
+      { side: "Chart right", attempts: 1, knownOutcomes: 1, makes: 1, share: 0.2, makeRate: 1 },
     ]);
   });
 });
