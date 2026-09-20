@@ -13,7 +13,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from .football_model import forecast, train_and_evaluate
+from .football_model import forecast, train_and_evaluate, train_division_model
 from .football_efficiency_model import build as build_efficiency_model
 from .football_sources import (
     ATTRIBUTION,
@@ -430,9 +430,12 @@ def personnel_preview(conn, year: int, limit: int = 12) -> list[dict]:
 
 
 def lower_division_results(games: list[dict], season: int, generated_at: str) -> dict:
-    """Build a source-native D2/D3 result archive from retained schedule rows.
+    """Build a source-native D2/D3 result and forecast archive.
 
-    This intentionally does not infer player production, ratings, or forecasts.
+    Player production remains outside this schedule artifact. The score model
+    is independently fitted per exact division after the result archive is
+    assembled, so a missing history or mixed-division game cannot manufacture
+    a rating or prediction.
     Cross-division games are represented once for each lower division involved;
     team summaries only credit a team whose exact schedule label matches that
     division. Games with missing scores remain visible in coverage but cannot
@@ -441,8 +444,16 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
     rows: list[dict] = []
     summaries: dict[str, dict[str, int]] = {}
     teams: dict[str, dict[str, dict[str, object]]] = {division: {} for division in LOWER_RESULT_DIVISIONS}
+    models: dict[str, dict[str, object] | None] = {division: None for division in LOWER_RESULT_DIVISIONS}
+    forecasts: dict[str, list[dict]] = {division: [] for division in LOWER_RESULT_DIVISIONS}
     for division in sorted(LOWER_RESULT_DIVISIONS):
-        summaries[division] = {"games": 0, "score_complete": 0, "scores_missing": 0}
+        summaries[division] = {
+            "games": 0,
+            "score_complete": 0,
+            "scores_missing": 0,
+            "upcoming_games": 0,
+            "forecast_games": 0,
+        }
     for game in games:
         if game.get("season") != season or not game.get("completed"):
             continue
@@ -495,6 +506,73 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
                 team["losses"] += int(own_score < opponent_score)
                 team["points_for"] += own_score
                 team["points_against"] += opponent_score
+    for division in sorted(LOWER_RESULT_DIVISIONS):
+        try:
+            model = train_division_model(games, generated_at, season, division)
+        except ValueError:
+            model = None
+        if model is None:
+            continue
+        models[division] = {
+            key: model[key]
+            for key in (
+                "id",
+                "version",
+                "division",
+                "target_season",
+                "cutoff",
+                "training_seasons",
+                "training_games",
+                "calibration_season",
+                "calibration",
+                "limitations",
+            )
+        }
+        directory = {
+            str(game.get(f"{side}_id")): game.get(f"{side}_name") or str(game.get(f"{side}_id"))
+            for game in games
+            if game.get("season") == season
+            for side in ("home", "away")
+            if normalize_division(game.get(f"{side}_division")) == division
+        }
+        ratings = []
+        for index, team_id in enumerate(model["teams"]):
+            ratings.append({
+                "team_id": str(team_id),
+                "team": directory.get(str(team_id), str(team_id)),
+                "division": division,
+                "rating": round(float(model["margin_coef"][index + 2]), 2),
+            })
+        ratings.sort(key=lambda row: (-row["rating"], row["team"]))
+        for rank, row in enumerate(ratings, 1):
+            row["rank"] = rank
+        models[division]["ratings"] = ratings
+        for game in games:
+            if game.get("season") != season or game.get("completed"):
+                continue
+            if normalize_division(game.get("home_division")) != division or normalize_division(game.get("away_division")) != division:
+                continue
+            if not game.get("kickoff") or game["kickoff"] <= generated_at:
+                continue
+            summaries[division]["upcoming_games"] += 1
+            prediction = forecast(model, game)
+            if prediction is None:
+                continue
+            summaries[division]["forecast_games"] += 1
+            forecasts[division].append({
+                "game_id": str(game["id"]),
+                "kickoff": game["kickoff"],
+                "week": game.get("week"),
+                "scope_division": division,
+                "home_id": str(game["home_id"]),
+                "home_name": game.get("home_name") or str(game["home_id"]),
+                "away_id": str(game["away_id"]),
+                "away_name": game.get("away_name") or str(game["away_id"]),
+                "neutral": bool(game.get("neutral")),
+                "model_id": model["id"],
+                "prediction": prediction,
+            })
+        forecasts[division].sort(key=lambda row: (row["kickoff"], row["game_id"]))
     rows.sort(key=lambda row: (row["kickoff"], row["game_id"], row["scope_division"]), reverse=True)
     team_rows = {
         division: sorted(
@@ -504,7 +582,7 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
         for division in sorted(LOWER_RESULT_DIVISIONS)
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "sport": "football",
         "season": season,
         "generated_at": generated_at,
@@ -512,10 +590,12 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
         "coverage": summaries,
         "teams": team_rows,
         "rows": rows,
+        "models": models,
+        "forecasts": forecasts,
         "limitations": [
             "Results come from the retained schedule release and are not a player-stat census.",
             "Rows with missing scores remain visible in coverage and are excluded from team records.",
-            "No lower-division predictions, ratings, or player identities are inferred from these rows.",
+            "Forecasts and ratings use only exact-division final scores, venue, and team identity; player availability and cross-division strength are not modeled.",
         ],
     }
 

@@ -17,6 +17,21 @@ export type LowerFootballResult = {
   score_complete: boolean;
 };
 
+export type LowerFootballPrediction = {
+  home_margin: number;
+  total: number;
+  home_score: number;
+  away_score: number;
+  home_win_probability: number;
+  margin_low: number;
+  margin_high: number;
+};
+
+export type LowerFootballForecast = Omit<LowerFootballResult, "home_division" | "away_division" | "home_score" | "away_score" | "score_complete"> & {
+  model_id: string;
+  prediction: LowerFootballPrediction;
+};
+
 export type LowerFootballTeam = {
   team_id: string;
   team: string;
@@ -28,15 +43,39 @@ export type LowerFootballTeam = {
   points_against: number;
 };
 
+export type LowerFootballRating = {
+  team_id: string;
+  team: string;
+  division: LowerFootballDivision;
+  rating: number;
+  rank: number;
+};
+
+export type LowerFootballModel = {
+  id: string;
+  version: string;
+  division: LowerFootballDivision;
+  target_season: number;
+  cutoff: string;
+  training_seasons: number[];
+  training_games: number;
+  calibration_season: number;
+  calibration: { games: number; margin_half_width: number };
+  ratings: LowerFootballRating[];
+  limitations: string[];
+};
+
 export type LowerFootballResults = {
   schema_version: number;
   sport: "football";
   season: number;
   generated_at: string;
   scope: string;
-  coverage: Record<LowerFootballDivision, { games: number; score_complete: number; scores_missing: number }>;
+  coverage: Record<LowerFootballDivision, { games: number; score_complete: number; scores_missing: number; upcoming_games?: number; forecast_games?: number }>;
   teams: Record<LowerFootballDivision, LowerFootballTeam[]>;
   rows: LowerFootballResult[];
+  models: Partial<Record<LowerFootballDivision, LowerFootballModel | null>>;
+  forecasts: Record<LowerFootballDivision, LowerFootballForecast[]>;
   limitations: string[];
   source?: { dataset?: string; season?: number; url?: string; fetched_at?: string; sha256?: string; last_modified?: string | null };
 };
@@ -60,11 +99,57 @@ function validRow(value: unknown): value is LowerFootballResult {
     && (row.away_score == null || finite(row.away_score) != null);
 }
 
+function validPrediction(value: unknown): value is LowerFootballPrediction {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return ["home_margin", "total", "home_score", "away_score", "home_win_probability", "margin_low", "margin_high"]
+    .every((key) => finite(row[key]) != null)
+    && Number(row.home_win_probability) >= 0
+    && Number(row.home_win_probability) <= 1
+    && Number(row.total) >= 0;
+}
+
+function validForecast(value: unknown): value is LowerFootballForecast {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.game_id === "string"
+    && typeof row.kickoff === "string"
+    && divisions.has(row.scope_division as LowerFootballDivision)
+    && typeof row.home_id === "string"
+    && typeof row.home_name === "string"
+    && typeof row.away_id === "string"
+    && typeof row.away_name === "string"
+    && typeof row.model_id === "string"
+    && validPrediction(row.prediction);
+}
+
+function validModel(value: unknown, division: LowerFootballDivision): value is LowerFootballModel {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  const calibration = row.calibration as Record<string, unknown> | undefined;
+  const ratings = Array.isArray(row.ratings) ? row.ratings.filter((item): item is LowerFootballRating => {
+    if (!item || typeof item !== "object") return false;
+    const rating = item as Record<string, unknown>;
+    return typeof rating.team_id === "string" && typeof rating.team === "string"
+      && rating.division === division && Number.isInteger(rating.rank)
+      && finite(rating.rating) != null;
+  }) : [];
+  return typeof row.id === "string" && typeof row.version === "string"
+    && row.division === division && typeof row.target_season === "number"
+    && typeof row.cutoff === "string" && Array.isArray(row.training_seasons)
+    && row.training_seasons.every((season) => Number.isInteger(season))
+    && Number.isInteger(row.training_games) && Number.isInteger(row.calibration_season)
+    && !!calibration && Number.isInteger(calibration.games)
+    && finite(calibration.margin_half_width) != null
+    && Array.isArray(row.limitations) && row.limitations.every((item) => typeof item === "string")
+    && ratings.length > 0;
+}
+
 /** Validate the checked-in archive and fail closed on malformed rows. */
 export function validateLowerFootballResults(value: unknown): LowerFootballResults {
   if (!value || typeof value !== "object") throw new Error("Lower-division football archive is malformed.");
   const raw = value as Record<string, unknown>;
-  if (raw.sport !== "football" || raw.schema_version !== 1 || typeof raw.season !== "number") {
+  if (raw.sport !== "football" || (raw.schema_version !== 1 && raw.schema_version !== 2) || typeof raw.season !== "number") {
     throw new Error("Lower-division football archive has an unsupported edition.");
   }
   const rows = Array.isArray(raw.rows) ? raw.rows.filter(validRow) : [];
@@ -78,13 +163,23 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
         && ["games", "wins", "losses", "points_for", "points_against"].every((key) => finite(row[key]) != null);
     }) : [];
   }
-  const coverage = { d2: { games: 0, score_complete: 0, scores_missing: 0 }, d3: { games: 0, score_complete: 0, scores_missing: 0 } } as LowerFootballResults["coverage"];
+  const coverage = { d2: { games: 0, score_complete: 0, scores_missing: 0, upcoming_games: 0, forecast_games: 0 }, d3: { games: 0, score_complete: 0, scores_missing: 0, upcoming_games: 0, forecast_games: 0 } } as LowerFootballResults["coverage"];
   for (const row of rows) {
     coverage[row.scope_division].games += 1;
     coverage[row.scope_division][row.score_complete ? "score_complete" : "scores_missing"] += 1;
   }
+  const models = {} as LowerFootballResults["models"];
+  const forecasts = { d2: [], d3: [] } as LowerFootballResults["forecasts"];
+  for (const division of ["d2", "d3"] as const) {
+    const sourceModel = raw.models && typeof raw.models === "object" ? (raw.models as Record<string, unknown>)[division] : null;
+    if (validModel(sourceModel, division)) models[division] = sourceModel;
+    const sourceForecasts = raw.forecasts && typeof raw.forecasts === "object" ? (raw.forecasts as Record<string, unknown>)[division] : [];
+    forecasts[division] = Array.isArray(sourceForecasts) ? sourceForecasts.filter(validForecast) : [];
+    coverage[division].upcoming_games = Number(raw.coverage && typeof raw.coverage === "object" && (raw.coverage as Record<string, unknown>)[division] && typeof (raw.coverage as Record<string, unknown>)[division] === "object" ? ((raw.coverage as Record<string, unknown>)[division] as Record<string, unknown>).upcoming_games || 0 : 0);
+    coverage[division].forecast_games = forecasts[division].length;
+  }
   return {
-    schema_version: 1,
+    schema_version: typeof raw.schema_version === "number" ? raw.schema_version : 1,
     sport: "football",
     season: raw.season,
     generated_at: typeof raw.generated_at === "string" ? raw.generated_at : "",
@@ -92,6 +187,8 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
     coverage,
     teams,
     rows: rows.sort((a, b) => b.kickoff.localeCompare(a.kickoff) || b.game_id.localeCompare(a.game_id)),
+    models,
+    forecasts,
     limitations: Array.isArray(raw.limitations) ? raw.limitations.filter((item): item is string => typeof item === "string") : [],
     source: raw.source && typeof raw.source === "object" ? raw.source as LowerFootballResults["source"] : undefined,
   };

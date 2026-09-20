@@ -22,9 +22,9 @@ export default function Page() {
         <h1>The matchup desk.</h1>
         <p>
           Every published upcoming game in the retained FBS, FCS, Division II
-          and Division III schedule. Forecasts cover known FBS opponents, with
-          score estimates and an 80% margin range; lower-division rows remain
-          visible without an invented prediction. All times Eastern; schedules
+          and Division III schedule. Forecasts cover known FBS opponents and
+          validated exact-division D2/D3 games, with score estimates and an 80%
+          margin range; rows without a validated model remain visible. All times Eastern; schedules
           can change.
         </p>
       </div>

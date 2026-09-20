@@ -22,6 +22,7 @@ from ncaa_scraper.football_model import (
     eligible,
     fit,
     forecast,
+    train_division_model,
     train_and_evaluate,
 )
 
@@ -43,6 +44,33 @@ def game(i, year=2024):
 
 
 class ModelTests(unittest.TestCase):
+    def test_division_model_isolated_and_dated(self):
+        rows = []
+        for year in [2022, 2023, 2024, 2025, 2026]:
+            for i in range(150):
+                row = game(i, year)
+                row["home_division"] = "d2"
+                row["away_division"] = "d2"
+                rows.append(row)
+        mixed = game(900, 2026)
+        mixed["home_id"] = "d2-only"
+        mixed["away_id"] = "fbs-only"
+        mixed["home_division"] = "d2"
+        mixed["away_division"] = "fbs"
+        rows.append(mixed)
+        model = train_division_model(rows, "2026-09-04T00:00:00Z", 2026, "d2")
+        self.assertEqual(model["division"], "d2")
+        self.assertNotIn("fbs-only", model["teams"])
+        self.assertEqual(model["training_seasons"], [2022, 2023, 2024, 2025, 2026])
+        self.assertEqual(model["calibration_season"], 2024)
+        future = game(901, 2027)
+        future["home_division"] = future["away_division"] = "d2"
+        future["home_score"] = 999
+        self.assertEqual(
+            model["id"],
+            train_division_model(rows, "2026-09-04T00:00:00Z", 2026, "d2")["id"],
+        )
+
     def test_future_scores_and_missing_scores_are_excluded(self):
         cutoff = "2026-09-04T00:00:00Z"
         self.assertFalse(eligible(game(1, 2027), cutoff))
@@ -289,8 +317,8 @@ class ImportTests(unittest.TestCase):
             },
         ]
         artifact = lower_division_results(rows, 2026, "2026-09-04T00:00:00Z")
-        self.assertEqual(artifact["coverage"]["d2"], {"games": 2, "score_complete": 1, "scores_missing": 1})
-        self.assertEqual(artifact["coverage"]["d3"], {"games": 1, "score_complete": 1, "scores_missing": 0})
+        self.assertEqual(artifact["coverage"]["d2"], {"games": 2, "score_complete": 1, "scores_missing": 1, "upcoming_games": 0, "forecast_games": 0})
+        self.assertEqual(artifact["coverage"]["d3"], {"games": 1, "score_complete": 1, "scores_missing": 0, "upcoming_games": 0, "forecast_games": 0})
         self.assertEqual(len(artifact["rows"]), 3)
         self.assertEqual(artifact["teams"]["d2"][0]["wins"], 1)
         self.assertEqual(artifact["teams"]["d3"][0]["losses"], 1)

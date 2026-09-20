@@ -17,12 +17,11 @@ describe("lower-division football results", () => {
     });
     expect(lowerResultsForDivision(archive, "d2")).toHaveLength(2);
     expect(lowerResultsForDivision(archive, "d3")).toHaveLength(1);
-    expect(archive.coverage.d2).toEqual({ games: 2, score_complete: 1, scores_missing: 1 });
-    expect(archive.coverage.d3).toEqual({ games: 1, score_complete: 1, scores_missing: 0 });
+    expect(archive.coverage.d2).toEqual({ games: 2, score_complete: 1, scores_missing: 1, upcoming_games: 0, forecast_games: 0 });
+    expect(archive.coverage.d3).toEqual({ games: 1, score_complete: 1, scores_missing: 0, upcoming_games: 0, forecast_games: 0 });
   });
 
   it("fails closed for an unsupported archive edition", () => {
     expect(() => validateLowerFootballResults({ sport: "basketball", schema_version: 1, season: 2026 })).toThrow("unsupported edition");
   });
 });
-

@@ -245,7 +245,7 @@ export default function FootballDashboard() {
           </tr>)}</tbody>
         </table>
       </div>
-      <p className="note">Division II and Division III schedule coverage is available from the retained release. The current identified player production edition covers FBS and FCS only, so D2/D3 player counts remain unavailable. The Silvermine forecast is trained and published for FBS-versus-FBS games only.</p>
+      <p className="note">Division II and Division III schedule coverage is available from the retained release. The current identified player production edition covers FBS and FCS only, so D2/D3 player counts remain unavailable. The primary board covers FBS-versus-FBS games; the matchup desk also publishes independently gated exact-division D2/D3 ratings and forecasts when their model artifact is available.</p>
     </section>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>

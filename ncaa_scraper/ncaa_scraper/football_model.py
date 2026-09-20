@@ -12,15 +12,26 @@ import numpy as np
 MODEL_VERSION = "ridge-team-calibrated-v2"
 
 
-def eligible(game: dict, cutoff: str) -> bool:
+def eligible(game: dict, cutoff: str, division: str | None = None) -> bool:
+    """Return whether a final belongs in a score model's dated training set.
+
+    The production D1 model keeps its historical FBS-only contract when no
+    division is supplied.  Lower-division editions pass an explicit division
+    and therefore use the same leakage-safe score design without silently
+    mixing FBS, FCS, D2, and D3 teams.
+    """
+    division_match = (
+        game["home_division"] == game["away_division"] == division
+        if division is not None
+        else game["home_division"] == "fbs" and game["away_division"] == "fbs"
+    )
     return bool(
         game["completed"]
         and game["home_score"] is not None
         and game["away_score"] is not None
         and datetime.fromisoformat(game["kickoff"].replace("Z", "+00:00"))
         < datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
-        and game["home_division"] == "fbs"
-        and game["away_division"] == "fbs"
+        and division_match
     )
 
 
@@ -298,3 +309,61 @@ def forecast(model: dict, game: dict) -> dict | None:
         "margin_low": round(margin - width, 1),
         "margin_high": round(margin + width, 1),
     }
+
+
+def train_division_model(
+    games: list[dict], cutoff: str, target_season: int, division: str
+) -> dict:
+    """Fit a dated, division-isolated score model for a lower-division slate.
+
+    The model shares the proven ridge score design with the D1 release, but its
+    training and calibration cohorts are restricted to one exact division.
+    Calibration uses the second-most-recent season and the production fit only
+    sees finals before ``cutoff``.  This makes the resulting score, probability
+    and interval usable for an in-season upcoming slate without claiming that
+    another division is a valid proxy.
+    """
+    completed = [
+        g
+        for g in games
+        if g["season"] <= target_season and eligible(g, cutoff, division)
+    ]
+    seasons = sorted({g["season"] for g in completed})
+    if len(completed) < 100 or len(seasons) < 3:
+        raise ValueError(
+            f"At least 100 finals across three seasons are required for {division}"
+        )
+    calibration_season = target_season - 2
+    if calibration_season not in seasons:
+        calibration_season = seasons[-2]
+    initial_rows = [g for g in completed if g["season"] < calibration_season]
+    calibration_rows = [g for g in completed if g["season"] == calibration_season]
+    if len(initial_rows) < 100 or len(calibration_rows) < 100:
+        raise ValueError(f"Insufficient dated calibration history for {division}")
+    initial = fit(initial_rows)
+    calibration = calibrate(calibration_rows, initial)
+    model = fit(completed)
+    model.update(
+        {
+            "version": "ridge-division-calibrated-v1",
+            "division": division,
+            "target_season": target_season,
+            "cutoff": cutoff,
+            "calibration": calibration,
+            "training_seasons": seasons,
+            "training_games": len(completed),
+            "calibration_season": calibration_season,
+            "limitations": [
+                "Score, venue and exact-division team identity are the only model inputs.",
+                "Player availability, transfers, injuries and coaching changes are not modeled.",
+                "Cross-division games remain in the schedule archive but are not forecast when either team is outside this division.",
+            ],
+        }
+    )
+    model["id"] = (
+        "ridge-division-calibrated-v1-"
+        + division
+        + "-"
+        + hashlib.sha256(json.dumps(model, sort_keys=True).encode()).hexdigest()[:12]
+    )
+    return model

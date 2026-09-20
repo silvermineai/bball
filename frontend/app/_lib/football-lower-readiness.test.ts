@@ -23,6 +23,8 @@ const archive = (source: LowerFootballResults["source"] = {
     d3: [],
   },
   rows: [],
+  models: {},
+  forecasts: { d2: [], d3: [] },
   limitations: [],
   source,
 });
@@ -59,5 +61,14 @@ describe("lower football readiness", () => {
     expect(lowerFootballReceiptStatus(archive({ dataset: "schedule", season: 2025, url: "x", fetched_at: "2026-09-20T12:00:00Z", sha256: "a".repeat(64) }))).toBe("unavailable");
     expect(lowerFootballReceiptStatus(archive({ dataset: "schedule", season: 2026, url: "x", fetched_at: "not-a-date", sha256: "a".repeat(64) }))).toBe("unavailable");
     expect(lowerFootballReceiptStatus(archive({ dataset: "schedule", season: 2026, url: "x", fetched_at: "2026-09-20T12:00:00Z", sha256: "short" }))).toBe("unavailable");
+  });
+
+  it("reports a forecast surface only when a model and forecast rows are published", () => {
+    const edition = archive();
+    edition.models = { d2: { id: "model-d2" } as LowerFootballResults["models"]["d2"] };
+    edition.coverage.d2.forecast_games = 1;
+    expect(lowerFootballReadiness(edition)[0].predictions).toBe("recorded");
+    edition.coverage.d2.forecast_games = 0;
+    expect(lowerFootballReadiness(edition)[0].predictions).toBe("unavailable");
   });
 });

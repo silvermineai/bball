@@ -9,7 +9,7 @@ export type LowerFootballReadinessRow = {
   scoreCoverage: number | null;
   teamRows: number;
   playerStats: "unavailable";
-  predictions: "unavailable";
+  predictions: "recorded" | "unavailable";
   receipt: LowerFootballReceiptStatus;
 };
 
@@ -50,7 +50,7 @@ export function lowerFootballReadiness(
       scoreCoverage: scheduleRows > 0 ? completeScoreRows / scheduleRows : null,
       teamRows: archive.teams[division]?.length ?? 0,
       playerStats: "unavailable",
-      predictions: "unavailable",
+      predictions: archive.models[division]?.id && (archive.coverage[division]?.forecast_games ?? 0) > 0 ? "recorded" : "unavailable",
       receipt,
     };
   });
