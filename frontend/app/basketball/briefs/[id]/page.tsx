@@ -28,6 +28,7 @@ import ManualMarketCheck from "../ManualMarketCheck";
 import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
 import { buildNotebookShotPrep } from "../../../blog/notebook-shot-prep";
 import BriefLineupEvidence from "../BriefLineupEvidence";
+import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
 
 const emptySplit = () => ({
   games: 0,
@@ -190,6 +191,10 @@ export default async function Page({
     rows: buildNotebookShotPrep(profile.id, personnel, shotProfiles, shotSeason),
   }));
   const shotPrepCount = shotPrep.reduce((sum, group) => sum + group.rows.length, 0);
+  const factorPersonnel = buildFactorPersonnelQuestions(
+    evidence.pressures,
+    evidence.programs.map(({ profile, personnel }) => ({ profile, personnel })),
+  );
   const tasks = [
     ...evidence.pressures.map(
       (point) =>
@@ -427,6 +432,18 @@ export default async function Page({
               <p className="brief-film-question">
                 <strong>On film:</strong> {point.factor.question}
               </p>
+              {(() => {
+                const personnel = factorPersonnel.find(
+                  (row) => row.key === `${point.offense}:${point.defense}:${point.factor.key}`,
+                );
+                return personnel ? (
+                  <p className="brief-film-question">
+                    <strong>Personnel check:</strong>{" "}
+                    <Link href={personnel.playerHref}>{personnel.player.name}</Link>{" "}
+                    ({personnel.metricLabel} {personnel.metricText}; {personnel.sampleText}). {personnel.question}
+                  </p>
+                ) : null;
+              })()}
             </section>
           ))}
         </div>
