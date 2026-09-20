@@ -99,7 +99,7 @@ export default function SportNavigation() {
         <div className="sport-scope" aria-label={`${config.label} data scope`}>
           <span className="sport-scope-label">Scope</span>
           <span className="sport-scope-fixed" aria-label="Active sport edition">{config.label}</span>
-          <div className="sport-scope-group" aria-label="NCAA division">
+          <div className="sport-scope-group" aria-label="Division">
             {DIVISION_OPTIONS.map((option) => (
               <Link
                 key={option.value}

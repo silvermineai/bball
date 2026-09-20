@@ -20,7 +20,7 @@ const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const fmt = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percentile = (rank: number, total: number) => total <= 1 ? 100 : Math.max(0, Math.min(100, 100 * (total - rank) / (total - 1)));
 
-/** Keep the ranking-to-shot-map handoff in the exact NCAA archive namespace. */
+/** Keep the ranking-to-shot-map handoff in the exact archive namespace. */
 export function rankingPlayerShotMapHref(playerId: string | number, season: number) {
   return `/basketball/ncaa-player/?id=${encodeURIComponent(String(playerId))}&season=${encodeURIComponent(String(season))}#shot-profile`;
 }
@@ -120,9 +120,9 @@ const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDat
 function RankingScopeBoundary({ scope }: { scope: SportScope }) {
   const women = scope.gender === "women";
   if (!women && (scope.division === "2" || scope.division === "3")) {
-    return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">DIVISION RANKINGS PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)} ranking explorer</h2><p>The advanced D1 model archive is separate from this source-native Division {scope.division} board. Rank retained NCAA production fields within the requested division below.</p><DivisionPlayerRankings division={scope.division} /><div className="scope-unavailable-actions"><a className="button" href={`/basketball/ncaa/?division=${scope.division}`}>Open the complete D{scope.division} archive</a></div></section>;
+    return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">DIVISION RANKINGS PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)} ranking explorer</h2><p>The advanced D1 model archive is separate from this source-native Division {scope.division} board. Rank retained production fields within the requested division below.</p><DivisionPlayerRankings division={scope.division} /><div className="scope-unavailable-actions"><a className="button" href={`/basketball/ncaa/?division=${scope.division}`}>Open the complete D{scope.division} archive</a></div></section>;
   }
-  return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">SCOPE NOT PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)} ranking explorer</h2><p>{women ? "Women’s basketball rows are not imported into the advanced player ranking archive. No men’s rows are substituted." : `The advanced archive explorer is currently published for men’s Division I only. The current ${scopeLabel(scope)} leader tables above remain in their own NCAA cohort.`}</p><a className="button" href={`/basketball/ncaa/?division=${scope.division}`}>Open {women ? "published men’s" : scopeLabel(scope)} national archive</a></section>;
+  return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">SCOPE NOT PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)} ranking explorer</h2><p>{women ? "Women’s basketball rows are not imported into the advanced player ranking archive. No men’s rows are substituted." : `The advanced archive explorer is currently published for men’s Division I only. The current ${scopeLabel(scope)} leader tables above remain in their own division cohort.`}</p><a className="button" href={`/basketball/ncaa/?division=${scope.division}`}>Open {women ? "published men’s" : scopeLabel(scope)} national archive</a></section>;
 }
 const statLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
   { key: "all-around", label: "All-around", metric: "balanced_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Eight-component production screen with an audit trail." },

@@ -38,10 +38,10 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
   return <section className="field-card division-team-archive" aria-labelledby="division-team-title">
     <div className="eyebrow">MEN&apos;S BASKETBALL · D{division} TEAM ARCHIVE</div>
     <h2 id="division-team-title">Division team records</h2>
-    <p className="muted">Observed team-directory rows from the retained NCAA final-season release. Wins, losses, games and scoring stay unavailable when the source did not supply them.</p>
+    <p className="muted">Observed team-directory rows from the retained final-season release. Wins, losses, games and scoring stay unavailable when the source did not supply them.</p>
     {error ? <p className="status-error" role="alert">{error}</p> : !teams ? <p className="muted">Loading division team archive…</p> : <>
       {selected ? <article className="paper-panel division-archive-dossier" aria-labelledby="division-team-dossier-title" style={{ marginBottom: 20 }}>
-        <div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Exact NCAA team ID · D{division}</div><h3 id="division-team-dossier-title">{selected.name}</h3></div><Link className="hero-link" href={closeDossierHref}>Close dossier →</Link></div>
+        <div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Exact archive team ID · D{division}</div><h3 id="division-team-dossier-title">{selected.name}</h3></div><Link className="hero-link" href={closeDossierHref}>Close dossier →</Link></div>
         <p className="note">Team ID {selected.team_ncaa_id} · {selected.conference || "Conference unavailable"}. This dossier is filtered from the validated D{division} team directory; it never falls through to Division I ratings.</p>
         <div className="strip"><div><strong>{number(selected.games)}</strong><span>Games</span></div><div><strong>{number(selected.wins)}</strong><span>Wins</span></div><div><strong>{number(selected.losses)}</strong><span>Losses</span></div><div><strong>{selected.games && selected.wins != null ? `${number(100 * selected.wins / selected.games, 1)}%` : "—"}</strong><span>Win rate</span></div><div><strong>{number(selected.ppg, 1)}</strong><span>PPG</span></div></div>
         <p className="note">A dash means the retained team directory did not contain a usable numeric value. No record or rate is inferred.</p>

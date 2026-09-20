@@ -5,7 +5,7 @@ import NcaaRankings from "./NcaaRankings";
 
 export const metadata = {
   title: "Player rankings",
-  description: "Rank current NCAA college basketball players by division, scoring, rebounding, playmaking and shooting efficiency.",
+  description: "Rank college basketball players by division, scoring, rebounding, playmaking and shooting efficiency.",
 };
 
 function getPlayers() {
