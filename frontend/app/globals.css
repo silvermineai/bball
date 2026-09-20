@@ -5717,6 +5717,9 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .scope-unavailable h1 { margin: 12px 0 16px; font-size: clamp(2.4rem, 5vw, 4.6rem); }
 .scope-unavailable p { max-width: 680px; color: var(--muted); line-height: 1.7; }
 .scope-unavailable-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 28px; }
+.football-division-availability { margin-top: 28px; }
+.football-division-availability h2 { margin: 8px 0 10px; font-size: clamp(1.35rem, 2.8vw, 2rem); }
+.football-division-availability p { margin: 0; }
 .readiness-state {
   display: inline-block;
   padding: 4px 7px;
