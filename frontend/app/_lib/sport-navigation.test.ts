@@ -34,6 +34,8 @@ describe("sport navigation", () => {
   it("encodes gender and division while preserving existing filters", () => {
     expect(buildScopeHref("/basketball/players/", "?season=2027", "women", "3"))
       .toBe("/basketball/players/?season=2027&gender=women&division=3");
+    expect(buildScopeHref("/research/coverage/?sport=football", "?season=2027", "men", "2"))
+      .toBe("/research/coverage/?season=2027&sport=football&gender=men&division=2");
   });
 
   it("advertises the published women's D1 sport tab", () => {

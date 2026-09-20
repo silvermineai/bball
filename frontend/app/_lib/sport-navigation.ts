@@ -122,9 +122,13 @@ export function isNavItemActive(pathname: string, item: SportNavItem): boolean {
 }
 
 export function buildScopeHref(pathname: string, currentSearch: string, gender: Gender, division: Division): string {
+  const [basePath, embeddedQuery = ""] = pathname.split("?", 2);
   const params = new URLSearchParams(currentSearch);
+  for (const [key, value] of new URLSearchParams(embeddedQuery)) {
+    params.set(key, value);
+  }
   params.set("gender", gender);
   params.set("division", division);
   const query = params.toString();
-  return `${pathname}${query ? `?${query}` : ""}`;
+  return `${basePath}${query ? `?${query}` : ""}`;
 }
