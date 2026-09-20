@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { date } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { footballSourceCoverageRows } from "../../_lib/football-source-coverage";
 
 type Dataset = "all" | "box" | "passing" | "rushing" | "receiving" | "defense" | "specialists" | "team_advanced" | "teams" | "betting" | "ncaa_player_stats" | "rosters" | "recruits" | "team_talent" | "returning_production";
-type Meta = { seasons: number[]; datasets: { dataset: Exclude<Dataset, "all">; rows: number }[]; dataset_labels: Record<Exclude<Dataset, "all">, string> };
+type Meta = { seasons: number[]; datasets: { dataset: Exclude<Dataset, "all">; rows: number | null }[]; dataset_labels: Record<Exclude<Dataset, "all">, string>; counts_deferred?: boolean };
 type Row = {
   dataset: Exclude<Dataset, "all">;
   season: number;
@@ -144,6 +145,33 @@ export default function SourceStats() {
         <div><strong>{meta?.seasons.length || "—"}</strong><span>Source seasons</span></div>
         <div><strong>40</strong><span>Rows per page</span></div>
       </div>
+      {meta && (
+        <section className="section paper-panel" aria-labelledby="football-source-coverage">
+          <div className="eyebrow">Retained source coverage</div>
+          <h2 id="football-source-coverage">Know what is in each archive.</h2>
+          <p>
+            These are the datasets currently present across the retained
+            football source catalog. Counts cover all catalog seasons; the
+            selected season&apos;s exact slice appears after the filters below.
+            An exact count is authoritative for this catalog;
+            &quot;Deferred&quot; means the edge returned receipt metadata while the
+            large table count was withheld. It never means zero.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Dataset</th><th className="numeric">Retained rows</th><th>Status</th></tr></thead>
+              <tbody>{footballSourceCoverageRows(meta.datasets, meta.dataset_labels).map((row) => (
+                <tr key={row.dataset}>
+                  <th scope="row">{row.label}<small>{row.dataset}</small></th>
+                  <td className="numeric">{row.rows == null ? "Deferred" : row.rows.toLocaleString()}</td>
+                  <td>{row.count_status === "exact" ? "Exact edition count" : "Receipt-only catalog"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          {meta.counts_deferred && <p className="note">At least one count is deferred because the source table is too large for a bounded catalog read. Open a dataset to see the authoritative count for its selected season and filters.</p>}
+        </section>
+      )}
       <div className="toolbar">
         <label className="control"><span>SOURCE DATASET</span><select value={dataset} onChange={(event) => change(() => setDataset(event.target.value as Dataset))}><option value="box">{labels.box}</option><option value="all">All retained datasets</option>{(meta?.datasets || []).filter((item) => item.dataset !== "box").map((item) => <option key={item.dataset} value={item.dataset}>{labels[item.dataset]}</option>)}</select></label>
         <label className="control"><span>STAT SEASON</span><select value={season} onChange={(event) => change(() => setSeason(event.target.value))}>{(meta?.seasons || [2025]).map((value) => <option key={value} value={value}>{value}{value === 2026 ? " · Partial season" : ""}</option>)}</select></label>
