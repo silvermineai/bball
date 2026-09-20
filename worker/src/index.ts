@@ -1034,25 +1034,32 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   try {
   const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
   const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
+  // The NCAA snapshot has explicit publisher rows for all three divisions.
+  // Only the supplemental box-score calculation is D1-scoped: the public
+  // publisher values for D2/D3 are still valid and must not be described as
+  // unavailable merely because the ESPN-derived fill does not cover them.
+  const requestedPublisherDivisions = division === "all" ? ["1", "2", "3"] : [division];
   const provenance = stat === "apg" || stat === "ast"
     ? {
       kind: "exact_id_derived",
       dataset: "ncaa_mbb_player_box",
       source_url: "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/ncaa_mbb_player_box/ncaa_mbb_player_box_2026.parquet",
+      publisher_divisions: ["1", "2", "3"],
       derived_divisions: ["1"],
       publisher_rank: false,
       note: stat === "apg"
-        ? "Division I values are summed from exact NCAA player IDs and divided by distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows."
-        : "Division I values are summed from exact NCAA player IDs across distinct source contests; Division II and III remain unavailable when the ranking page supplies no rows.",
+        ? `Division I values are summed from exact NCAA player IDs and divided by distinct source contests; the retained NCAA ranking snapshot supplies no ${stat.toUpperCase()} values for Division II or III${requestedPublisherDivisions.every((value) => value === "1") ? "." : "; those requested divisions remain unavailable for this derived measure."}`
+        : `Division I values are summed from exact NCAA player IDs across distinct source contests; the retained NCAA ranking snapshot supplies no total assists for Division II or III${requestedPublisherDivisions.every((value) => value === "1") ? "." : "; those requested divisions remain unavailable for this derived measure."}`,
     }
     : boxDerivedStats.has(stat)
     ? {
       kind: "publisher_snapshot_with_exact_id_fill",
       dataset: "ncaa_mbb_player_box",
       source_url: "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/ncaa_mbb_player_box/ncaa_mbb_player_box_2026.parquet",
+      publisher_divisions: ["1", "2", "3"],
       derived_divisions: ["1"],
       publisher_rank: true,
-      note: "Publisher values and ranks are retained when supplied; missing Division I values are filled from exact NCAA player IDs using source totals and distinct contests. Division II and III remain unavailable when the ranking page supplies no rows.",
+      note: "Publisher values and ranks are retained for the requested NCAA division when supplied; missing Division I values may be filled from exact NCAA player IDs using source totals and distinct contests. The D2/D3 rows are publisher observations and are never substituted with Division I data.",
     }
     : {
       kind: "publisher_snapshot",

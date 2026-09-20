@@ -1012,6 +1012,46 @@ describe("bball api", () => {
     });
   });
 
+  it("labels D2 publisher rows without claiming that only D1 is available", async () => {
+    const prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "2202",
+            division: 2,
+            name: "Division Two Player",
+            team_name: "Example State",
+            stat_value: 19.4,
+            publisher_rank: 4,
+            total_count: 1,
+            payload_json: JSON.stringify({
+              player_id: 2202,
+              division: 2,
+              ppg: 19.4,
+              source_stats: { ppg: { rank: 4, value: 19.4 } },
+            }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=ppg&division=2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      division: "2",
+      rows: [{ division: 2, ppg: 19.4, publisher_rank: 4 }],
+      provenance: {
+        kind: "publisher_snapshot_with_exact_id_fill",
+        publisher_divisions: ["1", "2", "3"],
+        derived_divisions: ["1"],
+        note: "Publisher values and ranks are retained for the requested NCAA division when supplied; missing Division I values may be filled from exact NCAA player IDs using source totals and distinct contests. The D2/D3 rows are publisher observations and are never substituted with Division I data.",
+      },
+    });
+  });
+
   it("accepts NCAA national total-stat leaderboards", async () => {
     const prepare = vi.fn(() => ({
       bind: vi.fn(() => ({
