@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from .espn_pickcenter import MAX_RESPONSE_BYTES, REQUEST_DELAY_SECONDS, parse_pickcenter
+from .espn_pickcenter import MAX_RESPONSE_BYTES, REQUEST_DELAY_SECONDS, parse_pickcenter, summary_capture_counts
 from .football_sources import ROOT, utcnow
 from .odds_feed import schedules
 from .research_ledger import connect, digest, encoded, timestamp
@@ -85,6 +85,7 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
                 summaries.append({"event_id": event_id, "summary": summary, "url": url})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
             continue
+    summary_count, pickcenter_count = summary_capture_counts(summaries)
     receipt = {
         "provider": PROVIDER,
         "sport": SPORT,
@@ -93,6 +94,10 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],
+        # Retain bounded capture diagnostics so the public market endpoint can
+        # distinguish an empty quote response from an unobserved schedule.
+        "summary_count": summary_count,
+        "summary_with_pickcenter": pickcenter_count,
         "timing_basis": "summary_capture",
         "sha256": digest(summaries),
     }
@@ -130,6 +135,29 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
                 accepted += 1
         except (KeyError, TypeError, ValueError):
             rejected += 1
+    # Keep the receipt self-describing. The source response is private, but
+    # these bounded counts are safe publication metadata and make a failed or
+    # empty football capture auditable without implying that a line existed.
+    conn.execute(
+        "UPDATE audit_receipts SET payload_json=? WHERE id=?",
+        (encoded({
+            **receipt,
+            "summary_count": receipt.get("summary_count", len(summaries)),
+            "summary_with_pickcenter": receipt.get(
+                "summary_with_pickcenter",
+                sum(
+                    1
+                    for item in summaries
+                    if isinstance(item, dict)
+                    and isinstance(item.get("summary"), dict)
+                    and isinstance(item["summary"].get("pickcenter"), list)
+                    and bool(item["summary"].get("pickcenter"))
+                )
+            ),
+            "accepted_markets": accepted,
+            "rejected_records": rejected,
+        }), receipt_id),
+    )
     conn.commit()
     return {"accepted_markets": accepted, "rejected_records": rejected}
 

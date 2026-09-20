@@ -66,6 +66,11 @@ class EspnFootballPickcenterTests(unittest.TestCase):
         result = ingest(conn, [{"event_id": GAME["id"], "summary": summary()}], receipt, [GAME], receipt["captured_at"])
         self.assertEqual(result, {"accepted_markets": 3, "rejected_records": 0})
         self.assertEqual(conn.execute("SELECT DISTINCT sport FROM audit_markets").fetchone()[0], "football")
+        receipt_payload = json.loads(conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(receipt_payload["summary_count"], 1)
+        self.assertEqual(receipt_payload["summary_with_pickcenter"], 1)
+        self.assertEqual(receipt_payload["accepted_markets"], 3)
+        self.assertEqual(receipt_payload["rejected_records"], 0)
         payload = json.loads(conn.execute("SELECT payload_json FROM audit_markets WHERE market='spreads'").fetchone()[0])
         self.assertEqual(payload["home_id"], GAME["home_id"])
 
