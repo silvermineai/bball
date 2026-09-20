@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { SportScope } from "../_lib/sport-scope";
 import { scopeLabel } from "../_lib/sport-scope";
 import WomensBasketballSnapshot from "./WomensBasketballSnapshot";
+import WomensBasketballRankings from "./WomensBasketballRankings";
+import { usePathname } from "next/navigation";
 
 type Props = {
   sport: "basketball" | "football";
@@ -11,7 +13,9 @@ type Props = {
 };
 
 export default function ScopeUnavailable({ sport, scope }: Props) {
+  const pathname = usePathname() || "";
   const isWomen = scope.gender === "women";
+  const womenRankings = isWomen && sport === "basketball" && scope.division === "1" && (pathname === "/basketball/rankings" || pathname.startsWith("/basketball/rankings/") || pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/"));
   const sportName = sport === "basketball" ? "Women's basketball" : "football";
   const detail = isWomen
     ? scope.division === "1"
@@ -26,7 +30,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
       <div className="eyebrow">SCOPE NOT PUBLISHED</div>
       <h1 id="scope-unavailable-title">{sportName} · {scopeLabel(scope)}</h1>
       <p>{detail}</p>
-      {isWomen && sport === "basketball" && scope.division === "1" ? <WomensBasketballSnapshot /> : null}
+      {womenRankings ? <WomensBasketballRankings /> : isWomen && sport === "basketball" && scope.division === "1" ? <WomensBasketballSnapshot /> : null}
       <div className="scope-unavailable-actions">
         <Link className="button" href={sport === "basketball" ? "/basketball/ncaa/?division=1" : "/football/source-stats/"}>
           Open published archive

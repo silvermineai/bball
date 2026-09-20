@@ -171,6 +171,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
         run: |
           python scripts/publish-womens-basketball-edition.py
+          python scripts/publish-womens-basketball-rankings.py
           python scripts/publish-womens-basketball-shots.py
           python scripts/publish-womens-basketball-model.py
           python scripts/check-womens-basketball-forecast-readiness.py
