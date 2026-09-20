@@ -27,9 +27,10 @@ describe("NCAA ranking stat context", () => {
       offensive_rebounds: 20, defensive_rebounds: 80, possessions: 120,
       team_possessions: 800, rim_makes: 30, rim_attempts: 50,
       mid_makes: 10, mid_attempts: 30, transition_points: 40,
+      putback_makes: 12, putback_attempts: 20,
       unassisted_attempts: 120,
       unassisted_points: 100,
-    })).toBe("FG 100/200 · 3P 32/80 · FT 40/50 · ORB 20 · DRB 80 · Poss 120 · Team poss 800 · Rim 30/50 · Mid 10/30 · Trans pts 40 · Unast FGA 120 · Unast pts 100");
+    })).toBe("FG 100/200 · 3P 32/80 · FT 40/50 · ORB 20 · DRB 80 · Poss 120 · Team poss 800 · Rim 30/50 · Mid 10/30 · Putback 12/20 · Trans pts 40 · Unast FGA 120 · Unast pts 100");
     expect(rankingRecordedDetail({ fga: 200, fta: null })).toBe("");
   });
 
@@ -38,6 +39,7 @@ describe("NCAA ranking stat context", () => {
     expect(accuracySample("two_pct", row)).toEqual([102, 180]);
     expect(accuracySample("two_pct", { ...row, tpa: null })).toEqual([null, null]);
     expect(accuracySample("two_pct", { ...row, fgm: 40 })).toEqual([null, null]);
+    expect(accuracySample("putback_pct", { putback_makes: 18, putback_attempts: 30 } as NcaaRankingResult["rows"][number])).toEqual([18, 30]);
   });
 });
 

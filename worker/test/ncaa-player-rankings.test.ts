@@ -13,8 +13,33 @@ describe("NCAA player rankings availability", () => {
   });
 
   it("derives self-created shot share from exact unassisted and total attempts", () => {
-    expect(metricExpression("unassisted_rate")).toBe("CASE WHEN fga > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= fga THEN 100.0 * unassisted_attempts / fga ELSE NULL END");
-    expect(volumeColumn("unassisted_rate")).toBe("fga");
+    expect(metricExpression("unassisted_rate")).toBe("CASE WHEN unassisted_total_attempts > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= unassisted_total_attempts THEN 100.0 * unassisted_attempts / unassisted_total_attempts ELSE NULL END");
+    expect(volumeColumn("unassisted_rate")).toBe("unassisted_total_attempts");
+  });
+
+  it("derives putback accuracy from exact makes and attempts", () => {
+    expect(metricExpression("putback_pct")).toBe("CASE WHEN putback_attempts > 0 AND putback_makes >= 0 AND putback_makes <= putback_attempts THEN 100.0 * putback_makes / putback_attempts ELSE NULL END");
+    expect(volumeColumn("putback_pct")).toBe("putback_attempts");
+  });
+
+  it("requires every retained row before aggregating the new shooting denominators", async () => {
+    const prepare = vi.fn((_query: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => ({ total: 0 })),
+        all: vi.fn(async () => ({ results: [] })),
+      })),
+    }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=putback_pct&minGames=5&minMinutes=200&minVolume=25",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.pbacka')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.pbackm')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga_unast')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
   });
 
   it("returns a retryable status when the rankings catalog is unavailable", async () => {

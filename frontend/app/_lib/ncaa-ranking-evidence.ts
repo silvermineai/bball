@@ -12,6 +12,7 @@ export type RankingEvidenceMetric =
   | "ft_pct"
   | "rim_pct"
   | "mid_pct"
+  | "putback_pct"
   | "ft_rate"
   | "ast_rate"
   | "points_poss"
@@ -46,7 +47,10 @@ export type RankingEvidenceRow = {
   rim_makes?: number | null;
   mid_attempts?: number | null;
   mid_makes?: number | null;
+  putback_attempts?: number | null;
+  putback_makes?: number | null;
   transition_points?: number | null;
+  unassisted_total_attempts?: number | null;
   unassisted_attempts?: number | null;
   unassisted_points?: number | null;
   half_points?: number | null;
@@ -58,7 +62,7 @@ export type RankingEvidence = { primary: string; detail: string };
 
 const evidenceMetrics = new Set<string>([
   "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate",
-  "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate",
+  "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate",
   "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate",
   "transition_share", "unassisted_rate", "unassisted_share",
 ]);
@@ -119,6 +123,7 @@ export function rankingEvidence(metric: string, row: RankingEvidenceRow): Rankin
     case "ft_pct": return pair(row.ftm, "FTM", row.fta, "FTA");
     case "rim_pct": return pair(row.rim_makes, "RIM MAKES", row.rim_attempts, "RIM ATT");
     case "mid_pct": return pair(row.mid_makes, "MID MAKES", row.mid_attempts, "MID ATT");
+    case "putback_pct": return pair(row.putback_makes, "PUTBACK MAKES", row.putback_attempts, "PUTBACK ATT");
     case "ft_rate": return pair(row.fta, "FTA", row.fga, "FGA");
     case "ast_rate": return pair(row.assists, "AST", row.possessions, "POSS");
     case "points_poss": return pair(row.points, "PTS", row.possessions, "POSS");
@@ -128,7 +133,7 @@ export function rankingEvidence(metric: string, row: RankingEvidenceRow): Rankin
     case "poss_share": return pair(row.possessions, "PLAYER POSS", row.team_possessions, "TEAM POSS");
     case "rim_rate": return pair(row.rim_attempts, "RIM ATT", row.fga, "FGA");
     case "transition_share": return pair(row.transition_points, "TRANS PTS", row.points, "PTS");
-    case "unassisted_rate": return pair(row.unassisted_attempts, "UNAST FGA", row.fga, "FGA");
+    case "unassisted_rate": return pair(row.unassisted_attempts, "UNAST FGA", row.unassisted_total_attempts, "FGA");
     case "unassisted_share": return pair(row.unassisted_points, "UNAST PTS", row.points, "PTS");
     default: return null;
   }
