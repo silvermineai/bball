@@ -323,4 +323,33 @@ describe("market archive metadata", () => {
     expect(calls[0]?.[0] || "").toContain("WHERE 1=1");
     expect(calls[0]?.[0] || "").not.toContain("g.season=?");
   });
+
+  it("merges the current research ledger into the all-season football archive", async () => {
+    const makePrepare = (row: Record<string, unknown>) => vi.fn((sql: string) => {
+      const bound = {
+        first: vi.fn().mockResolvedValue(sql.includes("count(*)") ? { total: 1 } : null),
+        all: vi.fn().mockResolvedValue({ results: [row] }),
+      };
+      return { bind: vi.fn(() => bound) };
+    });
+    const legacyPrepare = makePrepare({ game_id: "legacy-game", kickoff: "2025-12-01T00:00:00Z", observed_at: "2025-11-30T00:00:00Z" });
+    const researchPrepare = makePrepare({ game_id: "ledger-game", kickoff: "2026-09-20T00:00:00Z", observed_at: "2026-09-19T00:00:00Z" });
+    const response = await markets.request(
+      "/?sport=football&season=all&page=0",
+      {},
+      {
+        DB: { prepare: legacyPrepare },
+        RESEARCH_DB: { prepare: researchPrepare },
+      },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<{ game_id: string }> };
+    expect(body.total).toBe(2);
+    expect(body.rows.map((row) => row.game_id)).toEqual(["ledger-game", "legacy-game"]);
+    const sql = [...legacyPrepare.mock.calls, ...researchPrepare.mock.calls]
+      .map(([statement]) => statement)
+      .join("\n");
+    expect(sql).toContain("football_markets");
+    expect(sql).toContain("audit_markets");
+  });
 });

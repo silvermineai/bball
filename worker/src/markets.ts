@@ -214,8 +214,13 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   // the historical SportsDataverse betting archive remains in FOOTBALL_DB.
   // Keep the current-season view pointed at the clocked ledger rows while
   // preserving the established archive for prior seasons.
-  const useFootballLedger = football && season === 2026 && meta !== "1";
   const hasResearchBinding = Boolean((c.env as Env & { RESEARCH_DB?: D1Database }).RESEARCH_DB);
+  const useFootballLedger = football && season === 2026 && meta !== "1";
+  // The split deployment keeps the clocked 2026 football capture in the
+  // research D1 and the historical archive in FOOTBALL_DB. An all-season
+  // archive view must read both stores; otherwise it silently drops the
+  // current-season ledger rows while its metadata still reports them.
+  const useCombinedFootballArchive = football && season === "all" && hasResearchBinding && meta !== "1";
   // The established football archive uses football_markets in the legacy
   // store; basketball quotes use the append-only audit ledger in research D1.
   const db = football ? footballDb(c.env) : researchDb(c.env);
@@ -355,10 +360,77 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     ? `${marketTable} m`
     : `${marketTable} m JOIN ${gameTable} g ON g.id=m.game_id`;
   try {
-    const count = await withTimeout(queryDb.prepare(
-      `SELECT count(*) AS total FROM ${fromClause} WHERE ${where}`,
-    ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
-    const rows = await withTimeout(queryDb.prepare(
+    let total = 0;
+    let resultRows: unknown[] = [];
+    if (useCombinedFootballArchive) {
+      const legacyWhere = search
+        ? "(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)"
+        : "1=1";
+      const legacyBinds: Array<string | number> = search ? [search, search, search] : [];
+      const ledgerWhere = search
+        ? "m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)"
+        : "m.sport=?";
+      const ledgerBinds: Array<string | number> = search
+        ? [sport, search, search, search, search]
+        : [sport];
+      const [legacyCount, ledgerCount] = await Promise.all([
+        withTimeout(db.prepare(
+          `SELECT count(*) AS total FROM football_markets m JOIN football_games g ON g.id=m.game_id WHERE ${legacyWhere}`,
+        ).bind(...legacyBinds).first<{ total: number }>(), DB_TIMEOUT_MS),
+        withTimeout(researchDb(c.env).prepare(
+          `SELECT count(*) AS total FROM audit_markets m WHERE ${ledgerWhere}`,
+        ).bind(...ledgerBinds).first<{ total: number }>(), DB_TIMEOUT_MS),
+      ]);
+      total = Number(legacyCount?.total || 0) + Number(ledgerCount?.total || 0);
+      // Fetch enough from each independently sorted stream to produce the
+      // requested merged page. The page window is bounded by the query
+      // validator, so the largest request remains bounded as well.
+      const fetchLimit = (page + 1) * 40;
+      const [legacyRows, ledgerRows] = await Promise.all([
+        withTimeout(db.prepare(
+          `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
+                  m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
+                  NULL AS updated_at,
+                  NULL AS home_price,NULL AS away_price,NULL AS over_price,NULL AS under_price,
+                  NULL AS market,NULL AS bookmaker,NULL AS provider
+             FROM football_markets m JOIN football_games g ON g.id=m.game_id
+            WHERE ${legacyWhere}
+            ORDER BY g.kickoff DESC,m.observed_at DESC,m.game_id DESC LIMIT ?`,
+        ).bind(...legacyBinds, fetchLimit).all(), DB_TIMEOUT_MS),
+        withTimeout(researchDb(c.env).prepare(
+          `SELECT m.game_id,
+                  CAST(json_extract(m.payload_json,'$.season') AS INTEGER) AS season,
+                  json_extract(m.payload_json,'$.starts_at') AS kickoff,
+                  json_extract(m.payload_json,'$.home_name') AS home_name,
+                  json_extract(m.payload_json,'$.away_name') AS away_name,
+                  CASE WHEN m.market='spreads' THEN json_extract(m.payload_json,'$.line') END AS home_spread,
+                  CASE WHEN m.market='totals' THEN json_extract(m.payload_json,'$.line') END AS total,
+                  json_extract(m.payload_json,'$.home_price') AS home_price,
+                  json_extract(m.payload_json,'$.away_price') AS away_price,
+                  json_extract(m.payload_json,'$.over_price') AS over_price,
+                  json_extract(m.payload_json,'$.under_price') AS under_price,
+                  m.captured_at AS observed_at,m.updated_at AS updated_at,m.provider AS source,
+                  CASE WHEN datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at')) THEN 1 ELSE 0 END AS is_pregame,
+                  m.market,m.bookmaker,m.provider
+             FROM audit_markets m
+            WHERE ${ledgerWhere}
+            ORDER BY kickoff DESC,m.captured_at DESC,m.game_id DESC LIMIT ?`,
+        ).bind(...ledgerBinds, fetchLimit).all(), DB_TIMEOUT_MS),
+      ]);
+      resultRows = [...legacyRows.results, ...ledgerRows.results]
+        .sort((left, right) => {
+          const a = left as { kickoff?: unknown; observed_at?: unknown; game_id?: unknown };
+          const b = right as { kickoff?: unknown; observed_at?: unknown; game_id?: unknown };
+          return String(b.kickoff || "").localeCompare(String(a.kickoff || ""))
+            || String(b.observed_at || "").localeCompare(String(a.observed_at || ""))
+            || String(b.game_id || "").localeCompare(String(a.game_id || ""));
+        })
+        .slice(page * 40, page * 40 + 40);
+    } else {
+      const count = await withTimeout(queryDb.prepare(
+        `SELECT count(*) AS total FROM ${fromClause} WHERE ${where}`,
+      ).bind(...binds).first<{ total: number }>(), DB_TIMEOUT_MS);
+      const rows = await withTimeout(queryDb.prepare(
       football && !useFootballLedger
         ? `SELECT m.game_id,g.season,g.kickoff,g.home_name,g.away_name,
                 m.home_spread,m.total,m.observed_at,m.source,m.is_pregame,
@@ -399,14 +471,17 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
            FROM audit_markets m JOIN bb_games g ON g.id=m.game_id
           WHERE ${where}
           ORDER BY g.starts_at DESC,m.captured_at DESC,m.game_id DESC LIMIT 40 OFFSET ?`,
-    ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+      ).bind(...binds, page * 40).all(), DB_TIMEOUT_MS);
+      total = Number(count?.total || 0);
+      resultRows = rows.results;
+    }
     const response = c.json({
       sport,
       season,
       page,
       page_size: 40,
-      total: count?.total ?? 0,
-      rows: rows.results.map((row) => ({ ...row, source: null, bookmaker: null, provider: null })),
+      total,
+      rows: resultRows.map((row) => ({ ...(row as Record<string, unknown>), source: null, bookmaker: null, provider: null })),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
