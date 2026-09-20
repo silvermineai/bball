@@ -216,6 +216,9 @@ def main():
             "away": row.get("away_display_name") or row.get("away_name"),
             "prediction": prediction(home_id, away_id, ratings, final_home_advantage, calibration),
         })
+    team_ratings = []
+    for rank, row in enumerate(sorted(ratings.values(), key=lambda value: (-value["rating"], value["team"], value["team_id"])), start=1):
+        team_ratings.append({**row, "rank": rank, "rating": round(row["rating"], 2), "points": round(row["points"], 2), "allowed": round(row["allowed"], 2)})
     model_fingerprint = hashlib.sha256(json.dumps({**{str(season): receipt.get("sha256") for season, receipt in training_receipts.items()}, str(VALIDATION_SEASON): validation_receipt.get("sha256"), "schedule": receipt_schedule.get("sha256")}, sort_keys=True).encode()).hexdigest()[:12]
     edition = {
         "schema_version": 1,
@@ -238,6 +241,7 @@ def main():
         "home_advantage": round(final_home_advantage, 3),
         "coverage": {"forecast_rows": len(forecasts), "primary_rows": sum(item["prediction"]["estimate_type"] == "primary" for item in forecasts), "cold_start_rows": sum(item["prediction"]["estimate_type"] == "cold_start" for item in forecasts), "rated_teams": len(ratings)},
         "forecasts": forecasts,
+        "team_ratings": team_ratings,
         "receipts": {**{f"team_box_{season}": {"sha256": receipt.get("sha256"), "url": receipt.get("url")} for season, receipt in training_receipts.items()}, f"team_box_{VALIDATION_SEASON}": {"sha256": validation_receipt.get("sha256"), "url": validation_receipt.get("url")}, "schedule_2027": {"sha256": receipt_schedule.get("sha256"), "url": receipt_schedule.get("url")}},
         "limitations": ["This is a separate women’s model; men’s ratings and forecasts are never substituted.", "It uses team box-score history and does not incorporate a betting line or injury feed.", "Cold-start rows are explicitly labeled when either team has fewer than five training games."],
     }

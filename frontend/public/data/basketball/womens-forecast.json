@@ -4,7 +4,7 @@
   "sport": "basketball",
   "gender": "women",
   "target_season": 2027,
-  "generated_at": "2026-09-20T07:34:11.304104Z",
+  "generated_at": "2026-09-20T08:51:55.828795Z",
   "model_status": "published",
   "method": "Multi-season shrunk team net-margin ratings with a source-native home-court estimate; the latest completed season is held out for validation before the target refit.",
   "training_seasons": [
@@ -41131,6 +41131,8009 @@
         "home_training_games": 128,
         "away_training_games": 114
       }
+    }
+  ],
+  "team_ratings": [
+    {
+      "team_id": "2579",
+      "team": "South Carolina Gamecocks",
+      "rating": 25.24,
+      "points": 82.65,
+      "allowed": 56.1,
+      "games": 154,
+      "rank": 1
+    },
+    {
+      "team_id": "41",
+      "team": "UConn Huskies",
+      "rating": 25.22,
+      "points": 81.1,
+      "allowed": 54.58,
+      "games": 155,
+      "rank": 2
+    },
+    {
+      "team_id": "99",
+      "team": "LSU Tigers",
+      "rating": 23.56,
+      "points": 86.92,
+      "allowed": 62.06,
+      "games": 145,
+      "rank": 3
+    },
+    {
+      "team_id": "251",
+      "team": "Texas Longhorns",
+      "rating": 20.94,
+      "points": 78.78,
+      "allowed": 56.74,
+      "games": 152,
+      "rank": 4
+    },
+    {
+      "team_id": "26",
+      "team": "UCLA Bruins",
+      "rating": 16.91,
+      "points": 77.25,
+      "allowed": 59.42,
+      "games": 146,
+      "rank": 5
+    },
+    {
+      "team_id": "87",
+      "team": "Notre Dame Fighting Irish",
+      "rating": 15.76,
+      "points": 78.5,
+      "allowed": 61.83,
+      "games": 138,
+      "rank": 6
+    },
+    {
+      "team_id": "526",
+      "team": "Florida Gulf Coast Eagles",
+      "rating": 15.23,
+      "points": 72.34,
+      "allowed": 56.2,
+      "games": 134,
+      "rank": 7
+    },
+    {
+      "team_id": "2571",
+      "team": "South Dakota State Jackrabbits",
+      "rating": 13.92,
+      "points": 75.92,
+      "allowed": 61.18,
+      "games": 136,
+      "rank": 8
+    },
+    {
+      "team_id": "277",
+      "team": "West Virginia Mountaineers",
+      "rating": 13.79,
+      "points": 72.92,
+      "allowed": 58.3,
+      "games": 132,
+      "rank": 9
+    },
+    {
+      "team_id": "194",
+      "team": "Ohio State Buckeyes",
+      "rating": 13.28,
+      "points": 79.75,
+      "allowed": 65.69,
+      "games": 136,
+      "rank": 10
+    },
+    {
+      "team_id": "127",
+      "team": "Michigan State Spartans",
+      "rating": 13.13,
+      "points": 80.19,
+      "allowed": 66.22,
+      "games": 124,
+      "rank": 11
+    },
+    {
+      "team_id": "2294",
+      "team": "Iowa Hawkeyes",
+      "rating": 13.11,
+      "points": 82.59,
+      "allowed": 68.76,
+      "games": 143,
+      "rank": 12
+    },
+    {
+      "team_id": "2217",
+      "team": "Fairfield Stags",
+      "rating": 12.72,
+      "points": 70.27,
+      "allowed": 56.74,
+      "games": 126,
+      "rank": 13
+    },
+    {
+      "team_id": "150",
+      "team": "Duke Blue Devils",
+      "rating": 12.66,
+      "points": 69.75,
+      "allowed": 56.36,
+      "games": 140,
+      "rank": 14
+    },
+    {
+      "team_id": "325",
+      "team": "Cleveland State Vikings",
+      "rating": 12.59,
+      "points": 73.31,
+      "allowed": 59.99,
+      "games": 139,
+      "rank": 15
+    },
+    {
+      "team_id": "2439",
+      "team": "UNLV Lady Rebels",
+      "rating": 12.59,
+      "points": 75.02,
+      "allowed": 61.67,
+      "games": 132,
+      "rank": 16
+    },
+    {
+      "team_id": "171",
+      "team": "Columbia Lions",
+      "rating": 12.44,
+      "points": 74.74,
+      "allowed": 61.48,
+      "games": 122,
+      "rank": 17
+    },
+    {
+      "team_id": "239",
+      "team": "Baylor Bears",
+      "rating": 11.92,
+      "points": 73.71,
+      "allowed": 61.09,
+      "games": 137,
+      "rank": 18
+    },
+    {
+      "team_id": "2739",
+      "team": "Green Bay Phoenix",
+      "rating": 11.89,
+      "points": 69.58,
+      "allowed": 56.99,
+      "games": 136,
+      "rank": 19
+    },
+    {
+      "team_id": "145",
+      "team": "Ole Miss Rebels",
+      "rating": 11.88,
+      "points": 71.98,
+      "allowed": 59.4,
+      "games": 136,
+      "rank": 20
+    },
+    {
+      "team_id": "201",
+      "team": "Oklahoma Sooners",
+      "rating": 11.68,
+      "points": 82.84,
+      "allowed": 70.47,
+      "games": 135,
+      "rank": 21
+    },
+    {
+      "team_id": "30",
+      "team": "USC Trojans",
+      "rating": 11.63,
+      "points": 72.68,
+      "allowed": 60.35,
+      "games": 133,
+      "rank": 22
+    },
+    {
+      "team_id": "24",
+      "team": "Stanford Cardinal",
+      "rating": 11.38,
+      "points": 74.36,
+      "allowed": 62.32,
+      "games": 136,
+      "rank": 23
+    },
+    {
+      "team_id": "254",
+      "team": "Utah Utes",
+      "rating": 11.2,
+      "points": 76.28,
+      "allowed": 64.37,
+      "games": 127,
+      "rank": 24
+    },
+    {
+      "team_id": "2050",
+      "team": "Ball State Cardinals",
+      "rating": 11.13,
+      "points": 75.48,
+      "allowed": 63.69,
+      "games": 134,
+      "rank": 25
+    },
+    {
+      "team_id": "130",
+      "team": "Michigan Wolverines",
+      "rating": 11.1,
+      "points": 75.88,
+      "allowed": 64.13,
+      "games": 135,
+      "rank": 26
+    },
+    {
+      "team_id": "257",
+      "team": "Richmond Spiders",
+      "rating": 11.08,
+      "points": 71.6,
+      "allowed": 59.87,
+      "games": 136,
+      "rank": 27
+    },
+    {
+      "team_id": "2250",
+      "team": "Gonzaga Bulldogs",
+      "rating": 11.06,
+      "points": 73.72,
+      "allowed": 62.01,
+      "games": 136,
+      "rank": 28
+    },
+    {
+      "team_id": "259",
+      "team": "Virginia Tech Hokies",
+      "rating": 10.77,
+      "points": 73.74,
+      "allowed": 62.32,
+      "games": 133,
+      "rank": 29
+    },
+    {
+      "team_id": "2393",
+      "team": "Middle Tennessee Blue Raiders",
+      "rating": 10.77,
+      "points": 67.77,
+      "allowed": 56.36,
+      "games": 133,
+      "rank": 30
+    },
+    {
+      "team_id": "2450",
+      "team": "Norfolk State Spartans",
+      "rating": 10.64,
+      "points": 66.09,
+      "allowed": 54.78,
+      "games": 129,
+      "rank": 31
+    },
+    {
+      "team_id": "232",
+      "team": "Charleston Cougars",
+      "rating": 10.63,
+      "points": 72.91,
+      "allowed": 61.56,
+      "games": 118,
+      "rank": 32
+    },
+    {
+      "team_id": "163",
+      "team": "Princeton Tigers",
+      "rating": 10.54,
+      "points": 68.17,
+      "allowed": 56.89,
+      "games": 114,
+      "rank": 33
+    },
+    {
+      "team_id": "2617",
+      "team": "Stephen F. Austin Ladyjacks",
+      "rating": 10.5,
+      "points": 76.04,
+      "allowed": 64.92,
+      "games": 135,
+      "rank": 34
+    },
+    {
+      "team_id": "333",
+      "team": "Alabama Crimson Tide",
+      "rating": 10.37,
+      "points": 73.12,
+      "allowed": 62.13,
+      "games": 133,
+      "rank": 35
+    },
+    {
+      "team_id": "120",
+      "team": "Maryland Terrapins",
+      "rating": 10.3,
+      "points": 79.96,
+      "allowed": 69.04,
+      "games": 134,
+      "rank": 36
+    },
+    {
+      "team_id": "2628",
+      "team": "TCU Horned Frogs",
+      "rating": 10.2,
+      "points": 71.33,
+      "allowed": 60.54,
+      "games": 140,
+      "rank": 37
+    },
+    {
+      "team_id": "153",
+      "team": "North Carolina Tar Heels",
+      "rating": 10.16,
+      "points": 70.32,
+      "allowed": 59.58,
+      "games": 139,
+      "rank": 38
+    },
+    {
+      "team_id": "152",
+      "team": "NC State Wolfpack",
+      "rating": 10.12,
+      "points": 74.47,
+      "allowed": 63.76,
+      "games": 137,
+      "rank": 39
+    },
+    {
+      "team_id": "197",
+      "team": "Oklahoma State Cowgirls",
+      "rating": 10.04,
+      "points": 75.55,
+      "allowed": 64.88,
+      "games": 128,
+      "rank": 40
+    },
+    {
+      "team_id": "97",
+      "team": "Louisville Cardinals",
+      "rating": 9.89,
+      "points": 74.39,
+      "allowed": 63.94,
+      "games": 142,
+      "rank": 41
+    },
+    {
+      "team_id": "2633",
+      "team": "Tennessee Lady Volunteers",
+      "rating": 9.82,
+      "points": 79.16,
+      "allowed": 68.75,
+      "games": 134,
+      "rank": 42
+    },
+    {
+      "team_id": "84",
+      "team": "Indiana Hoosiers",
+      "rating": 9.61,
+      "points": 75.39,
+      "allowed": 65.19,
+      "games": 129,
+      "rank": 43
+    },
+    {
+      "team_id": "344",
+      "team": "Mississippi State Bulldogs",
+      "rating": 9.57,
+      "points": 74.15,
+      "allowed": 64.0,
+      "games": 133,
+      "rank": 44
+    },
+    {
+      "team_id": "66",
+      "team": "Iowa State Cyclones",
+      "rating": 9.52,
+      "points": 77.14,
+      "allowed": 67.04,
+      "games": 131,
+      "rank": 45
+    },
+    {
+      "team_id": "2253",
+      "team": "Grand Canyon Lopes",
+      "rating": 9.49,
+      "points": 70.42,
+      "allowed": 60.33,
+      "games": 126,
+      "rank": 46
+    },
+    {
+      "team_id": "2306",
+      "team": "Kansas State Wildcats",
+      "rating": 9.13,
+      "points": 72.65,
+      "allowed": 63.01,
+      "games": 143,
+      "rank": 47
+    },
+    {
+      "team_id": "161",
+      "team": "Fairleigh Dickinson Knights",
+      "rating": 9.04,
+      "points": 64.71,
+      "allowed": 55.11,
+      "games": 129,
+      "rank": 48
+    },
+    {
+      "team_id": "256",
+      "team": "James Madison Dukes",
+      "rating": 8.99,
+      "points": 72.46,
+      "allowed": 62.95,
+      "games": 138,
+      "rank": 49
+    },
+    {
+      "team_id": "108",
+      "team": "Harvard Crimson",
+      "rating": 8.9,
+      "points": 68.64,
+      "allowed": 59.12,
+      "games": 116,
+      "rank": 50
+    },
+    {
+      "team_id": "93",
+      "team": "Murray State Racers",
+      "rating": 8.76,
+      "points": 81.6,
+      "allowed": 72.28,
+      "games": 126,
+      "rank": 51
+    },
+    {
+      "team_id": "238",
+      "team": "Vanderbilt Commodores",
+      "rating": 8.73,
+      "points": 76.1,
+      "allowed": 66.83,
+      "games": 131,
+      "rank": 52
+    },
+    {
+      "team_id": "356",
+      "team": "Illinois Fighting Illini",
+      "rating": 8.65,
+      "points": 74.2,
+      "allowed": 65.02,
+      "games": 131,
+      "rank": 53
+    },
+    {
+      "team_id": "227",
+      "team": "Rhode Island Rams",
+      "rating": 8.5,
+      "points": 64.84,
+      "allowed": 55.84,
+      "games": 134,
+      "rank": 54
+    },
+    {
+      "team_id": "2603",
+      "team": "Saint Joseph's Hawks",
+      "rating": 8.45,
+      "points": 66.58,
+      "allowed": 57.6,
+      "games": 129,
+      "rank": 55
+    },
+    {
+      "team_id": "300",
+      "team": "UC Irvine Anteaters",
+      "rating": 8.38,
+      "points": 64.18,
+      "allowed": 55.27,
+      "games": 126,
+      "rank": 56
+    },
+    {
+      "team_id": "261",
+      "team": "Vermont Catamounts",
+      "rating": 8.28,
+      "points": 61.73,
+      "allowed": 52.96,
+      "games": 137,
+      "rank": 57
+    },
+    {
+      "team_id": "36",
+      "team": "Colorado State Rams",
+      "rating": 8.19,
+      "points": 68.65,
+      "allowed": 59.94,
+      "games": 127,
+      "rank": 58
+    },
+    {
+      "team_id": "2198",
+      "team": "Eastern Kentucky Colonels",
+      "rating": 8.11,
+      "points": 73.19,
+      "allowed": 64.59,
+      "games": 132,
+      "rank": 59
+    },
+    {
+      "team_id": "2244",
+      "team": "George Mason Patriots",
+      "rating": 8.01,
+      "points": 68.11,
+      "allowed": 59.59,
+      "games": 128,
+      "rank": 60
+    },
+    {
+      "team_id": "147",
+      "team": "Montana State Bobcats",
+      "rating": 7.96,
+      "points": 68.32,
+      "allowed": 59.86,
+      "games": 129,
+      "rank": 61
+    },
+    {
+      "team_id": "2000",
+      "team": "Abilene Christian Wildcats",
+      "rating": 7.73,
+      "points": 71.15,
+      "allowed": 62.94,
+      "games": 128,
+      "rank": 62
+    },
+    {
+      "team_id": "158",
+      "team": "Nebraska Cornhuskers",
+      "rating": 7.71,
+      "points": 74.38,
+      "allowed": 66.2,
+      "games": 133,
+      "rank": 63
+    },
+    {
+      "team_id": "2449",
+      "team": "North Dakota State Bison",
+      "rating": 7.7,
+      "points": 73.99,
+      "allowed": 65.82,
+      "games": 130,
+      "rank": 64
+    },
+    {
+      "team_id": "38",
+      "team": "Colorado Buffaloes",
+      "rating": 7.44,
+      "points": 70.12,
+      "allowed": 62.24,
+      "games": 136,
+      "rank": 65
+    },
+    {
+      "team_id": "2181",
+      "team": "Drake Bulldogs",
+      "rating": 7.26,
+      "points": 77.53,
+      "allowed": 69.81,
+      "games": 128,
+      "rank": 66
+    },
+    {
+      "team_id": "2653",
+      "team": "Troy Trojans",
+      "rating": 7.16,
+      "points": 81.08,
+      "allowed": 73.48,
+      "games": 131,
+      "rank": 67
+    },
+    {
+      "team_id": "2501",
+      "team": "Portland Pilots",
+      "rating": 7.15,
+      "points": 70.74,
+      "allowed": 63.16,
+      "games": 134,
+      "rank": 68
+    },
+    {
+      "team_id": "88",
+      "team": "Southern Indiana Screaming Eagles",
+      "rating": 7.07,
+      "points": 69.53,
+      "allowed": 62.02,
+      "games": 126,
+      "rank": 69
+    },
+    {
+      "team_id": "2649",
+      "team": "Toledo Rockets",
+      "rating": 7.06,
+      "points": 70.18,
+      "allowed": 62.69,
+      "games": 130,
+      "rank": 70
+    },
+    {
+      "team_id": "2320",
+      "team": "Lamar Cardinals",
+      "rating": 7.04,
+      "points": 65.8,
+      "allowed": 58.31,
+      "games": 123,
+      "rank": 71
+    },
+    {
+      "team_id": "269",
+      "team": "Marquette Golden Eagles",
+      "rating": 6.96,
+      "points": 67.34,
+      "allowed": 59.94,
+      "games": 126,
+      "rank": 72
+    },
+    {
+      "team_id": "135",
+      "team": "Minnesota Golden Gophers",
+      "rating": 6.9,
+      "points": 72.1,
+      "allowed": 64.78,
+      "games": 132,
+      "rank": 73
+    },
+    {
+      "team_id": "2309",
+      "team": "Kent State Golden Flashes",
+      "rating": 6.82,
+      "points": 71.25,
+      "allowed": 64.0,
+      "games": 126,
+      "rank": 74
+    },
+    {
+      "team_id": "2870",
+      "team": "Purdue Fort Wayne Mastodons",
+      "rating": 6.65,
+      "points": 70.22,
+      "allowed": 63.18,
+      "games": 136,
+      "rank": 75
+    },
+    {
+      "team_id": "52",
+      "team": "Florida State Seminoles",
+      "rating": 6.55,
+      "points": 78.95,
+      "allowed": 71.98,
+      "games": 129,
+      "rank": 76
+    },
+    {
+      "team_id": "2514",
+      "team": "Quinnipiac Bobcats",
+      "rating": 6.52,
+      "points": 64.01,
+      "allowed": 57.07,
+      "games": 125,
+      "rank": 77
+    },
+    {
+      "team_id": "276",
+      "team": "Marshall Thundering Herd",
+      "rating": 6.44,
+      "points": 72.32,
+      "allowed": 65.49,
+      "games": 133,
+      "rank": 78
+    },
+    {
+      "team_id": "21",
+      "team": "San Diego State Aztecs",
+      "rating": 6.31,
+      "points": 67.59,
+      "allowed": 60.89,
+      "games": 133,
+      "rank": 79
+    },
+    {
+      "team_id": "156",
+      "team": "Creighton Bluejays",
+      "rating": 6.28,
+      "points": 70.86,
+      "allowed": 64.18,
+      "games": 126,
+      "rank": 80
+    },
+    {
+      "team_id": "222",
+      "team": "Villanova Wildcats",
+      "rating": 6.25,
+      "points": 67.61,
+      "allowed": 61.0,
+      "games": 140,
+      "rank": 81
+    },
+    {
+      "team_id": "399",
+      "team": "UAlbany Great Danes",
+      "rating": 5.93,
+      "points": 60.01,
+      "allowed": 53.71,
+      "games": 128,
+      "rank": 82
+    },
+    {
+      "team_id": "2541",
+      "team": "Santa Clara Broncos",
+      "rating": 5.92,
+      "points": 71.02,
+      "allowed": 64.74,
+      "games": 131,
+      "rank": 83
+    },
+    {
+      "team_id": "2272",
+      "team": "High Point Panthers",
+      "rating": 5.89,
+      "points": 67.11,
+      "allowed": 60.85,
+      "games": 130,
+      "rank": 84
+    },
+    {
+      "team_id": "2430",
+      "team": "UNC Greensboro Spartans",
+      "rating": 5.66,
+      "points": 63.28,
+      "allowed": 57.24,
+      "games": 123,
+      "rank": 85
+    },
+    {
+      "team_id": "264",
+      "team": "Washington Huskies",
+      "rating": 5.66,
+      "points": 66.98,
+      "allowed": 60.97,
+      "games": 130,
+      "rank": 86
+    },
+    {
+      "team_id": "2057",
+      "team": "Belmont Bruins",
+      "rating": 5.58,
+      "points": 71.11,
+      "allowed": 65.19,
+      "games": 134,
+      "rank": 87
+    },
+    {
+      "team_id": "183",
+      "team": "Syracuse Orange",
+      "rating": 5.5,
+      "points": 73.12,
+      "allowed": 67.28,
+      "games": 128,
+      "rank": 88
+    },
+    {
+      "team_id": "2287",
+      "team": "Illinois State Redbirds",
+      "rating": 5.39,
+      "points": 72.17,
+      "allowed": 66.46,
+      "games": 134,
+      "rank": 89
+    },
+    {
+      "team_id": "236",
+      "team": "Chattanooga Mocs",
+      "rating": 5.36,
+      "points": 62.12,
+      "allowed": 56.43,
+      "games": 128,
+      "rank": 90
+    },
+    {
+      "team_id": "58",
+      "team": "South Florida Bulls",
+      "rating": 5.29,
+      "points": 67.75,
+      "allowed": 62.14,
+      "games": 131,
+      "rank": 91
+    },
+    {
+      "team_id": "249",
+      "team": "North Texas Mean Green",
+      "rating": 5.24,
+      "points": 69.62,
+      "allowed": 64.05,
+      "games": 126,
+      "rank": 92
+    },
+    {
+      "team_id": "2623",
+      "team": "Missouri State Lady Bears",
+      "rating": 5.07,
+      "points": 69.1,
+      "allowed": 63.72,
+      "games": 132,
+      "rank": 93
+    },
+    {
+      "team_id": "2747",
+      "team": "Wofford Terriers",
+      "rating": 5.07,
+      "points": 67.21,
+      "allowed": 61.8,
+      "games": 120,
+      "rank": 94
+    },
+    {
+      "team_id": "242",
+      "team": "Rice Owls",
+      "rating": 5.06,
+      "points": 68.45,
+      "allowed": 63.08,
+      "games": 128,
+      "rank": 95
+    },
+    {
+      "team_id": "2097",
+      "team": "Campbell Fighting Camels",
+      "rating": 5.05,
+      "points": 60.71,
+      "allowed": 55.32,
+      "games": 121,
+      "rank": 96
+    },
+    {
+      "team_id": "258",
+      "team": "Virginia Cavaliers",
+      "rating": 4.96,
+      "points": 71.69,
+      "allowed": 66.43,
+      "games": 127,
+      "rank": 97
+    },
+    {
+      "team_id": "2460",
+      "team": "Northern Iowa Panthers",
+      "rating": 4.93,
+      "points": 72.69,
+      "allowed": 67.46,
+      "games": 127,
+      "rank": 98
+    },
+    {
+      "team_id": "2335",
+      "team": "Liberty Flames",
+      "rating": 4.79,
+      "points": 67.93,
+      "allowed": 62.84,
+      "games": 128,
+      "rank": 99
+    },
+    {
+      "team_id": "204",
+      "team": "Oregon State Beavers",
+      "rating": 4.79,
+      "points": 66.88,
+      "allowed": 61.81,
+      "games": 135,
+      "rank": 100
+    },
+    {
+      "team_id": "2305",
+      "team": "Kansas Jayhawks",
+      "rating": 4.79,
+      "points": 69.92,
+      "allowed": 64.84,
+      "games": 132,
+      "rank": 101
+    },
+    {
+      "team_id": "2166",
+      "team": "Davidson Wildcats",
+      "rating": 4.75,
+      "points": 63.82,
+      "allowed": 58.75,
+      "games": 122,
+      "rank": 102
+    },
+    {
+      "team_id": "2348",
+      "team": "Louisiana Tech Lady Techsters",
+      "rating": 4.66,
+      "points": 66.82,
+      "allowed": 61.87,
+      "games": 129,
+      "rank": 103
+    },
+    {
+      "team_id": "2710",
+      "team": "Western Illinois Leathernecks",
+      "rating": 4.6,
+      "points": 72.13,
+      "allowed": 67.23,
+      "games": 125,
+      "rank": 104
+    },
+    {
+      "team_id": "70",
+      "team": "Idaho Vandals",
+      "rating": 4.6,
+      "points": 68.4,
+      "allowed": 63.5,
+      "games": 124,
+      "rank": 105
+    },
+    {
+      "team_id": "302",
+      "team": "UC Davis Aggies",
+      "rating": 4.6,
+      "points": 65.24,
+      "allowed": 60.36,
+      "games": 128,
+      "rank": 106
+    },
+    {
+      "team_id": "189",
+      "team": "Bowling Green Falcons",
+      "rating": 4.58,
+      "points": 71.73,
+      "allowed": 66.87,
+      "games": 130,
+      "rank": 107
+    },
+    {
+      "team_id": "107",
+      "team": "Holy Cross Crusaders",
+      "rating": 4.58,
+      "points": 61.73,
+      "allowed": 56.87,
+      "games": 130,
+      "rank": 108
+    },
+    {
+      "team_id": "167",
+      "team": "New Mexico Lobos",
+      "rating": 4.5,
+      "points": 68.84,
+      "allowed": 64.06,
+      "games": 126,
+      "rank": 109
+    },
+    {
+      "team_id": "2329",
+      "team": "Lehigh Mountain Hawks",
+      "rating": 4.38,
+      "points": 68.46,
+      "allowed": 63.79,
+      "games": 125,
+      "rank": 110
+    },
+    {
+      "team_id": "2635",
+      "team": "Tennessee Tech Golden Eagles",
+      "rating": 4.38,
+      "points": 69.09,
+      "allowed": 64.42,
+      "games": 125,
+      "rank": 111
+    },
+    {
+      "team_id": "331",
+      "team": "Eastern Washington Eagles",
+      "rating": 4.33,
+      "points": 67.92,
+      "allowed": 63.32,
+      "games": 128,
+      "rank": 112
+    },
+    {
+      "team_id": "12",
+      "team": "Arizona Wildcats",
+      "rating": 4.22,
+      "points": 70.71,
+      "allowed": 66.22,
+      "games": 126,
+      "rank": 113
+    },
+    {
+      "team_id": "68",
+      "team": "Boise State Broncos",
+      "rating": 4.2,
+      "points": 67.04,
+      "allowed": 62.58,
+      "games": 132,
+      "rank": 114
+    },
+    {
+      "team_id": "2540",
+      "team": "UC Santa Barbara Gauchos",
+      "rating": 4.15,
+      "points": 65.32,
+      "allowed": 60.89,
+      "games": 123,
+      "rank": 115
+    },
+    {
+      "team_id": "2110",
+      "team": "Central Arkansas Sugar Bears",
+      "rating": 4.14,
+      "points": 64.46,
+      "allowed": 60.05,
+      "games": 122,
+      "rank": 116
+    },
+    {
+      "team_id": "2483",
+      "team": "Oregon Ducks",
+      "rating": 4.12,
+      "points": 69.19,
+      "allowed": 64.82,
+      "games": 133,
+      "rank": 117
+    },
+    {
+      "team_id": "2193",
+      "team": "East Tennessee State Bucs",
+      "rating": 4.01,
+      "points": 60.27,
+      "allowed": 56.01,
+      "games": 125,
+      "rank": 118
+    },
+    {
+      "team_id": "2448",
+      "team": "North Carolina A&T Aggies",
+      "rating": 3.95,
+      "points": 64.09,
+      "allowed": 59.87,
+      "games": 116,
+      "rank": 119
+    },
+    {
+      "team_id": "2641",
+      "team": "Texas Tech Lady Raiders",
+      "rating": 3.92,
+      "points": 67.14,
+      "allowed": 62.99,
+      "games": 137,
+      "rank": 120
+    },
+    {
+      "team_id": "96",
+      "team": "Kentucky Wildcats",
+      "rating": 3.89,
+      "points": 70.84,
+      "allowed": 66.71,
+      "games": 130,
+      "rank": 121
+    },
+    {
+      "team_id": "2390",
+      "team": "Miami Hurricanes",
+      "rating": 3.84,
+      "points": 68.99,
+      "allowed": 64.91,
+      "games": 127,
+      "rank": 122
+    },
+    {
+      "team_id": "290",
+      "team": "Georgia Southern Eagles",
+      "rating": 3.84,
+      "points": 72.13,
+      "allowed": 68.04,
+      "games": 126,
+      "rank": 123
+    },
+    {
+      "team_id": "62",
+      "team": "Hawai'i Rainbow Wahine",
+      "rating": 3.82,
+      "points": 60.77,
+      "allowed": 56.71,
+      "games": 128,
+      "rank": 124
+    },
+    {
+      "team_id": "2032",
+      "team": "Arkansas State Red Wolves",
+      "rating": 3.79,
+      "points": 71.19,
+      "allowed": 67.17,
+      "games": 130,
+      "rank": 125
+    },
+    {
+      "team_id": "2182",
+      "team": "Drexel Dragons",
+      "rating": 3.79,
+      "points": 61.83,
+      "allowed": 57.79,
+      "games": 119,
+      "rank": 126
+    },
+    {
+      "team_id": "151",
+      "team": "East Carolina Pirates",
+      "rating": 3.76,
+      "points": 65.55,
+      "allowed": 61.55,
+      "games": 128,
+      "rank": 127
+    },
+    {
+      "team_id": "2619",
+      "team": "Stony Brook Seawolves",
+      "rating": 3.7,
+      "points": 64.49,
+      "allowed": 60.54,
+      "games": 120,
+      "rank": 128
+    },
+    {
+      "team_id": "219",
+      "team": "Pennsylvania Quakers",
+      "rating": 3.69,
+      "points": 64.59,
+      "allowed": 60.63,
+      "games": 107,
+      "rank": 129
+    },
+    {
+      "team_id": "2296",
+      "team": "Jackson State Lady Tigers",
+      "rating": 3.48,
+      "points": 64.86,
+      "allowed": 61.16,
+      "games": 124,
+      "rank": 130
+    },
+    {
+      "team_id": "113",
+      "team": "Massachusetts Minutewomen",
+      "rating": 3.34,
+      "points": 66.98,
+      "allowed": 63.43,
+      "games": 128,
+      "rank": 131
+    },
+    {
+      "team_id": "25",
+      "team": "California Golden Bears",
+      "rating": 3.3,
+      "points": 69.17,
+      "allowed": 65.67,
+      "games": 133,
+      "rank": 132
+    },
+    {
+      "team_id": "233",
+      "team": "South Dakota Coyotes",
+      "rating": 3.28,
+      "points": 69.28,
+      "allowed": 65.8,
+      "games": 133,
+      "rank": 133
+    },
+    {
+      "team_id": "57",
+      "team": "Florida Gators",
+      "rating": 3.2,
+      "points": 72.91,
+      "allowed": 69.52,
+      "games": 135,
+      "rank": 134
+    },
+    {
+      "team_id": "2550",
+      "team": "Seton Hall Pirates",
+      "rating": 3.17,
+      "points": 66.4,
+      "allowed": 63.03,
+      "games": 131,
+      "rank": 135
+    },
+    {
+      "team_id": "61",
+      "team": "Georgia Lady Bulldogs",
+      "rating": 2.94,
+      "points": 66.97,
+      "allowed": 63.84,
+      "games": 128,
+      "rank": 136
+    },
+    {
+      "team_id": "228",
+      "team": "Clemson Tigers",
+      "rating": 2.93,
+      "points": 67.26,
+      "allowed": 64.16,
+      "games": 129,
+      "rank": 137
+    },
+    {
+      "team_id": "2405",
+      "team": "Monmouth Hawks",
+      "rating": 2.88,
+      "points": 63.76,
+      "allowed": 60.69,
+      "games": 122,
+      "rank": 138
+    },
+    {
+      "team_id": "2754",
+      "team": "Youngstown State Penguins",
+      "rating": 2.87,
+      "points": 63.55,
+      "allowed": 60.5,
+      "games": 127,
+      "rank": 139
+    },
+    {
+      "team_id": "2458",
+      "team": "Northern Colorado Bears",
+      "rating": 2.86,
+      "points": 64.68,
+      "allowed": 61.63,
+      "games": 124,
+      "rank": 140
+    },
+    {
+      "team_id": "2184",
+      "team": "Duquesne Dukes",
+      "rating": 2.83,
+      "points": 68.38,
+      "allowed": 65.38,
+      "games": 130,
+      "rank": 141
+    },
+    {
+      "team_id": "2751",
+      "team": "Wyoming Cowgirls",
+      "rating": 2.77,
+      "points": 62.65,
+      "allowed": 59.71,
+      "games": 129,
+      "rank": 142
+    },
+    {
+      "team_id": "2599",
+      "team": "St. John's Red Storm",
+      "rating": 2.77,
+      "points": 61.87,
+      "allowed": 58.93,
+      "games": 130,
+      "rank": 143
+    },
+    {
+      "team_id": "198",
+      "team": "Oral Roberts Golden Eagles",
+      "rating": 2.73,
+      "points": 79.89,
+      "allowed": 76.98,
+      "games": 124,
+      "rank": 144
+    },
+    {
+      "team_id": "202",
+      "team": "Tulsa Golden Hurricane",
+      "rating": 2.72,
+      "points": 69.09,
+      "allowed": 66.19,
+      "games": 126,
+      "rank": 145
+    },
+    {
+      "team_id": "231",
+      "team": "Furman Paladins",
+      "rating": 2.63,
+      "points": 66.24,
+      "allowed": 63.44,
+      "games": 124,
+      "rank": 146
+    },
+    {
+      "team_id": "324",
+      "team": "Coastal Carolina Chanticleers",
+      "rating": 2.61,
+      "points": 70.84,
+      "allowed": 68.06,
+      "games": 126,
+      "rank": 147
+    },
+    {
+      "team_id": "2464",
+      "team": "Northern Arizona Lumberjacks",
+      "rating": 2.58,
+      "points": 74.61,
+      "allowed": 71.88,
+      "games": 134,
+      "rank": 148
+    },
+    {
+      "team_id": "59",
+      "team": "Georgia Tech Yellow Jackets",
+      "rating": 2.57,
+      "points": 67.78,
+      "allowed": 65.05,
+      "games": 129,
+      "rank": 149
+    },
+    {
+      "team_id": "295",
+      "team": "Old Dominion Monarchs",
+      "rating": 2.49,
+      "points": 66.6,
+      "allowed": 63.95,
+      "games": 129,
+      "rank": 150
+    },
+    {
+      "team_id": "2142",
+      "team": "Colgate Raiders",
+      "rating": 2.37,
+      "points": 60.51,
+      "allowed": 57.99,
+      "games": 128,
+      "rank": 151
+    },
+    {
+      "team_id": "28",
+      "team": "UC San Diego Tritons",
+      "rating": 2.36,
+      "points": 63.13,
+      "allowed": 60.61,
+      "games": 127,
+      "rank": 152
+    },
+    {
+      "team_id": "349",
+      "team": "Army Black Knights",
+      "rating": 2.35,
+      "points": 62.22,
+      "allowed": 59.71,
+      "games": 122,
+      "rank": 153
+    },
+    {
+      "team_id": "2545",
+      "team": "SE Louisiana Lady Lions",
+      "rating": 2.29,
+      "points": 62.58,
+      "allowed": 60.14,
+      "games": 121,
+      "rank": 154
+    },
+    {
+      "team_id": "2856",
+      "team": "California Baptist Lancers",
+      "rating": 2.27,
+      "points": 73.18,
+      "allowed": 70.76,
+      "games": 131,
+      "rank": 155
+    },
+    {
+      "team_id": "47",
+      "team": "Howard Bison",
+      "rating": 2.15,
+      "points": 62.6,
+      "allowed": 60.31,
+      "games": 124,
+      "rank": 156
+    },
+    {
+      "team_id": "288",
+      "team": "Lipscomb Bisons",
+      "rating": 2.14,
+      "points": 68.26,
+      "allowed": 65.98,
+      "games": 121,
+      "rank": 157
+    },
+    {
+      "team_id": "351",
+      "team": "Wingate Bulldogs",
+      "rating": 2.11,
+      "points": 72.0,
+      "allowed": 53.0,
+      "games": 1,
+      "rank": 158
+    },
+    {
+      "team_id": "311",
+      "team": "Maine Black Bears",
+      "rating": 2.01,
+      "points": 61.02,
+      "allowed": 58.89,
+      "games": 127,
+      "rank": 159
+    },
+    {
+      "team_id": "2561",
+      "team": "Siena Saints",
+      "rating": 2.0,
+      "points": 66.74,
+      "allowed": 64.61,
+      "games": 121,
+      "rank": 160
+    },
+    {
+      "team_id": "2636",
+      "team": "UTSA Roadrunners",
+      "rating": 1.94,
+      "points": 63.65,
+      "allowed": 61.59,
+      "games": 127,
+      "rank": 161
+    },
+    {
+      "team_id": "2046",
+      "team": "Austin Peay Governors",
+      "rating": 1.92,
+      "points": 61.82,
+      "allowed": 59.78,
+      "games": 126,
+      "rank": 162
+    },
+    {
+      "team_id": "252",
+      "team": "BYU Cougars",
+      "rating": 1.85,
+      "points": 66.98,
+      "allowed": 65.02,
+      "games": 131,
+      "rank": 163
+    },
+    {
+      "team_id": "357",
+      "team": "Texas A&M-Corpus Christi Islanders",
+      "rating": 1.74,
+      "points": 61.71,
+      "allowed": 59.85,
+      "games": 124,
+      "rank": 164
+    },
+    {
+      "team_id": "193",
+      "team": "Miami (OH) RedHawks",
+      "rating": 1.72,
+      "points": 65.73,
+      "allowed": 63.9,
+      "games": 125,
+      "rank": 165
+    },
+    {
+      "team_id": "218",
+      "team": "Temple Owls",
+      "rating": 1.7,
+      "points": 66.86,
+      "allowed": 65.04,
+      "games": 120,
+      "rank": 166
+    },
+    {
+      "team_id": "2066",
+      "team": "Binghamton Bearcats",
+      "rating": 1.67,
+      "points": 62.1,
+      "allowed": 60.32,
+      "games": 124,
+      "rank": 167
+    },
+    {
+      "team_id": "2",
+      "team": "Auburn Tigers",
+      "rating": 1.58,
+      "points": 64.8,
+      "allowed": 63.11,
+      "games": 124,
+      "rank": 168
+    },
+    {
+      "team_id": "265",
+      "team": "Washington State Cougars",
+      "rating": 1.58,
+      "points": 66.83,
+      "allowed": 65.16,
+      "games": 137,
+      "rank": 169
+    },
+    {
+      "team_id": "2698",
+      "team": "West Georgia Wolves",
+      "rating": 1.52,
+      "points": 70.2,
+      "allowed": 68.48,
+      "games": 61,
+      "rank": 170
+    },
+    {
+      "team_id": "2655",
+      "team": "Tulane Green Wave",
+      "rating": 1.45,
+      "points": 65.96,
+      "allowed": 64.41,
+      "games": 123,
+      "rank": 171
+    },
+    {
+      "team_id": "82",
+      "team": "UIC Flames",
+      "rating": 1.22,
+      "points": 64.41,
+      "allowed": 63.12,
+      "games": 129,
+      "rank": 172
+    },
+    {
+      "team_id": "2539",
+      "team": "San Francisco Dons",
+      "rating": 1.17,
+      "points": 67.1,
+      "allowed": 65.86,
+      "games": 127,
+      "rank": 173
+    },
+    {
+      "team_id": "2010",
+      "team": "Alabama A&M Bulldogs",
+      "rating": 1.04,
+      "points": 61.25,
+      "allowed": 60.15,
+      "games": 124,
+      "rank": 174
+    },
+    {
+      "team_id": "98",
+      "team": "Western Kentucky Lady Toppers",
+      "rating": 1.0,
+      "points": 66.35,
+      "allowed": 65.28,
+      "games": 124,
+      "rank": 175
+    },
+    {
+      "team_id": "2229",
+      "team": "Florida International Panthers",
+      "rating": 0.99,
+      "points": 68.02,
+      "allowed": 66.96,
+      "games": 128,
+      "rank": 176
+    },
+    {
+      "team_id": "213",
+      "team": "Penn State Lady Lions",
+      "rating": 0.98,
+      "points": 75.31,
+      "allowed": 74.27,
+      "games": 124,
+      "rank": 177
+    },
+    {
+      "team_id": "2084",
+      "team": "Buffalo Bulls",
+      "rating": 0.96,
+      "points": 66.19,
+      "allowed": 65.16,
+      "games": 123,
+      "rank": 178
+    },
+    {
+      "team_id": "2529",
+      "team": "Sacred Heart Pioneers",
+      "rating": 0.96,
+      "points": 61.18,
+      "allowed": 60.17,
+      "games": 127,
+      "rank": 179
+    },
+    {
+      "team_id": "2755",
+      "team": "Grambling Lady Tigers",
+      "rating": 0.85,
+      "points": 64.85,
+      "allowed": 63.95,
+      "games": 123,
+      "rank": 180
+    },
+    {
+      "team_id": "55",
+      "team": "Jacksonville State Gamecocks",
+      "rating": 0.84,
+      "points": 61.09,
+      "allowed": 60.19,
+      "games": 120,
+      "rank": 181
+    },
+    {
+      "team_id": "104",
+      "team": "Boston University Terriers",
+      "rating": 0.74,
+      "points": 61.93,
+      "allowed": 61.14,
+      "games": 127,
+      "rank": 182
+    },
+    {
+      "team_id": "2230",
+      "team": "Fordham Rams",
+      "rating": 0.72,
+      "points": 63.99,
+      "allowed": 63.23,
+      "games": 120,
+      "rank": 183
+    },
+    {
+      "team_id": "326",
+      "team": "Texas State Bobcats",
+      "rating": 0.7,
+      "points": 64.44,
+      "allowed": 63.69,
+      "games": 124,
+      "rank": 184
+    },
+    {
+      "team_id": "2947",
+      "team": "Rochester Christian Warriors",
+      "rating": 0.67,
+      "points": 86.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 185
+    },
+    {
+      "team_id": "2778",
+      "team": "Scranton Royals",
+      "rating": 0.67,
+      "points": 69.0,
+      "allowed": 63.0,
+      "games": 1,
+      "rank": 186
+    },
+    {
+      "team_id": "2803",
+      "team": "Bryant Bulldogs",
+      "rating": 0.52,
+      "points": 60.39,
+      "allowed": 59.83,
+      "games": 121,
+      "rank": 187
+    },
+    {
+      "team_id": "5",
+      "team": "UAB Blazers",
+      "rating": 0.5,
+      "points": 69.73,
+      "allowed": 69.2,
+      "games": 123,
+      "rank": 188
+    },
+    {
+      "team_id": "2515",
+      "team": "Radford Highlanders",
+      "rating": 0.49,
+      "points": 62.98,
+      "allowed": 62.45,
+      "games": 130,
+      "rank": 189
+    },
+    {
+      "team_id": "2331",
+      "team": "Lenoir-Rhyne College Bears",
+      "rating": 0.3,
+      "points": 58.5,
+      "allowed": 57.0,
+      "games": 2,
+      "rank": 190
+    },
+    {
+      "team_id": "16",
+      "team": "Sacramento State Hornets",
+      "rating": 0.26,
+      "points": 62.99,
+      "allowed": 62.72,
+      "games": 129,
+      "rank": 191
+    },
+    {
+      "team_id": "2572",
+      "team": "Southern Miss Lady Eagles",
+      "rating": 0.21,
+      "points": 66.97,
+      "allowed": 66.74,
+      "games": 124,
+      "rank": 192
+    },
+    {
+      "team_id": "2344",
+      "team": "Longwood Lancers",
+      "rating": 0.2,
+      "points": 66.73,
+      "allowed": 66.51,
+      "games": 125,
+      "rank": 193
+    },
+    {
+      "team_id": "56",
+      "team": "Stetson Hatters",
+      "rating": 0.15,
+      "points": 63.56,
+      "allowed": 63.41,
+      "games": 128,
+      "rank": 194
+    },
+    {
+      "team_id": "2379",
+      "team": "Maryland Eastern Shore Hawks",
+      "rating": 0.15,
+      "points": 61.45,
+      "allowed": 61.3,
+      "games": 122,
+      "rank": 195
+    },
+    {
+      "team_id": "119",
+      "team": "Towson Tigers",
+      "rating": 0.14,
+      "points": 65.23,
+      "allowed": 65.08,
+      "games": 117,
+      "rank": 196
+    },
+    {
+      "team_id": "2900",
+      "team": "St. Thomas-Minnesota Tommies",
+      "rating": 0.13,
+      "points": 66.8,
+      "allowed": 66.67,
+      "games": 123,
+      "rank": 197
+    },
+    {
+      "team_id": "118",
+      "team": "Johns Hopkins University Blue Jays",
+      "rating": 0.1,
+      "points": 60.0,
+      "allowed": 59.5,
+      "games": 2,
+      "rank": 198
+    },
+    {
+      "team_id": "278",
+      "team": "Fresno State Bulldogs",
+      "rating": 0.09,
+      "points": 62.53,
+      "allowed": 62.43,
+      "games": 129,
+      "rank": 199
+    },
+    {
+      "team_id": "2433",
+      "team": "UL Monroe Warhawks",
+      "rating": 0.07,
+      "points": 69.48,
+      "allowed": 69.4,
+      "games": 126,
+      "rank": 200
+    },
+    {
+      "team_id": "2916",
+      "team": "Incarnate Word Cardinals",
+      "rating": 0.02,
+      "points": 61.92,
+      "allowed": 61.9,
+      "games": 118,
+      "rank": 201
+    },
+    {
+      "team_id": "225",
+      "team": "Brown Bears",
+      "rating": -0.05,
+      "points": 61.7,
+      "allowed": 61.75,
+      "games": 103,
+      "rank": 202
+    },
+    {
+      "team_id": "2815",
+      "team": "Lindenwood Lions",
+      "rating": -0.17,
+      "points": 66.6,
+      "allowed": 66.79,
+      "games": 118,
+      "rank": 203
+    },
+    {
+      "team_id": "48",
+      "team": "Delaware Blue Hens",
+      "rating": -0.22,
+      "points": 65.18,
+      "allowed": 65.42,
+      "games": 114,
+      "rank": 204
+    },
+    {
+      "team_id": "507",
+      "team": "Concordia Nebraska Bulldogs",
+      "rating": -0.22,
+      "points": 64.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 205
+    },
+    {
+      "team_id": "304",
+      "team": "Idaho State Bengals",
+      "rating": -0.24,
+      "points": 60.86,
+      "allowed": 61.12,
+      "games": 118,
+      "rank": 206
+    },
+    {
+      "team_id": "2630",
+      "team": "UT Martin Skyhawks",
+      "rating": -0.25,
+      "points": 64.41,
+      "allowed": 64.68,
+      "games": 124,
+      "rank": 207
+    },
+    {
+      "team_id": "149",
+      "team": "Montana Lady Griz",
+      "rating": -0.31,
+      "points": 67.85,
+      "allowed": 68.18,
+      "games": 123,
+      "rank": 208
+    },
+    {
+      "team_id": "2906",
+      "team": "Trevecca Nazarene Trojans",
+      "rating": -0.45,
+      "points": 69.0,
+      "allowed": 70.67,
+      "games": 3,
+      "rank": 209
+    },
+    {
+      "team_id": "279",
+      "team": "Pacific Tigers",
+      "rating": -0.49,
+      "points": 67.84,
+      "allowed": 68.35,
+      "games": 130,
+      "rank": 210
+    },
+    {
+      "team_id": "142",
+      "team": "Missouri Tigers",
+      "rating": -0.51,
+      "points": 68.91,
+      "allowed": 69.45,
+      "games": 128,
+      "rank": 211
+    },
+    {
+      "team_id": "2363",
+      "team": "Manhattan Jaspers",
+      "rating": -0.53,
+      "points": 59.28,
+      "allowed": 59.84,
+      "games": 123,
+      "rank": 212
+    },
+    {
+      "team_id": "45",
+      "team": "George Washington Revolutionaries",
+      "rating": -0.53,
+      "points": 60.26,
+      "allowed": 60.83,
+      "games": 127,
+      "rank": 213
+    },
+    {
+      "team_id": "2825",
+      "team": "Quincy Hawks",
+      "rating": -0.67,
+      "points": 73.0,
+      "allowed": 79.0,
+      "games": 1,
+      "rank": 214
+    },
+    {
+      "team_id": "2627",
+      "team": "Tarleton State Texans",
+      "rating": -0.69,
+      "points": 63.37,
+      "allowed": 64.1,
+      "games": 123,
+      "rank": 215
+    },
+    {
+      "team_id": "314",
+      "team": "Iona Gaels",
+      "rating": -0.76,
+      "points": 59.41,
+      "allowed": 60.22,
+      "games": 125,
+      "rank": 216
+    },
+    {
+      "team_id": "46",
+      "team": "Georgetown Hoyas",
+      "rating": -0.76,
+      "points": 60.17,
+      "allowed": 60.98,
+      "games": 127,
+      "rank": 217
+    },
+    {
+      "team_id": "395",
+      "team": "Saint Augustine's Falcons",
+      "rating": -0.78,
+      "points": 55.0,
+      "allowed": 62.0,
+      "games": 1,
+      "rank": 218
+    },
+    {
+      "team_id": "2453",
+      "team": "North Alabama Lions",
+      "rating": -0.83,
+      "points": 66.44,
+      "allowed": 67.32,
+      "games": 121,
+      "rank": 219
+    },
+    {
+      "team_id": "2582",
+      "team": "Southern Jaguars",
+      "rating": -0.85,
+      "points": 59.51,
+      "allowed": 60.41,
+      "games": 130,
+      "rank": 220
+    },
+    {
+      "team_id": "2025",
+      "team": "Angelo State Rams",
+      "rating": -0.89,
+      "points": 57.0,
+      "allowed": 65.0,
+      "games": 1,
+      "rank": 221
+    },
+    {
+      "team_id": "128442",
+      "team": "D'Youville Saints",
+      "rating": -0.89,
+      "points": 59.0,
+      "allowed": 67.0,
+      "games": 1,
+      "rank": 222
+    },
+    {
+      "team_id": "244",
+      "team": "St. Edward's Hilltoppers",
+      "rating": -0.89,
+      "points": 49.0,
+      "allowed": 57.0,
+      "games": 1,
+      "rank": 223
+    },
+    {
+      "team_id": "2248",
+      "team": "Gettysburg Bullets",
+      "rating": -0.9,
+      "points": 80.0,
+      "allowed": 84.5,
+      "games": 2,
+      "rank": 224
+    },
+    {
+      "team_id": "2534",
+      "team": "Sam Houston Bearkats",
+      "rating": -0.91,
+      "points": 65.09,
+      "allowed": 66.06,
+      "games": 116,
+      "rank": 225
+    },
+    {
+      "team_id": "131832",
+      "team": "Bismarck State Mystics",
+      "rating": -1.0,
+      "points": 80.0,
+      "allowed": 89.0,
+      "games": 1,
+      "rank": 226
+    },
+    {
+      "team_id": "3065",
+      "team": "Briar Cliff Chargers",
+      "rating": -1.0,
+      "points": 81.0,
+      "allowed": 90.0,
+      "games": 1,
+      "rank": 227
+    },
+    {
+      "team_id": "2466",
+      "team": "Northwestern State Lady Demons",
+      "rating": -1.05,
+      "points": 61.4,
+      "allowed": 62.52,
+      "games": 122,
+      "rank": 228
+    },
+    {
+      "team_id": "2670",
+      "team": "VCU Rams",
+      "rating": -1.05,
+      "points": 58.67,
+      "allowed": 59.8,
+      "games": 122,
+      "rank": 229
+    },
+    {
+      "team_id": "126973",
+      "team": "Northern Vermont - Johnson Badgers",
+      "rating": -1.11,
+      "points": 53.0,
+      "allowed": 63.0,
+      "games": 1,
+      "rank": 230
+    },
+    {
+      "team_id": "2005",
+      "team": "Air Force Falcons",
+      "rating": -1.2,
+      "points": 63.18,
+      "allowed": 64.45,
+      "games": 129,
+      "rank": 231
+    },
+    {
+      "team_id": "2986",
+      "team": "Fairmont St Falcons",
+      "rating": -1.22,
+      "points": 55.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 232
+    },
+    {
+      "team_id": "131690",
+      "team": "Felician Golden Falcons",
+      "rating": -1.22,
+      "points": 55.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 233
+    },
+    {
+      "team_id": "2512",
+      "team": "Queens College Knights",
+      "rating": -1.22,
+      "points": 71.0,
+      "allowed": 82.0,
+      "games": 1,
+      "rank": 234
+    },
+    {
+      "team_id": "294",
+      "team": "Jacksonville Dolphins",
+      "rating": -1.24,
+      "points": 67.26,
+      "allowed": 68.58,
+      "games": 120,
+      "rank": 235
+    },
+    {
+      "team_id": "2026",
+      "team": "App State Mountaineers",
+      "rating": -1.28,
+      "points": 66.76,
+      "allowed": 68.12,
+      "games": 121,
+      "rank": 236
+    },
+    {
+      "team_id": "3101",
+      "team": "Utah Tech Trailblazers",
+      "rating": -1.3,
+      "points": 68.91,
+      "allowed": 70.3,
+      "games": 121,
+      "rank": 237
+    },
+    {
+      "team_id": "338",
+      "team": "Kennesaw State Owls",
+      "rating": -1.33,
+      "points": 62.85,
+      "allowed": 64.27,
+      "games": 119,
+      "rank": 238
+    },
+    {
+      "team_id": "125763",
+      "team": "Dordt Defenders",
+      "rating": -1.33,
+      "points": 54.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 239
+    },
+    {
+      "team_id": "2375",
+      "team": "Master's University Mustangs",
+      "rating": -1.33,
+      "points": 46.0,
+      "allowed": 58.0,
+      "games": 1,
+      "rank": 240
+    },
+    {
+      "team_id": "2517",
+      "team": "Regis Rangers",
+      "rating": -1.33,
+      "points": 57.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 241
+    },
+    {
+      "team_id": "131",
+      "team": "Wayne State (MI) Warriors",
+      "rating": -1.33,
+      "points": 63.0,
+      "allowed": 75.0,
+      "games": 1,
+      "rank": 242
+    },
+    {
+      "team_id": "250",
+      "team": "UT Arlington Mavericks",
+      "rating": -1.34,
+      "points": 68.98,
+      "allowed": 70.4,
+      "games": 126,
+      "rank": 243
+    },
+    {
+      "team_id": "2001",
+      "team": "Adams State Grizzlies",
+      "rating": -1.4,
+      "points": 63.5,
+      "allowed": 70.5,
+      "games": 2,
+      "rank": 244
+    },
+    {
+      "team_id": "166",
+      "team": "New Mexico State Aggies",
+      "rating": -1.4,
+      "points": 61.29,
+      "allowed": 62.78,
+      "games": 129,
+      "rank": 245
+    },
+    {
+      "team_id": "2093",
+      "team": "Cal State East Bay Pioneers",
+      "rating": -1.44,
+      "points": 66.0,
+      "allowed": 79.0,
+      "games": 1,
+      "rank": 246
+    },
+    {
+      "team_id": "230",
+      "team": "Francis Marion Patriots",
+      "rating": -1.44,
+      "points": 56.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 247
+    },
+    {
+      "team_id": "2588",
+      "team": "Southwestern University Pirates",
+      "rating": -1.44,
+      "points": 49.0,
+      "allowed": 62.0,
+      "games": 1,
+      "rank": 248
+    },
+    {
+      "team_id": "235",
+      "team": "Memphis Tigers",
+      "rating": -1.48,
+      "points": 67.25,
+      "allowed": 68.83,
+      "games": 122,
+      "rank": 249
+    },
+    {
+      "team_id": "245",
+      "team": "Texas A&M Aggies",
+      "rating": -1.49,
+      "points": 62.98,
+      "allowed": 64.57,
+      "games": 117,
+      "rank": 250
+    },
+    {
+      "team_id": "2378",
+      "team": "UMBC Retrievers",
+      "rating": -1.52,
+      "points": 60.26,
+      "allowed": 61.88,
+      "games": 118,
+      "rank": 251
+    },
+    {
+      "team_id": "2426",
+      "team": "Navy Midshipmen",
+      "rating": -1.52,
+      "points": 62.3,
+      "allowed": 63.93,
+      "games": 122,
+      "rank": 252
+    },
+    {
+      "team_id": "2247",
+      "team": "Georgia State Panthers",
+      "rating": -1.55,
+      "points": 66.22,
+      "allowed": 67.87,
+      "games": 126,
+      "rank": 253
+    },
+    {
+      "team_id": "298",
+      "team": "Alaska Nanooks",
+      "rating": -1.56,
+      "points": 58.0,
+      "allowed": 72.0,
+      "games": 1,
+      "rank": 254
+    },
+    {
+      "team_id": "2729",
+      "team": "William & Mary Tribe",
+      "rating": -1.56,
+      "points": 62.98,
+      "allowed": 64.65,
+      "games": 115,
+      "rank": 255
+    },
+    {
+      "team_id": "2885",
+      "team": "NJIT Highlanders",
+      "rating": -1.6,
+      "points": 61.83,
+      "allowed": 63.54,
+      "games": 121,
+      "rank": 256
+    },
+    {
+      "team_id": "253",
+      "team": "Southern Utah Thunderbirds",
+      "rating": -1.61,
+      "points": 67.03,
+      "allowed": 68.74,
+      "games": 124,
+      "rank": 257
+    },
+    {
+      "team_id": "94",
+      "team": "Northern Kentucky Norse",
+      "rating": -1.62,
+      "points": 67.56,
+      "allowed": 69.28,
+      "games": 126,
+      "rank": 258
+    },
+    {
+      "team_id": "2377",
+      "team": "McNeese Cowgirls",
+      "rating": -1.66,
+      "points": 65.06,
+      "allowed": 66.83,
+      "games": 126,
+      "rank": 259
+    },
+    {
+      "team_id": "8",
+      "team": "Arkansas Razorbacks",
+      "rating": -1.76,
+      "points": 70.14,
+      "allowed": 72.01,
+      "games": 133,
+      "rank": 260
+    },
+    {
+      "team_id": "2332",
+      "team": "Lewis Flyers",
+      "rating": -1.78,
+      "points": 53.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 261
+    },
+    {
+      "team_id": "128475",
+      "team": "Saint Rose Golden Knights",
+      "rating": -1.78,
+      "points": 44.0,
+      "allowed": 60.0,
+      "games": 1,
+      "rank": 262
+    },
+    {
+      "team_id": "2676",
+      "team": "Virginia Union Panthers",
+      "rating": -1.78,
+      "points": 60.0,
+      "allowed": 76.0,
+      "games": 1,
+      "rank": 263
+    },
+    {
+      "team_id": "2771",
+      "team": "Merrimack Warriors",
+      "rating": -1.79,
+      "points": 61.93,
+      "allowed": 63.84,
+      "games": 122,
+      "rank": 264
+    },
+    {
+      "team_id": "380",
+      "team": "Anderson (SC) Trojans",
+      "rating": -1.8,
+      "points": 70.0,
+      "allowed": 79.0,
+      "games": 2,
+      "rank": 265
+    },
+    {
+      "team_id": "2064",
+      "team": "Bethel (TN) Wildcats",
+      "rating": -1.8,
+      "points": 59.0,
+      "allowed": 68.0,
+      "games": 2,
+      "rank": 266
+    },
+    {
+      "team_id": "3105",
+      "team": "Southeastern Fires",
+      "rating": -1.8,
+      "points": 62.5,
+      "allowed": 71.5,
+      "games": 2,
+      "rank": 267
+    },
+    {
+      "team_id": "2239",
+      "team": "Cal State Fullerton Titans",
+      "rating": -1.81,
+      "points": 62.61,
+      "allowed": 64.54,
+      "games": 123,
+      "rank": 268
+    },
+    {
+      "team_id": "141",
+      "team": "Missouri-St. Louis Rivermen",
+      "rating": -1.82,
+      "points": 55.0,
+      "allowed": 61.67,
+      "games": 3,
+      "rank": 269
+    },
+    {
+      "team_id": "139",
+      "team": "Saint Louis Billikens",
+      "rating": -1.87,
+      "points": 68.08,
+      "allowed": 70.06,
+      "games": 142,
+      "rank": 270
+    },
+    {
+      "team_id": "2170",
+      "team": "Delta State Statesmen",
+      "rating": -2.0,
+      "points": 59.0,
+      "allowed": 66.33,
+      "games": 3,
+      "rank": 271
+    },
+    {
+      "team_id": "606",
+      "team": "St. Thomas (FL) Bobcats",
+      "rating": -2.0,
+      "points": 60.0,
+      "allowed": 78.0,
+      "games": 1,
+      "rank": 272
+    },
+    {
+      "team_id": "2638",
+      "team": "UTEP Miners",
+      "rating": -2.07,
+      "points": 65.55,
+      "allowed": 67.75,
+      "games": 122,
+      "rank": 273
+    },
+    {
+      "team_id": "2018",
+      "team": "Allegheny Gators",
+      "rating": -2.11,
+      "points": 52.0,
+      "allowed": 71.0,
+      "games": 1,
+      "rank": 274
+    },
+    {
+      "team_id": "2054",
+      "team": "Barton Bulldogs",
+      "rating": -2.11,
+      "points": 62.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 275
+    },
+    {
+      "team_id": "506",
+      "team": "Concordia University (CA) Eagles",
+      "rating": -2.11,
+      "points": 52.0,
+      "allowed": 71.0,
+      "games": 1,
+      "rank": 276
+    },
+    {
+      "team_id": "108784",
+      "team": "Southwestern Christian U SOUTHWESTERN CHRISTIAN U",
+      "rating": -2.11,
+      "points": 39.0,
+      "allowed": 58.0,
+      "games": 1,
+      "rank": 277
+    },
+    {
+      "team_id": "2441",
+      "team": "New Haven Chargers",
+      "rating": -2.16,
+      "points": 58.41,
+      "allowed": 61.17,
+      "games": 29,
+      "rank": 278
+    },
+    {
+      "team_id": "2509",
+      "team": "Purdue Boilermakers",
+      "rating": -2.18,
+      "points": 67.76,
+      "allowed": 70.08,
+      "games": 122,
+      "rank": 279
+    },
+    {
+      "team_id": "2168",
+      "team": "Dayton Flyers",
+      "rating": -2.18,
+      "points": 64.86,
+      "allowed": 67.18,
+      "games": 121,
+      "rank": 280
+    },
+    {
+      "team_id": "2086",
+      "team": "Butler Bulldogs",
+      "rating": -2.19,
+      "points": 61.77,
+      "allowed": 64.1,
+      "games": 126,
+      "rank": 281
+    },
+    {
+      "team_id": "2615",
+      "team": "St. Xavier Cougars",
+      "rating": -2.2,
+      "points": 66.0,
+      "allowed": 77.0,
+      "games": 2,
+      "rank": 282
+    },
+    {
+      "team_id": "2657",
+      "team": "Tuskegee Golden Tigers",
+      "rating": -2.2,
+      "points": 59.5,
+      "allowed": 70.5,
+      "games": 2,
+      "rank": 283
+    },
+    {
+      "team_id": "2083",
+      "team": "Bucknell Bison",
+      "rating": -2.2,
+      "points": 56.76,
+      "allowed": 59.11,
+      "games": 121,
+      "rank": 284
+    },
+    {
+      "team_id": "2802",
+      "team": "Bethel (MN) Royals",
+      "rating": -2.22,
+      "points": 42.0,
+      "allowed": 62.0,
+      "games": 1,
+      "rank": 285
+    },
+    {
+      "team_id": "2069",
+      "team": "Black Hills State Yellow Jackets",
+      "rating": -2.22,
+      "points": 39.0,
+      "allowed": 59.0,
+      "games": 1,
+      "rank": 286
+    },
+    {
+      "team_id": "128502",
+      "team": "Edgewood Eagles",
+      "rating": -2.22,
+      "points": 50.0,
+      "allowed": 70.0,
+      "games": 1,
+      "rank": 287
+    },
+    {
+      "team_id": "2197",
+      "team": "Eastern Illinois Panthers",
+      "rating": -2.24,
+      "points": 63.26,
+      "allowed": 65.65,
+      "games": 122,
+      "rank": 288
+    },
+    {
+      "team_id": "2345",
+      "team": "Cal State Los Angeles Golden Eagles",
+      "rating": -2.25,
+      "points": 66.25,
+      "allowed": 73.0,
+      "games": 4,
+      "rank": 289
+    },
+    {
+      "team_id": "2382",
+      "team": "Mercer Bears",
+      "rating": -2.31,
+      "points": 61.37,
+      "allowed": 63.83,
+      "games": 120,
+      "rank": 290
+    },
+    {
+      "team_id": "2447",
+      "team": "Nicholls Colonels",
+      "rating": -2.33,
+      "points": 61.61,
+      "allowed": 64.09,
+      "games": 122,
+      "rank": 291
+    },
+    {
+      "team_id": "175",
+      "team": "Ithaca Bombers",
+      "rating": -2.33,
+      "points": 45.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 292
+    },
+    {
+      "team_id": "2826",
+      "team": "Rocky Mountain Bears",
+      "rating": -2.33,
+      "points": 46.0,
+      "allowed": 67.0,
+      "games": 1,
+      "rank": 293
+    },
+    {
+      "team_id": "2608",
+      "team": "Saint Mary's Gaels",
+      "rating": -2.35,
+      "points": 61.62,
+      "allowed": 64.12,
+      "games": 125,
+      "rank": 294
+    },
+    {
+      "team_id": "27",
+      "team": "UC Riverside Highlanders",
+      "rating": -2.41,
+      "points": 57.87,
+      "allowed": 60.43,
+      "games": 125,
+      "rank": 295
+    },
+    {
+      "team_id": "2116",
+      "team": "UCF Knights",
+      "rating": -2.42,
+      "points": 63.74,
+      "allowed": 66.33,
+      "games": 116,
+      "rank": 296
+    },
+    {
+      "team_id": "2022",
+      "team": "American International Yellow Jackets",
+      "rating": -2.44,
+      "points": 46.0,
+      "allowed": 68.0,
+      "games": 1,
+      "rank": 297
+    },
+    {
+      "team_id": "2179",
+      "team": "Dominican (NY) Chargers",
+      "rating": -2.44,
+      "points": 57.0,
+      "allowed": 79.0,
+      "games": 1,
+      "rank": 298
+    },
+    {
+      "team_id": "110466",
+      "team": "Mid-America Christian Evangels",
+      "rating": -2.44,
+      "points": 72.0,
+      "allowed": 94.0,
+      "games": 1,
+      "rank": 299
+    },
+    {
+      "team_id": "2031",
+      "team": "Little Rock Trojans",
+      "rating": -2.52,
+      "points": 57.51,
+      "allowed": 60.2,
+      "games": 121,
+      "rank": 300
+    },
+    {
+      "team_id": "103",
+      "team": "Boston College Eagles",
+      "rating": -2.54,
+      "points": 68.45,
+      "allowed": 71.15,
+      "games": 130,
+      "rank": 301
+    },
+    {
+      "team_id": "2002",
+      "team": "Adelphi Panthers",
+      "rating": -2.55,
+      "points": 50.67,
+      "allowed": 60.0,
+      "games": 3,
+      "rank": 302
+    },
+    {
+      "team_id": "108884",
+      "team": "Toccoa Falls Eagles",
+      "rating": -2.56,
+      "points": 34.0,
+      "allowed": 57.0,
+      "games": 1,
+      "rank": 303
+    },
+    {
+      "team_id": "2716",
+      "team": "Westmont Warriors",
+      "rating": -2.56,
+      "points": 51.0,
+      "allowed": 74.0,
+      "games": 1,
+      "rank": 304
+    },
+    {
+      "team_id": "2567",
+      "team": "SMU Mustangs",
+      "rating": -2.57,
+      "points": 64.78,
+      "allowed": 67.52,
+      "games": 120,
+      "rank": 305
+    },
+    {
+      "team_id": "116",
+      "team": "Mount St. Mary's Mountaineers",
+      "rating": -2.62,
+      "points": 59.03,
+      "allowed": 61.83,
+      "games": 121,
+      "rank": 306
+    },
+    {
+      "team_id": "100",
+      "team": "Loyola New Orleans Wolfpack",
+      "rating": -2.64,
+      "points": 62.0,
+      "allowed": 71.67,
+      "games": 3,
+      "rank": 307
+    },
+    {
+      "team_id": "2389",
+      "team": "MSU Denver Roadrunners",
+      "rating": -2.67,
+      "points": 68.0,
+      "allowed": 92.0,
+      "games": 1,
+      "rank": 308
+    },
+    {
+      "team_id": "574",
+      "team": "Mount Mercy College Mustangs",
+      "rating": -2.67,
+      "points": 57.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 309
+    },
+    {
+      "team_id": "109515",
+      "team": "Nyack College Warriors",
+      "rating": -2.67,
+      "points": 49.0,
+      "allowed": 73.0,
+      "games": 1,
+      "rank": 310
+    },
+    {
+      "team_id": "2741",
+      "team": "Wisconsin Lutheran Warriors",
+      "rating": -2.67,
+      "points": 52.0,
+      "allowed": 76.0,
+      "games": 1,
+      "rank": 311
+    },
+    {
+      "team_id": "2413",
+      "team": "Morehead State Eagles",
+      "rating": -2.68,
+      "points": 64.31,
+      "allowed": 67.16,
+      "games": 122,
+      "rank": 312
+    },
+    {
+      "team_id": "2351",
+      "team": "Loyola Marymount Lions",
+      "rating": -2.69,
+      "points": 62.94,
+      "allowed": 65.81,
+      "games": 119,
+      "rank": 313
+    },
+    {
+      "team_id": "305",
+      "team": "DePaul Blue Demons",
+      "rating": -2.7,
+      "points": 68.98,
+      "allowed": 71.85,
+      "games": 127,
+      "rank": 314
+    },
+    {
+      "team_id": "2065",
+      "team": "Bethune-Cookman Wildcats",
+      "rating": -2.7,
+      "points": 60.83,
+      "allowed": 63.7,
+      "games": 122,
+      "rank": 315
+    },
+    {
+      "team_id": "196",
+      "team": "Northeastern State RiverHawks",
+      "rating": -2.78,
+      "points": 74.0,
+      "allowed": 99.0,
+      "games": 1,
+      "rank": 316
+    },
+    {
+      "team_id": "129",
+      "team": "Saginaw Valley State Cardinals",
+      "rating": -2.78,
+      "points": 44.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 317
+    },
+    {
+      "team_id": "108890",
+      "team": "Washington Adventist Shock",
+      "rating": -2.78,
+      "points": 41.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 318
+    },
+    {
+      "team_id": "3084",
+      "team": "Utah Valley Wolverines",
+      "rating": -2.83,
+      "points": 60.92,
+      "allowed": 63.94,
+      "games": 119,
+      "rank": 319
+    },
+    {
+      "team_id": "2440",
+      "team": "Nevada Wolf Pack",
+      "rating": -2.83,
+      "points": 62.15,
+      "allowed": 65.17,
+      "games": 125,
+      "rank": 320
+    },
+    {
+      "team_id": "587",
+      "team": "Notre Dame College Falcons",
+      "rating": -2.89,
+      "points": 54.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 321
+    },
+    {
+      "team_id": "2894",
+      "team": "Sioux Falls Cougars",
+      "rating": -2.89,
+      "points": 62.0,
+      "allowed": 88.0,
+      "games": 1,
+      "rank": 322
+    },
+    {
+      "team_id": "7859",
+      "team": "Washington College (MD) Shoremen",
+      "rating": -2.89,
+      "points": 50.0,
+      "allowed": 76.0,
+      "games": 1,
+      "rank": 323
+    },
+    {
+      "team_id": "109754",
+      "team": "Young Harris College Mountain Lions",
+      "rating": -2.89,
+      "points": 39.0,
+      "allowed": 65.0,
+      "games": 1,
+      "rank": 324
+    },
+    {
+      "team_id": "299",
+      "team": "Long Beach State Beach",
+      "rating": -2.9,
+      "points": 63.8,
+      "allowed": 66.89,
+      "games": 125,
+      "rank": 325
+    },
+    {
+      "team_id": "3091",
+      "team": "Hope International Royals",
+      "rating": -2.91,
+      "points": 59.0,
+      "allowed": 69.67,
+      "games": 3,
+      "rank": 326
+    },
+    {
+      "team_id": "2737",
+      "team": "Winthrop Eagles",
+      "rating": -2.94,
+      "points": 59.01,
+      "allowed": 62.14,
+      "games": 123,
+      "rank": 327
+    },
+    {
+      "team_id": "2132",
+      "team": "Cincinnati Bearcats",
+      "rating": -2.97,
+      "points": 64.45,
+      "allowed": 67.61,
+      "games": 122,
+      "rank": 328
+    },
+    {
+      "team_id": "2316",
+      "team": "Kentucky Wesleyan Panthers",
+      "rating": -3.0,
+      "points": 61.0,
+      "allowed": 88.0,
+      "games": 1,
+      "rank": 329
+    },
+    {
+      "team_id": "2336",
+      "team": "Limestone Saints",
+      "rating": -3.0,
+      "points": 48.0,
+      "allowed": 75.0,
+      "games": 1,
+      "rank": 330
+    },
+    {
+      "team_id": "2337",
+      "team": "Lincoln Memorial Railsplitters",
+      "rating": -3.0,
+      "points": 57.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 331
+    },
+    {
+      "team_id": "107599",
+      "team": "Science & Arts (OK) Drovers",
+      "rating": -3.0,
+      "points": 67.0,
+      "allowed": 94.0,
+      "games": 1,
+      "rank": 332
+    },
+    {
+      "team_id": "154",
+      "team": "Wake Forest Demon Deacons",
+      "rating": -3.01,
+      "points": 61.64,
+      "allowed": 64.85,
+      "games": 126,
+      "rank": 333
+    },
+    {
+      "team_id": "2523",
+      "team": "Robert Morris Colonials",
+      "rating": -3.04,
+      "points": 59.3,
+      "allowed": 62.55,
+      "games": 119,
+      "rank": 334
+    },
+    {
+      "team_id": "131653",
+      "team": "California (PA) Vulcans",
+      "rating": -3.11,
+      "points": 44.0,
+      "allowed": 72.0,
+      "games": 1,
+      "rank": 335
+    },
+    {
+      "team_id": "53",
+      "team": "Florida Tech Panthers",
+      "rating": -3.11,
+      "points": 47.0,
+      "allowed": 75.0,
+      "games": 1,
+      "rank": 336
+    },
+    {
+      "team_id": "2915",
+      "team": "Freed-Hardeman Lions",
+      "rating": -3.11,
+      "points": 41.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 337
+    },
+    {
+      "team_id": "3233",
+      "team": "Lourdes LOURDES",
+      "rating": -3.11,
+      "points": 76.0,
+      "allowed": 104.0,
+      "games": 1,
+      "rank": 338
+    },
+    {
+      "team_id": "425",
+      "team": "Northern State Wolves",
+      "rating": -3.11,
+      "points": 57.0,
+      "allowed": 85.0,
+      "games": 1,
+      "rank": 339
+    },
+    {
+      "team_id": "2848",
+      "team": "Western Oregon Wolves",
+      "rating": -3.11,
+      "points": 63.0,
+      "allowed": 91.0,
+      "games": 1,
+      "rank": 340
+    },
+    {
+      "team_id": "2887",
+      "team": "Northwest Nazarene Nighthawks",
+      "rating": -3.2,
+      "points": 62.0,
+      "allowed": 78.0,
+      "games": 2,
+      "rank": 341
+    },
+    {
+      "team_id": "2535",
+      "team": "Samford Bulldogs",
+      "rating": -3.2,
+      "points": 62.58,
+      "allowed": 65.98,
+      "games": 126,
+      "rank": 342
+    },
+    {
+      "team_id": "2507",
+      "team": "Providence Friars",
+      "rating": -3.22,
+      "points": 58.69,
+      "allowed": 62.11,
+      "games": 131,
+      "rank": 343
+    },
+    {
+      "team_id": "2699",
+      "team": "West Liberty Hilltoppers",
+      "rating": -3.22,
+      "points": 73.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 344
+    },
+    {
+      "team_id": "2931",
+      "team": "William Woods Owls",
+      "rating": -3.22,
+      "points": 62.0,
+      "allowed": 91.0,
+      "games": 1,
+      "rank": 345
+    },
+    {
+      "team_id": "2145",
+      "team": "Colorado-Colorado Springs Mountain Lions",
+      "rating": -3.27,
+      "points": 53.0,
+      "allowed": 65.0,
+      "games": 3,
+      "rank": 346
+    },
+    {
+      "team_id": "292",
+      "team": "UT Rio Grande Valley Vaqueros",
+      "rating": -3.32,
+      "points": 62.38,
+      "allowed": 65.91,
+      "games": 125,
+      "rank": 347
+    },
+    {
+      "team_id": "536",
+      "team": "Hastings Broncos",
+      "rating": -3.33,
+      "points": 56.0,
+      "allowed": 86.0,
+      "games": 1,
+      "rank": 348
+    },
+    {
+      "team_id": "1",
+      "team": "Alaska Anchorage Seawolves",
+      "rating": -3.35,
+      "points": 64.22,
+      "allowed": 70.56,
+      "games": 9,
+      "rank": 349
+    },
+    {
+      "team_id": "2201",
+      "team": "Eastern New Mexico Greyhounds",
+      "rating": -3.36,
+      "points": 47.33,
+      "allowed": 59.67,
+      "games": 3,
+      "rank": 350
+    },
+    {
+      "team_id": "270",
+      "team": "Milwaukee Panthers",
+      "rating": -3.39,
+      "points": 61.55,
+      "allowed": 65.16,
+      "games": 124,
+      "rank": 351
+    },
+    {
+      "team_id": "2985",
+      "team": "Concordia-Ann Arbor Cardinals",
+      "rating": -3.4,
+      "points": 57.0,
+      "allowed": 74.0,
+      "games": 2,
+      "rank": 352
+    },
+    {
+      "team_id": "330",
+      "team": "Virginia St Trojans",
+      "rating": -3.4,
+      "points": 55.5,
+      "allowed": 72.5,
+      "games": 2,
+      "rank": 353
+    },
+    {
+      "team_id": "2241",
+      "team": "Gardner-Webb Runnin' Bulldogs",
+      "rating": -3.42,
+      "points": 65.44,
+      "allowed": 69.09,
+      "games": 124,
+      "rank": 354
+    },
+    {
+      "team_id": "2427",
+      "team": "UNC Asheville Bulldogs",
+      "rating": -3.46,
+      "points": 59.11,
+      "allowed": 62.8,
+      "games": 123,
+      "rank": 355
+    },
+    {
+      "team_id": "2724",
+      "team": "Wichita State Shockers",
+      "rating": -3.48,
+      "points": 63.38,
+      "allowed": 67.08,
+      "games": 127,
+      "rank": 356
+    },
+    {
+      "team_id": "2597",
+      "team": "St. Francis Brooklyn Terriers",
+      "rating": -3.55,
+      "points": 57.43,
+      "allowed": 61.93,
+      "games": 30,
+      "rank": 357
+    },
+    {
+      "team_id": "492",
+      "team": "Bethany (KS) BETHANY (KS)",
+      "rating": -3.56,
+      "points": 52.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 358
+    },
+    {
+      "team_id": "101",
+      "team": "Eureka College Red Devils",
+      "rating": -3.56,
+      "points": 54.0,
+      "allowed": 86.0,
+      "games": 1,
+      "rank": 359
+    },
+    {
+      "team_id": "2401",
+      "team": "Mississippi College Choctaws",
+      "rating": -3.56,
+      "points": 42.0,
+      "allowed": 74.0,
+      "games": 1,
+      "rank": 360
+    },
+    {
+      "team_id": "2029",
+      "team": "Arkansas-Pine Bluff Golden Lions",
+      "rating": -3.57,
+      "points": 63.44,
+      "allowed": 67.24,
+      "games": 121,
+      "rank": 361
+    },
+    {
+      "team_id": "2429",
+      "team": "Charlotte 49ers",
+      "rating": -3.58,
+      "points": 62.34,
+      "allowed": 66.14,
+      "games": 125,
+      "rank": 362
+    },
+    {
+      "team_id": "2210",
+      "team": "Elon Phoenix",
+      "rating": -3.6,
+      "points": 58.56,
+      "allowed": 62.41,
+      "games": 116,
+      "rank": 363
+    },
+    {
+      "team_id": "2006",
+      "team": "Akron Zips",
+      "rating": -3.6,
+      "points": 65.79,
+      "allowed": 69.63,
+      "games": 121,
+      "rank": 364
+    },
+    {
+      "team_id": "309",
+      "team": "Louisiana Ragin' Cajuns",
+      "rating": -3.6,
+      "points": 59.36,
+      "allowed": 63.21,
+      "games": 121,
+      "rank": 365
+    },
+    {
+      "team_id": "111206",
+      "team": "Bethel College Indiana Pilots",
+      "rating": -3.67,
+      "points": 52.0,
+      "allowed": 85.0,
+      "games": 1,
+      "rank": 366
+    },
+    {
+      "team_id": "2081",
+      "team": "Bryan (TN) Lions",
+      "rating": -3.67,
+      "points": 57.0,
+      "allowed": 90.0,
+      "games": 1,
+      "rank": 367
+    },
+    {
+      "team_id": "455",
+      "team": "West Virginia Wesleyan Bobcats",
+      "rating": -3.67,
+      "points": 39.0,
+      "allowed": 72.0,
+      "games": 1,
+      "rank": 368
+    },
+    {
+      "team_id": "2036",
+      "team": "Asbury Eagles",
+      "rating": -3.7,
+      "points": 72.5,
+      "allowed": 91.0,
+      "games": 2,
+      "rank": 369
+    },
+    {
+      "team_id": "513",
+      "team": "Dakota Wesleyan Tigers",
+      "rating": -3.7,
+      "points": 51.5,
+      "allowed": 70.0,
+      "games": 2,
+      "rank": 370
+    },
+    {
+      "team_id": "2219",
+      "team": "Faulkner Eagles",
+      "rating": -3.73,
+      "points": 59.67,
+      "allowed": 73.33,
+      "games": 3,
+      "rank": 371
+    },
+    {
+      "team_id": "301",
+      "team": "San Diego Toreros",
+      "rating": -3.73,
+      "points": 60.68,
+      "allowed": 64.65,
+      "games": 127,
+      "rank": 372
+    },
+    {
+      "team_id": "2419",
+      "team": "Mount St. Joseph Lions",
+      "rating": -3.78,
+      "points": 46.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 373
+    },
+    {
+      "team_id": "111954",
+      "team": "University Of New England Nor'easters",
+      "rating": -3.78,
+      "points": 39.0,
+      "allowed": 73.0,
+      "games": 1,
+      "rank": 374
+    },
+    {
+      "team_id": "2459",
+      "team": "Northern Illinois Huskies",
+      "rating": -3.79,
+      "points": 65.11,
+      "allowed": 69.14,
+      "games": 123,
+      "rank": 375
+    },
+    {
+      "team_id": "2102",
+      "team": "Carnegie Mellon Tartans",
+      "rating": -3.8,
+      "points": 56.5,
+      "allowed": 75.5,
+      "games": 2,
+      "rank": 376
+    },
+    {
+      "team_id": "2202",
+      "team": "Eastern Oregon Mountaineers",
+      "rating": -3.8,
+      "points": 54.0,
+      "allowed": 73.0,
+      "games": 2,
+      "rank": 377
+    },
+    {
+      "team_id": "2409",
+      "team": "Montevallo Falcons",
+      "rating": -3.8,
+      "points": 62.0,
+      "allowed": 81.0,
+      "games": 2,
+      "rank": 378
+    },
+    {
+      "team_id": "2837",
+      "team": "East Texas A&M Lions",
+      "rating": -3.81,
+      "points": 65.37,
+      "allowed": 69.43,
+      "games": 123,
+      "rank": 379
+    },
+    {
+      "team_id": "9",
+      "team": "Arizona State Sun Devils",
+      "rating": -3.89,
+      "points": 65.88,
+      "allowed": 70.02,
+      "games": 126,
+      "rank": 380
+    },
+    {
+      "team_id": "128602",
+      "team": "Five Towns College Sound",
+      "rating": -3.89,
+      "points": 52.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 381
+    },
+    {
+      "team_id": "2242",
+      "team": "Geneva Golden Tornadoes",
+      "rating": -3.89,
+      "points": 65.0,
+      "allowed": 100.0,
+      "games": 1,
+      "rank": 382
+    },
+    {
+      "team_id": "2246",
+      "team": "Georgia College Bobcats",
+      "rating": -3.89,
+      "points": 46.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 383
+    },
+    {
+      "team_id": "7052",
+      "team": "Ottawa (KS) OTTAWA (KS)",
+      "rating": -3.89,
+      "points": 36.0,
+      "allowed": 71.0,
+      "games": 1,
+      "rank": 384
+    },
+    {
+      "team_id": "2830",
+      "team": "Saint Anselm Hawks",
+      "rating": -3.9,
+      "points": 49.5,
+      "allowed": 69.0,
+      "games": 2,
+      "rank": 385
+    },
+    {
+      "team_id": "2860",
+      "team": "Central Methodist Eagles",
+      "rating": -4.0,
+      "points": 38.0,
+      "allowed": 74.0,
+      "games": 1,
+      "rank": 386
+    },
+    {
+      "team_id": "3092",
+      "team": "Davenport Panthers",
+      "rating": -4.0,
+      "points": 46.0,
+      "allowed": 66.0,
+      "games": 2,
+      "rank": 387
+    },
+    {
+      "team_id": "2188",
+      "team": "East Stroudsburg University Warriors",
+      "rating": -4.0,
+      "points": 42.0,
+      "allowed": 78.0,
+      "games": 1,
+      "rank": 388
+    },
+    {
+      "team_id": "2224",
+      "team": "Findlay Oilers",
+      "rating": -4.0,
+      "points": 58.0,
+      "allowed": 78.0,
+      "games": 2,
+      "rank": 389
+    },
+    {
+      "team_id": "2228",
+      "team": "Flagler Saints",
+      "rating": -4.0,
+      "points": 56.0,
+      "allowed": 76.0,
+      "games": 2,
+      "rank": 390
+    },
+    {
+      "team_id": "2374",
+      "team": "Marywood Pacers",
+      "rating": -4.0,
+      "points": 44.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 391
+    },
+    {
+      "team_id": "2487",
+      "team": "Pace Setters",
+      "rating": -4.0,
+      "points": 50.0,
+      "allowed": 86.0,
+      "games": 1,
+      "rank": 392
+    },
+    {
+      "team_id": "2275",
+      "team": "Hofstra Pride",
+      "rating": -4.01,
+      "points": 56.8,
+      "allowed": 61.08,
+      "games": 120,
+      "rank": 393
+    },
+    {
+      "team_id": "248",
+      "team": "Houston Cougars",
+      "rating": -4.05,
+      "points": 63.08,
+      "allowed": 67.4,
+      "games": 121,
+      "rank": 394
+    },
+    {
+      "team_id": "2117",
+      "team": "Central Michigan Chippewas",
+      "rating": -4.1,
+      "points": 65.32,
+      "allowed": 69.7,
+      "games": 117,
+      "rank": 395
+    },
+    {
+      "team_id": "3",
+      "team": "Birmingham-Southern Panthers",
+      "rating": -4.11,
+      "points": 75.0,
+      "allowed": 112.0,
+      "games": 1,
+      "rank": 396
+    },
+    {
+      "team_id": "128409",
+      "team": "Caltech Beavers",
+      "rating": -4.11,
+      "points": 42.0,
+      "allowed": 79.0,
+      "games": 1,
+      "rank": 397
+    },
+    {
+      "team_id": "512",
+      "team": "Dakota State Trojans",
+      "rating": -4.11,
+      "points": 47.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 398
+    },
+    {
+      "team_id": "2889",
+      "team": "Puerto Rico-Bayamon Pirates",
+      "rating": -4.11,
+      "points": 45.0,
+      "allowed": 82.0,
+      "games": 1,
+      "rank": 399
+    },
+    {
+      "team_id": "2548",
+      "team": "Seattle Pacific Falcons",
+      "rating": -4.11,
+      "points": 44.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 400
+    },
+    {
+      "team_id": "2687",
+      "team": "Washburn Ichabods",
+      "rating": -4.11,
+      "points": 58.0,
+      "allowed": 95.0,
+      "games": 1,
+      "rank": 401
+    },
+    {
+      "team_id": "2744",
+      "team": "Wisconsin Stout Blue Devils",
+      "rating": -4.11,
+      "points": 40.0,
+      "allowed": 77.0,
+      "games": 1,
+      "rank": 402
+    },
+    {
+      "team_id": "2267",
+      "team": "Hawaiʻi Hilo Vulcans",
+      "rating": -4.18,
+      "points": 56.67,
+      "allowed": 72.0,
+      "games": 3,
+      "rank": 403
+    },
+    {
+      "team_id": "140",
+      "team": "Kansas City Roos",
+      "rating": -4.2,
+      "points": 65.12,
+      "allowed": 69.59,
+      "games": 126,
+      "rank": 404
+    },
+    {
+      "team_id": "2133",
+      "team": "Claflin Panthers",
+      "rating": -4.22,
+      "points": 31.0,
+      "allowed": 69.0,
+      "games": 1,
+      "rank": 405
+    },
+    {
+      "team_id": "2302",
+      "team": "John Carroll Blue Streaks",
+      "rating": -4.22,
+      "points": 59.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 406
+    },
+    {
+      "team_id": "3082",
+      "team": "Texas A&M International Dustdevils",
+      "rating": -4.22,
+      "points": 63.0,
+      "allowed": 101.0,
+      "games": 1,
+      "rank": 407
+    },
+    {
+      "team_id": "2714",
+      "team": "Western Colorado Mountaineers",
+      "rating": -4.25,
+      "points": 52.75,
+      "allowed": 65.5,
+      "games": 4,
+      "rank": 408
+    },
+    {
+      "team_id": "2008",
+      "team": "Alabama-Huntsville Chargers",
+      "rating": -4.27,
+      "points": 55.0,
+      "allowed": 70.67,
+      "games": 3,
+      "rank": 409
+    },
+    {
+      "team_id": "2719",
+      "team": "Wheeling Cardinals",
+      "rating": -4.3,
+      "points": 48.5,
+      "allowed": 70.0,
+      "games": 2,
+      "rank": 410
+    },
+    {
+      "team_id": "2965",
+      "team": "Clarke University Pride",
+      "rating": -4.33,
+      "points": 58.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 411
+    },
+    {
+      "team_id": "2245",
+      "team": "Georgetown (KY) Tigers",
+      "rating": -4.33,
+      "points": 61.0,
+      "allowed": 100.0,
+      "games": 1,
+      "rank": 412
+    },
+    {
+      "team_id": "2494",
+      "team": "Philander Smith Panthers",
+      "rating": -4.33,
+      "points": 45.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 413
+    },
+    {
+      "team_id": "2496",
+      "team": "Piedmont Lions",
+      "rating": -4.33,
+      "points": 66.0,
+      "allowed": 105.0,
+      "games": 1,
+      "rank": 414
+    },
+    {
+      "team_id": "260",
+      "team": "Saint Michael's Purple Knights",
+      "rating": -4.33,
+      "points": 52.0,
+      "allowed": 91.0,
+      "games": 1,
+      "rank": 415
+    },
+    {
+      "team_id": "2723",
+      "team": "University of Wisconsin River Falls Falcons",
+      "rating": -4.33,
+      "points": 62.0,
+      "allowed": 101.0,
+      "games": 1,
+      "rank": 416
+    },
+    {
+      "team_id": "2352",
+      "team": "Loyola Maryland Greyhounds",
+      "rating": -4.41,
+      "points": 56.5,
+      "allowed": 61.2,
+      "games": 122,
+      "rank": 417
+    },
+    {
+      "team_id": "502",
+      "team": "Calumet St. Joseph Crimson Wave",
+      "rating": -4.44,
+      "points": 28.0,
+      "allowed": 68.0,
+      "games": 1,
+      "rank": 418
+    },
+    {
+      "team_id": "2233",
+      "team": "Franklin Grizzlies",
+      "rating": -4.44,
+      "points": 45.0,
+      "allowed": 85.0,
+      "games": 1,
+      "rank": 419
+    },
+    {
+      "team_id": "2315",
+      "team": "Kutztown Golden Bears",
+      "rating": -4.44,
+      "points": 47.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 420
+    },
+    {
+      "team_id": "2154",
+      "team": "Coppin State Eagles",
+      "rating": -4.48,
+      "points": 58.1,
+      "allowed": 62.88,
+      "games": 122,
+      "rank": 421
+    },
+    {
+      "team_id": "144",
+      "team": "Franklin Pierce Ravens",
+      "rating": -4.5,
+      "points": 47.5,
+      "allowed": 70.0,
+      "games": 2,
+      "rank": 422
+    },
+    {
+      "team_id": "275",
+      "team": "Wisconsin Badgers",
+      "rating": -4.55,
+      "points": 66.27,
+      "allowed": 71.11,
+      "games": 126,
+      "rank": 423
+    },
+    {
+      "team_id": "2078",
+      "team": "Bridgeport Purple Knights",
+      "rating": -4.56,
+      "points": 25.0,
+      "allowed": 66.0,
+      "games": 1,
+      "rank": 424
+    },
+    {
+      "team_id": "111228",
+      "team": "Embry Riddle (AZ) Eagles",
+      "rating": -4.56,
+      "points": 59.0,
+      "allowed": 100.0,
+      "games": 1,
+      "rank": 425
+    },
+    {
+      "team_id": "388",
+      "team": "Lebanon Valley Flying Dutchmen",
+      "rating": -4.56,
+      "points": 30.0,
+      "allowed": 71.0,
+      "games": 1,
+      "rank": 426
+    },
+    {
+      "team_id": "2359",
+      "team": "Macalester Scots",
+      "rating": -4.56,
+      "points": 43.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 427
+    },
+    {
+      "team_id": "2381",
+      "team": "Menlo Oaks",
+      "rating": -4.56,
+      "points": 39.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 428
+    },
+    {
+      "team_id": "210",
+      "team": "Millersville Marauders",
+      "rating": -4.56,
+      "points": 39.0,
+      "allowed": 80.0,
+      "games": 1,
+      "rank": 429
+    },
+    {
+      "team_id": "2701",
+      "team": "Montana Western Bulldogs",
+      "rating": -4.56,
+      "points": 33.0,
+      "allowed": 74.0,
+      "games": 1,
+      "rank": 430
+    },
+    {
+      "team_id": "112704",
+      "team": "Stevenson Mustangs",
+      "rating": -4.56,
+      "points": 49.0,
+      "allowed": 90.0,
+      "games": 1,
+      "rank": 431
+    },
+    {
+      "team_id": "216",
+      "team": "Susquehanna River Hawks",
+      "rating": -4.56,
+      "points": 37.0,
+      "allowed": 78.0,
+      "games": 1,
+      "rank": 432
+    },
+    {
+      "team_id": "2652",
+      "team": "Trinity Christian (IL) Trolls",
+      "rating": -4.56,
+      "points": 40.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 433
+    },
+    {
+      "team_id": "2785",
+      "team": "Union Garnet Chargers",
+      "rating": -4.56,
+      "points": 51.0,
+      "allowed": 92.0,
+      "games": 1,
+      "rank": 434
+    },
+    {
+      "team_id": "2350",
+      "team": "Loyola Chicago Ramblers",
+      "rating": -4.59,
+      "points": 58.41,
+      "allowed": 63.3,
+      "games": 125,
+      "rank": 435
+    },
+    {
+      "team_id": "2226",
+      "team": "Florida Atlantic Owls",
+      "rating": -4.66,
+      "points": 61.91,
+      "allowed": 66.88,
+      "games": 122,
+      "rank": 436
+    },
+    {
+      "team_id": "111998",
+      "team": "SUNY New Paltz Hawks",
+      "rating": -4.67,
+      "points": 46.0,
+      "allowed": 88.0,
+      "games": 1,
+      "rank": 437
+    },
+    {
+      "team_id": "128478",
+      "team": "Vtsu Lyndon Hornets",
+      "rating": -4.67,
+      "points": 35.0,
+      "allowed": 77.0,
+      "games": 1,
+      "rank": 438
+    },
+    {
+      "team_id": "2546",
+      "team": "Southeast Missouri State Redhawks",
+      "rating": -4.7,
+      "points": 62.73,
+      "allowed": 67.74,
+      "games": 120,
+      "rank": 439
+    },
+    {
+      "team_id": "2606",
+      "team": "Saint Martin's Saints",
+      "rating": -4.73,
+      "points": 44.33,
+      "allowed": 61.67,
+      "games": 3,
+      "rank": 440
+    },
+    {
+      "team_id": "2172",
+      "team": "Denver Pioneers",
+      "rating": -4.73,
+      "points": 63.57,
+      "allowed": 68.62,
+      "games": 119,
+      "rank": 441
+    },
+    {
+      "team_id": "2016",
+      "team": "Alcorn State Lady Braves",
+      "rating": -4.75,
+      "points": 58.8,
+      "allowed": 63.87,
+      "games": 121,
+      "rank": 442
+    },
+    {
+      "team_id": "2227",
+      "team": "Florida Memorial FLORIDA MEMORIAL",
+      "rating": -4.78,
+      "points": 46.0,
+      "allowed": 89.0,
+      "games": 1,
+      "rank": 443
+    },
+    {
+      "team_id": "111196",
+      "team": "Middle Georgia State Knights",
+      "rating": -4.78,
+      "points": 57.0,
+      "allowed": 100.0,
+      "games": 1,
+      "rank": 444
+    },
+    {
+      "team_id": "2654",
+      "team": "Truman State Bulldogs",
+      "rating": -4.78,
+      "points": 43.0,
+      "allowed": 86.0,
+      "games": 1,
+      "rank": 445
+    },
+    {
+      "team_id": "2740",
+      "team": "Wisconsin-La Crosse Eagles",
+      "rating": -4.78,
+      "points": 56.0,
+      "allowed": 99.0,
+      "games": 1,
+      "rank": 446
+    },
+    {
+      "team_id": "85",
+      "team": "IU Indianapolis Jaguars",
+      "rating": -4.8,
+      "points": 66.52,
+      "allowed": 71.63,
+      "games": 120,
+      "rank": 447
+    },
+    {
+      "team_id": "110467",
+      "team": "Post University Eagles",
+      "rating": -4.8,
+      "points": 50.0,
+      "allowed": 74.0,
+      "games": 2,
+      "rank": 448
+    },
+    {
+      "team_id": "2265",
+      "team": "Haverford Fords",
+      "rating": -4.89,
+      "points": 38.0,
+      "allowed": 82.0,
+      "games": 1,
+      "rank": 449
+    },
+    {
+      "team_id": "511",
+      "team": "Cumberlands Patriots",
+      "rating": -4.9,
+      "points": 62.5,
+      "allowed": 87.0,
+      "games": 2,
+      "rank": 450
+    },
+    {
+      "team_id": "125",
+      "team": "Grand Valley State Lakers",
+      "rating": -4.9,
+      "points": 53.0,
+      "allowed": 77.5,
+      "games": 2,
+      "rank": 451
+    },
+    {
+      "team_id": "14",
+      "team": "Chico State Wildcats",
+      "rating": -5.0,
+      "points": 45.5,
+      "allowed": 70.5,
+      "games": 2,
+      "rank": 452
+    },
+    {
+      "team_id": "366",
+      "team": "Ferrum Panthers",
+      "rating": -5.0,
+      "points": 39.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 453
+    },
+    {
+      "team_id": "117",
+      "team": "St. Mary's (MD) Seahawks",
+      "rating": -5.0,
+      "points": 38.0,
+      "allowed": 83.0,
+      "games": 1,
+      "rank": 454
+    },
+    {
+      "team_id": "2920",
+      "team": "Mobile Rams",
+      "rating": -5.08,
+      "points": 60.0,
+      "allowed": 75.25,
+      "games": 4,
+      "rank": 455
+    },
+    {
+      "team_id": "111",
+      "team": "Northeastern Huskies",
+      "rating": -5.09,
+      "points": 59.5,
+      "allowed": 64.96,
+      "games": 107,
+      "rank": 456
+    },
+    {
+      "team_id": "2073",
+      "team": "Bluefield State Big Blues",
+      "rating": -5.1,
+      "points": 52.5,
+      "allowed": 78.0,
+      "games": 2,
+      "rank": 457
+    },
+    {
+      "team_id": "2153",
+      "team": "Concordia (TX) Tornados",
+      "rating": -5.1,
+      "points": 51.0,
+      "allowed": 76.5,
+      "games": 2,
+      "rank": 458
+    },
+    {
+      "team_id": "2368",
+      "team": "Marist Red Foxes",
+      "rating": -5.11,
+      "points": 57.3,
+      "allowed": 62.74,
+      "games": 122,
+      "rank": 459
+    },
+    {
+      "team_id": "2124",
+      "team": "Chaminade Silverswords",
+      "rating": -5.11,
+      "points": 63.0,
+      "allowed": 109.0,
+      "games": 1,
+      "rank": 460
+    },
+    {
+      "team_id": "131731",
+      "team": "Purchase Panthers",
+      "rating": -5.11,
+      "points": 53.0,
+      "allowed": 99.0,
+      "games": 1,
+      "rank": 461
+    },
+    {
+      "team_id": "2370",
+      "team": "Tennessee Southern Firehawks",
+      "rating": -5.18,
+      "points": 64.0,
+      "allowed": 83.0,
+      "games": 3,
+      "rank": 462
+    },
+    {
+      "team_id": "2695",
+      "team": "West Alabama Tigers",
+      "rating": -5.18,
+      "points": 51.0,
+      "allowed": 70.0,
+      "games": 3,
+      "rank": 463
+    },
+    {
+      "team_id": "2974",
+      "team": "Shepherd Rams",
+      "rating": -5.2,
+      "points": 51.5,
+      "allowed": 77.5,
+      "games": 2,
+      "rank": 464
+    },
+    {
+      "team_id": "155",
+      "team": "North Dakota Fighting Hawks",
+      "rating": -5.22,
+      "points": 66.91,
+      "allowed": 72.47,
+      "games": 124,
+      "rank": 465
+    },
+    {
+      "team_id": "510",
+      "team": "Culver-Stockton Wildcats",
+      "rating": -5.22,
+      "points": 42.0,
+      "allowed": 89.0,
+      "games": 1,
+      "rank": 466
+    },
+    {
+      "team_id": "124682",
+      "team": "Nelson Lions",
+      "rating": -5.22,
+      "points": 40.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 467
+    },
+    {
+      "team_id": "2943",
+      "team": "New England College Pilgrims",
+      "rating": -5.22,
+      "points": 29.0,
+      "allowed": 76.0,
+      "games": 1,
+      "rank": 468
+    },
+    {
+      "team_id": "2901",
+      "team": "Staten Island Dolphins",
+      "rating": -5.22,
+      "points": 47.0,
+      "allowed": 94.0,
+      "games": 1,
+      "rank": 469
+    },
+    {
+      "team_id": "619",
+      "team": "Tabor Bluejays",
+      "rating": -5.22,
+      "points": 46.0,
+      "allowed": 93.0,
+      "games": 1,
+      "rank": 470
+    },
+    {
+      "team_id": "126911",
+      "team": "Wisconsin-Superior Yellow Jackets",
+      "rating": -5.22,
+      "points": 30.0,
+      "allowed": 77.0,
+      "games": 1,
+      "rank": 471
+    },
+    {
+      "team_id": "2804",
+      "team": "Chowan Hawks",
+      "rating": -5.3,
+      "points": 50.5,
+      "allowed": 77.0,
+      "games": 2,
+      "rank": 472
+    },
+    {
+      "team_id": "542",
+      "team": "Illinois-Springfield Prairie Stars",
+      "rating": -5.3,
+      "points": 54.0,
+      "allowed": 80.5,
+      "games": 2,
+      "rank": 473
+    },
+    {
+      "team_id": "596",
+      "team": "Peru State Bobcat",
+      "rating": -5.3,
+      "points": 65.0,
+      "allowed": 91.5,
+      "games": 2,
+      "rank": 474
+    },
+    {
+      "team_id": "2063",
+      "team": "Bethel (KS) Threshers",
+      "rating": -5.33,
+      "points": 36.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 475
+    },
+    {
+      "team_id": "2206",
+      "team": "Edward Waters Tigers",
+      "rating": -5.33,
+      "points": 52.5,
+      "allowed": 68.5,
+      "games": 4,
+      "rank": 476
+    },
+    {
+      "team_id": "2365",
+      "team": "Mansfield Mountaineers",
+      "rating": -5.33,
+      "points": 34.0,
+      "allowed": 82.0,
+      "games": 1,
+      "rank": 477
+    },
+    {
+      "team_id": "2888",
+      "team": "Ouachita Baptist Tigers",
+      "rating": -5.33,
+      "points": 45.0,
+      "allowed": 93.0,
+      "games": 1,
+      "rank": 478
+    },
+    {
+      "team_id": "2492",
+      "team": "Pepperdine Waves",
+      "rating": -5.36,
+      "points": 61.59,
+      "allowed": 67.29,
+      "games": 123,
+      "rank": 479
+    },
+    {
+      "team_id": "2385",
+      "team": "Mercyhurst Lakers",
+      "rating": -5.4,
+      "points": 65.03,
+      "allowed": 71.17,
+      "games": 59,
+      "rank": 480
+    },
+    {
+      "team_id": "160",
+      "team": "New Hampshire Wildcats",
+      "rating": -5.43,
+      "points": 54.18,
+      "allowed": 59.98,
+      "games": 116,
+      "rank": 481
+    },
+    {
+      "team_id": "289",
+      "team": "Mount Saint Mary (NY) Knights",
+      "rating": -5.44,
+      "points": 36.0,
+      "allowed": 85.0,
+      "games": 1,
+      "rank": 482
+    },
+    {
+      "team_id": "2325",
+      "team": "La Salle Explorers",
+      "rating": -5.52,
+      "points": 60.41,
+      "allowed": 66.29,
+      "games": 126,
+      "rank": 483
+    },
+    {
+      "team_id": "63",
+      "team": "Buena Vista Beavers",
+      "rating": -5.56,
+      "points": 54.0,
+      "allowed": 104.0,
+      "games": 1,
+      "rank": 484
+    },
+    {
+      "team_id": "111208",
+      "team": "Penn State (Beaver) Penn State - Beaver",
+      "rating": -5.56,
+      "points": 39.0,
+      "allowed": 89.0,
+      "games": 1,
+      "rank": 485
+    },
+    {
+      "team_id": "111203",
+      "team": "Georgia Southwestern Hurricanes",
+      "rating": -5.6,
+      "points": 46.5,
+      "allowed": 74.5,
+      "games": 2,
+      "rank": 486
+    },
+    {
+      "team_id": "223",
+      "team": "West Chester Golden Rams",
+      "rating": -5.6,
+      "points": 48.0,
+      "allowed": 76.0,
+      "games": 2,
+      "rank": 487
+    },
+    {
+      "team_id": "2681",
+      "team": "Wagner Seahawks",
+      "rating": -5.66,
+      "points": 58.57,
+      "allowed": 64.63,
+      "games": 115,
+      "rank": 488
+    },
+    {
+      "team_id": "2262",
+      "team": "Hanover Panthers",
+      "rating": -5.67,
+      "points": 43.0,
+      "allowed": 94.0,
+      "games": 1,
+      "rank": 489
+    },
+    {
+      "team_id": "111957",
+      "team": "Regent University Royals",
+      "rating": -5.67,
+      "points": 52.0,
+      "allowed": 103.0,
+      "games": 1,
+      "rank": 490
+    },
+    {
+      "team_id": "3096",
+      "team": "San Diego Christian Hawks",
+      "rating": -5.67,
+      "points": 30.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 491
+    },
+    {
+      "team_id": "2568",
+      "team": "Southern Arkansas Muleriders",
+      "rating": -5.67,
+      "points": 46.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 492
+    },
+    {
+      "team_id": "108866",
+      "team": "Trinity (FL) Tigers",
+      "rating": -5.67,
+      "points": 36.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 493
+    },
+    {
+      "team_id": "2660",
+      "team": "UMass Boston UMASS BOSTON",
+      "rating": -5.67,
+      "points": 46.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 494
+    },
+    {
+      "team_id": "628",
+      "team": "Valley City State Vikings",
+      "rating": -5.67,
+      "points": 45.0,
+      "allowed": 96.0,
+      "games": 1,
+      "rank": 495
+    },
+    {
+      "team_id": "2428",
+      "team": "North Carolina Central Eagles",
+      "rating": -5.67,
+      "points": 64.36,
+      "allowed": 70.42,
+      "games": 118,
+      "rank": 496
+    },
+    {
+      "team_id": "2711",
+      "team": "Western Michigan Broncos",
+      "rating": -5.69,
+      "points": 59.86,
+      "allowed": 65.94,
+      "games": 117,
+      "rank": 497
+    },
+    {
+      "team_id": "2152",
+      "team": "Concordia (MN) Cobbers",
+      "rating": -5.7,
+      "points": 53.5,
+      "allowed": 82.0,
+      "games": 2,
+      "rank": 498
+    },
+    {
+      "team_id": "2273",
+      "team": "Hillsdale Chargers",
+      "rating": -5.7,
+      "points": 56.5,
+      "allowed": 85.0,
+      "games": 2,
+      "rank": 499
+    },
+    {
+      "team_id": "2589",
+      "team": "Spalding Pelicans",
+      "rating": -5.7,
+      "points": 46.5,
+      "allowed": 75.0,
+      "games": 2,
+      "rank": 500
+    },
+    {
+      "team_id": "126823",
+      "team": "Saint Mary of the Woods Pomeroys",
+      "rating": -5.78,
+      "points": 50.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 501
+    },
+    {
+      "team_id": "121690",
+      "team": "Wheaton College (MA) Lyons",
+      "rating": -5.78,
+      "points": 24.0,
+      "allowed": 76.0,
+      "games": 1,
+      "rank": 502
+    },
+    {
+      "team_id": "112358",
+      "team": "Long Island University Sharks",
+      "rating": -5.81,
+      "points": 59.98,
+      "allowed": 66.17,
+      "games": 121,
+      "rank": 503
+    },
+    {
+      "team_id": "2750",
+      "team": "Wright State Raiders",
+      "rating": -5.87,
+      "points": 66.25,
+      "allowed": 72.48,
+      "games": 128,
+      "rank": 504
+    },
+    {
+      "team_id": "126974",
+      "team": "Villa Maria Vikings",
+      "rating": -5.89,
+      "points": 31.0,
+      "allowed": 84.0,
+      "games": 1,
+      "rank": 505
+    },
+    {
+      "team_id": "2404",
+      "team": "Molloy Lions",
+      "rating": -5.9,
+      "points": 49.5,
+      "allowed": 79.0,
+      "games": 2,
+      "rank": 506
+    },
+    {
+      "team_id": "2013",
+      "team": "Albany State Golden Rams",
+      "rating": -6.0,
+      "points": 60.5,
+      "allowed": 90.5,
+      "games": 2,
+      "rank": 507
+    },
+    {
+      "team_id": "2077",
+      "team": "Brewton Parker Wildcats",
+      "rating": -6.0,
+      "points": 40.5,
+      "allowed": 70.5,
+      "games": 2,
+      "rank": 508
+    },
+    {
+      "team_id": "2876",
+      "team": "Lincoln (MO) Blue Tigers",
+      "rating": -6.0,
+      "points": 42.0,
+      "allowed": 96.0,
+      "games": 1,
+      "rank": 509
+    },
+    {
+      "team_id": "123358",
+      "team": "Transylvania Pioneers",
+      "rating": -6.0,
+      "points": 41.0,
+      "allowed": 95.0,
+      "games": 1,
+      "rank": 510
+    },
+    {
+      "team_id": "2134",
+      "team": "Clarion Golden Eagles",
+      "rating": -6.1,
+      "points": 50.5,
+      "allowed": 81.0,
+      "games": 2,
+      "rank": 511
+    },
+    {
+      "team_id": "2421",
+      "team": "Mount Vernon Nazarene (OH) Cougars",
+      "rating": -6.1,
+      "points": 53.0,
+      "allowed": 83.5,
+      "games": 2,
+      "rank": 512
+    },
+    {
+      "team_id": "2477",
+      "team": "Ohio Dominican Panthers",
+      "rating": -6.1,
+      "points": 58.0,
+      "allowed": 88.5,
+      "games": 2,
+      "rank": 513
+    },
+    {
+      "team_id": "2251",
+      "team": "Goucher Gophers",
+      "rating": -6.11,
+      "points": 50.0,
+      "allowed": 105.0,
+      "games": 1,
+      "rank": 514
+    },
+    {
+      "team_id": "2948",
+      "team": "Stillman Tigers",
+      "rating": -6.11,
+      "points": 35.0,
+      "allowed": 90.0,
+      "games": 1,
+      "rank": 515
+    },
+    {
+      "team_id": "13",
+      "team": "Cal Poly Mustangs",
+      "rating": -6.13,
+      "points": 57.57,
+      "allowed": 64.11,
+      "games": 118,
+      "rank": 516
+    },
+    {
+      "team_id": "71",
+      "team": "Bradley Braves",
+      "rating": -6.14,
+      "points": 61.54,
+      "allowed": 68.07,
+      "games": 125,
+      "rank": 517
+    },
+    {
+      "team_id": "79",
+      "team": "Southern Illinois Salukis",
+      "rating": -6.15,
+      "points": 66.13,
+      "allowed": 72.7,
+      "games": 119,
+      "rank": 518
+    },
+    {
+      "team_id": "2891",
+      "team": "Ripon Red Hawks",
+      "rating": -6.2,
+      "points": 42.5,
+      "allowed": 73.5,
+      "games": 2,
+      "rank": 519
+    },
+    {
+      "team_id": "2942",
+      "team": "Mary Washington Eagles",
+      "rating": -6.22,
+      "points": 43.0,
+      "allowed": 99.0,
+      "games": 1,
+      "rank": 520
+    },
+    {
+      "team_id": "2845",
+      "team": "Waynesburg College Jackets",
+      "rating": -6.22,
+      "points": 39.0,
+      "allowed": 95.0,
+      "games": 1,
+      "rank": 521
+    },
+    {
+      "team_id": "499",
+      "team": "Cal State East Bay Pioneers",
+      "rating": -6.27,
+      "points": 58.67,
+      "allowed": 81.67,
+      "games": 3,
+      "rank": 522
+    },
+    {
+      "team_id": "130110",
+      "team": "Bates College Bobcats",
+      "rating": -6.33,
+      "points": 39.0,
+      "allowed": 96.0,
+      "games": 1,
+      "rank": 523
+    },
+    {
+      "team_id": "131667",
+      "team": "Berkeley Knights",
+      "rating": -6.33,
+      "points": 30.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 524
+    },
+    {
+      "team_id": "2877",
+      "team": "Lindsey Wilson LINDSEY WILSON",
+      "rating": -6.33,
+      "points": 44.0,
+      "allowed": 101.0,
+      "games": 1,
+      "rank": 525
+    },
+    {
+      "team_id": "108846",
+      "team": "Multnomah Lions",
+      "rating": -6.33,
+      "points": 64.0,
+      "allowed": 121.0,
+      "games": 1,
+      "rank": 526
+    },
+    {
+      "team_id": "86802",
+      "team": "Oswego St Lakers",
+      "rating": -6.33,
+      "points": 30.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 527
+    },
+    {
+      "team_id": "2692",
+      "team": "Weber State Wildcats",
+      "rating": -6.37,
+      "points": 60.46,
+      "allowed": 67.24,
+      "games": 125,
+      "rank": 528
+    },
+    {
+      "team_id": "354",
+      "team": "Olivet College Comets",
+      "rating": -6.44,
+      "points": 50.0,
+      "allowed": 108.0,
+      "games": 1,
+      "rank": 529
+    },
+    {
+      "team_id": "131773",
+      "team": "Saint Mary's (MN) Cardinals",
+      "rating": -6.44,
+      "points": 36.0,
+      "allowed": 94.0,
+      "games": 1,
+      "rank": 530
+    },
+    {
+      "team_id": "2707",
+      "team": "West Virginia State Yellow Jackets",
+      "rating": -6.44,
+      "points": 39.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 531
+    },
+    {
+      "team_id": "3163",
+      "team": "Roosevelt Lakers",
+      "rating": -6.45,
+      "points": 58.67,
+      "allowed": 82.33,
+      "games": 3,
+      "rank": 532
+    },
+    {
+      "team_id": "2199",
+      "team": "Eastern Michigan Eagles",
+      "rating": -6.47,
+      "points": 62.21,
+      "allowed": 69.12,
+      "games": 116,
+      "rank": 533
+    },
+    {
+      "team_id": "2398",
+      "team": "Millsaps Majors",
+      "rating": -6.5,
+      "points": 37.5,
+      "allowed": 70.0,
+      "games": 2,
+      "rank": 534
+    },
+    {
+      "team_id": "109672",
+      "team": "Bushnell Beacons",
+      "rating": -6.55,
+      "points": 48.33,
+      "allowed": 72.33,
+      "games": 3,
+      "rank": 535
+    },
+    {
+      "team_id": "131664",
+      "team": "Bard Eagles",
+      "rating": -6.56,
+      "points": 28.0,
+      "allowed": 87.0,
+      "games": 1,
+      "rank": 536
+    },
+    {
+      "team_id": "109516",
+      "team": "Misericordia Cougars",
+      "rating": -6.56,
+      "points": 22.0,
+      "allowed": 81.0,
+      "games": 1,
+      "rank": 537
+    },
+    {
+      "team_id": "130229",
+      "team": "New College (FL) Mighty Banyans",
+      "rating": -6.56,
+      "points": 32.0,
+      "allowed": 91.0,
+      "games": 1,
+      "rank": 538
+    },
+    {
+      "team_id": "2473",
+      "team": "Oakland Golden Grizzlies",
+      "rating": -6.57,
+      "points": 64.86,
+      "allowed": 71.87,
+      "games": 119,
+      "rank": 539
+    },
+    {
+      "team_id": "22",
+      "team": "San Francisco State Gators",
+      "rating": -6.6,
+      "points": 51.5,
+      "allowed": 84.5,
+      "games": 2,
+      "rank": 540
+    },
+    {
+      "team_id": "3071",
+      "team": "North Central College Cardinals",
+      "rating": -6.67,
+      "points": 53.0,
+      "allowed": 113.0,
+      "games": 1,
+      "rank": 541
+    },
+    {
+      "team_id": "107607",
+      "team": "Point Skyhawks",
+      "rating": -6.67,
+      "points": 30.0,
+      "allowed": 90.0,
+      "games": 1,
+      "rank": 542
+    },
+    {
+      "team_id": "2639",
+      "team": "Texas Lutheran Bulldogs",
+      "rating": -6.67,
+      "points": 41.75,
+      "allowed": 61.75,
+      "games": 4,
+      "rank": 543
+    },
+    {
+      "team_id": "2261",
+      "team": "Hampton Lady Pirates",
+      "rating": -6.77,
+      "points": 58.98,
+      "allowed": 66.24,
+      "games": 112,
+      "rank": 544
+    },
+    {
+      "team_id": "130205",
+      "team": "Brenau University Golden Tigers",
+      "rating": -6.78,
+      "points": 49.0,
+      "allowed": 110.0,
+      "games": 1,
+      "rank": 545
+    },
+    {
+      "team_id": "2155",
+      "team": "Cornell College (IA) Rams",
+      "rating": -6.78,
+      "points": 55.0,
+      "allowed": 116.0,
+      "games": 1,
+      "rank": 546
+    },
+    {
+      "team_id": "124761",
+      "team": "Grace Christian Tigers",
+      "rating": -6.78,
+      "points": 41.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 547
+    },
+    {
+      "team_id": "359",
+      "team": "Otterbein Cardinals",
+      "rating": -6.78,
+      "points": 36.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 548
+    },
+    {
+      "team_id": "2642",
+      "team": "Texas Wesleyan Rams",
+      "rating": -6.78,
+      "points": 40.0,
+      "allowed": 101.0,
+      "games": 1,
+      "rank": 549
+    },
+    {
+      "team_id": "568",
+      "team": "Minot State Beavers",
+      "rating": -6.8,
+      "points": 45.0,
+      "allowed": 79.0,
+      "games": 2,
+      "rank": 550
+    },
+    {
+      "team_id": "2717",
+      "team": "Western Carolina Catamounts",
+      "rating": -6.82,
+      "points": 59.34,
+      "allowed": 66.62,
+      "games": 119,
+      "rank": 551
+    },
+    {
+      "team_id": "2871",
+      "team": "Kean Cougars",
+      "rating": -6.89,
+      "points": 27.0,
+      "allowed": 89.0,
+      "games": 1,
+      "rank": 552
+    },
+    {
+      "team_id": "100277",
+      "team": "Pensacola Christian Eagles",
+      "rating": -6.89,
+      "points": 38.0,
+      "allowed": 100.0,
+      "games": 1,
+      "rank": 553
+    },
+    {
+      "team_id": "2880",
+      "team": "Missouri Baptist Spartans",
+      "rating": -6.9,
+      "points": 46.5,
+      "allowed": 81.0,
+      "games": 2,
+      "rank": 554
+    },
+    {
+      "team_id": "573",
+      "team": "Mount Marty College Lancers",
+      "rating": -6.9,
+      "points": 54.5,
+      "allowed": 89.0,
+      "games": 2,
+      "rank": 555
+    },
+    {
+      "team_id": "195",
+      "team": "Ohio Bobcats",
+      "rating": -6.95,
+      "points": 64.85,
+      "allowed": 72.27,
+      "games": 120,
+      "rank": 556
+    },
+    {
+      "team_id": "2706",
+      "team": "W. Virginia Tech Golden Bears",
+      "rating": -7.0,
+      "points": 39.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 557
+    },
+    {
+      "team_id": "2730",
+      "team": "William Carey Crusaders",
+      "rating": -7.0,
+      "points": 61.33,
+      "allowed": 87.0,
+      "games": 3,
+      "rank": 558
+    },
+    {
+      "team_id": "172",
+      "team": "Cornell Big Red",
+      "rating": -7.04,
+      "points": 55.71,
+      "allowed": 63.3,
+      "games": 104,
+      "rank": 559
+    },
+    {
+      "team_id": "221",
+      "team": "Pittsburgh Panthers",
+      "rating": -7.05,
+      "points": 61.81,
+      "allowed": 69.31,
+      "games": 124,
+      "rank": 560
+    },
+    {
+      "team_id": "2506",
+      "team": "Presbyterian Blue Hose",
+      "rating": -7.08,
+      "points": 58.02,
+      "allowed": 65.56,
+      "games": 124,
+      "rank": 561
+    },
+    {
+      "team_id": "284",
+      "team": "Stonehill Skyhawks",
+      "rating": -7.08,
+      "points": 59.07,
+      "allowed": 66.62,
+      "games": 120,
+      "rank": 562
+    },
+    {
+      "team_id": "2067",
+      "team": "Biola Eagles",
+      "rating": -7.09,
+      "points": 48.33,
+      "allowed": 74.33,
+      "games": 3,
+      "rank": 563
+    },
+    {
+      "team_id": "2565",
+      "team": "SIU Edwardsville Cougars",
+      "rating": -7.12,
+      "points": 64.3,
+      "allowed": 71.89,
+      "games": 122,
+      "rank": 564
+    },
+    {
+      "team_id": "2099",
+      "team": "Canisius Golden Griffins",
+      "rating": -7.17,
+      "points": 57.8,
+      "allowed": 65.45,
+      "games": 120,
+      "rank": 565
+    },
+    {
+      "team_id": "6",
+      "team": "South Alabama Jaguars",
+      "rating": -7.18,
+      "points": 61.9,
+      "allowed": 69.54,
+      "games": 125,
+      "rank": 566
+    },
+    {
+      "team_id": "2742",
+      "team": "UW-Parkside Rangers",
+      "rating": -7.2,
+      "points": 47.0,
+      "allowed": 83.0,
+      "games": 2,
+      "rank": 567
+    },
+    {
+      "team_id": "565",
+      "team": "Midland University Warriors",
+      "rating": -7.22,
+      "points": 41.0,
+      "allowed": 106.0,
+      "games": 1,
+      "rank": 568
+    },
+    {
+      "team_id": "2511",
+      "team": "Queens University Royals",
+      "rating": -7.22,
+      "points": 61.41,
+      "allowed": 69.13,
+      "games": 117,
+      "rank": 569
+    },
+    {
+      "team_id": "322",
+      "team": "Lafayette Leopards",
+      "rating": -7.27,
+      "points": 56.4,
+      "allowed": 64.15,
+      "games": 120,
+      "rank": 570
+    },
+    {
+      "team_id": "2415",
+      "team": "Morgan State Lady Bears",
+      "rating": -7.3,
+      "points": 56.67,
+      "allowed": 64.46,
+      "games": 117,
+      "rank": 571
+    },
+    {
+      "team_id": "2905",
+      "team": "UT Dallas Comets",
+      "rating": -7.3,
+      "points": 51.0,
+      "allowed": 87.5,
+      "games": 2,
+      "rank": 572
+    },
+    {
+      "team_id": "2151",
+      "team": "Concordia-Chicago Cougars",
+      "rating": -7.33,
+      "points": 32.0,
+      "allowed": 98.0,
+      "games": 1,
+      "rank": 573
+    },
+    {
+      "team_id": "2667",
+      "team": "Ursinus Bears",
+      "rating": -7.33,
+      "points": 19.0,
+      "allowed": 85.0,
+      "games": 1,
+      "rank": 574
+    },
+    {
+      "team_id": "282",
+      "team": "Indiana State Sycamores",
+      "rating": -7.37,
+      "points": 67.27,
+      "allowed": 75.12,
+      "games": 123,
+      "rank": 575
+    },
+    {
+      "team_id": "39",
+      "team": "Connecticut College Camels",
+      "rating": -7.45,
+      "points": 40.67,
+      "allowed": 68.0,
+      "games": 3,
+      "rank": 576
+    },
+    {
+      "team_id": "2908",
+      "team": "South Carolina Upstate Spartans",
+      "rating": -7.47,
+      "points": 55.77,
+      "allowed": 63.72,
+      "games": 125,
+      "rank": 577
+    },
+    {
+      "team_id": "313",
+      "team": "Keene State Owls",
+      "rating": -7.5,
+      "points": 44.0,
+      "allowed": 81.5,
+      "games": 2,
+      "rank": 578
+    },
+    {
+      "team_id": "531",
+      "team": "ProvidenceMT Argonauts",
+      "rating": -7.5,
+      "points": 37.0,
+      "allowed": 74.5,
+      "games": 2,
+      "rank": 579
+    },
+    {
+      "team_id": "2862",
+      "team": "Colorado Christian Cougars",
+      "rating": -7.54,
+      "points": 62.6,
+      "allowed": 82.2,
+      "games": 5,
+      "rank": 580
+    },
+    {
+      "team_id": "561",
+      "team": "Mayville State Comets",
+      "rating": -7.54,
+      "points": 60.0,
+      "allowed": 79.6,
+      "games": 5,
+      "rank": 581
+    },
+    {
+      "team_id": "2131",
+      "team": "Christian Brothers Buccaneers",
+      "rating": -7.55,
+      "points": 56.67,
+      "allowed": 84.33,
+      "games": 3,
+      "rank": 582
+    },
+    {
+      "team_id": "2882",
+      "team": "UNC Pembroke Braves",
+      "rating": -7.55,
+      "points": 54.67,
+      "allowed": 82.33,
+      "games": 3,
+      "rank": 583
+    },
+    {
+      "team_id": "128537",
+      "team": "Kuyper Cougars",
+      "rating": -7.56,
+      "points": 37.0,
+      "allowed": 105.0,
+      "games": 1,
+      "rank": 584
+    },
+    {
+      "team_id": "571",
+      "team": "Morris MORRIS",
+      "rating": -7.56,
+      "points": 34.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 585
+    },
+    {
+      "team_id": "110395",
+      "team": "Antelope Valley",
+      "rating": -7.6,
+      "points": 44.0,
+      "allowed": 82.0,
+      "games": 2,
+      "rank": 586
+    },
+    {
+      "team_id": "3067",
+      "team": "Goshen Maple Leafs",
+      "rating": -7.6,
+      "points": 43.0,
+      "allowed": 81.0,
+      "games": 2,
+      "rank": 587
+    },
+    {
+      "team_id": "2339",
+      "team": "Lincoln (PA) Lions",
+      "rating": -7.62,
+      "points": 54.0,
+      "allowed": 73.8,
+      "games": 5,
+      "rank": 588
+    },
+    {
+      "team_id": "128455",
+      "team": "Saint Elizabeth Eagles",
+      "rating": -7.7,
+      "points": 44.5,
+      "allowed": 83.0,
+      "games": 2,
+      "rank": 589
+    },
+    {
+      "team_id": "164",
+      "team": "Rutgers Scarlet Knights",
+      "rating": -7.77,
+      "points": 63.68,
+      "allowed": 71.94,
+      "games": 125,
+      "rank": 590
+    },
+    {
+      "team_id": "2324",
+      "team": "Langston Lions",
+      "rating": -7.78,
+      "points": 35.0,
+      "allowed": 105.0,
+      "games": 1,
+      "rank": 591
+    },
+    {
+      "team_id": "131817",
+      "team": "Nelson American Indian Warriors",
+      "rating": -7.78,
+      "points": 41.0,
+      "allowed": 111.0,
+      "games": 1,
+      "rank": 592
+    },
+    {
+      "team_id": "2489",
+      "team": "Palm Beach Atlantic Sailfish",
+      "rating": -7.82,
+      "points": 46.0,
+      "allowed": 74.67,
+      "games": 3,
+      "rank": 593
+    },
+    {
+      "team_id": "2644",
+      "team": "Thiel Tomcats",
+      "rating": -7.89,
+      "points": 33.0,
+      "allowed": 104.0,
+      "games": 1,
+      "rank": 594
+    },
+    {
+      "team_id": "2789",
+      "team": "York College Nebraska YORK (NE)",
+      "rating": -7.89,
+      "points": 33.0,
+      "allowed": 104.0,
+      "games": 1,
+      "rank": 595
+    },
+    {
+      "team_id": "2892",
+      "team": "Rust Bearcats",
+      "rating": -7.91,
+      "points": 51.67,
+      "allowed": 80.67,
+      "games": 3,
+      "rank": 596
+    },
+    {
+      "team_id": "50",
+      "team": "Florida A&M Rattlers",
+      "rating": -7.92,
+      "points": 60.72,
+      "allowed": 69.18,
+      "games": 118,
+      "rank": 597
+    },
+    {
+      "team_id": "2658",
+      "team": "Texas A&M-Kingsville Javelinas",
+      "rating": -8.0,
+      "points": 47.67,
+      "allowed": 77.0,
+      "games": 3,
+      "rank": 598
+    },
+    {
+      "team_id": "2075",
+      "team": "Bowie State Bulldogs",
+      "rating": -8.0,
+      "points": 51.75,
+      "allowed": 75.75,
+      "games": 4,
+      "rank": 599
+    },
+    {
+      "team_id": "2163",
+      "team": "Dallas Crusaders",
+      "rating": -8.0,
+      "points": 38.0,
+      "allowed": 110.0,
+      "games": 1,
+      "rank": 600
+    },
+    {
+      "team_id": "2358",
+      "team": "Lyon Scots",
+      "rating": -8.0,
+      "points": 43.0,
+      "allowed": 115.0,
+      "games": 1,
+      "rank": 601
+    },
+    {
+      "team_id": "2824",
+      "team": "Panhandle State (OK) Aggies",
+      "rating": -8.0,
+      "points": 46.0,
+      "allowed": 118.0,
+      "games": 1,
+      "rank": 602
+    },
+    {
+      "team_id": "2838",
+      "team": "Tiffin Dragons",
+      "rating": -8.0,
+      "points": 42.0,
+      "allowed": 82.0,
+      "games": 2,
+      "rank": 603
+    },
+    {
+      "team_id": "2743",
+      "team": "Wisconsin Stevens Point Pointers",
+      "rating": -8.1,
+      "points": 43.0,
+      "allowed": 83.5,
+      "games": 2,
+      "rank": 604
+    },
+    {
+      "team_id": "2192",
+      "team": "Eastern Mennonite Royals",
+      "rating": -8.11,
+      "points": 31.0,
+      "allowed": 104.0,
+      "games": 1,
+      "rank": 605
+    },
+    {
+      "team_id": "109680",
+      "team": "Stephens STEPHENS",
+      "rating": -8.18,
+      "points": 54.67,
+      "allowed": 84.67,
+      "games": 3,
+      "rank": 606
+    },
+    {
+      "team_id": "2207",
+      "team": "Elizabeth City State Vikings",
+      "rating": -8.22,
+      "points": 32.0,
+      "allowed": 106.0,
+      "games": 1,
+      "rank": 607
+    },
+    {
+      "team_id": "247",
+      "team": "King's Monarchs",
+      "rating": -8.22,
+      "points": 31.0,
+      "allowed": 105.0,
+      "games": 1,
+      "rank": 608
+    },
+    {
+      "team_id": "2640",
+      "team": "Texas Southern Tigers",
+      "rating": -8.23,
+      "points": 63.16,
+      "allowed": 71.96,
+      "games": 117,
+      "rank": 609
+    },
+    {
+      "team_id": "2040",
+      "team": "Auburn Montgomery Senators",
+      "rating": -8.25,
+      "points": 50.0,
+      "allowed": 74.75,
+      "games": 4,
+      "rank": 610
+    },
+    {
+      "team_id": "2353",
+      "team": "LSU Shreveport Pilots",
+      "rating": -8.27,
+      "points": 40.67,
+      "allowed": 71.0,
+      "games": 3,
+      "rank": 611
+    },
+    {
+      "team_id": "2504",
+      "team": "Prairie View A&M Lady Panthers",
+      "rating": -8.28,
+      "points": 61.07,
+      "allowed": 69.92,
+      "games": 116,
+      "rank": 612
+    },
+    {
+      "team_id": "2520",
+      "team": "Rider Broncs",
+      "rating": -8.29,
+      "points": 55.96,
+      "allowed": 64.8,
+      "games": 120,
+      "rank": 613
+    },
+    {
+      "team_id": "130132",
+      "team": "Christopher Newport Captains",
+      "rating": -8.3,
+      "points": 52.5,
+      "allowed": 94.0,
+      "games": 2,
+      "rank": 614
+    },
+    {
+      "team_id": "2475",
+      "team": "Occidental Tigers",
+      "rating": -8.3,
+      "points": 45.0,
+      "allowed": 86.5,
+      "games": 2,
+      "rank": 615
+    },
+    {
+      "team_id": "2682",
+      "team": "Walsh Cavaliers",
+      "rating": -8.3,
+      "points": 54.5,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 616
+    },
+    {
+      "team_id": "66784",
+      "team": "Immaculata Mighty Macs",
+      "rating": -8.33,
+      "points": 39.0,
+      "allowed": 114.0,
+      "games": 1,
+      "rank": 617
+    },
+    {
+      "team_id": "2873",
+      "team": "Keuka Storm",
+      "rating": -8.33,
+      "points": 22.0,
+      "allowed": 97.0,
+      "games": 1,
+      "rank": 618
+    },
+    {
+      "team_id": "2174",
+      "team": "Detroit Mercy Titans",
+      "rating": -8.37,
+      "points": 60.66,
+      "allowed": 69.58,
+      "games": 123,
+      "rank": 619
+    },
+    {
+      "team_id": "2634",
+      "team": "Tennessee State Lady Tigers",
+      "rating": -8.38,
+      "points": 62.9,
+      "allowed": 71.85,
+      "games": 117,
+      "rank": 620
+    },
+    {
+      "team_id": "2502",
+      "team": "Portland State Vikings",
+      "rating": -8.38,
+      "points": 59.34,
+      "allowed": 68.28,
+      "games": 119,
+      "rank": 621
+    },
+    {
+      "team_id": "589",
+      "team": "Oklahoma Christian Eagles",
+      "rating": -8.4,
+      "points": 44.0,
+      "allowed": 86.0,
+      "games": 2,
+      "rank": 622
+    },
+    {
+      "team_id": "2373",
+      "team": "Maryville College (TN) Fighting Scots",
+      "rating": -8.44,
+      "points": 25.0,
+      "allowed": 101.0,
+      "games": 1,
+      "rank": 623
+    },
+    {
+      "team_id": "2736",
+      "team": "Winston-Salem Rams",
+      "rating": -8.45,
+      "points": 46.33,
+      "allowed": 77.33,
+      "games": 3,
+      "rank": 624
+    },
+    {
+      "team_id": "2177",
+      "team": "District of Columbia DISTRICT OF COLUMBIA",
+      "rating": -8.5,
+      "points": 43.0,
+      "allowed": 85.5,
+      "games": 2,
+      "rank": 625
+    },
+    {
+      "team_id": "128451",
+      "team": "Friends Falcons",
+      "rating": -8.5,
+      "points": 56.0,
+      "allowed": 98.5,
+      "games": 2,
+      "rank": 626
+    },
+    {
+      "team_id": "2418",
+      "team": "Mount Olive Trojans",
+      "rating": -8.55,
+      "points": 42.33,
+      "allowed": 73.67,
+      "games": 3,
+      "rank": 627
+    },
+    {
+      "team_id": "255",
+      "team": "Knox Prairie Fire",
+      "rating": -8.56,
+      "points": 42.0,
+      "allowed": 119.0,
+      "games": 1,
+      "rank": 628
+    },
+    {
+      "team_id": "128905",
+      "team": "Toronto Metropolitan Bold",
+      "rating": -8.56,
+      "points": 34.0,
+      "allowed": 111.0,
+      "games": 1,
+      "rank": 629
+    },
+    {
+      "team_id": "2465",
+      "team": "Northwest University Eagles",
+      "rating": -8.6,
+      "points": 49.5,
+      "allowed": 92.5,
+      "games": 2,
+      "rank": 630
+    },
+    {
+      "team_id": "148",
+      "team": "Montana Tech Orediggers",
+      "rating": -8.64,
+      "points": 49.67,
+      "allowed": 81.33,
+      "games": 3,
+      "rank": 631
+    },
+    {
+      "team_id": "131833",
+      "team": "Hesston Larks",
+      "rating": -8.67,
+      "points": 43.0,
+      "allowed": 121.0,
+      "games": 1,
+      "rank": 632
+    },
+    {
+      "team_id": "2874",
+      "team": "La Roche Redhawks",
+      "rating": -8.67,
+      "points": 31.0,
+      "allowed": 109.0,
+      "games": 1,
+      "rank": 633
+    },
+    {
+      "team_id": "2277",
+      "team": "Houston Christian Huskies",
+      "rating": -8.72,
+      "points": 55.22,
+      "allowed": 64.54,
+      "games": 116,
+      "rank": 634
+    },
+    {
+      "team_id": "2783",
+      "team": "SUNY Geneseo Knights",
+      "rating": -8.73,
+      "points": 44.0,
+      "allowed": 76.0,
+      "games": 3,
+      "rank": 635
+    },
+    {
+      "team_id": "2854",
+      "team": "Bloomfield Deacons",
+      "rating": -8.77,
+      "points": 60.8,
+      "allowed": 83.6,
+      "games": 5,
+      "rank": 636
+    },
+    {
+      "team_id": "2085",
+      "team": "Buffalo State Bengals",
+      "rating": -8.78,
+      "points": 44.0,
+      "allowed": 123.0,
+      "games": 1,
+      "rank": 637
+    },
+    {
+      "team_id": "3077",
+      "team": "Kentucky Christian Knights",
+      "rating": -8.78,
+      "points": 36.0,
+      "allowed": 115.0,
+      "games": 1,
+      "rank": 638
+    },
+    {
+      "team_id": "2488",
+      "team": "Paine Lions",
+      "rating": -8.78,
+      "points": 32.0,
+      "allowed": 111.0,
+      "games": 1,
+      "rank": 639
+    },
+    {
+      "team_id": "131604",
+      "team": "SUNY Delhi Broncos",
+      "rating": -8.78,
+      "points": 27.0,
+      "allowed": 106.0,
+      "games": 1,
+      "rank": 640
+    },
+    {
+      "team_id": "229",
+      "team": "Coker Cobras",
+      "rating": -8.82,
+      "points": 51.33,
+      "allowed": 83.67,
+      "games": 3,
+      "rank": 641
+    },
+    {
+      "team_id": "2518",
+      "team": "Regis University REGIS UNIVERSITY",
+      "rating": -8.85,
+      "points": 54.2,
+      "allowed": 77.2,
+      "games": 5,
+      "rank": 642
+    },
+    {
+      "team_id": "130380",
+      "team": "Southeastern Baptist College Chargers",
+      "rating": -8.89,
+      "points": 19.0,
+      "allowed": 99.0,
+      "games": 1,
+      "rank": 643
+    },
+    {
+      "team_id": "2839",
+      "team": "Tusculum Pioneers",
+      "rating": -8.9,
+      "points": 50.0,
+      "allowed": 94.5,
+      "games": 2,
+      "rank": 644
+    },
+    {
+      "team_id": "402",
+      "team": "Worcester State Lancers",
+      "rating": -8.9,
+      "points": 33.0,
+      "allowed": 77.5,
+      "games": 2,
+      "rank": 645
+    },
+    {
+      "team_id": "18",
+      "team": "Bridgewater State Bears",
+      "rating": -8.91,
+      "points": 54.33,
+      "allowed": 87.0,
+      "games": 3,
+      "rank": 646
+    },
+    {
+      "team_id": "130113",
+      "team": "Hood College Blaze",
+      "rating": -9.0,
+      "points": 21.0,
+      "allowed": 102.0,
+      "games": 1,
+      "rank": 647
+    },
+    {
+      "team_id": "123308",
+      "team": "Salem College",
+      "rating": -9.0,
+      "points": 51.0,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 648
+    },
+    {
+      "team_id": "43",
+      "team": "Yale Bulldogs",
+      "rating": -9.02,
+      "points": 58.11,
+      "allowed": 67.82,
+      "games": 105,
+      "rank": 649
+    },
+    {
+      "team_id": "23",
+      "team": "San José State Spartans",
+      "rating": -9.04,
+      "points": 59.74,
+      "allowed": 69.36,
+      "games": 125,
+      "rank": 650
+    },
+    {
+      "team_id": "77",
+      "team": "Northwestern Wildcats",
+      "rating": -9.08,
+      "points": 65.58,
+      "allowed": 75.3,
+      "games": 113,
+      "rank": 651
+    },
+    {
+      "team_id": "2109",
+      "team": "Cedarville Yellow Jackets",
+      "rating": -9.08,
+      "points": 57.75,
+      "allowed": 85.0,
+      "games": 4,
+      "rank": 652
+    },
+    {
+      "team_id": "109688",
+      "team": "Columbia International COLUMBIA INTERNATIONAL",
+      "rating": -9.1,
+      "points": 40.0,
+      "allowed": 85.5,
+      "games": 2,
+      "rank": 653
+    },
+    {
+      "team_id": "123309",
+      "team": "Health Sciences & Pharmacy Eutectics",
+      "rating": -9.1,
+      "points": 50.5,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 654
+    },
+    {
+      "team_id": "2939",
+      "team": "Jamestown Jimmies",
+      "rating": -9.1,
+      "points": 54.5,
+      "allowed": 100.0,
+      "games": 2,
+      "rank": 655
+    },
+    {
+      "team_id": "159",
+      "team": "Dartmouth Big Green",
+      "rating": -9.15,
+      "points": 53.46,
+      "allowed": 63.3,
+      "games": 105,
+      "rank": 656
+    },
+    {
+      "team_id": "128456",
+      "team": "Great Lakes Christian Crusaders",
+      "rating": -9.22,
+      "points": 41.0,
+      "allowed": 124.0,
+      "games": 1,
+      "rank": 657
+    },
+    {
+      "team_id": "191",
+      "team": "Heidelberg Student Princes",
+      "rating": -9.22,
+      "points": 34.0,
+      "allowed": 117.0,
+      "games": 1,
+      "rank": 658
+    },
+    {
+      "team_id": "2330",
+      "team": "Le Moyne Dolphins",
+      "rating": -9.23,
+      "points": 56.32,
+      "allowed": 66.33,
+      "games": 95,
+      "rank": 659
+    },
+    {
+      "team_id": "2454",
+      "team": "North Florida Ospreys",
+      "rating": -9.25,
+      "points": 61.21,
+      "allowed": 71.09,
+      "games": 117,
+      "rank": 660
+    },
+    {
+      "team_id": "126798",
+      "team": "Miami (OH)-Hamilton Harriers",
+      "rating": -9.27,
+      "points": 60.33,
+      "allowed": 94.33,
+      "games": 3,
+      "rank": 661
+    },
+    {
+      "team_id": "2115",
+      "team": "Central Connecticut Blue Devils",
+      "rating": -9.29,
+      "points": 57.46,
+      "allowed": 67.38,
+      "games": 118,
+      "rank": 662
+    },
+    {
+      "team_id": "109676",
+      "team": "Emerson College Lions",
+      "rating": -9.33,
+      "points": 27.0,
+      "allowed": 111.0,
+      "games": 1,
+      "rank": 663
+    },
+    {
+      "team_id": "128450",
+      "team": "Kansas Christian Falcons",
+      "rating": -9.33,
+      "points": 37.0,
+      "allowed": 121.0,
+      "games": 1,
+      "rank": 664
+    },
+    {
+      "team_id": "2148",
+      "team": "Concord Mountain Lions",
+      "rating": -9.36,
+      "points": 48.33,
+      "allowed": 82.67,
+      "games": 3,
+      "rank": 665
+    },
+    {
+      "team_id": "128567",
+      "team": "Arcadia Knights",
+      "rating": -9.4,
+      "points": 38.5,
+      "allowed": 85.5,
+      "games": 2,
+      "rank": 666
+    },
+    {
+      "team_id": "3182",
+      "team": "Cal State San Marcos Cougars",
+      "rating": -9.42,
+      "points": 45.5,
+      "allowed": 73.75,
+      "games": 4,
+      "rank": 667
+    },
+    {
+      "team_id": "130215",
+      "team": "Stanton Elks",
+      "rating": -9.44,
+      "points": 39.0,
+      "allowed": 124.0,
+      "games": 1,
+      "rank": 668
+    },
+    {
+      "team_id": "350",
+      "team": "UNC Wilmington Seahawks",
+      "rating": -9.5,
+      "points": 57.57,
+      "allowed": 67.72,
+      "games": 117,
+      "rank": 669
+    },
+    {
+      "team_id": "112702",
+      "team": "Frostburg State Bobcats",
+      "rating": -9.67,
+      "points": 50.5,
+      "allowed": 79.5,
+      "games": 4,
+      "rank": 670
+    },
+    {
+      "team_id": "2911",
+      "team": "William Jewell Cardinals",
+      "rating": -9.7,
+      "points": 33.5,
+      "allowed": 82.0,
+      "games": 2,
+      "rank": 671
+    },
+    {
+      "team_id": "2127",
+      "team": "Charleston Southern Buccaneers",
+      "rating": -9.78,
+      "points": 58.31,
+      "allowed": 68.75,
+      "games": 119,
+      "rank": 672
+    },
+    {
+      "team_id": "2437",
+      "team": "Omaha Mavericks",
+      "rating": -9.79,
+      "points": 64.88,
+      "allowed": 75.29,
+      "games": 127,
+      "rank": 673
+    },
+    {
+      "team_id": "315",
+      "team": "Niagara Purple Eagles",
+      "rating": -9.79,
+      "points": 61.86,
+      "allowed": 72.29,
+      "games": 123,
+      "rank": 674
+    },
+    {
+      "team_id": "2384",
+      "team": "Mercy Mavericks",
+      "rating": -9.85,
+      "points": 42.6,
+      "allowed": 68.2,
+      "games": 5,
+      "rank": 675
+    },
+    {
+      "team_id": "3149",
+      "team": "Farmingdale State Rams",
+      "rating": -9.89,
+      "points": 24.0,
+      "allowed": 113.0,
+      "games": 1,
+      "rank": 676
+    },
+    {
+      "team_id": "484",
+      "team": "Alice Lloyd College Eagles",
+      "rating": -9.9,
+      "points": 50.0,
+      "allowed": 99.5,
+      "games": 2,
+      "rank": 677
+    },
+    {
+      "team_id": "590",
+      "team": "Oklahoma Wesleyan Eagles",
+      "rating": -9.9,
+      "points": 49.5,
+      "allowed": 99.0,
+      "games": 2,
+      "rank": 678
+    },
+    {
+      "team_id": "179",
+      "team": "St. Bonaventure Bonnies",
+      "rating": -9.96,
+      "points": 55.54,
+      "allowed": 66.14,
+      "games": 125,
+      "rank": 679
+    },
+    {
+      "team_id": "121698",
+      "team": "Chestnut Hill Griffins",
+      "rating": -10.0,
+      "points": 44.67,
+      "allowed": 81.33,
+      "games": 3,
+      "rank": 680
+    },
+    {
+      "team_id": "2235",
+      "team": "Fresno Pacific Sunbirds",
+      "rating": -10.0,
+      "points": 43.75,
+      "allowed": 73.75,
+      "games": 4,
+      "rank": 681
+    },
+    {
+      "team_id": "3159",
+      "team": "College of Idaho Yotes",
+      "rating": -10.09,
+      "points": 42.33,
+      "allowed": 79.33,
+      "games": 3,
+      "rank": 682
+    },
+    {
+      "team_id": "128474",
+      "team": "Johnson Royals",
+      "rating": -10.09,
+      "points": 51.67,
+      "allowed": 88.67,
+      "games": 3,
+      "rank": 683
+    },
+    {
+      "team_id": "108827",
+      "team": "Blue Mountain Christian Toppers",
+      "rating": -10.1,
+      "points": 49.5,
+      "allowed": 100.0,
+      "games": 2,
+      "rank": 684
+    },
+    {
+      "team_id": "2528",
+      "team": "Rensselaer Engineers",
+      "rating": -10.1,
+      "points": 42.5,
+      "allowed": 93.0,
+      "games": 2,
+      "rank": 685
+    },
+    {
+      "team_id": "109246",
+      "team": "Sarah Lawrence Gryphons",
+      "rating": -10.11,
+      "points": 27.0,
+      "allowed": 118.0,
+      "games": 1,
+      "rank": 686
+    },
+    {
+      "team_id": "44",
+      "team": "American University Eagles",
+      "rating": -10.12,
+      "points": 57.18,
+      "allowed": 67.97,
+      "games": 121,
+      "rank": 687
+    },
+    {
+      "team_id": "110394",
+      "team": "Whittier Poets",
+      "rating": -10.18,
+      "points": 43.33,
+      "allowed": 80.67,
+      "games": 3,
+      "rank": 688
+    },
+    {
+      "team_id": "2934",
+      "team": "Cal State Bakersfield Roadrunners",
+      "rating": -10.2,
+      "points": 55.41,
+      "allowed": 66.28,
+      "games": 120,
+      "rank": 689
+    },
+    {
+      "team_id": "408",
+      "team": "Washington Adventist Shock",
+      "rating": -10.23,
+      "points": 54.2,
+      "allowed": 80.8,
+      "games": 5,
+      "rank": 690
+    },
+    {
+      "team_id": "2443",
+      "team": "New Orleans Privateers",
+      "rating": -10.27,
+      "points": 61.29,
+      "allowed": 72.27,
+      "games": 116,
+      "rank": 691
+    },
+    {
+      "team_id": "128733",
+      "team": "Bryant & Stratton Bobcats",
+      "rating": -10.3,
+      "points": 49.0,
+      "allowed": 100.5,
+      "games": 2,
+      "rank": 692
+    },
+    {
+      "team_id": "2463",
+      "team": "Cal State Northridge Matadors",
+      "rating": -10.32,
+      "points": 58.46,
+      "allowed": 69.47,
+      "games": 120,
+      "rank": 693
+    },
+    {
+      "team_id": "2937",
+      "team": "Dallas Christian Crusaders",
+      "rating": -10.4,
+      "points": 40.0,
+      "allowed": 92.0,
+      "games": 2,
+      "rank": 694
+    },
+    {
+      "team_id": "2592",
+      "team": "St. Andrews Knights",
+      "rating": -10.4,
+      "points": 29.0,
+      "allowed": 81.0,
+      "games": 2,
+      "rank": 695
+    },
+    {
+      "team_id": "2610",
+      "team": "St. Mary's (TX) Rattlers",
+      "rating": -10.43,
+      "points": 39.33,
+      "allowed": 63.67,
+      "games": 6,
+      "rank": 696
+    },
+    {
+      "team_id": "2157",
+      "team": "Covenant Fighting Scots",
+      "rating": -10.44,
+      "points": 41.0,
+      "allowed": 135.0,
+      "games": 1,
+      "rank": 697
+    },
+    {
+      "team_id": "2917",
+      "team": "LeMoyne-Owen Magicians",
+      "rating": -10.5,
+      "points": 42.0,
+      "allowed": 94.5,
+      "games": 2,
+      "rank": 698
+    },
+    {
+      "team_id": "2396",
+      "team": "Miles Golden Bears",
+      "rating": -10.58,
+      "points": 49.25,
+      "allowed": 81.0,
+      "games": 4,
+      "rank": 699
+    },
+    {
+      "team_id": "2369",
+      "team": "Mars Hill Mountain Lions",
+      "rating": -10.6,
+      "points": 42.0,
+      "allowed": 95.0,
+      "games": 2,
+      "rank": 700
+    },
+    {
+      "team_id": "2213",
+      "team": "Emory & Henry Wasps",
+      "rating": -10.62,
+      "points": 43.4,
+      "allowed": 71.0,
+      "games": 5,
+      "rank": 701
+    },
+    {
+      "team_id": "2863",
+      "team": "Cal State Monterey Bay Otters",
+      "rating": -10.82,
+      "points": 45.33,
+      "allowed": 85.0,
+      "games": 3,
+      "rank": 702
+    },
+    {
+      "team_id": "2834",
+      "team": "Sul Ross State Lobos",
+      "rating": -10.82,
+      "points": 51.67,
+      "allowed": 91.33,
+      "games": 3,
+      "rank": 703
+    },
+    {
+      "team_id": "2551",
+      "team": "Shaw Bears",
+      "rating": -10.91,
+      "points": 44.33,
+      "allowed": 84.33,
+      "games": 3,
+      "rank": 704
+    },
+    {
+      "team_id": "2645",
+      "team": "Thomas (GA) Night Hawks",
+      "rating": -11.0,
+      "points": 41.0,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 705
+    },
+    {
+      "team_id": "2169",
+      "team": "Delaware State Hornets",
+      "rating": -11.05,
+      "points": 54.25,
+      "allowed": 66.11,
+      "games": 110,
+      "rank": 706
+    },
+    {
+      "team_id": "2424",
+      "team": "New Mexico Highlands Cowboys",
+      "rating": -11.08,
+      "points": 48.4,
+      "allowed": 77.2,
+      "games": 5,
+      "rank": 707
+    },
+    {
+      "team_id": "2677",
+      "team": "Viterbo V-Hawks",
+      "rating": -11.1,
+      "points": 40.5,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 708
+    },
+    {
+      "team_id": "2612",
+      "team": "Saint Peter's Peacocks",
+      "rating": -11.17,
+      "points": 51.41,
+      "allowed": 63.34,
+      "games": 119,
+      "rank": 709
+    },
+    {
+      "team_id": "111194",
+      "team": "Johnson & Wales (RI) Griffins",
+      "rating": -11.2,
+      "points": 41.0,
+      "allowed": 97.0,
+      "games": 2,
+      "rank": 710
+    },
+    {
+      "team_id": "121702",
+      "team": "Midway Eagles",
+      "rating": -11.27,
+      "points": 58.0,
+      "allowed": 99.33,
+      "games": 3,
+      "rank": 711
+    },
+    {
+      "team_id": "2023",
+      "team": "Anderson (IN) Ravens",
+      "rating": -11.3,
+      "points": 46.5,
+      "allowed": 103.0,
+      "games": 2,
+      "rank": 712
+    },
+    {
+      "team_id": "613",
+      "team": "South Dakota Mines Hardrockers",
+      "rating": -11.36,
+      "points": 43.33,
+      "allowed": 85.0,
+      "games": 3,
+      "rank": 713
+    },
+    {
+      "team_id": "2349",
+      "team": "UMass Lowell River Hawks",
+      "rating": -11.39,
+      "points": 51.98,
+      "allowed": 64.18,
+      "games": 113,
+      "rank": 714
+    },
+    {
+      "team_id": "3136",
+      "team": "Academy of Art Urban Knights",
+      "rating": -11.4,
+      "points": 39.0,
+      "allowed": 96.0,
+      "games": 2,
+      "rank": 715
+    },
+    {
+      "team_id": "339",
+      "team": "Evansville Purple Aces",
+      "rating": -11.44,
+      "points": 64.04,
+      "allowed": 76.21,
+      "games": 126,
+      "rank": 716
+    },
+    {
+      "team_id": "111205",
+      "team": "William Peace Pacers",
+      "rating": -11.5,
+      "points": 44.5,
+      "allowed": 102.0,
+      "games": 2,
+      "rank": 717
+    },
+    {
+      "team_id": "2019",
+      "team": "Allen Yellow Jackets",
+      "rating": -11.55,
+      "points": 52.67,
+      "allowed": 95.0,
+      "games": 3,
+      "rank": 718
+    },
+    {
+      "team_id": "2595",
+      "team": "St. Francis (IL) Fighting Saints",
+      "rating": -11.62,
+      "points": 54.0,
+      "allowed": 84.2,
+      "games": 5,
+      "rank": 719
+    },
+    {
+      "team_id": "241",
+      "team": "McMurry War Hawks",
+      "rating": -11.67,
+      "points": 55.0,
+      "allowed": 90.0,
+      "games": 4,
+      "rank": 720
+    },
+    {
+      "team_id": "91",
+      "team": "Bellarmine Knights",
+      "rating": -11.69,
+      "points": 62.29,
+      "allowed": 74.74,
+      "games": 123,
+      "rank": 721
+    },
+    {
+      "team_id": "546",
+      "team": "Judson Eagles",
+      "rating": -11.7,
+      "points": 31.0,
+      "allowed": 89.5,
+      "games": 2,
+      "rank": 722
+    },
+    {
+      "team_id": "110398",
+      "team": "Maine Fort Kent Bengals",
+      "rating": -11.7,
+      "points": 34.0,
+      "allowed": 92.5,
+      "games": 2,
+      "rank": 723
+    },
+    {
+      "team_id": "2841",
+      "team": "Union (KY) Bulldogs",
+      "rating": -11.7,
+      "points": 45.5,
+      "allowed": 104.0,
+      "games": 2,
+      "rank": 724
+    },
+    {
+      "team_id": "131682",
+      "team": "Dean Bulldogs",
+      "rating": -11.78,
+      "points": 31.0,
+      "allowed": 137.0,
+      "games": 1,
+      "rank": 725
+    },
+    {
+      "team_id": "2071",
+      "team": "Bloomsburg Huskies",
+      "rating": -11.86,
+      "points": 53.67,
+      "allowed": 81.33,
+      "games": 6,
+      "rank": 726
+    },
+    {
+      "team_id": "2104",
+      "team": "Carroll (MT) Fighting Saints",
+      "rating": -12.0,
+      "points": 44.0,
+      "allowed": 88.0,
+      "games": 3,
+      "rank": 727
+    },
+    {
+      "team_id": "437",
+      "team": "Lake Erie Storm",
+      "rating": -12.0,
+      "points": 29.5,
+      "allowed": 89.5,
+      "games": 2,
+      "rank": 728
+    },
+    {
+      "team_id": "126757",
+      "team": "Simmons (KY) Falcons",
+      "rating": -12.0,
+      "points": 41.33,
+      "allowed": 85.33,
+      "games": 3,
+      "rank": 729
+    },
+    {
+      "team_id": "2752",
+      "team": "Xavier Musketeers",
+      "rating": -12.06,
+      "points": 53.89,
+      "allowed": 66.76,
+      "games": 119,
+      "rank": 730
+    },
+    {
+      "team_id": "387",
+      "team": "IU Southeast Grenadiers",
+      "rating": -12.09,
+      "points": 45.67,
+      "allowed": 90.0,
+      "games": 3,
+      "rank": 731
+    },
+    {
+      "team_id": "2094",
+      "team": "Cal Lutheran Kingsmen",
+      "rating": -12.17,
+      "points": 49.5,
+      "allowed": 86.0,
+      "games": 4,
+      "rank": 732
+    },
+    {
+      "team_id": "124762",
+      "team": "Bryn Athyn Lions",
+      "rating": -12.2,
+      "points": 39.5,
+      "allowed": 100.5,
+      "games": 2,
+      "rank": 733
+    },
+    {
+      "team_id": "111195",
+      "team": "Fisher College Eagles",
+      "rating": -12.2,
+      "points": 26.0,
+      "allowed": 87.0,
+      "games": 2,
+      "rank": 734
+    },
+    {
+      "team_id": "2047",
+      "team": "Averett Cougars",
+      "rating": -12.3,
+      "points": 39.0,
+      "allowed": 100.5,
+      "games": 2,
+      "rank": 735
+    },
+    {
+      "team_id": "2674",
+      "team": "Valparaiso Beacons",
+      "rating": -12.36,
+      "points": 60.41,
+      "allowed": 73.59,
+      "games": 120,
+      "rank": 736
+    },
+    {
+      "team_id": "2444",
+      "team": "Newberry Wolves",
+      "rating": -12.36,
+      "points": 37.67,
+      "allowed": 83.0,
+      "games": 3,
+      "rank": 737
+    },
+    {
+      "team_id": "2476",
+      "team": "Oglethorpe Stormy Petrels",
+      "rating": -12.4,
+      "points": 48.5,
+      "allowed": 110.5,
+      "games": 2,
+      "rank": 738
+    },
+    {
+      "team_id": "122210",
+      "team": "Texas A&M-Texarkana Eagles",
+      "rating": -12.4,
+      "points": 50.43,
+      "allowed": 77.0,
+      "games": 7,
+      "rank": 739
+    },
+    {
+      "team_id": "2547",
+      "team": "Seattle U Redhawks",
+      "rating": -12.4,
+      "points": 60.56,
+      "allowed": 73.81,
+      "games": 118,
+      "rank": 740
+    },
+    {
+      "team_id": "130174",
+      "team": "Texas A&M-San Antonio Jaguars",
+      "rating": -12.45,
+      "points": 56.0,
+      "allowed": 101.67,
+      "games": 3,
+      "rank": 741
+    },
+    {
+      "team_id": "316",
+      "team": "Dickinson State Blue Hawks",
+      "rating": -12.58,
+      "points": 51.75,
+      "allowed": 89.5,
+      "games": 4,
+      "rank": 742
+    },
+    {
+      "team_id": "2590",
+      "team": "Spring Hill Badgers",
+      "rating": -12.58,
+      "points": 42.5,
+      "allowed": 80.25,
+      "games": 4,
+      "rank": 743
+    },
+    {
+      "team_id": "224",
+      "team": "Westminster (UT) Griffins",
+      "rating": -12.6,
+      "points": 48.29,
+      "allowed": 75.29,
+      "games": 7,
+      "rank": 744
+    },
+    {
+      "team_id": "125218",
+      "team": "Campbellsville-Harrodsburg Pioneers",
+      "rating": -12.6,
+      "points": 34.5,
+      "allowed": 97.5,
+      "games": 2,
+      "rank": 745
+    },
+    {
+      "team_id": "552",
+      "team": "Madonna Crusaders",
+      "rating": -12.6,
+      "points": 45.0,
+      "allowed": 108.0,
+      "games": 2,
+      "rank": 746
+    },
+    {
+      "team_id": "111961",
+      "team": "Westcliff Warriors",
+      "rating": -12.67,
+      "points": 37.5,
+      "allowed": 75.5,
+      "games": 4,
+      "rank": 747
+    },
+    {
+      "team_id": "2274",
+      "team": "Hiram Terriers",
+      "rating": -12.8,
+      "points": 37.0,
+      "allowed": 101.0,
+      "games": 2,
+      "rank": 748
+    },
+    {
+      "team_id": "131775",
+      "team": "St. Joseph's Brooklyn Bears",
+      "rating": -12.8,
+      "points": 40.0,
+      "allowed": 104.0,
+      "games": 2,
+      "rank": 749
+    },
+    {
+      "team_id": "2211",
+      "team": "Emmanuel (MA) Lions",
+      "rating": -13.0,
+      "points": 46.25,
+      "allowed": 85.25,
+      "games": 4,
+      "rank": 750
+    },
+    {
+      "team_id": "130137",
+      "team": "IU Columbus Crimson Pride",
+      "rating": -13.18,
+      "points": 46.0,
+      "allowed": 94.33,
+      "games": 3,
+      "rank": 751
+    },
+    {
+      "team_id": "498",
+      "team": "UC Santa Cruz Banana Slugs",
+      "rating": -13.18,
+      "points": 34.33,
+      "allowed": 82.67,
+      "games": 3,
+      "rank": 752
+    },
+    {
+      "team_id": "2683",
+      "team": "Warner University Royals",
+      "rating": -13.29,
+      "points": 50.5,
+      "allowed": 81.5,
+      "games": 6,
+      "rank": 753
+    },
+    {
+      "team_id": "124763",
+      "team": "Lancaster Bible College",
+      "rating": -13.3,
+      "points": 32.5,
+      "allowed": 99.0,
+      "games": 2,
+      "rank": 754
+    },
+    {
+      "team_id": "3185",
+      "team": "UC Merced Bobcats",
+      "rating": -13.33,
+      "points": 46.75,
+      "allowed": 86.75,
+      "games": 4,
+      "rank": 755
+    },
+    {
+      "team_id": "110442",
+      "team": "IU East IU EAST",
+      "rating": -13.36,
+      "points": 44.33,
+      "allowed": 93.33,
+      "games": 3,
+      "rank": 756
+    },
+    {
+      "team_id": "2560",
+      "team": "Shorter Hawks",
+      "rating": -13.36,
+      "points": 39.33,
+      "allowed": 88.33,
+      "games": 3,
+      "rank": 757
+    },
+    {
+      "team_id": "7994",
+      "team": "Wilmington (DE) Wildcats",
+      "rating": -13.36,
+      "points": 38.33,
+      "allowed": 87.33,
+      "games": 3,
+      "rank": 758
+    },
+    {
+      "team_id": "2842",
+      "team": "UVA Wise Cavaliers",
+      "rating": -13.38,
+      "points": 50.0,
+      "allowed": 84.8,
+      "games": 5,
+      "rank": 759
+    },
+    {
+      "team_id": "3078",
+      "team": "Jessup Warriors",
+      "rating": -13.46,
+      "points": 39.4,
+      "allowed": 74.4,
+      "games": 5,
+      "rank": 760
+    },
+    {
+      "team_id": "2598",
+      "team": "Saint Francis Red Flash",
+      "rating": -13.48,
+      "points": 53.77,
+      "allowed": 68.16,
+      "games": 119,
+      "rank": 761
+    },
+    {
+      "team_id": "5793",
+      "team": "Defiance Yellow Jackets",
+      "rating": -13.5,
+      "points": 39.5,
+      "allowed": 107.0,
+      "games": 2,
+      "rank": 762
+    },
+    {
+      "team_id": "2281",
+      "team": "Huston Tillotson Rams",
+      "rating": -13.5,
+      "points": 50.0,
+      "allowed": 90.5,
+      "games": 4,
+      "rank": 763
+    },
+    {
+      "team_id": "2940",
+      "team": "Livingstone Blue Bears",
+      "rating": -13.54,
+      "points": 49.0,
+      "allowed": 84.2,
+      "games": 5,
+      "rank": 764
+    },
+    {
+      "team_id": "2822",
+      "team": "North Greenville Crusaders",
+      "rating": -13.55,
+      "points": 33.67,
+      "allowed": 83.33,
+      "games": 3,
+      "rank": 765
+    },
+    {
+      "team_id": "2011",
+      "team": "Alabama State Lady Hornets",
+      "rating": -13.55,
+      "points": 55.73,
+      "allowed": 70.17,
+      "games": 121,
+      "rank": 766
+    },
+    {
+      "team_id": "328",
+      "team": "Utah State Aggies",
+      "rating": -13.6,
+      "points": 59.63,
+      "allowed": 74.14,
+      "games": 119,
+      "rank": 767
+    },
+    {
+      "team_id": "2161",
+      "team": "Cumberland (TN) Bulldogs",
+      "rating": -13.62,
+      "points": 51.6,
+      "allowed": 87.0,
+      "games": 5,
+      "rank": 768
+    },
+    {
+      "team_id": "112102",
+      "team": "Columbia (SC) Koalas",
+      "rating": -13.75,
+      "points": 45.0,
+      "allowed": 86.25,
+      "games": 4,
+      "rank": 769
+    },
+    {
+      "team_id": "533",
+      "team": "Hannibal-LaGrange College Trojans",
+      "rating": -13.8,
+      "points": 29.5,
+      "allowed": 98.5,
+      "games": 2,
+      "rank": 770
+    },
+    {
+      "team_id": "130263",
+      "team": "Mississippi U for Women Owls",
+      "rating": -13.82,
+      "points": 50.67,
+      "allowed": 101.33,
+      "games": 3,
+      "rank": 771
+    },
+    {
+      "team_id": "2904",
+      "team": "Nelson (TX) Lions",
+      "rating": -13.83,
+      "points": 52.5,
+      "allowed": 94.0,
+      "games": 4,
+      "rank": 772
+    },
+    {
+      "team_id": "128307",
+      "team": "Lehman Lightning",
+      "rating": -13.9,
+      "points": 22.5,
+      "allowed": 92.0,
+      "games": 2,
+      "rank": 773
+    },
+    {
+      "team_id": "15252",
+      "team": "Columbia (MO) Cougars",
+      "rating": -13.91,
+      "points": 34.67,
+      "allowed": 85.67,
+      "games": 3,
+      "rank": 774
+    },
+    {
+      "team_id": "2820",
+      "team": "New Jersey City NEW JERSEY CITY",
+      "rating": -13.92,
+      "points": 50.4,
+      "allowed": 86.6,
+      "games": 5,
+      "rank": 775
+    },
+    {
+      "team_id": "3158",
+      "team": "Our Lady Of The Lake Saints",
+      "rating": -13.92,
+      "points": 40.6,
+      "allowed": 76.8,
+      "games": 5,
+      "rank": 776
+    },
+    {
+      "team_id": "130129",
+      "team": "Clinton Golden Bears",
+      "rating": -14.0,
+      "points": 41.25,
+      "allowed": 83.25,
+      "games": 4,
+      "rank": 777
+    },
+    {
+      "team_id": "2930",
+      "team": "Willamette Bearcats",
+      "rating": -14.0,
+      "points": 47.75,
+      "allowed": 89.75,
+      "games": 4,
+      "rank": 778
+    },
+    {
+      "team_id": "111200",
+      "team": "Bellevue University Bruins",
+      "rating": -14.08,
+      "points": 46.6,
+      "allowed": 83.2,
+      "games": 5,
+      "rank": 779
+    },
+    {
+      "team_id": "2625",
+      "team": "Talladega Tornadoes",
+      "rating": -14.17,
+      "points": 41.25,
+      "allowed": 83.75,
+      "games": 4,
+      "rank": 780
+    },
+    {
+      "team_id": "2318",
+      "team": "La Verne Leopards",
+      "rating": -14.18,
+      "points": 58.67,
+      "allowed": 110.67,
+      "games": 3,
+      "rank": 781
+    },
+    {
+      "team_id": "123387",
+      "team": "Benedictine Mesa Redhawks",
+      "rating": -14.23,
+      "points": 54.8,
+      "allowed": 91.8,
+      "games": 5,
+      "rank": 782
+    },
+    {
+      "team_id": "3106",
+      "team": "Corban Warriors",
+      "rating": -14.33,
+      "points": 45.0,
+      "allowed": 88.0,
+      "games": 4,
+      "rank": 783
+    },
+    {
+      "team_id": "215",
+      "team": "Slippery Rock The Rock",
+      "rating": -14.5,
+      "points": 43.25,
+      "allowed": 86.75,
+      "games": 4,
+      "rank": 784
+    },
+    {
+      "team_id": "109716",
+      "team": "Notre Dame (MD) Gators",
+      "rating": -14.55,
+      "points": 36.33,
+      "allowed": 89.67,
+      "games": 3,
+      "rank": 785
+    },
+    {
+      "team_id": "2703",
+      "team": "Western New Mexico Mustangs",
+      "rating": -14.69,
+      "points": 51.62,
+      "allowed": 81.0,
+      "games": 8,
+      "rank": 786
+    },
+    {
+      "team_id": "2726",
+      "team": "Wilberforce Bulldogs",
+      "rating": -14.69,
+      "points": 53.2,
+      "allowed": 91.4,
+      "games": 5,
+      "rank": 787
+    },
+    {
+      "team_id": "2632",
+      "team": "Tennessee Wesleyan Bulldogs",
+      "rating": -14.75,
+      "points": 48.0,
+      "allowed": 92.25,
+      "games": 4,
+      "rank": 788
+    },
+    {
+      "team_id": "2498",
+      "team": "Pittsburgh-Johnstown Mountain Cats",
+      "rating": -15.08,
+      "points": 42.0,
+      "allowed": 81.2,
+      "games": 5,
+      "rank": 789
+    },
+    {
+      "team_id": "111214",
+      "team": "Westminster (MO) Blue Jays",
+      "rating": -15.09,
+      "points": 48.0,
+      "allowed": 103.33,
+      "games": 3,
+      "rank": 790
+    },
+    {
+      "team_id": "2637",
+      "team": "Texas College Steers",
+      "rating": -15.17,
+      "points": 54.75,
+      "allowed": 100.25,
+      "games": 4,
+      "rank": 791
+    },
+    {
+      "team_id": "2327",
+      "team": "Lees McRae Bobcats",
+      "rating": -15.21,
+      "points": 46.33,
+      "allowed": 81.83,
+      "games": 6,
+      "rank": 792
+    },
+    {
+      "team_id": "2757",
+      "team": "Berry Vikings",
+      "rating": -15.31,
+      "points": 41.8,
+      "allowed": 81.6,
+      "games": 5,
+      "rank": 793
+    },
+    {
+      "team_id": "116335",
+      "team": "Life University Running Eagles",
+      "rating": -15.33,
+      "points": 46.71,
+      "allowed": 79.57,
+      "games": 7,
+      "rank": 794
+    },
+    {
+      "team_id": "3188",
+      "team": "Arizona Christian Firestorm",
+      "rating": -15.36,
+      "points": 48.67,
+      "allowed": 105.0,
+      "games": 3,
+      "rank": 795
+    },
+    {
+      "team_id": "126834",
+      "team": "Lincoln (CA) Oaklanders",
+      "rating": -15.36,
+      "points": 43.0,
+      "allowed": 99.33,
+      "games": 3,
+      "rank": 796
+    },
+    {
+      "team_id": "2410",
+      "team": "Montreat Cavaliers",
+      "rating": -15.4,
+      "points": 44.57,
+      "allowed": 77.57,
+      "games": 7,
+      "rank": 797
+    },
+    {
+      "team_id": "509",
+      "team": "Crown Storm",
+      "rating": -15.5,
+      "points": 28.0,
+      "allowed": 105.5,
+      "games": 2,
+      "rank": 798
+    },
+    {
+      "team_id": "109542",
+      "team": "Colby Sawyer Chargers",
+      "rating": -15.64,
+      "points": 34.33,
+      "allowed": 91.67,
+      "games": 3,
+      "rank": 799
+    },
+    {
+      "team_id": "3083",
+      "team": "Oakwood Ambassadors",
+      "rating": -15.67,
+      "points": 52.0,
+      "allowed": 99.0,
+      "games": 4,
+      "rank": 800
+    },
+    {
+      "team_id": "190",
+      "team": "Defiance Yellow Jackets",
+      "rating": -15.7,
+      "points": 30.5,
+      "allowed": 109.0,
+      "games": 2,
+      "rank": 801
+    },
+    {
+      "team_id": "111956",
+      "team": "Meredith College Avenging Angels",
+      "rating": -15.7,
+      "points": 28.0,
+      "allowed": 106.5,
+      "games": 2,
+      "rank": 802
+    },
+    {
+      "team_id": "2176",
+      "team": "Dillard Blue Devils",
+      "rating": -15.71,
+      "points": 45.67,
+      "allowed": 82.33,
+      "games": 6,
+      "rank": 803
+    },
+    {
+      "team_id": "123310",
+      "team": "North American Stallions",
+      "rating": -15.71,
+      "points": 58.0,
+      "allowed": 94.67,
+      "games": 6,
+      "rank": 804
+    },
+    {
+      "team_id": "106392",
+      "team": "Warner Pacific Knights",
+      "rating": -15.86,
+      "points": 46.0,
+      "allowed": 83.0,
+      "games": 6,
+      "rank": 805
+    },
+    {
+      "team_id": "2855",
+      "team": "Brescia Bearcats",
+      "rating": -16.0,
+      "points": 47.0,
+      "allowed": 95.0,
+      "games": 4,
+      "rank": 806
+    },
+    {
+      "team_id": "128568",
+      "team": "Cleary University Cougars",
+      "rating": -16.08,
+      "points": 47.4,
+      "allowed": 89.2,
+      "games": 5,
+      "rank": 807
+    },
+    {
+      "team_id": "2691",
+      "team": "Webber International Warriors",
+      "rating": -16.09,
+      "points": 39.0,
+      "allowed": 98.0,
+      "games": 3,
+      "rank": 808
+    },
+    {
+      "team_id": "2130",
+      "team": "Chicago State Cougars",
+      "rating": -16.24,
+      "points": 60.79,
+      "allowed": 78.13,
+      "games": 118,
+      "rank": 809
+    },
+    {
+      "team_id": "2310",
+      "team": "Kentucky State Thorobreds",
+      "rating": -16.38,
+      "points": 48.0,
+      "allowed": 90.6,
+      "games": 5,
+      "rank": 810
+    },
+    {
+      "team_id": "123",
+      "team": "Aquinas Saints",
+      "rating": -16.45,
+      "points": 38.33,
+      "allowed": 98.67,
+      "games": 3,
+      "rank": 811
+    },
+    {
+      "team_id": "2650",
+      "team": "Tougaloo Bulldogs",
+      "rating": -16.46,
+      "points": 44.0,
+      "allowed": 86.8,
+      "games": 5,
+      "rank": 812
+    },
+    {
+      "team_id": "2258",
+      "team": "Guilford Quakers",
+      "rating": -16.5,
+      "points": 50.75,
+      "allowed": 100.25,
+      "games": 4,
+      "rank": 813
+    },
+    {
+      "team_id": "126755",
+      "team": "Old Westbury Panthers",
+      "rating": -16.5,
+      "points": 24.5,
+      "allowed": 107.0,
+      "games": 2,
+      "rank": 814
+    },
+    {
+      "team_id": "108834",
+      "team": "Ohio Christian Trailblazers",
+      "rating": -16.55,
+      "points": 40.0,
+      "allowed": 100.67,
+      "games": 3,
+      "rank": 815
+    },
+    {
+      "team_id": "2304",
+      "team": "Johnson C. Smith Golden Bulls",
+      "rating": -16.6,
+      "points": 48.86,
+      "allowed": 84.43,
+      "games": 7,
+      "rank": 816
+    },
+    {
+      "team_id": "3152",
+      "team": "Walla Walla Wolves",
+      "rating": -16.85,
+      "points": 41.2,
+      "allowed": 85.0,
+      "games": 5,
+      "rank": 817
+    },
+    {
+      "team_id": "2299",
+      "team": "Jarvis Christian Bulldogs",
+      "rating": -16.93,
+      "points": 53.83,
+      "allowed": 93.33,
+      "games": 6,
+      "rank": 818
+    },
+    {
+      "team_id": "109704",
+      "team": "Coastal Georgia Mariner",
+      "rating": -17.0,
+      "points": 54.4,
+      "allowed": 98.6,
+      "games": 5,
+      "rank": 819
+    },
+    {
+      "team_id": "108867",
+      "team": "Gwynedd Mercy Griffins",
+      "rating": -17.09,
+      "points": 32.67,
+      "allowed": 95.33,
+      "games": 3,
+      "rank": 820
+    },
+    {
+      "team_id": "411",
+      "team": "Chapman Panthers",
+      "rating": -17.15,
+      "points": 36.2,
+      "allowed": 80.8,
+      "games": 5,
+      "rank": 821
+    },
+    {
+      "team_id": "124954",
+      "team": "Randolph Wildcats",
+      "rating": -17.18,
+      "points": 36.67,
+      "allowed": 99.67,
+      "games": 3,
+      "rank": 822
+    },
+    {
+      "team_id": "2129",
+      "team": "Cheyney (PA) Wolves",
+      "rating": -17.23,
+      "points": 41.2,
+      "allowed": 86.0,
+      "games": 5,
+      "rank": 823
+    },
+    {
+      "team_id": "110402",
+      "team": "Central Christian College Tigers",
+      "rating": -17.4,
+      "points": 33.0,
+      "allowed": 120.0,
+      "games": 2,
+      "rank": 824
+    },
+    {
+      "team_id": "3154",
+      "team": "Southwest Mustangs",
+      "rating": -17.58,
+      "points": 37.5,
+      "allowed": 90.25,
+      "games": 4,
+      "rank": 825
+    },
+    {
+      "team_id": "2123",
+      "team": "Chadron State Eagles",
+      "rating": -17.83,
+      "points": 36.25,
+      "allowed": 89.75,
+      "games": 4,
+      "rank": 826
+    },
+    {
+      "team_id": "123311",
+      "team": "Champion Christian Tigers",
+      "rating": -17.87,
+      "points": 46.57,
+      "allowed": 84.86,
+      "games": 7,
+      "rank": 827
+    },
+    {
+      "team_id": "42",
+      "team": "Hartford Hawks",
+      "rating": -18.0,
+      "points": 47.04,
+      "allowed": 70.18,
+      "games": 28,
+      "rank": 828
+    },
+    {
+      "team_id": "2312",
+      "team": "King (TN) Tornado",
+      "rating": -18.0,
+      "points": 39.14,
+      "allowed": 77.71,
+      "games": 7,
+      "rank": 829
+    },
+    {
+      "team_id": "110419",
+      "team": "Georgian Court Lions",
+      "rating": -18.2,
+      "points": 40.57,
+      "allowed": 79.57,
+      "games": 7,
+      "rank": 830
+    },
+    {
+      "team_id": "3148",
+      "team": "College of Saint Mary Flames",
+      "rating": -18.23,
+      "points": 45.4,
+      "allowed": 92.8,
+      "games": 5,
+      "rank": 831
+    },
+    {
+      "team_id": "3111",
+      "team": "Apprentice School Builders",
+      "rating": -18.27,
+      "points": 28.33,
+      "allowed": 95.33,
+      "games": 3,
+      "rank": 832
+    },
+    {
+      "team_id": "2400",
+      "team": "Mississippi Valley State Devilettes",
+      "rating": -18.28,
+      "points": 57.54,
+      "allowed": 77.04,
+      "games": 119,
+      "rank": 833
+    },
+    {
+      "team_id": "2569",
+      "team": "South Carolina State Lady Bulldogs",
+      "rating": -18.48,
+      "points": 49.86,
+      "allowed": 69.59,
+      "games": 118,
+      "rank": 834
+    },
+    {
+      "team_id": "3178",
+      "team": "Ave Maria Gyrenes",
+      "rating": -18.67,
+      "points": 36.5,
+      "allowed": 92.5,
+      "games": 4,
+      "rank": 835
+    },
+    {
+      "team_id": "2474",
+      "team": "Oakland City Mighty Oaks",
+      "rating": -18.69,
+      "points": 42.8,
+      "allowed": 91.4,
+      "games": 5,
+      "rank": 836
+    },
+    {
+      "team_id": "3195",
+      "team": "St. Thomas (TX) Celts",
+      "rating": -18.78,
+      "points": 43.9,
+      "allowed": 77.7,
+      "games": 10,
+      "rank": 837
+    },
+    {
+      "team_id": "500",
+      "team": "Cal Maritime Keelhaulers",
+      "rating": -18.91,
+      "points": 33.67,
+      "allowed": 103.0,
+      "games": 3,
+      "rank": 838
+    },
+    {
+      "team_id": "2616",
+      "team": "Stanislaus State Warriors",
+      "rating": -18.93,
+      "points": 49.0,
+      "allowed": 89.57,
+      "games": 7,
+      "rank": 839
+    },
+    {
+      "team_id": "548",
+      "team": "LaGrange Panthers",
+      "rating": -19.0,
+      "points": 45.83,
+      "allowed": 90.17,
+      "games": 6,
+      "rank": 840
+    },
+    {
+      "team_id": "2913",
+      "team": "Brevard Tornados",
+      "rating": -19.46,
+      "points": 38.8,
+      "allowed": 89.4,
+      "games": 5,
+      "rank": 841
+    },
+    {
+      "team_id": "108823",
+      "team": "LSU Alexandria Generals",
+      "rating": -19.64,
+      "points": 39.33,
+      "allowed": 85.17,
+      "games": 6,
+      "rank": 842
+    },
+    {
+      "team_id": "109466",
+      "team": "Haskell Jayhawks",
+      "rating": -19.75,
+      "points": 48.75,
+      "allowed": 108.0,
+      "games": 4,
+      "rank": 843
+    },
+    {
+      "team_id": "2225",
+      "team": "Fisk Bulldogs",
+      "rating": -19.94,
+      "points": 49.8,
+      "allowed": 85.7,
+      "games": 10,
+      "rank": 844
+    },
+    {
+      "team_id": "451",
+      "team": "Converse CONVERSE",
+      "rating": -20.0,
+      "points": 39.6,
+      "allowed": 91.6,
+      "games": 5,
+      "rank": 845
+    },
+    {
+      "team_id": "214",
+      "team": "Point Park Pioneers",
+      "rating": -20.08,
+      "points": 43.8,
+      "allowed": 96.0,
+      "games": 5,
+      "rank": 846
+    },
+    {
+      "team_id": "126864",
+      "team": "Fort Lauderdale Eagles",
+      "rating": -20.18,
+      "points": 34.0,
+      "allowed": 108.0,
+      "games": 3,
+      "rank": 847
+    },
+    {
+      "team_id": "463",
+      "team": "Wesleyan College (GA) Wolves",
+      "rating": -20.27,
+      "points": 28.67,
+      "allowed": 103.0,
+      "games": 3,
+      "rank": 848
+    },
+    {
+      "team_id": "2503",
+      "team": "Puerto Rico-Mayaguez Bulldogs",
+      "rating": -20.71,
+      "points": 35.67,
+      "allowed": 84.0,
+      "games": 6,
+      "rank": 849
+    },
+    {
+      "team_id": "121694",
+      "team": "Johnson University (FL) Suns",
+      "rating": -20.73,
+      "points": 23.0,
+      "allowed": 99.0,
+      "games": 3,
+      "rank": 850
+    },
+    {
+      "team_id": "3141",
+      "team": "Northern New Mexico Eagles",
+      "rating": -21.07,
+      "points": 46.33,
+      "allowed": 95.5,
+      "games": 6,
+      "rank": 851
+    },
+    {
+      "team_id": "2553",
+      "team": "Sewanee Tigers",
+      "rating": -21.08,
+      "points": 47.0,
+      "allowed": 110.25,
+      "games": 4,
+      "rank": 852
+    },
+    {
+      "team_id": "111994",
+      "team": "Life Pacific Warriors",
+      "rating": -21.43,
+      "points": 39.5,
+      "allowed": 89.5,
+      "games": 6,
+      "rank": 853
+    },
+    {
+      "team_id": "3120",
+      "team": "Ecclesia Royals",
+      "rating": -21.45,
+      "points": 28.0,
+      "allowed": 106.67,
+      "games": 3,
+      "rank": 854
+    },
+    {
+      "team_id": "2347",
+      "team": "Louisiana Christian Wildcats",
+      "rating": -21.73,
+      "points": 48.86,
+      "allowed": 95.43,
+      "games": 7,
+      "rank": 855
+    },
+    {
+      "team_id": "2573",
+      "team": "Southern New Orleans Knights",
+      "rating": -22.07,
+      "points": 38.83,
+      "allowed": 90.33,
+      "games": 6,
+      "rank": 856
+    },
+    {
+      "team_id": "495",
+      "team": "Bluefield Ramblin' Rams",
+      "rating": -22.09,
+      "points": 39.67,
+      "allowed": 120.67,
+      "games": 3,
+      "rank": 857
+    },
+    {
+      "team_id": "418",
+      "team": "Hendrix Warriors",
+      "rating": -22.2,
+      "points": 36.86,
+      "allowed": 84.43,
+      "games": 7,
+      "rank": 858
+    },
+    {
+      "team_id": "2576",
+      "team": "Southern Wesleyan Warriors",
+      "rating": -22.26,
+      "points": 46.73,
+      "allowed": 85.18,
+      "games": 11,
+      "rank": 859
+    },
+    {
+      "team_id": "109689",
+      "team": "Mid-Atlantic Christian Mustangs",
+      "rating": -22.27,
+      "points": 28.67,
+      "allowed": 110.33,
+      "games": 3,
+      "rank": 860
+    },
+    {
+      "team_id": "126756",
+      "team": "Carolina University Bruins",
+      "rating": -22.29,
+      "points": 39.83,
+      "allowed": 91.83,
+      "games": 6,
+      "rank": 861
+    },
+    {
+      "team_id": "2945",
+      "team": "Pfeiffer Falcons",
+      "rating": -22.38,
+      "points": 37.0,
+      "allowed": 95.2,
+      "games": 5,
+      "rank": 862
+    },
+    {
+      "team_id": "111960",
+      "team": "La Sierra Golden Eagles",
+      "rating": -22.44,
+      "points": 41.0,
+      "allowed": 85.88,
+      "games": 8,
+      "rank": 863
+    },
+    {
+      "team_id": "2167",
+      "team": "Davis & Elkins Senators",
+      "rating": -22.57,
+      "points": 39.5,
+      "allowed": 92.17,
+      "games": 6,
+      "rank": 864
+    },
+    {
+      "team_id": "108810",
+      "team": "Salem University Tigers",
+      "rating": -22.69,
+      "points": 33.4,
+      "allowed": 92.4,
+      "games": 5,
+      "rank": 865
+    },
+    {
+      "team_id": "109604",
+      "team": "Simpson (CA) Red Hawks",
+      "rating": -22.92,
+      "points": 43.8,
+      "allowed": 103.4,
+      "games": 5,
+      "rank": 866
+    },
+    {
+      "team_id": "116420",
+      "team": "Park University Gilbert Buccaneers",
+      "rating": -22.94,
+      "points": 48.0,
+      "allowed": 93.88,
+      "games": 8,
+      "rank": 867
+    },
+    {
+      "team_id": "2544",
+      "team": "Schreiner Mountaineers",
+      "rating": -23.07,
+      "points": 39.0,
+      "allowed": 88.43,
+      "games": 7,
+      "rank": 868
+    },
+    {
+      "team_id": "2113",
+      "team": "Centenary (LA) Gentlemen",
+      "rating": -23.25,
+      "points": 38.25,
+      "allowed": 108.0,
+      "games": 4,
+      "rank": 869
+    },
+    {
+      "team_id": "109019",
+      "team": "Johnson & Wales-Charlotte Wildcats",
+      "rating": -23.67,
+      "points": 48.14,
+      "allowed": 98.86,
+      "games": 7,
+      "rank": 870
+    },
+    {
+      "team_id": "2728",
+      "team": "Wiley Wildcats",
+      "rating": -23.67,
+      "points": 46.71,
+      "allowed": 97.43,
+      "games": 7,
+      "rank": 871
+    },
+    {
+      "team_id": "2866",
+      "team": "Evergreen State Geoducks",
+      "rating": -24.2,
+      "points": 41.57,
+      "allowed": 93.43,
+      "games": 7,
+      "rank": 872
+    },
+    {
+      "team_id": "2027",
+      "team": "Arkansas Baptist Buffaloes",
+      "rating": -24.95,
+      "points": 45.5,
+      "allowed": 87.08,
+      "games": 12,
+      "rank": 873
+    },
+    {
+      "team_id": "123546",
+      "team": "UNT Dallas Trailblazers",
+      "rating": -25.15,
+      "points": 44.58,
+      "allowed": 86.5,
+      "games": 12,
+      "rank": 874
+    },
+    {
+      "team_id": "2758",
+      "team": "Howard Payne Yellow Jackets",
+      "rating": -25.71,
+      "points": 38.17,
+      "allowed": 98.17,
+      "games": 6,
+      "rank": 875
+    },
+    {
+      "team_id": "2326",
+      "team": "LeTourneau Yellow Jackets",
+      "rating": -25.93,
+      "points": 35.33,
+      "allowed": 95.83,
+      "games": 6,
+      "rank": 876
+    },
+    {
+      "team_id": "534",
+      "team": "Harris Stowe State Hornets",
+      "rating": -26.0,
+      "points": 42.0,
+      "allowed": 97.71,
+      "games": 7,
+      "rank": 877
+    },
+    {
+      "team_id": "286",
+      "team": "North Carolina Wesleyan Battling Bishops",
+      "rating": -26.13,
+      "points": 41.14,
+      "allowed": 97.14,
+      "games": 7,
+      "rank": 878
+    },
+    {
+      "team_id": "458",
+      "team": "Agnes Scott AGNES SCOTT",
+      "rating": -26.75,
+      "points": 33.0,
+      "allowed": 113.25,
+      "games": 4,
+      "rank": 879
+    },
+    {
+      "team_id": "2215",
+      "team": "Erskine Flying Fleet",
+      "rating": -27.79,
+      "points": 40.0,
+      "allowed": 88.0,
+      "games": 11,
+      "rank": 880
+    },
+    {
+      "team_id": "2684",
+      "team": "Warren Wilson Owls",
+      "rating": -28.14,
+      "points": 36.83,
+      "allowed": 102.5,
+      "games": 6,
+      "rank": 881
+    },
+    {
+      "team_id": "3174",
+      "team": "Trinity Baptist Eagles",
+      "rating": -28.62,
+      "points": 39.0,
+      "allowed": 113.4,
+      "games": 5,
+      "rank": 882
+    },
+    {
+      "team_id": "109546",
+      "team": "Bob Jones Bruins",
+      "rating": -29.08,
+      "points": 36.4,
+      "allowed": 112.0,
+      "games": 5,
+      "rank": 883
+    },
+    {
+      "team_id": "3079",
+      "team": "Central Baptist Mustangs",
+      "rating": -29.62,
+      "points": 38.38,
+      "allowed": 97.62,
+      "games": 8,
+      "rank": 884
+    },
+    {
+      "team_id": "121697",
+      "team": "Florida National Conquistadors",
+      "rating": -30.85,
+      "points": 31.2,
+      "allowed": 111.4,
+      "games": 5,
+      "rank": 885
+    },
+    {
+      "team_id": "3166",
+      "team": "Arlington Baptist Patriots",
+      "rating": -31.31,
+      "points": 37.75,
+      "allowed": 100.38,
+      "games": 8,
+      "rank": 886
+    },
+    {
+      "team_id": "128658",
+      "team": "College of Biblical Studies Ambassadors",
+      "rating": -33.38,
+      "points": 33.6,
+      "allowed": 120.4,
+      "games": 5,
+      "rank": 887
+    },
+    {
+      "team_id": "108878",
+      "team": "Bethesda Flames",
+      "rating": -37.89,
+      "points": 37.45,
+      "allowed": 102.91,
+      "games": 11,
+      "rank": 888
+    },
+    {
+      "team_id": "3229",
+      "team": "Virginia Lynchburg Dragons",
+      "rating": -39.63,
+      "points": 37.18,
+      "allowed": 105.64,
+      "games": 11,
+      "rank": 889
     }
   ],
   "receipts": {
