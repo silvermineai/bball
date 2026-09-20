@@ -50,6 +50,7 @@ export default function NCAAIndividual() {
   const [division, setDivision] = useState<NCAADivisionFilter>(initial.division);
   const [stat, setStat] = useState<NCAAStatKey>(initial.stat);
   const [query, setQuery] = useState(initial.query);
+  const [minGames, setMinGames] = useState(initial.minGames);
   const [page, setPage] = useState(0);
   const [copied, setCopied] = useState("");
   const [live, setLive] = useState<{ rows: NCAAIndividualPlayer[]; total: number; provenance?: LiveLeaderResponse["provenance"] } | null>(null);
@@ -74,7 +75,7 @@ export default function NCAAIndividual() {
     return () => controller.abort();
   }, [retryNonce]);
   useEffect(() => {
-    const next = ncaaFilterSearch({ division, stat, query });
+    const next = ncaaFilterSearch({ division, stat, query, minGames });
     if (next !== window.location.search) {
       window.history.replaceState(
         window.history.state,
@@ -84,10 +85,11 @@ export default function NCAAIndividual() {
     }
     setPage(0);
     setCopied("");
-  }, [division, stat, query]);
+  }, [division, stat, query, minGames]);
   const staticRows = sortNCAAPlayers(
     (data?.players || []).filter((p) =>
       (division === "all" || p.division === +division) &&
+      (minGames === 0 || (p.games != null && p.games >= minGames)) &&
       `${p.name} ${p.team_name || ""} ${p.conference || ""}`.toLowerCase().includes(query.toLowerCase()),
     ),
     stat,
@@ -99,7 +101,7 @@ export default function NCAAIndividual() {
       return;
     }
     const controller = new AbortController();
-    const params = new URLSearchParams({ division, stat, page: String(page) });
+    const params = new URLSearchParams({ division, stat, min_games: String(minGames), page: String(page) });
     if (query.trim()) params.set("q", query.trim());
     setLive(null);
     setLiveError("");
@@ -119,7 +121,7 @@ export default function NCAAIndividual() {
         }
       });
     return () => controller.abort();
-  }, [division, page, query, retryNonce, stat]);
+  }, [division, minGames, page, query, retryNonce, stat]);
   const rows = live?.rows || staticRows;
   const totalRows = live?.total ?? staticRows.length;
   const pageRows = live ? rows : rows.slice(page * 40, page * 40 + 40);
@@ -141,7 +143,7 @@ export default function NCAAIndividual() {
         const totalPages = Math.ceil(totalRows / PAGE_SIZE);
         if (totalPages > 1001) throw new Error("This cohort exceeds the bounded export window. Search for a player or program first.");
         for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
-          const params = new URLSearchParams({ division, stat, page: String(requestedPage) });
+          const params = new URLSearchParams({ division, stat, min_games: String(minGames), page: String(requestedPage) });
           if (query.trim()) params.set("q", query.trim());
           const response = await fetch(`/api/basketball/research/ncaa-leaders?${params}`);
           if (!response.ok) throw new Error("The complete national leaderboard could not be loaded.");
@@ -198,6 +200,7 @@ export default function NCAAIndividual() {
       <div className="toolbar">
         <label className="control"><span>DIVISION</span><select name="ncaa-leader-division" value={division} onChange={(e) => setDivision(e.target.value as NCAADivisionFilter)}><option value="1">Division I</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">All divisions</option></select></label>
         <label className="control"><span>LEADERBOARD</span><select name="ncaa-leader-stat" value={stat} onChange={(e) => setStat(e.target.value as NCAAStatKey)}>{stats.map((key) => <option key={key} value={key}>{ncaaStatLabels[key]}</option>)}</select></label>
+        <label className="control"><span>MINIMUM GAMES</span><select name="ncaa-leader-min-games" value={minGames} onChange={(e) => setMinGames(Number(e.target.value))}>{[0, 5, 10, 15, 20].map((games) => <option value={games} key={games}>{games ? `${games}+ games` : "Any recorded games"}</option>)}</select></label>
         <label className="control"><span>PLAYER OR PROGRAM</span><input name="ncaa-leader-search" autoComplete="off" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search national records…" /></label>
         <button className="button secondary" type="button" onClick={share}>Copy leaderboard link</button>
       </div>

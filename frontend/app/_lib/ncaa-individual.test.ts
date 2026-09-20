@@ -101,6 +101,7 @@ describe("NCAA individual leader sorting", () => {
       division: "2",
       stat: "three_fgm",
       query: "Jordan Smith",
+      minGames: 0,
     });
     expect(ncaaFilterSearch(filters)).toBe(
       "?division=2&stat=three_fgm&q=Jordan+Smith",
@@ -112,8 +113,16 @@ describe("NCAA individual leader sorting", () => {
       division: "1",
       stat: "ppg",
       query: "",
+      minGames: 0,
     });
-    expect(ncaaFilterSearch({ division: "1", stat: "ppg", query: "" })).toBe("");
+    expect(ncaaFilterSearch({ division: "1", stat: "ppg", query: "", minGames: 0 })).toBe("");
+  });
+
+  it("round-trips a minimum games floor without changing the default", () => {
+    const filters = parseNCAAFilters("?minGames=15");
+    expect(filters.minGames).toBe(15);
+    expect(ncaaFilterSearch(filters)).toBe("?minGames=15");
+    expect(parseNCAAFilters("?minGames=99").minGames).toBe(0);
   });
 
   it("only reports rank fields that the source actually publishes", () => {

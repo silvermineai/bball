@@ -62,7 +62,7 @@ export type LiveLeader = {
   payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null }) | null;
 };
 
-export type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number };
+export type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number; min_games?: number };
 
 export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | null {
   const payload = row.payload || {};
@@ -147,12 +147,13 @@ export function bundledNationalLeaderRows(
   metric: NationalLeaderMetric,
   query: string,
   division: NationalLeaderDivision = "1",
+  minGames = 0,
 ): RankedPlayer[] {
   // The server-rendered bundle is a D1 PPG snapshot. Never use it as a
   // substitute for a lower-division or all-division live request.
   if (metric !== "ppg" || query.trim() || division !== "1") return [];
   return initialPlayers
-    .filter((player) => player.division === 1)
+    .filter((player) => player.division === 1 && (minGames === 0 || (player.games != null && player.games >= minGames)))
     .map((player) => ({ ...player, leader_rank: player.ppg_rank }));
 }
 
@@ -161,10 +162,12 @@ export function resolveNationalLeaderResponse(
   metric: NationalLeaderMetric,
   query: string,
   division: NationalLeaderDivision = "1",
+  minGames = 0,
 ) {
   const rows = (payload.rows || []).flatMap((raw, index) => {
     const row = normalizeNationalLeader(raw);
     if (!row || (division !== "all" && String(row.division) !== division)) return [];
+    if (minGames > 0 && (row.games == null || row.games < minGames)) return [];
     return [{ ...row, leader_rank: division === "all" ? index + 1 : metricRank(raw, metric) ?? index + 1 }];
   }).slice(0, 40);
   const responseTotal = Number(payload.total);
@@ -188,9 +191,10 @@ export default function LiveNationalPlayerTable({
 }) {
   const [metric, setMetric] = useState<NationalLeaderMetric>("ppg");
   const [division, setDivision] = useState<NationalLeaderDivision>("1");
+  const [minGames, setMinGames] = useState(0);
   const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 40>(10);
-  const [players, setPlayers] = useState<RankedPlayer[]>(() => bundledNationalLeaderRows(initialPlayers, "ppg", "", "1"));
+  const [players, setPlayers] = useState<RankedPlayer[]>(() => bundledNationalLeaderRows(initialPlayers, "ppg", "", "1", 0));
   const [totalRows, setTotalRows] = useState(initialPlayers.filter((player) => player.division === 1).length);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -205,7 +209,6 @@ export default function LiveNationalPlayerTable({
       nationalLeaderCsvRows(players.slice(0, rowLimit), metric),
     ));
   };
-  const normalizeRows = (rawRows: LiveLeader[], selected: NationalLeaderMetric) => resolveNationalLeaderResponse({ rows: rawRows }, selected, "", division).rows;
   const downloadAllCsv = async () => {
     if (exporting) return;
     setExporting(true);
@@ -216,7 +219,7 @@ export default function LiveNationalPlayerTable({
       let pages = Math.max(1, Math.ceil(total / 40));
       let expectedPageSize = 40;
       for (let page = 0; page < pages; page += 1) {
-        const params = new URLSearchParams({ division, stat: metric, page: String(page) });
+        const params = new URLSearchParams({ division, stat: metric, min_games: String(minGames), page: String(page) });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`);
         if (!response.ok) throw new Error("The complete national leaderboard could not be loaded.");
@@ -235,7 +238,7 @@ export default function LiveNationalPlayerTable({
         } else if (pageTotal !== total || pageCount !== pages || pageSize !== expectedPageSize) {
           throw new Error("The national leaderboard changed during export.");
         }
-        const pageRows = normalizeRows(payload.rows || [], metric);
+        const pageRows = resolveNationalLeaderResponse(payload, metric, query, division, minGames).rows;
         if (pageRows.length > pageSize || (page < pages - 1 && pageRows.length === 0)) {
           throw new Error("The national leaderboard returned an incomplete page.");
         }
@@ -259,9 +262,9 @@ export default function LiveNationalPlayerTable({
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    const fallbackRows = bundledNationalLeaderRows(initialPlayers, metric, query, division);
+    const fallbackRows = bundledNationalLeaderRows(initialPlayers, metric, query, division, minGames);
     setPlayers(fallbackRows);
-    const params = new URLSearchParams({ division, stat: metric, page: "0" });
+    const params = new URLSearchParams({ division, stat: metric, min_games: String(minGames), page: "0" });
     if (query.trim()) params.set("q", query.trim());
     fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`, { signal: controller.signal })
       .then((response) => {
@@ -270,7 +273,7 @@ export default function LiveNationalPlayerTable({
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        const resolved = resolveNationalLeaderResponse(payload, metric, query, division);
+        const resolved = resolveNationalLeaderResponse(payload, metric, query, division, minGames);
         setTotalRows(resolved.total);
         setPlayers(resolved.rows);
         setError(resolved.emptyMessage);
@@ -289,7 +292,7 @@ export default function LiveNationalPlayerTable({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [initialPlayers, metric, query, division, scopeLabel]);
+  }, [initialPlayers, metric, query, division, minGames, scopeLabel]);
 
   const pct = (value: number | null) => value == null ? "—" : `${fmt(value)}%`;
   const perGame = (value: number | null | undefined, games: number | null) => value == null || games == null || games <= 0 ? null : value / games;
@@ -309,6 +312,12 @@ export default function LiveNationalPlayerTable({
           <span>LEADERBOARD FIELD</span>
           <select value={metric} onChange={(event) => setMetric(event.target.value as NationalLeaderMetric)}>
             {leaderMetrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label}</option>)}
+          </select>
+        </label>
+        <label className="control">
+          <span>MINIMUM GAMES</span>
+          <select value={minGames} onChange={(event) => setMinGames(Number(event.target.value))}>
+            {[0, 5, 10, 15, 20].map((games) => <option value={games} key={games}>{games ? `${games}+ games` : "Any recorded games"}</option>)}
           </select>
         </label>
         <label className="control">

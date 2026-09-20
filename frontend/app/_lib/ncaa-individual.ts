@@ -176,6 +176,7 @@ export type NCAAFilters = {
   division: NCAADivisionFilter;
   stat: NCAAStatKey;
   query: string;
+  minGames: number;
 };
 
 const ncaaDivisions = new Set<NCAADivisionFilter>(["1", "2", "3", "all"]);
@@ -185,10 +186,12 @@ export function parseNCAAFilters(search: string): NCAAFilters {
   const params = new URLSearchParams(search);
   const division = params.get("division") as NCAADivisionFilter | null;
   const stat = params.get("stat") as NCAAStatKey | null;
+  const minGames = Number(params.get("minGames") || 0);
   return {
     division: division && ncaaDivisions.has(division) ? division : "1",
     stat: stat && stat in ncaaStatLabels ? stat : "ppg",
     query: params.get("q") || "",
+    minGames: Number.isInteger(minGames) && minGames >= 0 && minGames <= 50 ? minGames : 0,
   };
 }
 
@@ -198,6 +201,7 @@ export function ncaaFilterSearch(filters: NCAAFilters) {
   if (filters.division !== "1") params.set("division", filters.division);
   if (filters.stat !== "ppg") params.set("stat", filters.stat);
   if (filters.query) params.set("q", filters.query);
+  if (filters.minGames > 0) params.set("minGames", String(filters.minGames));
   const query = params.toString();
   return query ? `?${query}` : "";
 }

@@ -934,6 +934,7 @@ describe("bball api", () => {
     for (const path of [
       "/api/basketball/research/ncaa-leaders?division=4",
       "/api/basketball/research/ncaa-leaders?stat=per",
+      "/api/basketball/research/ncaa-leaders?min_games=51",
       "/api/basketball/research/ncaa-leaders?page=-1",
     ]) {
       expect((await app.request(path, {}, {})).status).toBe(400);
@@ -1022,6 +1023,33 @@ describe("bball api", () => {
       provenance: { kind: "publisher_snapshot_with_exact_id_fill", publisher_rank: true },
       rows: [{ publisher_rank: 7, rpg: 12.5 }],
     });
+  });
+
+  it("applies the source games floor inside the national leaderboard query", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "42",
+            division: 1,
+            name: "Full Season Player",
+            team_name: "Example U",
+            stat_value: 18.2,
+            publisher_rank: 3,
+            total_count: 1,
+            payload_json: JSON.stringify({ games: 20, ppg: 18.2 }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=ppg&division=1&min_games=10",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ min_games: 10, total: 1, rows: [{ ppg: 18.2 }] });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(payload_json, '$.games')"));
   });
 
   it("labels D2 publisher rows without claiming that only D1 is available", async () => {

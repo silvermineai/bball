@@ -1029,6 +1029,7 @@ app.get(
 const ncaaLeaderQuery = z.object({
   division: z.enum(["1", "2", "3", "all"]).default("1"),
   stat: z.enum(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]).default("ppg"),
+  min_games: z.coerce.number().int().min(0).max(50).default(0),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(0).max(100).default(0),
   meta: z.enum(["0", "1"]).default("0"),
@@ -1046,7 +1047,7 @@ function withNCAALeaderTimeout<T>(promise: Promise<T>, milliseconds: number): Pr
 
 app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
   const db = researchDb(c.env);
-  const { division, stat, q, page, meta } = c.req.valid("query");
+  const { division, stat, min_games, q, page, meta } = c.req.valid("query");
   const cache = typeof caches === "undefined"
     ? null
     : (caches as unknown as { default: Cache }).default;
@@ -1118,7 +1119,9 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const where = division === "all" ? "season=?" : "season=? AND division=?";
   const binds: Array<string | number> = division === "all" ? [2026] : [2026, Number(division)];
   const search = q?.trim();
+  const gamesSql = min_games > 0 ? " AND CAST(json_extract(payload_json, '$.games') AS REAL) >= ?" : "";
   const searchSql = search ? " AND (name LIKE ? OR team_name LIKE ? OR payload_json LIKE ?)" : "";
+  if (min_games > 0) binds.push(min_games);
   if (search) binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
   const columnStat = new Set(["ppg", "rpg", "apg", "mpg"]).has(stat);
   const value = columnStat ? stat : `json_extract(payload_json, '$.${stat}')`;
@@ -1128,7 +1131,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const publisherRankColumn = stat === "apg" || stat === "ast" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
   const order = `${value} IS NULL, ${value} DESC, name, player_id`;
   try {
-  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
+  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${gamesSql}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
   const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
   // The NCAA snapshot has explicit publisher rows for all three divisions.
   // Only the supplemental box-score calculation is D1-scoped: the public
@@ -1163,7 +1166,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       publisher_rank: true,
     };
   const total = rows.results.length ? Number((rows.results[0] as Record<string, unknown>).total_count || 0) : 0;
-  const response = c.json({ season: 2026, division, stat, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => {
+  const response = c.json({ season: 2026, division, stat, min_games, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => {
     let payload: Record<string, unknown> = {};
     try {
       const parsed = JSON.parse(String(row.payload_json));

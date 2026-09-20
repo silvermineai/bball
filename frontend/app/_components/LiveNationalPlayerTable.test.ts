@@ -112,4 +112,16 @@ describe("live national player normalization", () => {
     expect(bundledNationalLeaderRows(initial, "ppg", "", "2")).toEqual([]);
     expect(bundledNationalLeaderRows(initial, "ppg", "", "all")).toEqual([]);
   });
+
+  it("keeps short samples out when a minimum games floor is selected", () => {
+    const initial = [
+      normalizeNationalLeader({ player_id: "short", division: 1, name: "Short Sample", ppg: 30, payload: { games: 2 } })!,
+      normalizeNationalLeader({ player_id: "full", division: 1, name: "Full Sample", ppg: 20, payload: { games: 20 } })!,
+    ];
+    expect(bundledNationalLeaderRows(initial, "ppg", "", "1", 10).map((row) => row.player_id)).toEqual(["full"]);
+    expect(resolveNationalLeaderResponse({ total: 2, rows: [
+      { player_id: "short", division: 1, name: "Short Sample", ppg: 30, payload: { games: 2 } },
+      { player_id: "full", division: 1, name: "Full Sample", ppg: 20, payload: { games: 20 } },
+    ] }, "ppg", "", "1", 10).rows.map((row) => row.player_id)).toEqual(["full"]);
+  });
 });
