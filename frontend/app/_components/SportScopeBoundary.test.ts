@@ -15,4 +15,9 @@ describe("sport scope boundary", () => {
     expect(isPublishedBoundary("football", { gender: "men", division: "2" }, "/football/players/")).toBe(true);
     expect(isPublishedBoundary("football", { gender: "men", division: "1" }, "/football/players/")).toBe(false);
   });
+
+  it("keeps retained lower-division football schedules visible", () => {
+    expect(isPublishedBoundary("football", { gender: "men", division: "2" }, "/football/matchups/")).toBe(false);
+    expect(isPublishedBoundary("football", { gender: "men", division: "3" }, "/football/matchups/")).toBe(false);
+  });
 });

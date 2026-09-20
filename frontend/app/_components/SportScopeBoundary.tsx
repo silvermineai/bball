@@ -18,9 +18,19 @@ const BASKETBALL_DIVISION_ARCHIVES = [
   "/basketball/ncaa-team-box",
 ];
 
+// Football lower-division schedules are retained and filtered by the matchup
+// desk. Other lower-division football surfaces remain fail-closed until their
+// player/team releases are published.
+const FOOTBALL_DIVISION_ARCHIVES = [
+  "/football/matchups",
+];
+
 export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pathname: string) {
   if (scope.gender === "women") return true;
-  if (sport === "football") return scope.division !== "1";
+  if (sport === "football") {
+    if (scope.division === "1") return false;
+    return !FOOTBALL_DIVISION_ARCHIVES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  }
   if (scope.division === "1") return false;
   return !BASKETBALL_DIVISION_ARCHIVES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
