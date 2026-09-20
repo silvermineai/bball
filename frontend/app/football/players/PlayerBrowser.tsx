@@ -14,11 +14,14 @@ import {
   footballPlayerFilterSearch,
   footballPlayerSorts,
   parseFootballPlayerFilters,
+  parseFootballPlayerScope,
   productionForCategory,
   type FootballPlayerCategory,
   type FootballPlayerDivision,
   type FootballPlayerSort,
 } from "../../_lib/football-player-view";
+import ScopeUnavailable from "../../_components/ScopeUnavailable";
+import { footballScopeAvailable, type SportScope } from "../../_lib/sport-scope";
 type Production = {
   games?: number | null;
   plays: number | null;
@@ -71,10 +74,13 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0),
     [copied, setCopied] = useState(""),
-    [hydrated, setHydrated] = useState(false);
+    [hydrated, setHydrated] = useState(false),
+    [scope, setScope] = useState<SportScope | null>(null);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const eventDataset = footballEventDataset(category);
   useEffect(() => {
+    const requestedScope = parseFootballPlayerScope(window.location.search);
+    setScope(requestedScope);
     const parsed = parseFootballPlayerFilters(
       window.location.search,
       catalog.seasons.map((s) => s.season),
@@ -89,7 +95,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     setHydrated(true);
   }, [catalog]);
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !scope || !footballScopeAvailable(scope)) return;
     const url = new URL(window.location.href);
     url.search = footballPlayerFilterSearch({
       season,
@@ -101,11 +107,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       page,
     });
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, season, category, division, sort, query, qualified, page]);
+  }, [hydrated, scope, season, category, division, sort, query, qualified, page]);
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
     setError("");
+    if (!scope || !footballScopeAvailable(scope)) return () => controller.abort();
     if (eventDataset) {
       setData(null);
       return;
@@ -129,7 +136,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [season, retry, catalog, eventDataset]);
+  }, [season, retry, catalog, eventDataset, scope]);
   const rows = (data?.season === +season ? data.players : []).filter(
     (p) =>
       (p.name + " " + p.team + " " + p.conference)
@@ -156,6 +163,8 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     return (bv ?? 0) - (av ?? 0) || a.name.localeCompare(b.name);
   });
   const minimum = data?.rankings[category]?.minimum_plays;
+  if (!scope) return <p className="empty" role="status">Reading the requested football player scope…</p>;
+  if (!footballScopeAvailable(scope)) return <ScopeUnavailable sport="football" scope={scope} />;
   const exportRow = (p: Player) => {
     const selected = productionForCategory(p, category), s = selected?.stats;
     const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;

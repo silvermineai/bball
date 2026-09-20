@@ -4,6 +4,7 @@ import {
   footballPlayerFilterSearch,
   hasRankedProduction,
   parseFootballPlayerFilters,
+  parseFootballPlayerScope,
   productionForCategory,
   type FootballPlayerProduction,
 } from "./football-player-view";
@@ -28,6 +29,14 @@ const row = (rank: number | null, plays: number): FootballPlayerProduction => ({
       touchdowns: 2,
     },
   },
+});
+
+describe("football player index scope boundary", () => {
+  it("reads shared gender and D1/D2/D3 scope before native FBS controls", () => {
+    expect(parseFootballPlayerScope("?gender=women&division=3")).toEqual({ gender: "women", division: "3" });
+    expect(parseFootballPlayerScope("?gender=men&division=1")).toEqual({ gender: "men", division: "1" });
+    expect(parseFootballPlayerScope("?division=all")).toEqual({ gender: "men", division: "1" });
+  });
 });
 
 describe("football player index category selection", () => {

@@ -25,6 +25,17 @@ export const footballPlayerCategories = [
 ] as const;
 export type FootballPlayerCategory = (typeof footballPlayerCategories)[number];
 export type FootballPlayerDivision = "fbs" | "all";
+
+/** Read the shared sport-desk scope before native FBS/FCS controls are applied. */
+export function parseFootballPlayerScope(search: string) {
+  const params = new URLSearchParams(search);
+  const gender = params.get("gender");
+  const division = params.get("division");
+  return {
+    gender: gender === "women" ? "women" : "men",
+    division: division === "2" || division === "3" ? division : "1",
+  } as const;
+}
 export const footballPlayerSorts = ["rank", "epa", "epa_per_play", "yards_per_play", "success_rate", "plays"] as const;
 export type FootballPlayerSort = (typeof footballPlayerSorts)[number];
 
