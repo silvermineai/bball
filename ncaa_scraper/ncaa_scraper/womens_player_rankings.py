@@ -14,12 +14,28 @@ from typing import Any
 MIN_GAMES = 10
 METRICS = {
     "scoring": ("Scoring", "avgPoints", "PPG"),
+    # Keep a volume lens beside the per-game lens.  ``points`` is the
+    # publisher-reported season total, so this does not manufacture a total
+    # from a rounded average.  The retained games denominator stays on every
+    # row for review.
+    "scoring_volume": ("Scoring volume", "points", "PTS"),
     "rebounding": ("Rebounding", "avgRebounds", "RPG"),
     "playmaking": ("Playmaking", "avgAssists", "APG"),
     "steals": ("Steals", "avgSteals", "SPG"),
     "blocks": ("Blocks", "avgBlocks", "BPG"),
     "field_goal": ("Field goal percentage", "fieldGoalPct", "FG%"),
     "three_point": ("Three-point percentage", "threePointFieldGoalPct", "3P%"),
+}
+
+METRIC_DESCRIPTIONS = {
+    "scoring": "Source-reported points per game.",
+    "scoring_volume": "Source-reported season points total; games remain attached as the denominator context.",
+    "rebounding": "Source-reported rebounds per game.",
+    "playmaking": "Source-reported assists per game.",
+    "steals": "Source-reported steals per game.",
+    "blocks": "Source-reported blocks per game.",
+    "field_goal": "Source-reported field-goal percentage.",
+    "three_point": "Source-reported three-point percentage.",
 }
 
 
@@ -61,7 +77,13 @@ def build_rankings(players: list[dict[str, Any]]) -> dict[str, Any]:
         rows.sort(key=lambda row: (-row["value"], row["name"], row["player_id"]))
         for rank, row in enumerate(rows, start=1):
             row["rank"] = rank
-        leaderboards[key] = {"label": label, "stat": stat, "unit": unit, "rows": rows}
+        leaderboards[key] = {
+            "label": label,
+            "stat": stat,
+            "unit": unit,
+            "description": METRIC_DESCRIPTIONS[key],
+            "rows": rows,
+        }
         coverage[key] = {"observed": observed, "qualified": len(rows)}
 
     return {

@@ -32,3 +32,16 @@ def test_qualification_metadata_keeps_source_games_denominator_explicit():
         "schedule_reconciled": False,
     }
     assert result["leaderboards"]["scoring"]["rows"][0]["games"] == 20
+
+
+def test_scoring_volume_uses_publisher_total_and_keeps_games_context():
+    result = build_rankings([
+        player("short", "Short sample", 10, avgPoints=30, points=300),
+        player("durable", "Durable scorer", 20, avgPoints=20, points=400),
+    ])
+    board = result["leaderboards"]["scoring_volume"]
+    assert [row["name"] for row in board["rows"]] == ["Durable scorer", "Short sample"]
+    assert board["rows"][0]["value"] == 400
+    assert board["rows"][0]["games"] == 20
+    assert "season points total" in board["description"]
+    assert result["coverage"]["scoring_volume"] == {"observed": 2, "qualified": 2}
