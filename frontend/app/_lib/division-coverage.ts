@@ -40,7 +40,7 @@ export function divisionCoverage(
     state: recorded.has(surface) ? "recorded" : "unavailable",
     note: recorded.has(surface)
       ? surface === "matches"
-        ? `Retained Division ${division} schedule rows.`
+        ? `Retained Division ${division} schedule rows and completed score results.`
         : surface === "rankings"
           ? `Within-division recorded fields for Division ${division}.`
           : `Validated Division ${division} ${surface} archive rows.`

@@ -16,7 +16,7 @@ describe("division coverage matrix", () => {
     });
   });
 
-  it("records only lower-division football schedule rows", () => {
+  it("records lower-division football schedule and completed result rows", () => {
     const rows = divisionCoverage("football", "men", "3");
     expect(states("football", "men", "3")).toEqual({
       players: "unavailable",
@@ -26,7 +26,7 @@ describe("division coverage matrix", () => {
       predictions: "unavailable",
       recruiting: "unavailable",
     });
-    expect(rows.find((row) => row.surface === "matches")?.note).toContain("schedule rows");
+    expect(rows.find((row) => row.surface === "matches")?.note).toContain("completed score results");
   });
 
   it("does not substitute men’s rows into women’s lower divisions", () => {
