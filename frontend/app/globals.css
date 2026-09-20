@@ -5745,6 +5745,9 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .division-archive-summary { margin-top: 28px; }
 .division-archive-summary h2 { margin: 8px 0 10px; font-size: clamp(1.35rem, 2.8vw, 2rem); }
 .division-archive-summary .scope-snapshot-counts { margin: 18px 0; }
+.division-coverage-matrix { margin-top: 18px; }
+.division-coverage-matrix h3 { margin: 8px 0 10px; }
+.division-coverage-matrix .data-table { margin-top: 12px; }
 .wbb-player-card { margin-top: 28px; }
 .wbb-player-controls { display: grid; grid-template-columns: 140px minmax(0, 1fr) 105px minmax(120px, .45fr); gap: 8px 12px; align-items: center; margin: 18px 0 12px; }
 .wbb-player-controls label { color: var(--muted); font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }

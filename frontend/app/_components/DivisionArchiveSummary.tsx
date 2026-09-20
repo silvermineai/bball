@@ -7,6 +7,7 @@ import {
   type DivisionArchiveSummary as Summary,
   type LowerBasketballDivision,
 } from "../_lib/division-archive-summary";
+import DivisionCoverageMatrix from "./DivisionCoverageMatrix";
 
 const date = (value: string | null) => {
   if (!value) return "capture date unavailable";
@@ -37,6 +38,7 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
     <h2 id="division-archive-summary-title">Published rows for Division {division}</h2>
     <p className="note">This scope has a retained final-season player and team directory. Counts below come from the checked-in release; missing source fields remain unavailable.</p>
     {error ? <p className="status-error" role="alert">{error}</p> : !summary ? <p className="muted" role="status">Loading division archive summary…</p> : <>
+      <DivisionCoverageMatrix sport="basketball" gender="men" division={division} />
       <div className="scope-snapshot-counts" aria-label={`Division ${division} archive counts`}>
         <strong>{summary.players.toLocaleString()}</strong><span>player rows</span>
         <strong>{summary.teams.toLocaleString()}</strong><span>team rows</span>
