@@ -5,6 +5,7 @@ describe("live national player normalization", () => {
   it("uses live fields and fills the display line from the retained payload", () => {
     expect(normalizeNationalLeader({
       player_id: "42",
+      division: 2,
       name: "A Player",
       team_name: "A University",
       ppg: 21.5,
@@ -21,7 +22,7 @@ describe("live national player normalization", () => {
       },
     })).toEqual({
       player_id: "42",
-      division: 1,
+      division: 2,
       name: "A Player",
       team_name: "A University",
       conference: "Big Test",
@@ -45,7 +46,7 @@ describe("live national player normalization", () => {
   });
 
   it("reads a selected rate without losing unavailable fields", () => {
-    const player = normalizeNationalLeader({ player_id: "7", name: "A Center", bpg: 2.4 });
+    const player = normalizeNationalLeader({ player_id: "7", division: 3, name: "A Center", bpg: 2.4 });
     expect(player).not.toBeNull();
     expect(metricValue(player!, "bpg")).toBe(2.4);
     expect(metricValue(player!, "ft_pct")).toBeNull();
@@ -54,6 +55,7 @@ describe("live national player normalization", () => {
   it("exports the visible ranked rows with attached context and selected metric", () => {
     const player = normalizeNationalLeader({
       player_id: "42",
+      division: 1,
       name: "A Player",
       team_name: "A University",
       ppg: 21.5,
@@ -72,6 +74,7 @@ describe("live national player normalization", () => {
   it("uses bundled rows only for the unfiltered default leaderboard", () => {
     const initial = [normalizeNationalLeader({
       player_id: "42",
+      division: 1,
       name: "A Player",
       ppg: 21.5,
       publisher_rank: 2,
@@ -89,5 +92,24 @@ describe("live national player normalization", () => {
       total: 0,
       emptyMessage: "No Division I players match this search and field.",
     });
+  });
+
+  it("preserves exact division and filters rows outside the requested scope", () => {
+    const response = resolveNationalLeaderResponse({
+      total: 2,
+      rows: [
+        { player_id: "d2", division: 2, name: "D2 Player", ppg: 20 },
+        { player_id: "d3", division: 3, name: "D3 Player", ppg: 19 },
+      ],
+    }, "ppg", "", "2");
+    expect(response.rows).toHaveLength(1);
+    expect(response.rows[0]).toEqual(expect.objectContaining({ player_id: "d2", division: 2 }));
+    expect(resolveNationalLeaderResponse({ rows: [{ player_id: "d2", division: 2, name: "D2 Player", ppg: 20 }] }, "ppg", "", "1").rows).toEqual([]);
+  });
+
+  it("does not present the D1 bundle as an all-division or lower-division result", () => {
+    const initial = [normalizeNationalLeader({ player_id: "42", division: 1, name: "A Player", ppg: 21.5 })!];
+    expect(bundledNationalLeaderRows(initial, "ppg", "", "2")).toEqual([]);
+    expect(bundledNationalLeaderRows(initial, "ppg", "", "all")).toEqual([]);
   });
 });
