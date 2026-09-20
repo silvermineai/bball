@@ -48,6 +48,16 @@ type ValueRow = {
   stats_json: string;
 };
 
+type RecruitingRow = {
+  athlete_id: string;
+  rank: number | null;
+  position_rank: number | null;
+  grade: number | null;
+  status: string | null;
+  captured_at: string | null;
+  source_sha256: string | null;
+};
+
 const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
 
@@ -149,7 +159,7 @@ matchupPersonnel.get("/", zValidator("query", querySchema), async (c) => {
     if (!game) return c.json({ error: "Matchup not found for the requested season." }, 404);
 
     const rosterIdentity = `SELECT athlete_id FROM bb_rosters WHERE season=? AND team_id IN (?,?)`;
-    const [rosters, participation, playerStats, playerValues, receipts] = await withTimeout(Promise.all([
+    const [rosters, participation, playerStats, playerValues, receipts, recruiting] = await withTimeout(Promise.all([
       db.prepare(
         "SELECT team_id,athlete_id,profile_json FROM bb_rosters WHERE season=? AND team_id IN (?,?) ORDER BY team_id,athlete_id",
       ).bind(season, game.home_id, game.away_id).all<RosterRow>(),
@@ -175,6 +185,14 @@ matchupPersonnel.get("/", zValidator("query", querySchema), async (c) => {
       db.prepare(
         "SELECT dataset,season,json_extract(receipt_json,'$.fetched_at') AS fetched_at,json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season IN (?,?) AND dataset IN ('rosters','player_box','player_season','publisher_player_value') ORDER BY season,dataset",
       ).bind(priorSeason, season).all(),
+      db.prepare(
+        `SELECT r.athlete_id,r.rank,r.position_rank,r.grade,r.status,r.captured_at,r.source_sha256
+           FROM bb_espn_recruiting r
+           JOIN bb_espn_recruiting_current current_release
+             ON current_release.season=r.season AND current_release.edition=r.edition
+          WHERE r.season=? AND r.athlete_id IN (${rosterIdentity})
+          ORDER BY r.athlete_id`,
+      ).bind(season, season, game.home_id, game.away_id).all<RecruitingRow>(),
     ]), DB_TIMEOUT_MS);
 
     const participationByAthlete = new Map<string, ParticipationRow[]>();
@@ -185,6 +203,7 @@ matchupPersonnel.get("/", zValidator("query", querySchema), async (c) => {
     }
     const statsByAthleteTeam = new Map(playerStats.results.map((row) => [`${row.athlete_id}:${row.team_id}`, object(row.stats_json)]));
     const valueByAthleteTeam = new Map(playerValues.results.map((row) => [`${row.player_id}:${row.team_id}`, object(row.stats_json)]));
+    const recruitingByAthlete = new Map(recruiting.results.map((row) => [row.athlete_id, row]));
     const currentTeamsByAthlete = new Map<string, Set<string>>();
     for (const row of rosters.results) {
       const teams = currentTeamsByAthlete.get(row.athlete_id) || new Set<string>();
@@ -222,6 +241,7 @@ matchupPersonnel.get("/", zValidator("query", querySchema), async (c) => {
       const observedGames = stints.map((stint) => stint.games).filter((value): value is number => value != null);
       const name = profileName(profile) || priorRows.map((prior) => text(prior.name)).find(Boolean) || row.athlete_id;
       if (name.toLowerCase() === "team") return [];
+      const recruitingRow = recruitingByAthlete.get(row.athlete_id);
       return [{
         team_id: row.team_id,
         athlete_id: row.athlete_id,
@@ -230,6 +250,15 @@ matchupPersonnel.get("/", zValidator("query", querySchema), async (c) => {
         class_year: text(profile.experience_display_value),
         height: text(profile.height),
         status,
+        recruiting: recruitingRow ? {
+          season,
+          rank: number(recruitingRow.rank),
+          position_rank: number(recruitingRow.position_rank),
+          grade: number(recruitingRow.grade),
+          status: text(recruitingRow.status),
+          captured_at: text(recruitingRow.captured_at),
+          source_sha256: text(recruitingRow.source_sha256),
+        } : null,
         prior_games: observedGames.length ? observedGames.reduce((sum, value) => sum + value, 0) : null,
         prior_minutes: observedMinutes.length ? Math.round(observedMinutes.reduce((sum, value) => sum + value, 0) * 10) / 10 : null,
         prior_stints: stints,

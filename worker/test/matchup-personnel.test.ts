@@ -27,6 +27,7 @@ function bindings({ missing = false, fail = false } = {}) {
           { team_id: "99", player_id: "20", stats_json: JSON.stringify({ box_bpm: 1.3 }) },
         ] };
         if (sql.includes("FROM bb_sources")) return { results: [{ dataset: "rosters", season: 2027, fetched_at: "2026-09-19T00:00:00Z", sha256: "a".repeat(64) }] };
+        if (sql.includes("FROM bb_espn_recruiting")) return { results: [{ athlete_id: "20", rank: 42, position_rank: 8, grade: 92.5, status: "committed", captured_at: "2026-09-12T00:00:00Z", source_sha256: "b".repeat(64) }] };
         if (sql.startsWith("SELECT team_id,athlete_id,profile_json FROM bb_rosters")) return { results: [
           { team_id: "2132", athlete_id: "10", profile_json: JSON.stringify({ full_name: "Return Guard", position_abbreviation: "G", experience_display_value: "Sr.", height: "6-3" }) },
           { team_id: "44", athlete_id: "20", profile_json: JSON.stringify({ full_name: "Incoming Wing", position_abbreviation: "F" }) },
@@ -47,6 +48,7 @@ describe("matchup personnel", () => {
     expect(body.home.players[0]).toMatchObject({ athlete_id: "10", name: "Return Guard", status: "returning", prior_games: 30, prior_minutes: 900 });
     expect(body.home.players[0].prior_stints[0]).toMatchObject({ team_id: "2132", stats: { ppg: 14.2, rpg: 4.1, field_goals: "5.0-11.0" }, box_bpm: 4.2 });
     expect(body.away.players[0]).toMatchObject({ athlete_id: "20", status: "incoming", prior_stints: [{ team_id: "99", team: "Prior College", games: 25, minutes: 700 }] });
+    expect(body.away.players[0].recruiting).toEqual({ season: 2027, rank: 42, position_rank: 8, grade: 92.5, status: "committed", captured_at: "2026-09-12T00:00:00Z", source_sha256: "b".repeat(64) });
     expect(body.source_receipts[0]).not.toHaveProperty("url");
   });
 

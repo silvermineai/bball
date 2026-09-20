@@ -73,4 +73,19 @@ describe("matchup personnel client", () => {
     expect(parseMatchupPersonnel(withReceipts, { gameId: "401", season: 2027, homeId: "1", awayId: "2" }).source_receipts).toEqual(withReceipts.source_receipts);
     expect(() => parseMatchupPersonnel({ ...withReceipts, source_receipts: [{ ...withReceipts.source_receipts[0], sha256: "not-a-digest" }] }, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
   });
+
+  it("keeps exact-ID recruiting evidence optional but rejects malformed ranks or digests", () => {
+    const withRecruiting = {
+      ...payload(),
+      home: {
+        ...payload().home,
+        players: [{
+          ...payload().home.players[0],
+          recruiting: { season: 2027, rank: 42, position_rank: 8, grade: 92.5, status: "committed", captured_at: "2026-09-12T00:00:00Z", source_sha256: "b".repeat(64) },
+        }],
+      },
+    };
+    expect(parseMatchupPersonnel(withRecruiting, { gameId: "401", season: 2027, homeId: "1", awayId: "2" }).home.players[0].recruiting).toMatchObject({ rank: 42, source_sha256: "b".repeat(64) });
+    expect(() => parseMatchupPersonnel({ ...withRecruiting, home: { ...withRecruiting.home, players: [{ ...withRecruiting.home.players[0], recruiting: { ...withRecruiting.home.players[0].recruiting, rank: 0 } }] } }, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
+  });
 });

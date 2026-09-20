@@ -28,6 +28,13 @@ function receiptClock(value: string | null) {
     : "clock unavailable";
 }
 
+function recruitingEvidenceLabel(evidence: MatchupPersonnelSide["players"][number]["recruiting"]) {
+  if (!evidence) return "No exact recruiting row";
+  const rank = evidence.rank == null ? "rank unavailable" : `#${evidence.rank}`;
+  const positionRank = evidence.position_rank == null ? "position rank unavailable" : `position #${evidence.position_rank}`;
+  return `${rank} · ${positionRank}${evidence.grade == null ? "" : ` · grade ${evidence.grade}`}`;
+}
+
 function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; priorSeason: number }) {
   const rows = matchupPersonnelRows(side);
   const leaders = matchupPersonnelLeaders(side);
@@ -55,11 +62,13 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
       </div>
       <div className="table-scroll">
         <table className="data-table personnel-table">
-          <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>
-          <tbody>{rows.map((row) => (
-            <tr key={row.key}>
+          <thead><tr><th>Player</th><th>Status</th><th>Recruiting row</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>
+          <tbody>{rows.map((row) => {
+            const player = side.players.find((candidate) => candidate.athlete_id === row.athlete_id);
+            return <tr key={row.key}>
               <td><Link href={`/basketball/player/?id=${encodeURIComponent(row.athlete_id)}&season=${priorSeason}`}><strong>{row.player}</strong></Link><small>{row.position || "Position unavailable"} · Profile ID {row.athlete_id}</small><small>FG {row.field_goals || "—"} · 3P {row.three_pointers || "—"} · FT {row.free_throws || "—"}</small></td>
               <td><span className={`personnel-status ${row.status}`}>{personnelStatusLabel(row.status)}</span></td>
+              <td>{recruitingEvidenceLabel(player?.recruiting || null)}<small>{player?.recruiting?.status || "Exact ID not in current recruiting release"}</small>{player?.recruiting && <small>{player.recruiting.source_sha256 ? "Current-edition digest verified" : "Recruiting digest unavailable"}</small>}</td>
               <td>{row.prior_team || <span className="muted">—</span>}</td>
               <td className="numeric">{metric(row.minutes, 0)}</td>
               <td className="numeric">{metric(row.mpg)}</td>
@@ -74,8 +83,8 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
               <td className="numeric">{metric(row.box_bpm)}</td>
               <td className="numeric">{metric(row.box_obpm)}</td>
               <td className="numeric">{metric(row.box_dbpm)}</td>
-            </tr>
-          ))}</tbody>
+            </tr>;
+          })}</tbody>
         </table>
       </div>
     </article>
@@ -140,7 +149,7 @@ export default function MatchupPersonnelPanel({ game }: { game: BBGame }) {
         <PersonnelTable side={personnel.away} priorSeason={personnel.prior_season} />
         <PersonnelTable side={personnel.home} priorSeason={personnel.prior_season} />
       </div>
-      <p className="note personnel-policy">Each prior-team stint remains a separate row. Dashes mean unavailable source evidence; they are never treated as zero.</p>
+      <p className="note personnel-policy">Each prior-team stint remains a separate row. Recruiting rows are joined only by the exact retained athlete ID and current class edition; a missing row does not imply that no recruiting activity occurred. Dashes mean unavailable source evidence; they are never treated as zero.</p>
     </section>
   );
 }

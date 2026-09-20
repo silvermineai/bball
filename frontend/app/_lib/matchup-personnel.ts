@@ -32,9 +32,20 @@ export type MatchupPersonnelPlayer = {
   class_year: string | null;
   height: string | null;
   status: "returning" | "incoming" | "new_to_dataset" | "ambiguous";
+  recruiting: MatchupRecruitingEvidence | null;
   prior_games: number | null;
   prior_minutes: number | null;
   prior_stints: MatchupPersonnelStint[];
+};
+
+export type MatchupRecruitingEvidence = {
+  season: number;
+  rank: number | null;
+  position_rank: number | null;
+  grade: number | null;
+  status: string | null;
+  captured_at: string | null;
+  source_sha256: string | null;
 };
 
 export type MatchupPersonnelSide = {
@@ -164,10 +175,26 @@ function validPlayer(value: unknown): value is MatchupPersonnelPlayer {
     && nullableString(player.height)
     && typeof player.status === "string"
     && statuses.has(player.status)
+    && (player.recruiting == null || validRecruitingEvidence(player.recruiting))
     && nullableNumber(player.prior_games)
     && nullableNumber(player.prior_minutes)
     && Array.isArray(player.prior_stints)
     && player.prior_stints.every(validStint);
+}
+
+function validRecruitingEvidence(value: unknown): value is MatchupRecruitingEvidence {
+  const evidence = record(value);
+  const rank = (candidate: unknown) => candidate == null || (typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0);
+  return !!evidence
+    && typeof evidence.season === "number"
+    && Number.isInteger(evidence.season)
+    && evidence.season >= 2025
+    && rank(evidence.rank)
+    && rank(evidence.position_rank)
+    && (evidence.grade == null || (typeof evidence.grade === "number" && Number.isFinite(evidence.grade)))
+    && (evidence.status == null || typeof evidence.status === "string")
+    && (evidence.captured_at == null || (typeof evidence.captured_at === "string" && Number.isFinite(Date.parse(evidence.captured_at))))
+    && (evidence.source_sha256 == null || (typeof evidence.source_sha256 === "string" && /^[a-f0-9]{64}$/i.test(evidence.source_sha256)));
 }
 
 function validSide(value: unknown, expectedId: string): value is MatchupPersonnelSide {
