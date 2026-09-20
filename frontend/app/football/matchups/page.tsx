@@ -6,6 +6,7 @@ import { getFootballBriefEvidence } from "../../_lib/football-brief-data";
 import { footballSlateIntel } from "../../_lib/football-brief";
 import MatchupBrowser from "./MatchupBrowser";
 import { footballModelFactors } from "../../_lib/football-model-factors";
+import LowerDivisionResults from "./LowerDivisionResults";
 export const metadata = { title: "2026 football matchups and forecasts" };
 export default function Page() {
   const d = getOverview();
@@ -85,6 +86,7 @@ export default function Page() {
           }}
         />
       </Suspense>
+      <LowerDivisionResults />
     </>
   );
 }

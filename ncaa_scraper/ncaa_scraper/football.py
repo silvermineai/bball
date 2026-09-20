@@ -39,6 +39,7 @@ DIVISION_ALIASES = {
     "division iii": "d3",
 }
 SUPPORTED_SCHEDULE_DIVISIONS = frozenset({"fbs", "fcs", "d2", "d3"})
+LOWER_RESULT_DIVISIONS = frozenset({"d2", "d3"})
 
 
 def normalize_division(value):
@@ -296,6 +297,97 @@ def personnel_preview(conn, year: int, limit: int = 12) -> list[dict]:
     ]
 
 
+def lower_division_results(games: list[dict], season: int, generated_at: str) -> dict:
+    """Build a source-native D2/D3 result archive from retained schedule rows.
+
+    This intentionally does not infer player production, ratings, or forecasts.
+    Cross-division games are represented once for each lower division involved;
+    team summaries only credit a team whose exact schedule label matches that
+    division. Games with missing scores remain visible in coverage but cannot
+    affect win/loss or points summaries.
+    """
+    rows: list[dict] = []
+    summaries: dict[str, dict[str, int]] = {}
+    teams: dict[str, dict[str, dict[str, object]]] = {division: {} for division in LOWER_RESULT_DIVISIONS}
+    for division in sorted(LOWER_RESULT_DIVISIONS):
+        summaries[division] = {"games": 0, "score_complete": 0, "scores_missing": 0}
+    for game in games:
+        if game.get("season") != season or not game.get("completed"):
+            continue
+        home_division = normalize_division(game.get("home_division"))
+        away_division = normalize_division(game.get("away_division"))
+        involved = sorted({d for d in (home_division, away_division) if d in LOWER_RESULT_DIVISIONS})
+        if not involved:
+            continue
+        score_complete = game.get("home_score") is not None and game.get("away_score") is not None
+        for division in involved:
+            summaries[division]["games"] += 1
+            summaries[division]["score_complete" if score_complete else "scores_missing"] += 1
+            rows.append({
+                "game_id": str(game["id"]),
+                "kickoff": game["kickoff"],
+                "week": game.get("week"),
+                "scope_division": division,
+                "home_id": str(game["home_id"]),
+                "home_name": game.get("home_name") or str(game["home_id"]),
+                "home_division": home_division,
+                "away_id": str(game["away_id"]),
+                "away_name": game.get("away_name") or str(game["away_id"]),
+                "away_division": away_division,
+                "home_score": game.get("home_score"),
+                "away_score": game.get("away_score"),
+                "neutral": bool(game.get("neutral")),
+                "score_complete": score_complete,
+            })
+            if not score_complete:
+                continue
+            for side in ("home", "away"):
+                if normalize_division(game.get(f"{side}_division")) != division:
+                    continue
+                team_id = str(game[f"{side}_id"])
+                team = teams[division].setdefault(team_id, {
+                    "team_id": team_id,
+                    "team": game.get(f"{side}_name") or team_id,
+                    "division": division,
+                    "games": 0,
+                    "wins": 0,
+                    "losses": 0,
+                    "points_for": 0,
+                    "points_against": 0,
+                })
+                own_score = game[f"{side}_score"]
+                opponent = "away" if side == "home" else "home"
+                opponent_score = game[f"{opponent}_score"]
+                team["games"] += 1
+                team["wins"] += int(own_score > opponent_score)
+                team["losses"] += int(own_score < opponent_score)
+                team["points_for"] += own_score
+                team["points_against"] += opponent_score
+    rows.sort(key=lambda row: (row["kickoff"], row["game_id"], row["scope_division"]), reverse=True)
+    team_rows = {
+        division: sorted(
+            teams[division].values(),
+            key=lambda row: (-int(row["wins"]), -int(row["points_for"]) + int(row["points_against"]), str(row["team"])),
+        )
+        for division in sorted(LOWER_RESULT_DIVISIONS)
+    }
+    return {
+        "schema_version": 1,
+        "sport": "football",
+        "season": season,
+        "generated_at": generated_at,
+        "scope": "D2/D3 completed schedule results",
+        "coverage": summaries,
+        "teams": team_rows,
+        "rows": rows,
+        "limitations": [
+            "Results come from the retained schedule release and are not a player-stat census.",
+            "Rows with missing scores remain visible in coverage and are excluded from team records.",
+            "No lower-division predictions, ratings, or player identities are inferred from these rows.",
+        ],
+    }
+
+
 def build(conn, season=2026):
     now = utcnow()
     # The active forecast edition is a five-season window. Older schedule rows
@@ -439,7 +531,7 @@ def build(conn, season=2026):
     # construct genuinely lagged feature states for its dated holdouts.
     all_games = [dict(r) for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")]
     efficiency_model = build_efficiency_model(conn, all_games, model, upcoming, season)
-    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model}
+    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model, "lower-division-results-" + str(season): lower_division_results(games, season, now)}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
     artifacts[f"personnel-preview-{season}"] = personnel_preview(conn, season)

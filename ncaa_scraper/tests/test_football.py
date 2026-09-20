@@ -11,6 +11,7 @@ from ncaa_scraper.football import (
     normalize_division,
     normalize_game,
     number,
+    lower_division_results,
     personnel_preview,
     store_rows,
 )
@@ -151,6 +152,59 @@ class ImportTests(unittest.TestCase):
         game_row = normalize_game(row)
         self.assertEqual(game_row["home_division"], "d2")
         self.assertEqual(game_row["away_division"], "d3")
+
+    def test_lower_results_are_scoped_and_missing_scores_do_not_change_records(self):
+        rows = [
+            {
+                "id": "complete-cross",
+                "season": 2026,
+                "kickoff": "2026-09-01T00:00:00Z",
+                "home_id": "d2-home",
+                "away_id": "d3-away",
+                "home_name": "D2 Home",
+                "away_name": "D3 Away",
+                "home_division": "d2",
+                "away_division": "iii",
+                "home_score": 21,
+                "away_score": 14,
+                "completed": 1,
+                "neutral": 0,
+            },
+            {
+                "id": "missing-d2",
+                "season": 2026,
+                "kickoff": "2026-09-02T00:00:00Z",
+                "home_id": "d2-home",
+                "away_id": "d2-other",
+                "home_name": "D2 Home",
+                "away_name": "D2 Other",
+                "home_division": "ii",
+                "away_division": "ii",
+                "home_score": None,
+                "away_score": None,
+                "completed": 1,
+                "neutral": 0,
+            },
+            {
+                "id": "future",
+                "season": 2026,
+                "kickoff": "2026-09-03T00:00:00Z",
+                "home_id": "d2-home",
+                "away_id": "d2-other",
+                "home_division": "d2",
+                "away_division": "d2",
+                "home_score": 99,
+                "away_score": 0,
+                "completed": 0,
+                "neutral": 0,
+            },
+        ]
+        artifact = lower_division_results(rows, 2026, "2026-09-04T00:00:00Z")
+        self.assertEqual(artifact["coverage"]["d2"], {"games": 2, "score_complete": 1, "scores_missing": 1})
+        self.assertEqual(artifact["coverage"]["d3"], {"games": 1, "score_complete": 1, "scores_missing": 0})
+        self.assertEqual(len(artifact["rows"]), 3)
+        self.assertEqual(artifact["teams"]["d2"][0]["wins"], 1)
+        self.assertEqual(artifact["teams"]["d3"][0]["losses"], 1)
 
     def test_dataset_selection_keeps_full_ncaa_player_history(self):
         self.assertEqual(datasets_for_year(2026, 2013), ["ncaa_player_stats"])

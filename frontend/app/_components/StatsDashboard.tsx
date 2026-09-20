@@ -11,6 +11,7 @@ import type { BBGame, BBRoster, BBTeam } from "../_lib/basketball-types";
 import { date, fmt } from "../_lib/format";
 import { playerProfileCoverageLabel, rankPlayerProfiles } from "../_lib/player-index-view";
 import { priorProductionIndex } from "../_lib/roster-observations";
+import { lowerDivisionPlayerHref } from "../_lib/division-archive-links";
 import LiveBasketballForecastStatus from "./LiveBasketballForecastStatus";
 import LiveBasketballMarketStatus from "./LiveBasketballMarketStatus";
 import LiveBasketballProspectStatus from "./LiveBasketballProspectStatus";
@@ -41,23 +42,73 @@ function getPlayers(season: number) {
   return [] as BasketballLeaderPlayer[];
 }
 
-function getNationalPlayers(season: number) {
+function getNationalPlayersByDivision(season: number) {
   const file = path.join(process.cwd(), "public/data/basketball/ncaa-individual.json");
-  if (!fs.existsSync(file)) return [] as NationalPlayerRow[];
+  const empty = { "1": [], "2": [], "3": [] } as Record<"1" | "2" | "3", NationalPlayerRow[]>;
+  if (!fs.existsSync(file)) return empty;
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as {
     season?: number;
     players?: Array<NationalPlayerRow & { pf?: number | null; tov?: number | null }>;
   };
-  if (data.season !== season) return [] as NationalPlayerRow[];
-  return (data.players || [])
-    .filter((player) => player.division === 1 && player.ppg != null)
-    .sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1) || a.name.localeCompare(b.name))
-    .map((player) => ({
+  if (data.season !== season) return empty;
+  const rows = (data.players || []).map((player) => ({
       ...player,
       fouls: player.fouls ?? player.pf ?? null,
       turnovers: player.turnovers ?? player.tov ?? null,
-    }))
-    .slice(0, 10);
+    }));
+  return (Object.keys(empty) as Array<"1" | "2" | "3">).reduce((result, division) => {
+    result[division] = rows
+      .filter((player) => player.division === Number(division) && player.ppg != null)
+      .sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1) || a.name.localeCompare(b.name))
+      .slice(0, 10);
+    return result;
+  }, empty);
+}
+
+type DivisionLeader = NationalPlayerRow & { metricValue: number };
+
+function divisionLeader(rows: NationalPlayerRow[], metric: "ppg" | "rpg" | "apg"): DivisionLeader | null {
+  const row = rows
+    .filter((player) => player[metric] != null)
+    .sort((a, b) => (b[metric] ?? -1) - (a[metric] ?? -1) || a.name.localeCompare(b.name))[0];
+  return row && row[metric] != null ? { ...row, metricValue: row[metric] } : null;
+}
+
+function DivisionLeaderTable({ leaders, season }: { leaders: Record<"1" | "2" | "3", NationalPlayerRow[]>; season: number }) {
+  const playerHref = (player: NationalPlayerRow) => player.division === 1
+    ? `/basketball/ncaa-player/?id=${encodeURIComponent(String(player.player_id))}&season=${season}`
+    : lowerDivisionPlayerHref(String(player.division) as "2" | "3", player.player_id);
+  return (
+    <div className="dashboard-subsection" aria-labelledby="dashboard-division-leaders">
+      <div className="dashboard-section-heading">
+        <div><span className="eyebrow">DIVISION LEADER SNAPSHOT</span><h3 id="dashboard-division-leaders">The same questions across D1, D2 and D3</h3></div>
+        <Link href="/basketball/ncaa/">Open the complete national archive →</Link>
+      </div>
+      <p className="dashboard-caption">Source-native NCAA leader rows, kept in separate division cohorts. A dash means the retained edition did not publish that measure for the selected division.</p>
+      <div className="dashboard-table-wrap">
+        <table className="data-table dashboard-table">
+          <thead><tr><th>Division</th><th>Scoring leader</th><th className="numeric">PPG</th><th>Rebounding leader</th><th className="numeric">RPG</th><th>Playmaking leader</th><th className="numeric">APG</th><th className="numeric">Rows</th></tr></thead>
+          <tbody>{(["1", "2", "3"] as const).map((division) => {
+            const rows = leaders[division];
+            const scoring = divisionLeader(rows, "ppg");
+            const rebounding = divisionLeader(rows, "rpg");
+            const playmaking = divisionLeader(rows, "apg");
+            const link = (player: DivisionLeader | null) => player ? <Link href={playerHref(player)}>{player.name}</Link> : <span className="muted">Unavailable</span>;
+            return <tr key={division}>
+              <th scope="row">D{division}<small>{division === "1" ? "Division I" : `Division ${division}`}</small></th>
+              <td>{link(scoring)}<small>{scoring?.team_name || "Team unavailable"}</small></td>
+              <td className="numeric"><strong>{scoring ? fmt(scoring.metricValue) : "—"}</strong></td>
+              <td>{link(rebounding)}<small>{rebounding?.team_name || "Team unavailable"}</small></td>
+              <td className="numeric"><strong>{rebounding ? fmt(rebounding.metricValue) : "—"}</strong></td>
+              <td>{link(playmaking)}<small>{playmaking?.team_name || "Team unavailable"}</small></td>
+              <td className="numeric"><strong>{playmaking ? fmt(playmaking.metricValue) : "—"}</strong></td>
+              <td className="numeric">{rows.length.toLocaleString()}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
@@ -341,7 +392,8 @@ export default function StatsDashboard() {
   const rosterModel = getRosterModel();
   const rosterLeaders = getRosterLeaders();
   const players = getPlayers(overview.season);
-  const nationalPlayers = getNationalPlayers(overview.season - 1);
+  const nationalPlayersByDivision = getNationalPlayersByDivision(overview.season - 1);
+  const nationalPlayers = nationalPlayersByDivision["1"];
   const latestSeason = overview.season - 1;
   const forecasts = overview.upcoming.filter((game) => predictionFor(game));
   const forecastRows = overview.coverage.forecast_games + (overview.coverage.baseline_estimate_games || 0);
@@ -467,6 +519,7 @@ export default function StatsDashboard() {
           <PlayerTable players={players} season={latestSeason} />
           <LiveNcaaPlayerTable season={latestSeason} />
           <LiveNationalPlayerTable initialPlayers={nationalPlayers} season={latestSeason} />
+          <DivisionLeaderTable leaders={nationalPlayersByDivision} season={latestSeason} />
           <div className="dashboard-subsection" aria-labelledby="dashboard-roster-production">
             <div className="dashboard-section-heading">
               <div><span className="eyebrow">2026–27 ROSTER WATCH</span><h3 id="dashboard-roster-production">Returning player production</h3></div>

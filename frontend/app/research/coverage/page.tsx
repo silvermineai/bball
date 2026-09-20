@@ -24,6 +24,12 @@ const neutralText = (value: string) => value
 export default function Page() {
   const football = getOverview();
   const basketball = getBasketball();
+  const lowerFootballResults = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/football/lower-division-results-2026.json"), "utf8"),
+  ) as {
+    coverage: Record<"d2" | "d3", { games: number; score_complete: number; scores_missing: number }>;
+    source?: { fetched_at?: string | null; sha256?: string | null };
+  };
   const footballPlayerCatalog = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/football/player-catalog.json"), "utf8"),
   ) as {
@@ -522,7 +528,8 @@ export default function Page() {
               <tr><td><strong>Women&apos;s basketball</strong></td><td>D2</td><td className="numeric">0</td><td>Not imported; no D1 rows are substituted</td><td><Link href="/basketball/?gender=women&division=2">View boundary →</Link></td></tr>
               <tr><td><strong>Women&apos;s basketball</strong></td><td>D3</td><td className="numeric">0</td><td>Not imported; no D1 rows are substituted</td><td><Link href="/basketball/?gender=women&division=3">View boundary →</Link></td></tr>
               <tr><td><strong>Football</strong></td><td>D1 (FBS/FCS)</td><td className="numeric">{count(footballScopeRows.d1)}</td><td>Player archive, team ratings, forecasts and game evidence</td><td><Link href="/football/">Open desk →</Link></td></tr>
-              <tr><td><strong>Football</strong></td><td>D2–D3</td><td className="numeric">{count(footballScopeRows.d2 + footballScopeRows.d3)}</td><td>Not present in the retained football edition</td><td><Link href="/football/?gender=men&division=2">View boundary →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D2</td><td className="numeric">{count(footballScopeRows.d2)}</td><td>{count(lowerFootballResults.coverage.d2.score_complete)} completed score rows; no player tables, ratings or forecasts</td><td><Link href="/football/matchups/?division=2">Open D2 results →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D3</td><td className="numeric">{count(footballScopeRows.d3)}</td><td>{count(lowerFootballResults.coverage.d3.score_complete)} completed score rows; no player tables, ratings or forecasts</td><td><Link href="/football/matchups/?division=3">Open D3 results →</Link></td></tr>
             </tbody>
           </table>
         </div>
