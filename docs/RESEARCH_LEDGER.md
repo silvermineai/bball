@@ -71,6 +71,8 @@ PYTHONPATH=ncaa_scraper .venv/bin/python scripts/sync-ledger.py
 
 The command updates the local immutable ledger and emits `.local/research-ledger.sql`; the normal validation/deployment workflow then publishes qualifying comparisons. A CSV import is an attribution and storage mechanism, not permission to redistribute the provider's raw feed.
 
+Imports are idempotent at the quote identity `(sport, game_id, provider, bookmaker, market, captured_at)`. Re-running the same export reports `duplicate_markets` and leaves one retained observation; if a later file changes the line, prices, participants or provider update at that identity, the entire file is rejected and rolled back so the operator can resolve the source correction explicitly. The command output separates `inserted_markets` from validated rows and duplicates.
+
 ## Refresh and publish
 
 ```bash

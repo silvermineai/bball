@@ -75,6 +75,51 @@ class MarketCsvTests(unittest.TestCase):
         self.assertIn("provider.example/terms", receipt)
 
     @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_reimporting_same_snapshot_is_idempotent(self, _schedules):
+        kwargs = {
+            "conn": self.conn,
+            "sport": "basketball",
+            "rows": [self.row()],
+            "source_sha256": "a" * 64,
+            "source_name": "lines.csv",
+            "provider": "Licensed Feed",
+            "license_url": "https://provider.example/terms",
+        }
+        first = import_rows(imported_at="2026-11-10T01:01:00Z", **kwargs)
+        second = import_rows(imported_at="2026-11-10T01:02:00Z", **kwargs)
+        self.assertEqual(first["inserted_markets"], 1)
+        self.assertEqual(first["duplicate_markets"], 0)
+        self.assertEqual(second["inserted_markets"], 0)
+        self.assertEqual(second["duplicate_markets"], 1)
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 1)
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_conflicting_snapshot_identity_rolls_back(self, _schedules):
+        import_rows(
+            self.conn,
+            "basketball",
+            [self.row()],
+            "a" * 64,
+            "lines.csv",
+            "Licensed Feed",
+            "https://provider.example/terms",
+            "2026-11-10T01:01:00Z",
+        )
+        with self.assertRaisesRegex(ValueError, "conflicting quote already exists"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [self.row(line="-4.5")],
+                "b" * 64,
+                "corrected-lines.csv",
+                "Licensed Feed",
+                "https://provider.example/terms",
+                "2026-11-10T01:02:00Z",
+            )
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 1)
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 1)
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
     def test_rejected_row_rolls_back_all_market_rows(self, _schedules):
         with self.assertRaises(ValueError):
             import_rows(
@@ -189,6 +234,19 @@ class MarketCsvTests(unittest.TestCase):
                 "lines.csv",
                 "Licensed Feed",
                 "https://provider.example/terms",
+                "2026-11-10T01:01:00Z",
+            )
+
+    def test_import_requires_absolute_license_url(self):
+        with self.assertRaisesRegex(ValueError, r"absolute http\(s\) URL"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [],
+                "a" * 64,
+                "lines.csv",
+                "Licensed Feed",
+                "terms",
                 "2026-11-10T01:01:00Z",
             )
 

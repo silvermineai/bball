@@ -17,13 +17,14 @@ import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .football_sources import ROOT, utcnow
 from .odds_feed import normalize_market, schedules
 from .research_ledger import brief_bundle, build_report, connect, digest, encoded, export_sql, ingest_published, timestamp
 
 MARKETS = {"spreads", "totals", "h2h"}
-REQUIRED = {"game_id", "market", "captured_at", "updated_at", "home_name", "away_name", "starts_at"}
+REQUIRED = {"game_id", "market", "captured_at", "updated_at", "home_name", "away_name", "starts_at", "bookmaker"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -127,6 +128,9 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
         raise ValueError("sport must be football or basketball")
     if not provider.strip() or not license_url.strip():
         raise ValueError("provider and license_url are required")
+    parsed_license_url = urlparse(license_url.strip())
+    if parsed_license_url.scheme not in {"http", "https"} or not parsed_license_url.netloc:
+        raise ValueError("license_url must be an absolute http(s) URL")
     source_sha256 = source_sha256.strip().lower()
     if not SHA256.fullmatch(source_sha256):
         raise ValueError("source_sha256 must be a 64-character hexadecimal SHA-256 digest")
@@ -148,6 +152,8 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
         (receipt_id, imported_at, provider, encoded(receipt)),
     )
     accepted = 0
+    inserted = 0
+    duplicates = 0
     errors = []
     seen_quotes = set()
     for row_number, row in enumerate(rows, start=2):
@@ -173,19 +179,48 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
                     f"row {row_number}: duplicate game/bookmaker/market/capture identity"
                 )
             seen_quotes.add(quote_identity)
-            key = digest([sport, game_id, "CSV:" + provider, bookmaker, market["key"], captured, payload])
+            provider_key = "CSV:" + provider
+            # The receipt ID is provenance for the import, not part of the
+            # quote's identity. Re-importing the same licensed snapshot must
+            # be idempotent, while a changed quote at the same capture clock
+            # must stop the whole file rather than create an ambiguous row.
+            existing = conn.execute(
+                "SELECT payload_json FROM audit_markets "
+                "WHERE sport=? AND game_id=? AND provider=? AND bookmaker=? "
+                "AND market=? AND captured_at=? LIMIT 1",
+                (sport, game_id, provider_key, bookmaker, market["key"], captured),
+            ).fetchone()
+            if existing is not None:
+                existing_payload = json.loads(existing[0])
+                comparable_payload = {key: value for key, value in payload.items() if key != "receipt_id"}
+                existing_comparable = {key: value for key, value in existing_payload.items() if key != "receipt_id"}
+                if existing_comparable != comparable_payload:
+                    raise ValueError(
+                        f"row {row_number}: conflicting quote already exists for the same game/bookmaker/market/capture identity"
+                    )
+                duplicates += 1
+                accepted += 1
+                continue
+            key = digest([sport, game_id, provider_key, bookmaker, market["key"], captured, payload])
             conn.execute(
-                "INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)",
-                (key, sport, game_id, "CSV:" + provider, bookmaker, market["key"], captured, updated, encoded(payload)),
+                "INSERT INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)",
+                (key, sport, game_id, provider_key, bookmaker, market["key"], captured, updated, encoded(payload)),
             )
             accepted += 1
+            inserted += 1
         except (KeyError, TypeError, ValueError, OverflowError) as error:
             errors.append(str(error))
     if errors:
         conn.rollback()
         raise ValueError("CSV import rejected: " + "; ".join(errors[:8]) + ("; …" if len(errors) > 8 else ""))
     conn.commit()
-    return {"accepted_markets": accepted, "receipt_id": receipt_id, "rows": len(rows)}
+    return {
+        "accepted_markets": accepted,
+        "inserted_markets": inserted,
+        "duplicate_markets": duplicates,
+        "receipt_id": receipt_id,
+        "rows": len(rows),
+    }
 
 
 def read_csv(path: Path):
@@ -205,13 +240,13 @@ def read_csv(path: Path):
         # shape checks below apply to every row exactly as the browser preflight.
         reader.fieldnames = fields
         missing = REQUIRED - set(fields)
-        if missing:
-            raise ValueError("CSV is missing required columns: " + ", ".join(sorted(missing)))
         rows = []
         for row_number, row in enumerate(reader, start=2):
             if None in row:
                 raise ValueError(f"row {row_number}: more cells than the header defines")
             rows.append(row)
+        if missing:
+            raise ValueError("CSV is missing required columns: " + ", ".join(sorted(missing)))
     if not rows:
         raise ValueError("CSV contains no rows")
     return rows, digest_hex
