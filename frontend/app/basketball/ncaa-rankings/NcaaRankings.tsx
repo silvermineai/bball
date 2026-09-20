@@ -5,6 +5,7 @@ import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { hasRankingEvidence, rankingEvidence } from "../../_lib/ncaa-ranking-evidence";
+import { basketballScopeAvailable, parseSportScope, scopeLabel, type SportScope } from "../../_lib/sport-scope";
 
 type Metric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "ts" | "efg" | "half_ts" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "three_pct" | "two_pct" | "ft_pct" | "rim_pct" | "mid_pct" | "putback_pct" | "ft_rate" | "ast_rate" | "points_poss" | "orb40" | "drb40" | "reb40" | "poss_share" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "balanced_index" | "impact_index";
 type Row = { season: number; player_id: string; team_id: string; player_name: string | null; team_name: string | null; position: string | null; class_year: string | null; roster_height?: string | null; hometown?: string | null; high_school?: string | null; games: number; minutes: number; points: number; rebounds: number; offensive_rebounds?: number | null; defensive_rebounds?: number | null; assists: number; steals: number; blocks: number; turnovers: number | null; fouls: number | null; possessions?: number | null; fga?: number | null; fgm?: number | null; tpa?: number | null; tpm?: number | null; fta?: number | null; ftm?: number | null; rim_attempts?: number | null; rim_makes?: number | null; mid_attempts?: number | null; mid_makes?: number | null; putback_attempts?: number | null; putback_makes?: number | null; transition_points?: number | null; unassisted_total_attempts?: number | null; unassisted_attempts?: number | null; unassisted_points?: number | null; half_points?: number | null; half_fga?: number | null; half_fta?: number | null; team_possessions?: number | null; value: number; component_count?: number; ppg_value?: number | null; rpg_value?: number | null; apg_value?: number | null; spg_value?: number | null; bpg_value?: number | null; ts_value?: number | null; ts_denominator?: number | null; efg_value?: number | null; efg_denominator?: number | null; per40_value?: number | null; rank: number; rapm_net: number | null; orapm: number | null; drapm: number | null; off_poss: number | null; def_poss: number | null };
@@ -115,6 +116,10 @@ export function rankingRecordedDetail(row: RankingDetailStatInput): string {
 // exact source measure the reader asked to study.
 const metricFromQuery = (value: string | null): Metric => value && Object.prototype.hasOwnProperty.call(labels, value) ? value as Metric : "balanced_index";
 const sourceDate = (value: string | null) => value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "date unavailable";
+function RankingScopeBoundary({ scope }: { scope: SportScope }) {
+  const women = scope.gender === "women";
+  return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">SCOPE NOT PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)} ranking explorer</h2><p>{women ? "Women’s basketball rows are not imported into the advanced player ranking archive. No men’s rows are substituted." : `The advanced archive explorer is currently published for men’s Division I only. The current ${scopeLabel(scope)} leader tables above remain in their own NCAA cohort.`}</p><a className="button" href={`/basketball/ncaa/?division=${scope.division}`}>Open {women ? "published men’s" : scopeLabel(scope)} national archive</a></section>;
+}
 const statLenses: Array<{ key: string; label: string; metric: Metric; minGames: string; minMinutes: string; minVolume: string; description: string }> = [
   { key: "all-around", label: "All-around", metric: "balanced_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Eight-component production screen with an audit trail." },
   { key: "impact", label: "Verified impact", metric: "impact_index", minGames: "5", minMinutes: "200", minVolume: "0", description: "Exact-ID RAPM plus scoring rate; 500 offensive and defensive possessions." },
@@ -202,25 +207,39 @@ export default function NcaaRankings() {
   const [copied, setCopied] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
+  const [scope, setScope] = useState<SportScope | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setScope(parseSportScope({
+      gender: params.get("gender") || undefined,
+      division: params.get("division") || undefined,
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (!scope) return;
     const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume });
     if (query.trim()) params.set("q", query.trim());
     if (position) params.set("position", position);
     if (classYear) params.set("classYear", classYear);
     if (page) params.set("page", String(page));
     if (compareIds.length) params.set("compare", compareIds.join(","));
+    if (scope.gender !== "men") params.set("gender", scope.gender);
+    if (scope.division !== "1") params.set("division", scope.division);
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page, compareIds]);
+  }, [season, metric, minGames, minMinutes, minVolume, query, position, classYear, page, compareIds, scope]);
 
   useEffect(() => {
+    if (!scope || !basketballScopeAvailable(scope)) return;
     setMeta(null);
     setError("");
     fetch(`/api/basketball/research/ncaa-player-rankings?meta=1&season=${season}`)
       .then((r) => { if (!r.ok) throw Error("The ranking catalog could not be loaded."); return r.json() as Promise<Meta>; })
       .then(setMeta).catch((e) => setError(e.message));
-  }, [retryNonce, season]);
+  }, [retryNonce, season, scope]);
   useEffect(() => {
+    if (!scope || !basketballScopeAvailable(scope)) return;
     const controller = new AbortController();
     const params = new URLSearchParams({ season, metric, minGames, minMinutes, minVolume, page: String(page) });
     if (query.trim()) params.set("q", query.trim());
@@ -232,7 +251,7 @@ export default function NcaaRankings() {
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [classYear, metric, minGames, minMinutes, minVolume, page, position, query, retryNonce, season]);
+  }, [classYear, metric, minGames, minMinutes, minVolume, page, position, query, retryNonce, season, scope]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 50)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
@@ -322,6 +341,8 @@ export default function NcaaRankings() {
       setExporting(false);
     }
   };
+  if (!scope) return <p className="empty" role="status">Reading the requested ranking scope…</p>;
+  if (!basketballScopeAvailable(scope)) return <RankingScopeBoundary scope={scope} />;
   return <>
     <div className="page-title">
       <div className="eyebrow">Player rankings archive</div>
