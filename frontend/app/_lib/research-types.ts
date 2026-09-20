@@ -74,6 +74,10 @@ export type SportSummary = {
   exclusion_counts: Record<string, number>;
   metrics: Metrics;
   games_with_comparisons: number;
+  /** Qualifying quote observations attached to games with verified finals. */
+  settled_market_observations?: number;
+  /** Qualifying quote observations attached to scheduled or awaiting-result games. */
+  pending_market_observations?: number;
   qualifying_market_observations?: number;
   /** Reconciled quote funnel for the selected season/model cohort. */
   comparison_readiness?: {

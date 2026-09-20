@@ -108,7 +108,7 @@ describe("live research scorecard", () => {
     expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
-    expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, market_observations: 7, unmatched_events: 3, games_with_comparisons: 1, qualifying_market_observations: 1 });
+    expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, market_observations: 7, unmatched_events: 3, games_with_comparisons: 1, qualifying_market_observations: 1, settled_market_observations: 0, pending_market_observations: 1 });
     expect(body.sports.basketball.comparison_readiness).toEqual({
       retained_observations: 7,
       selected_game_observations: 4,

@@ -397,6 +397,12 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     String(right.last_registered_at || "").localeCompare(String(left.last_registered_at || ""))
       || left.model_id.localeCompare(right.model_id)
       || left.estimate_type.localeCompare(right.estimate_type));
+  const settledMarketObservations = rows
+    .filter((row) => row.status === "settled")
+    .reduce((total, row) => total + (row.comparisons as Json[]).length, 0);
+  const pendingMarketObservations = rows
+    .filter((row) => row.status === "scheduled" || row.status === "awaiting_result")
+    .reduce((total, row) => total + (row.comparisons as Json[]).length, 0);
   return {
     games: rows.length,
     registered_versions: registeredVersions,
@@ -406,6 +412,8 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     exclusion_counts: Object.fromEntries(rows.filter((row) => row.exclusion).reduce((map, row) => map.set(String(row.exclusion), (map.get(String(row.exclusion)) || 0) + 1), new Map<string, number>())),
     metrics: metrics(rows),
     games_with_comparisons: rows.filter((row) => (row.comparisons as Json[]).length).length,
+    settled_market_observations: settledMarketObservations,
+    pending_market_observations: pendingMarketObservations,
     qualifying_market_observations: rows.reduce(
       (total, row) => total + (row.comparisons as Json[]).length,
       0,

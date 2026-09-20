@@ -152,6 +152,8 @@ export default function Scorecard() {
     m = summary.metrics,
     marketObservations = summary.market_observations ?? 0,
     qualifyingMarketObservations = summary.qualifying_market_observations ?? 0,
+    settledMarketObservations = summary.settled_market_observations,
+    pendingMarketObservations = summary.pending_market_observations,
     unmatchedEvents = summary.unmatched_events ?? 0,
     readiness = summary.comparison_readiness,
     marketEvidence = marketEvidenceState(marketObservations, qualifyingMarketObservations),
@@ -444,6 +446,8 @@ export default function Scorecard() {
           <span>Applicable feed contracts <b>{(marketMetadata?.provider_capabilities?.length || 0).toLocaleString()}</b></span>
           <span>Capture receipts <b>{(marketMetadata?.research_receipts || 0).toLocaleString()}</b></span>
           <span>Latest capture <b>{marketMetadata?.research_capture?.market_status ? "Recorded" : "Not recorded"}</b></span>
+          {settledMarketObservations != null && <span>Settled comparisons <b>{settledMarketObservations.toLocaleString()}</b></span>}
+          {pendingMarketObservations != null && <span>Awaiting source finals <b>{pendingMarketObservations.toLocaleString()}</b></span>}
         </div>
         <p className="note" role="status" style={{ marginTop: 12 }}>
           {marketReadiness === "validated"
@@ -534,6 +538,9 @@ export default function Scorecard() {
             Model-versus-market errors will appear here once matched games
             settle. Open the <Link href="/research/markets/">market archive</Link> for retained observations and its <Link href="/research/markets/#market-policy">capture policy</Link> for the licensed feed workflow.
           </p>
+          {settledMarketObservations != null && pendingMarketObservations != null && (
+            <p className="note">{settledMarketObservations.toLocaleString()} qualifying quote observations have verified finals; {pendingMarketObservations.toLocaleString()} remain attached to scheduled or awaiting-result games. Only settled observations contribute to model and market error metrics.</p>
+          )}
         </div>
       ) : (
         <div>
