@@ -6290,3 +6290,16 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (max-width: 520px) {
   .recruiting-intake-compare-grid { grid-template-columns: 1fr; }
 }
+
+.prospect-learning-queue { background: var(--surface-muted); }
+.prospect-learning-queue .note { line-height: 1.45; }
+.prospect-learning-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.prospect-learning-card { display: grid; align-content: start; gap: 7px; min-height: 118px; padding: 12px; border: 1px solid var(--line); background: var(--surface); }
+.prospect-learning-card .eyebrow { color: #087447; font-size: 9px; }
+.prospect-learning-card.is-unavailable .eyebrow { color: #a44732; }
+.prospect-learning-card strong { font-size: 12px; }
+.prospect-learning-card small { color: var(--muted); font: 10px/1.35 "IBM Plex Mono", monospace; }
+.prospect-learning-card a { color: var(--blue); font-size: 10px; font-weight: 700; }
+@media (max-width: 1050px) { .prospect-learning-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .prospect-learning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .prospect-learning-grid { grid-template-columns: 1fr; } }

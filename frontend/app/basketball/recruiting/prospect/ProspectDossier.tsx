@@ -14,6 +14,7 @@ import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-sc
 import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
 import { prospectClassContext, type ProspectClassContextPayload } from "./class-context";
 import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-context";
+import { prospectLearningChecks } from "./learning-questions";
 
 type Prospect = {
   athlete_id: string;
@@ -153,6 +154,16 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     edition,
     position: prospect.position,
   }) : null;
+  const learningChecks = prospect ? prospectLearningChecks({
+    rank: prospect.rank,
+    previousRank: prospect.previous_rank ?? null,
+    previousCapturedAt: prospect.previous_captured_at,
+    committedTeamId: prospect.committed_team_id,
+    committedTeamName: prospect.committed_team_name,
+    recordedSchoolCount: recordedSchools.length,
+    resolvedSchoolCount: recordedSchools.filter((school) => school.resolved).length,
+    hasPeerContext: peerContext != null,
+  }) : [];
   const toggleProspectShortlist = () => {
     if (!prospect) return;
     const entry: RecruitingShortlistEntry = {
@@ -197,6 +208,22 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <p className="note">{rankMovement ? `Previous national rank ${rank(prospect.previous_rank ?? null)} · captured ${prospect.previous_captured_at ? new Date(prospect.previous_captured_at).toLocaleDateString() : "date unavailable"}.` : "No earlier edition for this exact athlete ID is retained yet. Future captures will establish the comparison baseline."}</p>
             </section>;
           })()}
+          <section className="paper-panel prospect-learning-queue" aria-label="Prospect learning queue" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Staff learning queue / exact athlete ID</div><h2>What to verify next.</h2></div>
+              <span className="note">Retained evidence only</span>
+            </div>
+            <p className="note">These checks organize the selected prospect&apos;s retained rank, destination, school-list and peer fields. They are review prompts, not a recruiting grade, offer or eligibility conclusion.</p>
+            <div className="prospect-learning-grid">
+              {learningChecks.map((check) => <article className={`prospect-learning-card is-${check.status}`} key={check.key}>
+                <span className="eyebrow">{check.status === "recorded" ? "Recorded" : "Unavailable"}</span>
+                <strong>{check.label}</strong>
+                <small>{check.detail}</small>
+                {check.key === "fit" && prospect.committed_team_id ? <Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(prospect.committed_team_id)}`}>Open exact roster fit →</Link> : null}
+                {check.key === "school-list" && recordedSchools.length ? <Link href="#recorded-schools">Inspect retained school IDs →</Link> : null}
+              </article>)}
+            </div>
+          </section>
           <section className="paper-panel" aria-label="Prospect class context" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Class denominator / same retained edition</div><h2>{classContext?.nationalRank ? `#${classContext.nationalRank} of ${classContext.ranked.toLocaleString()} ranked` : "Rank denominator unavailable"}</h2></div>
