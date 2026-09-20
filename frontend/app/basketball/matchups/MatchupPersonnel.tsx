@@ -20,6 +20,14 @@ function percentage(value: number | null) {
   return value == null || !Number.isFinite(value) ? "—" : `${value.toFixed(1)}%`;
 }
 
+function receiptClock(value: string | null) {
+  if (!value) return "clock unavailable";
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime())
+    ? parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+    : "clock unavailable";
+}
+
 function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; priorSeason: number }) {
   const rows = matchupPersonnelRows(side);
   const leaders = matchupPersonnelLeaders(side);
@@ -118,6 +126,16 @@ export default function MatchupPersonnelPanel({ game }: { game: BBGame }) {
         <div><strong>{personnel.coverage.players_with_publisher_stats}/{personnel.coverage.listed_players}</strong><span>stat lines</span></div>
         <div><strong>{personnel.coverage.players_with_box_bpm}/{personnel.coverage.listed_players}</strong><span>Box BPM</span></div>
       </div>
+      <p className="note personnel-receipts" aria-label="Personnel source receipts">
+        {personnel.source_receipts.length
+          ? <>Receipt coverage: {personnel.source_receipts.map((receipt) => `${receipt.dataset} ${receipt.season}`).join(" · ")} · latest {receiptClock(personnel.source_receipts.reduce<string | null>((latest, receipt) => !latest || (receipt.fetched_at && receipt.fetched_at > latest) ? receipt.fetched_at : latest, null))}.</>
+          : "No source receipt metadata was returned for this personnel packet."}
+        {personnel.source_receipts.length > 0
+          ? personnel.source_receipts.some((receipt) => !receipt.sha256)
+            ? " At least one dataset has no published digest."
+            : " Every returned dataset includes a SHA-256 digest."
+          : ""}
+      </p>
       <div className="personnel-grid">
         <PersonnelTable side={personnel.away} priorSeason={personnel.prior_season} />
         <PersonnelTable side={personnel.home} priorSeason={personnel.prior_season} />

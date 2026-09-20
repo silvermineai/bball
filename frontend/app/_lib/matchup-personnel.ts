@@ -71,7 +71,15 @@ export type MatchupPersonnel = {
   };
   home: MatchupPersonnelSide;
   away: MatchupPersonnelSide;
+  source_receipts: MatchupPersonnelSourceReceipt[];
   identity_policy: string;
+};
+
+export type MatchupPersonnelSourceReceipt = {
+  dataset: string;
+  season: number;
+  fetched_at: string | null;
+  sha256: string | null;
 };
 
 export type MatchupPersonnelTableRow = {
@@ -188,6 +196,18 @@ function validSide(value: unknown, expectedId: string): value is MatchupPersonne
     && side.players_with_box_bpm === players.filter((player) => player.prior_stints.some((stint) => stint.box_bpm != null)).length;
 }
 
+function validSourceReceipt(value: unknown): value is MatchupPersonnelSourceReceipt {
+  const receipt = record(value);
+  return !!receipt
+    && typeof receipt.dataset === "string"
+    && receipt.dataset.trim().length > 0
+    && typeof receipt.season === "number"
+    && Number.isInteger(receipt.season)
+    && receipt.season >= 2025
+    && (receipt.fetched_at == null || (typeof receipt.fetched_at === "string" && Number.isFinite(Date.parse(receipt.fetched_at))))
+    && (receipt.sha256 == null || (typeof receipt.sha256 === "string" && /^[a-f0-9]{64}$/i.test(receipt.sha256)));
+}
+
 export function parseMatchupPersonnel(
   value: unknown,
   expected: { gameId: string; season: number; homeId: string; awayId: string },
@@ -195,6 +215,11 @@ export function parseMatchupPersonnel(
   const payload = record(value);
   const game = record(payload?.game);
   const coverage = record(payload?.coverage);
+  const sourceReceipts = payload?.source_receipts == null
+    ? []
+    : Array.isArray(payload.source_receipts) && payload.source_receipts.every(validSourceReceipt)
+      ? payload.source_receipts as MatchupPersonnelSourceReceipt[]
+      : null;
   const coverageKeys = ["listed_players", "players_with_prior_minutes", "players_with_publisher_stats", "players_with_box_bpm"];
   if (!payload || !game || !coverage
     || payload.season !== expected.season
@@ -207,6 +232,7 @@ export function parseMatchupPersonnel(
     || !nullableString(game.home_name)
     || !nullableString(game.away_name)
     || typeof payload.identity_policy !== "string"
+    || sourceReceipts == null
     || !validSide(payload.home, expected.homeId)
     || !validSide(payload.away, expected.awayId)
     || !coverageKeys.every((key) => typeof coverage[key] === "number" && Number.isInteger(coverage[key]) && Number(coverage[key]) >= 0)
@@ -216,7 +242,7 @@ export function parseMatchupPersonnel(
     || coverage.players_with_box_bpm !== payload.home.players_with_box_bpm + payload.away.players_with_box_bpm) {
     throw new Error("The personnel response did not match the selected matchup.");
   }
-  return payload as unknown as MatchupPersonnel;
+  return { ...(payload as unknown as MatchupPersonnel), source_receipts: sourceReceipts };
 }
 
 export async function loadMatchupPersonnel(

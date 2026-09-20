@@ -61,4 +61,16 @@ describe("matchup personnel client", () => {
     const parsed = parseMatchupPersonnel(payload(), { gameId: "401", season: 2027, homeId: "1", awayId: "2" });
     expect(matchupPersonnelLeaders({ ...parsed.away, players: parsed.away.players.map((player) => ({ ...player, prior_minutes: null })) })).toEqual([]);
   });
+
+  it("preserves validated source receipts and rejects malformed integrity metadata", () => {
+    const withReceipts = {
+      ...payload(),
+      source_receipts: [
+        { dataset: "rosters", season: 2027, fetched_at: "2026-09-19T00:00:00Z", sha256: "a".repeat(64) },
+        { dataset: "player_box", season: 2026, fetched_at: null, sha256: null },
+      ],
+    };
+    expect(parseMatchupPersonnel(withReceipts, { gameId: "401", season: 2027, homeId: "1", awayId: "2" }).source_receipts).toEqual(withReceipts.source_receipts);
+    expect(() => parseMatchupPersonnel({ ...withReceipts, source_receipts: [{ ...withReceipts.source_receipts[0], sha256: "not-a-digest" }] }, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
+  });
 });
