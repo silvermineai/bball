@@ -57,7 +57,7 @@ export default function WomensShotProfileCourt() {
   return <section className="field-card" aria-labelledby="wbb-shot-map-title">
     <div className="eyebrow">PLAYER SHOT MAP · 2026 SOURCE COORDINATES</div>
     <h2 id="wbb-shot-map-title">Where each player likes to shoot</h2>
-    <p className="muted">Search the retained shot identities, then inspect attempt concentration on the court. The map uses the supplied NCAA feet coordinates; it does not guess a join to the season player table.</p>
+    <p className="muted">Search the retained shot identities, then inspect attempt concentration on the court. The map uses the supplied court feet coordinates; it does not guess a join to the season player table.</p>
     {!publication ? <p className="muted">Loading shot-coordinate profiles…</p> : <>
       <div className="wbb-shot-map-controls">
         <label htmlFor="wbb-shot-search">Find a player</label>
