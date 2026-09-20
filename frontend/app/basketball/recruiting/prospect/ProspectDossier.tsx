@@ -15,6 +15,7 @@ import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment
 import { prospectClassContext, type ProspectClassContextPayload } from "./class-context";
 import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-context";
 import { prospectLearningChecks } from "./learning-questions";
+import { recordedProspectFields } from "./recorded-fields";
 
 type Prospect = {
   athlete_id: string;
@@ -314,6 +315,14 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <article className="paper-panel"><div className="eyebrow">Player profile</div><h2>{prospect.position || "Position not listed"}</h2><dl className="roster-stat-grid"><div><dt>High school</dt><dd>{prospect.high_school || "—"}</dd></div><div><dt>Hometown</dt><dd>{prospect.hometown || "—"}</dd></div><div><dt>Status</dt><dd>{prospect.status || "—"}</dd></div><div><dt>State rank</dt><dd>{rank(prospect.state_rank)}</dd></div><div><dt>Region rank</dt><dd>{rank(prospect.region_rank)}</dd></div><div><dt>Height</dt><dd>{prospect.height_inches == null ? "—" : `${number(prospect.height_inches / 12, 1)} ft`}</dd></div><div><dt>Weight</dt><dd>{prospect.weight_pounds == null ? "—" : `${number(prospect.weight_pounds)} lb`}</dd></div><div><dt>Athlete ID</dt><dd>{prospect.athlete_id}</dd></div></dl></article>
               <article className="paper-panel"><div className="eyebrow">How to read this</div><h2>Evidence before inference.</h2><p>Rank, grade and commitment fields are recorded values.</p><p className="note">Captured {prospect.captured_at ? new Date(prospect.captured_at).toLocaleString() : "—"}. A commitment description is not a verified transfer, roster or eligibility determination.</p>{prospect.committed_team_id && <p className="note"><Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(prospect.committed_team_id)}`}>Compare that program&apos;s role workload and prior production →</Link></p>}<small className="note">Edition {edition || "unavailable"} · Athlete ID {prospect.athlete_id}</small></article>
             </div>
+          </section>
+          <section className="section paper-panel" aria-labelledby="prospect-recorded-fields">
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Raw record / exact retained fields</div><h2 id="prospect-recorded-fields">Inspect the recorded prospect row.</h2></div>
+              <span className="note">No inferred values</span>
+            </div>
+            <p className="note">This table exposes the fields returned for this exact athlete ID and edition. “Unavailable” means the retained row did not provide a usable value; it is not a zero, ranking assumption or eligibility conclusion.</p>
+            <div className="table-scroll"><table className="data-table"><thead><tr><th>Field</th><th>Recorded value</th></tr></thead><tbody>{recordedProspectFields(prospect).map((field) => <tr key={field.key}><th scope="row">{field.label}</th><td><code>{field.value}</code></td></tr>)}</tbody></table></div>
           </section>
           <section className="section paper-panel" id="recorded-schools" aria-labelledby="recorded-schools-title">
             <div className="section-heading" style={{ marginBottom: 12 }}>
