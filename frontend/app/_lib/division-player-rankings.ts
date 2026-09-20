@@ -1,0 +1,89 @@
+export type DivisionPlayer = {
+  player_id: string | number;
+  division: string | number;
+  name: string;
+  team_name?: string | null;
+  conference?: string | null;
+  class_year?: string | null;
+  position?: string | null;
+  games?: number | null;
+  ppg?: number | null;
+  rpg?: number | null;
+  apg?: number | null;
+  mpg?: number | null;
+  fg_pct?: number | null;
+  three_pct?: number | null;
+  ft_pct?: number | null;
+  threes_pg?: number | null;
+  [key: string]: unknown;
+};
+
+export const divisionRankingMetrics = [
+  ["ppg", "PPG", "Points per game"],
+  ["rpg", "RPG", "Rebounds per game"],
+  ["apg", "APG", "Assists per game"],
+  ["mpg", "MPG", "Minutes per game"],
+  ["fg_pct", "FG%", "Field-goal percentage"],
+  ["three_pct", "3P%", "Three-point percentage"],
+  ["ft_pct", "FT%", "Free-throw percentage"],
+  ["threes_pg", "3PG", "Three-pointers per game"],
+] as const;
+
+export type DivisionRankingMetric = (typeof divisionRankingMetrics)[number][0];
+
+export type DivisionRankedPlayer = DivisionPlayer & {
+  value: number;
+  rank: number;
+  source_rank: number | null;
+};
+
+const finite = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+export function divisionMetricLabel(metric: DivisionRankingMetric): string {
+  return divisionRankingMetrics.find(([key]) => key === metric)?.[2] || metric;
+}
+
+export function divisionMetricValue(player: DivisionPlayer, metric: DivisionRankingMetric): number | null {
+  const value = player[metric];
+  return finite(value) ? value : null;
+}
+
+export function divisionSourceRank(player: DivisionPlayer, metric: DivisionRankingMetric): number | null {
+  const value = player[`${metric}_rank`];
+  return finite(value) && value > 0 ? value : null;
+}
+
+export function rankDivisionPlayers(
+  players: DivisionPlayer[],
+  options: {
+    division: "2" | "3";
+    metric: DivisionRankingMetric;
+    query?: string;
+    minGames?: number;
+    limit?: number;
+  },
+): { rows: DivisionRankedPlayer[]; total: number } {
+  const query = options.query?.trim().toLowerCase() || "";
+  const minGames = Number.isFinite(options.minGames) ? Math.max(0, options.minGames || 0) : 0;
+  const qualified = players
+    .filter((player) => String(player.division) === options.division)
+    .filter((player) => {
+      const games = player.games;
+      return finite(games) && games >= minGames;
+    })
+    .filter((player) => !query || `${player.name} ${player.team_name || ""} ${player.conference || ""} ${player.player_id}`.toLowerCase().includes(query))
+    .map((player) => ({ player, value: divisionMetricValue(player, options.metric) }))
+    .filter((row): row is { player: DivisionPlayer; value: number } => row.value != null)
+    .sort((left, right) => right.value - left.value || left.player.name.localeCompare(right.player.name) || String(left.player.player_id).localeCompare(String(right.player.player_id)));
+  const limit = options.limit == null ? qualified.length : Math.max(0, options.limit);
+  return {
+    total: qualified.length,
+    rows: qualified.slice(0, limit).map(({ player, value }, index) => ({
+      ...player,
+      value,
+      rank: index + 1,
+      source_rank: divisionSourceRank(player, options.metric),
+    })),
+  };
+}
