@@ -10,6 +10,7 @@ type Edition = {
   model_status: string;
   coverage: { players: number; teams: number; upcoming_games: number };
   leaders: Record<string, { label: string; rows: Leader[] }>;
+  players: Array<{ player_id: string; name: string; team: string; position: string; stats: Record<string, number> }>;
   upcoming: Array<{ game_id: string; date?: string; home?: string; away?: string; venue?: string }>;
   limitations: string[];
 };
@@ -30,6 +31,7 @@ export default function WomensBasketballSnapshot() {
     <div className="scope-snapshot-grid">
       {Object.entries(edition.leaders).map(([key, group]) => <section className="field-card" key={key}><div className="eyebrow">{group.label}</div><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th className="numeric">Value</th></tr></thead><tbody>{group.rows.slice(0, 8).map((row) => <tr key={`${key}-${row.player_id}`}><td>{row.name}</td><td>{row.team}</td><td className="numeric">{row.value.toFixed(1)}</td></tr>)}</tbody></table></section>)}
     </div>
+    <section className="field-card"><div className="eyebrow">PLAYER TABLE · 2026 OBSERVED PRODUCTION</div><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th></tr></thead><tbody>{edition.players.slice(0, 20).map((row) => <tr key={`player-${row.player_id}`}><td>{row.name}</td><td>{row.team}</td><td className="numeric">{row.stats.avgPoints?.toFixed(1) || "—"}</td><td className="numeric">{row.stats.avgRebounds?.toFixed(1) || "—"}</td><td className="numeric">{row.stats.avgAssists?.toFixed(1) || "—"}</td></tr>)}</tbody></table></section>
     <section className="field-card"><div className="eyebrow">UPCOMING GAMES</div><table className="data-table"><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Venue</th></tr></thead><tbody>{edition.upcoming.slice(0, 10).map((game) => <tr key={game.game_id}><td>{date(game.date)}</td><td>{game.away || "—"}</td><td>{game.home || "—"}</td><td>{game.venue || "—"}</td></tr>)}</tbody></table></section>
     <p className="muted">Observed edition generated {date(edition.generated_at)}. {edition.limitations[1]}</p>
   </div>;

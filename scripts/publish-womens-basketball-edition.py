@@ -106,6 +106,13 @@ def main():
             "teams": len(team_counts),
             "upcoming_games": len(upcoming),
         },
+        "players": sorted(
+            [
+                {**player, "stats": {key: round(value, 2) for key, value in player["stats"].items()}}
+                for player in players.values()
+            ],
+            key=lambda player: (-player["stats"].get("avgPoints", -1), player["name"]),
+        ),
         "leaders": leaders,
         "teams": [{"team": team, "roster_count": count} for team, count in sorted(team_counts.items(), key=lambda item: (-item[1], item[0]))[:50]],
         "upcoming": upcoming,
