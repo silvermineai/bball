@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveFieldGoalPercent, playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
+import { effectiveFieldGoalPercent, playerCoreStatCoverage, playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
 
 const row: LiveNCAAPlayerRow = {
   player_id: "p-1",
@@ -39,6 +39,7 @@ describe("homepage NCAA player export", () => {
     expect(values[playerCsvHeaders.indexOf("FT%")]).toBe(80);
     expect(values[playerCsvHeaders.indexOf("Selected metric")]).toBe("ppg");
     expect(values[playerCsvHeaders.indexOf("Selected value")]).toBe(15);
+    expect(values[playerCsvHeaders.indexOf("Core stat fields recorded")]).toBe("16/16");
   });
 
   it("preserves unavailable values instead of converting them to zero", () => {
@@ -56,6 +57,12 @@ describe("homepage NCAA player export", () => {
     expect(effectiveFieldGoalPercent(100, 32, 200)).toBe(58);
     const values = playerCsvRows([{ ...row, fgm: null }], "efg")[0];
     expect(values[playerCsvHeaders.indexOf("eFG%")]).toBeNull();
+  });
+
+  it("reports partial source coverage without converting unavailable fields to zero", () => {
+    const sparse = { ...row, fta: null, ftm: null, tpa: null, tpm: null, fouls: null };
+    expect(playerCoreStatCoverage(sparse)).toEqual({ observed: 11, total: 16 });
+    expect(playerCsvRows([sparse], "ft_pct")[0][playerCsvHeaders.indexOf("Core stat fields recorded")]).toBe("11/16");
   });
 
   it("requires stable pagination metadata and non-empty intermediate pages", () => {

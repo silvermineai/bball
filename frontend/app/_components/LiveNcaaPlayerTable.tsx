@@ -47,6 +47,25 @@ export type LiveNCAAPlayerRankingResult = {
 };
 type Result = LiveNCAAPlayerRankingResult;
 
+/**
+ * Count only the core fields that the table can display without estimating a
+ * missing value. This keeps a partial source row visibly distinct from a
+ * complete stat line while preserving the raw values in the export.
+ */
+const coreStatFields = [
+  "minutes", "points", "rebounds", "offensive_rebounds", "defensive_rebounds",
+  "assists", "steals", "blocks", "fouls", "turnovers", "fga", "fgm", "tpa",
+  "tpm", "fta", "ftm",
+] as const;
+
+export function playerCoreStatCoverage(row: LiveNCAAPlayerRow) {
+  const observed = coreStatFields.filter((field) => {
+    const value = row[field];
+    return typeof value === "number" && Number.isFinite(value);
+  }).length;
+  return { observed, total: coreStatFields.length };
+}
+
 export function validatePlayerExportPage(
   payload: LiveNCAAPlayerRankingResult,
   expectedTotal: number,
@@ -171,12 +190,13 @@ export const playerCsvHeaders = [
   "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
   "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Fouls", "PF/G", "Turnovers", "TO/G",
-  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value",
+  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded",
 ];
 
 /** Keep the homepage export aligned with the visible player table and retain raw denominators. */
 export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCell[][] {
   return rows.map((row) => {
+    const coverage = playerCoreStatCoverage(row);
     const mpg = perGame(row.minutes, row.games);
     const ppg = perGame(row.points, row.games);
     const rpg = perGame(row.rebounds, row.games);
@@ -196,7 +216,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
       row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.fouls, fpg,
       row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
-      metric, row.value,
+      metric, row.value, `${coverage.observed}/${coverage.total}`,
     ];
   });
 }
@@ -329,10 +349,11 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
             <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
-            <tbody>{result.rows.slice(0, rowLimit).map((row) => (
-              <tr key={`${row.player_id}-${row.team_name || ""}`}>
+            <tbody>{result.rows.slice(0, rowLimit).map((row) => {
+              const coverage = playerCoreStatCoverage(row);
+              return <tr key={`${row.player_id}-${row.team_name || ""}`}>
                 <td className="rank-number">{row.rank}</td>
-                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small></th>
+                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small></th>
                 <td>{row.team_name || "—"}</td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>
@@ -351,8 +372,8 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
                 <td className="numeric">{percentage(row.tpm, row.tpa) == null ? "—" : `${fmt(percentage(row.tpm, row.tpa), 1)}%`}</td>
                 <td className="numeric">{percentage(row.ftm, row.fta) == null ? "—" : `${fmt(percentage(row.ftm, row.fta), 1)}%`}</td>
                 <td className="numeric"><strong>{displayMetric(row)}</strong></td>
-              </tr>
-            ))}</tbody>
+              </tr>;
+            })}</tbody>
           </table>
         </div>
       ) : status === "checking" ? <p className="empty" role="status">Loading current player production…</p> : <p className="empty" role="status">Live player production is temporarily unavailable. <Link href="/basketball/ncaa-rankings/">Open the ranking archive →</Link></p>}
