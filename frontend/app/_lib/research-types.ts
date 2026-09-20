@@ -49,6 +49,10 @@ export type Metrics = {
   log_loss: number | null;
   interval_games: number;
   interval_coverage: number | null;
+  /** Mean high-minus-low span among valid, settled forecast intervals. */
+  interval_mean_width?: number | null;
+  /** Reliability-bin weighted absolute forecast/observed gap. */
+  expected_calibration_error?: number | null;
   reliability?: {
     lower: number;
     upper: number;
@@ -85,6 +89,8 @@ export type SportSummary = {
     log_loss: number | null;
     interval_games: number;
     interval_coverage: number | null;
+    interval_mean_width?: number | null;
+    expected_calibration_error?: number | null;
   }[];
   market_metrics: {
     /** Exact forecast edition evaluated against this market cohort. */

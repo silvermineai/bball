@@ -240,6 +240,13 @@ export default function Scorecard() {
           </b>
         </span>
         <span>
+          Mean interval width <b>{fmt(m.interval_mean_width)}</b>
+        </span>
+        <span>
+          Calibration error{" "}
+          <b>{m.expected_calibration_error == null ? "—" : `${fmt(m.expected_calibration_error * 100, 1)} pts`}</b>
+        </span>
+        <span>
           Retained odds observations <b>{marketObservations.toLocaleString()}</b>
         </span>
         <span>
@@ -269,6 +276,7 @@ export default function Scorecard() {
                   <th className="numeric">Settled</th>
                   <th className="numeric">Margin MAE</th>
                   <th className="numeric">Brier</th>
+                  <th className="numeric">Calibration error</th>
                   <th className="numeric">80% range</th>
                 </tr>
               </thead>
@@ -282,10 +290,11 @@ export default function Scorecard() {
                     <td className="numeric">{edition.settled_games.toLocaleString()}</td>
                     <td className="numeric">{fmt(edition.margin_mae)}</td>
                     <td className="numeric">{fmt(edition.brier, 4)}</td>
+                    <td className="numeric">{edition.expected_calibration_error == null ? "—" : `${fmt(edition.expected_calibration_error * 100, 1)} pts`}</td>
                     <td className="numeric">
                       {edition.interval_coverage === null
                         ? "—"
-                        : `${fmt(edition.interval_coverage * 100)}% (${edition.interval_games.toLocaleString()})`}
+                        : `${fmt(edition.interval_coverage * 100)}% · ${fmt(edition.interval_mean_width)} pts (${edition.interval_games.toLocaleString()})`}
                     </td>
                   </tr>
                 ))}

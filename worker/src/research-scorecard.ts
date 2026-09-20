@@ -64,8 +64,18 @@ function parse(value: unknown): Json | null {
 }
 
 function number(value: unknown): number | null {
+  // JSON null, booleans and blank strings are missing evidence, not zero.
+  // Number(null), Number(false) and Number("") all coerce to 0, which could
+  // otherwise turn an incomplete final or prediction into a valid metric.
+  if (value === null || value === undefined || typeof value === "boolean") return null;
+  if (typeof value !== "number" && (typeof value !== "string" || !value.trim())) return null;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function probability(value: unknown): number | null {
+  const candidate = number(value);
+  return candidate !== null && candidate >= 0 && candidate <= 1 ? candidate : null;
 }
 
 function bool(value: unknown): boolean {
@@ -152,7 +162,7 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
   };
   const modelMargin = number(p.home_margin);
   const modelTotal = number(p.total);
-  const modelWin = number(p.home_win_probability);
+  const modelWin = probability(p.home_win_probability);
   if (market === "spreads" && modelMargin !== null && line !== null) output.model_difference = modelMargin + line;
   else if (market === "totals" && modelTotal !== null && line !== null) output.model_difference = modelTotal - line;
   else if (market === "h2h" && modelWin !== null) {
@@ -185,31 +195,39 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
 
 function metrics(rows: Json[]): Json {
   const settled = rows.filter((row) => row.status === "settled");
-  const binary = settled.filter((row) => number(row.actual_margin) !== 0);
+  const binary = settled.filter((row) => {
+    const margin = number(row.actual_margin);
+    return margin !== null && margin !== 0;
+  });
   const marginErrors = settled.flatMap((row) => number(row.home_margin) !== null && number(row.actual_margin) !== null ? [Math.abs(Number(row.home_margin) - Number(row.actual_margin))] : []);
   const totalErrors = settled.flatMap((row) => number(row.total) !== null && number(row.actual_total) !== null ? [Math.abs(Number(row.total) - Number(row.actual_total))] : []);
-  const picks = binary.filter((row) => number(row.home_win_probability) !== null && number(row.home_win_probability) !== 0.5);
-  const winner = picks.map((row) => (Number(row.home_win_probability) > 0.5) === (Number(row.actual_margin) > 0) ? 1 : 0);
-  const brier = binary.flatMap((row) => number(row.home_win_probability) !== null && number(row.actual_margin) !== null ? [(Number(row.home_win_probability) - (Number(row.actual_margin) > 0 ? 1 : 0)) ** 2] : []);
+  const picks = binary.filter((row) => probability(row.home_win_probability) !== null && probability(row.home_win_probability) !== 0.5);
+  const winner = picks.map((row) => (Number(probability(row.home_win_probability)) > 0.5) === (Number(row.actual_margin) > 0) ? 1 : 0);
+  const brier = binary.flatMap((row) => probability(row.home_win_probability) !== null && number(row.actual_margin) !== null ? [(Number(probability(row.home_win_probability)) - (Number(row.actual_margin) > 0 ? 1 : 0)) ** 2] : []);
   const logLoss = binary.flatMap((row) => {
-    const p = number(row.home_win_probability);
+    const p = probability(row.home_win_probability);
     const margin = number(row.actual_margin);
     if (p === null || margin === null) return [];
     const likelihood = margin > 0 ? p : 1 - p;
     return [-Math.log(Math.max(1e-12, Math.min(1 - 1e-12, likelihood)))];
   });
-  const interval = settled.filter((row) => number(row.margin_low) !== null && number(row.margin_high) !== null && number(row.actual_margin) !== null);
+  const interval = settled.filter((row) => {
+    const low = number(row.margin_low);
+    const high = number(row.margin_high);
+    return low !== null && high !== null && low <= high && number(row.actual_margin) !== null;
+  });
   const reliability = Array.from({ length: 10 }, (_, index) => {
     const lower = index / 10;
     const upper = (index + 1) / 10;
     const bucket = binary.filter((row) => {
-      const probability = number(row.home_win_probability);
-      return probability !== null && probability >= lower && (index === 9 ? probability <= upper : probability < upper);
+      const candidate = probability(row.home_win_probability);
+      return candidate !== null && candidate >= lower && (index === 9 ? candidate <= upper : candidate < upper);
     });
-    const predicted = bucket.flatMap((row) => number(row.home_win_probability) === null ? [] : [Number(row.home_win_probability)]);
+    const predicted = bucket.flatMap((row) => probability(row.home_win_probability) === null ? [] : [Number(probability(row.home_win_probability))]);
     const observed = bucket.flatMap((row) => number(row.actual_margin) === null ? [] : [Number(row.actual_margin) > 0 ? 1 : 0]);
     return bucket.length ? { lower, upper, games: bucket.length, predicted: mean(predicted), observed: mean(observed) } : null;
   }).filter((bin): bin is { lower: number; upper: number; games: number; predicted: number | null; observed: number | null } => bin !== null);
+  const calibratedGames = reliability.reduce((sum, bin) => sum + bin.games, 0);
   return {
     games: settled.length,
     binary_games: binary.length,
@@ -221,6 +239,11 @@ function metrics(rows: Json[]): Json {
     log_loss: mean(logLoss),
     interval_games: interval.length,
     interval_coverage: mean(interval.map((row) => Number(Number(row.margin_low) <= Number(row.actual_margin) && Number(row.actual_margin) <= Number(row.margin_high)))),
+    interval_mean_width: mean(interval.map((row) => Number(row.margin_high) - Number(row.margin_low))),
+    expected_calibration_error: calibratedGames
+      ? reliability.reduce((sum, bin) => sum + bin.games * Math.abs(Number(bin.observed) - Number(bin.predicted)), 0)
+        / calibratedGames
+      : null,
     reliability,
   };
 }
@@ -276,6 +299,8 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
       log_loss: measured.log_loss,
       interval_games: measured.interval_games,
       interval_coverage: measured.interval_coverage,
+      interval_mean_width: measured.interval_mean_width,
+      expected_calibration_error: measured.expected_calibration_error,
     };
   }).sort((left, right) =>
     String(right.last_registered_at || "").localeCompare(String(left.last_registered_at || ""))
@@ -353,10 +378,13 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const status = exclusion ? "excluded" : finalStatus(state, now);
     const homeScore = number(state?.home_score);
     const awayScore = number(state?.away_score);
+    const marginLow = number(prediction.margin_low);
+    const marginHigh = number(prediction.margin_high);
+    const validMarginInterval = marginLow !== null && marginHigh !== null && marginLow <= marginHigh;
     const item: Json = {
       id: row.id, sport, game_id: row.game_id, model_id: row.model_id, generated_at: row.generated_at, registered_at: row.registered_at, starts_at: row.starts_at,
       time_tbd: Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
-      home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: number(prediction.home_win_probability), margin_low: number(prediction.margin_low), margin_high: number(prediction.margin_high),
+      home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: probability(prediction.home_win_probability), margin_low: validMarginInterval ? marginLow : null, margin_high: validMarginInterval ? marginHigh : null,
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,
       actual_total: status === "settled" && homeScore !== null && awayScore !== null ? homeScore + awayScore : null, comparisons: [],
     };

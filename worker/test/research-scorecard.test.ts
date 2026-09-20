@@ -166,16 +166,84 @@ describe("live research scorecard", () => {
       { lower: 0.2, upper: 0.3, games: 1, predicted: 0.2, observed: 0 },
       { lower: 0.7, upper: 0.8, games: 1, predicted: 0.7, observed: 1 },
     ]);
+    expect(body.sports.basketball.metrics).toMatchObject({
+      interval_games: 2,
+      interval_coverage: 1,
+      interval_mean_width: 25,
+      expected_calibration_error: 0.25,
+    });
     expect(body.sports.basketball.model_metrics).toMatchObject([
-      { model_id: "model-2", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 7, interval_coverage: 1 },
-      { model_id: "model-1", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 5, interval_coverage: 1 },
+      { model_id: "model-2", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 7, interval_coverage: 1, interval_mean_width: 24 },
+      { model_id: "model-1", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 5, interval_coverage: 1, interval_mean_width: 26 },
     ]);
+    expect(body.sports.basketball.model_metrics[0].expected_calibration_error).toBeCloseTo(0.2);
+    expect(body.sports.basketball.model_metrics[1].expected_calibration_error).toBeCloseTo(0.3);
     expect(body.sports.basketball.model_metrics[0].brier).toBeCloseTo(0.04);
     expect(body.sports.basketball.model_metrics[1].brier).toBeCloseTo(0.09);
     expect(body.sports.basketball.market_metrics).toMatchObject([
       { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8 },
       { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9 },
     ]);
+  });
+
+  it("withholds null and invalid numeric evidence instead of coercing it into metrics", async () => {
+    const incompleteFinal = {
+      id: "registration-incomplete",
+      sport: "basketball",
+      game_id: "game-incomplete",
+      model_id: "model-integrity",
+      generated_at: "2026-01-01T00:00:00.000000Z",
+      registered_at: "2026-01-01T00:01:00.000000Z",
+      starts_at: "2026-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home", away_id: "away", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: null, total: "", home_win_probability: 1.2, margin_low: 12, margin_high: -4 },
+      }),
+      state_json: JSON.stringify({
+        home_id: "home", away_id: "away", starts_at: "2026-01-02T00:00:00.000000Z", time_tbd: 0,
+        completed: 1, home_score: null, away_score: 70,
+      }),
+      exclusion: null,
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("ROW_NUMBER() OVER")
+            ? { results: [incompleteFinal] }
+            : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request("/?sport=basketball&season=2027&limit=5000", {}, { RESEARCH_DB: { prepare } as never });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { games: Array<Record<string, unknown>>; sports: { basketball: { metrics: Record<string, unknown> } } };
+    expect(body.games[0]).toMatchObject({
+      status: "final_missing_scores",
+      home_margin: null,
+      total: null,
+      home_win_probability: null,
+      margin_low: null,
+      margin_high: null,
+      actual_margin: null,
+      actual_total: null,
+    });
+    expect(body.sports.basketball.metrics).toMatchObject({
+      games: 0,
+      binary_games: 0,
+      brier: null,
+      interval_games: 0,
+      interval_coverage: null,
+      interval_mean_width: null,
+      expected_calibration_error: null,
+    });
   });
 
   it("returns a retryable response when the scorecard warehouse is busy", async () => {
