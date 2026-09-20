@@ -9,6 +9,7 @@ import {
   GENDER_OPTIONS,
   isNavItemActive,
   SPORT_NAVIGATION,
+  sportAvailabilityMessage,
   sportForPathname,
   sportSupportsGenderScope,
   type Division,
@@ -127,7 +128,7 @@ export default function SportNavigation() {
         </div>
       ) : currentSport === "football" ? (
         <div className="sport-availability" role="status">
-          <strong>Football coverage:</strong> current archive is FBS/FCS; D2 and D3 selections are retained for future imports.
+          {sportAvailabilityMessage(currentSport, division)}
         </div>
       ) : null}
     </div>

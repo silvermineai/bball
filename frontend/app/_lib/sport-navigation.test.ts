@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, isNavItemActive, SPORT_NAVIGATION, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
+import { buildScopeHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -32,5 +32,13 @@ describe("sport navigation", () => {
     expect(sportSupportsGenderScope("football")).toBe(false);
     expect(sportSupportsGenderScope("mens-basketball")).toBe(true);
     expect(sportSupportsGenderScope("womens-basketball")).toBe(true);
+  });
+
+  it("describes football lower-division coverage without overstating the archive", () => {
+    expect(sportAvailabilityMessage("football", "1")).toContain("D2 and D3 schedule rows are available");
+    expect(sportAvailabilityMessage("football", "2")).toBe(
+      "Football coverage: D2 schedule rows are available. Player tables, team stats and model forecasts for D2 are not yet published.",
+    );
+    expect(sportAvailabilityMessage("mens-basketball", "3")).toBeNull();
   });
 });
