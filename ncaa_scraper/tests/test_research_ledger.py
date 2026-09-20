@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ncaa_scraper.odds_feed import fetch, ingest, match_event, normalize_market
+from ncaa_scraper.odds_feed import configured_odds_key, fetch, ingest, match_event, normalize_market
 from ncaa_scraper.research_ledger import (
     ROOT,
     build_report,
@@ -367,6 +367,19 @@ class LedgerTests(unittest.TestCase):
                 fetch("football", "SECRET_TEST_KEY")
             self.assertNotIn("SECRET_TEST_KEY", str(failure.exception))
             self.assertEqual(get.call_count, 1)
+
+    def test_odds_key_resolution_skips_blank_environment_values(self):
+        self.assertEqual(
+            configured_odds_key(
+                {"THE_ODDS_API_KEY": "   ", "ODDS_API_KEY": " env-key "},
+                {"THE_ODDS_API_KEY": " file-key "},
+            ),
+            "env-key",
+        )
+        self.assertEqual(
+            configured_odds_key({"THE_ODDS_API_KEY": "  "}, {"THE_ODDS_API_KEY": " file-key "}),
+            "file-key",
+        )
 
     def test_source_sql_export_is_a_safe_ci_fallback(self):
         with tempfile.TemporaryDirectory() as d:

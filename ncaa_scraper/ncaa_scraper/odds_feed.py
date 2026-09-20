@@ -15,6 +15,7 @@ import re
 import sqlite3
 import time
 import unicodedata
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -28,6 +29,25 @@ PROVIDER = "The Odds API"
 SPORT_KEYS = {"football": "americanfootball_ncaaf", "basketball": "basketball_ncaab"}
 TERMS = "https://the-odds-api.com/terms-and-conditions.html"
 CACHE = ROOT / ".local/odds"
+
+
+def configured_odds_key(
+    environment: Mapping[str, object] | None = None,
+    file_values: Mapping[str, object] | None = None,
+) -> str | None:
+    """Return the first non-blank configured key without exposing its value."""
+    environment = os.environ if environment is None else environment
+    file_values = dotenv_values(Path.home() / ".env") if file_values is None else file_values
+    for name, source in (
+        ("THE_ODDS_API_KEY", environment),
+        ("ODDS_API_KEY", environment),
+        ("THE_ODDS_API_KEY", file_values),
+        ("ODDS_API_KEY", file_values),
+    ):
+        value = source.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def normalize_name(value):
@@ -382,13 +402,7 @@ def main():
     parser.add_argument("--sport", choices=[*SPORT_KEYS, "both"], default="football")
     parser.add_argument("--days", type=int, choices=range(1, 15), default=7)
     args = parser.parse_args()
-    values = dotenv_values(Path.home() / ".env")
-    key = (
-        os.environ.get("THE_ODDS_API_KEY")
-        or os.environ.get("ODDS_API_KEY")
-        or values.get("THE_ODDS_API_KEY")
-        or values.get("ODDS_API_KEY")
-    )
+    key = configured_odds_key()
     if not key:
         raise SystemExit(
             "No odds credential configured. Add THE_ODDS_API_KEY to ~/.env; no provider call was made."

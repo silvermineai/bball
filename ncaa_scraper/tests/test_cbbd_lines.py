@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from ncaa_scraper.cbbd_lines import fetch_lines, ingest
+from ncaa_scraper.cbbd_recruiting import api_key
 
 
 GAME = {
@@ -44,6 +45,19 @@ class CbbdLinesTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "no provider call"):
                 fetch_lines(2027)
             fetch.assert_not_called()
+
+    def test_key_resolution_skips_blank_environment_values(self):
+        self.assertEqual(
+            api_key({"CBBD_API_KEY": "   "}, {"CBBD_API_KEY": " file-key "}),
+            "file-key",
+        )
+        self.assertEqual(
+            api_key(
+                {"CBBD_API_KEY": " ", "COLLEGE_BASKETBALL_DATA_API_KEY": " env-key "},
+                {},
+            ),
+            "env-key",
+        )
 
     def test_ingest_accepts_future_moneyline_and_rejects_started_game(self):
         rows = [

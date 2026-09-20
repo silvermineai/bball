@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import time
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError
@@ -47,14 +48,23 @@ def capture_clock(value: datetime | None = None) -> str:
     return now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def api_key() -> str | None:
-    values = dotenv_values(Path.home() / ".env")
-    return (
-        os.environ.get("CBBD_API_KEY")
-        or values.get("CBBD_API_KEY")
-        or os.environ.get("COLLEGE_BASKETBALL_DATA_API_KEY")
-        or values.get("COLLEGE_BASKETBALL_DATA_API_KEY")
-    )
+def api_key(
+    environment: Mapping[str, object] | None = None,
+    file_values: Mapping[str, object] | None = None,
+) -> str | None:
+    """Return the first non-blank configured CBBD key, stripped for requests."""
+    environment = os.environ if environment is None else environment
+    file_values = dotenv_values(Path.home() / ".env") if file_values is None else file_values
+    for name, source in (
+        ("CBBD_API_KEY", environment),
+        ("CBBD_API_KEY", file_values),
+        ("COLLEGE_BASKETBALL_DATA_API_KEY", environment),
+        ("COLLEGE_BASKETBALL_DATA_API_KEY", file_values),
+    ):
+        value = source.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def fetch_json(
