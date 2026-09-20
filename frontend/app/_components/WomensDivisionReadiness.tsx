@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DivisionCoverageMatrix from "./DivisionCoverageMatrix";
+import { divisionPlayerReadiness } from "../_lib/division-player-readiness";
 
 type Division = { status: string; rows: number; reason: string };
 type Signal = { game_id: string; date?: string | null; home?: string | null; away?: string | null; source_flag: string };
@@ -56,6 +57,15 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
         <p className="note">{publication.asset_audit.method} {publication.asset_audit.assets_with_valid_receipt.toLocaleString()} files have a valid source receipt.</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Retained asset</th><th className="numeric">Rows</th><th>Division field</th><th>Identity fields</th><th>Receipt</th></tr></thead><tbody>{publication.retained_assets.map((asset) => <tr key={asset.asset}><th scope="row">{asset.asset}<small>{asset.dataset || "source file"}{asset.season ? ` · ${asset.season}` : ""}</small></th><td className="numeric">{asset.rows.toLocaleString()}</td><td>{asset.division_fields.length ? asset.division_fields.join(", ") : <span className="status-error">none</span>}</td><td>{asset.identity_fields?.length ? asset.identity_fields.join(", ") : "—"}</td><td>{asset.receipt.valid ? "valid" : <span className="status-error">missing / invalid</span>}</td></tr>)}</tbody></table></div>
       </div> : null}
+      {publication.retained_assets?.length ? (() => {
+        const playerReadiness = divisionPlayerReadiness(publication.retained_assets);
+        return <div className="paper-panel" style={{ marginTop: 18 }} aria-label="Women&apos;s lower-division player import readiness">
+          <div className="eyebrow">PLAYER IMPORT GATE</div>
+          <h3>{playerReadiness.ready}/{playerReadiness.candidates} candidate player assets ready</h3>
+          <p className="note">A player release is eligible for D{division} ingestion only when it carries an explicit division field, stable team and athlete identifiers, and a valid receipt. Current source assets remain blocked when any requirement is absent.</p>
+          {playerReadiness.candidates ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Candidate asset</th><th className="numeric">Rows</th><th>Status</th><th>Gate detail</th></tr></thead><tbody>{playerReadiness.gates.map((gate) => <tr key={gate.asset}><th scope="row">{gate.asset}<small>{gate.dataset}</small></th><td className="numeric">{gate.rows.toLocaleString()}</td><td>{gate.status === "ready" ? "Ready" : <span className="status-error">Blocked</span>}</td><td>{gate.reasons.length ? gate.reasons.join(" · ") : "All player import requirements recorded"}</td></tr>)}</tbody></table></div> : <p className="empty">No player-shaped asset is available to evaluate for D{division} import.</p>}
+        </div>;
+      })() : null}
       {signals ? <div className="paper-panel" style={{ marginTop: 18 }}>
         <div className="eyebrow">SOURCE SIGNAL · NOT A DIVISION LABEL</div>
         <h3>{signals.rows.toLocaleString()} scheduled non-Division-I signal{signals.rows === 1 ? "" : "s"}</h3>
