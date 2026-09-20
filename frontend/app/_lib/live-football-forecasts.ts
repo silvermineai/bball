@@ -104,25 +104,43 @@ export async function loadLiveFootballForecasts(
 /** Load only exact, ledger-qualified market comparisons for football games. */
 export async function loadLiveFootballMarketComparisons(signal: AbortSignal | undefined, modelId: string) {
   if (!modelId) throw new Error("Live football market comparisons require a model edition.");
-  const response = await fetch(
-    `/api/research/scorecard?sport=football&season=2026&model=${encodeURIComponent(modelId)}&limit=5000`,
-    { signal },
-  );
-  if (!response.ok) throw new Error("Live football market comparisons unavailable.");
-  const payload = await response.json() as LiveFootballScorecardResponse;
-  const total = Number(payload.total);
-  const pageSize = Number(payload.page_size);
-  if (payload.live !== true || payload.season !== 2026 || payload.model !== modelId || !Number.isInteger(total) || total < 0
-    || !Number.isInteger(pageSize) || pageSize < 1 || !Array.isArray(payload.games)
-    || payload.games.length !== total || payload.games.length > pageSize) {
+  const endpoint = (page: number) =>
+    `/api/research/scorecard?sport=football&season=2026&model=${encodeURIComponent(modelId)}&limit=5000&page=${page}`;
+  const fetchPage = async (page: number) => {
+    const response = await fetch(endpoint(page), { signal });
+    if (!response.ok) throw new Error("Live football market comparisons unavailable.");
+    return response.json() as Promise<LiveFootballScorecardResponse>;
+  };
+  const first = await fetchPage(0);
+  const total = Number(first.total);
+  const pageSize = Number(first.page_size);
+  if (first.live !== true || first.season !== 2026 || first.model !== modelId || !Number.isInteger(total) || total < 0
+    || !Number.isInteger(pageSize) || pageSize < 1 || !Array.isArray(first.games) || first.games.length > pageSize) {
     throw new Error("Live football market comparisons returned an incomplete cohort.");
   }
-  const ids = new Set(payload.games.map((game) => game.game_id));
-  if (ids.size !== payload.games.length) {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // Keep pagination bounded if an upstream response advertises corrupt metadata.
+  if (pageCount > 1001) throw new Error("The live football market cohort exceeds the bounded page window.");
+  const additional = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) => fetchPage(index + 1)),
+  );
+  const pages = [first, ...additional];
+  pages.forEach((payload, page) => {
+    if (payload.live !== true || payload.season !== 2026 || payload.model !== modelId
+      || Number(payload.total) !== total || Number(payload.page_size) !== pageSize
+      || !Array.isArray(payload.games) || payload.games.length > pageSize
+      || (page < pageCount - 1 && payload.games.length === 0)) {
+      throw new Error("Live football market comparisons returned an incomplete cohort.");
+    }
+  });
+  const games = pages.flatMap((payload) => payload.games || []);
+  if (games.length !== total) throw new Error("Live football market comparisons returned an incomplete cohort.");
+  const ids = new Set(games.map((game) => game.game_id));
+  if (ids.size !== games.length) {
     throw new Error("Live football market comparisons returned duplicate games.");
   }
   return Object.fromEntries(
-    payload.games.map((game) => [game.game_id, {
+    games.map((game) => [game.game_id, {
       model_id: game.model_id,
       comparisons: game.comparisons || [],
     }]),

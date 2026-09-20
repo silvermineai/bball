@@ -107,6 +107,32 @@ describe("live football forecast merge", () => {
     globalThis.fetch = originalFetch;
   });
 
+  it("paginates a larger market cohort without weakening edition checks", async () => {
+    const originalFetch = globalThis.fetch;
+    const urls: string[] = [];
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+      urls.push(url);
+      const page = Number(new URL(url, "https://example.test").searchParams.get("page"));
+      return new Response(JSON.stringify({
+        live: true,
+        season: 2026,
+        model: "football-v1",
+        total: 2,
+        page_size: 1,
+        games: [{ game_id: `game-${page + 1}`, model_id: "football-v1", comparisons: [] }],
+      }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballMarketComparisons(undefined, "football-v1")).resolves.toEqual({
+      "game-1": { model_id: "football-v1", comparisons: [] },
+      "game-2": { model_id: "football-v1", comparisons: [] },
+    });
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toContain("page=0");
+    expect(urls[1]).toContain("page=1");
+    globalThis.fetch = originalFetch;
+  });
+
   it("rejects a partial live market cohort instead of rendering incomplete evidence", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response(JSON.stringify({
