@@ -75,13 +75,17 @@ export function matchupFactorEdges(game: BBGame) {
 /** Keep the context vintage visible beside every factor edge. */
 export function matchupFactorContextLabel(game: BBGame) {
   const season = game.matchup_factors?.season;
-  return Number.isInteger(season) ? `Four Factor context · ${season}` : "Four Factor context unavailable";
+  if (!Number.isInteger(season)) return "Four Factor context unavailable";
+  if (game.matchup_factors_same_edition === false) {
+    return `Other-edition context · ${game.matchup_factors_model_id || "edition unavailable"} · ${season}`;
+  }
+  return `Four Factor context · ${season}`;
 }
 
 export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
-  "FTR edge", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
+  "FTR edge", "Four Factor model edition", "Four Factor same edition", "Four Factor generated", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
   "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace", "Verified market home probability", "Moneyline probability gap",
 ];
 
@@ -105,7 +109,10 @@ export function forecastCsvRows(
       prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
       prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
       factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
-      matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId)?.roster_margin, market.spread, market.total, market.spreadGap, market.totalGap,
+      game.matchup_factors_model_id ?? null,
+      game.matchup_factors_same_edition == null ? null : game.matchup_factors_same_edition ? "yes" : "no",
+      game.matchup_factors_generated_at ?? null,
+      matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId)?.roster_margin ?? null, market.spread, market.total, market.spreadGap, market.totalGap,
       home?.adj_off, home?.adj_def, home?.adj_net, home?.adj_tempo,
       away?.adj_off, away?.adj_def, away?.adj_net, away?.adj_tempo,
       market.homeProbability == null ? null : market.homeProbability * 100,

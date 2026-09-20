@@ -102,6 +102,12 @@ describe("matchupFactorContextLabel", () => {
       ...games[0],
       matchup_factors: { season: 2026, factors: {}, edges: {} },
     })).toBe("Four Factor context · 2026");
+    expect(matchupFactorContextLabel({
+      ...games[0],
+      matchup_factors: { season: 2026, factors: {}, edges: {} },
+      matchup_factors_model_id: "model-old",
+      matchup_factors_same_edition: false,
+    })).toBe("Other-edition context · model-old · 2026");
     expect(matchupFactorContextLabel(games[0])).toBe("Four Factor context unavailable");
   });
 });
@@ -115,7 +121,8 @@ describe("forecastCsvRows", () => {
     }]);
     expect(rows[0].slice(0, 8)).toEqual(["late", "2026-11-10T04:00:00Z", "Away late", "Home late", "primary", 70, 75, 0.58]);
     expect(rows[0].slice(13, 17)).toEqual([0.012, -0.031, 0.018, 0]);
-    expect(rows[0][18]).toBeNull();
+    expect(rows[0].slice(17, 20)).toEqual([null, null, null]);
+    expect(rows[0][20]).toBeNull();
   });
 
   it("exports the adjusted team ratings used to read the matchup", () => {
