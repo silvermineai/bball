@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { basketballCalibrationSummary } from "../../_lib/basketball-calibration";
 
 type CalibrationGame = {
   game?: {
@@ -77,8 +78,10 @@ export function readPublishedCalibration(): CalibrationBucket[] {
 }
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+const pctOrDash = (value: number | null) => value == null ? "—" : pct(value);
 
 export default function ForecastCalibrationTable({ buckets }: { buckets: CalibrationBucket[] }) {
+  const summary = basketballCalibrationSummary(buckets);
   return (
     <section className="section paper-panel" aria-labelledby="forecast-calibration">
       <div className="section-heading">
@@ -91,6 +94,12 @@ export default function ForecastCalibrationTable({ buckets }: { buckets: Calibra
         Each row groups the chronological replay by calibrated home-win probability. The observed rate is the share of home wins in that band; the gap is observed minus predicted. Range coverage is the share of games whose final margin landed inside the model&apos;s calibrated band.
       </p>
       {buckets.length ? (
+        <>
+        <div className="strip" style={{ marginBottom: 18 }} aria-label="Calibration summary">
+          <div><strong>{pctOrDash(summary.expectedCalibrationError)}</strong><span>Expected calibration error</span><small>{summary.games.toLocaleString()} weighted held-out games</small></div>
+          <div><strong>{pctOrDash(summary.maximumAbsoluteGap)}</strong><span>Largest bucket gap</span><small>Absolute observed minus predicted</small></div>
+          <div><strong>{pctOrDash(summary.intervalCoverage)}</strong><span>Weighted range coverage</span><small>Published margin interval</small></div>
+        </div>
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Home-win band</th><th className="numeric">Games</th><th className="numeric">Model rate</th><th className="numeric">Observed rate</th><th className="numeric">Gap</th><th className="numeric">Margin range coverage</th></tr></thead>
@@ -104,6 +113,8 @@ export default function ForecastCalibrationTable({ buckets }: { buckets: Calibra
             </tr>)}</tbody>
           </table>
         </div>
+        <p className="note" style={{ marginTop: 12 }}>Expected calibration error is the game-weighted mean absolute gap between predicted and observed home-win rates. It is descriptive for this held-out edition; it does not retune the live forecast.</p>
+        </>
       ) : <p className="empty">The calibration replay is unavailable in this edition.</p>}
     </section>
   );
