@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
+import { marketImportMatchesGame, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
 import type { BBGame } from "../../_lib/basketball-types";
 
 const fixed = (value: number | null, digits = 1) => value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
@@ -19,14 +19,15 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
   const [rows, setRows] = useState<MarketImportRow[]>([]);
   const comparisons = useMemo(() => rows.map((row) => {
     const game = upcoming.find((candidate) => candidate.id === row.gameId);
-    const prediction = game && game.starts_at === row.startsAt ? game.prediction : null;
+    const exact = marketImportMatchesGame(row, game || null);
+    const prediction = exact ? game?.prediction : null;
     if (!game || !prediction) return { row, game: game || null, exact: false, gap: null, model: null };
     const gap = row.market === "spreads"
       ? prediction.home_margin + (row.line || 0)
       : row.market === "totals"
         ? prediction.total - (row.line || 0)
         : prediction.home_win_probability - (noVigHome(row) || 0);
-    return { row, game, exact: true, gap, model: row.market === "spreads" ? prediction.home_margin : row.market === "totals" ? prediction.total : prediction.home_win_probability * 100 };
+    return { row, game, exact, gap, model: row.market === "spreads" ? prediction.home_margin : row.market === "totals" ? prediction.total : prediction.home_win_probability * 100 };
   }), [rows, upcoming]);
   const matched = comparisons.filter((item) => item.exact);
   const unmatched = comparisons.length - matched.length;
@@ -60,7 +61,7 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
       {matched.length > 0 && <div className="market-import-preview">
         <div className="eyebrow">Private comparison preview / upcoming basketball</div>
         <h4>See the model beside your authorized quote.</h4>
-        <p className="note">This preview stays in memory in this browser. It joins only exact game IDs and start times from the published 2026–27 schedule; it does not upload, persist or add these rows to the public ledger.</p>
+        <p className="note">This preview stays in memory in this browser. It joins only exact game IDs, participant names and start instants from the published 2026–27 schedule; it does not upload, persist or add these rows to the public ledger.</p>
         <div className="market-import-preview-stats" role="status"><span><strong>{matched.length}</strong> exact upcoming matches</span><span><strong>{unmatched}</strong> rows outside the current upcoming slate</span></div>
         <div className="table-scroll">
           <table className="data-table"><thead><tr><th>Game</th><th>Market</th><th>Book</th><th className="numeric">Quote</th><th className="numeric">Model</th><th className="numeric">Difference</th></tr></thead><tbody>

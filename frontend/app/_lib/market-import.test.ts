@@ -1,9 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
+import { marketImportMatchesGame, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
 describe("market import preflight", () => {
+  const previewRow = (overrides: Partial<ReturnType<typeof parseMarketImportRows>[number]> = {}) => ({
+    gameId: "401",
+    market: "spreads",
+    startsAt: "2027-01-01T20:00:00Z",
+    capturedAt: "2026-12-31T20:00:00Z",
+    updatedAt: "2026-12-31T19:59:00Z",
+    homeName: "North State",
+    awayName: "South State",
+    bookmaker: "Book",
+    line: -3,
+    homePrice: 1.91,
+    awayPrice: 1.91,
+    overPrice: null,
+    underPrice: null,
+    ...overrides,
+  });
+
+  it("matches equivalent timestamp encodings only when participants and IDs are exact", () => {
+    const row = previewRow();
+    const game = { id: "401", starts_at: "2027-01-01T12:00:00-08:00", home_name: "North State", away_name: "South State" };
+    expect(marketImportMatchesGame(row, game)).toBe(true);
+    expect(marketImportMatchesGame({ ...row, homeName: "North St." }, game)).toBe(false);
+    expect(marketImportMatchesGame({ ...row, gameId: "402" }, game)).toBe(false);
+  });
+
+  it("fails closed when either preview start clock is invalid", () => {
+    const row = previewRow({ startsAt: "2027-01-01 20:00:00" });
+    const game = { id: "401", starts_at: "2027-01-01T20:00:00Z", home_name: "North State", away_name: "South State" };
+    expect(marketImportMatchesGame(row, game)).toBe(false);
+  });
+
   it("parses quoted names and accepts a valid spread row", () => {
     const csv = `${header}\n401,"spreads",2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2026-12-31T19:59:00Z,"North, Home",Away,Book,-3,1.91,1.91,,,,,,,event-1`;
     expect(parseMarketCsv(csv)[1][6]).toBe("Away");

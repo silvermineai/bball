@@ -30,6 +30,25 @@ export type MarketImportRow = {
   underPrice: number | null;
 };
 
+type ExactScheduleGame = Pick<
+  import("./basketball-types").BBGame,
+  "id" | "starts_at" | "home_name" | "away_name"
+>;
+
+/**
+ * Use the same identity boundary as the server importer for a local preview.
+ * Timestamp strings may use different ISO precision or offsets, so compare
+ * instants after requiring both values to be valid timezone-bearing dates.
+ */
+export function marketImportMatchesGame(row: MarketImportRow, game: ExactScheduleGame | null): boolean {
+  if (!game || game.id !== row.gameId || game.home_name !== row.homeName || game.away_name !== row.awayName) return false;
+  const timezoneBearing = (value: string) => /[zZ]|[+-]\d{2}:?\d{2}$/.test(value);
+  if (!timezoneBearing(game.starts_at) || !timezoneBearing(row.startsAt)) return false;
+  const gameTime = Date.parse(game.starts_at);
+  const rowTime = Date.parse(row.startsAt);
+  return Number.isFinite(gameTime) && Number.isFinite(rowTime) && gameTime === rowTime;
+}
+
 /** Parse RFC 4180-style CSV locally; the selected file never leaves the browser. */
 export function parseMarketCsv(text: string): string[][] {
   const rows: string[][] = [];
