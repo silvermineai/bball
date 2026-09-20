@@ -8,7 +8,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams } from "../_lib/forecast-lab-analysis";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 
 export default function BasketballCard({
@@ -33,6 +33,7 @@ export default function BasketballCard({
   const p = g.prediction || g.fallback_prediction || null;
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signalContext = forecastSignalContext(p, !!g.prediction);
+  const strongestFactor = strongestMatchupSignal(g.matchup_factors);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
     .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))
@@ -147,6 +148,14 @@ export default function BasketballCard({
           <div className="match-detail muted">
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
+          </div>
+          <div className="match-detail muted">
+            <span>Largest factor mismatch</span>
+            <span>
+              {strongestFactor
+                ? `${strongestFactor.edge > 0 ? "Home" : "Away"} ${strongestFactor.label} · ${fmt(Math.abs(strongestFactor.edge) * 100, 1)} pp`
+                : "No same-edition factor evidence"}
+            </span>
           </div>
           {(homeRating || awayRating || rosterScenario || g.matchup_factors || homeRoster || awayRoster) && (
             <details className="match-card-details">
