@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { describeRecruitingIntakeCoverage, parseRecruitingCsv, validateRecruitingIntakeCsv } from "./recruiting-intake";
+import { describeRecruitingIntakeCoverage, parseRecruitingCsv, recruitingIntakeRequiredColumns, validateRecruitingIntakeCsv } from "./recruiting-intake";
 
 const header = "record_id,season,player_name,player_source_id,from_program,from_program_id,to_program,to_program_id,status,status_date,source_published_on,source_url,source_publisher,captured_at";
 
 describe("recruiting intake preflight", () => {
+  it("keeps the import contract visible for the zero-row workflow", () => {
+    expect(recruitingIntakeRequiredColumns).toEqual([
+      "season", "player_name", "from_program", "to_program", "status",
+      "status_date", "source_published_on", "source_url", "source_publisher", "captured_at",
+    ]);
+  });
   it("parses quoted commas and validates a clean export", () => {
     const csv = `${header}\nmove-1,2027,"Doe, Jordan",p1,"Old, U",1,New,2,reported_transfer,2026-05-01,2026-05-02,https://provider.example/row,Provider,2026-05-03T12:00:00Z`;
     expect(parseRecruitingCsv(csv)[1][2]).toBe("Doe, Jordan");

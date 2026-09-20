@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { describeRecruitingIntakeCoverage, validateRecruitingIntakeCsv, type RecruitingIntakePreflight } from "../../_lib/recruiting-intake";
+import { describeRecruitingIntakeCoverage, recruitingIntakeRequiredColumns, validateRecruitingIntakeCsv, type RecruitingIntakePreflight } from "../../_lib/recruiting-intake";
+
+type ReviewedCoverage = {
+  coverage?: {
+    players?: number;
+    programs?: number;
+    events?: number;
+    historical_links?: number;
+    complete_national_coverage?: boolean;
+  };
+  edition?: string;
+  reviewed_at?: string;
+};
 
 type IntakeCoverage = {
   total: number;
@@ -37,6 +49,7 @@ const clock = (value: string | null) =>
 
 export default function AuthorizedIntake() {
   const [coverage, setCoverage] = useState<IntakeCoverage | null>(null);
+  const [reviewedCoverage, setReviewedCoverage] = useState<ReviewedCoverage | null>(null);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [preflight, setPreflight] = useState<RecruitingIntakePreflight | null>(null);
@@ -49,6 +62,14 @@ export default function AuthorizedIntake() {
       })
       .then((value) => { if (!controller.signal.aborted) setCoverage(value); })
       .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
+    return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/basketball/research/recruiting?season=2027", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<ReviewedCoverage> : null)
+      .then((value) => { if (!controller.signal.aborted && value) setReviewedCoverage(value); })
+      .catch(() => { /* Reviewed coverage remains explicitly unavailable. */ });
     return () => controller.abort();
   }, []);
   const providerFeeds = coverage?.provider_feeds ?? [];
@@ -109,6 +130,32 @@ export default function AuthorizedIntake() {
             </div>}
           </div>
         )}
+        {coverageDisplay?.available && coverage ? (
+          <section className="recruiting-intake-compare" aria-label="Recruiting evidence coverage comparison">
+            <div>
+              <div className="eyebrow">Coverage comparison / 2027</div>
+              <h3>Keep the evidence layers separate.</h3>
+              <p className="note">Reviewed school announcements, public prospect rankings and licensed intake answer different questions. A zero in one layer does not erase the others.</p>
+            </div>
+            <div className="recruiting-intake-compare-grid">
+              <div><strong>{reviewedCoverage?.coverage?.players == null ? "—" : reviewedCoverage.coverage.players.toLocaleString()}</strong><span>Reviewed additions</span><small>{reviewedCoverage?.coverage?.events == null ? "Coverage unavailable" : `${reviewedCoverage.coverage.events.toLocaleString()} dated events`}</small></div>
+              <div><strong>{coverage.public_rankings?.rows == null ? "—" : coverage.public_rankings.rows.toLocaleString()}</strong><span>Public prospect rows</span><small>{coverage.public_rankings?.ranked_rows == null ? "Coverage unavailable" : `${coverage.public_rankings.ranked_rows.toLocaleString()} ranked`}</small></div>
+              <div><strong>{coverage.total.toLocaleString()}</strong><span>Authorized intake rows</span><small>{coverage.total ? `${importedProviders.size} retained feed${importedProviders.size === 1 ? "" : "s"}` : "No licensed export loaded"}</small></div>
+            </div>
+          </section>
+        ) : null}
+        {coverageDisplay?.available && coverage?.total === 0 ? (
+          <section className="recruiting-intake-next" aria-label="Next authorized import fields">
+            <div>
+              <div className="eyebrow">Next required import / no rows loaded</div>
+              <h3>What a licensed export must carry.</h3>
+              <p className="note">Download the template, fill these fields from an approved feed, then run the local preflight. A clean preflight still requires the server importer and license record.</p>
+            </div>
+            <div className="recruiting-intake-field-list">
+              {recruitingIntakeRequiredColumns.map((field) => <code key={field}>{field}</code>)}
+            </div>
+          </section>
+        ) : null}
         <p className="note">{coverage?.policy || "Rows are never used to infer eligibility or current availability. A missing import is unavailable evidence, not a zero."}</p>
         <div className="recruiting-intake-preflight">
           <div>

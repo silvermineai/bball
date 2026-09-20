@@ -4,7 +4,8 @@ export const recruitingIntakeColumns = [
   "source_publisher", "captured_at",
 ] as const;
 
-const requiredColumns = ["season", "player_name", "from_program", "to_program", "status", "status_date", "source_published_on", "source_url", "source_publisher", "captured_at"] as const;
+export const recruitingIntakeRequiredColumns = ["season", "player_name", "from_program", "to_program", "status", "status_date", "source_published_on", "source_url", "source_publisher", "captured_at"] as const;
+const requiredColumns = recruitingIntakeRequiredColumns;
 const statuses = new Set(["reported_transfer", "reported_commitment", "reported_withdrawal", "reported_eligibility", "reported_unavailability", "reported_update"]);
 
 export type RecruitingIntakePreflight = {
