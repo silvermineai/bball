@@ -11,7 +11,7 @@ import {
   type RecruitingShortlistEntry,
 } from "../../../_lib/recruiting-shortlist";
 import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-schools";
-import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
+import { commitmentTransitions, type RecruitingHistoryEntry, validateRecruitingHistory } from "./commitment-history";
 import { prospectClassContext, type ProspectClassContextPayload } from "./class-context";
 import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-context";
 import { prospectLearningChecks } from "./learning-questions";
@@ -65,6 +65,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const athleteId = /^\d{1,15}$/.test(params.get("id") || "") ? params.get("id")! : "";
   const [prospect, setProspect] = useState<Prospect | null>(null);
   const [history, setHistory] = useState<RecruitingHistoryEntry[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<"checking" | "verified" | "unavailable">("checking");
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
   const [sourceReceipt, setSourceReceipt] = useState<Response["source_receipt"]>(null);
@@ -86,6 +87,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     setError("");
     setProspect(null);
     setHistory([]);
+    setHistoryStatus("checking");
     setEdition(null);
     setSourceReceipt(null);
     setClassContextPayload(null);
@@ -102,7 +104,9 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
         setSourceReceipt(value.source_receipt || null);
         setClassContextPayload(value.class_context || null);
         setPeerContextPayload(value.peer_context || null);
-        setHistory(value.history || []);
+        const validatedHistory = validateRecruitingHistory(value.history);
+        setHistory(validatedHistory || []);
+        setHistoryStatus(validatedHistory ? "verified" : "unavailable");
         if (value.unavailable_reason) setError(value.unavailable_reason);
         else if (!value.rows.length) setError("That prospect is not in the selected class edition.");
         else setProspect(value.rows[0]);
@@ -265,9 +269,9 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
           <section className="paper-panel" aria-label="Prospect commitment history" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Destination history / exact athlete ID</div><h2>{latestHistory?.committed_team_name || prospect.committed_team_name || "No destination recorded"}</h2></div>
-              <span className="note">{destinationChanges.length} observed change{destinationChanges.length === 1 ? "" : "s"}</span>
+              <span className="note">{historyStatus === "verified" ? `${history.length} validated capture${history.length === 1 ? "" : "s"}` : "History unavailable"} · {destinationChanges.length} observed change{destinationChanges.length === 1 ? "" : "s"}</span>
             </div>
-            <p className="note">Changes appear only when two adjacent retained editions differ. They describe the stored captures; they do not establish when an announcement, offer, signing or eligibility decision occurred.</p>
+            <p className="note">{historyStatus === "unavailable" ? "The retained history did not pass edition, timestamp or field integrity checks, so timeline changes are withheld. The current prospect row remains separate." : "Changes appear only when two adjacent retained editions differ. They describe the stored captures; they do not establish when an announcement, offer, signing or eligibility decision occurred."}</p>
             <dl className="roster-stat-grid" style={{ marginTop: 16 }}>
               <div><dt>Current recorded status</dt><dd>{latestHistory?.status || prospect.status || "—"}</dd></div>
               <div><dt>First retained destination</dt><dd>{firstRecordedDestination?.committed_team_name || firstRecordedDestination?.committed_team_id || "—"}</dd></div>

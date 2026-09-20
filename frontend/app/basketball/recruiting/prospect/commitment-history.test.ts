@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
+import { commitmentTransitions, type RecruitingHistoryEntry, validateRecruitingHistory } from "./commitment-history";
 
 const capture = (overrides: Partial<RecruitingHistoryEntry>): RecruitingHistoryEntry => ({
   edition: "edition-1",
@@ -63,5 +63,24 @@ describe("commitmentTransitions", () => {
     expect(commitmentTransitions([baseline, capture({ edition: "", committed_team_id: "257" })])).toEqual([]);
     expect(commitmentTransitions([baseline, capture({ edition: "edition-2", captured_at: "", committed_team_id: "257" })])).toEqual([]);
     expect(commitmentTransitions([baseline, capture({ edition: "edition-2", captured_at: "not-a-date", committed_team_id: "257" })])).toEqual([]);
+  });
+});
+
+describe("validateRecruitingHistory", () => {
+  it("accepts ordered captures and preserves recorded nullable fields", () => {
+    const rows = [
+      capture({}),
+      capture({ edition: "edition-2", captured_at: "2026-09-14T00:00:00Z", rank: null, grade: 0, status: null }),
+    ];
+    expect(validateRecruitingHistory(rows)).toEqual(rows);
+  });
+
+  it("withholds duplicate, out-of-order, and malformed captures", () => {
+    const baseline = capture({});
+    expect(validateRecruitingHistory([baseline, { ...baseline, captured_at: "2026-09-14T00:00:00Z" }])).toBeNull();
+    expect(validateRecruitingHistory([baseline, capture({ edition: "edition-2", captured_at: "2026-09-11T00:00:00Z" })])).toBeNull();
+    expect(validateRecruitingHistory([baseline, capture({ edition: "edition-2", rank: 0 })])).toBeNull();
+    expect(validateRecruitingHistory([baseline, capture({ edition: "edition-2", source_url: null as unknown as string })])).toBeNull();
+    expect(validateRecruitingHistory("history")).toBeNull();
   });
 });

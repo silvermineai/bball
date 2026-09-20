@@ -27,6 +27,52 @@ const recorded = (value: string | null) => {
   return normalized ? normalized : null;
 };
 
+const nullableString = (value: unknown): value is string | null => value === null || typeof value === "string";
+
+/**
+ * Admit a history only when every retained capture has a usable identity and
+ * the array is in the same chronological order promised by the API query.
+ * A malformed row invalidates the whole history so a partial timeline cannot
+ * be mistaken for the prospect's complete retained record.
+ */
+export function validateRecruitingHistory(value: unknown): RecruitingHistoryEntry[] | null {
+  if (!Array.isArray(value)) return null;
+  const editions = new Set<string>();
+  let previousTime = -Infinity;
+  let previousEdition = "";
+  const rows: RecruitingHistoryEntry[] = [];
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+    const row = candidate as Partial<RecruitingHistoryEntry>;
+    if (typeof row.edition !== "string" || !row.edition.trim()
+      || typeof row.captured_at !== "string" || !row.captured_at.trim()
+      || !Number.isFinite(Date.parse(row.captured_at))
+      || editions.has(row.edition)) return null;
+    const capturedTime = Date.parse(row.captured_at);
+    if (capturedTime < previousTime || (capturedTime === previousTime && row.edition <= previousEdition)) return null;
+    const rankValue = row.rank;
+    const gradeValue = row.grade;
+    if (rankValue === undefined || (rankValue !== null && (!Number.isSafeInteger(rankValue) || rankValue <= 0))) return null;
+    if (gradeValue === undefined || (gradeValue !== null && (typeof gradeValue !== "number" || !Number.isFinite(gradeValue) || gradeValue < 0))) return null;
+    if (!nullableString(row.status) || !nullableString(row.committed_team_id) || !nullableString(row.committed_team_name) || typeof row.source_url !== "string") return null;
+    const normalized: RecruitingHistoryEntry = {
+      edition: row.edition,
+      captured_at: row.captured_at,
+      rank: row.rank ?? null,
+      grade: row.grade ?? null,
+      status: row.status ?? null,
+      committed_team_id: row.committed_team_id ?? null,
+      committed_team_name: row.committed_team_name ?? null,
+      source_url: row.source_url,
+    };
+    rows.push(normalized);
+    editions.add(row.edition);
+    previousTime = capturedTime;
+    previousEdition = row.edition;
+  }
+  return rows;
+}
+
 /**
  * Describes only differences between adjacent retained captures. The first
  * capture establishes a baseline, so it can never be reported as an event.
