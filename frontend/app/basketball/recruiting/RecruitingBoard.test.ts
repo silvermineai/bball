@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classDestinationRows,
   classSnapshotCoverage,
   currentRecruitingBoardResult,
   recruitingBoardRequestSearch,
@@ -109,6 +110,44 @@ describe("recruiting class coverage", () => {
     expect(classSnapshotCoverage(snapshot)).toEqual({ total: 100, ranked: 0.8, graded: 0.75, committed: 0.4 });
     expect(classSnapshotCoverage({ ...snapshot, total: 0 })).toEqual({ total: null, ranked: null, graded: null, committed: null });
     expect(classSnapshotCoverage({ ...snapshot, cohort: { ranked: 101, graded: 75, committed: 40 } })).toEqual({ total: 100, ranked: null, graded: 0.75, committed: 0.4 });
+  });
+});
+
+describe("recruiting destination comparison", () => {
+  it("keeps destination rows within the committed denominator and preserves position mix", () => {
+    const rows = classDestinationRows([{
+      season: "2027",
+      total: 100,
+      cohort: { ranked: 80, graded: 75, committed: 40 },
+      captured_at: "2026-09-18T00:00:00Z",
+      position_breakdown: [],
+      commitment_destinations: [
+        {
+          team_id: "7",
+          team: "North State",
+          total: 12,
+          ranked_total: 10,
+          top100_total: 4,
+          source_rank_points: 300,
+          best_rank: 8,
+          average_rank: 42.5,
+          position_breakdown: [{ position: "PG", total: 7 }, { position: "C", total: 5 }],
+        },
+        {
+          team_id: "8",
+          team: "Impossible State",
+          total: 41,
+          ranked_total: 40,
+          top100_total: 20,
+          source_rank_points: 900,
+          best_rank: 1,
+          average_rank: 10,
+          position_breakdown: [],
+        },
+      ],
+    }]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ season: "2027", team_id: "7", committedTotal: 40, positionLabels: ["PG 7", "C 5"] });
   });
 });
 

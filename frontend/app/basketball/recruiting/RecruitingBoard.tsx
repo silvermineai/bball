@@ -106,8 +106,62 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
   return result.rank_distribution;
 }
 type Result = RecruitingBoardResult;
+type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
+
+export type RecruitingClassDestinationRow = CommitmentDestination & {
+  season: string;
+  committedTotal: number | null;
+  positionLabels: string[];
+};
+
+/**
+ * Keep the cross-class destination comparison tied to validated aggregates.
+ * The API returns only the top twelve destinations for each exact release;
+ * this helper takes a bounded prefix and drops impossible count relationships
+ * instead of presenting a partial or malformed destination as fact.
+ */
+export function classDestinationRows(
+  snapshots: ClassSnapshot[],
+  limit = 5,
+): RecruitingClassDestinationRow[] {
+  if (!Number.isSafeInteger(limit) || limit < 1) return [];
+  return snapshots.flatMap((snapshot) => {
+    const committedTotal = typeof snapshot.cohort?.committed === "number"
+      && Number.isSafeInteger(snapshot.cohort.committed)
+      && snapshot.cohort.committed >= 0
+      ? snapshot.cohort.committed
+      : null;
+    const destinations = (snapshot.commitment_destinations || [])
+      .filter((destination) => {
+        const total = destination.total;
+        const ranked = destination.ranked_total;
+        const top100 = destination.top100_total;
+        return destination.team.trim().length > 0
+          && Number.isSafeInteger(total) && total > 0
+          && Number.isSafeInteger(ranked) && ranked >= 0 && ranked <= total
+          && Number.isSafeInteger(top100) && top100 >= 0 && top100 <= ranked
+          && (committedTotal == null || total <= committedTotal);
+      })
+      .sort((a, b) => b.source_rank_points - a.source_rank_points
+        || b.top100_total - a.top100_total
+        || b.ranked_total - a.ranked_total
+        || b.total - a.total
+        || a.team.localeCompare(b.team))
+      .slice(0, limit);
+    return destinations.map((destination) => ({
+      ...destination,
+      season: snapshot.season,
+      committedTotal,
+      positionLabels: (destination.position_breakdown || [])
+        .filter((position) => Number.isSafeInteger(position.total) && position.total > 0 && position.position.trim())
+        .sort((a, b) => b.total - a.total || a.position.localeCompare(b.position))
+        .slice(0, 3)
+        .map((position) => `${position.position} ${position.total}`),
+    }));
+  });
+}
 
 /**
  * Keep the cross-class table tied to the same denominator as each board
@@ -426,6 +480,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   });
   const shortlistCommitted = shortlist.filter((entry) => Boolean(entry.committed_team_name)).length;
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
+  const destinationRows = classDestinationRows(classSnapshots, 5);
   return (
     <section className="section">
       <div className="section-heading">
@@ -507,6 +562,30 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <td>{destination ? destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team}</Link> : destination.team : "Unavailable"}{destination && <small>{destination.total.toLocaleString()} recorded commitment{destination.total === 1 ? "" : "s"}{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}</small>}</td>
               <td><small>{snapshot.captured_at ? `${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small></td>
               <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
+            </tr>;
+          })}</tbody>
+        </table></div>
+      </section>}
+      {destinationRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-destination-table-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Destination audit / retained editions</div><h3 id="recruiting-destination-table-title">Where the ranked classes are landing.</h3></div>
+          <span className="note">Top five per class</span>
+        </div>
+        <p className="note">These rows use the top five recorded commitment destinations from each class&apos;s complete current edition. Top-100 counts, rank summaries and position mixes remain source aggregates; a destination row does not confirm enrollment, eligibility or an offer.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th>Destination</th><th className="numeric">Recorded commitments</th><th className="numeric">Top 100</th><th className="numeric">Best rank</th><th className="numeric">Average rank</th><th>Position mix</th></tr></thead>
+          <tbody>{destinationRows.map((destination) => {
+            const share = destination.committedTotal && destination.committedTotal > 0
+              ? `${((destination.total / destination.committedTotal) * 100).toFixed(1)}% of class commitments`
+              : "Commitment denominator unavailable";
+            return <tr key={`${destination.season}-${destination.team_id || "unknown"}-${destination.team}`}>
+              <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(destination.season); setPage(0); }}>{destination.season}</button></th>
+              <td>{destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team}</Link> : destination.team}</td>
+              <td className="numeric"><strong>{destination.total.toLocaleString()}</strong><small>{share}</small></td>
+              <td className="numeric">{destination.top100_total.toLocaleString()}<small>{destination.ranked_total.toLocaleString()} ranked</small></td>
+              <td className="numeric">{destination.best_rank == null ? "—" : `#${destination.best_rank}`}</td>
+              <td className="numeric">{destination.average_rank == null ? "—" : `#${destination.average_rank.toFixed(0)}`}</td>
+              <td>{destination.positionLabels.length ? destination.positionLabels.join(" · ") : "Position mix unavailable"}</td>
             </tr>;
           })}</tbody>
         </table></div>
