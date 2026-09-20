@@ -14,6 +14,7 @@ import {
 } from "../../_lib/recruiting-shortlist";
 import { prospectSchools, type ProspectProgram } from "../../_lib/prospect-schools";
 import { recordedSchoolPrograms, type RecordedSchoolProgramRow } from "../../_lib/recorded-school-board";
+import { recruitingEvidenceGuide } from "./evidence-guide";
 
 type Prospect = {
   athlete_id: string;
@@ -166,6 +167,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax });
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
+  const evidenceGuide = result ? recruitingEvidenceGuide(result, schoolPrograms) : [];
   const error = loadError?.request === boardRequest ? loadError.message : "";
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -436,6 +438,24 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             {" "}The edition identifier lets a staff member reproduce this exact board after a later refresh.
           </p>
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.{result.rank_quality.withheld_placeholder_rows ? ` ${result.rank_quality.withheld_placeholder_rows.toLocaleString()} ungraded source placeholder rank${result.rank_quality.withheld_placeholder_rows === 1 ? " was" : "s were"} withheld.` : ""}</p>}
+          {evidenceGuide.length > 0 && <section className="paper-panel" aria-labelledby="recruiting-evidence-guide-title" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Board method / exact edition</div><h3 id="recruiting-evidence-guide-title">Read each signal at its evidence boundary.</h3></div>
+              <Link href="/basketball/learn/">Open the learning desk →</Link>
+            </div>
+            <p className="note">Use this sequence before adding a prospect or program to a study list. Counts refer to the active filters in edition <span className="source-hash">{result.edition}</span>; invalid or mixed-edition aggregates are withheld.</p>
+            <div className="table-scroll"><table className="data-table">
+              <thead><tr><th>Signal</th><th>Observed here</th><th>What it establishes</th><th>Evidence boundary</th><th>Next check</th></tr></thead>
+              <tbody>{evidenceGuide.map((row) => <tr key={row.key}>
+                <th scope="row">{row.signal}</th>
+                <td><strong>{row.observed}</strong></td>
+                <td>{row.establishes}</td>
+                <td>{row.boundary}</td>
+                <td><Link href={row.nextHref}>{row.nextLabel} →</Link></td>
+              </tr>)}</tbody>
+            </table></div>
+            <p className="note" style={{ marginTop: 12 }}>The guide describes retained fields and joins. It does not create a composite recruiting score or infer a player relationship from a name.</p>
+          </section>}
           {result.rank_movement && <section className="paper-panel recruiting-movement-panel" aria-label="Rank movement">
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">{movementEvidence ? "Edition-to-edition movement" : "Baseline edition"}</div><h3>{movementEvidence ? "See what changed in the board." : "Establish the board before tracking change."}</h3></div><span className="note">{movementEvidence ? "Compared with the latest earlier capture for each athlete" : "No earlier capture is retained for these exact athlete IDs"}</span>
@@ -490,7 +510,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             </table></div>
             <p className="note" style={{ marginTop: 12 }}>“Committed here” requires the prospect’s exact committed-team ID to equal the recorded school ID. “Uncommitted” means the committed-team field is empty in this edition. Neither count predicts enrollment or eligibility.</p>
           </section>}
-          <div className="table-wrap">
+          <div className="table-wrap" id="prospect-board-table">
             <table className="data-table">
               <caption className="sr-only">{season} basketball recruiting prospects</caption>
               <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Recorded schools</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
