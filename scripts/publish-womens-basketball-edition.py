@@ -29,11 +29,64 @@ def num(value):
         return None
 
 
+def build_team_stats(rows):
+    """Group every numeric source stat by its stable team identifier.
+
+    The release contains one row per team/stat.  Keep the source's complete
+    metric set instead of selecting a few display leaders, and fail closed if
+    a source revision supplies two different values for the same key.  A
+    conflicting value is an identity/data-integrity problem, not a reason to
+    silently choose whichever row happens to be last.
+    """
+    grouped = {}
+    numeric_rows = 0
+    skipped_rows = 0
+    for row in rows:
+        team_id = str(row.get("team_id") or "")
+        stat_name = str(row.get("stat_name") or "")
+        value = num(row.get("value"))
+        if not team_id or not stat_name or value is None:
+            skipped_rows += 1
+            continue
+        team = grouped.setdefault(
+            team_id,
+            {
+                "team_id": team_id,
+                "team": row.get("team_display_name") or team_id,
+                "abbreviation": row.get("team_abbreviation") or "",
+                "stats": {},
+                "stat_metadata": {},
+            },
+        )
+        prior = team["stats"].get(stat_name)
+        if prior is not None and prior != value:
+            raise ValueError(
+                f"Conflicting team stat for {team_id}/{stat_name}: {prior} vs {value}"
+            )
+        team["stats"][stat_name] = round(value, 4)
+        team["stat_metadata"][stat_name] = {
+            "label": row.get("stat_label") or "",
+            "name": row.get("stat_display_name") or stat_name,
+            "description": row.get("stat_description") or "",
+        }
+        numeric_rows += 1
+    teams = sorted(grouped.values(), key=lambda item: (item["team"], item["team_id"]))
+    return teams, {
+        "rows": len(rows),
+        "numeric_rows": numeric_rows,
+        "skipped_rows": skipped_rows,
+        "teams": len(teams),
+        "stat_fields": len({name for team in teams for name in team["stats"]}),
+    }
+
+
 def main():
     source = client()
     season_rows, season_receipt = source.load("player_season", 2026)
+    team_season_rows, team_season_receipt = source.load("team_season", 2026)
     roster_rows, roster_receipt = source.load("rosters", 2027)
     schedule_rows, schedule_receipt = source.load("schedule", 2027)
+    team_stats, team_stats_coverage = build_team_stats(team_season_rows)
 
     players = {}
     for row in season_rows:
@@ -104,6 +157,11 @@ def main():
         "coverage": {
             "player_season_rows": len(season_rows),
             "players": len(players),
+            "team_season_rows": team_stats_coverage["rows"],
+            "team_stats_numeric_rows": team_stats_coverage["numeric_rows"],
+            "team_stats_skipped_rows": team_stats_coverage["skipped_rows"],
+            "team_stats_teams": team_stats_coverage["teams"],
+            "team_stats_fields": team_stats_coverage["stat_fields"],
             "roster_rows": len(roster_rows),
             "teams": len(team_counts),
             "upcoming_games": len(upcoming),
@@ -116,10 +174,12 @@ def main():
             key=lambda player: (-player["stats"].get("avgPoints", -1), player["name"]),
         ),
         "leaders": leaders,
+        "team_stats": team_stats,
         "teams": [{"team": team, "roster_count": count} for team, count in sorted(team_counts.items(), key=lambda item: (-item[1], item[0]))[:50]],
         "upcoming": upcoming,
         "receipts": {
             "player_season": {"sha256": season_receipt.get("sha256"), "url": season_receipt.get("url")},
+            "team_season": {"sha256": team_season_receipt.get("sha256"), "url": team_season_receipt.get("url")},
             "rosters": {"sha256": roster_receipt.get("sha256"), "url": roster_receipt.get("url")},
             "schedule": {"sha256": schedule_receipt.get("sha256"), "url": schedule_receipt.get("url")},
         },
