@@ -10,11 +10,17 @@ export type TrajectoryInput = {
 export type TrajectorySeason = {
   season: number;
   teams: number;
-  games: number;
+  games: number | null;
   minutes: number | null;
   points: number | null;
+  possessions: number | null;
   ppg: number | null;
   mpg: number | null;
+  pointsPerPossession: number | null;
+  assistsPerPossession: number | null;
+  turnoversPerPossession: number | null;
+  threePointAttemptRate: number | null;
+  freeThrowAttemptRate: number | null;
   ts: number | null;
   efg: number | null;
 };
@@ -27,6 +33,19 @@ export type TrajectoryContext = {
 
 const finite = (value: Numeric): value is number =>
   typeof value === "number" && Number.isFinite(value);
+
+const nonnegative = (value: number | null): value is number =>
+  value != null && value >= 0;
+
+const boundedPart = (part: number | null, whole: number | null) =>
+  nonnegative(part) && nonnegative(whole) && whole > 0 && part <= whole
+    ? part / whole
+    : null;
+
+const positiveRate = (numerator: number | null, denominator: number | null) =>
+  nonnegative(numerator) && nonnegative(denominator) && denominator > 0
+    ? numerator / denominator
+    : null;
 
 const completeSum = (rows: TrajectoryInput[], key: string): number | null => {
   const values = rows.map((row) => row.stats[key]);
@@ -53,15 +72,19 @@ export function buildNcaaPlayerTrajectory(
   return [...bySeason.entries()]
     .sort(([a], [b]) => b - a)
     .map(([season, seasonRows]) => {
-      const games = seasonRows.reduce(
-        (total, row) => total + (finite(row.games) ? row.games : 0),
-        0,
-      );
+      const gamesValues = seasonRows.map((row) => row.games);
+      const games = gamesValues.every((value) => finite(value) && value >= 0)
+        ? gamesValues.reduce<number>((total, value) => total + Number(value), 0)
+        : null;
       const minutes = completeSum(seasonRows, "mins");
       const points = completeSum(seasonRows, "pts");
+      const possessions = completeSum(seasonRows, "o_poss");
+      const assists = completeSum(seasonRows, "ast");
+      const turnovers = completeSum(seasonRows, "tov");
       const fgm = completeSum(seasonRows, "fgm");
       const fga = completeSum(seasonRows, "fga");
       const tpm = completeSum(seasonRows, "tpm");
+      const tpa = completeSum(seasonRows, "tpa");
       const fta = completeSum(seasonRows, "fta");
       return {
         season,
@@ -69,20 +92,28 @@ export function buildNcaaPlayerTrajectory(
         games,
         minutes,
         points,
-        ppg: points != null && games > 0 ? points / games : null,
-        mpg: minutes != null && games > 0 ? minutes / games : null,
+        possessions,
+        ppg: nonnegative(points) && games != null && games > 0 ? points / games : null,
+        mpg: nonnegative(minutes) && games != null && games > 0 ? minutes / games : null,
+        pointsPerPossession: positiveRate(points, possessions),
+        assistsPerPossession: positiveRate(assists, possessions),
+        turnoversPerPossession: positiveRate(turnovers, possessions),
+        threePointAttemptRate: boundedPart(tpa, fga),
+        freeThrowAttemptRate: positiveRate(fta, fga),
         ts:
-          points != null &&
-          fga != null &&
-          fta != null &&
+          nonnegative(points) &&
+          nonnegative(fga) &&
+          nonnegative(fta) &&
           fga + 0.475 * fta > 0
             ? points / (2 * (fga + 0.475 * fta))
             : null,
         efg:
-          fgm != null &&
-          tpm != null &&
-          fga != null &&
-          fga > 0
+          nonnegative(fgm) &&
+          nonnegative(tpm) &&
+          nonnegative(fga) &&
+          fga > 0 &&
+          fgm <= fga &&
+          tpm <= fgm
             ? (fgm + 0.5 * tpm) / fga
             : null,
       };

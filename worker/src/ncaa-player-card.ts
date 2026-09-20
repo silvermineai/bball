@@ -44,6 +44,19 @@ function parseObject(value: unknown): Record<string, unknown> | null {
   }
 }
 
+function validReceipt(row: { dataset: string; season: number; receipt_json: string }) {
+  const receipt = parseObject(row.receipt_json);
+  const fetchedAt = typeof receipt?.fetched_at === "string" ? Date.parse(receipt.fetched_at) : Number.NaN;
+  return Number.isInteger(row.season)
+    && typeof receipt?.url === "string"
+    && /^https?:\/\//.test(receipt.url)
+    && Number.isFinite(fetchedAt)
+    && typeof receipt?.sha256 === "string"
+    && /^[a-f0-9]{64}$/i.test(receipt.sha256)
+      ? { dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }
+      : null;
+}
+
 // Keep the card quick to load while allowing staff to retrieve the complete
 // season evidence when they need to audit every contest behind a total.
 ncaaPlayerCard.get("/:id/games", zValidator("query", gamesQuerySchema), async (c) => {
@@ -120,18 +133,22 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
     ]), DB_TIMEOUT_MS);
     const games = await withTimeout(ncaaBoxDb(c.env).prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT 12").bind(playerId, season).all(), DB_TIMEOUT_MS);
     const receipts = await withTimeout(db.prepare(
-      "SELECT dataset,season,receipt_json FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_shots','ncaa_team_rosters','ncaa_rapm','player_season') ORDER BY dataset",
-    ).bind(season).all<{ dataset: string; season: number; receipt_json: string }>(), DB_TIMEOUT_MS);
+      "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset IN ('ncaa_player_box','ncaa_shots','ncaa_team_rosters','ncaa_rapm','player_season') ORDER BY season DESC,dataset",
+    ).all<{ dataset: string; season: number; receipt_json: string }>(), DB_TIMEOUT_MS);
     const sourceReceipts = receipts.results.flatMap((row) => {
-      const receipt = parseObject(row.receipt_json);
-      return typeof receipt?.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
-        ? [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
-        : [];
+      const receipt = validReceipt(row);
+      return receipt ? [receipt] : [];
     });
     const rows = (seasons.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; });
     const rosterRows = (rosters.results as Array<Record<string, unknown>>).flatMap(({ profile_json, ...row }) => { const profile = parseObject(profile_json); return profile ? [{ ...row, profile }] : []; });
     const shotRows = (shooting.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; });
     if (!rows.length && !rosterRows.length && !shotRows.length) return c.json({ error: "NCAA player not found" }, 404);
+    const retainedSeasons = new Set([
+      ...rows.map((row) => Number((row as Record<string, unknown>).season)),
+      ...rosterRows.map((row) => Number((row as Record<string, unknown>).season)),
+      ...shotRows.map((row) => Number((row as Record<string, unknown>).season)),
+    ].filter((value) => Number.isInteger(value)));
+    const careerSourceReceipts = sourceReceipts.filter((receipt) => retainedSeasons.has(receipt.season));
     const response = c.json({
       player_id: playerId,
       selected_season: season,
@@ -139,7 +156,8 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
       rosters: rosterRows,
       shooting: shotRows,
       games: (games.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; }),
-      source_receipts: sourceReceipts,
+      source_receipts: careerSourceReceipts.filter((receipt) => receipt.season === season),
+      career_source_receipts: careerSourceReceipts,
       identity_note: "NCAA source ID namespace; no name-only join to ESPN identities.",
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

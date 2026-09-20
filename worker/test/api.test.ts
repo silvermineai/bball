@@ -1127,15 +1127,23 @@ describe("bball api", () => {
     expect(await response.json()).toEqual({ error: "The NCAA player card is temporarily unavailable." });
   });
 
-  it("attaches selected-season source receipts to the NCAA player card", async () => {
+  it("attaches only valid receipts for retained exact-ID seasons to the NCAA player card", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: () => sql.includes("FROM bb_sources")
-        ? { all: async () => ({ results: [{ dataset: "ncaa_player_box", season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/ncaa-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }) }] }) }
+        ? { all: async () => ({ results: [] }) }
         : { all: async () => ({ results: [] }) },
+      all: async () => sql.includes("FROM bb_sources") ? ({ results: [
+        { dataset: "ncaa_player_box", season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/ncaa-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }) },
+        { dataset: "player_season", season: 2025, receipt_json: JSON.stringify({ url: "https://example.test/player-season.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "b".repeat(64) }) },
+        { dataset: "player_season", season: 2024, receipt_json: JSON.stringify({ url: "https://example.test/unrelated.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "c".repeat(64) }) },
+        { dataset: "ncaa_shots", season: 2026, receipt_json: JSON.stringify({ url: "javascript:bad", fetched_at: "not-a-date", sha256: "bad" }) },
+      ] }) : ({ results: [] }),
     }));
     const batch = vi.fn(async () => [
-      { results: [{ season: 2026, player_id: "123", team_id: "7", player_name: "Example Player", team_name: "Example U", games: 10, stats_json: "{}" }] },
-      { results: [] },
+      { results: [
+        { season: 2026, player_id: "123", team_id: "7", player_name: "Example Player", team_name: "Example U", games: 10, stats_json: "{}" },
+        { season: 2025, player_id: "123", team_id: "8", player_name: "Example Player", team_name: "Example State", games: 8, stats_json: "{}" },
+      ] },
       { results: [] },
       { results: [] },
     ]);
@@ -1147,7 +1155,12 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       source_receipts: [{ dataset: "ncaa_player_box", season: 2026, url: "https://example.test/ncaa-box.parquet", sha256: "a".repeat(64) }],
+      career_source_receipts: [
+        { dataset: "ncaa_player_box", season: 2026, sha256: "a".repeat(64) },
+        { dataset: "player_season", season: 2025, sha256: "b".repeat(64) },
+      ],
     });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("ORDER BY season DESC,dataset"))).toBe(true);
   });
 
   it("reads NCAA player-game coverage from the dedicated archive binding", async () => {

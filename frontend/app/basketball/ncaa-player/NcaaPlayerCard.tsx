@@ -24,7 +24,8 @@ type CoordinateTuple = [string | null, number | null, number | null, number | nu
 type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: Array<CoordinateShot | CoordinateTuple>; coordinate_count?: number; located_count?: number } };
 type GameRow = { season?: number; contest_id: string; team_id: string; game_date: string | null; team_name: string | null; opponent_name: string | null; player_name: string | null; stats: Stats };
 type GameExport = { season: number; page: number; page_size: number; total: number; rows: GameRow[] };
-type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting: ShotRow[]; games: GameRow[]; source_receipts?: Array<{ dataset: string; season: number; url: string; fetched_at: string; sha256: string }>; identity_note: string };
+type SourceReceipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
+type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting: ShotRow[]; games: GameRow[]; source_receipts?: SourceReceipt[]; career_source_receipts?: SourceReceipt[]; identity_note: string };
 type Impact = { season: number; player_id: string; player: string; team: string; orapm: number | null; drapm: number | null; rapm_net: number | null; off_poss: number | null; def_poss: number | null; qualified: boolean; rank: number | null };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const value = (stats: Stats | undefined, key: string) => stats?.[key] == null ? null : Number(stats[key]);
@@ -244,7 +245,7 @@ export default function NcaaPlayerCard() {
       <div className="toolbar"><label className="control"><span>STAT SEASON</span><select value={season} onChange={(e) => setSeason(Number(e.target.value))}>{Array.from(new Set(card.seasons.map((row) => row.season))).sort((a, b) => b - a).map((year) => <option value={year} key={year}>{label(year)}</option>)}</select></label><span className="note">{card.identity_note}</span></div>
       {card.source_receipts?.length ? <details className="paper-panel" style={{ marginBottom: 24 }}><summary><strong>Archive receipts for the {label(season)} evidence</strong> · {card.source_receipts.length} release{card.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Release</th></tr></thead><tbody>{card.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>{receipt.dataset.replace(/^ncaa_/, "player ")}</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td>Retained edition</td></tr>)}</tbody></table></div></details> : null}
       <PlayerRankingSnapshot id={id} season={season} />
-      <PlayerTrajectory rows={trajectory} selectedSeason={season} />
+      <PlayerTrajectory rows={trajectory} selectedSeason={season} receipts={card.career_source_receipts || []} />
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Selected season / Production</div><h2>What the archive recorded.</h2></div><span className="note">{selected?.length || 0} team record{selected?.length === 1 ? "" : "s"}</span></div><div className="strip"><div><strong>{fmt(minutes == null || !games ? null : minutes / games)}</strong><span>Minutes per game</span></div><div><strong>{fmt(safeSum(orb, drb) == null || !games ? null : safeSum(orb, drb)! / games)}</strong><span>Rebounds per game</span></div><div><strong>{fmt(ast == null || !games ? null : ast / games)}</strong><span>Assists per game</span></div><div><strong>{fmt(turnovers == null || !games ? null : turnovers / games)}</strong><span>Turnovers per game</span></div><div><strong>{fmt(fouls == null || !games ? null : fouls / games)}</strong><span>Fouls per game</span></div><div><strong>{pct(efg)}</strong><span>Effective FG%</span></div><div><strong>{pct(rate(ftm, fta))}</strong><span>Free-throw accuracy</span></div></div><div className="table-scroll"><table className="data-table"><thead><tr><th>Season / team</th><th className="numeric">GP</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">TO</th><th className="numeric">PF</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">FT</th></tr></thead><tbody>{card.seasons.map((row) => <tr key={`${row.season}-${row.team_id}`} className={row.season === season ? "career-selected-row" : ""}><td><button className="career-season-link" onClick={() => setSeason(row.season)}>{label(row.season)} · {row.team_name || row.team_id} →</button><small>Team ID {row.team_id}</small></td><td className="numeric">{row.games}</td><td className="numeric">{fmt(value(row.stats, "pts"), 0)}</td><td className="numeric">{fmt(safeSum(value(row.stats, "orb"), value(row.stats, "drb")), 0)}</td><td className="numeric">{fmt(value(row.stats, "ast"), 0)}</td><td className="numeric">{fmt(value(row.stats, "tov"), 0)}</td><td className="numeric">{fmt(value(row.stats, "pf"), 0)}</td><td className="numeric">{fmt(value(row.stats, "fgm"), 0)}/{fmt(value(row.stats, "fga"), 0)}</td><td className="numeric">{fmt(value(row.stats, "tpm"), 0)}/{fmt(value(row.stats, "tpa"), 0)}</td><td className="numeric">{fmt(value(row.stats, "ftm"), 0)}/{fmt(value(row.stats, "fta"), 0)} <small>{pct(rate(value(row.stats, "ftm"), value(row.stats, "fta")))}</small></td></tr>)}</tbody></table></div></section>
       {selectedStats ? <ScoringContext stats={selectedStats} /> : null}
       <section className="section paper-panel"><div className="eyebrow">Derived rates / selected season</div><h2>See the player&apos;s efficiency shape.</h2><p className="note">These rates use the pooled exact-ID team rows above. A missing denominator keeps only the affected rate unavailable; no zero is inferred.</p><div className="strip"><div><strong>{fmt(advancedRates.pointsPerPossession, 2)}</strong><span>Points / recorded possession</span></div><div><strong>{pct(advancedRates.threePointAttemptRate)}</strong><span>3-point attempt rate</span></div><div><strong>{pct(advancedRates.freeThrowAttemptRate)}</strong><span>Free-throw attempt rate</span></div><div><strong>{pct(advancedRates.assistRate)}</strong><span>Assists / possession</span></div><div><strong>{pct(advancedRates.turnoverRate)}</strong><span>Turnovers / possession</span></div></div><p className="note">Points per possession is a scoring-efficiency ratio. The remaining values are workload and shot-profile rates, not opponent adjustments, usage projections or eligibility findings.</p></section>
@@ -264,9 +265,11 @@ const trajectoryValue = (value: number | null, digits = 1) =>
 function PlayerTrajectory({
   rows,
   selectedSeason,
+  receipts,
 }: {
   rows: TrajectorySeason[];
   selectedSeason: number;
+  receipts: SourceReceipt[];
 }) {
   const { active, ppgDelta } = trajectoryContext(rows, selectedSeason);
   const maxPpg = Math.max(...rows.map((row) => row.ppg || 0), 1);
@@ -326,7 +329,7 @@ function PlayerTrajectory({
             <div className="trajectory-label">
               <strong>{label(row.season)}</strong>
               <small>
-                {row.teams} team{row.teams === 1 ? "" : "s"} · {row.games || "—"} games
+                {row.teams} team{row.teams === 1 ? "" : "s"} · {row.games ?? "—"} games
               </small>
             </div>
             <div
@@ -354,6 +357,24 @@ function PlayerTrajectory({
           </div>
         ))}
       </div>
+      {rows.length > 0 && <div className="table-scroll" style={{ marginTop: 24 }}>
+        <table className="data-table">
+          <thead><tr><th>Season</th><th className="numeric">PTS / POSS</th><th className="numeric">AST / POSS</th><th className="numeric">TO / POSS</th><th className="numeric">3PA / FGA</th><th className="numeric">FTA / FGA</th><th>Edition evidence</th></tr></thead>
+          <tbody>{rows.map((row) => {
+            const seasonReceipts = receipts.filter((receipt) => receipt.season === row.season);
+            return <tr key={`role-${row.season}`} className={row.season === selectedSeason ? "career-selected-row" : ""}>
+              <td><strong>{label(row.season)}</strong><small>{row.teams} exact-ID team row{row.teams === 1 ? "" : "s"}</small></td>
+              <td className="numeric"><strong>{trajectoryValue(row.pointsPerPossession, 2)}</strong><small>{trajectoryValue(row.points, 0)} / {trajectoryValue(row.possessions, 0)}</small></td>
+              <td className="numeric"><strong>{pct(row.assistsPerPossession)}</strong><small>AST / source POSS</small></td>
+              <td className="numeric"><strong>{pct(row.turnoversPerPossession)}</strong><small>TO / source POSS</small></td>
+              <td className="numeric"><strong>{pct(row.threePointAttemptRate)}</strong><small>3PA / FGA</small></td>
+              <td className="numeric"><strong>{pct(row.freeThrowAttemptRate)}</strong><small>FTA / FGA</small></td>
+              <td>{seasonReceipts.length ? <><strong>{seasonReceipts.length} receipt{seasonReceipts.length === 1 ? "" : "s"}</strong><small>{seasonReceipts.map((receipt) => `${receipt.dataset.replace(/^ncaa_/, "player ")} ${receipt.sha256.slice(0, 8)}…`).join(" · ")}</small></> : <><strong>Unavailable</strong><small>No valid retained receipt for this season</small></>}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>}
+      {rows.length > 0 && <p className="note" style={{ marginTop: 14 }}>The rate table uses pooled totals for one exact player ID. POSS is the source-recorded offensive-possession denominator. Missing, zero, negative, nonfinite or internally inconsistent inputs leave the affected result unavailable. Receipts are matched to seasons that appear on this card; they do not establish cross-provider identity.</p>}
       {!rows.length && <p className="empty">No season rows are available for this archive ID.</p>}
     </section>
   );
