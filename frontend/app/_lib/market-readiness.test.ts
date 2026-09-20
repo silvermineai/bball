@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketReadinessLabel, marketReadinessState } from "./market-readiness";
+import { marketCaptureDiagnostic, marketReadinessLabel, marketReadinessState } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -21,5 +21,21 @@ describe("market connector readiness", () => {
   it("keeps an in-flight request visibly separate", () => {
     expect(marketReadinessState(null, true)).toBe("checking");
     expect(marketReadinessLabel("checking")).toContain("Checking");
+  });
+
+  it("reports capture coverage separately from accepted quotes", () => {
+    expect(marketCaptureDiagnostic({
+      research_capture: {
+        summary_count: 71,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        accepted_markets: 0,
+        rejected_records: 0,
+      },
+    })).toBe("Latest capture inspected 71 future summaries; 0 contained complete quote sets and 0 had a non-empty odds payload; 0 markets passed validation; 0 summaries were rejected.");
+  });
+
+  it("withholds a capture diagnostic when the receipt has no summary count", () => {
+    expect(marketCaptureDiagnostic({ research_receipts: 1 })).toBeNull();
   });
 });
