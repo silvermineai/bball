@@ -7,6 +7,7 @@ import {
   type LowerFootballDivision,
   type LowerFootballResults,
 } from "../../_lib/football-lower-results";
+import { lowerFootballReadiness } from "../../_lib/football-lower-readiness";
 import { date, fmt, kick } from "../../_lib/format";
 
 export default function LowerDivisionResults() {
@@ -31,6 +32,7 @@ export default function LowerDivisionResults() {
   }, [archive, division, query]);
   const teams = archive?.teams[division] || [];
   const coverage = archive?.coverage[division];
+  const readiness = archive ? lowerFootballReadiness(archive) : [];
 
   return (
     <section className="paper-panel" aria-labelledby="lower-division-results-title" style={{ marginTop: 28 }}>
@@ -46,6 +48,22 @@ export default function LowerDivisionResults() {
           <div><strong>{coverage?.scores_missing.toLocaleString() ?? "—"}</strong><span>Missing scores</span></div>
           <div><strong>{teams.length.toLocaleString()}</strong><span>Team records</span></div>
         </div>
+        <div className="table-scroll" style={{ marginTop: 20 }}>
+          <table className="data-table">
+            <caption className="eyebrow" style={{ textAlign: "left", paddingBottom: 10 }}>Lower-division publication readiness</caption>
+            <thead><tr><th>Division</th><th className="numeric">Schedule rows</th><th className="numeric">Complete scores</th><th className="numeric">Score coverage</th><th className="numeric">Team rows</th><th>Player stats</th><th>Predictions</th><th>Receipt</th></tr></thead>
+            <tbody>{readiness.map((row) => <tr key={row.division}>
+              <th scope="row">{row.division.toUpperCase()}<small>Source-native scope</small></th>
+              <td className="numeric">{row.scheduleRows.toLocaleString()}</td>
+              <td className="numeric">{row.completeScoreRows.toLocaleString()}</td>
+              <td className="numeric">{row.scoreCoverage == null ? "—" : `${Math.round(row.scoreCoverage * 100)}%`}</td>
+              <td className="numeric">{row.teamRows.toLocaleString()}</td>
+              <td>{row.playerStats === "unavailable" ? "Unavailable" : "Recorded"}</td>
+              <td>{row.predictions === "unavailable" ? "Unavailable" : "Recorded"}</td>
+              <td>{row.receipt === "valid" ? "Valid" : <span className="status-error">Unavailable</span>}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
         <div className="toolbar" style={{ marginTop: 18 }}>
           <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => setDivision(event.target.value as LowerFootballDivision)}><option value="d2">Division II</option><option value="d3">Division III</option></select></label>
           <label className="control"><span>TEAM OR GAME</span><input type="search" maxLength={100} value={query} placeholder="Search a team or game ID" onChange={(event) => setQuery(event.target.value)} /></label>
@@ -54,9 +72,8 @@ export default function LowerDivisionResults() {
           <div><h3>Team records</h3><div className="table-scroll"><table className="data-table"><thead><tr><th>Team</th><th className="numeric">W–L</th><th className="numeric">PF</th><th className="numeric">PA</th></tr></thead><tbody>{teams.slice(0, 12).map((team) => <tr key={team.team_id}><th scope="row">{team.team}<small>{team.team_id}</small></th><td className="numeric"><strong>{team.wins}–{team.losses}</strong><small>{team.games} scored games</small></td><td className="numeric">{fmt(team.points_for, 0)}</td><td className="numeric">{fmt(team.points_against, 0)}</td></tr>)}</tbody></table></div></div>
           <div><h3>Recorded results</h3><div className="table-scroll"><table className="data-table"><thead><tr><th>Start</th><th>Matchup</th><th className="numeric">Score</th></tr></thead><tbody>{rows.slice(0, 16).map((row) => <tr key={`${row.scope_division}-${row.game_id}`}><td>{kick(row.kickoff)}<small>{row.week == null ? "Week unavailable" : `Week ${row.week}`}</small></td><th scope="row">{row.away_name} at {row.home_name}<small>{row.game_id}{row.neutral ? " · neutral" : ""}</small></th><td className="numeric">{row.score_complete ? <strong>{row.away_score}–{row.home_score}</strong> : "—"}</td></tr>)}</tbody></table></div>{!rows.length ? <p className="empty">No recorded rows match this filter.</p> : rows.length > 16 ? <p className="note">Showing 16 of {rows.length.toLocaleString()} matching results.</p> : null}</div>
         </div>
-        <p className="note" style={{ marginTop: 18 }}>Scores with missing source values stay visible in the archive but are excluded from team records. Cross-division games remain in each lower division’s schedule cohort; no opponent strength or player production is inferred.</p>
+        <p className="note" style={{ marginTop: 18 }}>Scores with missing source values stay visible in the archive but are excluded from team records. Cross-division games remain in each lower division’s schedule cohort; no opponent strength, player production, or forecast is inferred. A valid schedule receipt is a provenance gate, not evidence that player stats or model inputs exist.</p>
       </>}
     </section>
   );
 }
-
