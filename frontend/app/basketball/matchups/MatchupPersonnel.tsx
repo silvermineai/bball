@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { BBGame } from "../../_lib/basketball-types";
 import {
   loadMatchupPersonnel,
+  matchupPersonnelLeaders,
   matchupPersonnelRows,
   personnelStatusLabel,
   type MatchupPersonnel,
@@ -21,6 +22,7 @@ function percentage(value: number | null) {
 
 function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; priorSeason: number }) {
   const rows = matchupPersonnelRows(side);
+  const leaders = matchupPersonnelLeaders(side);
   return (
     <article className="personnel-team">
       <header>
@@ -34,6 +36,15 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
         {side.returning_players} returning · {side.incoming_players} incoming · {side.new_to_dataset_players} new
         {side.ambiguous_players ? ` · ${side.ambiguous_players} check` : ""}
       </p>
+      <div className="personnel-leaders" aria-label={`${side.team} prior workload leaders`}>
+        <span className="eyebrow">TOP PRIOR WORKLOAD</span>
+        {leaders.length ? leaders.map((leader) => (
+          <div className="personnel-row" key={leader.athlete_id}>
+            <span><strong>{leader.player}</strong><small>{personnelStatusLabel(leader.status)} · source-listed prior season</small></span>
+            <span><strong>{metric(leader.minutes, 0)} min</strong><small>{percentage(leader.share * 100)} of reported prior minutes</small></span>
+          </div>
+        )) : <small className="muted">Prior minute totals unavailable; no workload leader inferred.</small>}
+      </div>
       <div className="table-scroll">
         <table className="data-table personnel-table">
           <thead><tr><th>Player</th><th>Status</th><th>Prior team</th><th className="numeric">Min</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">BPM</th><th className="numeric">OBPM</th><th className="numeric">DBPM</th></tr></thead>

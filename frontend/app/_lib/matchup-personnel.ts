@@ -99,6 +99,14 @@ export type MatchupPersonnelTableRow = {
   box_dbpm: number | null;
 };
 
+export type MatchupPersonnelLeader = {
+  athlete_id: string;
+  player: string;
+  status: MatchupPersonnelPlayer["status"];
+  minutes: number;
+  share: number;
+};
+
 const statuses = new Set(["returning", "incoming", "new_to_dataset", "ambiguous"]);
 const statKeys: Array<keyof MatchupPersonnelStats> = [
   "ppg", "rpg", "apg", "spg", "bpg", "mpg", "fg_pct", "three_pct", "ft_pct",
@@ -254,6 +262,36 @@ export function matchupPersonnelRows(side: MatchupPersonnelSide): MatchupPersonn
       box_dbpm: stint?.box_dbpm ?? null,
     }));
   });
+}
+
+/**
+ * Surface the largest recorded prior-season workloads before the full table.
+ * This is a historical workload cue, not a projected rotation or availability
+ * claim; players without a finite positive minute total stay out of the list.
+ */
+export function matchupPersonnelLeaders(
+  side: MatchupPersonnelSide,
+  limit = 3,
+): MatchupPersonnelLeader[] {
+  const workloads = side.players.flatMap((player) => {
+    const minutes = player.prior_minutes;
+    return minutes != null && Number.isFinite(minutes) && minutes > 0
+      ? [{ player, minutes }]
+      : [];
+  });
+  const total = workloads.reduce((sum, row) => sum + row.minutes, 0);
+  const count = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 3;
+  if (!Number.isFinite(total) || total <= 0 || count === 0) return [];
+  return workloads
+    .sort((left, right) => right.minutes - left.minutes || left.player.name.localeCompare(right.player.name))
+    .slice(0, count)
+    .map(({ player, minutes }) => ({
+      athlete_id: player.athlete_id,
+      player: player.name,
+      status: player.status,
+      minutes,
+      share: minutes / total,
+    }));
 }
 
 export function personnelStatusLabel(status: MatchupPersonnelPlayer["status"]) {

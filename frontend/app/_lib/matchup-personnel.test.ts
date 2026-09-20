@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchupPersonnelRows, parseMatchupPersonnel, personnelStatusLabel } from "./matchup-personnel";
+import { matchupPersonnelLeaders, matchupPersonnelRows, parseMatchupPersonnel, personnelStatusLabel } from "./matchup-personnel";
 
 function payload() {
   const stats = { ppg: 12.4, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, mpg: 28, fg_pct: null, three_pct: null, ft_pct: null, field_goals: null, three_pointers: null, free_throws: null };
@@ -32,6 +32,18 @@ describe("matchup personnel client", () => {
       expect.objectContaining({ player: "Player One", status: "incoming", prior_team: "Older U", minutes: 300, mpg: 28, ppg: null, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, box_bpm: null, box_obpm: null, box_dbpm: null }),
     ]);
     expect(personnelStatusLabel("incoming")).toBe("IN");
+    expect(matchupPersonnelLeaders(parsed.home)).toEqual([
+      { athlete_id: "10", player: "Player One", status: "incoming", minutes: 800, share: 1 },
+    ]);
+    expect(matchupPersonnelLeaders({
+      ...parsed.home,
+      players: [
+        ...parsed.home.players,
+        { ...parsed.home.players[0], athlete_id: "11", name: "Player Two", prior_minutes: 400 },
+      ],
+    }, 1)).toEqual([
+      { athlete_id: "10", player: "Player One", status: "incoming", minutes: 800, share: 2 / 3 },
+    ]);
   });
 
   it("fails closed when the response belongs to another game or team", () => {
@@ -43,5 +55,10 @@ describe("matchup personnel client", () => {
     const bad = payload();
     bad.home.listed_players = 2;
     expect(() => parseMatchupPersonnel(bad, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
+  });
+
+  it("fails closed when no positive prior workload is available", () => {
+    const parsed = parseMatchupPersonnel(payload(), { gameId: "401", season: 2027, homeId: "1", awayId: "2" });
+    expect(matchupPersonnelLeaders({ ...parsed.away, players: parsed.away.players.map((player) => ({ ...player, prior_minutes: null })) })).toEqual([]);
   });
 });
