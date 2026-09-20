@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Link from "next/link";
 import Announcements from "./Announcements";
-import { getRecruiting, getRosters } from "../../_lib/basketball-data";
+import { getArchivedRecruitingOutlook, getRecruiting, getRosters } from "../../_lib/basketball-data";
 import RecruitingWire from "./RecruitingWire";
 import AuthorizedIntake from "./AuthorizedIntake";
 import MovementWatch from "./MovementWatch";
@@ -21,6 +21,7 @@ import { publicArchiveArticle } from "../../_lib/public-text";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 import RecruitingCoverageBoundary from "../../_components/RecruitingCoverageBoundary";
 import { assessRecruitingCoverage } from "../../_lib/recruiting-coverage";
+import ArchivedTeamOutlook from "./ArchivedTeamOutlook";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
   if (!player) return <span className="note">No recorded player in this evidence set</span>;
@@ -41,6 +42,7 @@ export const metadata = {
 };
 export default function Page() {
   const rawData = getRecruiting();
+  const archivedTeamOutlook = getArchivedRecruitingOutlook();
   const rosters = getRosters();
   const programDirectory = (JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/teams.json"), "utf8"),
@@ -158,6 +160,7 @@ export default function Page() {
           </table>
         </div>
       </section>
+      <ArchivedTeamOutlook release={archivedTeamOutlook} />
       <section className="section" aria-labelledby="recruiting-production">
         <div className="section-heading">
           <div>

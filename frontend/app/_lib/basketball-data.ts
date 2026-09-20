@@ -5,6 +5,10 @@ import type { RecruitingRelease } from "./recruiting";
 import type { ShotCatalog, ShotSeason } from "./shooting";
 import { getLedger } from "./research-data";
 import type { Comparison, Ledger } from "./research-types";
+import {
+  parseArchivedRecruitingRelease,
+  type ArchivedRecruitingRelease,
+} from "./archived-recruiting";
 export function getBasketball(): BBOverview {
   return JSON.parse(
     fs.readFileSync(
@@ -53,6 +57,20 @@ export function getRecruiting(): RecruitingRelease {
       "utf8",
     ),
   );
+}
+
+/**
+ * Read the retained prior-season team outlook separately from reviewed
+ * school-announcement recruiting evidence. It is useful context, but its
+ * season and evidence class must stay visible to callers.
+ */
+export function getArchivedRecruitingOutlook(): ArchivedRecruitingRelease {
+  return parseArchivedRecruitingRelease(JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/recruiting.json"),
+      "utf8",
+    ),
+  ));
 }
 
 /**
