@@ -143,6 +143,29 @@ const coverageRate = (part: number | undefined, total: number | undefined) => to
 const captureLabel = (value: string | null) => value
   ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
   : "capture date unavailable";
+
+export const recruitingExportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "recorded_school_count", "recorded_schools", "recorded_school_ids", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
+
+export function recruitingExportCsv(
+  rows: Prospect[],
+  options: { season: string | number; edition: string | null | undefined; capturedAt: string | null | undefined; programs: ProspectProgram[] },
+) {
+  const season = Number(options.season);
+  if (!Number.isInteger(season) || season < 1900 || season > 2200) {
+    throw new Error("The recruiting export returned an invalid class season.");
+  }
+  const identities = new Set<string>();
+  const values = rows.map((row) => {
+    if (!/^\d{1,15}$/.test(row.athlete_id) || identities.has(row.athlete_id)) {
+      throw new Error("The recruiting edition returned duplicate or invalid prospect IDs.");
+    }
+    identities.add(row.athlete_id);
+    const schools = prospectSchools(row.school_ids, options.programs, row.committed_team_id);
+    return [season, row.rank, row.previous_rank, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at, row.name, row.position, row.grade, row.position_rank, row.state_rank, row.region_rank, row.height_inches, row.weight_pounds, row.committed_team_name, row.committed_team_id, schools.length, schools.map((school) => school.name).join("; "), schools.map((school) => school.id).join("; "), row.status, row.high_school, row.hometown, row.athlete_id, options.edition || null, options.capturedAt || null];
+  });
+  return toCsv(recruitingExportHeaders, values);
+}
+
 const fitHref = (teamId: string | null | undefined) => teamId
   ? `/basketball/recruiting/fit/?team=${encodeURIComponent(teamId)}`
   : null;
@@ -222,7 +245,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
       setCopied("Copy the filtered URL from your address bar.");
     }
   };
-  const exportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "recorded_school_count", "recorded_schools", "recorded_school_ids", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
+  const exportHeaders = recruitingExportHeaders;
   const shortlistExportHeaders = exportHeaders;
   const exportRow = (row: Prospect) => {
     const schools = prospectSchools(row.school_ids, programs, row.committed_team_id);
@@ -230,7 +253,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   };
   const downloadPage = () => {
     if (!result) return;
-    downloadCsv(`prospect-board-${season}-page-${page + 1}.csv`, toCsv(exportHeaders, result.rows.map(exportRow)));
+    const csv = recruitingExportCsv(result.rows, { season, edition: result.edition, capturedAt: result.captured_at, programs });
+    downloadCsv(`prospect-board-${season}-page-${page + 1}.csv`, csv);
     setExportMessage(`Downloaded ${result.rows.length.toLocaleString()} prospects from this page.`);
   };
   const downloadAll = async () => {
@@ -260,8 +284,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         setExportMessage(`Preparing ${all.length.toLocaleString()} of ${totalRows.toLocaleString()} prospects…`);
       }
       if (all.length !== totalRows) throw new Error("The recruiting edition returned an incomplete export.");
-      const identities = new Set(all.map((row) => row.athlete_id));
-      if (identities.size !== all.length) throw new Error("The recruiting edition returned duplicate prospect rows.");
+      const csv = recruitingExportCsv(all, { season, edition: result.edition, capturedAt: result.captured_at, programs });
+      downloadCsv(`prospect-board-${season}-all.csv`, csv);
       setExportMessage(`Downloaded ${all.length.toLocaleString()} filtered prospects.`);
     } catch (reason) {
       setExportMessage(reason instanceof Error ? reason.message : "The complete recruiting export could not be loaded.");
