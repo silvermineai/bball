@@ -10,6 +10,9 @@ export type TrajectoryInput = {
 export type TrajectorySeason = {
   season: number;
   teams: number;
+  sourceRows: number;
+  completeFields: number;
+  fieldCount: number;
   games: number | null;
   minutes: number | null;
   points: number | null;
@@ -24,6 +27,24 @@ export type TrajectorySeason = {
   ts: number | null;
   efg: number | null;
 };
+
+/**
+ * Fields used by the trajectory's pooled rates. Coverage is counted across
+ * every retained team row in a season, so a transfer stint with a missing
+ * denominator remains visible instead of being silently treated as zero.
+ */
+export const TRAJECTORY_CORE_FIELDS = [
+  "mins",
+  "pts",
+  "o_poss",
+  "ast",
+  "tov",
+  "fgm",
+  "fga",
+  "tpm",
+  "tpa",
+  "fta",
+] as const;
 
 export type TrajectoryContext = {
   active: TrajectorySeason | undefined;
@@ -86,9 +107,13 @@ export function buildNcaaPlayerTrajectory(
       const tpm = completeSum(seasonRows, "tpm");
       const tpa = completeSum(seasonRows, "tpa");
       const fta = completeSum(seasonRows, "fta");
+      const completeFields = TRAJECTORY_CORE_FIELDS.filter((field) => completeSum(seasonRows, field) != null).length;
       return {
         season,
         teams: new Set(seasonRows.map((row) => row.team_id)).size,
+        sourceRows: seasonRows.length,
+        completeFields,
+        fieldCount: TRAJECTORY_CORE_FIELDS.length,
         games,
         minutes,
         points,

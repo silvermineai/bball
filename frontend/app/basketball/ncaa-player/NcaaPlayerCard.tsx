@@ -290,8 +290,10 @@ function PlayerTrajectory({
       <p className="note">
         Team rows are combined within each season for this same archive player ID.
         Rates use pooled totals, and a missing required field stays
-        unavailable. This is a descriptive development view, not an identity
-        claim about a different player with the same name.
+        unavailable. The coverage count below checks the retained core fields
+        across every exact-ID team row in that season. This is a descriptive
+        development view, not an identity claim about a different player with
+        the same name.
       </p>
       {active && (
         <div className="strip" style={{ marginTop: 18 }}>
@@ -359,7 +361,7 @@ function PlayerTrajectory({
       </div>
       {rows.length > 0 && <div className="table-scroll" style={{ marginTop: 24 }}>
         <table className="data-table">
-          <thead><tr><th>Season</th><th className="numeric">PTS / POSS</th><th className="numeric">AST / POSS</th><th className="numeric">TO / POSS</th><th className="numeric">3PA / FGA</th><th className="numeric">FTA / FGA</th><th>Edition evidence</th></tr></thead>
+          <thead><tr><th>Season</th><th className="numeric">PTS / POSS</th><th className="numeric">AST / POSS</th><th className="numeric">TO / POSS</th><th className="numeric">3PA / FGA</th><th className="numeric">FTA / FGA</th><th className="numeric">EFG%</th><th>Edition evidence</th></tr></thead>
           <tbody>{rows.map((row) => {
             const seasonReceipts = receipts.filter((receipt) => receipt.season === row.season);
             return <tr key={`role-${row.season}`} className={row.season === selectedSeason ? "career-selected-row" : ""}>
@@ -369,7 +371,8 @@ function PlayerTrajectory({
               <td className="numeric"><strong>{pct(row.turnoversPerPossession)}</strong><small>TO / source POSS</small></td>
               <td className="numeric"><strong>{pct(row.threePointAttemptRate)}</strong><small>3PA / FGA</small></td>
               <td className="numeric"><strong>{pct(row.freeThrowAttemptRate)}</strong><small>FTA / FGA</small></td>
-              <td>{seasonReceipts.length ? <><strong>{seasonReceipts.length} receipt{seasonReceipts.length === 1 ? "" : "s"}</strong><small>{seasonReceipts.map((receipt) => `${receipt.dataset.replace(/^ncaa_/, "player ")} ${receipt.sha256.slice(0, 8)}…`).join(" · ")}</small></> : <><strong>Unavailable</strong><small>No valid retained receipt for this season</small></>}</td>
+              <td className="numeric"><strong>{pct(row.efg)}</strong><small>FGM + 0.5 × 3PM / FGA</small></td>
+              <td><strong>{row.completeFields}/{row.fieldCount} core fields</strong><small>{row.sourceRows} retained team row{row.sourceRows === 1 ? "" : "s"}{seasonReceipts.length ? ` · ${seasonReceipts.length} receipt${seasonReceipts.length === 1 ? "" : "s"}` : " · no valid receipt"}</small>{seasonReceipts.length ? <small>{seasonReceipts.map((receipt) => `${receipt.dataset.replace(/^ncaa_/, "player ")} ${receipt.sha256.slice(0, 8)}…`).join(" · ")}</small> : null}</td>
             </tr>;
           })}</tbody>
         </table>

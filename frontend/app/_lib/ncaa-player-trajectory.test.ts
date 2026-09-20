@@ -24,8 +24,8 @@ describe("NCAA player trajectory", () => {
       },
     ]);
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ season: 2025, teams: 1, games: 20, points: 360, ppg: 18, mpg: 30 });
-    expect(rows[1]).toMatchObject({ season: 2024, teams: 2, games: 15, minutes: 300, points: 150, ppg: 10, mpg: 20 });
+    expect(rows[0]).toMatchObject({ season: 2025, teams: 1, sourceRows: 1, completeFields: 10, fieldCount: 10, games: 20, points: 360, ppg: 18, mpg: 30 });
+    expect(rows[1]).toMatchObject({ season: 2024, teams: 2, sourceRows: 2, completeFields: 10, fieldCount: 10, games: 15, minutes: 300, points: 150, ppg: 10, mpg: 20 });
     expect(rows[0].pointsPerPossession).toBe(0.6);
     expect(rows[0].assistsPerPossession).toBe(0.15);
     expect(rows[0].turnoversPerPossession).toBe(0.1);
@@ -71,6 +71,27 @@ describe("NCAA player trajectory", () => {
     expect(row.turnoversPerPossession).toBeNull();
     expect(row.threePointAttemptRate).toBeNull();
     expect(row.freeThrowAttemptRate).toBeCloseTo(40 / 140);
+  });
+
+  it("reports core field coverage across every retained team stint", () => {
+    const [row] = buildNcaaPlayerTrajectory([
+      {
+        season: 2026,
+        team_id: "a",
+        games: 12,
+        stats: { mins: 300, pts: 180, o_poss: 400, ast: 60, tov: 20, fgm: 70, fga: 140, tpm: 25, tpa: 60, fta: 40 },
+      },
+      {
+        season: 2026,
+        team_id: "b",
+        games: 4,
+        stats: { mins: 80, pts: 30, o_poss: 100, ast: 10, tov: 8, fgm: 12, fga: 35, tpm: 4, tpa: 15 },
+      },
+    ]);
+    expect(row.sourceRows).toBe(2);
+    expect(row.completeFields).toBe(9);
+    expect(row.fieldCount).toBe(10);
+    expect(row.freeThrowAttemptRate).toBeNull();
   });
 
   it("uses the selected season for the summary and compares it with the prior row", () => {
