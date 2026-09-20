@@ -7,6 +7,24 @@ export type FootballMatchupSort =
   | "close"
   | "margin"
   | "uncertainty";
+export type FootballMatchupDivision = "d1" | "d2" | "d3";
+
+export function parseFootballMatchupDivision(value: string | null): FootballMatchupDivision {
+  if (value === "2" || value === "d2" || value === "ii" || value === "d-ii") return "d2";
+  if (value === "3" || value === "d3" || value === "iii" || value === "d-iii") return "d3";
+  return "d1";
+}
+
+export function matchesFootballMatchupDivision(
+  game: { home_division?: string | null; away_division?: string | null },
+  division: FootballMatchupDivision,
+) {
+  const sourceDivisions = [game.home_division, game.away_division]
+    .map((value) => String(value || "").trim().toLowerCase());
+  if (division === "d2") return sourceDivisions.some((value) => value === "d2" || value === "ii" || value === "d-ii" || value === "division ii");
+  if (division === "d3") return sourceDivisions.some((value) => value === "d3" || value === "iii" || value === "d-iii" || value === "division iii");
+  return sourceDivisions.some((value) => value === "fbs" || value === "fcs" || value === "d1" || value === "i" || value === "division i");
+}
 
 const signals = new Set<FootballMatchupSignal>([
   "all",

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   matchesFootballMatchupSignal,
+  matchesFootballMatchupDivision,
+  parseFootballMatchupDivision,
   parseFootballMatchupSignal,
   parseFootballMatchupSort,
   sortFootballMatchups,
@@ -17,6 +19,17 @@ const prediction = (probability: number) => ({
 });
 
 describe("football matchup signal filters", () => {
+  it("keeps division filters tied to source division labels", () => {
+    expect(parseFootballMatchupDivision("2")).toBe("d2");
+    expect(parseFootballMatchupDivision("iii")).toBe("d3");
+    expect(parseFootballMatchupDivision("fbs")).toBe("d1");
+    expect(parseFootballMatchupDivision("unknown")).toBe("d1");
+    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d2" }, "d2")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "Division II", away_division: "Division II" }, "d2")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d3")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "fbs", away_division: "fcs" }, "d1")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d1")).toBe(false);
+  });
   it("accepts supported values and fails closed", () => {
     expect(parseFootballMatchupSignal("strong")).toBe("strong");
     expect(parseFootballMatchupSignal("wild")).toBe("all");

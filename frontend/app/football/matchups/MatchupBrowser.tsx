@@ -16,7 +16,9 @@ import type { LiveFootballMarketComparisonSet } from "../../_lib/live-football-f
 import type { FootballSlateIntel } from "../../_lib/football-brief";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
 import {
+  matchesFootballMatchupDivision,
   matchesFootballMatchupSignal,
+  parseFootballMatchupDivision,
   parseFootballMatchupSignal,
   parseFootballMatchupSort,
   sortFootballMatchups,
@@ -45,9 +47,11 @@ export default function MatchupBrowser({
   const requestedPicks = params.get("picks") || "";
   const requestedPage = Number(params.get("page") || 0);
   const requestedWeek = params.get("week");
+  const requestedDivision = parseFootballMatchupDivision(params.get("division"));
   const initialWeek = requestedWeek && /^\d{1,2}$/.test(requestedWeek) ? requestedWeek : "all";
   const [query, setQuery] = useState(params.get("team") || ""),
     [week, setWeek] = useState(initialWeek),
+    [division, setDivision] = useState(requestedDivision),
     [mode, setMode] = useState<"all" | "forecast">(params.get("show") === "forecast" ? "forecast" : "all"),
     [signal, setSignal] = useState<FootballMatchupSignal>(parseFootballMatchupSignal(params.get("signal"))),
     [sort, setSort] = useState<FootballMatchupSort>(parseFootballMatchupSort(params.get("sort"))),
@@ -61,7 +65,8 @@ export default function MatchupBrowser({
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, LiveFootballMarketComparisonSet> | null>(null),
     [liveMarketError, setLiveMarketError] = useState("");
   const activeGames = liveGames || games;
-  const filteredRows = activeGames.filter(
+  const scopedGames = activeGames.filter((game) => matchesFootballMatchupDivision(game, division));
+  const filteredRows = scopedGames.filter(
     (g) =>
       (
         g.home_name +
@@ -72,15 +77,16 @@ export default function MatchupBrowser({
         " " +
         g.away_conference
       )
-        .toLowerCase()
+      .toLowerCase()
         .includes(query.toLowerCase()) &&
       (week === "all" || String(g.week) === week) &&
+      matchesFootballMatchupDivision(g, division) &&
       (mode === "all" || g.prediction) &&
       matchesFootballMatchupSignal(g.prediction, signal),
   );
   const rows = sortFootballMatchups(filteredRows, sort);
   const scenarioByGame = new Map(efficiencyScenarios.map((scenario) => [scenario.game_id, scenario]));
-  const marketLinkedRows = activeGames
+  const marketLinkedRows = scopedGames
     .map((game) => ({
       game,
       comparisons: applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [],
@@ -89,7 +95,7 @@ export default function MatchupBrowser({
     .sort((left, right) => left.game.kickoff.localeCompare(right.game.kickoff));
   const linkedComparisons = (game: Game) => applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [];
   const prepRows = prepIds
-    .map((id) => activeGames.find((game) => game.id === id))
+    .map((id) => scopedGames.find((game) => game.id === id))
     .filter((game): game is Game => !!game);
 
   useEffect(() => {
@@ -133,6 +139,8 @@ export default function MatchupBrowser({
     else url.searchParams.delete("team");
     if (week !== "all") url.searchParams.set("week", week);
     else url.searchParams.delete("week");
+    if (division !== "d1") url.searchParams.set("division", division);
+    else if (url.searchParams.get("division") !== "1") url.searchParams.delete("division");
     if (mode === "forecast") url.searchParams.set("show", mode);
     else url.searchParams.delete("show");
     if (signal !== "all") url.searchParams.set("signal", signal);
@@ -144,7 +152,7 @@ export default function MatchupBrowser({
     if (prepIds.length) url.searchParams.set("picks", prepIds.join(","));
     else url.searchParams.delete("picks");
     window.history.replaceState(window.history.state, "", url);
-  }, [mode, page, prepIds, query, signal, sort, week]);
+  }, [division, mode, page, prepIds, query, signal, sort, week]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -215,6 +223,20 @@ export default function MatchupBrowser({
           </select>
         </label>
         <label className="control">
+          <span>DIVISION</span>
+          <select
+            value={division}
+            onChange={(e) => {
+              setDivision(parseFootballMatchupDivision(e.target.value));
+              setPage(0);
+            }}
+          >
+            <option value="d1">D1 · FBS/FCS</option>
+            <option value="d2">D2</option>
+            <option value="d3">D3</option>
+          </select>
+        </label>
+        <label className="control">
           <span>SHOW</span>
           <select
             value={mode}
@@ -276,7 +298,9 @@ export default function MatchupBrowser({
       {copied && <p className="note" role="status">{copied}</p>}
       <p className="note" style={{ marginBottom: 22 }}>
         {rows.length} matchups · Generated {date(generated)} · {liveGames
-          ? "Live D1 forecast rows are applied to the published cards."
+          ? division === "d1"
+            ? "Live D1 forecast rows are applied to the published cards."
+            : "Lower-division schedule rows are shown; forecasts appear only where the model has an eligible projection."
           : liveError
             ? `${liveError} Showing the published snapshot.`
             : "Checking the live D1 forecast edition…"}
