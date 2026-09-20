@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlayerIndexFilters, playerIndexFilterSearch, rankPlayerProfiles } from "./player-index-view";
+import { parsePlayerIndexFilters, playerIndexFilterSearch, playerIndexScopeSearch, rankPlayerProfiles } from "./player-index-view";
 
 describe("historical player index URL state", () => {
   it("parses supported season, search, sort, qualification and page", () => {
@@ -25,6 +25,13 @@ describe("historical player index URL state", () => {
   it("serializes only non-default controls", () => {
     expect(playerIndexFilterSearch({ season: "2025", query: "Jones", sort: "ts", qualified: false, page: 4 })).toBe("?season=2025&q=Jones&sort=ts&qualified=0&page=4");
     expect(playerIndexFilterSearch({ season: "2026", query: "", sort: "ppg", qualified: true, page: 0 })).toBe("");
+  });
+
+  it("preserves an unsupported gender and division scope when controls rewrite the URL", () => {
+    expect(playerIndexScopeSearch(
+      { season: "2026", query: "Jones", sort: "ppg", qualified: true, page: 0 },
+      { gender: "women", division: "3" },
+    )).toBe("?q=Jones&gender=women&division=3");
   });
 
   it("round-trips the profile sort control", () => {

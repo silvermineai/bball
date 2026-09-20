@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { BBPlayer } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
+import ScopeUnavailable from "../../_components/ScopeUnavailable";
 import { fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { comparisonHref } from "../../_lib/player-comparison";
@@ -14,10 +15,11 @@ import {
 } from "../../_lib/careers";
 import {
   parsePlayerIndexFilters,
-  playerIndexFilterSearch,
+  playerIndexScopeSearch,
   rankPlayerProfiles,
   type PlayerIndexSort,
 } from "../../_lib/player-index-view";
+import { basketballScopeAvailable, parseSportScope, type SportScope } from "../../_lib/sport-scope";
 
 type LiveArchiveMeta = {
   seasons?: Array<{ season: number }>;
@@ -35,9 +37,16 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     [page, setPage] = useState(0),
     [copied, setCopied] = useState(""),
     [hydrated, setHydrated] = useState(false);
+  const [scope, setScope] = useState<SportScope | null>(null);
   const [liveArchive, setLiveArchive] = useState<LiveArchiveMeta | null>(null);
   const [liveArchiveStatus, setLiveArchiveStatus] = useState<"checking" | "live" | "fallback">("checking");
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedScope = parseSportScope({
+      gender: params.get("gender") || undefined,
+      division: params.get("division") || undefined,
+    });
+    setScope(requestedScope);
     const filters = parsePlayerIndexFilters(
       window.location.search,
       catalog.seasons.map((s) => s.season),
@@ -50,6 +59,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     setHydrated(true);
   }, [catalog]);
   useEffect(() => {
+    if (!scope || !basketballScopeAvailable(scope)) return;
     const controller = new AbortController();
     fetch("/api/basketball/research/careers/meta", { signal: controller.signal })
       .then((response) => {
@@ -66,19 +76,19 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveArchiveStatus("fallback");
       });
     return () => controller.abort();
-  }, []);
+  }, [scope]);
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !scope) return;
     const url = new URL(window.location.href);
-    url.search = playerIndexFilterSearch({
+    url.search = playerIndexScopeSearch({
       season,
       query: q,
       sort,
       qualified,
       page,
-    });
+    }, scope);
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, page, q, qualified, season, sort]);
+  }, [hydrated, page, q, qualified, season, sort, scope]);
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const sourceReceipts = catalog.sources
     .flat()
@@ -89,7 +99,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     season: number;
     players: BBPlayer[];
     coverage?: CareerCoverage;
-  }>(`history/players-${coverage ? season : "unsupported"}`);
+  }>(`history/players-${coverage ? season : "unsupported"}`, { enabled: scope != null && basketballScopeAvailable(scope) });
   const basePlayers = (data?.season === +season ? data.players : []).filter(
     (p) => !qualified || p.qualified,
   );
@@ -128,6 +138,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
   const rows = ranked.filter((p) =>
     (p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()),
   );
+  if (!scope) return <p className="empty" role="status">Reading the requested player archive scope…</p>;
+  if (!basketballScopeAvailable(scope)) return <ScopeUnavailable sport="basketball" scope={scope} />;
   return (
     <>
       <div className="strip">

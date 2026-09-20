@@ -1,3 +1,5 @@
+import type { SportScope } from "./sport-scope";
+
 export const playerIndexSorts = [
   "profile",
   "ppg",
@@ -164,6 +166,15 @@ export function playerIndexFilterSearch(filters: PlayerIndexFilters) {
   if (filters.sort !== "ppg") params.set("sort", filters.sort);
   if (!filters.qualified) params.set("qualified", "0");
   if (filters.page) params.set("page", String(filters.page));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+/** Preserve the requested sport scope while the player index rewrites its own controls. */
+export function playerIndexScopeSearch(filters: PlayerIndexFilters, scope: SportScope) {
+  const params = new URLSearchParams(playerIndexFilterSearch(filters));
+  if (scope.gender !== "men") params.set("gender", scope.gender);
+  if (scope.division !== "1") params.set("division", scope.division);
   const query = params.toString();
   return query ? `?${query}` : "";
 }
