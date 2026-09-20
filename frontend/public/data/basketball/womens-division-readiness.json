@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "sport": "basketball",
+  "gender": "women",
+  "generated_at": "2026-09-20T09:13:00.073858Z",
+  "source": {
+    "release": "SportsDataverse women’s college basketball bulk release",
+    "schedule_receipt": {
+      "sha256": "d7186f8e8a5e75b65b349f98d2ca9ade5ab4b492f65c7deeb22cf988b3ef350d",
+      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2027.parquet"
+    },
+    "observed_season": 2026,
+    "target_season": 2027
+  },
+  "published": {
+    "division": "1",
+    "status": "published",
+    "player_rows": 1000,
+    "team_rows": 572,
+    "upcoming_games": 25
+  },
+  "divisions": {
+    "2": {
+      "status": "unavailable",
+      "rows": 0,
+      "reason": "The retained release has no complete Division II player/team tables or explicit D2 label."
+    },
+    "3": {
+      "status": "unavailable",
+      "rows": 0,
+      "reason": "The retained release has no complete Division III player/team tables or explicit D3 label."
+    }
+  },
+  "non_division_one_schedule_signals": {
+    "rows": 5,
+    "classification": "unresolved_non_d1",
+    "note": "The source flag identifies non-Division-I opponents but does not distinguish Division II from Division III. These games are excluded from D2/D3 counts and forecasts.",
+    "games": [
+      {
+        "game_id": "401909669",
+        "date": "2026-11-02T05:00Z",
+        "home": "Winthrop Eagles",
+        "away": "Newberry Wolves",
+        "source_flag": "away_non_div1_team"
+      },
+      {
+        "game_id": "401911766",
+        "date": "2026-11-04T05:00Z",
+        "home": "St. Bonaventure Bonnies",
+        "away": "D'Youville Saints",
+        "source_flag": "away_non_div1_team"
+      },
+      {
+        "game_id": "401911722",
+        "date": "2026-11-08T05:00Z",
+        "home": "Fordham Rams",
+        "away": "Monroe (NY) Mustangs",
+        "source_flag": "away_non_div1_team"
+      },
+      {
+        "game_id": "401913780",
+        "date": "2026-12-03T05:00Z",
+        "home": "New Hampshire Wildcats",
+        "away": "Vermont State Johnson Badgers",
+        "source_flag": "away_non_div1_team"
+      },
+      {
+        "game_id": "401917772",
+        "date": "2026-12-28T05:00Z",
+        "home": "Santa Clara Broncos",
+        "away": "Dominican (CA) Penguins",
+        "source_flag": "away_non_div1_team"
+      }
+    ]
+  },
+  "import_contract": {
+    "required_scope_fields": [
+      "sport",
+      "gender",
+      "division",
+      "season"
+    ],
+    "required_identity_fields": [
+      "team_id",
+      "team_display_name",
+      "athlete_id",
+      "athlete_display_name"
+    ],
+    "acceptance_rules": [
+      "Require an explicit source division value of 2 or 3 before publishing D2/D3 rows.",
+      "Require stable team and athlete identifiers and a source receipt hash.",
+      "Reject conflicting duplicate identity/stat rows instead of choosing a last row.",
+      "Keep unresolved non-D1 schedule signals outside D2/D3 counts until classified."
+    ],
+    "next_required_inputs": [
+      "A lawful women’s D2/D3 schedule, team, and player release with explicit division labels.",
+      "A source receipt and field-level validation for each imported season."
+    ]
+  },
+  "limitations": [
+    "No women’s D2 or D3 rows are fabricated or substituted from D1.",
+    "The current source flag is non-D1 only; it cannot identify D2 versus D3."
+  ]
+}
