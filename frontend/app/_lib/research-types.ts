@@ -142,6 +142,20 @@ export type SportSummary = {
     market_brier: number | null;
     direction_results: Record<string, number>;
   }[];
+  /**
+   * Upcoming and awaiting-result quote cohorts. These describe current model
+   * versus line differences, but deliberately contain no accuracy metrics.
+   */
+  pending_market_metrics?: {
+    model_id?: string;
+    provider: string;
+    bookmaker: string;
+    market: string;
+    games: number;
+    model_difference_mean: number | null;
+    market_overround_mean: number | null;
+    direction_results: Record<string, number>;
+  }[];
 };
 
 export type MarketEvidenceState = "none" | "retained_unqualified" | "qualified" | "inconsistent";

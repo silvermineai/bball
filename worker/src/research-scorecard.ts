@@ -301,26 +301,39 @@ function metrics(rows: Json[]): Json {
 }
 
 function summary(rows: Json[], registeredVersions: number, marketObservations: number, unmatchedEvents: number, readiness: MarketComparisonReadiness): Json {
-  const groups = new Map<string, Json[]>();
-  for (const row of rows) for (const quote of (row.comparisons as Json[])) {
-    if (row.status !== "settled") continue;
-    const modelId = String(row.model_id || "");
-    const key = `${modelId}|${quote.provider}|${quote.bookmaker}|${quote.market}`;
-    groups.set(key, [...(groups.get(key) || []), { ...quote, model_id: modelId }]);
-  }
-  const marketMetrics = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, quotes]) => {
+  const marketSummary = (statuses: Set<string>, includeSettlementMetrics: boolean) => {
+    const groups = new Map<string, Json[]>();
+    for (const row of rows) for (const quote of (row.comparisons as Json[])) {
+      if (!statuses.has(String(row.status))) continue;
+      const modelId = String(row.model_id || "");
+      const key = `${modelId}|${quote.provider}|${quote.bookmaker}|${quote.market}`;
+      groups.set(key, [...(groups.get(key) || []), { ...quote, model_id: modelId }]);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, quotes]) => {
     const first = quotes[0];
     const direction: Record<string, number> = {};
     for (const q of quotes) if (typeof q.direction_result === "string") direction[q.direction_result] = (direction[q.direction_result] || 0) + 1;
-    return {
+    const base = {
       model_id: first.model_id, provider: first.provider, bookmaker: first.bookmaker, market: first.market, games: quotes.length,
+      model_difference_mean: mean(quotes.flatMap((q) => number(q.model_difference) === null ? [] : [Number(q.model_difference)])),
+      market_overround_mean: mean(quotes.flatMap((q) => number(q.market_overround) === null ? [] : [Number(q.market_overround)])),
+      direction_results: direction,
+    };
+    if (!includeSettlementMetrics) return base;
+    return {
+      ...base,
       model_mae: mean(quotes.flatMap((q) => number(q.model_absolute_error) === null ? [] : [Number(q.model_absolute_error)])),
       market_mae: mean(quotes.flatMap((q) => number(q.market_absolute_error) === null ? [] : [Number(q.market_absolute_error)])),
       model_brier: mean(quotes.flatMap((q) => number(q.model_brier) === null ? [] : [Number(q.model_brier)])),
       market_brier: mean(quotes.flatMap((q) => number(q.market_brier) === null ? [] : [Number(q.market_brier)])),
-      direction_results: direction,
     };
   });
+  };
+  const marketMetrics = marketSummary(new Set(["settled"]), true);
+  // Upcoming quotes are useful for matchup preparation, but cannot contribute
+  // to model accuracy until a verified final is available. Keep this cohort
+  // separate so a live line never appears to be a settled result.
+  const pendingMarketMetrics = marketSummary(new Set(["scheduled", "awaiting_result"]), false);
   const counts: Record<string, number> = {};
   for (const row of rows) counts[String(row.status)] = (counts[String(row.status)] || 0) + 1;
   const modelGroups = new Map<string, Json[]>();
@@ -431,6 +444,7 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     model_metrics: modelMetrics,
     estimate_metrics: estimateMetrics,
     market_metrics: marketMetrics,
+    pending_market_metrics: pendingMarketMetrics,
   };
 }
 

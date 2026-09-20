@@ -108,7 +108,23 @@ describe("live research scorecard", () => {
     expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
     expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
-    expect(body.sports.basketball).toMatchObject({ games: 1, registered_versions: 1, market_observations: 7, unmatched_events: 3, games_with_comparisons: 1, qualifying_market_observations: 1, settled_market_observations: 0, pending_market_observations: 1 });
+    expect(body.sports.basketball).toMatchObject({
+      games: 1,
+      registered_versions: 1,
+      market_observations: 7,
+      unmatched_events: 3,
+      games_with_comparisons: 1,
+      qualifying_market_observations: 1,
+      settled_market_observations: 0,
+      pending_market_observations: 1,
+      pending_market_metrics: [{
+        model_id: "model-1",
+        market: "spreads",
+        games: 1,
+        model_difference_mean: 1.5,
+        market_overround_mean: expect.closeTo(1 / 1.91 + 1 / 1.91 - 1, 8),
+      }],
+    });
     expect(body.sports.basketball.comparison_readiness).toEqual({
       retained_observations: 7,
       selected_game_observations: 4,
@@ -193,6 +209,7 @@ describe("live research scorecard", () => {
       metrics: { reliability: Array<{ lower: number; upper: number; games: number; predicted: number; observed: number }> };
       model_metrics: Array<Record<string, unknown>>;
       market_metrics: Array<Record<string, unknown>>;
+      pending_market_metrics?: Array<Record<string, unknown>>;
       estimate_metrics: Array<Record<string, unknown>>;
     } } };
     expect(body.sports.basketball.metrics.reliability).toEqual([
@@ -222,6 +239,7 @@ describe("live research scorecard", () => {
       { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8 },
       { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9 },
     ]);
+    expect(body.sports.basketball.pending_market_metrics).toEqual([]);
   });
 
   it("withholds null and invalid numeric evidence instead of coercing it into metrics", async () => {

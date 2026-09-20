@@ -166,6 +166,7 @@ export default function Scorecard() {
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
+  const pendingMarketMetrics = summary.pending_market_metrics || [];
   const marketReadiness = marketReadinessState(
     marketMetadata,
     marketMetadataStatus === "checking",
@@ -578,6 +579,50 @@ export default function Scorecard() {
             </table>
           </div>
         </div>
+      )}
+      {pendingMarketMetrics.length > 0 && (
+        <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="pending-market-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Upcoming / awaiting source finals</div>
+              <h3 id="pending-market-title">Model context beside the current line.</h3>
+            </div>
+            <span className="note">No accuracy claim yet</span>
+          </div>
+          <p className="note">
+            These are qualifying pregame quote observations attached to scheduled or awaiting-result games. The average difference is preparation context only; it becomes an error metric only after the game has a verified final.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model edition</th>
+                  <th>Market</th>
+                  <th className="numeric">Games</th>
+                  <th className="numeric">Average model difference</th>
+                  <th className="numeric">Average market margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingMarketMetrics.map((r) => (
+                  <tr key={`${r.model_id || "legacy"}|${r.provider}|${r.bookmaker}|${r.market}`}>
+                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code></th>
+                    <td>{r.market}</td>
+                    <td className="numeric">{r.games.toLocaleString()}</td>
+                    <td className="numeric">
+                      {r.model_difference_mean == null
+                        ? "—"
+                        : `${r.model_difference_mean >= 0 ? "+" : ""}${fmt(r.market === "h2h" ? r.model_difference_mean * 100 : r.model_difference_mean, 1)} ${r.market === "h2h" ? "pp" : "pts"}`}
+                    </td>
+                    <td className="numeric">
+                      {r.market_overround_mean == null ? "—" : `${fmt(r.market_overround_mean * 100, 2)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
       {sport === "football" && benchmark && (
         <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="retrospective-benchmark-title">
