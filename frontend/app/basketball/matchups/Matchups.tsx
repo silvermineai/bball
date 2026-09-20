@@ -135,15 +135,9 @@ export default function Matchups({
   }, [publisherTeamIds]);
 
   useEffect(() => {
-    if (!liveForecastModelId) {
-      setLiveMarketComparisons(null);
-      setLiveMarketsError("");
-      return;
-    }
-    setLiveMarketComparisons(null);
-    setLiveMarketsError("");
-    const controller = new AbortController();
+    setLiveGamesError("");
     setLiveForecastModelId(null);
+    const controller = new AbortController();
     const load = async () => {
       const rows = await loadLiveBasketballForecasts(controller.signal);
       if (!controller.signal.aborted) {
@@ -161,6 +155,13 @@ export default function Matchups({
   }, [games]);
 
   useEffect(() => {
+    if (!liveForecastModelId) {
+      setLiveMarketComparisons(null);
+      setLiveMarketsError("");
+      return;
+    }
+    setLiveMarketComparisons(null);
+    setLiveMarketsError("");
     const controller = new AbortController();
     loadLiveBasketballMarketComparisons(controller.signal, liveForecastModelId)
       .then((value) => {
