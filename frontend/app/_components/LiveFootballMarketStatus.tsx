@@ -4,12 +4,20 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
-import { footballMarketStatusDetail } from "../_lib/football-market-status";
+import { footballMarketCaptureDetail, footballMarketStatusDetail } from "../_lib/football-market-status";
+import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../_lib/market-availability";
 
 type MarketMetadata = {
   total?: number;
   pregame?: number;
   research_latest_capture_at?: string | null;
+  research_capture?: {
+    summary_count?: number;
+    summary_with_pickcenter?: number;
+    accepted_markets?: number;
+    rejected_records?: number;
+    market_status?: MarketCaptureStatus;
+  };
   source?: "partial" | "unavailable";
   unavailable_reason?: string;
 };
@@ -71,6 +79,11 @@ export default function LiveFootballMarketStatus() {
     : archive?.source === "unavailable"
       ? archive.unavailable_reason || "The market archive is temporarily unavailable."
       : "";
+  const captureDiagnostic = footballMarketCaptureDetail(archive?.research_capture);
+  const captureStatus = archive?.research_capture?.market_status;
+  const captureStatusNote = captureStatus
+    ? ` Capture status: ${marketCaptureStatusLabel(captureStatus)}. ${marketCaptureStatusDetail(captureStatus)}`
+    : "";
 
   return (
     <p className="note" role="status">
@@ -84,7 +97,7 @@ export default function LiveFootballMarketStatus() {
               settledModelGames: metrics?.games || 0,
               winnerAccuracy: metrics?.winner_accuracy ?? null,
               marginMae: metrics?.margin_mae ?? null,
-            })} {caveat ? `${caveat} ` : ""}{scorecard.generated_at ? `Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
+            })} {caveat ? `${caveat} ` : ""}{captureDiagnostic ? `${captureDiagnostic} ` : ""}{captureStatusNote}{scorecard.generated_at ? ` Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
           </>
         : status === "fallback"
           ? <>Live market record unavailable; the retained archive remains available. <Link href="/research/scorecard/?sport=football">Open the scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>

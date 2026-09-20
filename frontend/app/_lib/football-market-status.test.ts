@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballMarketStatusDetail } from "./football-market-status";
+import { footballMarketCaptureDetail, footballMarketStatusDetail } from "./football-market-status";
 
 const base = {
   qualifyingMarketObservations: 301,
@@ -28,5 +28,16 @@ describe("football market status", () => {
   it("labels settled market comparisons when the ledger supplies them", () => {
     const text = footballMarketStatusDetail({ ...base, settledMarketComparisons: 4 });
     expect(text).toContain("4 settled model-to-line comparisons are available");
+  });
+
+  it("reports connector coverage without turning an empty capture into a no-line claim", () => {
+    const text = footballMarketCaptureDetail({ summary_count: 20, summary_with_pickcenter: 0, accepted_markets: 0, rejected_records: 0 });
+    expect(text).toContain("checked 20 future game summaries");
+    expect(text).toContain("0 included complete market quotes");
+    expect(text).not.toContain("no line");
+  });
+
+  it("keeps malformed connector counts unavailable", () => {
+    expect(footballMarketCaptureDetail({ summary_count: -1, summary_with_pickcenter: 2 })).toBe("");
   });
 });
