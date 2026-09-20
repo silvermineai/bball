@@ -124,7 +124,7 @@ export default function SportNavigation() {
       </div>
       {!config.available ? (
         <div className="sport-availability" role="status">
-          <strong>Archive status:</strong> Women's Basketball rows are not imported yet. Scope links remain available so the requested sport and division stay explicit in the URL.
+          <strong>Archive status:</strong> Women's Basketball observed player, roster and schedule tables are available; predictions remain gated until a separate model is validated.
         </div>
       ) : currentSport === "football" ? (
         <div className="sport-availability" role="status">

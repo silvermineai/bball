@@ -1,0 +1,956 @@
+{
+  "schema_version": 1,
+  "gender": "women",
+  "sport": "basketball",
+  "season": 2027,
+  "observed_player_season": 2026,
+  "generated_at": "2026-09-20T06:18:23.572680Z",
+  "model_status": "not_published",
+  "coverage": {
+    "player_season_rows": 41919,
+    "players": 1000,
+    "roster_rows": 5616,
+    "teams": 400,
+    "upcoming_games": 25
+  },
+  "leaders": {
+    "points": {
+      "label": "Points per game",
+      "rows": [
+        {
+          "player_id": "4909660",
+          "name": "Evelyn Quiroz",
+          "team": "Texas A&M International Dustdevils",
+          "position": "G",
+          "value": 19.0
+        },
+        {
+          "player_id": "4618080",
+          "name": "Kaylene Smikle",
+          "team": "Rutgers Scarlet Knights",
+          "position": "G",
+          "value": 17.2
+        },
+        {
+          "player_id": "4705385",
+          "name": "Mickayla Perdue",
+          "team": "Toledo Rockets",
+          "position": "G",
+          "value": 16.9
+        },
+        {
+          "player_id": "5107391",
+          "name": "Gracie Merkle",
+          "team": "Bellarmine Knights",
+          "position": "C",
+          "value": 16.5
+        },
+        {
+          "player_id": "4705362",
+          "name": "Edyn Battle",
+          "team": "Miami (OH) RedHawks",
+          "position": "G",
+          "value": 16.4
+        },
+        {
+          "player_id": "4903796",
+          "name": "Emma Parrish",
+          "team": "Trinity Baptist Eagles",
+          "position": "G",
+          "value": 16.4
+        },
+        {
+          "player_id": "4586267",
+          "name": "Destinee Wells",
+          "team": "Belmont Bruins",
+          "position": "G",
+          "value": 15.7
+        },
+        {
+          "player_id": "5106838",
+          "name": "Kenley McCarn",
+          "team": "UT Martin Skyhawks",
+          "position": "G",
+          "value": 15.5
+        },
+        {
+          "player_id": "5107606",
+          "name": "Alejandra Zuniga",
+          "team": "NJIT Highlanders",
+          "position": "G",
+          "value": 15.1
+        },
+        {
+          "player_id": "4704990",
+          "name": "Peyton McDaniel",
+          "team": "James Madison Dukes",
+          "position": "G",
+          "value": 15.1
+        },
+        {
+          "player_id": "4899622",
+          "name": "Rachael Rose",
+          "team": "South Carolina Upstate Spartans",
+          "position": "G",
+          "value": 15.1
+        },
+        {
+          "player_id": "4898966",
+          "name": "Adrianna Smith",
+          "team": "Maine Black Bears",
+          "position": "F",
+          "value": 15.0
+        },
+        {
+          "player_id": "4900552",
+          "name": "Lex Therien",
+          "team": "Loyola Maryland Greyhounds",
+          "position": "F",
+          "value": 14.8
+        },
+        {
+          "player_id": "5107396",
+          "name": "Parris Atkins",
+          "team": "Central Arkansas Sugar Bears",
+          "position": "G",
+          "value": 14.8
+        },
+        {
+          "player_id": "5107451",
+          "name": "Zahirah Walton",
+          "team": "George Mason Patriots",
+          "position": "F",
+          "value": 14.8
+        },
+        {
+          "player_id": "4858666",
+          "name": "Mara Braun",
+          "team": "Minnesota Golden Gophers",
+          "position": "G",
+          "value": 14.4
+        },
+        {
+          "player_id": "5106836",
+          "name": "Sharnecce Currie-Jelks",
+          "team": "UT Martin Skyhawks",
+          "position": "F",
+          "value": 14.4
+        },
+        {
+          "player_id": "4704510",
+          "name": "Tyi Skinner",
+          "team": "Delaware Blue Hens",
+          "position": "G",
+          "value": 14.3
+        },
+        {
+          "player_id": "5107471",
+          "name": "Nya Robertson",
+          "team": "George Washington Revolutionaries",
+          "position": "G",
+          "value": 14.2
+        },
+        {
+          "player_id": "5107543",
+          "name": "Timaya Lewis-Eutsey",
+          "team": "VCU Rams",
+          "position": "G",
+          "value": 14.2
+        },
+        {
+          "player_id": "5108571",
+          "name": "Tess Heal",
+          "team": "Santa Clara Broncos",
+          "position": "G",
+          "value": 14.1
+        },
+        {
+          "player_id": "5107777",
+          "name": "Ashlyn Traylor-Walker",
+          "team": "Radford Highlanders",
+          "position": "G",
+          "value": 14.0
+        },
+        {
+          "player_id": "5108533",
+          "name": "Mya Perry",
+          "team": "Ohio State Buckeyes",
+          "position": "G",
+          "value": 14.0
+        },
+        {
+          "player_id": "5107712",
+          "name": "Sophie Glancey",
+          "team": "Northern Arizona Lumberjacks",
+          "position": "F",
+          "value": 14.0
+        },
+        {
+          "player_id": "4705316",
+          "name": "Destiny Howell",
+          "team": "Howard Bison",
+          "position": "G",
+          "value": 13.6
+        }
+      ]
+    },
+    "rebounds": {
+      "label": "Rebounds per game",
+      "rows": [
+        {
+          "player_id": "5108128",
+          "name": "Charlotte O'Keefe",
+          "team": "UT Rio Grande Valley Vaqueros",
+          "position": "F",
+          "value": 10.2
+        },
+        {
+          "player_id": "4900552",
+          "name": "Lex Therien",
+          "team": "Loyola Maryland Greyhounds",
+          "position": "F",
+          "value": 10.2
+        },
+        {
+          "player_id": "5107391",
+          "name": "Gracie Merkle",
+          "team": "Bellarmine Knights",
+          "position": "C",
+          "value": 9.3
+        },
+        {
+          "player_id": "4565525",
+          "name": "Amiya Joyner",
+          "team": "East Carolina Pirates",
+          "position": "F",
+          "value": 9.0
+        },
+        {
+          "player_id": "4899411",
+          "name": "Debora dos Santos",
+          "team": "San Francisco Dons",
+          "position": "F",
+          "value": 8.8
+        },
+        {
+          "player_id": "4704495",
+          "name": "Caitlin Weimar",
+          "team": "Marist Red Foxes",
+          "position": "F",
+          "value": 8.5
+        },
+        {
+          "player_id": "4910441",
+          "name": "Agar Farrés Garcia",
+          "team": "Colorado Colorado Springs Mountain Lions",
+          "position": "F",
+          "value": 8.4
+        },
+        {
+          "player_id": "4899721",
+          "name": "Megan Norris",
+          "team": "UC Davis Aggies",
+          "position": "C",
+          "value": 8.4
+        },
+        {
+          "player_id": "5106836",
+          "name": "Sharnecce Currie-Jelks",
+          "team": "UT Martin Skyhawks",
+          "position": "F",
+          "value": 8.4
+        },
+        {
+          "player_id": "4898966",
+          "name": "Adrianna Smith",
+          "team": "Maine Black Bears",
+          "position": "F",
+          "value": 8.3
+        },
+        {
+          "player_id": "4707518",
+          "name": "Aijah Palmore",
+          "team": "St. Andrews Knights",
+          "position": "F",
+          "value": 8.0
+        },
+        {
+          "player_id": "4704857",
+          "name": "Grace Boffeli",
+          "team": "Northern Iowa Panthers",
+          "position": "F",
+          "value": 8.0
+        },
+        {
+          "player_id": "4858655",
+          "name": "Mallory Heyer",
+          "team": "Minnesota Golden Gophers",
+          "position": "F",
+          "value": 8.0
+        },
+        {
+          "player_id": "5108791",
+          "name": "Raven Preston",
+          "team": "Elon Phoenix",
+          "position": "G",
+          "value": 8.0
+        },
+        {
+          "player_id": "5107452",
+          "name": "Nalani Kaysia",
+          "team": "George Mason Patriots",
+          "position": "F",
+          "value": 7.9
+        },
+        {
+          "player_id": "5108319",
+          "name": "Hailey Adams",
+          "team": "Rice Owls",
+          "position": "G",
+          "value": 7.4
+        },
+        {
+          "player_id": "5107577",
+          "name": "Carla Brito",
+          "team": "South Florida Bulls",
+          "position": "F",
+          "value": 7.3
+        },
+        {
+          "player_id": "5108133",
+          "name": "Deborah Ogayemi",
+          "team": "UT Rio Grande Valley Vaqueros",
+          "position": "F",
+          "value": 7.3
+        },
+        {
+          "player_id": "4898948",
+          "name": "Koi Sims",
+          "team": "UAlbany Great Danes",
+          "position": "F",
+          "value": 7.3
+        },
+        {
+          "player_id": "4704979",
+          "name": "Teneisia Brown",
+          "team": "Merrimack Warriors",
+          "position": "F",
+          "value": 7.2
+        },
+        {
+          "player_id": "4899954",
+          "name": "Unique Miller",
+          "team": "Delaware State Hornets",
+          "position": "C",
+          "value": 7.2
+        },
+        {
+          "player_id": "5107925",
+          "name": "Antoniette Emma-Nnopu",
+          "team": "UNC Greensboro Spartans",
+          "position": "F",
+          "value": 7.1
+        },
+        {
+          "player_id": "4433529",
+          "name": "Chaniya Clark",
+          "team": "North Carolina A&T Aggies",
+          "position": "C",
+          "value": 7.1
+        },
+        {
+          "player_id": "5107658",
+          "name": "Laura Bello",
+          "team": "Idaho State Bengals",
+          "position": "F",
+          "value": 7.1
+        },
+        {
+          "player_id": "5107712",
+          "name": "Sophie Glancey",
+          "team": "Northern Arizona Lumberjacks",
+          "position": "F",
+          "value": 7.1
+        }
+      ]
+    },
+    "assists": {
+      "label": "Assists per game",
+      "rows": [
+        {
+          "player_id": "4565529",
+          "name": "Caroline Lau",
+          "team": "Northwestern Wildcats",
+          "position": "G",
+          "value": 5.6
+        },
+        {
+          "player_id": "5108598",
+          "name": "Noelani Cornfield",
+          "team": "Southern Miss Lady Eagles",
+          "position": "G",
+          "value": 4.9
+        },
+        {
+          "player_id": "4704672",
+          "name": "Shaulana Wagner",
+          "team": "Xavier Musketeers",
+          "position": "G",
+          "value": 4.9
+        },
+        {
+          "player_id": "4899541",
+          "name": "Benthe Versteeg",
+          "team": "Sacramento State Hornets",
+          "position": "G",
+          "value": 4.7
+        },
+        {
+          "player_id": "4904635",
+          "name": "Kassie Monday",
+          "team": "Cumberlands Patriots",
+          "position": "G",
+          "value": 4.7
+        },
+        {
+          "player_id": "5107447",
+          "name": "Ainhoa Cea",
+          "team": "Lipscomb Bisons",
+          "position": "G",
+          "value": 4.4
+        },
+        {
+          "player_id": "5108672",
+          "name": "Kamy Peppler",
+          "team": "Milwaukee Panthers",
+          "position": "G",
+          "value": 4.4
+        },
+        {
+          "player_id": "4586267",
+          "name": "Destinee Wells",
+          "team": "Belmont Bruins",
+          "position": "G",
+          "value": 4.2
+        },
+        {
+          "player_id": "4899077",
+          "name": "Tanajah Hayes",
+          "team": "Florida International Panthers",
+          "position": "G",
+          "value": 4.1
+        },
+        {
+          "player_id": "5107757",
+          "name": "Chardonnay Hartley",
+          "team": "Longwood Lancers",
+          "position": "G",
+          "value": 4.0
+        },
+        {
+          "player_id": "5107737",
+          "name": "Gemma Nuñez",
+          "team": "Campbell Fighting Camels",
+          "position": "G",
+          "value": 4.0
+        },
+        {
+          "player_id": "5105423",
+          "name": "Stefanie Ingram",
+          "team": "Georgia Lady Bulldogs",
+          "position": "G",
+          "value": 4.0
+        },
+        {
+          "player_id": "4433464",
+          "name": "Kaylah Ivey",
+          "team": "Boston College Eagles",
+          "position": "G",
+          "value": 3.9
+        },
+        {
+          "player_id": "4899622",
+          "name": "Rachael Rose",
+          "team": "South Carolina Upstate Spartans",
+          "position": "G",
+          "value": 3.9
+        },
+        {
+          "player_id": "4906104",
+          "name": "Da'Myia Derby",
+          "team": "Arlington Baptist Patriots",
+          "position": "G",
+          "value": 3.8
+        },
+        {
+          "player_id": "4898953",
+          "name": "Jadyn Weltz",
+          "team": "Binghamton Bearcats",
+          "position": "G",
+          "value": 3.8
+        },
+        {
+          "player_id": "5108547",
+          "name": "Ronnie Porter",
+          "team": "Wisconsin Badgers",
+          "position": "G",
+          "value": 3.8
+        },
+        {
+          "player_id": "4704252",
+          "name": "Tate Lash",
+          "team": "Furman Paladins",
+          "position": "G",
+          "value": 3.7
+        },
+        {
+          "player_id": "5108329",
+          "name": "Denim DeShields",
+          "team": "UAB Blazers",
+          "position": "G",
+          "value": 3.6
+        },
+        {
+          "player_id": "5107675",
+          "name": "Mack Konig",
+          "team": "Montana Lady Griz",
+          "position": "G",
+          "value": 3.6
+        },
+        {
+          "player_id": "5107944",
+          "name": "Filipa Barros",
+          "team": "California Baptist Lancers",
+          "position": "G",
+          "value": 3.5
+        },
+        {
+          "player_id": "5105739",
+          "name": "Talana Lepolo",
+          "team": "Stanford Cardinal",
+          "position": "G",
+          "value": 3.5
+        },
+        {
+          "player_id": "4898966",
+          "name": "Adrianna Smith",
+          "team": "Maine Black Bears",
+          "position": "F",
+          "value": 3.4
+        },
+        {
+          "player_id": "5107777",
+          "name": "Ashlyn Traylor-Walker",
+          "team": "Radford Highlanders",
+          "position": "G",
+          "value": 3.4
+        },
+        {
+          "player_id": "5108300",
+          "name": "Ereauna Hardaway",
+          "team": "North Texas Mean Green",
+          "position": "PG",
+          "value": 3.4
+        }
+      ]
+    }
+  },
+  "teams": [
+    {
+      "team": "Clarion Golden Eagles",
+      "roster_count": 25
+    },
+    {
+      "team": "Concord Mountain Lions",
+      "roster_count": 22
+    },
+    {
+      "team": "Newberry Wolves",
+      "roster_count": 22
+    },
+    {
+      "team": "Bellarmine Knights",
+      "roster_count": 21
+    },
+    {
+      "team": "Coker Cobras",
+      "roster_count": 21
+    },
+    {
+      "team": "Haskell Jayhawks",
+      "roster_count": 21
+    },
+    {
+      "team": "Ferrum Panthers",
+      "roster_count": 20
+    },
+    {
+      "team": "Pensacola Christian Eagles",
+      "roster_count": 19
+    },
+    {
+      "team": "Bluefield Ramblin' Rams",
+      "roster_count": 18
+    },
+    {
+      "team": "Clinton Golden Bears",
+      "roster_count": 18
+    },
+    {
+      "team": "Emmanuel (MA) Lions",
+      "roster_count": 18
+    },
+    {
+      "team": "Georgia Southern Eagles",
+      "roster_count": 18
+    },
+    {
+      "team": "King (TN) Tornado",
+      "roster_count": 18
+    },
+    {
+      "team": "Mercy Mavericks",
+      "roster_count": 18
+    },
+    {
+      "team": "Navy Midshipmen",
+      "roster_count": 18
+    },
+    {
+      "team": "New Haven Chargers",
+      "roster_count": 18
+    },
+    {
+      "team": "Pennsylvania Quakers",
+      "roster_count": 18
+    },
+    {
+      "team": "San Francisco State Gators",
+      "roster_count": 18
+    },
+    {
+      "team": "South Carolina State Lady Bulldogs",
+      "roster_count": 18
+    },
+    {
+      "team": "Union Garnet Chargers",
+      "roster_count": 18
+    },
+    {
+      "team": "Carolina University Bruins",
+      "roster_count": 17
+    },
+    {
+      "team": "Catawba Indians",
+      "roster_count": 17
+    },
+    {
+      "team": "Frostburg State Bobcats",
+      "roster_count": 17
+    },
+    {
+      "team": "Lees McRae Bobcats",
+      "roster_count": 17
+    },
+    {
+      "team": "Omaha Mavericks",
+      "roster_count": 17
+    },
+    {
+      "team": "South Dakota Coyotes",
+      "roster_count": 17
+    },
+    {
+      "team": "Stevenson Mustangs",
+      "roster_count": 17
+    },
+    {
+      "team": "UIC Flames",
+      "roster_count": 17
+    },
+    {
+      "team": "UNC Wilmington Seahawks",
+      "roster_count": 17
+    },
+    {
+      "team": "Air Force Falcons",
+      "roster_count": 16
+    },
+    {
+      "team": "Alabama A&M Bulldogs",
+      "roster_count": 16
+    },
+    {
+      "team": "Alabama State Lady Hornets",
+      "roster_count": 16
+    },
+    {
+      "team": "Brown Bears",
+      "roster_count": 16
+    },
+    {
+      "team": "Cal Poly Mustangs",
+      "roster_count": 16
+    },
+    {
+      "team": "Cal State Los Angeles Golden Eagles",
+      "roster_count": 16
+    },
+    {
+      "team": "Columbia Lions",
+      "roster_count": 16
+    },
+    {
+      "team": "D'Youville Saints",
+      "roster_count": 16
+    },
+    {
+      "team": "Dartmouth Big Green",
+      "roster_count": 16
+    },
+    {
+      "team": "Eastern Washington Eagles",
+      "roster_count": 16
+    },
+    {
+      "team": "Grand Canyon Lopes",
+      "roster_count": 16
+    },
+    {
+      "team": "Harvard Crimson",
+      "roster_count": 16
+    },
+    {
+      "team": "High Point Panthers",
+      "roster_count": 16
+    },
+    {
+      "team": "Idaho State Bengals",
+      "roster_count": 16
+    },
+    {
+      "team": "Incarnate Word Cardinals",
+      "roster_count": 16
+    },
+    {
+      "team": "Iona Gaels",
+      "roster_count": 16
+    },
+    {
+      "team": "Johnson C. Smith Golden Bulls",
+      "roster_count": 16
+    },
+    {
+      "team": "La Salle Explorers",
+      "roster_count": 16
+    },
+    {
+      "team": "Life Pacific Warriors",
+      "roster_count": 16
+    },
+    {
+      "team": "Mississippi Valley State Devilettes",
+      "roster_count": 16
+    },
+    {
+      "team": "Monmouth Hawks",
+      "roster_count": 16
+    }
+  ],
+  "upcoming": [
+    {
+      "game_id": "401917926",
+      "date": "2026-11-02T05:00Z",
+      "home": "Iowa State Cyclones",
+      "away": "Grambling Lady Tigers",
+      "venue": "Hilton Coliseum"
+    },
+    {
+      "game_id": "401917681",
+      "date": "2026-11-02T05:00Z",
+      "home": "Wyoming Cowgirls",
+      "away": "Santa Clara Broncos",
+      "venue": "Arena-Auditorium"
+    },
+    {
+      "game_id": "401917680",
+      "date": "2026-11-02T05:00Z",
+      "home": "New Mexico State Aggies",
+      "away": "San Diego Toreros",
+      "venue": "Pan American Center"
+    },
+    {
+      "game_id": "401917679",
+      "date": "2026-11-02T05:00Z",
+      "home": "Pacific Tigers",
+      "away": "Simpson (CA) Red Hawks",
+      "venue": "Alex G. Spanos Center"
+    },
+    {
+      "game_id": "401917678",
+      "date": "2026-11-02T05:00Z",
+      "home": "New Mexico Lobos",
+      "away": "Seattle U Redhawks",
+      "venue": "The Pit"
+    },
+    {
+      "game_id": "401916098",
+      "date": "2026-11-02T05:00Z",
+      "home": "Drexel Dragons",
+      "away": "Marist Red Foxes",
+      "venue": "Daskalakis Athletic Center"
+    },
+    {
+      "game_id": "401916067",
+      "date": "2026-11-02T05:00Z",
+      "home": "Vanderbilt Commodores",
+      "away": "Lipscomb Bisons",
+      "venue": "Memorial Gymnasium (TN)"
+    },
+    {
+      "game_id": "401916057",
+      "date": "2026-11-02T05:00Z",
+      "home": "Tulane Green Wave",
+      "away": "Texas Southern Tigers",
+      "venue": "Avron B. Fogelman Arena in the Devlin Fieldhouse"
+    },
+    {
+      "game_id": "401916015",
+      "date": "2026-11-02T05:00Z",
+      "home": "Virginia Tech Hokies",
+      "away": "North Carolina Central Eagles",
+      "venue": "Cassell Coliseum"
+    },
+    {
+      "game_id": "401916003",
+      "date": "2026-11-02T05:00Z",
+      "home": "Virginia Cavaliers",
+      "away": "Maryland Eastern Shore Hawks",
+      "venue": "John Paul Jones Arena"
+    },
+    {
+      "game_id": "401915691",
+      "date": "2026-11-02T05:00Z",
+      "home": "Manhattan Jaspers",
+      "away": "Pace Setters",
+      "venue": "Draddy Gymnasium"
+    },
+    {
+      "game_id": "401915664",
+      "date": "2026-11-02T05:00Z",
+      "home": "Iona Gaels",
+      "away": "Dominican (NY) Chargers",
+      "venue": "Hynes Athletics Center"
+    },
+    {
+      "game_id": "401913855",
+      "date": "2026-11-02T05:00Z",
+      "home": "Minnesota Golden Gophers",
+      "away": "Harvard Crimson",
+      "venue": "Williams Arena"
+    },
+    {
+      "game_id": "401913842",
+      "date": "2026-11-02T05:00Z",
+      "home": "South Florida Bulls",
+      "away": "Furman Paladins",
+      "venue": "Yuengling Center"
+    },
+    {
+      "game_id": "401913830",
+      "date": "2026-11-02T05:00Z",
+      "home": "Rice Owls",
+      "away": "Houston Christian Huskies",
+      "venue": "Tudor Fieldhouse"
+    },
+    {
+      "game_id": "401913810",
+      "date": "2026-11-02T05:00Z",
+      "home": "UMass Lowell River Hawks",
+      "away": "Saint Anselm Hawks",
+      "venue": "Kennedy Family Athletic Complex"
+    },
+    {
+      "game_id": "401913797",
+      "date": "2026-11-02T05:00Z",
+      "home": "Northeastern Huskies",
+      "away": "UAlbany Great Danes",
+      "venue": "Cabot Center"
+    },
+    {
+      "game_id": "401913784",
+      "date": "2026-11-02T05:00Z",
+      "home": "NJIT Highlanders",
+      "away": "Rider Broncs",
+      "venue": "Joel & Diane Bloom Wellness and Events Center"
+    },
+    {
+      "game_id": "401913772",
+      "date": "2026-11-02T05:00Z",
+      "home": "New Hampshire Wildcats",
+      "away": "New England College Pilgrims",
+      "venue": "Lundholm Gymnasium"
+    },
+    {
+      "game_id": "401913735",
+      "date": "2026-11-02T05:00Z",
+      "home": "NC State Wolfpack",
+      "away": "Wofford Terriers",
+      "venue": "Reynolds Coliseum"
+    },
+    {
+      "game_id": "401913723",
+      "date": "2026-11-02T05:00Z",
+      "home": "Miami Hurricanes",
+      "away": "Florida Atlantic Owls",
+      "venue": "Watsco Center"
+    },
+    {
+      "game_id": "401913705",
+      "date": "2026-11-02T05:00Z",
+      "home": "Florida State Seminoles",
+      "away": "Merrimack Warriors",
+      "venue": "Tucker Center"
+    },
+    {
+      "game_id": "401913675",
+      "date": "2026-11-02T05:00Z",
+      "home": "Charlotte 49ers",
+      "away": "Richmond Spiders",
+      "venue": "Halton Arena"
+    },
+    {
+      "game_id": "401913015",
+      "date": "2026-11-02T05:00Z",
+      "home": "Purdue Fort Wayne Mastodons",
+      "away": "Xavier Musketeers",
+      "venue": "Hilliard Gates Sports Center"
+    },
+    {
+      "game_id": "401913003",
+      "date": "2026-11-02T05:00Z",
+      "home": "Rutgers Scarlet Knights",
+      "away": "Long Island University Sharks",
+      "venue": "Jersey Mike’s Arena"
+    }
+  ],
+  "receipts": {
+    "player_season": {
+      "sha256": "d4f2d9553f9bf54919fc71d68701b2a9c377b405e76cc13260ed18ca19b81999",
+      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_player_season_stats/player_season_stats_2026.parquet"
+    },
+    "rosters": {
+      "sha256": "e330827fdde82d9430972385fdd70b6ade3f5152d2436e06ecb2eb82decb80b8",
+      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_rosters/rosters_2027.parquet"
+    },
+    "schedule": {
+      "sha256": "d7186f8e8a5e75b65b349f98d2ca9ade5ab4b492f65c7deeb22cf988b3ef350d",
+      "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2027.parquet"
+    }
+  },
+  "limitations": [
+    "This edition is source-native women’s data and does not substitute men’s rows.",
+    "A women’s game forecast model is not published until its own training and calibration checks pass.",
+    "The observed player season is 2026; the 2027 roster and schedule are upcoming context."
+  ]
+}
