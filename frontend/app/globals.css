@@ -5728,6 +5728,10 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .wbb-player-controls { display: grid; grid-template-columns: 140px minmax(0, 1fr) 105px minmax(120px, .45fr); gap: 8px 12px; align-items: center; margin: 18px 0 12px; }
 .wbb-player-controls label { color: var(--muted); font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
 .wbb-player-controls input, .wbb-player-controls select { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 9px 10px; color: var(--ink); }
+.division-player-archive { margin-top: 28px; }
+.division-player-controls { display: grid; grid-template-columns: 140px minmax(0, 1fr) 70px minmax(120px, .35fr); gap: 8px 12px; align-items: center; margin: 18px 0 12px; }
+.division-player-controls label { color: var(--muted); font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.division-player-controls input, .division-player-controls select { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 9px 10px; color: var(--ink); }
 .wbb-shot-map-controls { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 12px; margin-top: 18px; align-items: start; }
 .wbb-shot-map-controls label { padding-top: 9px; font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .wbb-shot-map-controls input { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 9px 10px; color: var(--ink); }
@@ -5751,6 +5755,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (max-width: 800px) { .scope-snapshot-head { display: block; } .scope-snapshot-counts { margin-top: 16px; } .scope-snapshot-grid { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .wbb-shot-map-layout { grid-template-columns: 1fr; } .wbb-shot-map-controls { grid-template-columns: 1fr; } .wbb-shot-map-controls label { padding-top: 0; } .wbb-shot-search-results { grid-column: 1; } }
 @media (max-width: 700px) { .wbb-player-controls { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .division-player-controls { grid-template-columns: 1fr; } }
 
 @media (max-width: 900px) {
   .strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
