@@ -2,7 +2,7 @@ import Link from "next/link";
 import FootballBrief from "../../_components/FootballBrief";
 import { notFound } from "next/navigation";
 import { getOverview } from "../../_lib/data";
-import { getBasketball, getBasketballShootingSeason, getRosters, getRosterModel } from "../../_lib/basketball-data";
+import { getBasketball, getBasketballShootingSeason, getRecruiting, getRosters, getRosterModel } from "../../_lib/basketball-data";
 import { historicalPersonnel } from "../../_lib/matchup-brief";
 import { getScoutProfile } from "../../_lib/scouting-data";
 import { date, fmt } from "../../_lib/format";
@@ -104,6 +104,8 @@ export default async function Page({
   if (basketballGame) {
     const rosterModel = getRosterModel();
     const rosters = getRosters();
+    const recruiting = getRecruiting();
+    const shotEdition = getBasketballShootingSeason(basketball.season - 1);
     const loadProfile = (teamId: string) => {
       try {
         return getScoutProfile(teamId);
@@ -131,8 +133,10 @@ export default async function Page({
         recentForm={notebookRecentForm(homeProfile, awayProfile, basketballGame.home_id, basketballGame.away_id)}
         rosterSeason={rosters.season}
         rosterSource={rosters.source}
-        shotProfiles={getBasketballShootingSeason(basketball.season - 1)?.players || []}
+        shotProfiles={shotEdition?.players || []}
         shotSeason={basketball.season - 1}
+        shotEdition={shotEdition}
+        recruiting={recruiting}
         modelEvaluation={basketball.model.evaluation}
         modelTrainingSeasons={basketball.model.training_seasons}
         model={basketball.model}

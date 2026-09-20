@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam, BBOverview } from "../_lib/basketball-types";
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import type { ShotOption } from "../_lib/shooting";
+import type { ShotSeason } from "../_lib/shooting";
+import type { RecruitingRelease } from "../_lib/recruiting";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 import { notebookFormMetrics, type NotebookRecentForm } from "./notebook-form";
@@ -10,6 +12,7 @@ import { notebookModelValidation } from "./notebook-model-validation";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 import { buildNotebookShotPrep } from "./notebook-shot-prep";
 import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
+import { buildNotebookEvidenceRows } from "./notebook-evidence";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -51,6 +54,8 @@ export default function BasketballNotebook({
   rosterSource,
   shotProfiles = [],
   shotSeason,
+  shotEdition = null,
+  recruiting = null,
   modelEvaluation,
   modelTrainingSeasons,
   model,
@@ -70,6 +75,8 @@ export default function BasketballNotebook({
   rosterSource: BBRosters["source"];
   shotProfiles?: ShotOption[];
   shotSeason?: number;
+  shotEdition?: ShotSeason | null;
+  recruiting?: RecruitingRelease | null;
   modelEvaluation?: BBOverview["model"]["evaluation"] | null;
   modelTrainingSeasons?: number[];
   model?: Pick<BBOverview["model"], "teams" | "efficiency" | "tempo"> | null;
@@ -127,6 +134,29 @@ export default function BasketballNotebook({
     },
   ];
   const shotPrepCount = shotPrepRows.reduce((sum, group) => sum + group.rows.length, 0);
+  const shotEvidence = shotPrepRows.flatMap((group) => group.rows).reduce(
+    (totals, row) => ({
+      attempts: totals.attempts + (row.profile.matched.attempts ?? 0),
+      located: totals.located + (row.profile.matched.located ?? 0),
+    }),
+    { attempts: 0, located: 0 },
+  );
+  const evidenceRows = buildNotebookEvidenceRows({
+    homeId: game.home_id,
+    awayId: game.away_id,
+    forecastModelId: forecastIdentity.modelId,
+    forecastCapturedAt: forecastIdentity.generatedAt,
+    recentForm,
+    historicalPlayerCount: homePlayers.length + awayPlayers.length,
+    shotEdition,
+    shotPlayerJoins: shotPrepCount,
+    shotAttempts: shotEvidence.attempts,
+    shotLocated: shotEvidence.located,
+    recruiting,
+    rosterSource,
+    rosterSeason,
+    rosterRows: homeRosterPlayers.length + awayRosterPlayers.length,
+  });
   const gameRead = buildNotebookGameRead(
     game,
     homeTeam,
@@ -206,6 +236,54 @@ export default function BasketballNotebook({
           {coldStart
             ? "Exploratory cold-start estimate: at least one program is outside the trained field, so the wider calibrated range is the primary context."
             : "Primary preseason estimate from the published efficiency model. The range describes held-out model error, not a promise about the final score."}
+        </p>
+      </section>
+
+      <section className="section" aria-labelledby="notebook-evidence-chain">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Evidence chain / retained releases</div>
+            <h2 id="notebook-evidence-chain">What this game read is built from.</h2>
+          </div>
+          <Link href="/basketball/source-stats/">Open source coverage →</Link>
+        </div>
+        <p className="note">
+          Read the forecast, historical workload, shot map and roster signals in
+          separate columns. A model edition identifies the registered estimate;
+          a SHA-256 receipt identifies the retained source release. Missing or
+          mismatched evidence stays visible as unavailable.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Evidence</th>
+                <th>Coverage attached to this game</th>
+                <th>Edition / receipt</th>
+                <th>Captured / reviewed</th>
+                <th>How to learn from it</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evidenceRows.map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">
+                    {row.label}
+                    <small>{row.status === "verified" ? "Verified source release" : row.status === "edition" ? "Registered edition" : "Unavailable"}</small>
+                  </th>
+                  <td>{row.coverage}</td>
+                  <td><span className="source-hash">{row.receipt}</span></td>
+                  <td>{row.captured ? date(row.captured) : "—"}</td>
+                  <td>{row.learning}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note" style={{ marginTop: 10 }}>
+          This table documents provenance and joins. It does not turn a source
+          listing into an availability decision, and it does not add a second
+          forecast to the stored model.
         </p>
       </section>
 
