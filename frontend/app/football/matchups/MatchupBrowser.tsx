@@ -99,6 +99,11 @@ export default function MatchupBrowser({
     .filter((game): game is Game => !!game);
 
   useEffect(() => {
+    setDivision(requestedDivision);
+    setPage(0);
+  }, [requestedDivision]);
+
+  useEffect(() => {
     const validIds = new Set(activeGames.map((game) => game.id));
     const fromUrl = requestedPicks.split(",").filter((id) => validIds.has(id)).slice(0, 12);
     let next = fromUrl;
