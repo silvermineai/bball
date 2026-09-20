@@ -75,13 +75,16 @@ def test_football_discovery_surfaces_fbs_only_and_unstable_ncaa_identity():
     assert any(blocker["code"] == "missing_division" for blocker in candidates["box"]["blockers"])
 
 
-def test_discovery_rejects_unsupported_sport_or_division():
-    try:
-        discover_lower_division_sources("MBB", 2)
-    except ValueError as error:
-        assert "catalog" in str(error)
-    else:
-        raise AssertionError("MBB lower-division player catalog should not be silently substituted")
+def test_mbb_discovery_accepts_receipted_explicit_d2_and_d3_rows():
+    for division, expected in ((2, 1020), (3, 1031)):
+        result = discover_lower_division_sources("MBB", division, season=2026)
+        assert result["status"] == "ready"
+        candidate = result["candidates"][0]
+        assert candidate["dataset"] == "ncaa_individual"
+        assert candidate["observation"]["division_rows"][str(division)] == expected
+        assert candidate["observation"]["identity_complete"][str(division)] == expected
+        assert candidate["observation"]["receipt_valid"] is True
+        assert candidate["blockers"] == []
 
     try:
         discover_lower_division_sources("WBB", 1)

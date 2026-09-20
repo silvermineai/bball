@@ -42,6 +42,29 @@ def _release_url(tag: str, asset_template: str) -> str:
 # observations come from the cfbfastR/NCAA release schemas and are checked
 # against the local CSV headers when a release is retained.
 _CATALOG: dict[str, dict[str, Any]] = {
+    "MBB": {
+        "sport": "basketball",
+        "gender": "men",
+        "label": "men's basketball",
+        # This is a normalized derivative of the NCAA national-ranking pages,
+        # not a bulk SportsDataverse asset. Keep it in its own source contract
+        # so an explicit NCAA division cannot be mistaken for a guessed
+        # non-D1 classification.
+        "datasets": {
+            "ncaa_individual": ("ncaa_statistics", "ncaa-individual-{season}.json"),
+        },
+        "candidates": (
+            {
+                "dataset": "ncaa_individual",
+                "required_identity": ("player_id", "name", "team_name"),
+                "observed_scope": ("division",),
+                "notes": (
+                    "NCAA national-ranking rows carry an explicit division and stable NCAA player/team IDs.",
+                    "Only rows retained from the exact-season NCAA release are eligible for D2/D3 coverage.",
+                ),
+            },
+        ),
+    },
     "WBB": {
         "sport": "basketball",
         "gender": "women",
@@ -209,6 +232,57 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
         return {"season": year, "asset": str(path), "status": "unreadable"}
 
 
+def _cached_mbb_observation(year: int | None) -> dict[str, Any] | None:
+    """Read the retained NCAA MBB derivative without fetching or reclassifying.
+
+    The public derivative has one root season and explicit per-row divisions.
+    A matching SHA-256 receipt is required before the observation can satisfy
+    a lower-division source contract.  The row-level identity counters make a
+    sparse or malformed release fail closed instead of looking like coverage.
+    """
+
+    if year is None:
+        return None
+    root = Path(__file__).resolve().parents[2]
+    path = root / "frontend" / "public" / "data" / "basketball" / "ncaa-individual.json"
+    receipt_path = root / ".local" / "basketball" / f"ncaa-individual-{year}.json.receipt.json"
+    if not path.exists() or not receipt_path.exists():
+        return None
+    try:
+        release = json.loads(path.read_text(encoding="utf-8"))
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        rows = release.get("players") if isinstance(release, dict) else None
+        if not isinstance(rows, list):
+            return {"season": year, "asset": str(path), "status": "invalid_rows"}
+        divisions: dict[str, int] = {}
+        identity_complete: dict[str, int] = {}
+        field_values: set[str] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            field_values.update(str(key) for key in row)
+            division = str(row.get("division") or "")
+            if division:
+                divisions[division] = divisions.get(division, 0) + 1
+                if all(row.get(field) not in (None, "") for field in ("player_id", "name", "team_name")):
+                    identity_complete[division] = identity_complete.get(division, 0) + 1
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return {
+            "season": year,
+            "release_season": release.get("season") if isinstance(release, dict) else None,
+            "asset": str(path),
+            "rows": len(rows),
+            "fields": sorted(field_values),
+            "observed_divisions": sorted(divisions),
+            "division_rows": divisions,
+            "identity_complete": identity_complete,
+            "receipt_valid": _valid_receipt(receipt) and receipt.get("sha256") == digest,
+            "receipt": receipt,
+        }
+    except (OSError, UnicodeError, TypeError, ValueError, json.JSONDecodeError):
+        return {"season": year, "asset": str(path), "status": "unreadable"}
+
+
 def discover_lower_division_sources(
     sport_code: str,
     division: str | int,
@@ -232,30 +306,57 @@ def discover_lower_division_sources(
         if spec.get("known_missing_scope"):
             for field in spec["known_missing_scope"]:
                 blockers.append({"code": f"missing_{field}", "message": f"Release contract does not provide explicit {field} for this player asset."})
-        observation = _cached_observation(dataset, season)
-        if observation and "division" in observation.get("fields", []):
+        observation = _cached_mbb_observation(season) if code == "MBB" else _cached_observation(dataset, season)
+        if code == "MBB":
+            if not observation:
+                blockers.append({"code": "missing_retained_release", "message": "No retained NCAA individual release and receipt are available for this season."})
+            elif observation.get("status"):
+                blockers.append({"code": "unreadable_retained_release", "message": f"The retained NCAA individual release is {observation['status']}."})
+            elif observation.get("release_season") != season:
+                blockers.append({"code": "wrong_release_season", "message": f"The retained NCAA release is season={observation.get('release_season')}, not season={season}."})
+            elif not observation.get("receipt_valid"):
+                blockers.append({"code": "invalid_receipt", "message": "The retained NCAA release bytes do not match its SHA-256 receipt."})
+            elif target not in observation.get("observed_divisions", []):
+                blockers.append({"code": "target_division_absent", "message": f"Retained NCAA release contains no division={target} rows."})
+            elif observation.get("identity_complete", {}).get(target, 0) != observation.get("division_rows", {}).get(target, 0):
+                blockers.append({"code": "incomplete_player_identity", "message": f"Every NCAA division={target} row must carry player_id, name, and team_name."})
+        if code != "MBB" and observation and "division" in observation.get("fields", []):
             if target not in observation.get("observed_divisions", []):
                 blockers.append({"code": "target_division_absent", "message": f"Retained {season} asset contains no division={target} rows; observed divisions: {observation.get('observed_divisions', [])}."})
+        candidate_status = (
+            "ready"
+            if code == "MBB" and observation and not blockers
+            else "blocked" if blockers else "requires_labeled_release_validation"
+        )
         candidates.append(
             {
                 "dataset": dataset,
                 "release_asset": template,
-                "source_url_template": _release_url(tag, template),
+                "source_url_template": (
+                    "https://stats.ncaa.org/rankings/national_ranking"
+                    if code == "MBB"
+                    else _release_url(tag, template)
+                ),
                 "required_identity_fields": list(spec["required_identity"]),
                 "known_missing_scope_fields": list(spec.get("known_missing_scope", ())),
                 "notes": list(spec.get("notes", ())),
                 "observation": observation,
-                "status": "blocked" if blockers else "requires_labeled_release_validation",
+                "status": candidate_status,
                 "blockers": blockers,
             }
         )
 
     has_blockers = any(candidate["blockers"] for candidate in candidates)
+    all_ready = bool(candidates) and all(candidate["status"] == "ready" for candidate in candidates)
     return {
         "schema_version": 1,
-        "status": "blocked" if has_blockers else "needs_labeled_release_validation",
+        "status": "blocked" if has_blockers else "ready" if all_ready else "needs_labeled_release_validation",
         "requested_scope": {"sport_code": code, "sport": catalog["sport"], "gender": catalog["gender"], "division": target, "season": season},
-        "catalog": "SportsDataverse release assets; no direct scraping",
+        "catalog": (
+            "NCAA Statistics national-ranking derivative; no direct scraping"
+            if code == "MBB"
+            else "SportsDataverse release assets; no direct scraping"
+        ),
         "required_scope_fields": list(REQUIRED_SCOPE_FIELDS),
         "required_identity_fields": list(REQUIRED_IDENTITY_FIELDS),
         "required_receipt_fields": list(REQUIRED_RECEIPT_FIELDS),
