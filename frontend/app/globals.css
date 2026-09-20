@@ -6073,3 +6073,153 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   .ranking-profile-track { grid-column: 1 / -1; grid-row: 2; }
   .ranking-profile-row > small { grid-column: 1 / -1; }
 }
+
+/* Sport-first desk navigation: sport choice, stat sections, then scope. */
+.sport-desk-nav {
+  border-top: 1px solid #294463;
+  background: #0a1f3b;
+  color: #dce8f6;
+}
+.sport-switcher,
+.sport-desk-row {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+.sport-switcher {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  min-height: 45px;
+  border-bottom: 1px solid #294463;
+}
+.sport-switcher-tab {
+  position: relative;
+  padding: 14px 16px 12px;
+  color: #a9bdd5;
+  font: 600 13px/1 "Barlow Condensed", sans-serif;
+  letter-spacing: .03em;
+}
+.sport-switcher-tab:hover { color: #fff; }
+.sport-switcher-tab.is-active {
+  color: #fff;
+  background: #102d52;
+}
+.sport-switcher-tab.is-active::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: -1px;
+  left: 14px;
+  height: 3px;
+  background: #60c8a0;
+}
+.sport-desk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 48px;
+}
+.sport-tabs {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sport-tabs::-webkit-scrollbar { display: none; }
+.sport-tab,
+.sport-explore > summary {
+  flex: 0 0 auto;
+  padding: 14px 0 13px;
+  color: #c6d6e9;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sport-tab:hover,
+.sport-explore > summary:hover { color: #fff; }
+.sport-tab.is-active,
+.sport-tab-home { color: #7dc3ff; }
+.sport-explore { position: relative; flex: 0 0 auto; }
+.sport-explore > summary { list-style: none; cursor: pointer; color: #9fb5d0; }
+.sport-explore > summary::-webkit-details-marker { display: none; }
+.sport-explore > summary::after { content: "▾"; margin-left: 6px; font-size: 9px; }
+.sport-explore-panel {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% - 2px);
+  right: 0;
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr);
+  gap: 10px;
+  width: 220px;
+  padding: 15px;
+  border: 1px solid #9db6d1;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 14px 30px #020d1c55;
+}
+.sport-explore-heading {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--blue);
+  font: 600 9px/1.1 "IBM Plex Mono", monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.sport-explore-panel a { color: var(--ink); font-size: 11px; }
+.sport-explore-panel a:hover { color: var(--blue); }
+.sport-scope {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  color: #a9bdd5;
+  font: 600 10px/1 "IBM Plex Mono", monospace;
+  white-space: nowrap;
+}
+.sport-scope-label { color: #718aa8; text-transform: uppercase; letter-spacing: .12em; }
+.sport-scope-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #496583;
+  border-radius: 2px;
+}
+.sport-scope-group a { padding: 5px 7px; color: #aec0d8; }
+.sport-scope-group a:hover { color: #fff; }
+.sport-scope-group a.is-selected { background: #2a5f92; color: #fff; }
+@media (max-width: 1040px) {
+  .sport-desk-row { align-items: flex-start; flex-direction: column; gap: 0; padding-top: 0; }
+  .sport-tabs { width: 100%; }
+  .sport-scope { width: 100%; justify-content: flex-end; padding: 0 0 10px; }
+}
+@media (max-width: 650px) {
+  .sport-switcher,
+  .sport-desk-row { padding-left: 18px; padding-right: 18px; }
+  .sport-switcher { min-height: 42px; }
+  .sport-switcher-tab { padding: 13px 13px 11px; }
+  .sport-tabs { gap: 18px; }
+  .sport-tab,
+  .sport-explore > summary { padding: 12px 0 11px; }
+  .sport-scope { justify-content: flex-start; overflow-x: auto; padding-bottom: 9px; }
+  .sport-scope-label { margin-right: 2px; }
+  .sport-explore-panel { position: fixed; top: 154px; right: 18px; left: 18px; width: auto; }
+}
+.sport-availability {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 8px 32px 10px;
+  border-top: 1px solid #294463;
+  color: #b9cbe0;
+  font: 10px/1.45 "IBM Plex Mono", monospace;
+}
+.sport-availability strong { color: #f4ca7b; font-weight: 600; }
+@media (max-width: 650px) {
+  .sport-availability { padding-right: 18px; padding-left: 18px; }
+}
