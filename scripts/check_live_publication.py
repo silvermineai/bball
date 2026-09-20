@@ -450,6 +450,8 @@ def player_box_field_metadata(payload: dict) -> tuple[int, int, int]:
             raise ValueError("NCAA player box field coverage is incomplete")
         observed = item.get("observed")
         share = item.get("share")
+        numeric_observed = item.get("numeric_observed")
+        numeric_share = item.get("numeric_share")
         if (
             not isinstance(observed, int)
             or isinstance(observed, bool)
@@ -458,12 +460,20 @@ def player_box_field_metadata(payload: dict) -> tuple[int, int, int]:
             or not isinstance(share, (int, float))
             or isinstance(share, bool)
             or not 0 <= share <= 1
+            or not isinstance(numeric_observed, int)
+            or isinstance(numeric_observed, bool)
+            or numeric_observed < 0
+            or numeric_observed > rows
+            or not isinstance(numeric_share, (int, float))
+            or isinstance(numeric_share, bool)
+            or not 0 <= numeric_share <= 1
+            or numeric_observed > observed
         ):
             raise ValueError("NCAA player box field coverage is malformed")
     required = {"pts", "mins", "fga", "fgm", "fta", "ftm", "ast", "orb", "drb"}
     if any(
-        field not in coverage or not isinstance(coverage[field].get("observed"), int)
-        or coverage[field]["observed"] <= 0
+        field not in coverage or not isinstance(coverage[field].get("numeric_observed"), int)
+        or coverage[field]["numeric_observed"] <= 0
         for field in required
     ):
         raise ValueError("NCAA player box field coverage is missing core stats")

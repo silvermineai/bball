@@ -94,15 +94,21 @@ class BasketballModelTests(unittest.TestCase):
             "INSERT INTO bb_ncaa_player_box VALUES (?,?)",
             [
                 (2026, json.dumps({"pts": 0, "mins": 12, "ts_pct": None})),
-                (2026, json.dumps({"pts": 5, "mins": None})),
+                (2026, json.dumps({"pts": 5, "mins": None, "label": "bench"})),
+                (2026, json.dumps({"pts": None, "mins": 0, "flag": True})),
             ],
         )
         coverage = ncaa_player_box_field_coverage(conn, "2026-09-08T00:00:00Z")
         season = coverage["seasons"][0]
-        self.assertEqual(season["rows"], 2)
+        self.assertEqual(season["rows"], 3)
         self.assertEqual(season["fields"]["pts"]["observed"], 2)
-        self.assertEqual(season["fields"]["mins"]["observed"], 1)
+        self.assertEqual(season["fields"]["mins"]["observed"], 2)
         self.assertEqual(season["fields"]["ts_pct"]["observed"], 0)
+        self.assertEqual(season["fields"]["pts"]["numeric_observed"], 2)
+        self.assertEqual(season["fields"]["mins"]["numeric_observed"], 2)
+        self.assertEqual(season["fields"]["label"]["text_observed"], 1)
+        self.assertEqual(season["fields"]["flag"]["boolean_observed"], 1)
+        self.assertEqual(season["fields"]["ts_pct"]["numeric_observed"], 0)
         conn.close()
 
     def test_sql_export_batches_are_hashed_and_replayable(self):

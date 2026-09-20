@@ -32,7 +32,15 @@ type FieldCoverage = {
   seasons: Array<{
     season: number;
     rows: number;
-    fields: Record<string, { observed: number; share: number }>;
+    fields: Record<string, {
+      observed: number;
+      share: number;
+      numeric_observed?: number;
+      numeric_share?: number;
+      text_observed?: number;
+      boolean_observed?: number;
+      other_observed?: number;
+    }>;
   }>;
 };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
@@ -61,6 +69,11 @@ export function fieldAvailability(rows: number, observed: number): FieldAvailabi
   if (!Number.isInteger(rows) || rows <= 0 || !Number.isInteger(observed) || observed < 0 || observed > rows) return "unavailable";
   if (observed === rows) return "complete";
   return observed > 0 ? "partial" : "unavailable";
+}
+
+/** Numeric coverage matches the API field filter's JSON integer/real rule. */
+export function numericFieldAvailability(rows: number, observed: number): FieldAvailability {
+  return fieldAvailability(rows, observed);
 }
 
 export function validatePlayerBoxExportPage(
@@ -187,6 +200,13 @@ export default function NcaaPlayerBox() {
     summary[status] += 1;
     return summary;
   }, { complete: 0, partial: 0, unavailable: 0 }) : null;
+  const numericAvailability = selectedCoverage ? sourceFields.reduce<Record<FieldAvailability, number>>((summary, sourceField) => {
+    const value = selectedCoverage.fields[sourceField];
+    const numericObserved = value?.numeric_observed ?? value?.observed ?? 0;
+    const status = numericFieldAvailability(selectedCoverage.rows, numericObserved);
+    summary[status] += 1;
+    return summary;
+  }, { complete: 0, partial: 0, unavailable: 0 }) : null;
   const csvHeaders = [...exportHeaders, ...sourceFields.map((field) => `Archive ${field}`)];
   const share = async () => {
     try {
@@ -270,13 +290,16 @@ export default function NcaaPlayerBox() {
         <span className="note">{selectedCoverage.rows.toLocaleString()} rows · {fieldCoverage?.fields.length.toLocaleString()} archive keys</span>
       </div>
       <p className="note">Observed counts include recorded zeroes. A blank or null value is unavailable and is never converted into zero.</p>
-      {availability && <div className="strip" style={{ marginBottom: 18 }}><div><strong>{availability.complete}</strong><span>Complete fields</span></div><div><strong>{availability.partial}</strong><span>Partial fields</span></div><div><strong>{availability.unavailable}</strong><span>Unavailable fields</span></div><div><strong>{field || "All"}</strong><span>Active field filter</span></div></div>}
+      {availability && numericAvailability && <div className="strip" style={{ marginBottom: 18 }}><div><strong>{availability.complete}</strong><span>Recorded complete</span></div><div><strong>{numericAvailability.complete}</strong><span>Numeric usable</span></div><div><strong>{numericAvailability.partial}</strong><span>Numeric partial</span></div><div><strong>{numericAvailability.unavailable}</strong><span>Numeric unavailable</span></div><div><strong>{field || "All"}</strong><span>Active field filter</span></div></div>}
       {sparseEdition && <p className="status-error" role="status">This retained edition is sparse ({selectedCoverage.rows.toLocaleString()} usable rows). Treat it as partial historical coverage and inspect the archive receipt before comparing it with later seasons.</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th>Status</th><th className="numeric">Observed</th><th className="numeric">Coverage</th><th>Inspect</th></tr></thead><tbody>{fieldCoverage?.fields.map((sourceField) => {
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Archive field</th><th>Recorded</th><th>Numeric usable</th><th className="numeric">Observed</th><th className="numeric">Numeric</th><th>Inspect</th></tr></thead><tbody>{fieldCoverage?.fields.map((sourceField) => {
         const value = selectedCoverage.fields[sourceField];
         const status = fieldAvailability(selectedCoverage.rows, value?.observed ?? 0);
+        const numericObserved = value?.numeric_observed ?? value?.observed ?? 0;
+        const numericStatus = numericFieldAvailability(selectedCoverage.rows, numericObserved);
         const share = value && Number.isInteger(value.observed) && value.observed >= 0 && value.observed <= selectedCoverage.rows && selectedCoverage.rows > 0 ? value.observed / selectedCoverage.rows : null;
-        return <tr key={sourceField}><td><strong>{prettySourceField(sourceField)}</strong><small><code>{sourceField}</code></small></td><td>{status === "complete" ? "Complete" : status === "partial" ? "Partial" : "Unavailable"}</td><td className="numeric">{value?.observed.toLocaleString() || "0"}</td><td className="numeric">{share == null ? "—" : (share * 100).toFixed(1) + "%"}</td><td><button className="button secondary" type="button" onClick={() => { setField(sourceField); setPage(0); }}>{field === sourceField ? "Active" : "Inspect rows →"}</button></td></tr>;
+        const numericShare = value && Number.isInteger(numericObserved) && numericObserved >= 0 && numericObserved <= selectedCoverage.rows && selectedCoverage.rows > 0 ? numericObserved / selectedCoverage.rows : null;
+        return <tr key={sourceField}><td><strong>{prettySourceField(sourceField)}</strong><small><code>{sourceField}</code></small></td><td>{status === "complete" ? "Complete" : status === "partial" ? "Partial" : "Unavailable"}</td><td>{numericStatus === "complete" ? "Complete" : numericStatus === "partial" ? "Partial" : "Unavailable"}</td><td className="numeric">{value?.observed.toLocaleString() || "0"}<small>{share == null ? "" : ` · ${(share * 100).toFixed(1)}%`}</small></td><td className="numeric">{numericObserved.toLocaleString()}<small>{numericShare == null ? "" : ` · ${(numericShare * 100).toFixed(1)}%`}</small></td><td><button className="button secondary" type="button" onClick={() => { setField(sourceField); setPage(0); }} disabled={numericObserved === 0}>{field === sourceField ? "Active" : numericObserved === 0 ? "No numeric rows" : "Inspect rows →"}</button></td></tr>;
       })}</tbody></table></div>
     </section>}
       {result?.archive_mode === "games" && meta?.validation && <section className="paper-panel" style={{ marginBottom: 24 }}>

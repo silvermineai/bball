@@ -6,6 +6,7 @@ import argparse
 import atexit
 import hashlib
 import json
+import math
 import os
 import sqlite3
 from collections import Counter, defaultdict
@@ -1734,14 +1735,24 @@ def dataset_catalog(conn):
 
 
 def ncaa_player_box_field_coverage(conn, generated_at=None):
-    """Count every source stat key by season without treating zero as missing."""
+    """Count source stat keys and their usable JSON types by season.
+
+    ``observed`` preserves the original presence audit, while the type counts
+    make the quality of a field explicit.  The API's field filter accepts only
+    JSON numbers, so a field with text values must not be presented as equally
+    usable for ranking or analysis.  Nulls and empty strings remain missing;
+    recorded zeroes remain observed numeric values.
+    """
     seasons = {}
     fields = set()
     for season, stats_json in conn.execute(
         "SELECT season,stats_json FROM bb_ncaa_player_box ORDER BY season"
     ):
         season = int(season)
-        entry = seasons.setdefault(season, {"rows": 0, "fields": defaultdict(int)})
+        entry = seasons.setdefault(
+            season,
+            {"rows": 0, "fields": defaultdict(lambda: defaultdict(int))},
+        )
         entry["rows"] += 1
         try:
             stats = json.loads(stats_json)
@@ -1753,8 +1764,18 @@ def ncaa_player_box_field_coverage(conn, generated_at=None):
             if not isinstance(key, str):
                 continue
             fields.add(key)
-            if value is not None and value != "":
-                entry["fields"][key] += 1
+            if value is None or value == "":
+                continue
+            counts = entry["fields"][key]
+            counts["observed"] += 1
+            if isinstance(value, bool):
+                counts["boolean"] += 1
+            elif isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+                counts["numeric"] += 1
+            elif isinstance(value, str):
+                counts["text"] += 1
+            else:
+                counts["other"] += 1
     result = []
     for season in sorted(seasons):
         entry = seasons[season]
@@ -1764,12 +1785,21 @@ def ncaa_player_box_field_coverage(conn, generated_at=None):
                 "rows": entry["rows"],
                 "fields": {
                     key: {
-                        "observed": entry["fields"].get(key, 0),
+                        "observed": entry["fields"].get(key, {}).get("observed", 0),
                         "share": round(
-                            entry["fields"].get(key, 0) / entry["rows"], 6
+                            entry["fields"].get(key, {}).get("observed", 0) / entry["rows"], 6
                         )
                         if entry["rows"]
                         else 0,
+                        "numeric_observed": entry["fields"].get(key, {}).get("numeric", 0),
+                        "numeric_share": round(
+                            entry["fields"].get(key, {}).get("numeric", 0) / entry["rows"], 6
+                        )
+                        if entry["rows"]
+                        else 0,
+                        "text_observed": entry["fields"].get(key, {}).get("text", 0),
+                        "boolean_observed": entry["fields"].get(key, {}).get("boolean", 0),
+                        "other_observed": entry["fields"].get(key, {}).get("other", 0),
                     }
                     for key in sorted(fields)
                 },

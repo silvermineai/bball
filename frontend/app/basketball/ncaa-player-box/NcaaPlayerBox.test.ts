@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldAvailability, validatePlayerBoxExportPage, type PlayerBoxResult } from "./NcaaPlayerBox";
+import { fieldAvailability, numericFieldAvailability, validatePlayerBoxExportPage, type PlayerBoxResult } from "./NcaaPlayerBox";
 
 describe("player box export pagination", () => {
   const page = (overrides: Partial<PlayerBoxResult> = {}): PlayerBoxResult => ({
@@ -39,5 +39,12 @@ describe("player box field availability", () => {
     expect(fieldAvailability(0, 0)).toBe("unavailable");
     expect(fieldAvailability(100, 101)).toBe("unavailable");
     expect(fieldAvailability(100, 1.5)).toBe("unavailable");
+  });
+
+  it("uses the numeric archive filter's coverage semantics", () => {
+    expect(numericFieldAvailability(100, 100)).toBe("complete");
+    expect(numericFieldAvailability(100, 4)).toBe("partial");
+    expect(numericFieldAvailability(100, 0)).toBe("unavailable");
+    expect(numericFieldAvailability(100, 101)).toBe("unavailable");
   });
 });
