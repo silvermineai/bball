@@ -7,6 +7,7 @@ type Board = { label: string; stat: string; unit: string; rows: RankingRow[] };
 type Publication = {
   season: number;
   min_games: number;
+  qualification?: { field: string; minimum: number; scope: string; schedule_reconciled: boolean };
   coverage: Record<string, { observed: number; qualified: number }>;
   leaderboards: Record<string, Board>;
   limitations: string[];
@@ -35,7 +36,7 @@ export default function WomensBasketballRankings() {
   return <section className="field-card wbb-ranking-card" aria-labelledby="wbb-rankings-title">
     <div className="eyebrow">WOMEN&apos;S PLAYER RANKINGS · D1</div>
     <h2 id="wbb-rankings-title">Rank one stat at a time</h2>
-    <p className="muted">These boards keep units separate. Players qualify when the retained record has at least {publication?.min_games || 10} games and a finite value for the selected stat.</p>
+    <p className="muted">These boards keep units separate. Players qualify when the retained record has at least {publication?.qualification?.minimum || publication?.min_games || 10} source reported games and a finite value for the selected stat.</p>
     {!publication ? <p className="muted">Loading women&apos;s player rankings…</p> : <>
       <div className="wbb-ranking-controls">
         <label htmlFor="wbb-ranking-metric">Ranking lens</label>
@@ -51,6 +52,7 @@ export default function WomensBasketballRankings() {
         {!rows.length ? <p className="empty">No qualified players match this search.</p> : null}
       </> : null}
       <p className="muted">{publication.limitations[0]}</p>
+      <p className="note">Qualification field: <code>{publication.qualification?.field || "gamesPlayed"}</code> ({publication.qualification?.scope || "source-reported player-season field"}). Schedule reconciliation is {publication.qualification?.schedule_reconciled ? "included" : "not included"} in this release.</p>
     </>}
   </section>;
 }

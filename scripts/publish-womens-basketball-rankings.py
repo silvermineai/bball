@@ -28,12 +28,14 @@ def main():
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "source_edition_generated_at": edition.get("generated_at"),
         "min_games": rankings["min_games"],
+        "qualification": rankings["qualification"],
         "metrics": rankings["metrics"],
         "coverage": rankings["coverage"],
         "leaderboards": rankings["leaderboards"],
         "limitations": [
             "Each board ranks one recorded stat independently; there is no opaque overall grade.",
             "Players below the minimum game threshold or without a recorded value remain outside that board.",
+            "Qualification uses the source-reported gamesPlayed field; this release does not independently reconcile it to a schedule-game census.",
         ],
         "receipts": edition.get("receipts", {}),
     }

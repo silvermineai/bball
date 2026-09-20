@@ -20,3 +20,15 @@ def test_rankings_leave_missing_values_out_of_only_their_lens():
     result = build_rankings([player("a", "Alpha", 20, avgPoints=20), player("b", "Beta", 20)])
     assert result["coverage"]["scoring"] == {"observed": 1, "qualified": 1}
     assert result["coverage"]["rebounding"] == {"observed": 0, "qualified": 0}
+
+
+def test_qualification_metadata_keeps_source_games_denominator_explicit():
+    result = build_rankings([player("a", "Alpha", 20, avgPoints=20)])
+
+    assert result["qualification"] == {
+        "field": "gamesPlayed",
+        "minimum": 10,
+        "scope": "source-reported player-season field",
+        "schedule_reconciled": False,
+    }
+    assert result["leaderboards"]["scoring"]["rows"][0]["games"] == 20
