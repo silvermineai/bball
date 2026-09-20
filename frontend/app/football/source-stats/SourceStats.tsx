@@ -24,7 +24,7 @@ type Row = {
   stats: Record<string, unknown>;
   game: { id: string; kickoff: string; home_name: string | null; away_name: string | null; home_score: number | null; away_score: number | null } | null;
 };
-type Result = { dataset: Dataset; season: number; page: number; page_size: number; total: number; source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; url: string; fetched_at: string; sha256: string }>; rows: Row[] };
+type Result = { dataset: Dataset; season: number; page: number; page_size: number; total: number; source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; fetched_at: string; sha256: string }>; rows: Row[] };
 
 const fallbackLabels: Record<Exclude<Dataset, "all">, string> = {
   box: "Player box scores", passing: "Passing aggregates", rushing: "Rushing aggregates", receiving: "Receiving aggregates", defense: "Defensive events", specialists: "Kicking, punting & returns", team_advanced: "Advanced team rates", teams: "Team directory", betting: "Historical market archive", ncaa_player_stats: "retained player game stats", rosters: "Season rosters", recruits: "Recruiting commitments", team_talent: "Team talent", returning_production: "Returning production",

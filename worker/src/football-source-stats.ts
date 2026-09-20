@@ -185,11 +185,14 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   } catch {
     return c.json({ error: "The football source archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
+  // Keep provider URLs in the private receipt table only. The public source
+  // browser needs the edition clock and digest to audit a row, but should not
+  // turn the API into an outbound source directory.
   const sourceReceipts = receipts.results.flatMap((row) => {
     try {
       const receipt = JSON.parse(row.receipt_json) as { url?: string; fetched_at?: string; sha256?: string };
       if (!receipt.url || !receipt.fetched_at || !receipt.sha256) return [];
-      return [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
+      return [{ dataset: row.dataset, season: row.season, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }];
     } catch {
       return [];
     }

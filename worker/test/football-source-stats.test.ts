@@ -42,11 +42,20 @@ describe("football source statistics", () => {
       { DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json() as {
+      source_receipts: Array<Record<string, unknown>>;
+    };
+    expect(body.source_receipts).toEqual([{
+      dataset: "box",
+      season: 2025,
+      fetched_at: "2026-09-01T00:00:00Z",
+      sha256: "a".repeat(64),
+    }]);
+    expect(body.source_receipts[0]).not.toHaveProperty("url");
+    expect(body).toMatchObject({
       dataset: "box",
       season: 2025,
       total: 1,
-      source_receipts: [{ dataset: "box", season: 2025, url: "https://example.test/box.csv" }],
       rows: [{
         athlete_id: "123",
         stats: { athlete_name: "Example Player", yards: "91" },
