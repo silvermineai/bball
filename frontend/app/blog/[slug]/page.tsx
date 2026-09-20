@@ -7,6 +7,7 @@ import { historicalPersonnel } from "../../_lib/matchup-brief";
 import { getScoutProfile } from "../../_lib/scouting-data";
 import { date, fmt } from "../../_lib/format";
 import BasketballNotebook from "../BasketballNotebook";
+import { notebookRecentForm } from "../notebook-form";
 const titles: Record<string, string> = {
   "reading-the-forecast": "What a preseason model knows. And what it misses.",
   "understanding-player-epa": "Production is a question of context.",
@@ -103,13 +104,15 @@ export default async function Page({
   if (basketballGame) {
     const rosterModel = getRosterModel();
     const rosters = getRosters();
-    const loadPersonnel = (teamId: string) => {
+    const loadProfile = (teamId: string) => {
       try {
-        return historicalPersonnel(getScoutProfile(teamId));
+        return getScoutProfile(teamId);
       } catch {
-        return [];
+        return null;
       }
     };
+    const homeProfile = loadProfile(basketballGame.home_id);
+    const awayProfile = loadProfile(basketballGame.away_id);
     const rosterPlayersFor = (teamId: string) => rosters.players
       .filter((player) => player.team_id === teamId)
       .sort((a, b) => (b.prior_production?.minutes ?? -1) - (a.prior_production?.minutes ?? -1) || a.name.localeCompare(b.name));
@@ -121,10 +124,11 @@ export default async function Page({
         homeTeam={basketball.ratings.find((team) => team.id === basketballGame.home_id)}
         awayTeam={basketball.ratings.find((team) => team.id === basketballGame.away_id)}
         rosterScenario={rosterModel.scenarios.find((scenario) => scenario.game_id === basketballGame.id)}
-        homePlayers={loadPersonnel(basketballGame.home_id)}
-        awayPlayers={loadPersonnel(basketballGame.away_id)}
+        homePlayers={homeProfile ? historicalPersonnel(homeProfile) : []}
+        awayPlayers={awayProfile ? historicalPersonnel(awayProfile) : []}
         homeRosterPlayers={rosterPlayersFor(basketballGame.home_id)}
         awayRosterPlayers={rosterPlayersFor(basketballGame.away_id)}
+        recentForm={notebookRecentForm(homeProfile, awayProfile, basketballGame.home_id, basketballGame.away_id)}
         rosterSeason={rosters.season}
         rosterSource={rosters.source}
       />

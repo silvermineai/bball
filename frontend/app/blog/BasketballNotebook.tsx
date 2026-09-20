@@ -3,6 +3,7 @@ import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam } from "../_
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
+import { notebookFormMetrics, type NotebookRecentForm } from "./notebook-form";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 
 /**
@@ -40,6 +41,7 @@ export default function BasketballNotebook({
   awayPlayers = [],
   homeRosterPlayers = [],
   awayRosterPlayers = [],
+  recentForm,
   rosterSeason,
   rosterSource,
 }: {
@@ -53,6 +55,7 @@ export default function BasketballNotebook({
   awayPlayers?: ScoutPlayer[];
   homeRosterPlayers?: BBRoster[];
   awayRosterPlayers?: BBRoster[];
+  recentForm: NotebookRecentForm | null;
   rosterSeason: number;
   rosterSource: BBRosters["source"];
 }) {
@@ -95,6 +98,19 @@ export default function BasketballNotebook({
     { teamId: game.home_id, teamName: game.home_name, context: notebookRosterRoleContext(homeRosterPlayers, game.home_id, rosterSeason, rosterSource) },
   ];
   const rosterRolesReady = rosterRoleContexts.every((row) => row.context != null);
+  const formRows = recentForm ? [
+    { team: recentForm.away, sample: "Season", values: recentForm.away.season },
+    { team: recentForm.away, sample: "Last five", values: recentForm.away.lastFive },
+    { team: recentForm.home, sample: "Season", values: recentForm.home.season },
+    { team: recentForm.home, sample: "Last five", values: recentForm.home.lastFive },
+  ] : [];
+  const formMetric = (key: keyof NotebookRecentForm["home"]["season"]["metrics"], value: number | null) => {
+    if (value == null) return "—";
+    const definition = notebookFormMetrics.find((metric) => metric.key === key);
+    return definition?.format === "percent" ? `${fmt(value * 100)}%` : fmt(value);
+  };
+  const record = (sample: NotebookRecentForm["home"]["season"]) =>
+    `${sample.wins}-${sample.losses}${sample.ties ? `-${sample.ties}` : ""}`;
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -192,6 +208,36 @@ export default function BasketballNotebook({
         ) : (
           <p className="note">No same-edition roster continuity scenario is available for this game.</p>
         )}
+      </section>
+
+      <section className="section" aria-labelledby="notebook-recent-form">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recorded form / exact scouting edition</div>
+            <h2 id="notebook-recent-form">What do the last five show?</h2>
+          </div>
+          <Link href="/basketball/team-stats/">Open team stats →</Link>
+        </div>
+        <p className="note">
+          Season and last-five observations come from the same retained team profiles. They are descriptive samples for film review; they are not a trend claim, a cause, or a replacement for the stored forecast baseline.
+        </p>
+        {recentForm ? <>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Program / exact ID</th><th>Sample</th><th className="numeric">Record</th><th className="numeric">Pace</th>{notebookFormMetrics.map((metric) => <th className="numeric" key={metric.key}>{metric.label}</th>)}</tr></thead>
+              <tbody>{formRows.map(({ team, sample, values }) => <tr key={`${team.id}-${sample}`}>
+                <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(team.id)}/`}>{team.name}</Link><small>ID {team.id}</small></th>
+                <td>{sample}<small>{values.games} game{values.games === 1 ? "" : "s"}</small></td>
+                <td className="numeric">{record(values)}</td>
+                <td className="numeric">{fmt(values.pace)}</td>
+                {notebookFormMetrics.map((metric) => <td className="numeric" key={metric.key}>{formMetric(metric.key, values.metrics[metric.key])}</td>)}
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p className="note" style={{ marginTop: 10 }}>
+            Scouting edition <span className="source-hash">{recentForm.sourceEdition}</span> · model <span className="source-hash">{recentForm.modelId}</span> · captured {date(recentForm.generatedAt)}.
+          </p>
+        </> : <p className="empty">The two exact-team profiles do not share a valid scouting edition and model identity, so the recent-form comparison is withheld.</p>}
       </section>
 
       <section className="section" aria-labelledby="notebook-player-snapshot">
