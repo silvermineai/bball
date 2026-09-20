@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
   classSnapshotCoverage,
+  classSnapshotReceipt,
   currentRecruitingBoardResult,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
@@ -104,12 +105,36 @@ describe("recruiting class coverage", () => {
       total: 100,
       cohort: { ranked: 80, graded: 75, committed: 40 },
       captured_at: "2026-09-18T00:00:00Z",
+      edition: "edition-1",
       position_breakdown: [],
       commitment_destinations: [],
     };
     expect(classSnapshotCoverage(snapshot)).toEqual({ total: 100, ranked: 0.8, graded: 0.75, committed: 0.4 });
     expect(classSnapshotCoverage({ ...snapshot, total: 0 })).toEqual({ total: null, ranked: null, graded: null, committed: null });
     expect(classSnapshotCoverage({ ...snapshot, cohort: { ranked: 101, graded: 75, committed: 40 } })).toEqual({ total: 100, ranked: null, graded: 0.75, committed: 0.4 });
+  });
+
+  it("verifies a class receipt only when its digest and row count cover the edition", () => {
+    const snapshot = {
+      season: "2027",
+      total: 2,
+      cohort: { ranked: 2, graded: 2, committed: 1 },
+      captured_at: "2026-09-18T00:00:00Z",
+      edition: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      source_receipt: {
+        dataset: "recruiting_rankings",
+        captured_at: "2026-09-18T00:00:00Z",
+        source_rows: 2,
+        sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        sha256_scope: "release_edition" as const,
+        integrity: "verified" as const,
+      },
+      position_breakdown: [],
+      commitment_destinations: [],
+    };
+    expect(classSnapshotReceipt(snapshot)).toEqual({ sourceRows: 2, sha256: "a".repeat(64) });
+    expect(classSnapshotReceipt({ ...snapshot, source_receipt: { ...snapshot.source_receipt, source_rows: 1 } })).toBeNull();
+    expect(classSnapshotReceipt({ ...snapshot, edition: "different" })).toBeNull();
   });
 });
 
@@ -120,6 +145,7 @@ describe("recruiting destination comparison", () => {
       total: 100,
       cohort: { ranked: 80, graded: 75, committed: 40 },
       captured_at: "2026-09-18T00:00:00Z",
+      edition: "edition-1",
       position_breakdown: [],
       commitment_destinations: [
         {

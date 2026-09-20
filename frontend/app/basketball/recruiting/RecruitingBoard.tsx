@@ -107,7 +107,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
 }
 type Result = RecruitingBoardResult;
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
-type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations"> & { season: string };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
 
 export type RecruitingClassDestinationRow = CommitmentDestination & {
@@ -115,6 +115,33 @@ export type RecruitingClassDestinationRow = CommitmentDestination & {
   committedTotal: number | null;
   positionLabels: string[];
 };
+
+export type RecruitingClassSnapshotReceipt = {
+  sourceRows: number;
+  sha256: string;
+};
+
+/** Only call a class release verified when its digest covers its full table. */
+export function classSnapshotReceipt(snapshot: ClassSnapshot): RecruitingClassSnapshotReceipt | null {
+  const receipt = snapshot.source_receipt;
+  const sha256 = receipt?.sha256?.trim().toLowerCase() || "";
+  const total = snapshot.total;
+  if (
+    !receipt
+    || receipt.dataset !== "recruiting_rankings"
+    || receipt.integrity !== "verified"
+    || receipt.sha256_scope !== "release_edition"
+    || !/^[a-f0-9]{64}$/.test(sha256)
+    || !snapshot.edition?.trim()
+    || snapshot.edition.trim().toLowerCase() !== sha256
+    || !Number.isSafeInteger(receipt.source_rows)
+    || receipt.source_rows <= 0
+    || !Number.isSafeInteger(total)
+    || total <= 0
+    || receipt.source_rows !== total
+  ) return null;
+  return { sourceRows: receipt.source_rows, sha256 };
+}
 
 /**
  * Keep the cross-class destination comparison tied to validated aggregates.
@@ -450,7 +477,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
       const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
-      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations } satisfies ClassSnapshot;
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt } satisfies ClassSnapshot;
     })).then((settled) => {
       if (controller.signal.aborted) return;
       setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
@@ -537,6 +564,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             <small>{(snapshot.cohort?.ranked ?? 0).toLocaleString()} ranked · {(snapshot.cohort?.graded ?? 0).toLocaleString()} graded</small>
             <small>{(snapshot.position_breakdown || []).map((item) => `${item.position} ${item.total}`).join(" · ") || "Position unavailable"}</small>
             <small>{(snapshot.commitment_destinations || []).slice(0, 3).map((item) => `${item.team} ${item.total}`).join(" · ") || "No recorded destinations"}</small>
+            <small>{classSnapshotReceipt(snapshot) ? "Verified release digest" : "Release digest unavailable"}</small>
             <small>{snapshot.captured_at ? `Captured ${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small>
           </button>)}
         </div>
@@ -548,10 +576,11 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         </div>
         <p className="note">Each row uses the complete unfiltered denominator returned for that class. Coverage percentages describe recorded fields in that edition; they do not turn rank, grade or commitment into a Silvermine evaluation.</p>
         <div className="table-scroll"><table className="data-table">
-          <thead><tr><th>Class</th><th className="numeric">Prospects</th><th className="numeric">Rank coverage</th><th className="numeric">Grade coverage</th><th className="numeric">Commitment coverage</th><th>Top recorded destination</th><th>Captured</th><th>Open</th></tr></thead>
+          <thead><tr><th>Class</th><th className="numeric">Prospects</th><th className="numeric">Rank coverage</th><th className="numeric">Grade coverage</th><th className="numeric">Commitment coverage</th><th>Top recorded destination</th><th>Edition receipt</th><th>Captured</th><th>Open</th></tr></thead>
           <tbody>{classSnapshots.map((snapshot) => {
             const coverage = classSnapshotCoverage(snapshot);
             const destination = snapshot.commitment_destinations?.[0];
+            const receipt = classSnapshotReceipt(snapshot);
             const coverageCell = (count: number | undefined, share: number | null) => count == null || share == null ? "Unavailable" : <><strong>{count.toLocaleString()}</strong><small>{(share * 100).toFixed(0)}% of class</small></>;
             return <tr key={`class-table-${snapshot.season}`}>
               <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(snapshot.season); setPage(0); }}>{snapshot.season}</button></th>
@@ -560,6 +589,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <td className="numeric">{coverageCell(snapshot.cohort?.graded, coverage.graded)}</td>
               <td className="numeric">{coverageCell(snapshot.cohort?.committed, coverage.committed)}</td>
               <td>{destination ? destination.team_id ? <Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>{destination.team}</Link> : destination.team : "Unavailable"}{destination && <small>{destination.total.toLocaleString()} recorded commitment{destination.total === 1 ? "" : "s"}{destination.best_rank == null ? "" : ` · best #${destination.best_rank}`}</small>}</td>
+              <td><small>{receipt ? "Verified" : "Unavailable"}</small><small>{receipt ? `${receipt.sourceRows.toLocaleString()} source rows` : "Full release receipt unavailable"}</small>{receipt ? <small><code title={receipt.sha256}>{receipt.sha256.slice(0, 12)}…</code></small> : null}</td>
               <td><small>{snapshot.captured_at ? `${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small></td>
               <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
             </tr>;
