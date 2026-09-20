@@ -10,6 +10,7 @@ from .ingest import DEFAULT_DIVISION, DEFAULT_ORG_ID, DEFAULT_SEASON_LABEL, UCON
 from .models import Game, Team, create_session
 from .parsers import parse_game, parse_team_schedule_page
 from .sports import DEFAULT_SPORT_CODE, DEFAULT_SPORT_CODES, SPORTS
+from .source_contracts import discover_lower_division_sources
 
 
 def main() -> None:
@@ -44,7 +45,23 @@ def main() -> None:
     inspect = sub.add_parser("inspect-cache", help="Parse cached UConn sample pages without network")
     inspect.add_argument("--cache-dir", default=str(Path(__file__).resolve().parent / "cache"))
 
+    readiness = sub.add_parser(
+        "source-readiness",
+        help="Report the exact lawful player-source contract needed for a D2/D3 import",
+    )
+    readiness.add_argument(
+        "--release-year",
+        type=int,
+        help="Also inspect a retained local football release for this year (never downloads data)",
+    )
+
     args = parser.parse_args()
+
+    if args.command == "source-readiness":
+        if args.sport not in {"WBB", "MFB"}:
+            parser.error("source-readiness currently supports --sport WBB or --sport MFB")
+        print(json.dumps(discover_lower_division_sources(args.sport, args.division, season=args.release_year), indent=2))
+        return
 
     if args.command == "inspect-cache":
         cache_dir = Path(args.cache_dir)
