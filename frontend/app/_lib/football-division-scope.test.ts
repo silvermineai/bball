@@ -15,8 +15,8 @@ describe("football division publication boundary", () => {
       division: "2",
       scheduleRows: true,
       playerStats: false,
-      teamStats: false,
-      rankings: false,
+      teamStats: true,
+      rankings: true,
       predictions: false,
     });
   });

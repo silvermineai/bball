@@ -30,7 +30,7 @@ export function divisionCoverage(
   division: LowerDivision,
 ): DivisionCoverageRow[] {
   const recorded = sport === "football" && gender === "men"
-    ? new Set<DivisionCoverageSurface>(["matches"])
+    ? new Set<DivisionCoverageSurface>(["teams", "matches", "rankings"])
     : sport === "basketball" && gender === "men"
       ? new Set<DivisionCoverageSurface>(["players", "teams", "rankings"])
       : new Set<DivisionCoverageSurface>();
@@ -41,9 +41,13 @@ export function divisionCoverage(
     note: recorded.has(surface)
       ? surface === "matches"
         ? `Retained Division ${division} schedule rows and completed score results.`
-        : surface === "rankings"
-          ? `Within-division recorded fields for Division ${division}.`
-          : `Validated Division ${division} ${surface} archive rows.`
+        : sport === "football" && gender === "men" && surface === "teams"
+          ? `Source-derived Division ${division} W–L, points-for and points-against records from complete scores.`
+          : sport === "football" && gender === "men" && surface === "rankings"
+            ? `Observed Division ${division} record board sorted from retained team records; no opponent-adjusted power rating is inferred.`
+            : surface === "rankings"
+              ? `Within-division recorded fields for Division ${division}.`
+              : `Validated Division ${division} ${surface} archive rows.`
       : `No validated Division ${division} ${surface} release.`,
   }));
 }

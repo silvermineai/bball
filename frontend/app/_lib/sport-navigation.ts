@@ -105,9 +105,9 @@ export function sportSupportsGenderScope(sport: Sport): boolean {
 export function sportAvailabilityMessage(sport: Sport, division: Division): string | null {
   if (sport !== "football") return null;
   if (division === "1") {
-    return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedule rows are available, while lower-division player tables and forecasts are not yet published.";
+    return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedules and score-derived record boards are available, while lower-division player tables and forecasts are not yet published.";
   }
-  return `Football coverage: D${division} schedule rows are available. Player tables, team stats and model forecasts for D${division} are not yet published.`;
+  return `Football coverage: D${division} schedule rows and score-derived team records are available. Player tables, opponent-adjusted ratings and model forecasts for D${division} are not yet published.`;
 }
 
 export function isNavItemActive(pathname: string, item: SportNavItem): boolean {

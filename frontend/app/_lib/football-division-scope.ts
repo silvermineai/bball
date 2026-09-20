@@ -3,9 +3,9 @@ import type { SportScope } from "./sport-scope";
 export type LowerFootballDivision = "2" | "3";
 
 /**
- * Lower football divisions currently have schedule rows in the retained
- * edition. Keep this boundary explicit so UI links never imply player or
- * team-stat coverage that has not passed the release checks.
+ * Lower football divisions currently have schedule rows and score-derived
+ * team records in the retained edition. Keep the boundary explicit so UI
+ * links never imply player-stat coverage or opponent-adjusted ratings.
  */
 export function lowerFootballDivision(
   sport: "basketball" | "football",
@@ -20,8 +20,8 @@ export function footballDivisionAvailability(division: LowerFootballDivision) {
     division,
     scheduleRows: true,
     playerStats: false,
-    teamStats: false,
-    rankings: false,
+    teamStats: true,
+    rankings: true,
     predictions: false,
   } as const;
 }

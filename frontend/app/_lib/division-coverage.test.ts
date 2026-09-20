@@ -20,9 +20,9 @@ describe("division coverage matrix", () => {
     const rows = divisionCoverage("football", "men", "3");
     expect(states("football", "men", "3")).toEqual({
       players: "unavailable",
-      teams: "unavailable",
+      teams: "recorded",
       matches: "recorded",
-      rankings: "unavailable",
+      rankings: "recorded",
       predictions: "unavailable",
       recruiting: "unavailable",
     });
