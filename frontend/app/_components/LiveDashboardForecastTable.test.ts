@@ -121,8 +121,25 @@ describe("forecastCsvRows", () => {
     }]);
     expect(rows[0].slice(0, 8)).toEqual(["late", "2026-11-10T04:00:00Z", "Away late", "Home late", "primary", 70, 75, 0.58]);
     expect(rows[0].slice(13, 17)).toEqual([0.012, -0.031, 0.018, 0]);
-    expect(rows[0].slice(17, 20)).toEqual([null, null, null]);
+    expect(rows[0].slice(17, 20)).toEqual([null, null, 2027]);
     expect(rows[0][20]).toBeNull();
+  });
+
+  it("keeps the exact forecast edition and row clock alongside descriptive factor provenance", () => {
+    const rows = forecastCsvRows([{
+      ...games[0],
+      forecast_model_id: "basketball-efficiency-v2-current",
+      forecast_created_at: "2026-09-17T10:24:29.481035Z",
+      matchup_factors_model_id: "basketball-efficiency-v2-factor",
+    }], {}, [], [], "basketball-efficiency-v2-fallback");
+    expect(rows[0].slice(17, 23)).toEqual([
+      "basketball-efficiency-v2-current",
+      "2026-09-17T10:24:29.481035Z",
+      2027,
+      "basketball-efficiency-v2-factor",
+      null,
+      null,
+    ]);
   });
 
   it("exports the adjusted team ratings used to read the matchup", () => {

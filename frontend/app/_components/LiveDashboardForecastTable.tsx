@@ -85,7 +85,7 @@ export function matchupFactorContextLabel(game: BBGame) {
 export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
-  "FTR edge", "Four Factor model edition", "Four Factor same edition", "Four Factor generated", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
+  "FTR edge", "Forecast model edition", "Forecast generated", "Forecast target season", "Four Factor model edition", "Four Factor same edition", "Four Factor generated", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
   "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace", "Verified market home probability", "Moneyline probability gap",
 ];
 
@@ -109,6 +109,7 @@ export function forecastCsvRows(
       prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
       prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
       factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
+      game.forecast_model_id ?? (publishedModelId || null), game.forecast_created_at ?? null, game.season,
       game.matchup_factors_model_id ?? null,
       game.matchup_factors_same_edition == null ? null : game.matchup_factors_same_edition ? "yes" : "no",
       game.matchup_factors_generated_at ?? null,
