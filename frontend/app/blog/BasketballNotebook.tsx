@@ -1,10 +1,11 @@
 import Link from "next/link";
-import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam } from "../_lib/basketball-types";
+import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam, BBOverview } from "../_lib/basketball-types";
 import type { ScoutPlayer } from "../_lib/scouting-types";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 import { notebookFormMetrics, type NotebookRecentForm } from "./notebook-form";
 import { buildNotebookGameRead } from "./notebook-game-read";
+import { notebookModelValidation } from "./notebook-model-validation";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 
 /**
@@ -45,6 +46,8 @@ export default function BasketballNotebook({
   recentForm,
   rosterSeason,
   rosterSource,
+  modelEvaluation,
+  modelTrainingSeasons,
 }: {
   game: BBGame;
   generatedAt: string;
@@ -59,6 +62,8 @@ export default function BasketballNotebook({
   recentForm: NotebookRecentForm | null;
   rosterSeason: number;
   rosterSource: BBRosters["source"];
+  modelEvaluation?: BBOverview["model"]["evaluation"] | null;
+  modelTrainingSeasons?: number[];
 }) {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -106,6 +111,7 @@ export default function BasketballNotebook({
     rosterScenario,
     forecastIdentity.modelId,
   );
+  const validation = notebookModelValidation(modelEvaluation, modelTrainingSeasons);
   const formRows = recentForm ? [
     { team: recentForm.away, sample: "Season", values: recentForm.away.season },
     { team: recentForm.away, sample: "Last five", values: recentForm.away.lastFive },
@@ -178,6 +184,34 @@ export default function BasketballNotebook({
             ? "Exploratory cold-start estimate: at least one program is outside the trained field, so the wider calibrated range is the primary context."
             : "Primary preseason estimate from the published efficiency model. The range describes held-out model error, not a promise about the final score."}
         </p>
+      </section>
+
+      <section className="section" aria-labelledby="notebook-model-validation">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Model accountability</div>
+            <h2 id="notebook-model-validation">How much has this model missed?</h2>
+          </div>
+          <Link href="/basketball/model/">Open the full model record →</Link>
+        </div>
+        <p className="note">
+          These held-out results describe the forecast system behind this
+          notebook. They are a calibration reference for the range, not a
+          guarantee about this game and not evidence of a market edge.
+        </p>
+        {validation ? <>
+          <div className="raw-stat-grid">
+            <div><dt>Held-out games</dt><dd>{validation.games.toLocaleString()}</dd></div>
+            <div><dt>Margin MAE · test {validation.testSeason}</dt><dd>{fmt(validation.marginMae)} pts</dd></div>
+            <div><dt>Winner accuracy</dt><dd>{fmt(validation.winnerAccuracy * 100)}%</dd></div>
+            <div><dt>80% range coverage</dt><dd>{fmt(validation.intervalCoverage * 100)}%</dd></div>
+          </div>
+          <p className="note">
+            Training seasons: {validation.trainingSeasons.join(", ")} · constant
+            home-margin baseline MAE: {fmt(validation.baselineMarginMae)} pts.
+            The test season remains outside model fitting and calibration.
+          </p>
+        </> : <p className="empty">Held-out model validation is unavailable for this edition.</p>}
       </section>
 
       {gameRead.length > 0 && (

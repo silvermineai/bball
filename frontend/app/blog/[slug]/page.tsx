@@ -131,6 +131,8 @@ export default async function Page({
         recentForm={notebookRecentForm(homeProfile, awayProfile, basketballGame.home_id, basketballGame.away_id)}
         rosterSeason={rosters.season}
         rosterSource={rosters.source}
+        modelEvaluation={basketball.model.evaluation}
+        modelTrainingSeasons={basketball.model.training_seasons}
       />
     );
   }
