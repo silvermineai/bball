@@ -6,6 +6,7 @@ import {
   getBasketball,
   getBasketballShootingSeason,
   getRecruiting,
+  getRosterModel,
   getRosters,
 } from "../../../_lib/basketball-data";
 import { getScoutProfile } from "../../../_lib/scouting-data";
@@ -18,6 +19,7 @@ import {
   briefFactors,
   briefScenarioUrl,
   headToHeadSummary,
+  matchingBriefRosterScenario,
   rosterEvidenceReadiness,
 } from "../../../_lib/matchup-brief";
 import { eventLabels, publicationDate } from "../../../_lib/recruiting";
@@ -183,11 +185,13 @@ export default async function Page({
     away = loadBriefProfile(g.away_id, g.away_name, d),
     recruiting = getRecruiting(),
     rosters = getRosters(),
-    ledger = getLedger();
+    ledger = getLedger(),
+    rosterModel = getRosterModel();
   const evidence = briefEvidence(g, d, home, away, recruiting, ledger, rosters),
     headToHead = headToHeadSummary(home, away),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
   const predictionExplanation = explainBasketballPrediction(d.model, g, p);
+  const rosterScenario = matchingBriefRosterScenario(g, p, rosterModel, d.model.id);
   const shotSeason = d.season - 1;
   const shotProfiles = getBasketballShootingSeason(shotSeason)?.players || [];
   const shotPrep = evidence.programs.map(({ profile, personnel }) => ({
@@ -419,6 +423,60 @@ export default async function Page({
         )}
       </section>
       <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} />
+      <section className="section" aria-labelledby="brief-roster-sensitivity">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Roster continuity / sensitivity lens</div>
+            <h2 id="brief-roster-sensitivity">What changes if recorded continuity holds?</h2>
+          </div>
+          <span className="note">Research scenario</span>
+        </div>
+        {rosterScenario ? (
+          <>
+            <p className="note brief-explainer">
+              This scenario uses exact source-athlete IDs and prior recorded
+              minutes from the matching roster release. It reuses the primary
+              edition&apos;s calibration to show sensitivity; it does not replace
+              the published forecast or establish availability.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Roster lens</th><th className="numeric">Primary forecast</th><th className="numeric">Continuity scenario</th><th className="numeric">Change</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Home margin</th>
+                    <td className="numeric">{signed(p.home_margin)}</td>
+                    <td className="numeric">{signed(rosterScenario.roster_margin)}</td>
+                    <td className="numeric">{signed(rosterScenario.margin_delta)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Home win probability</th>
+                    <td className="numeric">{fmt(p.home_win_probability * 100)}%</td>
+                    <td className="numeric">{fmt(rosterScenario.roster_home_win_probability * 100)}%</td>
+                    <td className="numeric">{signed((rosterScenario.roster_home_win_probability - p.home_win_probability) * 100)} pp</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Margin range</th>
+                    <td className="numeric">{signed(p.margin_low)} to {signed(p.margin_high)}</td>
+                    <td className="numeric">{signed(rosterScenario.roster_margin_low)} to {signed(rosterScenario.roster_margin_high)}</td>
+                    <td className="numeric">{signed((rosterScenario.roster_margin_high - rosterScenario.roster_margin_low) - (p.margin_high - p.margin_low))} pts width</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="note">
+              Scenario model edition: <span className="mono">{rosterScenario.primary_model_id}</span> · base margin check passed against this brief.
+            </p>
+          </>
+        ) : (
+          <p className="empty">
+            No exact-edition continuity scenario is published for this game;
+            roster evidence remains descriptive and does not alter the forecast.
+          </p>
+        )}
+      </section>
       <section className="brief-readiness" aria-label="Pre-tip readiness">
         <div className="section-heading">
           <div>

@@ -6,6 +6,7 @@ import {
   briefScenarioUrl,
   headToHeadSummary,
   historicalPersonnel,
+  matchingBriefRosterScenario,
   pressurePoints,
   rosterContext,
   rosterEvidenceReadiness,
@@ -28,6 +29,22 @@ const profiles = new Map<string, ScoutProfile>(
   overview.ratings.map((t) => [t.id, read(`basketball/scouting/${t.id}.json`)]),
 );
 describe("matchup evidence and scenario handoff", () => {
+  it("attaches only an exact-edition roster scenario", () => {
+    const model = {
+      primary_model_id: "model-current",
+      scenarios: [{
+        game_id: "game-1", home_id: "home", away_id: "away", primary_model_id: "model-current",
+        base_margin: 4.5, roster_margin: 5.2, margin_delta: 0.7,
+        home_predicted_net: 2, away_predicted_net: -3, roster_home_win_probability: 0.64,
+        roster_margin_low: -10, roster_margin_high: 20,
+      }],
+    };
+    expect(matchingBriefRosterScenario({ id: "game-1", home_id: "home", away_id: "away" }, { home_margin: 4.5 }, model, "model-current")?.roster_margin).toBe(5.2);
+    expect(matchingBriefRosterScenario({ id: "game-1", home_id: "home", away_id: "other" }, { home_margin: 4.5 }, model, "model-current")).toBeNull();
+    expect(matchingBriefRosterScenario({ id: "game-1", home_id: "home", away_id: "away" }, { home_margin: 9 }, model, "model-current")).toBeNull();
+    expect(matchingBriefRosterScenario({ id: "game-1", home_id: "home", away_id: "away" }, { home_margin: 4.5 }, model, "model-old")).toBeNull();
+  });
+
   it("exposes complete schedule-adjusted factor lenses in both directions", () => {
     const game = overview.upcoming.find((g) => g.prediction)!;
     const home = profiles.get(game.home_id)!;

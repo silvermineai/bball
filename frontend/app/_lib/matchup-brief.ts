@@ -1,4 +1,4 @@
-import type { BBGame, BBOverview, BBRosters } from "./basketball-types";
+import type { BBGame, BBOverview, BBRosterModel, BBRosterScenario, BBRosters, BBPrediction } from "./basketball-types";
 import type { Metric, ScoutProfile, ScoutPlayer } from "./scouting-types";
 import { recruitingRows, type RecruitingRelease } from "./recruiting";
 import type { Ledger } from "./research-types";
@@ -351,6 +351,44 @@ export function briefScenarioUrl(
   game: Pick<BBGame, "home_id" | "away_id" | "neutral">,
 ) {
   return `/basketball/compare/?${new URLSearchParams({ a: game.home_id, b: game.away_id, venue: game.neutral ? "neutral" : "a" })}`;
+}
+
+/**
+ * Attach the roster challenger to a brief only when every edition boundary
+ * agrees. A matching game ID alone is insufficient: both participants, the
+ * primary model, and the published base margin must match before display.
+ */
+export function matchingBriefRosterScenario(
+  game: Pick<BBGame, "id" | "home_id" | "away_id">,
+  prediction: Pick<BBPrediction, "home_margin">,
+  rosterModel: Pick<BBRosterModel, "primary_model_id" | "scenarios"> | null | undefined,
+  forecastModelId: string,
+): BBRosterScenario | null {
+  if (!rosterModel || rosterModel.primary_model_id !== forecastModelId) return null;
+  const scenario = rosterModel.scenarios.find((row) =>
+    row.game_id === game.id
+    && row.home_id === game.home_id
+    && row.away_id === game.away_id,
+  );
+  if (!scenario) return null;
+  const numbers = [
+    scenario.base_margin,
+    scenario.roster_margin,
+    scenario.margin_delta,
+    scenario.roster_home_win_probability,
+    scenario.roster_margin_low,
+    scenario.roster_margin_high,
+  ];
+  if (
+    numbers.some((value) => typeof value !== "number" || !Number.isFinite(value))
+    || scenario.roster_home_win_probability < 0
+    || scenario.roster_home_win_probability > 1
+    || scenario.roster_margin_low > scenario.roster_margin_high
+    || scenario.roster_margin < scenario.roster_margin_low
+    || scenario.roster_margin > scenario.roster_margin_high
+    || Math.abs(scenario.base_margin - prediction.home_margin) > 0.05
+  ) return null;
+  return scenario;
 }
 
 export function briefEvidence(
