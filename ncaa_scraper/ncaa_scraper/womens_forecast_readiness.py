@@ -151,6 +151,16 @@ def assess(
     if paired_games_ready:
         paired_check["detail"] = f"The artifact reports {int(validation['games']):,} completed 2026 holdout games after the multi-season model join."
     calibration = forecast.get("calibration")
+    interval_ready = (
+        isinstance(calibration, dict)
+        and isinstance(calibration.get("margin_half_width"), (int, float))
+        and calibration["margin_half_width"] > 0
+        and isinstance(validation, dict)
+        and isinstance(validation.get("interval_games"), (int, float))
+        and validation["interval_games"] >= 100
+        and isinstance(validation.get("interval_coverage"), (int, float))
+        and 0 <= validation["interval_coverage"] <= 1
+    )
     calibration_ready = (
         isinstance(calibration, dict)
         and isinstance(calibration.get("games"), (int, float))
@@ -159,11 +169,12 @@ def assess(
         and len(calibration["logistic_coefficients"]) == 2
         and isinstance(calibration.get("brier"), (int, float))
         and isinstance(calibration.get("log_loss"), (int, float))
+        and interval_ready
     )
     calibration_check = next(check for check in checks if check["key"] == "wbb_probability_calibration")
     calibration_check["status"] = "ready" if calibration_ready and not missing else "blocked"
     if calibration_ready:
-        calibration_check["detail"] = "A women’s calibration record is attached to the multi-season artifact and can be audited against its holdout."
+        calibration_check["detail"] = "A women’s probability calibration and margin interval are attached to the multi-season artifact and can be audited against its holdout."
     if not calibration_ready:
         missing.append({
             "dataset": "model_calibration",

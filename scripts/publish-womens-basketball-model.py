@@ -84,6 +84,16 @@ def _sigmoid(value):
     return 1.0 / (1.0 + math.exp(-value))
 
 
+def empirical_quantile(values, quantile):
+    """Return a deterministic nearest-rank quantile for finite values."""
+    ordered = sorted(value for value in values if math.isfinite(value))
+    if not ordered:
+        return None
+    probability = max(0.0, min(1.0, float(quantile)))
+    index = min(len(ordered) - 1, max(0, math.ceil(probability * len(ordered)) - 1))
+    return ordered[index]
+
+
 def fit_probability_calibration(rows, ratings, home_advantage):
     """Fit a women’s-only logistic scale on the training seasons."""
     examples = []
@@ -127,6 +137,31 @@ def fit_probability_calibration(rows, ratings, home_advantage):
     }
 
 
+def fit_margin_interval(rows, ratings, home_advantage, calibration, target=0.8):
+    """Estimate a nominal margin interval from training residuals only.
+
+    The interval is carried into the publication so every forecast has an
+    explicit uncertainty width. Validation coverage is reported separately on
+    the held-out season; this function never uses future games.
+    """
+    errors = []
+    for game in completed_games(rows):
+        home = next((row for row in game if str(row.get("team_home_away") or "").casefold() == "home"), game[0])
+        away = next((row for row in game if row is not home), game[1])
+        home_id, away_id = str(home.get("team_id") or ""), str(away.get("team_id") or "")
+        if home_id not in ratings or away_id not in ratings:
+            continue
+        forecast = prediction(home_id, away_id, ratings, home_advantage, calibration)
+        actual = (number(home.get("team_score")) or 0.0) - (number(home.get("opponent_team_score")) or 0.0)
+        errors.append(abs(forecast["predicted_margin"] - actual))
+    width = empirical_quantile(errors, target)
+    return {
+        "margin_half_width": round(max(width or 0.5, 0.5), 4),
+        "interval_games": len(errors),
+        "interval_target": target,
+    }
+
+
 def prediction(home, away, ratings, home_advantage, calibration=None):
     h = ratings.get(str(home))
     a = ratings.get(str(away))
@@ -140,8 +175,10 @@ def prediction(home, away, ratings, home_advantage, calibration=None):
         probability = _sigmoid(margin / 9.0)
     h_points = h["points"] if h else 68.0
     a_points = a["points"] if a else 68.0
-    expected_total = (h_points + a_points) / 2.0
-    return {
+    # Team points are per-game averages, so their sum is the expected game
+    # total. Dividing before splitting the total would halve every projection.
+    expected_total = h_points + a_points
+    result = {
         "home_win_probability": round(probability, 4),
         "away_win_probability": round(1.0 - probability, 4),
         "predicted_margin": round(margin, 2),
@@ -151,6 +188,11 @@ def prediction(home, away, ratings, home_advantage, calibration=None):
         "home_training_games": h["games"] if h else 0,
         "away_training_games": a["games"] if a else 0,
     }
+    width = number((calibration or {}).get("margin_half_width"))
+    if width is not None and width > 0:
+        result["margin_low"] = round(margin - width, 2)
+        result["margin_high"] = round(margin + width, 2)
+    return result
 
 
 def evaluate(rows, ratings, home_advantage, calibration=None):
@@ -159,6 +201,8 @@ def evaluate(rows, ratings, home_advantage, calibration=None):
     log_loss = []
     correct = 0
     total = 0
+    interval_hits = 0
+    interval_games = 0
     for game in completed_games(rows):
         home = next((row for row in game if str(row.get("team_home_away") or "").casefold() == "home"), game[0])
         away = next((row for row in game if row is not home), game[1])
@@ -169,6 +213,9 @@ def evaluate(rows, ratings, home_advantage, calibration=None):
         actual_home_win = 1 if actual_margin > 0 else 0
         p = forecast["home_win_probability"]
         absolute_errors.append(abs(forecast["predicted_margin"] - actual_margin))
+        if forecast.get("margin_low") is not None and forecast.get("margin_high") is not None:
+            interval_games += 1
+            interval_hits += int(forecast["margin_low"] <= actual_margin <= forecast["margin_high"])
         brier.append((p - actual_home_win) ** 2)
         log_loss.append(-(actual_home_win * math.log(max(p, 1e-9)) + (1 - actual_home_win) * math.log(max(1.0 - p, 1e-9))))
         correct += int((p >= 0.5) == bool(actual_home_win))
@@ -179,6 +226,8 @@ def evaluate(rows, ratings, home_advantage, calibration=None):
         "win_accuracy": round(correct / total, 4) if total else None,
         "brier_score": round(sum(brier) / total, 4) if total else None,
         "log_loss": round(sum(log_loss) / total, 4) if total else None,
+        "interval_games": interval_games,
+        "interval_coverage": round(interval_hits / interval_games, 4) if interval_games else None,
     }
 
 
@@ -194,6 +243,7 @@ def main():
     schedule, receipt_schedule = source.load("schedule", 2027)
     ratings_training, home_advantage = fit_team_ratings(training_rows)
     calibration = fit_probability_calibration(training_rows, ratings_training, home_advantage)
+    calibration.update(fit_margin_interval(training_rows, ratings_training, home_advantage, calibration))
     validation = evaluate(validation_rows, ratings_training, home_advantage, calibration)
     if validation["games"] < 1000 or validation["brier_score"] is None:
         raise SystemExit("Women’s model validation did not have enough completed games")
@@ -222,13 +272,13 @@ def main():
     model_fingerprint = hashlib.sha256(json.dumps({**{str(season): receipt.get("sha256") for season, receipt in training_receipts.items()}, str(VALIDATION_SEASON): validation_receipt.get("sha256"), "schedule": receipt_schedule.get("sha256")}, sort_keys=True).encode()).hexdigest()[:12]
     edition = {
         "schema_version": 1,
-        "model_id": f"womens-basketball-margin-v2-{model_fingerprint}",
+        "model_id": f"womens-basketball-margin-v3-{model_fingerprint}",
         "sport": "basketball",
         "gender": "women",
         "target_season": 2027,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "model_status": "published",
-        "method": "Multi-season shrunk team net-margin ratings with a source-native home-court estimate; the latest completed season is held out for validation before the target refit.",
+        "method": "Multi-season shrunk team net-margin ratings with a source-native home-court estimate and a nominal 80% margin interval fit from training residuals; the latest completed season is held out for validation before the target refit.",
         "training_seasons": list(TRAINING_SEASONS),
         "validation_season": VALIDATION_SEASON,
         "validation": validation,
@@ -240,6 +290,13 @@ def main():
         },
         "home_advantage": round(final_home_advantage, 3),
         "coverage": {"forecast_rows": len(forecasts), "primary_rows": sum(item["prediction"]["estimate_type"] == "primary" for item in forecasts), "cold_start_rows": sum(item["prediction"]["estimate_type"] == "cold_start" for item in forecasts), "rated_teams": len(ratings)},
+        "market_comparison": {
+            "status": "awaiting_qualified_capture",
+            "forecast_rows": len(forecasts),
+            "qualified_line_rows": 0,
+            "required_fields": ["exact_game_id", "captured_at_before_start", "market_type", "line_or_price"],
+            "note": "No betting line is inferred. A comparison is shown only after an authorized quote is joined to this model edition with an exact game ID and a pre-tip capture clock.",
+        },
         "forecasts": forecasts,
         "team_ratings": team_ratings,
         "receipts": {**{f"team_box_{season}": {"sha256": receipt.get("sha256"), "url": receipt.get("url")} for season, receipt in training_receipts.items()}, f"team_box_{VALIDATION_SEASON}": {"sha256": validation_receipt.get("sha256"), "url": validation_receipt.get("url")}, "schedule_2027": {"sha256": receipt_schedule.get("sha256"), "url": receipt_schedule.get("url")}},

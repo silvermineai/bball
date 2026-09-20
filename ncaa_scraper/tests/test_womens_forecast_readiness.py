@@ -42,12 +42,13 @@ def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
     forecast = tmp_path / "forecast.json"
     forecast.write_text(json.dumps({
         "model_id": "wbb-test",
-        "validation": {"games": 100},
+        "validation": {"games": 100, "interval_games": 100, "interval_coverage": 0.8},
         "calibration": {
             "games": 100,
             "logistic_coefficients": [0.0, 0.1],
             "brier": 0.2,
             "log_loss": 0.6,
+            "margin_half_width": 20.0,
         },
         "forecasts": [{"game_id": "g1"}],
     }))

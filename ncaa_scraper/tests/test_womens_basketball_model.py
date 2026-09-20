@@ -11,6 +11,8 @@ evaluate = _MODULE.evaluate
 fit_team_ratings = _MODULE.fit_team_ratings
 prediction = _MODULE.prediction
 fit_probability_calibration = _MODULE.fit_probability_calibration
+fit_margin_interval = _MODULE.fit_margin_interval
+empirical_quantile = _MODULE.empirical_quantile
 
 
 def rows_for_game(game_id, home_score, away_score):
@@ -41,3 +43,21 @@ def test_womens_probability_calibration_is_fitted_on_training_games():
     assert len(calibration["logistic_coefficients"]) == 2
     calibrated = prediction("home", "away", ratings, home_advantage, calibration)
     assert 0 < calibrated["home_win_probability"] < 1
+
+
+def test_margin_interval_uses_training_residuals_and_is_reported_on_holdout():
+    rows = []
+    for index in range(10):
+        rows.extend(rows_for_game(str(index), 80 + index, 60))
+    ratings, home_advantage = fit_team_ratings(rows)
+    calibration = fit_probability_calibration(rows, ratings, home_advantage)
+    interval = fit_margin_interval(rows, ratings, home_advantage, calibration)
+    assert interval["interval_games"] == 10
+    assert interval["margin_half_width"] >= 0.5
+    assert empirical_quantile([1, 2, 3, 4, 5], 0.8) == 4
+    forecast = prediction("home", "away", ratings, home_advantage, {**calibration, **interval})
+    assert forecast["margin_low"] <= forecast["predicted_margin"] <= forecast["margin_high"]
+    assert forecast["predicted_home_score"] + forecast["predicted_away_score"] > 100
+    validation = evaluate(rows, ratings, home_advantage, {**calibration, **interval})
+    assert validation["interval_games"] == 10
+    assert 0 <= validation["interval_coverage"] <= 1

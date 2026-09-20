@@ -4,7 +4,7 @@
   "gender": "women",
   "target_season": 2027,
   "status": "ready_for_fit",
-  "model_id": "womens-basketball-margin-v2-097fb78fcb72",
+  "model_id": "womens-basketball-margin-v3-097fb78fcb72",
   "forecast_rows": 2283,
   "model_boundary": "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
   "checks": [
@@ -33,7 +33,7 @@
       "key": "wbb_probability_calibration",
       "label": "Women’s probability calibration",
       "status": "ready",
-      "detail": "A women’s calibration record is attached to the multi-season artifact and can be audited against its holdout.",
+      "detail": "A women’s probability calibration and margin interval are attached to the multi-season artifact and can be audited against its holdout.",
       "required": "women’s calibration coefficients, calibration-game count and held-out Brier/log-loss evidence"
     },
     {
@@ -147,7 +147,7 @@
   ],
   "missing_inputs": [],
   "next_steps": [
-    "Import and hash-verify the 2023–26 women’s team-box releases under their exact release tags.",
+    "Import and hash-verify the 2023–26 women’s schedule and team-box releases under their exact release tags.",
     "Join only on stable game and team IDs; retain unmatched, duplicate and invalid rows in the audit output.",
     "Run a women’s-only chronological fit, then calibrate on one completed season and evaluate on the following season.",
     "Register a WBB model ID and expose game probabilities only after the held-out metrics and source clocks pass publication checks."
