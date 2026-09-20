@@ -115,6 +115,48 @@ export type FootballPlayerProduction = {
   production: Record<string, FootballProduction>;
 };
 
+export type FootballRankablePlayer = FootballPlayerProduction & {
+  id: string;
+  team_id: string;
+  name: string;
+  division: string;
+};
+
+export function footballPlayerRankKey(playerId: string, teamId: string, category: string) {
+  return `${playerId}:${teamId}:${category}`;
+}
+
+/**
+ * Rank retained FCS production locally because the source board only assigns
+ * publisher ranks to FBS rows. The result is deliberately a Silvermine
+ * ordering, separate from the source rank and limited to the selected scope.
+ */
+export function computeFcsEpaRanks(
+  players: FootballRankablePlayer[],
+  category: string,
+  minimumPlays: Record<string, number | undefined>,
+) {
+  const rows = players.flatMap((player) => {
+    if (player.division !== "fcs") return [];
+    const categories = category === "all" ? player.categories : [category];
+    return categories.flatMap((selected) => {
+      const stats = player.production[selected];
+      const minimum = minimumPlays[selected];
+      return stats && minimum != null && (stats.plays ?? 0) >= minimum && stats.epa != null && Number.isFinite(stats.epa)
+        ? [{ player, category: selected, epa: stats.epa }]
+        : [];
+    });
+  });
+  rows.sort((left, right) =>
+    right.epa - left.epa ||
+    left.player.name.localeCompare(right.player.name) ||
+    left.player.id.localeCompare(right.player.id) ||
+    left.player.team_id.localeCompare(right.player.team_id) ||
+    left.category.localeCompare(right.category),
+  );
+  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, row.category), index + 1]));
+}
+
 /** Select the source row that the player index should display. */
 export function productionForCategory(
   player: FootballPlayerProduction,

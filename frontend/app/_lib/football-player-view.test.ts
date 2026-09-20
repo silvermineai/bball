@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   footballEventDataset,
+  computeFcsEpaRanks,
+  footballPlayerRankKey,
   footballPlayerFilterSearch,
   hasRankedProduction,
   parseFootballPlayerFilters,
@@ -68,6 +70,30 @@ describe("football player index category selection", () => {
     };
     expect(productionForCategory(player, "all")).toBeNull();
     expect(productionForCategory(player, "defensive")).toBeNull();
+  });
+});
+
+describe("football player division rankings", () => {
+  it("computes an explicit FCS EPA ordering without assigning a source rank", () => {
+    const ranks = computeFcsEpaRanks(
+      [
+        { id: "2", team_id: "b", name: "Beta", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 100, epa: 4, epa_per_play: 0.1, touchdowns: 1, rank: null } } },
+        { id: "1", team_id: "a", name: "Alpha", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 100, epa: 6, epa_per_play: 0.1, touchdowns: 1, rank: null } } },
+        { id: "3", team_id: "c", name: "FBS row", division: "fbs", categories: ["rushing"], production: { rushing: { plays: 90, yards: 100, epa: 99, epa_per_play: 0.1, touchdowns: 1, rank: 1 } } },
+      ],
+      "rushing",
+      { rushing: 50 },
+    );
+    expect(ranks.get(footballPlayerRankKey("1", "a", "rushing"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "rushing"))).toBe(2);
+    expect(ranks.has(footballPlayerRankKey("3", "c", "rushing"))).toBe(false);
+  });
+
+  it("does not qualify an FCS row below the category play threshold", () => {
+    const ranks = computeFcsEpaRanks([
+      { id: "1", team_id: "a", name: "Short sample", division: "fcs", categories: ["passing"], production: { passing: { plays: 99, yards: 100, epa: 50, epa_per_play: 0.5, touchdowns: 1, rank: null } } },
+    ], "passing", { passing: 100 });
+    expect(ranks.size).toBe(0);
   });
 });
 

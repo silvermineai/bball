@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
@@ -9,6 +9,8 @@ import {
 } from "../../_lib/football-player-history";
 import {
   hasRankedProduction,
+  computeFcsEpaRanks,
+  footballPlayerRankKey,
   footballPlayerCategories,
   footballEventDataset,
   footballPlayerFilterSearch,
@@ -137,6 +139,20 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       });
     return () => controller.abort();
   }, [season, retry, catalog, eventDataset, scope]);
+  const fcsRanks = useMemo(
+    () => computeFcsEpaRanks(
+      data?.season === +season ? data.players : [],
+      category,
+      Object.fromEntries(Object.entries(data?.rankings || {}).map(([key, value]) => [key, value.minimum_plays])),
+    ),
+    [category, data, season],
+  );
+  const selectedRank = (player: Player, selected: ReturnType<typeof productionForCategory>) => {
+    if (!selected?.stats) return null;
+    if (selected.stats.rank != null) return selected.stats.rank;
+    if (division !== "fcs") return null;
+    return fcsRanks.get(footballPlayerRankKey(player.id, player.team_id, selected.category));
+  };
   const rows = (data?.season === +season ? data.players : []).filter(
     (p) =>
       (p.name + " " + p.team + " " + p.conference)
@@ -144,12 +160,16 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         .includes(query.toLowerCase()) &&
       (division === "all" || p.division === division) &&
       (category === "all" || p.categories.includes(category)) &&
-      (!qualified || hasRankedProduction(p, category)),
+      (!qualified || (division === "fcs" ? selectedRank(p, productionForCategory(p, category)) != null : hasRankedProduction(p, category))),
   );
   const sortValue = (player: Player) => {
     const stats = productionForCategory(player, category)?.stats;
     if (!stats) return null;
-    if (sort === "rank") return stats.rank == null ? null : -stats.rank;
+    if (sort === "rank") {
+      const selected = productionForCategory(player, category);
+      const rank = selectedRank(player, selected);
+      return rank == null ? null : -rank;
+    }
     if (sort === "epa") return stats.epa;
     if (sort === "epa_per_play") return stats.epa_per_play;
     if (sort === "yards_per_play") return stats.yards_per_play ?? (stats.yards != null && stats.plays ? stats.yards / stats.plays : null);
@@ -168,7 +188,8 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
   const exportRow = (p: Player) => {
     const selected = productionForCategory(p, category), s = selected?.stats;
     const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;
-    return [season, p.division, selected?.category || category, s?.rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, s?.rank != null ? "yes" : "no"];
+    const rank = selectedRank(p, selected);
+    return [season, p.division, selected?.category || category, rank, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no"];
   };
   const download = (all = false) => {
     const selectedRows = all ? rows : rows.slice(page * 40, page * 40 + 40);
@@ -312,11 +333,11 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
               setPage(0);
             }}
           />
-          Show ranked players only (FBS, at least {minimum} plays)
+          Show ranked players only ({division === "fcs" ? "FCS Silvermine EPA order" : "FBS source rank"}, at least {minimum} plays)
         </label>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Ordered by {sortLabels[sort].toLowerCase()} within{" "}
+        Ordered by {division === "fcs" && sort === "rank" ? "FCS Silvermine EPA order" : sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
           ? "the best available ranked category per player"
           : category}. Team
@@ -327,7 +348,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           : "Historical coverage varies by division and category."}{" "}
         Category games, yards per play and success rate come from the same
         source production record; a dash means unranked or unavailable, never
-        zero.
+        zero. {division === "fcs" ? "FCS rank is a Silvermine ordering of retained EPA after the same category play threshold; the publisher does not provide a source FCS rank." : "FBS rank is the retained source rank."}
       </p>
       {eventDataset ? (
         <section className="section paper-panel">
@@ -365,7 +386,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>EPA rank</th>
+                  <th>{division === "fcs" ? "FCS EPA rank" : "EPA rank"}</th>
                   <th>Player / team</th>
                   <th>Category</th>
                   <th className="numeric">Box games</th>
@@ -385,7 +406,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                     s = selected?.stats;
                   return (
                     <tr key={`${p.id}-${p.team_id}`}>
-                      <td className="rank-number">{s?.rank ?? "—"}</td>
+                      <td className="rank-number">{selectedRank(p, selected) ?? "—"}</td>
                       <td>
                         <Link
                           href={`/football/player/?id=${p.id}&season=${season}`}
