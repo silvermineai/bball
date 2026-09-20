@@ -11,6 +11,48 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
+
+type RecruitingRelease = Record<string, unknown>;
+
+function publicRelease(value: unknown, season: number, firstRecordedAt: string): RecruitingRelease {
+  const release = value && typeof value === "object" && !Array.isArray(value)
+    ? value as RecruitingRelease
+    : {};
+  const { sources: _sources, stats_source: _statsSource, ...safe } = release;
+  const programs = Array.isArray(safe.programs)
+    ? safe.programs.flatMap((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const program = value as Record<string, unknown>;
+      const id = program.id == null ? null : String(program.id);
+      const name = typeof program.name === "string" && program.name.trim() ? program.name.trim() : null;
+      return id && name ? [{ id, name }] : [];
+    })
+    : [];
+  const edition = typeof safe.edition === "string" && /^[a-f0-9]{64}$/i.test(safe.edition)
+    ? safe.edition.toLowerCase()
+    : null;
+  const coverage = safe.coverage && typeof safe.coverage === "object" && !Array.isArray(safe.coverage)
+    ? safe.coverage as Record<string, unknown>
+    : {};
+  const sourceCount = Number.isSafeInteger(coverage.sources) && Number(coverage.sources) >= 0
+    ? Number(coverage.sources)
+    : null;
+  return {
+    ...safe,
+    first_recorded_at: firstRecordedAt,
+    programs,
+    source_receipt: {
+      dataset: "basketball_recruiting",
+      season,
+      captured_at: firstRecordedAt,
+      source_rows: sourceCount,
+      sha256: edition,
+      sha256_scope: edition ? "release_edition" : "unavailable",
+      integrity: edition && sourceCount != null && sourceCount > 0 ? "verified" : "unavailable",
+    },
+  };
+}
+
 recruiting.get("/", async (c) => {
   const value = c.req.query("season") ?? "2027";
   if (!/^\d{4}$/.test(value) || +value < 2025 || +value > 2035)
@@ -40,10 +82,13 @@ recruiting.get("/", async (c) => {
         { error: "No reviewed recruiting edition for this season" },
         404,
       );
-    const response = c.json({
-      ...JSON.parse(row.payload_json),
-      first_recorded_at: row.first_recorded_at,
-    });
+    let payload: unknown;
+    try {
+      payload = JSON.parse(row.payload_json);
+    } catch {
+      return c.json({ error: "The reviewed recruiting edition is malformed." }, 503, { "Cache-Control": "no-store" });
+    }
+    const response = c.json(publicRelease(payload, +value, row.first_recorded_at));
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;

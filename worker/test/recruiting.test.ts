@@ -13,8 +13,10 @@ describe("reviewed recruiting editions", () => {
       .fn()
       .mockResolvedValue({
         payload_json: JSON.stringify({
-          edition: "one",
-          sources: [{ published_on: "2026-04-28" }],
+          edition: "a".repeat(64),
+          coverage: { sources: 1 },
+          sources: [{ published_on: "2026-04-28", url: "https://outside.invalid/release" }],
+          stats_source: { publisher: "Outside Provider", url: "https://outside.invalid/stats" },
         }),
         first_recorded_at: "2026-09-05T00:00:00Z",
       });
@@ -25,10 +27,50 @@ describe("reviewed recruiting editions", () => {
     expect(bind).toHaveBeenCalledWith(2027);
     expect(prepare.mock.calls[0][0]).toContain("a.edition=r.edition");
     expect(await response.json()).toEqual({
-      edition: "one",
-      sources: [{ published_on: "2026-04-28" }],
+      edition: "a".repeat(64),
+      coverage: { sources: 1 },
+      programs: [],
       first_recorded_at: "2026-09-05T00:00:00Z",
+      source_receipt: {
+        dataset: "basketball_recruiting",
+        season: 2027,
+        captured_at: "2026-09-05T00:00:00Z",
+        source_rows: 1,
+        sha256: "a".repeat(64),
+        sha256_scope: "release_edition",
+        integrity: "verified",
+      },
     });
+  });
+
+  it("preserves recruiting facts while withholding provider references", async () => {
+    const payload = {
+      edition: "b".repeat(64),
+      coverage: { sources: 2 },
+      programs: [
+        { id: 41, name: "UConn", host: "uconnhuskies.com", publisher: "UConn Athletics" },
+        { id: 42, name: "", host: "empty.invalid" },
+      ],
+      sources: [{ id: "uconn", url: "https://uconnhuskies.com/release", publisher: "UConn Athletics" }],
+      stats_source: { publisher: "SportsDataverse", url: "https://example.invalid/stats" },
+      people: [{ key: "41-player", name: "Player", stats: { ppg: 12.4 } }],
+      events: [{ id: "event-1", kind: "addition", source_id: "uconn" }],
+    };
+    const response = await recruiting.request(
+      "/?season=2027",
+      {},
+      { DB: { prepare: () => ({ bind: () => ({ first: async () => ({ payload_json: JSON.stringify(payload), first_recorded_at: "2026-09-20T00:00:00Z" }) }) }) } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as Record<string, unknown>;
+    expect(body.programs).toEqual([{ id: "41", name: "UConn" }]);
+    expect(body.people).toEqual(payload.people);
+    expect(body.events).toEqual(payload.events);
+    expect(body.source_receipt).toEqual(expect.objectContaining({ integrity: "verified", source_rows: 2 }));
+    const text = JSON.stringify(body);
+    expect(text).not.toContain("uconnhuskies.com");
+    expect(text).not.toContain("SportsDataverse");
+    expect(text).not.toContain("Outside Provider");
   });
   it("returns missing coverage explicitly", async () => {
     expect(
