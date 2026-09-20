@@ -680,8 +680,10 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
           factors: factors.factors,
           integrity: factors.integrity,
           source: factors.factors ? "forecast_payload" : null,
-          model_id: null,
-          generated_at: null,
+          // The payload is stored on this exact forecast row, so a valid
+          // embedded context belongs to the row's immutable model edition.
+          model_id: factors.factors ? row.model_id : null,
+          generated_at: factors.factors ? row.created_at : null,
         };
       } else {
         matchupRead = publishedFactors.get(row.game_id) || matchupRead;

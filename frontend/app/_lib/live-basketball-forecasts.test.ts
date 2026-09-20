@@ -305,6 +305,54 @@ describe("live basketball forecast merge", () => {
     expect(merged[1].prediction).toBeNull();
   });
 
+  it("carries Four Factor context only with its exact live forecast edition", () => {
+    const factors: NonNullable<BBGame["matchup_factors"]> = {
+      season: 2026,
+      factors: {
+        efg: { home_offense: 0.53, home_defense: 0.50, away_offense: 0.49, away_defense: 0.52 },
+        tov: { home_offense: 0.16, home_defense: 0.15, away_offense: 0.17, away_defense: 0.16 },
+        orb: { home_offense: 0.30, home_defense: 0.28, away_offense: 0.25, away_defense: 0.30 },
+        ftr: { home_offense: 0.38, home_defense: 0.26, away_offense: 0.31, away_defense: 0.32 },
+      },
+      edges: { efg: 0.02, tov: 0.01, orb: 0.03, ftr: -0.01 },
+    };
+    const staticGame = { ...game("factor", "2026-11-02T05:00:00Z", prediction(4)), matchup_factors: factors };
+    const row = {
+      game_id: "factor",
+      model_id: "model-live",
+      season: 2027,
+      starts_at: "2026-11-02T05:00:00Z",
+      home_id: "factor-home",
+      away_id: "factor-away",
+      home_name: "Home factor",
+      away_name: "Away factor",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(5),
+      matchup_factors: factors,
+      matchup_factors_model_id: "model-live",
+    } satisfies LiveForecastRow;
+
+    const live = mergeLiveBasketballForecasts([staticGame], [row], "model-static");
+    expect(live[0].matchup_factors).toEqual(factors);
+
+    const mismatched = mergeLiveBasketballForecasts([staticGame], [{
+      ...row,
+      matchup_factors_model_id: "model-old",
+    }], "model-static");
+    expect(mismatched[0].matchup_factors).toBeNull();
+
+    const sameStaticEdition = mergeLiveBasketballForecasts([staticGame], [{
+      ...row,
+      matchup_factors: undefined,
+      matchup_factors_model_id: undefined,
+      model_id: "model-static",
+    }], "model-static");
+    expect(sameStaticEdition[0].matchup_factors).toEqual(factors);
+  });
+
   it("adds a newly registered game and orders the complete slate by start time", () => {
     const rows = [{
       game_id: "new",

@@ -19,6 +19,10 @@ export type LiveForecastRow = {
   source_time_valid?: boolean | null;
   source_observed_at?: string | null;
   prediction: BBGame["prediction"];
+  /** Four Factor context validated by the forecast endpoint. */
+  matchup_factors?: BBGame["matchup_factors"];
+  /** Edition that produced the attached Four Factor context. */
+  matchup_factors_model_id?: string | null;
 };
 
 type LiveForecastPage = {
@@ -247,7 +251,11 @@ export async function loadLiveBasketballGameMarketComparison(
   };
 }
 
-export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecastRow[]) {
+export function mergeLiveBasketballForecasts(
+  games: BBGame[],
+  rows: LiveForecastRow[],
+  staticModelId?: string | null,
+) {
   const staticById = new Map(games.map((game) => [game.id, game]));
   const liveIds = new Set<string>();
   const merged = rows.flatMap((row) => {
@@ -260,6 +268,20 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
     if (!names) return [];
     liveIds.add(row.game_id);
     const coldStart = row.prediction?.estimate_type === "cold_start";
+    // Factor context is descriptive model evidence, so it must travel with
+    // the exact edition that produced it. A static factor payload may be
+    // retained only when the caller identifies the same edition; a live
+    // payload must repeat its model ID explicitly. This keeps a stale asset
+    // from appearing beside a newer prediction during hydration.
+    const factorModelId = row.matchup_factors_model_id || null;
+    const liveFactors = row.matchup_factors_model_id === row.model_id
+      ? row.matchup_factors ?? null
+      : null;
+    const staticFactors = base
+      && staticModelId
+      && (base.forecast_model_id || staticModelId) === row.model_id
+      ? base.matchup_factors ?? null
+      : null;
     return [{
       ...(base || {
         id: row.game_id,
@@ -286,6 +308,7 @@ export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecast
       source_start: row.source_start ?? base?.source_start ?? null,
       source_time_valid: row.source_time_valid ?? base?.source_time_valid ?? null,
       source_observed_at: row.source_observed_at ?? base?.source_observed_at ?? null,
+      matchup_factors: liveFactors || (factorModelId ? null : staticFactors),
       // The API stores one row per game, including cold-start estimates. Keep
       // the distinction used by the static release so cards and filters do
       // not promote an exploratory estimate to the primary model field.

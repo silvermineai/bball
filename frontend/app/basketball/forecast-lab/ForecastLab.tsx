@@ -242,7 +242,7 @@ export default function ForecastLab({
     loadLiveBasketballForecasts(controller.signal, { model: modelSelection })
       .then((rows) => {
         if (!controller.signal.aborted) {
-          setLiveGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
+          setLiveGames(mergeLiveBasketballForecasts(overview.upcoming, rows, overview.model.id));
           setLiveForecastModelId(forecastModelId(rows));
           setLiveGamesError("");
         }
@@ -266,7 +266,7 @@ export default function ForecastLab({
     loadLiveBasketballForecasts(controller.signal, { model: "latest" })
       .then((rows) => {
         if (!controller.signal.aborted) {
-          setLatestGames(mergeLiveBasketballForecasts(overview.upcoming, rows));
+          setLatestGames(mergeLiveBasketballForecasts(overview.upcoming, rows, overview.model.id));
           setLatestGamesError("");
         }
       })

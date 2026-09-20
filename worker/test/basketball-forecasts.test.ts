@@ -121,6 +121,64 @@ describe("basketball forecast availability", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it("labels embedded four-factor context with the forecast row edition", async () => {
+    const factors = {
+      season: 2026,
+      factors: {
+        efg: { home_offense: 0.53, home_defense: 0.5, away_offense: 0.49, away_defense: 0.52 },
+        tov: { home_offense: 0.16, home_defense: 0.15, away_offense: 0.17, away_defense: 0.16 },
+        orb: { home_offense: 0.3, home_defense: 0.28, away_offense: 0.25, away_defense: 0.3 },
+        ftr: { home_offense: 0.38, home_defense: 0.26, away_offense: 0.31, away_defense: 0.32 },
+      },
+      edges: { efg: 0.02, tov: 0.01, orb: 0.03, ftr: -0.01 },
+    };
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      return {
+        bind: () => ({
+          all: async () => ({ results: [{
+            game_id: "402",
+            model_id: "model-embedded",
+            created_at: "2026-09-20T00:00:00Z",
+            prediction_json: JSON.stringify({ home_margin: 4.5, home_win_probability: 0.62, matchup_factors: factors }),
+            season: 2027,
+            starts_at: "2026-11-02T05:00:00Z",
+            home_id: "1",
+            away_id: "2",
+            home_name: "Home",
+            away_name: "Away",
+            home_score: null,
+            away_score: null,
+            completed: 0,
+            neutral: 0,
+            time_tbd: 0,
+            venue: null,
+            broadcast: null,
+            source_start: null,
+            source_time_valid: null,
+            source_observed_at: null,
+          }] }),
+        }),
+      };
+    });
+    const response = await basketballForecasts.request(
+      "/?season=2027&status=upcoming&model=latest&limit=1",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { rows: Array<Record<string, unknown>> };
+    expect(body.rows[0]).toMatchObject({
+      matchup_factors_integrity: "valid",
+      matchup_factors_source: "forecast_payload",
+      matchup_factors_model_id: "model-embedded",
+      matchup_factors_generated_at: "2026-09-20T00:00:00Z",
+      matchup_factors: factors,
+    });
+  });
+
   it("resolves latest from models that contain forecasts for the requested season", async () => {
     const countBinds: Array<string | number> = [];
     const prepare = vi.fn((sql: string) => {

@@ -142,7 +142,7 @@ export default function Matchups({
     const load = async () => {
       const rows = await loadLiveBasketballForecasts(controller.signal);
       if (!controller.signal.aborted) {
-        setLiveGames(mergeLiveBasketballForecasts(games, rows));
+        setLiveGames(mergeLiveBasketballForecasts(games, rows, model.id));
         setLiveForecastModelId(forecastModelId(rows));
         setLiveGamesError("");
       }
