@@ -69,6 +69,16 @@ describe("market import preflight", () => {
     expect(result.errors).toContain("Row 2: updated_at must be before starts_at.");
   });
 
+  it("matches server price and total-line validation before upload", () => {
+    const negativeTotal = `${header}\n401,totals,2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2026-12-31T19:59:00Z,Home,Away,Book,-1,1.91,1.91,1.91,1.91,,,,,event-1`;
+    const totalResult = validateMarketImportCsv(negativeTotal, new Date("2026-12-31T21:00:00Z"));
+    expect(totalResult.errors).toContain("Row 2: totals require a non-negative line.");
+
+    const nonstandardAmerican = `${header}\n401,h2h,2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2026-12-31T19:59:00Z,Home,Away,Book,,,,,,, -99,120,,,,event-1`;
+    const priceResult = validateMarketImportCsv(nonstandardAmerican, new Date("2026-12-31T21:00:00Z"));
+    expect(priceResult.errors).toContain("Row 2: h2h requires valid home and away prices.");
+  });
+
   it("normalizes decimal and American prices for a browser comparison preview", () => {
     const csv = `${header}\n${["401", "h2h", "2027-01-01T20:00:00Z", "2026-12-31T20:00:00Z", "2026-12-31T19:59:00Z", "Home", "Away", "Book", "", "", "", "", "", "-120", "105", "", "", "event-1"].join(",")}`;
     expect(parseMarketImportRows(csv)).toMatchObject([{

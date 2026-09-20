@@ -91,17 +91,21 @@ const number = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 const price = (decimal: string, american: string) => {
-  const parsedDecimal = number(decimal);
-  if (parsedDecimal != null) return parsedDecimal > 1;
+  if (decimal.trim()) {
+    const parsedDecimal = number(decimal);
+    return parsedDecimal != null && parsedDecimal > 1;
+  }
   const parsedAmerican = number(american);
-  return parsedAmerican != null && parsedAmerican !== 0;
+  return parsedAmerican != null && parsedAmerican !== 0 && Math.abs(parsedAmerican) >= 100;
 };
 
 const decimalPrice = (decimal: string, american: string) => {
-  const parsedDecimal = number(decimal);
-  if (parsedDecimal != null && parsedDecimal > 1) return parsedDecimal;
+  if (decimal.trim()) {
+    const parsedDecimal = number(decimal);
+    return parsedDecimal != null && parsedDecimal > 1 ? parsedDecimal : null;
+  }
   const parsedAmerican = number(american);
-  if (parsedAmerican == null || parsedAmerican === 0) return null;
+  if (parsedAmerican == null || parsedAmerican === 0 || Math.abs(parsedAmerican) < 100) return null;
   return parsedAmerican > 0 ? 1 + parsedAmerican / 100 : 1 + 100 / Math.abs(parsedAmerican);
 };
 
@@ -172,6 +176,7 @@ export function validateMarketImportCsv(text: string, now = new Date()): MarketI
     const marketLine = number(value("line")) ?? number(value("home_spread")) ?? number(value("total_line"));
     if (market === "spreads" && marketLine == null) addError(`Row ${row}: spreads require line or home_spread.`);
     if (market === "totals" && marketLine == null) addError(`Row ${row}: totals require line or total_line.`);
+    if (market === "totals" && marketLine != null && marketLine < 0) addError(`Row ${row}: totals require a non-negative line.`);
     if (market === "spreads" && (!price(value("home_price"), value("home_american")) || !price(value("away_price"), value("away_american")))) addError(`Row ${row}: spreads require valid home and away prices.`);
     if (market === "totals" && (!price(value("over_price"), value("over_american")) || !price(value("under_price"), value("under_american")))) addError(`Row ${row}: totals require valid over and under prices.`);
     if (market === "h2h" && (!price(value("home_price"), value("home_american")) || !price(value("away_price"), value("away_american")))) addError(`Row ${row}: h2h requires valid home and away prices.`);
