@@ -48,7 +48,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -66,6 +66,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const [history, setHistory] = useState<RecruitingHistoryEntry[]>([]);
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
+  const [sourceReceipt, setSourceReceipt] = useState<Response["source_receipt"]>(null);
   const [classContextPayload, setClassContextPayload] = useState<ProspectClassContextPayload | null>(null);
   const [peerContextPayload, setPeerContextPayload] = useState<ProspectPeerContextPayload | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
@@ -85,6 +86,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     setProspect(null);
     setHistory([]);
     setEdition(null);
+    setSourceReceipt(null);
     setClassContextPayload(null);
     setPeerContextPayload(null);
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
@@ -96,6 +98,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
         if (controller.signal.aborted) return;
         setSource(value.source);
         setEdition(value.edition || null);
+        setSourceReceipt(value.source_receipt || null);
         setClassContextPayload(value.class_context || null);
         setPeerContextPayload(value.peer_context || null);
         setHistory(value.history || []);
@@ -322,6 +325,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <span className="note">No inferred values</span>
             </div>
             <p className="note">This table exposes the fields returned for this exact athlete ID and edition. “Unavailable” means the retained row did not provide a usable value; it is not a zero, ranking assumption or eligibility conclusion.</p>
+            {sourceReceipt && <p className="note">Release digest {sourceReceipt.sha256 ? <code>{sourceReceipt.sha256}</code> : "unavailable"} · {sourceReceipt.source_rows.toLocaleString()} retained rows · integrity {sourceReceipt.integrity}.</p>}
             <div className="table-scroll"><table className="data-table"><thead><tr><th>Field</th><th>Recorded value</th></tr></thead><tbody>{recordedProspectFields(prospect).map((field) => <tr key={field.key}><th scope="row">{field.label}</th><td><code>{field.value}</code></td></tr>)}</tbody></table></div>
           </section>
           <section className="section paper-panel" id="recorded-schools" aria-labelledby="recorded-schools-title">

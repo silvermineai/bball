@@ -65,6 +65,7 @@ export type RecruitingBoardResult = {
   rank_distribution?: RecruitingRankDistributionBand[];
   edition: string | null;
   captured_at: string | null;
+  source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; integrity: "verified" | "unavailable" } | null;
   rows: Prospect[];
   source?: { provider: string; methodology: string; url?: string };
   unavailable_reason?: string;
@@ -498,6 +499,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             {result.captured_at ? <> · captured {captureLabel(result.captured_at)} UTC</> : " · capture date unavailable"}.
             {" "}The edition identifier lets a staff member reproduce this exact board after a later refresh.
           </p>
+          {result.source_receipt && <p className="note">Release digest {result.source_receipt.sha256 ? <code>{result.source_receipt.sha256}</code> : "unavailable"} · {result.source_receipt.source_rows.toLocaleString()} retained rows · integrity {result.source_receipt.integrity}.</p>}
           {result.rank_quality && <p className="note" role="status">Rank quality: {result.rank_quality.tied_rank_values.toLocaleString()} recorded rank value{result.rank_quality.tied_rank_values === 1 ? "" : "s"} are tied across {result.rank_quality.tied_rows.toLocaleString()} prospect rows. Ties retain the recorded rank and the board&apos;s name ordering.{result.rank_quality.withheld_placeholder_rows ? ` ${result.rank_quality.withheld_placeholder_rows.toLocaleString()} ungraded source placeholder rank${result.rank_quality.withheld_placeholder_rows === 1 ? " was" : "s were"} withheld.` : ""}</p>}
           {rankDistribution && <section className="paper-panel recruiting-rank-distribution" aria-labelledby="recruiting-rank-distribution-title" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 10 }}>

@@ -329,8 +329,16 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       positionsByTeam.set(teamId, positions);
     }
     const current = await withTimeout(db.prepare(
-      "SELECT edition,captured_at FROM bb_espn_recruiting_current WHERE season=?",
-    ).bind(season).first<{ edition: string; captured_at: string }>(), DB_TIMEOUT_MS);
+      `SELECT edition,captured_at,
+              (SELECT count(*) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_rows,
+              (SELECT count(DISTINCT NULLIF(TRIM(r.source_sha256),'')) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_hashes,
+              (SELECT min(r.source_sha256) FROM bb_espn_recruiting r WHERE r.season=c.season AND r.edition=c.edition) AS source_sha256
+         FROM bb_espn_recruiting_current c
+        WHERE season=?`,
+    ).bind(season).first<{ edition: string; captured_at: string; source_rows?: number | null; source_hashes?: number | null; source_sha256?: string | null }>(), DB_TIMEOUT_MS);
+    const sourceSha256 = typeof current?.source_sha256 === "string" && /^[a-f0-9]{64}$/i.test(current.source_sha256) && Number(current.source_hashes || 0) === 1
+      ? current.source_sha256
+      : null;
     const historyRows = athlete_id && includeHistory === "1"
       ? await withTimeout(db.prepare(
         `SELECT h.edition,h.captured_at,${effectiveRank("h")} AS rank,h.grade,h.status,h.committed_team_id,h.committed_team_name,h.source_url
@@ -438,6 +446,13 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       ],
       edition: current?.edition || null,
       captured_at: current?.captured_at || null,
+      source_receipt: current ? {
+        dataset: "recruiting_rankings",
+        captured_at: current.captured_at,
+        source_rows: Number(current.source_rows || 0),
+        sha256: sourceSha256,
+        integrity: sourceSha256 ? "verified" : "unavailable",
+      } : null,
       history: historyRows
         ? historyRows.results.map((row) => ({
           edition: String((row as { edition?: string }).edition || ""),

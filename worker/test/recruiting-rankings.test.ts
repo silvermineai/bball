@@ -54,6 +54,23 @@ describe("ESPN recruiting rankings", () => {
     expect(body.rows[0].school_ids_json).toBeUndefined();
   });
 
+  it("publishes a receipt only when the current edition has one shared valid digest", async () => {
+    const sha256 = "a".repeat(64);
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => sql.includes("SELECT edition")
+          ? { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z", source_rows: 2, source_hashes: 1, source_sha256: sha256 }
+          : sql.includes("WITH cohort_rows")
+            ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+            : sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+        all: vi.fn(async () => ({ results: [] })),
+      })),
+    }));
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { source_receipt: { dataset: string; source_rows: number; sha256: string | null; integrity: string } };
+    expect(body.source_receipt).toEqual({ dataset: "recruiting_rankings", captured_at: "2026-09-12T00:00:00Z", source_rows: 2, sha256, integrity: "verified" });
+  });
+
   it("keeps provider receipts out of the public response", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
