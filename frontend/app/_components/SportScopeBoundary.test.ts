@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { isPublishedBoundary } from "./SportScopeBoundary";
+import { isPublishedBoundary, scopeBoundaryView } from "./SportScopeBoundary";
 
 describe("sport scope boundary", () => {
+  it("does not render the default men's page before the URL scope hydrates", () => {
+    expect(scopeBoundaryView(false, "basketball", { gender: "women", division: "1" }, "/basketball/rankings")).toBe("loading");
+  });
+
+  it.each([
+    "/basketball/rankings",
+    "/basketball/players",
+    "/basketball/teams",
+    "/basketball/games",
+    "/basketball/matchups",
+  ])("routes women's basketball %s through the scope boundary", (pathname) => {
+    expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "1" }, pathname)).toBe("unavailable");
+  });
+
   it("keeps women’s basketball isolated on every route", () => {
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/players")).toBe(true);
   });

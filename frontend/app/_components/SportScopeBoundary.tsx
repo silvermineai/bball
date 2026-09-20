@@ -35,6 +35,24 @@ export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pa
   return !BASKETBALL_DIVISION_ARCHIVES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+export type ScopeBoundaryView = "loading" | "unavailable" | "published";
+
+/**
+ * Scope is read from the client URL because this shared boundary is a client
+ * component. Keep the default men’s page out of the server response until
+ * that scope has been resolved; otherwise a women’s URL briefly receives
+ * men’s rows before hydration replaces it.
+ */
+export function scopeBoundaryView(
+  hydrated: boolean,
+  sport: Props["sport"],
+  scope: SportScope,
+  pathname: string,
+): ScopeBoundaryView {
+  if (!hydrated) return "loading";
+  return isPublishedBoundary(sport, scope, pathname) ? "unavailable" : "published";
+}
+
 export default function SportScopeBoundary({ sport, children }: Props) {
   const pathname = usePathname() || "";
   const searchParams = useSearchParams();
@@ -48,7 +66,7 @@ export default function SportScopeBoundary({ sport, children }: Props) {
     setHydrated(true);
   }, []);
 
-  return hydrated && isPublishedBoundary(sport, scope, pathname)
-    ? <ScopeUnavailable sport={sport} scope={scope} />
-    : children;
+  const view = scopeBoundaryView(hydrated, sport, scope, pathname);
+  if (view === "loading") return <div className="scope-loading" aria-busy="true" />;
+  return view === "unavailable" ? <ScopeUnavailable sport={sport} scope={scope} /> : children;
 }
