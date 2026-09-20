@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { SportScope } from "../_lib/sport-scope";
 import { scopeLabel } from "../_lib/sport-scope";

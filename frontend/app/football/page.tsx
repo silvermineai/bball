@@ -1,6 +1,5 @@
 import FootballDashboard from "../_components/FootballDashboard";
-import ScopeUnavailable from "../_components/ScopeUnavailable";
-import { footballScopeAvailable, parseSportScope } from "../_lib/sport-scope";
+import ScopedDashboard from "../_components/ScopedDashboard";
 
 export const metadata = {
   title: "College football stats, ratings and predictions",
@@ -8,7 +7,6 @@ export const metadata = {
   alternates: { canonical: "/football/" },
 };
 
-export default async function Page({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const scope = parseSportScope(await searchParams);
-  return footballScopeAvailable(scope) ? <FootballDashboard /> : <ScopeUnavailable sport="football" scope={scope} />;
+export default function Page() {
+  return <ScopedDashboard sport="football"><FootballDashboard /></ScopedDashboard>;
 }
