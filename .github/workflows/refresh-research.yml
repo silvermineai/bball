@@ -202,7 +202,19 @@ jobs:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}
         run: |
           python -m unittest discover -s ncaa_scraper/tests -p 'test_publication_health.py'
-          python scripts/check-freshness.py --sport "$REFRESH_SPORT"
+          python scripts/check-freshness.py --sport "$REFRESH_SPORT" --report-file /tmp/research-freshness.json
+
+      - name: Retain source freshness report
+        # Keep the aggregate receipt/freshness report when a source or shape
+        # gate fails. This makes a stale upstream release diagnosable after
+        # the runner is gone instead of leaving only a compact log line.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-freshness-${{ github.run_id }}
+          path: /tmp/research-freshness.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Check basketball game readiness
         run: python scripts/check_basketball_game_readiness.py
@@ -465,6 +477,7 @@ jobs:
           esac
 
       - name: Record publication summary
+        if: always()
         run: |
           {
             echo "### Research publication completed"
@@ -475,4 +488,24 @@ jobs:
             echo "- CBBD recruiting capture requested: \`${{ inputs.capture_cbbd_recruiting || false }}\`"
             echo "- NCAA snapshot refresh requested: \`${{ github.event_name == 'schedule' || inputs.refresh_ncaa == true }}\`"
             echo "- Archive capture runs automatically after each successful Worker deployment."
+            if [ -s /tmp/research-freshness.json ]; then
+              echo "- Source freshness report: retained as the \`research-freshness-${GITHUB_RUN_ID}\` artifact."
+              python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/research-freshness.json').read_text())
+          errors = report.get('errors')
+          if report.get('ok') is True:
+              print('- Source freshness gate: passed')
+          elif isinstance(errors, list) and errors:
+              print('- Source freshness gate: failed')
+              for error in errors[:10]:
+                  print(f'  - {error}')
+          else:
+              print('- Source freshness gate: failed without a structured error list')
+          PY
+            else
+              echo "- Source freshness report: unavailable (freshness step did not start)."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
