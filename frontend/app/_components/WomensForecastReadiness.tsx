@@ -58,7 +58,7 @@ export default function WomensForecastReadiness() {
       <p className="note"><strong>{readiness.missing_inputs.length} retained historical assets are still required.</strong> The target schedule remains context only; it cannot train or calibrate a forecast.</p>
       <details>
         <summary>Show exact release assets to import</summary>
-        <ul className="plain-list">{readiness.missing_inputs.map((input) => <li key={`${input.dataset}-${input.season}`}><code>{input.release_tag}</code> · {input.asset}</li>)}</ul>
+        <ul className="plain-list">{readiness.missing_inputs.map((input) => <li key={`${input.dataset}-${input.season}`}>{input.dataset === "schedule" ? "Women’s schedule" : "Women’s team box"} · {input.season} edition</li>)}</ul>
       </details>
       <details>
         <summary>Show the publication steps</summary>
