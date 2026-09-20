@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  formatWomensPlayerStat,
+  unlistedWomensPlayerFields,
+  womensPlayerDetailCount,
+  womensPlayerDetailGroups,
+  womensPlayerFieldLabel,
+  type WomensPlayerStats,
+} from "../_lib/womens-player-detail";
 
 type Player = {
   player_id: string;
   name: string;
   team: string;
   position: string;
-  stats: Record<string, number | null | undefined>;
+  stats: WomensPlayerStats;
 };
 
 type Edition = {
@@ -90,7 +98,7 @@ export default function WomensBasketballPlayers() {
         </select>
       </div>
       <p className="note">{edition.coverage.players.toLocaleString()} retained players · showing {rows.length} matching rows · observed season {edition.observed_player_season} · captured {date(edition.generated_at)}.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">MPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th></tr></thead><tbody>{rows.map((player) => <tr key={player.player_id}><th scope="row">{player.name}<small>Player ID {player.player_id}</small></th><td>{player.team}</td><td>{player.position || "—"}</td><td className="numeric">{number(player.stats.gamesPlayed, 0)}</td><td className="numeric">{number(player.stats.avgPoints)}</td><td className="numeric">{number(player.stats.avgRebounds)}</td><td className="numeric">{number(player.stats.avgAssists)}</td><td className="numeric">{number(player.stats.avgMinutes)}</td><td className="numeric">{number(player.stats.fieldGoalPct)}</td><td className="numeric">{number(player.stats.threePointFieldGoalPct)}</td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">MPG</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th>Recorded line</th></tr></thead><tbody>{rows.map((player) => <tr key={player.player_id}><th scope="row">{player.name}<small>Player ID {player.player_id}</small></th><td>{player.team}</td><td>{player.position || "—"}</td><td className="numeric">{number(player.stats.gamesPlayed, 0)}</td><td className="numeric">{number(player.stats.avgPoints)}</td><td className="numeric">{number(player.stats.avgRebounds)}</td><td className="numeric">{number(player.stats.avgAssists)}</td><td className="numeric">{number(player.stats.avgMinutes)}</td><td className="numeric">{number(player.stats.fieldGoalPct)}</td><td className="numeric">{number(player.stats.threePointFieldGoalPct)}</td><td><details className="ranking-recorded-details"><summary>{womensPlayerDetailCount(player.stats)} recorded fields</summary><p className="note">Source values retained for this player-season row. A dash means the release did not contain a finite numeric value.</p>{womensPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{formatWomensPlayerStat(player.stats, key, kind)}</strong></span>)}</div></div>)}{unlistedWomensPlayerFields(player.stats).length ? <div><strong>Other retained fields</strong><div className="note">{unlistedWomensPlayerFields(player.stats).map((key) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{formatWomensPlayerStat(player.stats, key, "rate")}</strong></span>)}</div></div> : null}</details></td></tr>)}</tbody></table></div>
       {!rows.length ? <p className="empty">No retained players match these filters.</p> : null}
       <p className="muted">This table is an observed production file and does not infer eligibility, role, or future performance.</p>
     </>}
