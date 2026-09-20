@@ -267,6 +267,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             }}
           >
             <option value="fbs">FBS</option>
+            <option value="fcs">FCS</option>
             <option value="all">All imported divisions</option>
           </select>
         </label>

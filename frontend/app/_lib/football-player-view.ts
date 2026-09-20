@@ -24,7 +24,8 @@ export const footballPlayerCategories = [
   "puntReturns",
 ] as const;
 export type FootballPlayerCategory = (typeof footballPlayerCategories)[number];
-export type FootballPlayerDivision = "fbs" | "all";
+/** Native subdivisions present in the retained player editions. */
+export type FootballPlayerDivision = "fbs" | "fcs" | "all";
 
 /** Read the shared sport-desk scope before native FBS/FCS controls are applied. */
 export function parseFootballPlayerScope(search: string) {
@@ -87,7 +88,7 @@ export function parseFootballPlayerFilters(
     season,
     category:
       category && footballPlayerCategories.includes(category) ? category : "passing",
-    division: division === "all" ? "all" : "fbs",
+    division: division === "fcs" || division === "all" ? division : "fbs",
     query: params.get("q") || "",
     qualified: params.get("qualified") === "1",
     sort: requestedSort && footballPlayerSorts.includes(requestedSort) ? requestedSort : "rank",

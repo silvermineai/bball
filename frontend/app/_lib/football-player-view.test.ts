@@ -91,6 +91,21 @@ describe("football player board URL state", () => {
     });
   });
 
+  it("keeps the retained FCS player archive selectable", () => {
+    expect(parseFootballPlayerFilters("?division=fcs", seasons).division).toBe("fcs");
+    expect(
+      footballPlayerFilterSearch({
+        season: "2025",
+        category: "passing",
+        division: "fcs",
+        query: "",
+        qualified: false,
+        sort: "rank",
+        page: 0,
+      }),
+    ).toBe("?division=fcs");
+  });
+
   it("falls back to the current catalog and safe defaults for invalid state", () => {
     expect(
       parseFootballPlayerFilters(
