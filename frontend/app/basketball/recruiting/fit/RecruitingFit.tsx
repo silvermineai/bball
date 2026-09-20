@@ -5,7 +5,7 @@ import { useBasketballRelease } from "../../../_components/useBasketballRelease"
 import { downloadCsv, toCsv } from "../../../_lib/csv";
 import { fmt } from "../../../_lib/format";
 import type { BBRosters } from "../../../_lib/basketball-types";
-import { buildRecruitingFit, buildRoleSummaries, fitMetricLabels, focusDescriptions, focusLabels, prioritizeRoleSummaries, roleLabels, positionRole, type FitFocus, type FitRole, type FitTeam } from "../../../_lib/recruiting-fit";
+import { buildRecruitingFit, buildRoleSummaries, fitMetricLabels, focusDescriptions, focusLabels, parseRecruitingFitRosterPayload, prioritizeRoleSummaries, roleLabels, positionRole, type FitFocus, type FitRole, type FitTeam } from "../../../_lib/recruiting-fit";
 
 const focusValueLabels: Record<FitFocus, string> = { creation: "APG", shooting: "TS%", rebounding: "ORB/G · DRB/G", defense: "SPG", workload: "Minutes" };
 const componentDisplay = (key: string, value: number | null) => value == null ? "—" : ["ts", "efg", "ft_pct"].includes(key) ? `${fmt(value * 100)}%` : fmt(value);
@@ -46,9 +46,11 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     fetch("/api/basketball/research/rosters?season=2027", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The live roster observation edition is unavailable.");
-        return response.json() as Promise<BBRosters>;
+        return response.json() as Promise<unknown>;
       })
-      .then((value) => {
+      .then((payload) => {
+        const value = parseRecruitingFitRosterPayload(payload, 2027);
+        if (!value) throw new Error("The live roster observation edition failed source-ID integrity checks.");
         if (!controller.signal.aborted) setLiveRoster(value);
       })
       .catch((reason: unknown) => {

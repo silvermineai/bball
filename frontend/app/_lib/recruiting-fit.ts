@@ -1,4 +1,70 @@
-import type { BBRoster } from "./basketball-types";
+import type { BBRoster, BBRosters } from "./basketball-types";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function finiteNonNegative(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function validRosterPlayer(value: unknown): value is BBRoster {
+  if (!isRecord(value)
+    || typeof value.id !== "string" || value.id.trim() === ""
+    || typeof value.name !== "string" || value.name.trim() === ""
+    || typeof value.team_id !== "string" || value.team_id.trim() === ""
+    || typeof value.team !== "string" || value.team.trim() === ""
+    || !Array.isArray(value.previous_teams)
+    || !value.previous_teams.every((team) => typeof team === "string")
+    || typeof value.status !== "string" || value.status.trim() === "") return false;
+  if (value.position !== null && value.position !== undefined && typeof value.position !== "string") return false;
+  if (value.class_year !== null && value.class_year !== undefined && typeof value.class_year !== "string") return false;
+  if (value.height !== null && value.height !== undefined && typeof value.height !== "string") return false;
+  if (value.weight !== null && value.weight !== undefined && typeof value.weight !== "string") return false;
+  if (value.source_url !== null && value.source_url !== undefined && typeof value.source_url !== "string") return false;
+  if (value.prior_production !== null && value.prior_production !== undefined) {
+    if (!isRecord(value.prior_production)
+      || !finiteNonNegative(value.prior_production.games)
+      || !finiteNonNegative(value.prior_production.minutes)
+      || !Array.isArray(value.prior_production.teams)
+      || !value.prior_production.teams.every((team) => typeof team === "string")) return false;
+  }
+  return true;
+}
+
+/**
+ * Validate the live roster observation before it can replace the reviewed
+ * bundled release. The API is source evidence, so a malformed response is
+ * withheld as a whole; silently dropping bad rows would change denominators
+ * and could make a partial roster look complete.
+ */
+export function parseRecruitingFitRosterPayload(payload: unknown, expectedSeason = 2027): BBRosters | null {
+  if (!isRecord(payload)
+    || payload.season !== expectedSeason
+    || payload.previous_season !== expectedSeason - 1
+    || !finiteNonNegative(payload.teams_observed)
+    || !finiteNonNegative(payload.players_observed)
+    || !finiteNonNegative(payload.prior_players_not_observed)
+    || !isRecord(payload.status_counts)
+    || !Array.isArray(payload.players)) return null;
+  if (!Object.values(payload.status_counts).every(finiteNonNegative)) return null;
+  const ids = new Set<string>();
+  for (const player of payload.players) {
+    if (!validRosterPlayer(player)) return null;
+    if (ids.has(player.id)) return null;
+    ids.add(player.id);
+  }
+  if (payload.source !== null && payload.source !== undefined) {
+    if (!isRecord(payload.source) || typeof payload.source.dataset !== "string" || payload.source.dataset.trim() === "") return null;
+    for (const key of ["url", "fetched_at"]) {
+      const value = payload.source[key];
+      if (value !== null && value !== undefined && typeof value !== "string") return null;
+    }
+    const digest = payload.source.sha256;
+    if (digest !== null && digest !== undefined && (typeof digest !== "string" || !/^[a-f0-9]{64}$/i.test(digest))) return null;
+  }
+  return payload as unknown as BBRosters;
+}
 
 export type FitRole = "guard" | "wing" | "big" | "any";
 export type FitFocus = "creation" | "shooting" | "rebounding" | "defense" | "workload";

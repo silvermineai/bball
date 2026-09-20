@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecruitingFit, buildRoleSummaries, positionRole, prioritizeRoleSummaries } from "./recruiting-fit";
+import { buildRecruitingFit, buildRoleSummaries, parseRecruitingFitRosterPayload, positionRole, prioritizeRoleSummaries } from "./recruiting-fit";
 import type { BBRoster } from "./basketball-types";
 
 const player = (patch: Partial<BBRoster>): BBRoster => ({
@@ -7,6 +7,31 @@ const player = (patch: Partial<BBRoster>): BBRoster => ({
 });
 
 describe("recruiting fit", () => {
+  const liveRoster = (patch: Record<string, unknown> = {}) => ({
+    season: 2027,
+    previous_season: 2026,
+    teams_observed: 1,
+    players_observed: 1,
+    prior_players_not_observed: 0,
+    status_counts: { same_program: 1 },
+    players: [{ id: "source-42", name: "Source Player", team_id: "team-7", team: "Source Team", previous_teams: [], status: "same_program", position: "G", class_year: null, height: null, weight: null, source_url: null, prior_production: null }],
+    source: { dataset: "rosters", url: null, fetched_at: null, sha256: null },
+    ...patch,
+  });
+
+  it("accepts a complete roster edition and preserves source IDs", () => {
+    const parsed = parseRecruitingFitRosterPayload(liveRoster());
+    expect(parsed?.players[0]).toMatchObject({ id: "source-42", team_id: "team-7" });
+    expect(parsed?.source?.dataset).toBe("rosters");
+  });
+
+  it("withholds malformed or duplicate source rows instead of changing the fit denominator", () => {
+    expect(parseRecruitingFitRosterPayload(liveRoster({ season: 2026 }))).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({ players: [liveRoster().players[0], liveRoster().players[0]] }))).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({ source: { dataset: "rosters", url: null, fetched_at: null, sha256: "bad" } }))).toBeNull();
+    expect(parseRecruitingFitRosterPayload(liveRoster({ players: [{ ...liveRoster().players[0], name: "" }] }))).toBeNull();
+  });
+
   it("normalizes source positions into coach roles", () => {
     expect(positionRole("PG")).toBe("guard");
     expect(positionRole("SF")).toBe("wing");
