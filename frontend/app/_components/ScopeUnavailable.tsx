@@ -15,7 +15,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const sportName = sport === "basketball" ? "Women's basketball" : "football";
   const detail = isWomen
     ? scope.division === "1"
-      ? "The women’s source-native edition is now available for observed player production, roster context and upcoming games. Model predictions remain gated until a separate women’s fit is validated."
+      ? "The women’s source-native edition includes observed player production, roster context, upcoming games and a separately validated women’s forecast model."
       : "Women’s Division II and Division III rows are not imported yet. No Division I rows are substituted."
     : sport === "football"
       ? "The current football archive is FBS/FCS. Division II and Division III rows are not substituted with another division."

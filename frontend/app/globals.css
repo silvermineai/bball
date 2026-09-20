@@ -5702,6 +5702,18 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .scope-unavailable h1 { margin: 12px 0 16px; font-size: clamp(2.4rem, 5vw, 4.6rem); }
 .scope-unavailable p { max-width: 680px; color: var(--muted); line-height: 1.7; }
 .scope-unavailable-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 28px; }
+.readiness-state {
+  display: inline-block;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  font: 600 10px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.readiness-state-ready { color: #28603d; border-color: #8eb49a; background: #edf7ed; }
+.readiness-state-missing, .readiness-state-blocked { color: #9d3d25; border-color: #dca08e; background: #fff2ed; }
+.plain-list { margin: 12px 0 0; padding-left: 22px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.plain-list code { color: var(--ink); font: 10px "IBM Plex Mono", monospace; }
 .scope-snapshot { margin-top: 28px; max-width: 1180px; }
 .scope-snapshot-head { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; border-top: 1px solid var(--line); padding-top: 22px; }
 .scope-snapshot-head h2 { margin: 8px 0 8px; font-size: clamp(1.35rem, 2.8vw, 2rem); }
