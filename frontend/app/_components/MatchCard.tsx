@@ -3,6 +3,7 @@ import type { FootballEfficiencyScenario, Game } from "../_lib/data";
 import type { FootballCardIntel } from "../_lib/football-brief";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
+import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
   rushing: "Rush",
@@ -12,10 +13,12 @@ export default function MatchCard({
   game: g,
   efficiencyScenario,
   intel,
+  recruiting,
 }: {
   game: Game;
   efficiencyScenario?: FootballEfficiencyScenario;
   intel?: FootballCardIntel;
+  recruiting?: { home?: FootballRecruitingTeam; away?: FootballRecruitingTeam };
 }) {
   const p = g.prediction;
   return (
@@ -97,6 +100,26 @@ export default function MatchCard({
           <small className="football-card-intel-note">
             Prior-season source affiliation; this does not verify the current roster or availability.
           </small>
+        </section>
+      )}
+      {recruiting && (recruiting.home || recruiting.away) && (
+        <section className="football-card-intel" aria-label="Recruiting and returning production context">
+          <div className="football-card-intel-heading">
+            <strong>Personnel context</strong>
+            <span>Retained team-level recruiting edition</span>
+          </div>
+          <div className="football-card-intel-grid">
+            {[recruiting.away, recruiting.home].map((team) => team ? (
+              <div key={team.team_id}>
+                <h4>{team.team}</h4>
+                <ul>
+                  <li><strong>{team.talent_rank == null ? "—" : `#${team.talent_rank}`}</strong><small>Talent rank · {team.talent_composite == null ? "composite unavailable" : `${fmt(team.talent_composite, 1)} composite`}</small></li>
+                  <li><strong>{team.overall_returning == null ? "—" : `${fmt(team.overall_returning * 100, 1)}%`}</strong><small>Returning production · {team.n_returning == null ? "player count unavailable" : `${fmt(team.n_returning, 0)} players`}</small></li>
+                  <li><strong>{team.blue_chip_ratio == null ? "—" : `${fmt(team.blue_chip_ratio * 100, 1)}%`}</strong><small>Blue-chip ratio · {team.returning_estimated == null ? "estimate status unavailable" : team.returning_estimated ? "returning estimate" : "reported returning"}</small></li>
+                </ul>
+              </div>
+            ) : <div key="missing"><h4>Team personnel context</h4><p>Exact team-ID context unavailable.</p></div>)}</div>
+          <small className="football-card-intel-note">Personnel context is descriptive and season-scoped; it does not alter the primary forecast or establish eligibility, availability or starting roles.</small>
         </section>
       )}
       {efficiencyScenario && (

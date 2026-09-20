@@ -14,6 +14,7 @@ import {
 } from "../../_lib/live-football-forecasts";
 import type { LiveFootballMarketComparisonSet } from "../../_lib/live-football-forecasts";
 import type { FootballSlateIntel } from "../../_lib/football-brief";
+import { loadFootballRecruitingContext, type FootballRecruitingTeam } from "../../_lib/football-recruiting-context";
 import { comparisonQuoteSummary } from "../../_lib/market-display";
 import {
   matchesFootballMatchupDivision,
@@ -63,7 +64,8 @@ export default function MatchupBrowser({
     [liveModelId, setLiveModelId] = useState<string | null>(null),
     [liveError, setLiveError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, LiveFootballMarketComparisonSet> | null>(null),
-    [liveMarketError, setLiveMarketError] = useState("");
+    [liveMarketError, setLiveMarketError] = useState(""),
+    [recruitingContext, setRecruitingContext] = useState<Map<string, FootballRecruitingTeam> | null>(null);
   const activeGames = liveGames || games;
   const scopedGames = activeGames.filter((game) => matchesFootballMatchupDivision(game, division));
   const filteredRows = scopedGames.filter(
@@ -193,6 +195,13 @@ export default function MatchupBrowser({
       });
     return () => controller.abort();
   }, [liveModelId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadFootballRecruitingContext(controller.signal)
+      .then((context) => { if (!controller.signal.aborted) setRecruitingContext(context); })
+      .catch(() => { if (!controller.signal.aborted) setRecruitingContext(null); });
+    return () => controller.abort();
+  }, []);
   return (
     <>
       <div className="toolbar">
@@ -435,6 +444,10 @@ export default function MatchupBrowser({
               intel={matchupIntel ? {
                 playerSeason: matchupIntel.playerSeason,
                 programs: [matchupIntel.programs[g.away_id], matchupIntel.programs[g.home_id]].filter((program) => program != null),
+              } : undefined}
+              recruiting={recruitingContext ? {
+                away: recruitingContext.get(g.away_id),
+                home: recruitingContext.get(g.home_id),
               } : undefined}
             />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
