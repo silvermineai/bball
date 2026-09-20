@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   buildScopeHref,
   DIVISION_OPTIONS,
@@ -24,11 +23,12 @@ function selectedDivision(value: string | null): Division {
 
 export default function SportNavigation() {
   const pathname = usePathname() || "/";
-  const [currentSearch, setCurrentSearch] = useState("");
-  useEffect(() => {
-    setCurrentSearch(window.location.search);
-  }, [pathname]);
-  const searchParams = new URLSearchParams(currentSearch);
+  // Search params can change without the pathname changing (for example when
+  // switching from men's to women's basketball or from D1 to D2). Reading
+  // Next's reactive search params keeps the active tab and every generated
+  // scope link aligned with the URL after those transitions.
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams.toString() ? `?${searchParams.toString()}` : "";
   const currentSport = sportForPathname(pathname, searchParams.get("gender"));
   const config = SPORT_NAVIGATION[currentSport];
   // Men's and women's basketball are separate sport tabs. Football is a

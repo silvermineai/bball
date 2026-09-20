@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import "./globals.css";
 import GlobalSearch from "./_components/GlobalSearch";
 import SportNavigation from "./_components/SportNavigation";
@@ -40,11 +41,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <GlobalSearch />
           </div>
-          <SportNavigation />
+          <Suspense fallback={<div className="sport-nav-loading" aria-hidden="true" />}>
+            <SportNavigation />
+          </Suspense>
         </header>
-        <main id="main" className="page-wrap">
-          {children}
-        </main>
+        <Suspense fallback={<main id="main" className="page-wrap" aria-busy="true" />}>
+          <main id="main" className="page-wrap">
+            {children}
+          </main>
+        </Suspense>
         <footer className="site-footer">
           <div>
             <strong>Silvermine</strong>

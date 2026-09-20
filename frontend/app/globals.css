@@ -6166,6 +6166,11 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   background: #0a1f3b;
   color: #dce8f6;
 }
+.sport-nav-loading {
+  min-height: 94px;
+  border-top: 1px solid #294463;
+  background: #0a1f3b;
+}
 .sport-switcher,
 .sport-desk-row {
   max-width: 1400px;

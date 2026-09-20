@@ -1,32 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ScopeUnavailable from "./ScopeUnavailable";
-import { basketballScopeAvailable, footballScopeAvailable, parseSportScope, type SportScope } from "../_lib/sport-scope";
+import { basketballScopeAvailable, footballScopeAvailable, parseSportScopeSearch } from "../_lib/sport-scope";
 
 type Props = {
   sport: "basketball" | "football";
   children: React.ReactNode;
 };
 
-const DEFAULT_SCOPE: SportScope = { gender: "men", division: "1" };
-
 export default function ScopedDashboard({ sport, children }: Props) {
-  const [scope, setScope] = useState<SportScope>(DEFAULT_SCOPE);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setScope(parseSportScope({
-      gender: params.get("gender") || undefined,
-      division: params.get("division") || undefined,
-    }));
-    setHydrated(true);
-  }, []);
+  // This is intentionally reactive: gender/division links update the query
+  // string in place, so a mount-only window.location read would leave the
+  // dashboard on its previous scope.
+  const searchParams = useSearchParams();
+  const scope = parseSportScopeSearch(searchParams.toString());
 
   const available = sport === "basketball"
     ? basketballScopeAvailable(scope)
     : footballScopeAvailable(scope);
 
-  return hydrated && !available ? <ScopeUnavailable sport={sport} scope={scope} /> : children;
+  return !available ? <ScopeUnavailable sport={sport} scope={scope} /> : children;
 }

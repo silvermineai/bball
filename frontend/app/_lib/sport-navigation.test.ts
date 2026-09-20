@@ -28,6 +28,15 @@ describe("sport navigation", () => {
     expect(SPORT_NAVIGATION["womens-basketball"].available).toBe(true);
   });
 
+  it("keeps the core stat tabs consistent across each sport tab", () => {
+    const labels = Object.values(SPORT_NAVIGATION).map((config) => config.items.map((item) => item.label));
+    expect(labels).toEqual([
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
+    ]);
+  });
+
   it("does not offer a nonexistent women's football scope", () => {
     expect(sportSupportsGenderScope("football")).toBe(false);
     expect(sportSupportsGenderScope("mens-basketball")).toBe(true);

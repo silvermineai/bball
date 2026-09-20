@@ -17,6 +17,15 @@ export function parseSportScope(values?: SearchValues | null): SportScope {
   return { gender, division };
 }
 
+/** Parse the URL form used by the shared sport navigation. */
+export function parseSportScopeSearch(search: string): SportScope {
+  const params = new URLSearchParams(search);
+  return parseSportScope({
+    gender: params.get("gender") || undefined,
+    division: params.get("division") || undefined,
+  });
+}
+
 export function scopeLabel(scope: SportScope) {
   return `${scope.gender === "women" ? "Women's" : "Men's"} · D${scope.division}`;
 }
