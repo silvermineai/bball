@@ -1930,6 +1930,30 @@ describe("bball api", () => {
     expect(rowSql).toContain("ORDER BY value ASC, player_name ASC");
   });
 
+  it("exposes the two standardized components behind the impact index", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ total: 1 }),
+        all: vi.fn().mockResolvedValue({ results: [{ player_name: "Impact sample", rapm_z: 1.2, production_z: 0.8, value: 1, rank: 1 }] }),
+      })),
+      sql,
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-player-rankings?season=2026&metric=impact_index&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      metric: "impact_index",
+      rows: [{ rapm_z: 1.2, production_z: 0.8, value: 1 }],
+    });
+    const rankingSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("RANK() OVER"));
+    expect(rankingSql).toContain("AS rapm_z");
+    expect(rankingSql).toContain("AS production_z");
+    expect(rankingSql).toContain("rapm_net - rapm_mean");
+  });
+
   it("ranks NCAA personal fouls per game from retained source fields", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({

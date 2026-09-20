@@ -496,6 +496,8 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
     FROM derived d`;
   const scored = `
     SELECT s.*,
+      (rapm_net - rapm_mean) / NULLIF(rapm_sd, 0.0) AS rapm_z,
+      (per40_value - per40_mean) / NULLIF(per40_sd, 0.0) AS production_z,
       ((rapm_net - rapm_mean) / NULLIF(rapm_sd, 0.0) +
        (per40_value - per40_mean) / NULLIF(per40_sd, 0.0)) / 2.0 AS value
     FROM stats s
