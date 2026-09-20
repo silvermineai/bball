@@ -35,3 +35,57 @@ def test_missing_division_never_defaults_to_d2_or_d3():
     result = MODULE.build_readiness({"coverage": {}}, [{"game_id": 1, "away_non_div1_team": True}])
     assert {key: value["rows"] for key, value in result["divisions"].items()} == {"2": 0, "3": 0}
     assert result["non_division_one_schedule_signals"]["games"][0]["source_flag"] == "away_non_div1_team"
+
+
+def test_asset_audit_records_missing_labels_without_reclassifying_signals():
+    result = MODULE.build_readiness(
+        {"coverage": {}},
+        [],
+        [
+            {
+                "asset": "schedule_2027.parquet",
+                "rows": 10,
+                "division_fields": [],
+                "receipt": {"valid": True},
+            },
+            {
+                "asset": "player_2026.parquet",
+                "rows": 20,
+                "division_fields": [],
+                "receipt": {"valid": True},
+            },
+        ],
+    )
+    assert result["asset_audit"] == {
+        "status": "blocked_by_missing_explicit_division_labels",
+        "assets_inspected": 2,
+        "assets_with_explicit_division": 0,
+        "assets_with_valid_receipt": 2,
+        "explicit_division_fields": [],
+        "method": "Parquet schemas and immutable receipt sidecars were inspected; school names, conferences, and non-D1 flags are not classifiers.",
+    }
+    assert result["divisions"]["2"]["rows"] == result["divisions"]["3"]["rows"] == 0
+
+
+def test_next_input_contract_accepts_explicit_scope_and_rejects_conflicts():
+    receipt = {"url": "https://example.test/release.parquet", "sha256": "a" * 64}
+    row = {
+        "sport": "basketball",
+        "gender": "women",
+        "division": 2,
+        "season": 2026,
+        "team_id": "team-1",
+        "team_display_name": "Example",
+        "athlete_id": "athlete-1",
+        "athlete_display_name": "Player",
+        "stat_label": "PPG",
+        "value": 18.4,
+    }
+    assert MODULE.validate_labeled_release([row], receipt)["accepted"] is True
+    bad = {**row, "value": 19.1}
+    rejected = MODULE.validate_labeled_release([row, bad], receipt)
+    assert rejected["accepted"] is False
+    assert {error["code"] for error in rejected["errors"]} == {"conflicting_duplicate"}
+    missing = MODULE.validate_labeled_release([{**row, "division": None}], receipt)
+    assert missing["accepted"] is False
+    assert "missing_or_invalid_division" in {error["code"] for error in missing["errors"]}

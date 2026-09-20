@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "sport": "basketball",
   "gender": "women",
   "generated_at": "2026-09-20T09:13:00.073858Z",
@@ -12,6 +12,267 @@
     "observed_season": 2026,
     "target_season": 2027
   },
+  "asset_audit": {
+    "status": "blocked_by_missing_explicit_division_labels",
+    "assets_inspected": 13,
+    "assets_with_explicit_division": 0,
+    "assets_with_valid_receipt": 13,
+    "explicit_division_fields": [],
+    "method": "Parquet schemas and immutable receipt sidecars were inspected; school names, conferences, and non-D1 flags are not classifiers."
+  },
+  "retained_assets": [
+    {
+      "asset": "ncaa_wbb_shots_2026.parquet",
+      "dataset": "shots",
+      "season": 2026,
+      "rows": 708038,
+      "columns": 19,
+      "division_fields": [],
+      "identity_fields": [
+        "team_id",
+        "contest_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "78501d330551843c02d3705afc1f9979a921621da213f4b6caf74c7900484947",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/ncaa_wbb_shots/ncaa_wbb_shots_2026.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "player_season_stats_2026.parquet",
+      "dataset": "player_season",
+      "season": 2026,
+      "rows": 41919,
+      "columns": 16,
+      "division_fields": [],
+      "identity_fields": [
+        "athlete_id",
+        "athlete_display_name",
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "d4f2d9553f9bf54919fc71d68701b2a9c377b405e76cc13260ed18ca19b81999",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_player_season_stats/player_season_stats_2026.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "rosters_2027.parquet",
+      "dataset": "rosters",
+      "season": 2027,
+      "rows": 5616,
+      "columns": 36,
+      "division_fields": [],
+      "identity_fields": [
+        "team_id",
+        "team_display_name",
+        "athlete_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "e330827fdde82d9430972385fdd70b6ade3f5152d2436e06ecb2eb82decb80b8",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_rosters/rosters_2027.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "team_box_2023.parquet",
+      "dataset": "team_box",
+      "season": 2023,
+      "rows": 11630,
+      "columns": 54,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id",
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "3d58a562c464609c5ac56d405da4acfe354086ce3a524aebfbfa5b486b77f650",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2023.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "team_box_2024.parquet",
+      "dataset": "team_box",
+      "season": 2024,
+      "rows": 11796,
+      "columns": 56,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id",
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "c26fd030c10a8ef48b2bdda4b5e6f57d438479a66cad6e202f3cc6526d33b46d",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2024.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "team_box_2025.parquet",
+      "dataset": "team_box",
+      "season": 2025,
+      "rows": 11252,
+      "columns": 56,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id",
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "a3309f6334e6aaf6d9a2a458b3bfcff5b2b44bb57d5f155850d6b5680fc98f8f",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2025.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "team_box_2026.parquet",
+      "dataset": "team_box",
+      "season": 2026,
+      "rows": 12058,
+      "columns": 58,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id",
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "2312b7a7919de4530fabb81db0473a4d2aaf8596eed24bc87f2dd088ad839c7f",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_boxscores/team_box_2026.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "team_season_stats_2026.parquet",
+      "dataset": "team_season",
+      "season": 2026,
+      "rows": 25740,
+      "columns": 16,
+      "division_fields": [],
+      "identity_fields": [
+        "team_id",
+        "team_display_name"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "8baec5e2895145474a846807533d8d4c756acfb08fd88478c52d9962bfeb6f97",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_team_season_stats/team_season_stats_2026.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "wbb_schedule_2023.parquet",
+      "dataset": "schedule",
+      "season": 2023,
+      "rows": 5828,
+      "columns": 76,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "5a1765981b31a70343c0c464b41684bd5e745696fcd4a5a154e64f6346ee7b6b",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2023.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "wbb_schedule_2024.parquet",
+      "dataset": "schedule",
+      "season": 2024,
+      "rows": 5923,
+      "columns": 84,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "9de1c31785e06b580afca52bb341ca338b23372fa9bf4cdb2c05ad44b62ec6b6",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2024.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "wbb_schedule_2025.parquet",
+      "dataset": "schedule",
+      "season": 2025,
+      "rows": 5648,
+      "columns": 86,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "eeb544423579fc740f604573dc9edbc9779cf6a3c5fda71298660683f5cd8b4e",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2025.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "wbb_schedule_2026.parquet",
+      "dataset": "schedule",
+      "season": 2026,
+      "rows": 6054,
+      "columns": 95,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id"
+      ],
+      "non_d1_signal_fields": [],
+      "receipt": {
+        "sha256": "2b89a01c2a1f71cb978cfdaa4d9dbdf3eff4fb90b01b43f75df26b168d72e7e7",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2026.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    },
+    {
+      "asset": "wbb_schedule_2027.parquet",
+      "dataset": "schedule",
+      "season": 2027,
+      "rows": 2283,
+      "columns": 93,
+      "division_fields": [],
+      "identity_fields": [
+        "game_id"
+      ],
+      "non_d1_signal_fields": [
+        "away_non_div1_team"
+      ],
+      "receipt": {
+        "sha256": "d7186f8e8a5e75b65b349f98d2ca9ade5ab4b492f65c7deeb22cf988b3ef350d",
+        "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_schedules/wbb_schedule_2027.parquet",
+        "valid": true
+      },
+      "scope_status": "no_explicit_division_field"
+    }
+  ],
   "published": {
     "division": "1",
     "status": "published",
@@ -86,11 +347,22 @@
       "athlete_id",
       "athlete_display_name"
     ],
+    "required_receipt_fields": [
+      "url",
+      "sha256"
+    ],
+    "accepted_division_values": [
+      2,
+      3,
+      "2",
+      "3"
+    ],
     "acceptance_rules": [
       "Require an explicit source division value of 2 or 3 before publishing D2/D3 rows.",
       "Require stable team and athlete identifiers and a source receipt hash.",
       "Reject conflicting duplicate identity/stat rows instead of choosing a last row.",
-      "Keep unresolved non-D1 schedule signals outside D2/D3 counts until classified."
+      "Keep unresolved non-D1 schedule signals outside D2/D3 counts until classified.",
+      "Reject a release batch if any row is missing the required fields or if the same identity/stat key has conflicting values."
     ],
     "next_required_inputs": [
       "A lawful women’s D2/D3 schedule, team, and player release with explicit division labels.",
