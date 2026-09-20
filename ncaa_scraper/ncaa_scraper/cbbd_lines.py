@@ -29,7 +29,9 @@ def decimal_moneyline(value: object) -> float:
         number = float(value)
     except (TypeError, ValueError):
         raise ValueError("Invalid moneyline") from None
-    if number == 0 or number != number or abs(number) == float("inf"):
+    # CBBD exposes American moneylines. Require the conventional +/-100
+    # minimum so malformed values cannot become apparently valid decimal odds.
+    if number == 0 or number != number or abs(number) == float("inf") or abs(number) < 100:
         raise ValueError("Invalid moneyline")
     return 1 + (number / 100 if number > 0 else 100 / abs(number))
 

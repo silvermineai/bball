@@ -62,8 +62,9 @@ class EspnPickcenterTests(unittest.TestCase):
     def test_american_conversion_rejects_sentinels(self):
         self.assertAlmostEqual(american_to_decimal("+120"), 2.2)
         self.assertAlmostEqual(american_to_decimal("-140"), 1.7142857)
-        with self.assertRaises(ValueError):
-            american_to_decimal(0)
+        for value in (0, "+25", "-99", "NaN", "OFF"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                american_to_decimal(value)
 
     def test_parser_keeps_complete_future_markets_with_exact_identity(self):
         rows = parse_pickcenter(summary(), GAME, "2026-11-09T20:00:00Z", "receipt")

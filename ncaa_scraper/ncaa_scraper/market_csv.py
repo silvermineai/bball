@@ -12,6 +12,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import re
 import sqlite3
 from datetime import datetime
@@ -38,8 +39,8 @@ def decimal_price(row: dict[str, str], side: str) -> float | None:
     if not american:
         return None
     value = float(american)
-    if value == 0:
-        raise ValueError(f"{side}_american cannot be zero")
+    if not math.isfinite(value) or value == 0 or abs(value) < 100:
+        raise ValueError(f"{side}_american must be a valid +/-100-or-greater American price")
     return 1 + (value / 100 if value > 0 else 100 / abs(value))
 
 

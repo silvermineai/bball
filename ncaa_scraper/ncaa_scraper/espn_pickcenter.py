@@ -46,7 +46,10 @@ def american_to_decimal(value: object) -> float:
         number = float(str(value).strip().replace("+", "", 1))
     except (TypeError, ValueError):
         raise ValueError("Invalid American price") from None
-    if not finite(number) or number == 0:
+    # American odds are quoted at +/-100 or farther from zero. Values such as
+    # -1 or +25 are malformed source values, not valid prices that should be
+    # converted into decimal odds and admitted to the research ledger.
+    if not finite(number) or number == 0 or abs(number) < 100:
         raise ValueError("Invalid American price")
     result = 1 + (number / 100 if number > 0 else 100 / abs(number))
     if not finite(result) or result <= 1:

@@ -146,6 +146,21 @@ class MarketCsvTests(unittest.TestCase):
                 "2026-11-10T01:01:00Z",
             )
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
+
+    @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])
+    def test_import_rejects_nonstandard_american_prices(self, _schedules):
+        with self.assertRaisesRegex(ValueError, r"valid \+/-100-or-greater American price"):
+            import_rows(
+                self.conn,
+                "basketball",
+                [self.row(home_price="", home_american="-99")],
+                "e" * 64,
+                "lines.csv",
+                "Licensed Feed",
+                "https://provider.example/terms",
+                "2026-11-10T01:01:00Z",
+            )
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
         self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_receipts").fetchone()[0], 0)
 
     def test_read_csv_rejects_ambiguous_headers_and_surplus_cells(self):
