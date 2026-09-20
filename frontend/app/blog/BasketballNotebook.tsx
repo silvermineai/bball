@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { BBGame, BBRoster, BBRosters, BBRosterScenario, BBTeam, BBOverview } from "../_lib/basketball-types";
 import type { ScoutPlayer } from "../_lib/scouting-types";
+import type { ShotOption } from "../_lib/shooting";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
 import { date, fmt } from "../_lib/format";
 import { notebookFormMetrics, type NotebookRecentForm } from "./notebook-form";
 import { buildNotebookGameRead } from "./notebook-game-read";
 import { notebookModelValidation } from "./notebook-model-validation";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
+import { buildNotebookShotPrep } from "./notebook-shot-prep";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -46,6 +48,8 @@ export default function BasketballNotebook({
   recentForm,
   rosterSeason,
   rosterSource,
+  shotProfiles = [],
+  shotSeason,
   modelEvaluation,
   modelTrainingSeasons,
 }: {
@@ -62,6 +66,8 @@ export default function BasketballNotebook({
   recentForm: NotebookRecentForm | null;
   rosterSeason: number;
   rosterSource: BBRosters["source"];
+  shotProfiles?: ShotOption[];
+  shotSeason?: number;
   modelEvaluation?: BBOverview["model"]["evaluation"] | null;
   modelTrainingSeasons?: number[];
 }) {
@@ -104,6 +110,19 @@ export default function BasketballNotebook({
     { teamId: game.home_id, teamName: game.home_name, context: notebookRosterRoleContext(homeRosterPlayers, game.home_id, rosterSeason, rosterSource) },
   ];
   const rosterRolesReady = rosterRoleContexts.every((row) => row.context != null);
+  const shotPrepRows = shotSeason == null ? [] : [
+    {
+      teamId: game.away_id,
+      teamName: game.away_name,
+      rows: buildNotebookShotPrep(game.away_id, awayPlayers, shotProfiles, shotSeason),
+    },
+    {
+      teamId: game.home_id,
+      teamName: game.home_name,
+      rows: buildNotebookShotPrep(game.home_id, homePlayers, shotProfiles, shotSeason),
+    },
+  ];
+  const shotPrepCount = shotPrepRows.reduce((sum, group) => sum + group.rows.length, 0);
   const gameRead = buildNotebookGameRead(
     game,
     homeTeam,
@@ -370,6 +389,38 @@ export default function BasketballNotebook({
           ))}
         </div>
       </section>
+
+      {shotPrepCount > 0 && (
+        <section className="section" aria-labelledby="notebook-shot-prep">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Personnel → shot map / exact player IDs</div>
+              <h2 id="notebook-shot-prep">Turn the factor edge into a film drill.</h2>
+            </div>
+            <Link href="/basketball/shooting/">Open the full shooting lab →</Link>
+          </div>
+          <p className="note">
+            These links join the historical workload table to the retained NCAA
+            coordinate archive by exact player and team ID. The questions use
+            recorded attempt denominators to choose film; they do not predict a
+            current rotation or treat an archived shot map as availability.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Program / player</th><th>Recorded shot evidence</th><th>Preparation question</th><th>Drill-down</th></tr></thead>
+              <tbody>{shotPrepRows.flatMap((group) => group.rows.map((row) => (
+                <tr key={`${group.teamId}-${row.player.id}`}>
+                  <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(row.player.id)}&season=${row.player.season}`}>{row.player.name}</Link><small>{group.teamName} · {row.player.position || "Position unavailable"}</small></th>
+                  <td>{row.evidence}<small>{row.profile.name === row.player.name ? "Exact archive name" : `Archive label: ${row.profile.name}`}</small></td>
+                  <td>{row.question}</td>
+                  <td><Link className="button secondary" href={row.mapHref}>View court map ↗</Link></td>
+                </tr>
+              )))}</tbody>
+            </table>
+          </div>
+          <p className="note">Located coordinates are a subset of matched attempts; missing locations remain in the attempt denominator and are not imputed.</p>
+        </section>
+      )}
 
       <section className="section" aria-labelledby="notebook-roster-snapshot">
         <div className="section-heading">

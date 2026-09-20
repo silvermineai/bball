@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { BBOverview, BBRosters, BBRosterModel } from "./basketball-types";
 import type { RecruitingRelease } from "./recruiting";
+import type { ShotCatalog, ShotSeason } from "./shooting";
 import { getLedger } from "./research-data";
 import type { Comparison, Ledger } from "./research-types";
 export function getBasketball(): BBOverview {
@@ -28,6 +29,21 @@ export function getRosterModel(): BBRosterModel {
       "utf8",
     ),
   );
+}
+
+/** Return the retained shooting edition for an exact completed season. */
+export function getBasketballShootingSeason(season: number): ShotSeason | null {
+  const catalogPath = path.join(
+    process.cwd(),
+    "public/data/basketball/shooting-catalog.json",
+  );
+  const fallbackPath = path.join(process.cwd(), "public/data/basketball/shooting.json");
+  if (!fs.existsSync(catalogPath) && !fs.existsSync(fallbackPath)) return null;
+  const catalog = JSON.parse(
+    fs.readFileSync(fs.existsSync(catalogPath) ? catalogPath : fallbackPath, "utf8"),
+  ) as ShotCatalog;
+  const seasons = catalog.seasons ?? [catalog];
+  return seasons.find((entry) => entry.season === season) ?? null;
 }
 
 export function getRecruiting(): RecruitingRelease {
