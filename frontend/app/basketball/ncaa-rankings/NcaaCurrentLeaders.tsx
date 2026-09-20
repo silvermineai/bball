@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { parseSportScope, scopeLabel, type SportScope } from "../../_lib/sport-scope";
+import { lowerDivisionPlayerHref } from "../../_lib/division-archive-links";
 
 export type IndividualPlayer = {
   player_id: number;
@@ -103,7 +104,7 @@ function playerLabel(player: IndividualPlayer, scope: SportScope) {
   if (scope.division === "1") {
     return <Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(player.player_id)}&season=2026`}>{player.name} →</Link>;
   }
-  return <span>{player.name}</span>;
+  return <Link href={lowerDivisionPlayerHref(scope.division, player.player_id)}>{player.name} →</Link>;
 }
 
 export default function NcaaCurrentLeaders({ players }: { players: IndividualPlayer[] }) {
