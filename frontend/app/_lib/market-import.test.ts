@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { marketImportMatchesGame, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
+import { marketImportMatchesGame, marketImportPrediction, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
 describe("market import preflight", () => {
+  it("uses the primary forecast before an explicitly labelled cold-start fallback", () => {
+    const fallback = { home_score: 70, away_score: 68, home_margin: 2, total: 138, pace: 68, home_win_probability: 0.55, margin_low: -12, margin_high: 16, estimate_type: "cold_start" as const };
+    const primary = { ...fallback, home_margin: 5, estimate_type: undefined };
+    expect(marketImportPrediction({ prediction: primary, fallback_prediction: fallback })).toBe(primary);
+    expect(marketImportPrediction({ prediction: null, fallback_prediction: fallback })).toBe(fallback);
+    expect(marketImportPrediction(null)).toBeNull();
+  });
+
   const previewRow = (overrides: Partial<ReturnType<typeof parseMarketImportRows>[number]> = {}) => ({
     gameId: "401",
     market: "spreads",

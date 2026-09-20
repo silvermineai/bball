@@ -35,6 +35,16 @@ type ExactScheduleGame = Pick<
   "id" | "starts_at" | "home_name" | "away_name"
 >;
 
+type ForecastGame = Pick<
+  import("./basketball-types").BBGame,
+  "prediction" | "fallback_prediction"
+>;
+
+/** Use the published primary estimate, or its explicitly labelled cold-start fallback. */
+export function marketImportPrediction(game: ForecastGame | null): import("./basketball-types").BBPrediction | null {
+  return game?.prediction ?? game?.fallback_prediction ?? null;
+}
+
 /**
  * Use the same identity boundary as the server importer for a local preview.
  * Timestamp strings may use different ISO precision or offsets, so compare
