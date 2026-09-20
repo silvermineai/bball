@@ -8,6 +8,7 @@ export type RankingEvidenceMetric =
   | "tov_rate"
   | "three_rate"
   | "three_pct"
+  | "two_pct"
   | "ft_pct"
   | "rim_pct"
   | "mid_pct"
@@ -55,7 +56,7 @@ export type RankingEvidence = { primary: string; detail: string };
 
 const evidenceMetrics = new Set<string>([
   "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate",
-  "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate",
+  "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate",
   "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate",
   "transition_share", "unassisted_share",
 ]);
@@ -105,6 +106,14 @@ export function rankingEvidence(metric: string, row: RankingEvidenceRow): Rankin
     case "tov_rate": return pair(row.turnovers, "TO", row.possessions, "POSS");
     case "three_rate": return pair(row.tpa, "3PA", row.fga, "FGA");
     case "three_pct": return pair(row.tpm, "3PM", row.tpa, "3PA");
+    case "two_pct": {
+      if (!available(row.fgm) || !available(row.fga) || !available(row.tpm) || !available(row.tpa)) return null;
+      const makes = row.fgm - row.tpm;
+      const attempts = row.fga - row.tpa;
+      return attempts > 0 && makes >= 0 && makes <= attempts
+        ? pair(makes, "2PM", attempts, "2PA")
+        : null;
+    }
     case "ft_pct": return pair(row.ftm, "FTM", row.fta, "FTA");
     case "rim_pct": return pair(row.rim_makes, "RIM MAKES", row.rim_attempts, "RIM ATT");
     case "mid_pct": return pair(row.mid_makes, "MID MAKES", row.mid_attempts, "MID ATT");

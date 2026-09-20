@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankingPlayerShotMapHref, rankingRecordedDetail, rankingStatLine, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
+import { accuracySample, rankingPlayerShotMapHref, rankingRecordedDetail, rankingStatLine, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
 
 describe("NCAA ranking stat context", () => {
   it("hands exact ranking IDs directly to the player shot profile", () => {
@@ -30,6 +30,13 @@ describe("NCAA ranking stat context", () => {
       unassisted_points: 100,
     })).toBe("FG 100/200 · 3P 32/80 · FT 40/50 · ORB 20 · DRB 80 · Poss 120 · Team poss 800 · Rim 30/50 · Mid 10/30 · Trans pts 40 · Unast pts 100");
     expect(rankingRecordedDetail({ fga: 200, fta: null })).toBe("");
+  });
+
+  it("exports the exact residual makes and attempts behind two-point accuracy", () => {
+    const row = { fgm: 150, fga: 300, tpm: 48, tpa: 120 } as NcaaRankingResult["rows"][number];
+    expect(accuracySample("two_pct", row)).toEqual([102, 180]);
+    expect(accuracySample("two_pct", { ...row, tpa: null })).toEqual([null, null]);
+    expect(accuracySample("two_pct", { ...row, fgm: 40 })).toEqual([null, null]);
   });
 });
 

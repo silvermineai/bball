@@ -18,6 +18,10 @@ describe("NCAA ranking source evidence", () => {
       primary: "48 3PM",
       detail: "120 3PA",
     });
+    expect(rankingEvidence("two_pct", { fgm: 150, fga: 300, tpm: 48, tpa: 120 })).toEqual({
+      primary: "102 2PM",
+      detail: "180 2PA",
+    });
     expect(rankingEvidence("tov_rate", { turnovers: 37, possessions: 412.5 })).toEqual({
       primary: "37 TO",
       detail: "412.5 POSS",
@@ -32,6 +36,8 @@ describe("NCAA ranking source evidence", () => {
     expect(rankingEvidence("efg", { fgm: 150, tpm: null, fga: 300 })).toBeNull();
     expect(rankingEvidence("stocks40", { steals: 30, blocks: undefined, minutes: 600 })).toBeNull();
     expect(rankingEvidence("half_ts", { half_points: 280, half_fga: 230, half_fta: null })).toBeNull();
+    expect(rankingEvidence("two_pct", { fgm: 150, fga: 300, tpm: 48, tpa: null })).toBeNull();
+    expect(rankingEvidence("two_pct", { fgm: 40, fga: 200, tpm: 48, tpa: 100 })).toBeNull();
   });
 
   it("does not add an evidence column to directly recorded ranking totals", () => {

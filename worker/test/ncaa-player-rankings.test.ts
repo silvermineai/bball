@@ -7,6 +7,11 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("half_ts")).toBe("half_fga");
   });
 
+  it("derives two-point accuracy from all four retained shooting totals and qualifies by two-point attempts", () => {
+    expect(metricExpression("two_pct")).toBe("CASE WHEN (fga - tpa) > 0 AND (fgm - tpm) >= 0 AND (fgm - tpm) <= (fga - tpa) THEN 100.0 * (fgm - tpm) / (fga - tpa) ELSE NULL END");
+    expect(volumeColumn("two_pct")).toBe("(fga - tpa)");
+  });
+
   it("returns a retryable status when the rankings catalog is unavailable", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await ncaaPlayerRankings.request(
@@ -224,5 +229,41 @@ describe("NCAA player rankings availability", () => {
       total: 1,
       rows: [expect.objectContaining({ player_id: "8", value: 2 })],
     });
+  });
+
+  it("uses exact two-point attempts for the fallback qualification and withholds incomplete or impossible rows", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const player = {
+      division: 1,
+      team_ncaa_id: 42,
+      team_name: "Example U",
+      games: 20,
+      mins: 600,
+    };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { ...player, player_id: 7, name: "Qualified", fgm: 150, fga: 300, tpm: 48, tpa: 120 },
+        { ...player, player_id: 8, name: "Small Sample", fgm: 70, fga: 150, tpm: 35, tpa: 100 },
+        { ...player, player_id: 9, name: "Missing Three Attempts", fgm: 120, fga: 240, tpm: 30, tpa: null },
+        { ...player, player_id: 10, name: "Impossible Residual", fgm: 40, fga: 200, tpm: 48, tpa: 100 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=two_pct&minGames=5&minMinutes=200&minVolume=100",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<Record<string, unknown>> };
+    expect(body.total).toBe(1);
+    expect(body.rows).toEqual([expect.objectContaining({
+      player_id: "7",
+      value: 100 * 102 / 180,
+      fgm: 150,
+      fga: 300,
+      tpm: 48,
+      tpa: 120,
+    })]);
   });
 });

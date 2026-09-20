@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -99,7 +99,7 @@ const publishedMinutes = (player: PublishedIndividualPlayer): number | null => {
 
 const publishedSupportedMetrics = new Set<Metric>([
   "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg",
-  "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "ft_pct", "ft_rate",
+  "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "two_pct", "ft_pct", "ft_rate",
   "orb40", "drb40", "reb40", "points_poss", "ast_rate", "tov_rate", "three_rate",
 ]);
 
@@ -137,6 +137,12 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "tov_rate": return possessions != null && possessions > 0 && turnovers != null ? 100 * turnovers / possessions : null;
     case "three_rate": return fga != null && fga > 0 && tpa != null ? 100 * tpa / fga : null;
     case "three_pct": return finite(player.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
+    case "two_pct": {
+      if (fga == null || fgm == null || tpa == null || tpm == null) return null;
+      const attempts = fga - tpa;
+      const makes = fgm - tpm;
+      return attempts > 0 && makes >= 0 && makes <= attempts ? 100 * makes / attempts : null;
+    }
     case "ft_pct": return finite(player.ft_pct) ?? (fta != null && fta > 0 && finite(player.ftm) != null ? 100 * (finite(player.ftm) as number) / fta : null);
     case "ft_rate": return fga != null && fga > 0 && fta != null ? 100 * fta / fga : null;
     case "orb40": return minutes != null && minutes > 0 && orb != null ? 40 * orb / minutes : null;
@@ -194,6 +200,11 @@ async function publishedRankingsFallback(
     const volume = (player: PublishedIndividualPlayer): number | null | undefined => {
       if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(player.fga);
       if (args.metric === "three_pct") return finite(player.tpa);
+      if (args.metric === "two_pct") {
+        const fga = finite(player.fga);
+        const tpa = finite(player.tpa);
+        return fga != null && tpa != null && fga >= tpa ? fga - tpa : null;
+      }
       if (args.metric === "ft_pct") return finite(player.fta);
       if (args.metric === "ast_to") return finite(player.tov);
       if (["tov_rate", "ast_rate", "points_poss"].includes(args.metric)) return finite(player.o_poss);
@@ -339,6 +350,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   tov_rate: "CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END",
   three_rate: "CASE WHEN fga > 0 THEN 100.0 * tpa / fga ELSE NULL END",
   three_pct: "CASE WHEN tpa > 0 THEN 100.0 * tpm / tpa ELSE NULL END",
+  two_pct: "CASE WHEN (fga - tpa) > 0 AND (fgm - tpm) >= 0 AND (fgm - tpm) <= (fga - tpa) THEN 100.0 * (fgm - tpm) / (fga - tpa) ELSE NULL END",
   ft_pct: "CASE WHEN fta > 0 THEN 100.0 * ftm / fta ELSE NULL END",
   rim_pct: "CASE WHEN rim_attempts > 0 THEN 100.0 * rim_makes / rim_attempts ELSE NULL END",
   mid_pct: "CASE WHEN mid_attempts > 0 THEN 100.0 * mid_makes / mid_attempts ELSE NULL END",
@@ -367,6 +379,7 @@ const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss
 export const volumeColumn = (metric: Metric) => {
   if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
   if (metric === "three_pct") return "tpa";
+  if (metric === "two_pct") return "(fga - tpa)";
   if (metric === "ft_pct") return "fta";
   if (metric === "rim_pct") return "rim_attempts";
   if (metric === "mid_pct") return "mid_attempts";
