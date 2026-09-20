@@ -3,6 +3,7 @@ import {
   divisionPlayerDetailGroups,
   retainedPlayerDetailCount,
   retainedPlayerValue,
+  sortDivisionPlayers,
 } from "./division-player-detail";
 
 describe("division player retained detail", () => {
@@ -20,5 +21,18 @@ describe("division player retained detail", () => {
     expect(retainedPlayerValue(player, "fga")).toBeNull();
     expect(retainedPlayerValue(player, "tov")).toBeNull();
     expect(retainedPlayerDetailCount(player)).toBe(1);
+  });
+
+  it("keeps recorded zero values distinct from unavailable values when sorting", () => {
+    const rows = [
+      { division: 2, player_id: 3, name: "Unavailable", dbl_dbl: null },
+      { division: 2, player_id: 2, name: "Zero", dbl_dbl: 0 },
+      { division: 2, player_id: 1, name: "Leader", dbl_dbl: 4 },
+    ];
+    expect(sortDivisionPlayers(rows, "dbl_dbl").map((row) => row.name)).toEqual([
+      "Leader",
+      "Zero",
+      "Unavailable",
+    ]);
   });
 });

@@ -89,3 +89,25 @@ export function retainedPlayerDetailCount(player: DivisionPlayer): number {
     .flatMap((group) => group.fields)
     .filter(([key]) => retainedPlayerValue(player, key) != null).length;
 }
+
+/**
+ * Sort a lower-division player table by a retained field without collapsing a
+ * recorded zero into the unavailable bucket. Missing values remain at the
+ * bottom and ties use the stable source identity for deterministic paging.
+ */
+export function sortDivisionPlayers(
+  players: readonly DivisionPlayer[],
+  metric: string,
+): DivisionPlayer[] {
+  return [...players].sort((left, right) => {
+    const leftValue = retainedPlayerValue(left, metric);
+    const rightValue = retainedPlayerValue(right, metric);
+    if (leftValue == null && rightValue != null) return 1;
+    if (leftValue != null && rightValue == null) return -1;
+    if (leftValue != null && rightValue != null && rightValue !== leftValue) {
+      return rightValue - leftValue;
+    }
+    return left.name.localeCompare(right.name)
+      || String(left.player_id).localeCompare(String(right.player_id));
+  });
+}

@@ -8,6 +8,7 @@ import {
   divisionPlayerDetailGroups,
   retainedPlayerDetailCount,
   retainedPlayerValue,
+  sortDivisionPlayers,
   type DivisionPlayerWithEvidence,
 } from "../_lib/division-player-detail";
 
@@ -37,11 +38,10 @@ export default function DivisionPlayerArchive({ division }: { division: "2" | "3
   }, []);
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return (publication?.players || [])
+    const filtered = (publication?.players || [])
       .filter((player) => String(player.division) === division)
-      .filter((player) => !needle || `${player.name} ${player.team_name || ""} ${player.player_id}`.toLowerCase().includes(needle))
-      .sort((left, right) => (Number(right[metric]) || -Infinity) - (Number(left[metric]) || -Infinity) || left.name.localeCompare(right.name))
-      .slice(0, 100);
+      .filter((player) => !needle || `${player.name} ${player.team_name || ""} ${player.player_id}`.toLowerCase().includes(needle));
+    return sortDivisionPlayers(filtered, metric).slice(0, 100);
   }, [division, metric, publication, query]);
   const total = publication?.players.filter((player) => String(player.division) === division).length || 0;
   const selected = useMemo(
