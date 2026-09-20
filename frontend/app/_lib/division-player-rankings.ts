@@ -22,11 +22,15 @@ export const divisionRankingMetrics = [
   ["ppg", "PPG", "Points per game"],
   ["rpg", "RPG", "Rebounds per game"],
   ["apg", "APG", "Assists per game"],
+  ["spg", "SPG", "Steals per game"],
+  ["bpg", "BPG", "Blocks per game"],
   ["mpg", "MPG", "Minutes per game"],
   ["fg_pct", "FG%", "Field-goal percentage"],
   ["three_pct", "3P%", "Three-point percentage"],
   ["ft_pct", "FT%", "Free-throw percentage"],
   ["threes_pg", "3PG", "Three-pointers per game"],
+  ["ast_to", "A/TO", "Assist-to-turnover ratio"],
+  ["dbl_dbl", "DD", "Double-doubles"],
 ] as const;
 
 export type DivisionRankingMetric = (typeof divisionRankingMetrics)[number][0];

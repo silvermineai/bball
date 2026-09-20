@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { divisionMetricValue, rankDivisionPlayers } from "./division-player-rankings";
+import { divisionMetricLabel, divisionMetricValue, rankDivisionPlayers } from "./division-player-rankings";
 
 const players = [
   { player_id: 1, division: 2, name: "A Guard", team_name: "North", games: 20, ppg: 22, ppg_rank: 3 },
@@ -10,6 +10,12 @@ const players = [
 ];
 
 describe("division player rankings", () => {
+  it("exposes recorded defensive and context fields in the metric catalog", () => {
+    expect(divisionMetricLabel("spg")).toBe("Steals per game");
+    expect(divisionMetricLabel("bpg")).toBe("Blocks per game");
+    expect(divisionMetricLabel("ast_to")).toBe("Assist-to-turnover ratio");
+    expect(divisionMetricLabel("dbl_dbl")).toBe("Double-doubles");
+  });
   it("filters to the requested division and keeps source rank separate from local rank", () => {
     const result = rankDivisionPlayers(players, { division: "2", metric: "ppg", minGames: 5 });
     expect(result.total).toBe(2);
