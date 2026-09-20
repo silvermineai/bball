@@ -30,6 +30,8 @@ const BASKETBALL_ITEMS: SportNavItem[] = [
 const BASKETBALL_EXPLORE: SportNavItem[] = [
   { label: "Coach desk", href: "/basketball/coach/", match: [] },
   { label: "Shot locations", href: "/basketball/shooting/", match: [] },
+  { label: "Player shooting profiles", href: "/basketball/ncaa-shooting/", match: ["/basketball/ncaa-shooting"] },
+  { label: "Recruiting fit", href: "/basketball/recruiting/fit/", match: ["/basketball/recruiting/fit"] },
   { label: "Lineups", href: "/basketball/lineups/", match: [] },
   { label: "Impact", href: "/basketball/impact/", match: [] },
   { label: "Journal", href: "/basketball/blog/", match: ["/basketball/blog", "/blog"] },

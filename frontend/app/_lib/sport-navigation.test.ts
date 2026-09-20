@@ -37,6 +37,16 @@ describe("sport navigation", () => {
     ]);
   });
 
+  it("surfaces validated player shooting and recruiting-fit labs in Explore", () => {
+    const explore = SPORT_NAVIGATION["mens-basketball"].explore;
+    const shooting = explore.find((item) => item.label === "Player shooting profiles");
+    const recruitingFit = explore.find((item) => item.label === "Recruiting fit");
+    expect(shooting?.href).toBe("/basketball/ncaa-shooting/");
+    expect(recruitingFit?.href).toBe("/basketball/recruiting/fit/");
+    expect(isNavItemActive("/basketball/ncaa-shooting/", shooting!)).toBe(true);
+    expect(isNavItemActive("/basketball/recruiting/fit/", recruitingFit!)).toBe(true);
+  });
+
   it("does not offer a nonexistent women's football scope", () => {
     expect(sportSupportsGenderScope("football")).toBe(false);
     expect(sportSupportsGenderScope("mens-basketball")).toBe(true);
