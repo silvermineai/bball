@@ -72,6 +72,12 @@ export function matchupFactorEdges(game: BBGame) {
     .filter((edge): edge is { key: BBFactorKey; value: number } => edge.value != null && Number.isFinite(edge.value));
 }
 
+/** Keep the context vintage visible beside every factor edge. */
+export function matchupFactorContextLabel(game: BBGame) {
+  const season = game.matchup_factors?.season;
+  return Number.isInteger(season) ? `Four Factor context · ${season}` : "Four Factor context unavailable";
+}
+
 export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
@@ -270,7 +276,7 @@ export default function LiveDashboardForecastTable({
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric"><strong>{fmt(prediction.pace)}</strong><small>possessions</small></td>
                 <td className="numeric">
-                  {strongestFactorEdge(game) || "—"}<small>largest Four Factor edge</small>
+                  {strongestFactorEdge(game) || "—"}<small>{matchupFactorContextLabel(game)}</small>
                   {factorEdges.length > 0 && <details className="forecast-factor-details"><summary>All four</summary>{factorEdges.map((edge) => <small key={edge.key}>{factorLabels[edge.key]} {edge.value >= 0 ? "H" : "A"} {fmt(Math.abs(edge.value) * 100, 1)}</small>)}</details>}
                 </td>
                 <td className="numeric">{homeRating || awayRating ? <details className="forecast-factor-details"><summary>Show ratings</summary>{homeRating ? <small>H {fmt(homeRating.adj_off)} off · {fmt(homeRating.adj_def)} def · {fmt(homeRating.adj_net)} net</small> : <small>H unavailable</small>}{awayRating ? <small>A {fmt(awayRating.adj_off)} off · {fmt(awayRating.adj_def)} def · {fmt(awayRating.adj_net)} net</small> : <small>A unavailable</small>}</details> : "—"}</td>

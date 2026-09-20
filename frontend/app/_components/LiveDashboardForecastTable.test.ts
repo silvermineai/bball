@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastCsvRows, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -93,6 +93,16 @@ describe("matchupFactorEdges", () => {
       { key: "orb", value: -0.018 },
       { key: "ftr", value: 0 },
     ]);
+  });
+});
+
+describe("matchupFactorContextLabel", () => {
+  it("labels the retained context season instead of implying it is current-season data", () => {
+    expect(matchupFactorContextLabel({
+      ...games[0],
+      matchup_factors: { season: 2026, factors: {}, edges: {} },
+    })).toBe("Four Factor context · 2026");
+    expect(matchupFactorContextLabel(games[0])).toBe("Four Factor context unavailable");
   });
 });
 
