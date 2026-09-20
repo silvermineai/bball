@@ -87,5 +87,6 @@ describe("matchup personnel client", () => {
     };
     expect(parseMatchupPersonnel(withRecruiting, { gameId: "401", season: 2027, homeId: "1", awayId: "2" }).home.players[0].recruiting).toMatchObject({ rank: 42, source_sha256: "b".repeat(64) });
     expect(() => parseMatchupPersonnel({ ...withRecruiting, home: { ...withRecruiting.home, players: [{ ...withRecruiting.home.players[0], recruiting: { ...withRecruiting.home.players[0].recruiting, rank: 0 } }] } }, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
+    expect(() => parseMatchupPersonnel({ ...withRecruiting, home: { ...withRecruiting.home, players: [{ ...withRecruiting.home.players[0], recruiting: { ...withRecruiting.home.players[0].recruiting, season: 2026 } }] } }, { gameId: "401", season: 2027, homeId: "1", awayId: "2" })).toThrow(/did not match/);
   });
 });

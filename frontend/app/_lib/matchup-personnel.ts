@@ -164,7 +164,7 @@ function validStint(value: unknown): value is MatchupPersonnelStint {
     && nullableNumber(stint.box_dbpm);
 }
 
-function validPlayer(value: unknown): value is MatchupPersonnelPlayer {
+function validPlayer(value: unknown, expectedRecruitingSeason: number): value is MatchupPersonnelPlayer {
   const player = record(value);
   return !!player
     && typeof player.team_id === "string"
@@ -175,20 +175,20 @@ function validPlayer(value: unknown): value is MatchupPersonnelPlayer {
     && nullableString(player.height)
     && typeof player.status === "string"
     && statuses.has(player.status)
-    && (player.recruiting == null || validRecruitingEvidence(player.recruiting))
+    && (player.recruiting == null || validRecruitingEvidence(player.recruiting, expectedRecruitingSeason))
     && nullableNumber(player.prior_games)
     && nullableNumber(player.prior_minutes)
     && Array.isArray(player.prior_stints)
     && player.prior_stints.every(validStint);
 }
 
-function validRecruitingEvidence(value: unknown): value is MatchupRecruitingEvidence {
+function validRecruitingEvidence(value: unknown, expectedSeason: number): value is MatchupRecruitingEvidence {
   const evidence = record(value);
   const rank = (candidate: unknown) => candidate == null || (typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0);
   return !!evidence
     && typeof evidence.season === "number"
     && Number.isInteger(evidence.season)
-    && evidence.season >= 2025
+    && evidence.season === expectedSeason
     && rank(evidence.rank)
     && rank(evidence.position_rank)
     && (evidence.grade == null || (typeof evidence.grade === "number" && Number.isFinite(evidence.grade)))
@@ -197,7 +197,7 @@ function validRecruitingEvidence(value: unknown): value is MatchupRecruitingEvid
     && (evidence.source_sha256 == null || (typeof evidence.source_sha256 === "string" && /^[a-f0-9]{64}$/i.test(evidence.source_sha256)));
 }
 
-function validSide(value: unknown, expectedId: string): value is MatchupPersonnelSide {
+function validSide(value: unknown, expectedId: string, expectedRecruitingSeason: number): value is MatchupPersonnelSide {
   const side = record(value);
   const countKeys = [
     "listed_players", "returning_players", "incoming_players", "new_to_dataset_players",
@@ -208,7 +208,7 @@ function validSide(value: unknown, expectedId: string): value is MatchupPersonne
     || typeof side.team !== "string"
     || !countKeys.every((key) => typeof side[key] === "number" && Number.isInteger(side[key]) && Number(side[key]) >= 0)
     || !Array.isArray(side.players)
-    || !side.players.every((player) => validPlayer(player) && player.team_id === expectedId)) return false;
+    || !side.players.every((player) => validPlayer(player, expectedRecruitingSeason) && player.team_id === expectedId)) return false;
   const players = side.players as MatchupPersonnelPlayer[];
   const hasStats = (player: MatchupPersonnelPlayer) => player.prior_stints.some((stint) =>
     Object.values(stint.stats).some((field) => field != null)
@@ -260,8 +260,8 @@ export function parseMatchupPersonnel(
     || !nullableString(game.away_name)
     || typeof payload.identity_policy !== "string"
     || sourceReceipts == null
-    || !validSide(payload.home, expected.homeId)
-    || !validSide(payload.away, expected.awayId)
+    || !validSide(payload.home, expected.homeId, expected.season)
+    || !validSide(payload.away, expected.awayId, expected.season)
     || !coverageKeys.every((key) => typeof coverage[key] === "number" && Number.isInteger(coverage[key]) && Number(coverage[key]) >= 0)
     || coverage.listed_players !== payload.home.listed_players + payload.away.listed_players
     || coverage.players_with_prior_minutes !== payload.home.players_with_prior_minutes + payload.away.players_with_prior_minutes
