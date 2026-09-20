@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getBasketball,
+  getBasketballShootingSeason,
   getRecruiting,
   getRosters,
 } from "../../../_lib/basketball-data";
@@ -25,6 +26,7 @@ import type { Metric, ScoutProfile } from "../../../_lib/scouting-types";
 import BriefNotebook from "../BriefNotebook";
 import ManualMarketCheck from "../ManualMarketCheck";
 import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
+import { buildNotebookShotPrep } from "../../../blog/notebook-shot-prep";
 
 const emptySplit = () => ({
   games: 0,
@@ -180,6 +182,13 @@ export default async function Page({
   const evidence = briefEvidence(g, d, home, away, recruiting, ledger, rosters),
     headToHead = headToHeadSummary(home, away),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
+  const shotSeason = d.season - 1;
+  const shotProfiles = getBasketballShootingSeason(shotSeason)?.players || [];
+  const shotPrep = evidence.programs.map(({ profile, personnel }) => ({
+    profile,
+    rows: buildNotebookShotPrep(profile.id, personnel, shotProfiles, shotSeason),
+  }));
+  const shotPrepCount = shotPrep.reduce((sum, group) => sum + group.rows.length, 0);
   const tasks = [
     ...evidence.pressures.map(
       (point) =>
@@ -724,6 +733,60 @@ export default async function Page({
           ))}
         </div>
       </section>
+      {shotPrepCount > 0 && (
+        <section className="section" aria-labelledby="brief-shot-prep">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">05A / Personnel → shot map</div>
+              <h2 id="brief-shot-prep">Give the factor edge a film assignment.</h2>
+            </div>
+            <Link href="/basketball/shooting/">Open the shooting lab →</Link>
+          </div>
+          <p className="note brief-explainer">
+            These rows join the historical contributors above to the retained
+            NCAA shot archive by exact player and team ID. Attempt and located
+            counts stay visible so the question follows the evidence. This is
+            historical preparation context, not a projected rotation or a
+            forecast input.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Program / player</th>
+                  <th>Recorded shot evidence</th>
+                  <th>Question for film</th>
+                  <th>Drill-down</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shotPrep.flatMap(({ profile, rows }) =>
+                  rows.map((row) => (
+                    <tr key={`${profile.id}-${row.player.id}`}>
+                      <th scope="row">
+                        <Link href={`/basketball/player/?id=${encodeURIComponent(row.player.id)}&season=${row.player.season}`}>
+                          {row.player.name}
+                        </Link>
+                        <small>{profile.name} · {row.player.position || "Position unavailable"}</small>
+                      </th>
+                      <td>
+                        {row.evidence}
+                        <small>{row.profile.name === row.player.name ? "Exact archive name" : `Archive label: ${row.profile.name}`}</small>
+                      </td>
+                      <td>{row.question}</td>
+                      <td><Link className="button secondary" href={row.mapHref}>View court map ↗</Link></td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Located coordinates are a subset of matched attempts. Missing
+            locations remain in the attempt denominator and are not imputed.
+          </p>
+        </section>
+      )}
       <section className="section">
         <div className="section-heading">
           <div>
