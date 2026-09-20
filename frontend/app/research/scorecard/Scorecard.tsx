@@ -84,7 +84,7 @@ export default function Scorecard() {
       })
       .catch((e) => {
         if (e.name === "AbortError") return;
-        fetch("/data/research/ledger.json", { signal: c.signal })
+        fetch("/data/research/ledger-client.json", { signal: c.signal })
           .then((r) => {
             if (!r.ok) throw Error("The research ledger could not be loaded.");
             return r.json();

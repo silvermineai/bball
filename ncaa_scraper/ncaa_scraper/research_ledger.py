@@ -53,6 +53,21 @@ def brief_bundle(report):
     }
 
 
+def client_ledger(report):
+    """Return the scorecard edition without the append-only version history.
+
+    ``versions`` is useful for server-side matchup audit pages, but it can be
+    tens of megabytes larger than the game-level scorecard. Cloudflare Static
+    Assets has a per-file limit, so keep the browser fallback small while
+    retaining the complete version history in the local edition and D1.
+    """
+    return {
+        key: value
+        for key, value in report.items()
+        if key != "versions"
+    }
+
+
 def digest(value):
     return hashlib.sha256(encoded(value).encode()).hexdigest()
 
@@ -808,6 +823,7 @@ def main():
         )
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "ledger.json").write_text(encoded(report))
+    (OUT / "ledger-client.json").write_text(encoded(client_ledger(report)))
     (OUT / "briefs.json").write_text(encoded(brief_bundle(report)))
     if args.sql:
         export_sql(conn, args.sql)

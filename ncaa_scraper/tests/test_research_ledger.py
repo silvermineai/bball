@@ -12,6 +12,7 @@ from ncaa_scraper.odds_feed import configured_odds_key, fetch, ingest, match_eve
 from ncaa_scraper.research_ledger import (
     ROOT,
     build_report,
+    client_ledger,
     export_sql,
     forecast_registration_games,
     observe_state,
@@ -128,6 +129,14 @@ class LedgerTests(unittest.TestCase):
 
     def report(self, now="2026-09-05T19:00:00Z"):
         return build_report(self.c, now)
+
+    def test_client_ledger_keeps_scorecard_rows_without_version_history(self):
+        report = self.report()
+        report["versions"] = [{"id": "audit-only"}]
+        client = client_ledger(report)
+        self.assertIn("games", client)
+        self.assertIn("sports", client)
+        self.assertNotIn("versions", client)
 
     def test_registration_is_immutable_and_timezone_canonical(self):
         register(self.c, "football", game(), model(), T0, T1)
