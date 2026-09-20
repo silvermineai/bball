@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketCaptureStatusDetail, marketCaptureStatusLabel } from "./market-availability";
+import { marketCaptureNextStep, marketCaptureStatusDetail, marketCaptureStatusLabel } from "./market-availability";
 
 describe("market capture availability", () => {
   it("distinguishes an unpriced capture from validation failures", () => {
@@ -11,5 +11,11 @@ describe("market capture availability", () => {
   it("keeps unknown and missing statuses explicit", () => {
     expect(marketCaptureStatusLabel(undefined)).toBe("Quote availability is not resolved");
     expect(marketCaptureStatusDetail("no_eligible_summaries")).toContain("No upcoming game summary");
+  });
+
+  it("gives an empty capture a lawful next step without inventing a quote", () => {
+    expect(marketCaptureNextStep("no_quotes_published")).toContain("authorized CSV template");
+    expect(marketCaptureNextStep("quotes_failed_validation")).toContain("exact game IDs");
+    expect(marketCaptureNextStep(undefined)).toContain("missing evidence stays unavailable");
   });
 });

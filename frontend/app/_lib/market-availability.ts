@@ -34,3 +34,19 @@ export function marketCaptureStatusDetail(status: MarketCaptureStatus | null | u
       return "The capture did not report enough detail to classify quote availability.";
   }
 }
+
+/** Give an empty capture a concrete next action without treating absence as a quote. */
+export function marketCaptureNextStep(status: MarketCaptureStatus | null | undefined): string {
+  switch (status) {
+    case "no_eligible_summaries":
+      return "Wait for a confirmed future game window, then run the bounded capture again; no line is inferred from the schedule.";
+    case "no_quotes_published":
+      return "Use the authorized CSV template for a licensed export, or rerun capture when the provider publishes a complete pregame market.";
+    case "quotes_failed_validation":
+      return "Correct the rejected rows using exact game IDs, participants, and pregame capture/update clocks before importing again.";
+    case "validated_quotes":
+      return "Open the forecast record to inspect the qualifying model-to-line comparisons.";
+    default:
+      return "Use the authorized CSV template with exact game IDs and pregame clocks; missing evidence stays unavailable.";
+  }
+}

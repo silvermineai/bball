@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import { normalizeMarketSeason } from "../../_lib/market-view";
-import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
+import { marketCaptureNextStep, marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 
 type Meta = {
   seasons: number[];
@@ -222,6 +222,7 @@ export default function Markets() {
 
   const pages = useMemo(() => Math.max(1, Math.ceil((data?.total || 0) / 40)), [data]);
   const captureStatus = meta?.research_capture?.market_status;
+  const captureNextStep = marketCaptureNextStep(captureStatus);
   return (
     <section className="section" aria-label="Historical market archive">
       <div className="paper-panel brief-archive-note">
@@ -295,10 +296,12 @@ export default function Markets() {
               that a game had no line. The prospective scorecard stays clean
               until a feed ID, timing clocks and exact participants arrive.</>}</>}
             </p>
+            <p className="note"><strong>Next lawful step:</strong> {captureNextStep}</p>
             <div className="button-row">
               <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>
                 {sport === "basketball" ? "Open forecast lab + line checker →" : "Open football scorecard →"}
               </a>
+              {sport === "basketball" && <a className="button secondary" href="/data/research/market-import-template.csv" download>Download authorized CSV template ↓</a>}
               <a className="hero-link" href="#csv-import">Read the authorized import path →</a>
             </div>
           </div>
