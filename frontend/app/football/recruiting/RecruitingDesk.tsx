@@ -6,7 +6,7 @@ import { date, fmt } from "../../_lib/format";
 
 type View = "rosters" | "recruits" | "talent" | "returning";
 type Receipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
-type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }> };
+type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }>; coverage?: { completeness: "not_established"; note: string } };
 type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; raw?: Record<string, unknown>; record_key?: string };
 type Result = {
   view: View;
@@ -100,6 +100,7 @@ export default function RecruitingDesk() {
       <div className="hero-actions"><Link className="button" href="/football/matchups/">Open matchup preparation ↗</Link><Link className="hero-link" href="/football/source-stats/">Inspect every raw source field →</Link></div>
     </div>
     <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>{labels[view]} in view</span></div><div><strong>{meta?.seasons.length || "—"}</strong><span>Retained seasons</span></div><div><strong>{meta?.datasets.filter((item) => item.season === Number(season)).reduce((sum, item) => sum + item.rows, 0).toLocaleString() || "—"}</strong><span>Selected-season personnel rows</span></div><div><strong>{selectedReceipt ? date(selectedReceipt.fetched_at) : "—"}</strong><span>Edition retrieval clock</span></div></div>
+    {meta?.coverage && <section className="paper-panel" aria-label="Football recruiting coverage boundary" style={{ marginBottom: 22 }}><div className="section-heading" style={{ marginBottom: 10 }}><div><div className="eyebrow">Recruiting evidence boundary</div><h2>National completeness is not established.</h2></div><span className="note">Receipt-backed archive</span></div><p className="note">{meta.coverage.note} Use the view filters to inspect the actual roster, commitment, talent and returning-production rows; missing rows remain unavailable evidence.</p></section>}
     <div className="toolbar">
       <label className="control"><span>PERSONNEL VIEW</span><select value={view} onChange={(event) => updateView(event.target.value as View)}>{Object.entries(labels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
       <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setPage(0); setSeason(event.target.value); }}>{(meta?.seasons || [2026]).map((item) => <option key={item} value={item}>{item}{item === 2026 ? " · current source" : ""}</option>)}</select></label>

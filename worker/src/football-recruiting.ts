@@ -147,6 +147,10 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
           return receipt?.url && receipt.fetched_at && receipt.sha256 ? [{ dataset: row.dataset, season: row.season, url: String(receipt.url), fetched_at: String(receipt.fetched_at), sha256: String(receipt.sha256) }] : [];
         }),
         views: Object.entries(views).map(([view, value]) => ({ view, dataset: value.dataset, label: value.label })),
+        coverage: {
+          completeness: "not_established",
+          note: "Counts describe receipt-backed retained source rows; the archive does not assert complete national recruiting coverage.",
+        },
       });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));

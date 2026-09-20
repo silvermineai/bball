@@ -54,6 +54,6 @@ describe("football recruiting desk", () => {
     const prepare = vi.fn((sql: string) => ({ all: async () => ({ results: sql.includes("DISTINCT season") ? [{ season: 2026 }] : sql.includes("count(*)") ? [{ dataset: "team_talent", season: 2026, rows: 1 }] : [{ dataset: "team_talent", season: 2026, receipt_json: receipt }] }) }));
     const response = await footballRecruiting.request("/?meta=1", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ seasons: [2026], receipts: [{ dataset: "team_talent", sha256: "a".repeat(64) }] });
+    await expect(response.json()).resolves.toMatchObject({ seasons: [2026], receipts: [{ dataset: "team_talent", sha256: "a".repeat(64) }], coverage: { completeness: "not_established" } });
   });
 });

@@ -19,6 +19,8 @@ import { fmt } from "../../_lib/format";
 import { comparisonParams } from "../../_lib/player-comparison";
 import { publicArchiveArticle } from "../../_lib/public-text";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
+import RecruitingCoverageBoundary from "../../_components/RecruitingCoverageBoundary";
+import { assessRecruitingCoverage } from "../../_lib/recruiting-coverage";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
   if (!player) return <span className="note">No recorded player in this evidence set</span>;
@@ -79,6 +81,13 @@ export default function Page() {
       ),
     ).map(publicArchiveArticle);
   const productionComparisons = recruitingRosterProductionComparisons(data, rosters);
+  const recruitingCoverage = assessRecruitingCoverage({
+    coverage: data.coverage,
+    peopleCount: data.people.length,
+    eventCount: data.events.length,
+    sourceCount: data.sources.length,
+    directoryProgramCount: programDirectory.length,
+  });
   const continuityRows = (rosters.team_summaries || [])
     .filter((row) => row.represented_prior_minutes > 0)
     .sort((a, b) => b.represented_prior_minutes - a.represented_prior_minutes || a.team.localeCompare(b.team))
@@ -115,6 +124,16 @@ export default function Page() {
       </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
+      <RecruitingCoverageBoundary
+        assessment={recruitingCoverage}
+        edition={data.edition}
+        counts={{
+          players: data.coverage.players,
+          events: data.coverage.events,
+          sources: data.coverage.sources,
+          historicalLinks: data.coverage.historical_links,
+        }}
+      />
       <section className="section" aria-labelledby="roster-continuity">
         <div className="section-heading">
           <div>
