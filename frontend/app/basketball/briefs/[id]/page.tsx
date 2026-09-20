@@ -29,6 +29,7 @@ import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
 import { buildNotebookShotPrep } from "../../../blog/notebook-shot-prep";
 import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
+import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
 
 const emptySplit = () => ({
   games: 0,
@@ -195,14 +196,14 @@ export default async function Page({
     evidence.pressures,
     evidence.programs.map(({ profile, personnel }) => ({ profile, personnel })),
   );
-  const tasks = [
-    ...evidence.pressures.map(
-      (point) =>
-        `${point.offense} offense vs ${point.defense}: review ${point.factor.label.toLowerCase()}.`,
-    ),
-    "Confirm current availability and the expected rotation with dated school evidence.",
-    "Check the forecast record and capture time before using a market comparison.",
-  ];
+  const tasks = buildPreparationChecklist({
+    pressureLabels: evidence.pressures.map((point) => point.factor.label),
+    shotPrepCount,
+    factorPersonnelCount: factorPersonnel.length,
+    forecastType: p.estimate_type === "cold_start" ? "cold_start" : "primary",
+    marginLow: p.margin_low,
+    marginHigh: p.margin_high,
+  });
   const record = evidence.ledger,
     quotes = record && !record.exclusion ? record.comparisons : [],
     publisherArticles = relatedPublisherArticles(g),
