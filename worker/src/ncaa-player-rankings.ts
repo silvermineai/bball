@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -156,6 +156,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "half_ts":
     case "rim_rate":
     case "transition_share":
+    case "unassisted_rate":
     case "unassisted_share":
     case "rapm_net":
     case "orapm":
@@ -315,6 +316,7 @@ const aggregate = (where: string) => `
     ${sourceSum("mida")} AS mid_attempts,
     ${sourceSum("midm")} AS mid_makes,
     ${sourceSum("pts_trans")} AS transition_points,
+    ${sourceSum("fga_unast")} AS unassisted_attempts,
     ${sourceSum("pts_unast")} AS unassisted_points,
     ${sourceSum("pts_half")} AS half_points,
     ${sourceSum("fga_half")} AS half_fga,
@@ -363,6 +365,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   poss_share: "CASE WHEN team_possessions > 0 THEN 100.0 * possessions / team_possessions ELSE NULL END",
   rim_rate: "CASE WHEN fga > 0 THEN 100.0 * rim_attempts / fga ELSE NULL END",
   transition_share: "CASE WHEN points > 0 THEN 100.0 * transition_points / points ELSE NULL END",
+  unassisted_rate: "CASE WHEN fga > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= fga THEN 100.0 * unassisted_attempts / fga ELSE NULL END",
   unassisted_share: "CASE WHEN points > 0 THEN 100.0 * unassisted_points / points ELSE NULL END",
   rapm_net: "rapm_net",
   orapm: "orapm",
@@ -377,7 +380,7 @@ const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "or
 const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" || metric === "topg" ? "asc" : "desc";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 export const volumeColumn = (metric: Metric) => {
-  if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
+  if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate" || metric === "unassisted_rate") return "fga";
   if (metric === "three_pct") return "tpa";
   if (metric === "two_pct") return "(fga - tpa)";
   if (metric === "ft_pct") return "fta";

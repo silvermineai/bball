@@ -30,6 +30,10 @@ describe("NCAA ranking source evidence", () => {
       primary: "400 PLAYER POSS",
       detail: "2,000 TEAM POSS",
     });
+    expect(rankingEvidence("unassisted_rate", { unassisted_attempts: 96, fga: 240 })).toEqual({
+      primary: "96 UNAST FGA",
+      detail: "240 FGA",
+    });
   });
 
   it("withholds evidence when any required source input is unavailable", () => {
@@ -38,6 +42,7 @@ describe("NCAA ranking source evidence", () => {
     expect(rankingEvidence("half_ts", { half_points: 280, half_fga: 230, half_fta: null })).toBeNull();
     expect(rankingEvidence("two_pct", { fgm: 150, fga: 300, tpm: 48, tpa: null })).toBeNull();
     expect(rankingEvidence("two_pct", { fgm: 40, fga: 200, tpm: 48, tpa: 100 })).toBeNull();
+    expect(rankingEvidence("unassisted_rate", { unassisted_attempts: null, fga: 240 })).toBeNull();
   });
 
   it("does not add an evidence column to directly recorded ranking totals", () => {

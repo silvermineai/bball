@@ -21,6 +21,7 @@ export type RankingEvidenceMetric =
   | "poss_share"
   | "rim_rate"
   | "transition_share"
+  | "unassisted_rate"
   | "unassisted_share";
 
 export type RankingEvidenceRow = {
@@ -46,6 +47,7 @@ export type RankingEvidenceRow = {
   mid_attempts?: number | null;
   mid_makes?: number | null;
   transition_points?: number | null;
+  unassisted_attempts?: number | null;
   unassisted_points?: number | null;
   half_points?: number | null;
   half_fga?: number | null;
@@ -58,7 +60,7 @@ const evidenceMetrics = new Set<string>([
   "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate",
   "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "ft_rate", "ast_rate",
   "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate",
-  "transition_share", "unassisted_share",
+  "transition_share", "unassisted_rate", "unassisted_share",
 ]);
 
 export const hasRankingEvidence = (metric: string) => evidenceMetrics.has(metric);
@@ -126,6 +128,7 @@ export function rankingEvidence(metric: string, row: RankingEvidenceRow): Rankin
     case "poss_share": return pair(row.possessions, "PLAYER POSS", row.team_possessions, "TEAM POSS");
     case "rim_rate": return pair(row.rim_attempts, "RIM ATT", row.fga, "FGA");
     case "transition_share": return pair(row.transition_points, "TRANS PTS", row.points, "PTS");
+    case "unassisted_rate": return pair(row.unassisted_attempts, "UNAST FGA", row.fga, "FGA");
     case "unassisted_share": return pair(row.unassisted_points, "UNAST PTS", row.points, "PTS");
     default: return null;
   }

@@ -12,6 +12,11 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("two_pct")).toBe("(fga - tpa)");
   });
 
+  it("derives self-created shot share from exact unassisted and total attempts", () => {
+    expect(metricExpression("unassisted_rate")).toBe("CASE WHEN fga > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= fga THEN 100.0 * unassisted_attempts / fga ELSE NULL END");
+    expect(volumeColumn("unassisted_rate")).toBe("fga");
+  });
+
   it("returns a retryable status when the rankings catalog is unavailable", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const response = await ncaaPlayerRankings.request(

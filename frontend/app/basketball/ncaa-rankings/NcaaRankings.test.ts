@@ -27,8 +27,9 @@ describe("NCAA ranking stat context", () => {
       offensive_rebounds: 20, defensive_rebounds: 80, possessions: 120,
       team_possessions: 800, rim_makes: 30, rim_attempts: 50,
       mid_makes: 10, mid_attempts: 30, transition_points: 40,
+      unassisted_attempts: 120,
       unassisted_points: 100,
-    })).toBe("FG 100/200 · 3P 32/80 · FT 40/50 · ORB 20 · DRB 80 · Poss 120 · Team poss 800 · Rim 30/50 · Mid 10/30 · Trans pts 40 · Unast pts 100");
+    })).toBe("FG 100/200 · 3P 32/80 · FT 40/50 · ORB 20 · DRB 80 · Poss 120 · Team poss 800 · Rim 30/50 · Mid 10/30 · Trans pts 40 · Unast FGA 120 · Unast pts 100");
     expect(rankingRecordedDetail({ fga: 200, fta: null })).toBe("");
   });
 
