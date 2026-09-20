@@ -104,6 +104,61 @@ describe("ESPN recruiting rankings", () => {
     expect(contextQuery?.[0]).toContain("WHERE r.season=? AND r.edition=c.edition");
   });
 
+  it("adds raw same-position peer counts to an exact athlete response", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn((...args: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("AS peer_total")
+            ? {
+                athlete_id: "260236", position: "SF", edition: "edition-1",
+                target_height_inches: 79, target_weight_pounds: 205,
+                peer_total: 84, position_ranked_total: 61,
+                height_recorded: 72, height_below: 50, height_equal: 8, average_height_inches: 77.4,
+                weight_recorded: 70, weight_below: 43, weight_equal: 5, average_weight_pounds: 196.2,
+              }
+            : sql.includes("AS class_total")
+              ? { class_total: 383, class_committed_total: 132, class_ranked_total: 301, class_grade_total: 302 }
+              : sql.includes("WITH cohort_rows")
+                ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+                : sql.includes("SELECT edition")
+                  ? { edition: "edition-1", captured_at: "2026-09-19T00:00:00Z" }
+                  : { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 }),
+          all: vi.fn(async () => ({ results: sql.includes("SELECT r.athlete_id")
+            ? [{ athlete_id: "260236", name: "Oneal Delancy", position: "SF", height_inches: 79, weight_pounds: 205, rank: 36, school_ids_json: "[]" }]
+            : [] })),
+          args,
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&athlete_id=260236&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { peer_context: Record<string, unknown> };
+
+    expect(response.status).toBe(200);
+    expect(body.peer_context).toEqual({
+      season: 2027,
+      athlete_id: "260236",
+      edition: "edition-1",
+      position: "SF",
+      target_height_inches: 79,
+      target_weight_pounds: 205,
+      peers: 84,
+      position_ranked: 61,
+      height_recorded: 72,
+      height_below: 50,
+      height_equal: 8,
+      average_height_inches: 77.4,
+      weight_recorded: 70,
+      weight_below: 43,
+      weight_equal: 5,
+      average_weight_pounds: 196.2,
+    });
+    const peerQuery = sqlCalls.find((sql) => sql.includes("AS peer_total"));
+    expect(peerQuery).toContain("r.edition=t.edition");
+    expect(peerQuery).toContain("NULLIF(upper(trim(r.position)),'')=t.position");
+  });
+
   it("filters a program prospect board by exact retained school or commitment ID", async () => {
     const bind = vi.fn(() => ({
       first: vi.fn(async () => ({ total: 2, committed_total: 1, ranked_total: 2, grade_total: 2 })),
@@ -125,7 +180,7 @@ describe("ESPN recruiting rankings", () => {
     ];
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("ORDER BY captured_at ASC")) return { bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: history })) })) };
-      if (sql.includes("SELECT r.athlete_id")) return { bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: [{ athlete_id: "272415", name: "Danny Abass", rank: 31, school_ids_json: "[]" }] })) })) };
+      if (sql.includes("SELECT r.athlete_id,r.name")) return { bind: vi.fn(() => ({ all: vi.fn(async () => ({ results: [{ athlete_id: "272415", name: "Danny Abass", rank: 31, school_ids_json: "[]" }] })) })) };
       if (sql.includes("WITH current_rows")) return { bind: vi.fn(() => ({ first: vi.fn(async () => ({ total: 1, new_to_release: 0, moved_up: 1, moved_down: 0, unchanged: 0, rank_unavailable: 0 })) })) };
       return { bind: vi.fn(() => ({ first: vi.fn(async () => sql.includes("bb_espn_recruiting_current") && sql.includes("SELECT edition") ? { edition: "september", captured_at: "2026-09-01T00:00:00Z" } : sql.includes("count(*)") ? { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 } : { tied_rank_values: 0, tied_rows: 0 }), all: vi.fn(async () => ({ results: [] })) })) };
     });

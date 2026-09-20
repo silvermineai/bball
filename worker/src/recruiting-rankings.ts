@@ -106,6 +106,35 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE r.season=? AND r.edition=c.edition`,
     ).bind(season).first<{ class_total: number; class_committed_total: number | null; class_ranked_total: number | null; class_grade_total: number | null }>(), DB_TIMEOUT_MS) : null;
+    const peerContext = athlete_id ? await withTimeout(db.prepare(
+      `WITH target AS (
+        SELECT r.athlete_id,
+               NULLIF(upper(trim(r.position)),'') AS position,
+               r.height_inches,
+               r.weight_pounds,
+               c.edition
+          FROM bb_espn_recruiting r
+          JOIN bb_espn_recruiting_current c ON c.season=r.season AND c.edition=r.edition
+         WHERE r.season=? AND r.athlete_id=?
+         LIMIT 1
+      )
+      SELECT t.athlete_id,t.position,t.height_inches AS target_height_inches,
+             t.weight_pounds AS target_weight_pounds,t.edition,
+             count(r.athlete_id) AS peer_total,
+             sum(CASE WHEN r.position_rank IS NOT NULL AND r.position_rank > 0 THEN 1 ELSE 0 END) AS position_ranked_total,
+             sum(CASE WHEN r.height_inches IS NOT NULL AND r.height_inches > 0 THEN 1 ELSE 0 END) AS height_recorded,
+             sum(CASE WHEN r.height_inches IS NOT NULL AND r.height_inches > 0 AND t.height_inches IS NOT NULL AND r.height_inches < t.height_inches THEN 1 ELSE 0 END) AS height_below,
+             sum(CASE WHEN r.height_inches IS NOT NULL AND r.height_inches > 0 AND t.height_inches IS NOT NULL AND r.height_inches = t.height_inches THEN 1 ELSE 0 END) AS height_equal,
+             avg(CASE WHEN r.height_inches IS NOT NULL AND r.height_inches > 0 THEN r.height_inches END) AS average_height_inches,
+             sum(CASE WHEN r.weight_pounds IS NOT NULL AND r.weight_pounds > 0 THEN 1 ELSE 0 END) AS weight_recorded,
+             sum(CASE WHEN r.weight_pounds IS NOT NULL AND r.weight_pounds > 0 AND t.weight_pounds IS NOT NULL AND r.weight_pounds < t.weight_pounds THEN 1 ELSE 0 END) AS weight_below,
+             sum(CASE WHEN r.weight_pounds IS NOT NULL AND r.weight_pounds > 0 AND t.weight_pounds IS NOT NULL AND r.weight_pounds = t.weight_pounds THEN 1 ELSE 0 END) AS weight_equal,
+             avg(CASE WHEN r.weight_pounds IS NOT NULL AND r.weight_pounds > 0 THEN r.weight_pounds END) AS average_weight_pounds
+        FROM target t
+        JOIN bb_espn_recruiting r ON r.season=? AND r.edition=t.edition
+         AND NULLIF(upper(trim(r.position)),'')=t.position
+       GROUP BY t.athlete_id,t.position,t.height_inches,t.weight_pounds,t.edition`,
+    ).bind(season, athlete_id, season).first<Record<string, string | number | null>>(), DB_TIMEOUT_MS) : null;
     const fieldCoverage = await withTimeout(db.prepare(
       `SELECT count(*) AS total,
               sum(CASE WHEN NULLIF(TRIM(r.position),'') IS NOT NULL THEN 1 ELSE 0 END) AS position,
@@ -258,6 +287,24 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         committed: Number(classContext.class_committed_total || 0),
         ranked: Number(classContext.class_ranked_total || 0),
         graded: Number(classContext.class_grade_total || 0),
+      } : undefined,
+      peer_context: peerContext ? {
+        season,
+        athlete_id: String(peerContext.athlete_id || ""),
+        edition: String(peerContext.edition || ""),
+        position: peerContext.position == null ? null : String(peerContext.position),
+        target_height_inches: peerContext.target_height_inches == null ? null : Number(peerContext.target_height_inches),
+        target_weight_pounds: peerContext.target_weight_pounds == null ? null : Number(peerContext.target_weight_pounds),
+        peers: Number(peerContext.peer_total || 0),
+        position_ranked: Number(peerContext.position_ranked_total || 0),
+        height_recorded: Number(peerContext.height_recorded || 0),
+        height_below: Number(peerContext.height_below || 0),
+        height_equal: Number(peerContext.height_equal || 0),
+        average_height_inches: peerContext.average_height_inches == null ? null : Number(peerContext.average_height_inches),
+        weight_recorded: Number(peerContext.weight_recorded || 0),
+        weight_below: Number(peerContext.weight_below || 0),
+        weight_equal: Number(peerContext.weight_equal || 0),
+        average_weight_pounds: peerContext.average_weight_pounds == null ? null : Number(peerContext.average_weight_pounds),
       } : undefined,
       field_coverage: {
         total: Number(fieldCoverage?.total || count?.total || 0),

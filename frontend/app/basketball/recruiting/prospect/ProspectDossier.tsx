@@ -13,6 +13,7 @@ import {
 import { prospectSchools, type ProspectProgram } from "../../../_lib/prospect-schools";
 import { commitmentTransitions, type RecruitingHistoryEntry } from "./commitment-history";
 import { prospectClassContext, type ProspectClassContextPayload } from "./class-context";
+import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-context";
 
 type Prospect = {
   athlete_id: string;
@@ -45,7 +46,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -64,6 +65,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const [source, setSource] = useState<Response["source"]>();
   const [edition, setEdition] = useState<string | null>(null);
   const [classContextPayload, setClassContextPayload] = useState<ProspectClassContextPayload | null>(null);
+  const [peerContextPayload, setPeerContextPayload] = useState<ProspectPeerContextPayload | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [mentions, setMentions] = useState<PublisherMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -82,6 +84,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     setHistory([]);
     setEdition(null);
     setClassContextPayload(null);
+    setPeerContextPayload(null);
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The prospect record is unavailable.");
@@ -92,6 +95,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
         setSource(value.source);
         setEdition(value.edition || null);
         setClassContextPayload(value.class_context || null);
+        setPeerContextPayload(value.peer_context || null);
         setHistory(value.history || []);
         if (value.unavailable_reason) setError(value.unavailable_reason);
         else if (!value.rows.length) setError("That prospect is not in the selected class edition.");
@@ -143,6 +147,12 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
   const latestHistory = history.at(-1);
   const classContext = prospectClassContext(classContextPayload, prospect?.rank ?? null);
+  const peerContext = prospect ? prospectPeerContext(peerContextPayload, {
+    season,
+    athleteId: prospect.athlete_id,
+    edition,
+    position: prospect.position,
+  }) : null;
   const toggleProspectShortlist = () => {
     if (!prospect) return;
     const entry: RecruitingShortlistEntry = {
@@ -201,6 +211,23 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               </div>
               <p className="note" style={{ marginTop: 12 }}>The denominator is the complete unfiltered class in this exact edition. Ranked, graded and committed counts describe recorded coverage; they are not scouting grades or enrollment claims. Edition <span className="source-hash">{edition}</span>.</p>
             </> : <p className="empty">A valid unfiltered class denominator is not attached to this exact prospect response. The recorded rank remains visible without an inferred cohort size.</p>}
+          </section>
+          <section className="paper-panel" aria-label="Prospect position peer context" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 12 }}>
+              <div><div className="eyebrow">Position peers / same retained edition</div><h2>{peerContext ? `${peerContext.position} measurements in context.` : "Position peer context unavailable"}</h2></div>
+              <span className="note">{peerContext ? `${peerContext.peers.toLocaleString()} exact-position rows` : "Withheld"}</span>
+            </div>
+            {peerContext ? <>
+              <div className="raw-stat-grid">
+                <div><dt>Position cohort</dt><dd>{peerContext.peers.toLocaleString()}<small>{peerContext.position} rows</small></dd></div>
+                <div><dt>Position-rank coverage</dt><dd>{peerContext.positionRanked.toLocaleString()} / {peerContext.peers.toLocaleString()}<small>{((peerContext.positionRanked / peerContext.peers) * 100).toFixed(1)}% recorded</small></dd></div>
+                <div><dt>Listed height</dt><dd>{peerContext.height ? `${Math.floor(peerContext.height.value / 12)}′ ${peerContext.height.value % 12}″` : "—"}<small>{peerContext.height ? `${peerContext.height.percentile.toFixed(0)}th percentile · n=${peerContext.height.recorded}` : "Valid comparison unavailable"}</small></dd></div>
+                <div><dt>Position average height</dt><dd>{peerContext.height ? `${Math.floor(peerContext.height.average / 12)}′ ${(peerContext.height.average % 12).toFixed(1)}″` : "—"}<small>{peerContext.height ? `${peerContext.height.below} shorter · ${peerContext.height.equal} same listed height` : "Valid comparison unavailable"}</small></dd></div>
+                <div><dt>Listed weight</dt><dd>{peerContext.weight ? `${peerContext.weight.value.toFixed(0)} lb` : "—"}<small>{peerContext.weight ? `${peerContext.weight.percentile.toFixed(0)}th percentile · n=${peerContext.weight.recorded}` : "Valid comparison unavailable"}</small></dd></div>
+                <div><dt>Position average weight</dt><dd>{peerContext.weight ? `${peerContext.weight.average.toFixed(1)} lb` : "—"}<small>{peerContext.weight ? `${peerContext.weight.below} lighter · ${peerContext.weight.equal} same listed weight` : "Valid comparison unavailable"}</small></dd></div>
+              </div>
+              <p className="note" style={{ marginTop: 12 }}>Percentiles use the midpoint of equal listed measurements among {peerContext.position} prospects in edition <span className="source-hash">{edition}</span>. They describe recorded size, not skill, physical development, role or projection. Missing measurements stay unavailable.</p>
+            </> : <p className="empty">The exact athlete, position and recruiting edition do not share a valid peer cohort, so no size comparison is shown.</p>}
           </section>
           <section className="paper-panel" aria-label="Prospect commitment history" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
