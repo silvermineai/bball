@@ -41,6 +41,127 @@ DIVISION_ALIASES = {
 SUPPORTED_SCHEDULE_DIVISIONS = frozenset({"fbs", "fcs", "d2", "d3"})
 LOWER_RESULT_DIVISIONS = frozenset({"d2", "d3"})
 
+# ESPN's player-box release is the only retained football source that carries
+# stable athlete IDs across the defensive and specialist box-score categories.
+# Keep those rows attached to an exact athlete/team key and expose the source
+# fields as additive totals.  The separate advanced defensive/specialist
+# release remains name-only and is intentionally not joined here.
+BOX_PRODUCTION_FIELDS = {
+    "defensive": {
+        "tackles": ("totalTackles", "sum"),
+        "solo_tackles": ("soloTackles", "sum"),
+        "sacks": ("sacks", "sum"),
+        "tackles_for_loss": ("tacklesForLoss", "sum"),
+        "passes_defended": ("passesDefended", "sum"),
+        "hurries": ("hurries", "sum"),
+        "defensive_touchdowns": ("defensiveTouchdowns", "sum"),
+    },
+    "interceptions": {
+        "interceptions": ("interceptions", "sum"),
+        "interception_yards": ("interceptionYards", "sum"),
+        "interception_touchdowns": ("interceptionTouchdowns", "sum"),
+    },
+    "fumbles": {
+        "fumbles": ("fumbles", "sum"),
+        "fumbles_lost": ("fumblesLost", "sum"),
+        "fumbles_recovered": ("fumblesRecovered", "sum"),
+    },
+    "kicking": {
+        "field_goals_made": ("fieldGoalsMade/fieldGoalAttempts", "pair_made"),
+        "field_goals_attempted": ("fieldGoalsMade/fieldGoalAttempts", "pair_attempted"),
+        "extra_points_made": ("extraPointsMade/extraPointAttempts", "pair_made"),
+        "extra_points_attempted": ("extraPointsMade/extraPointAttempts", "pair_attempted"),
+        "total_kicking_points": ("totalKickingPoints", "sum"),
+    },
+    "punting": {
+        "punts": ("punts", "sum"),
+        "punt_yards": ("puntYards", "sum"),
+        "touchbacks": ("touchbacks", "sum"),
+        "punts_inside_20": ("puntsInside20", "sum"),
+        "long_punt": ("longPunt", "max"),
+    },
+    "kickReturns": {
+        "kick_returns": ("kickReturns", "sum"),
+        "kick_return_yards": ("kickReturnYards", "sum"),
+        "kick_return_touchdowns": ("kickReturnTouchdowns", "sum"),
+        "long_kick_return": ("longKickReturn", "max"),
+    },
+    "puntReturns": {
+        "punt_returns": ("puntReturns", "sum"),
+        "punt_return_yards": ("puntReturnYards", "sum"),
+        "punt_return_touchdowns": ("puntReturnTouchdowns", "sum"),
+        "long_punt_return": ("longPuntReturn", "max"),
+    },
+}
+
+
+def _source_pair(value):
+    """Parse a source ``made/attempted`` field without treating blanks as zero."""
+    if not isinstance(value, str) or "/" not in value:
+        return (None, None)
+    left, right = value.split("/", 1)
+    return (number(left.strip()), number(right.strip()))
+
+
+def box_category_production(rows: list[dict], category: str) -> dict | None:
+    """Aggregate exact-ID player-box rows for one non-EPA category.
+
+    This is a source-native summary: totals are only summed when the source
+    reports a numeric field, maxima retain source long-play fields, and rates
+    are derived only from the corresponding retained totals.  A category with
+    no observed numeric fields returns ``None`` so unavailable is never shown
+    as a zero.
+    """
+    fields = BOX_PRODUCTION_FIELDS.get(category)
+    if not fields:
+        return None
+    totals: dict[str, float] = {}
+    games: set[str] = set()
+    records = 0
+    for row in rows:
+        if row.get("category") != category:
+            continue
+        observed = False
+        for output, (source, operation) in fields.items():
+            value = row.get(source)
+            if operation.startswith("pair_"):
+                made, attempted = _source_pair(value)
+                value = made if operation == "pair_made" else attempted
+            else:
+                value = number(value)
+            if value is None:
+                continue
+            observed = True
+            if operation == "max":
+                totals[output] = max(totals.get(output, value), value)
+            else:
+                totals[output] = totals.get(output, 0) + value
+        if observed:
+            records += 1
+            game_id = row.get("game_id")
+            if game_id not in (None, ""):
+                games.add(str(game_id))
+    if not totals:
+        return None
+    # These rates are explicitly derived from source totals; no source blank
+    # is converted into a zero denominator.
+    if totals.get("field_goals_attempted", 0) > 0:
+        totals["field_goal_pct"] = totals.get("field_goals_made", 0) / totals["field_goals_attempted"]
+    if totals.get("extra_points_attempted", 0) > 0:
+        totals["extra_point_pct"] = totals.get("extra_points_made", 0) / totals["extra_points_attempted"]
+    if totals.get("punts", 0) > 0:
+        totals["gross_punt_yards_per_punt"] = totals.get("punt_yards", 0) / totals["punts"]
+    if totals.get("kick_returns", 0) > 0:
+        totals["kick_return_yards_per_return"] = totals.get("kick_return_yards", 0) / totals["kick_returns"]
+    if totals.get("punt_returns", 0) > 0:
+        totals["punt_return_yards_per_return"] = totals.get("punt_return_yards", 0) / totals["punt_returns"]
+    clean = {
+        key: int(value) if float(value).is_integer() else round(value, 6)
+        for key, value in totals.items()
+        if math.isfinite(value)
+    }
+    return {"records": records, "games": len(games), "metrics": clean}
+
 
 def normalize_division(value):
     if value in (None, ""):
@@ -165,7 +286,9 @@ def read_stats(conn, dataset: str, year: int) -> list[dict]:
 def player_board(conn, year):
     teams = {r["team_id"]: r for r in read_stats(conn, "teams", year)}
     players = {}
-    for r in read_stats(conn, "box", year):
+    box_rows = read_stats(conn, "box", year)
+    box_by_player: dict[tuple[str, str], list[dict]] = {}
+    for r in box_rows:
         aid, tid = r.get("athlete_id"), r.get("team_id")
         if not aid or not tid:
             continue
@@ -186,6 +309,10 @@ def player_board(conn, year):
             }
         players[key]["categories"].add(r.get("category", "unknown"))
         players[key]["games"].add(r["game_id"])
+        # Keep the source box rows available for exact-ID defensive and
+        # specialist summaries.  Name-only advanced event rows never enter
+        # this map and therefore cannot be attached by a guessed crosswalk.
+        box_by_player.setdefault(key, []).append(r)
     boards = {}
     for category, minimum in [("passing", 100), ("rushing", 50), ("receiving", 30)]:
         qualified = []
@@ -243,6 +370,11 @@ def player_board(conn, year):
             "scope": "FBS; within category",
         }
     for p in players.values():
+        key = (p["id"], p["team_id"])
+        for category in BOX_PRODUCTION_FIELDS:
+            summary = box_category_production(box_by_player.get(key, []), category)
+            if summary is not None:
+                p["production"][category] = summary
         p["categories"] = sorted(p["categories"])
         p["box_games"] = len(p.pop("games"))
     return {

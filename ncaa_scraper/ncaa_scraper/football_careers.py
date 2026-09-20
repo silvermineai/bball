@@ -110,12 +110,20 @@ def build(
         for category, stats in (row.get("production") or {}).items():
             if category not in CATEGORIES or not isinstance(stats, dict):
                 continue
+            source_metrics = stats.get("metrics")
+            if not isinstance(source_metrics, dict):
+                source_metrics = {}
             plays = _number(stats.get("plays"))
             yards = _number(stats.get("yards"))
             epa = _number(stats.get("epa"))
             touchdowns = _number(stats.get("touchdowns"))
             rank = _integer(stats.get("rank"))
-            if plays is None and yards is None and epa is None and touchdowns is None:
+            metric_values = {
+                str(key): _number(value)
+                for key, value in source_metrics.items()
+                if _number(value) is not None
+            }
+            if plays is None and yards is None and epa is None and touchdowns is None and not metric_values:
                 continue
             production_records += 1
             career["categories"].add(category)
@@ -126,6 +134,8 @@ def build(
                     "yards": 0.0,
                     "epa": 0.0,
                     "touchdowns": 0.0,
+                    "legacy_seen": set(),
+                    "metrics": {},
                     "seasons": set(),
                     "best_rank": None,
                 },
@@ -138,6 +148,9 @@ def build(
             ):
                 if value is not None:
                     target[key] += value
+                    target["legacy_seen"].add(key)
+            for key, value in metric_values.items():
+                target["metrics"][key] = target["metrics"].get(key, 0.0) + value
             target["seasons"].add(season)
             if rank is not None and rank > 0:
                 target["best_rank"] = min(
@@ -151,15 +164,25 @@ def build(
         for category in sorted(career["production"]):
             item = career["production"][category]
             plays = item["plays"]
-            production[category] = {
-                "plays": int(plays) if plays.is_integer() else plays,
-                "yards": int(item["yards"]) if item["yards"].is_integer() else item["yards"],
-                "epa": round(item["epa"], 6),
-                "epa_per_play": round(item["epa"] / plays, 8) if plays > 0 else None,
-                "touchdowns": int(item["touchdowns"]) if item["touchdowns"].is_integer() else item["touchdowns"],
+            entry = {
+                key: (
+                    int(item[key]) if item[key].is_integer() else item[key]
+                ) if key in item["legacy_seen"] else None
+                for key in ("plays", "yards", "epa", "touchdowns")
+            }
+            entry.update({
+                "epa_per_play": round(item["epa"] / plays, 8)
+                if "epa" in item["legacy_seen"] and "plays" in item["legacy_seen"] and plays > 0
+                else None,
                 "seasons": sorted(item["seasons"]),
                 "best_rank": item["best_rank"],
-            }
+            })
+            if item["metrics"]:
+                entry["metrics"] = {
+                    key: int(value) if value.is_integer() else round(value, 8)
+                    for key, value in sorted(item["metrics"].items())
+                }
+            production[category] = entry
         output.append(
             {
                 "id": career["id"],

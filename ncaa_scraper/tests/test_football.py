@@ -7,12 +7,14 @@ from unittest.mock import patch
 
 from ncaa_scraper.football import (
     ROOT,
+    box_category_production,
     datasets_for_year,
     normalize_division,
     normalize_game,
     number,
     lower_division_results,
     personnel_preview,
+    player_board,
     store_rows,
 )
 from ncaa_scraper.football_model import (
@@ -132,6 +134,93 @@ class ModelTests(unittest.TestCase):
 
 
 class ImportTests(unittest.TestCase):
+    def test_box_defensive_and_specialist_totals_stay_exact_id_and_fail_closed_on_blanks(self):
+        defensive = box_category_production(
+            [
+                {
+                    "category": "defensive",
+                    "game_id": "g1",
+                    "totalTackles": "7",
+                    "soloTackles": "4",
+                    "sacks": "1.5",
+                    "passesDefended": "",
+                },
+                {
+                    "category": "defensive",
+                    "game_id": "g2",
+                    "totalTackles": "",
+                    "soloTackles": "2",
+                    "sacks": "0",
+                    "passesDefended": "1",
+                },
+                # A different category cannot bleed into the defensive row.
+                {"category": "passing", "game_id": "g3", "totalTackles": "99"},
+            ],
+            "defensive",
+        )
+        self.assertEqual(defensive, {
+            "records": 2,
+            "games": 2,
+            "metrics": {
+                "tackles": 7,
+                "solo_tackles": 6,
+                "sacks": 1.5,
+                "passes_defended": 1,
+            },
+        })
+        kicking = box_category_production(
+            [
+                {
+                    "category": "kicking",
+                    "game_id": "g1",
+                    "fieldGoalsMade/fieldGoalAttempts": "2/3",
+                    "extraPointsMade/extraPointAttempts": "4/4",
+                    "totalKickingPoints": "10",
+                },
+                {
+                    "category": "kicking",
+                    "game_id": "g2",
+                    "fieldGoalsMade/fieldGoalAttempts": "0/1",
+                    "extraPointsMade/extraPointAttempts": "",
+                    "totalKickingPoints": "0",
+                },
+            ],
+            "kicking",
+        )
+        self.assertEqual(kicking["records"], 2)
+        self.assertEqual(kicking["games"], 2)
+        self.assertEqual(kicking["metrics"]["field_goals_made"], 2)
+        self.assertEqual(kicking["metrics"]["field_goals_attempted"], 4)
+        self.assertEqual(kicking["metrics"]["field_goal_pct"], 0.5)
+        self.assertEqual(kicking["metrics"]["extra_point_pct"], 1)
+
+    def test_player_board_adds_exact_id_box_production_but_not_name_only_events(self):
+        store_rows(self.conn, "teams", 2025, [{"team_id": "11", "division": "fbs", "short_display_name": "Alpha"}], {"fetched_at": "2026-01-01T00:00:00Z"})
+        store_rows(
+            self.conn,
+            "box",
+            2025,
+            [{
+                "athlete_id": "7", "athlete_name": "Defender", "team_id": "11",
+                "game_id": "g1", "category": "defensive", "totalTackles": "8",
+                "sacks": "1",
+            }],
+            {"fetched_at": "2026-01-01T00:00:00Z"},
+        )
+        store_rows(
+            self.conn,
+            "defense",
+            2025,
+            [{"def_pos_team_id": "11", "player_name": "Defender", "game_id": "g1", "season": "2025", "sacks": "9"}],
+            {"fetched_at": "2026-01-01T00:00:00Z"},
+        )
+        board = player_board(self.conn, 2025)
+        player = board["players"][0]
+        self.assertEqual(player["id"], "7")
+        self.assertEqual(player["production"]["defensive"]["metrics"], {"sacks": 1, "tackles": 8})
+        # The advanced name-only release is deliberately not joined or added.
+        self.assertEqual(player["production"]["defensive"]["metrics"]["sacks"], 1)
+
     def test_schedule_divisions_are_canonicalized_at_the_source_boundary(self):
         self.assertEqual(normalize_division("ii"), "d2")
         self.assertEqual(normalize_division("iii"), "d3")

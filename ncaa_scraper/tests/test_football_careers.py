@@ -63,3 +63,51 @@ class FootballCareerTests(unittest.TestCase):
         )
         self.assertEqual(result["players"][0]["production"]["passing"]["epa"], 1)
         self.assertIsNone(result["players"][0]["production"]["passing"]["epa_per_play"])
+
+    def test_exact_id_box_metrics_are_carried_across_seasons_without_cross_category_totals(self):
+        result = build(
+            [
+                {
+                    "id": "7",
+                    "name": "Defender",
+                    "season": 2024,
+                    "team_id": "1",
+                    "team": "Alpha",
+                    "box_games": 10,
+                    "production": {
+                        "defensive": {
+                            "records": 8,
+                            "games": 8,
+                            "metrics": {"tackles": 42, "sacks": 3.5},
+                        },
+                        "kicking": {
+                            "records": 2,
+                            "games": 2,
+                            "metrics": {"field_goals_made": 4, "field_goals_attempted": 5},
+                        },
+                    },
+                },
+                {
+                    "id": "7",
+                    "name": "Defender",
+                    "season": 2025,
+                    "team_id": "2",
+                    "team": "Beta",
+                    "box_games": 11,
+                    "production": {
+                        "defensive": {
+                            "records": 9,
+                            "games": 9,
+                            "metrics": {"tackles": 38, "sacks": 1.5},
+                        },
+                    },
+                },
+            ],
+            [2024, 2025],
+            generated_at="2026-01-01T00:00:00Z",
+        )
+        player = result["players"][0]
+        self.assertEqual(player["production"]["defensive"]["metrics"], {"sacks": 5, "tackles": 80})
+        self.assertEqual(player["production"]["kicking"]["metrics"]["field_goals_made"], 4)
+        self.assertIsNone(player["production"]["defensive"]["epa"])
+        self.assertEqual(result["coverage"]["production_records"], 3)
