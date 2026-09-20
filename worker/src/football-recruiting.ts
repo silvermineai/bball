@@ -12,6 +12,17 @@ const views = {
   returning: { dataset: "returning_production" as const, label: "Returning production" },
 } as const;
 type View = keyof typeof views;
+type RecruitSummaryRow = {
+  total: number | null;
+  programs: number | null;
+  graded: number | null;
+  average_grade: number | null;
+  five_star: number | null;
+  four_star: number | null;
+  three_star: number | null;
+  two_or_less_star: number | null;
+  stars_unavailable: number | null;
+};
 const query = z.object({
   view: z.enum(["rosters", "recruits", "talent", "returning"]).default("rosters"),
   season: z.coerce.number().int().min(2002).max(2035).default(2026),
@@ -152,11 +163,24 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
   let count: { total: number } | null;
   let rows: { results: Array<{ record_key: string; athlete_id: string | null; team_id: string | null; stats_json: string }> };
   let receipts: { results: Array<{ dataset: Dataset; season: number; receipt_json: string }> };
+  let recruitSummary: RecruitSummaryRow | null = null;
   try {
-    [count, rows, receipts] = await withTimeout(Promise.all([
+    [count, rows, receipts, recruitSummary] = await withTimeout(Promise.all([
       db.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`).bind(...binds).first<{ total: number }>(),
       db.prepare(`SELECT record_key,athlete_id,team_id,stats_json FROM football_stats s WHERE ${where} ORDER BY record_key LIMIT ? OFFSET ?`).bind(...binds, q.limit, q.page * q.limit).all<{ record_key: string; athlete_id: string | null; team_id: string | null; stats_json: string }>(),
       db.prepare("SELECT dataset,season,receipt_json FROM football_sources WHERE dataset=? AND season=?").bind(selected.dataset, q.season).all<{ dataset: Dataset; season: number; receipt_json: string }>(),
+      selected.dataset === "recruits"
+        ? db.prepare(`SELECT count(*) AS total,
+                            count(DISTINCT s.team_id) AS programs,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.grade') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.grade') AS REAL) > 0 THEN 1 ELSE 0 END) AS graded,
+                            avg(CASE WHEN json_extract(s.stats_json,'$.grade') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.grade') AS REAL) > 0 THEN CAST(json_extract(s.stats_json,'$.grade') AS REAL) END) AS average_grade,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=5 THEN 1 ELSE 0 END) AS five_star,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=4 THEN 1 ELSE 0 END) AS four_star,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=3 THEN 1 ELSE 0 END) AS three_star,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.stars') AS REAL) <= 2 THEN 1 ELSE 0 END) AS two_or_less_star,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NULL THEN 1 ELSE 0 END) AS stars_unavailable
+                       FROM football_stats s WHERE ${where}`).bind(...binds).first<RecruitSummaryRow>()
+        : Promise.resolve(null),
     ]), DB_TIMEOUT_MS);
   } catch {
     return c.json({ error: "The football recruiting archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
@@ -174,6 +198,19 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
       const receipt = parseJson(row.receipt_json);
       return receipt?.url && receipt.fetched_at && receipt.sha256 ? [{ dataset: row.dataset, season: row.season, url: String(receipt.url), fetched_at: String(receipt.fetched_at), sha256: String(receipt.sha256) }] : [];
     }),
+    summary: selected.dataset === "recruits" && recruitSummary ? {
+      total: Number(recruitSummary.total || 0),
+      programs: Number(recruitSummary.programs || 0),
+      graded: Number(recruitSummary.graded || 0),
+      average_grade: recruitSummary.average_grade == null ? null : Number(recruitSummary.average_grade),
+      star_counts: {
+        five: Number(recruitSummary.five_star || 0),
+        four: Number(recruitSummary.four_star || 0),
+        three: Number(recruitSummary.three_star || 0),
+        two_or_less: Number(recruitSummary.two_or_less_star || 0),
+        unavailable: Number(recruitSummary.stars_unavailable || 0),
+      },
+    } : undefined,
     rows: rows.results.flatMap((row) => {
       const raw = parseJson(row.stats_json);
       return raw ? [{ ...shape(q.view, row, raw), record_key: row.record_key, raw }] : [];

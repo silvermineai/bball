@@ -8,7 +8,24 @@ type View = "rosters" | "recruits" | "talent" | "returning";
 type Receipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
 type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }> };
 type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; raw?: Record<string, unknown>; record_key?: string };
-type Result = { view: View; label: string; dataset: string; season: number; page: number; page_size: number; total: number; source_receipts: Receipt[]; rows: Row[] };
+type Result = {
+  view: View;
+  label: string;
+  dataset: string;
+  season: number;
+  page: number;
+  page_size: number;
+  total: number;
+  source_receipts: Receipt[];
+  summary?: {
+    total: number;
+    programs: number;
+    graded: number;
+    average_grade: number | null;
+    star_counts: { five: number; four: number; three: number; two_or_less: number; unavailable: number };
+  };
+  rows: Row[];
+};
 
 const labels: Record<View, string> = {
   rosters: "Season rosters",
@@ -92,6 +109,29 @@ export default function RecruitingDesk() {
     {selectedReceipt && <details className="paper-panel" style={{ marginBottom: 22 }} open><summary><strong>{labels[view]} edition receipt</strong> · {date(selectedReceipt.fetched_at)}</summary><p className="note" style={{ marginTop: 14 }}>Retained edition · SHA-256 <span className="mono">{selectedReceipt.sha256.slice(0, 20)}…</span></p></details>}
     <p className="note">These records are source-listed personnel context. A roster row does not prove current eligibility, a commitment does not establish enrollment, and missing records do not prove a departure. Recruiting grades and stars are shown only when the attributed release supplies them.</p>
     {error ? <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => { setError(""); setRetry((current) => current + 1); }}>Retry football recruiting</button></div> : !result ? <p className="empty" role="status">Loading football recruiting records…</p> : <>
+      {view === "recruits" && result.summary && <section className="paper-panel" aria-label="Recruiting class summary" style={{ marginBottom: 22 }}>
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div><div className="eyebrow">Recruiting class / active filters</div><h2>Read the class before the page.</h2></div>
+          <span className="note">{result.summary.total.toLocaleString()} source rows reconciled</span>
+        </div>
+        <p className="note">These counts use the same season, search and team filters as the table. Grades and stars are retained source fields; missing values remain unavailable. No composite class score is inferred.</p>
+        <div className="strip" style={{ marginBottom: 16 }}>
+          <div><strong>{result.summary.total.toLocaleString()}</strong><span>Recruit records</span></div>
+          <div><strong>{result.summary.programs.toLocaleString()}</strong><span>Programs represented</span></div>
+          <div><strong>{result.summary.graded.toLocaleString()}</strong><span>With recorded grade</span></div>
+          <div><strong>{result.summary.average_grade == null ? "—" : fmt(result.summary.average_grade, 1)}</strong><span>Average recorded grade</span></div>
+        </div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Recorded star band</th><th className="numeric">Recruit records</th><th className="numeric">Share</th></tr></thead><tbody>
+          {([
+            ["5 stars", result.summary.star_counts.five],
+            ["4 stars", result.summary.star_counts.four],
+            ["3 stars", result.summary.star_counts.three],
+            ["2 or fewer", result.summary.star_counts.two_or_less],
+            ["Stars unavailable", result.summary.star_counts.unavailable],
+          ] as const).map(([label, count]) => <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{count.toLocaleString()}</strong></td><td className="numeric">{result.summary!.total > 0 ? `${((count / result.summary!.total) * 100).toFixed(1)}%` : "—"}</td></tr>)}
+        </tbody></table></div>
+        <p className="note" style={{ marginTop: 12 }}>A record count describes the retained recruiting release. It does not establish enrollment, eligibility, playing time or a program&apos;s future roster strength.</p>
+      </section>}
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div>
       <div className="table-scroll"><table className="data-table"><thead><tr>{view === "rosters" ? <><th>Player</th><th>Program</th><th>Position</th><th>Experience</th><th>Status</th><th>Listed size</th></> : view === "recruits" ? <><th>Recruit</th><th>Program</th><th>Position</th><th>Stars</th><th>Grade</th></> : view === "talent" ? <><th>Program</th><th>Talent composite</th><th>Talent rank</th><th>Blue-chip ratio</th><th>Recruit count</th></> : <><th>Program</th><th>Offense returning</th><th>Defense returning</th><th>Overall returning</th><th>Returning players</th><th>Estimated</th></>}</tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.record_key}-${row.id || row.team_id}`}>
         {view === "rosters" && <><th scope="row">{row.id ? <Link href={`/football/player/?id=${encodeURIComponent(String(row.id))}&season=${result.season}`}>{value(row, "name")}</Link> : value(row, "name")}<small>{row.id ? `Athlete ${row.id}` : "No stable athlete ID"}</small></th><td>{value(row, "team")}</td><td>{value(row, "position")}</td><td>{value(row, "experience")}</td><td>{value(row, "status")}{row.active != null && <small>{row.active ? "Active flag" : "Inactive flag"}</small>}</td><td>{row.height == null && row.weight == null ? "—" : `${row.height == null ? "—" : `${fmt(Number(row.height), 0)} in`} · ${row.weight == null ? "—" : `${fmt(Number(row.weight), 0)} lb`}`}</td></>}

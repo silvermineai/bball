@@ -4,6 +4,33 @@ import { footballRecruiting } from "../src/football-recruiting";
 const receipt = JSON.stringify({ url: "https://example.test/release.parquet", fetched_at: "2026-09-11T00:00:00Z", sha256: "a".repeat(64) });
 
 describe("football recruiting desk", () => {
+  it("returns a reconciled recruiting class summary for active filters", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        first: async () => sql.includes("json_extract")
+          ? { total: 5, programs: 2, graded: 4, average_grade: 87.25, five_star: 1, four_star: 1, three_star: 2, two_or_less_star: 0, stars_unavailable: 1 }
+          : sql.includes("count(*)") ? { total: 5 } : undefined,
+        all: async () => sql.includes("football_sources")
+          ? { results: [{ dataset: "recruits", season: 2026, receipt_json: receipt }] }
+          : { results: [] },
+      }),
+    }));
+    const response = await footballRecruiting.request("/?view=recruits&season=2026&q=quarterback", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      summary: {
+        total: 5,
+        programs: 2,
+        graded: 4,
+        average_grade: 87.25,
+        star_counts: { five: 1, four: 1, three: 2, two_or_less: 0, unavailable: 1 },
+      },
+    });
+    const summarySql = prepare.mock.calls.find(([sql]) => sql.includes("json_extract"))?.[0] || "";
+    expect(summarySql).toContain("s.dataset=? AND s.season=?");
+    expect(summarySql).toContain("s.stats_json");
+  });
+
   it("shapes a source roster row while preserving raw fields", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: () => ({
