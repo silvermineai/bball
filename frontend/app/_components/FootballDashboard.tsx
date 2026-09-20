@@ -236,8 +236,8 @@ export default function FootballDashboard() {
         <table className="data-table dashboard-table">
           <thead><tr><th>Imported division</th><th className="numeric">Players</th><th className="numeric">Team rows</th><th className="numeric">Upcoming games</th><th className="numeric">Forecasts</th><th className="numeric">No forecast</th></tr></thead>
           <tbody>{divisionCoverage.map((row) => <tr key={row.division}>
-            <th scope="row">{row.division.toUpperCase()}<small>{row.player_records.toLocaleString()} player records in the edition</small></th>
-            <td className="numeric">{row.players.toLocaleString()}</td>
+            <th scope="row">{row.division.toUpperCase()}<small>{row.player_stats_available ? `${row.player_records.toLocaleString()} player records in the edition` : "Player edition unavailable"}</small></th>
+            <td className="numeric">{row.player_stats_available ? row.players.toLocaleString() : "—"}</td>
             <td className="numeric">{row.teams.toLocaleString()}</td>
             <td className="numeric">{row.upcoming_games.toLocaleString()}</td>
             <td className="numeric"><strong>{row.forecast_games.toLocaleString()}</strong></td>

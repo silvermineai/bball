@@ -19,6 +19,7 @@ describe("football division coverage", () => {
     expect(coverage).toEqual([
       {
         division: "fbs",
+        player_stats_available: true,
         player_records: 2,
         players: 1,
         teams: 1,
@@ -28,6 +29,7 @@ describe("football division coverage", () => {
       },
       {
         division: "fcs",
+        player_stats_available: true,
         player_records: 1,
         players: 1,
         teams: 1,
@@ -37,6 +39,7 @@ describe("football division coverage", () => {
       },
       {
         division: "d2",
+        player_stats_available: false,
         player_records: 0,
         players: 0,
         teams: 1,
@@ -46,6 +49,7 @@ describe("football division coverage", () => {
       },
       {
         division: "d3",
+        player_stats_available: false,
         player_records: 0,
         players: 0,
         teams: 1,
@@ -62,6 +66,7 @@ describe("football division coverage", () => {
     ).toEqual([
       {
         division: "d2",
+        player_stats_available: false,
         player_records: 0,
         players: 0,
         teams: 0,
@@ -71,6 +76,7 @@ describe("football division coverage", () => {
       },
       {
         division: "d3",
+        player_stats_available: false,
         player_records: 0,
         players: 0,
         teams: 0,

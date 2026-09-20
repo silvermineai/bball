@@ -15,6 +15,8 @@ export type FootballCoveragePlayer = {
 
 export type FootballDivisionCoverage = {
   division: string;
+  /** False means the retained player edition has no rows for this division. */
+  player_stats_available: boolean;
   player_records: number;
   players: number;
   teams: number;
@@ -64,6 +66,7 @@ export function footballDivisionCoverage(
     const forecastGames = divisionGames.filter((game) => game.prediction != null).length;
     return {
       division,
+      player_stats_available: divisionPlayers.length > 0,
       player_records: divisionPlayers.length,
       players: playerIds.size,
       teams: teamIds.size,
