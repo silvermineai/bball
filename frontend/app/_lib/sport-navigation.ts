@@ -49,7 +49,9 @@ export const SPORT_NAVIGATION: Record<Sport, SportNavConfig> = {
     label: "Women's Basketball",
     gender: "women",
     home: "/basketball/",
-    available: false,
+    // Division I women’s tables, rankings, shot profiles and forecasts are
+    // published. Route-level scope boundaries still fail closed for D2/D3.
+    available: true,
     items: BASKETBALL_ITEMS,
     explore: BASKETBALL_EXPLORE,
   },

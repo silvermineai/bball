@@ -23,4 +23,8 @@ describe("sport navigation", () => {
     expect(buildScopeHref("/basketball/players/", "?season=2027", "women", "3"))
       .toBe("/basketball/players/?season=2027&gender=women&division=3");
   });
+
+  it("advertises the published women's D1 sport tab", () => {
+    expect(SPORT_NAVIGATION["womens-basketball"].available).toBe(true);
+  });
 });

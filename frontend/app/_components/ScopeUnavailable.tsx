@@ -19,6 +19,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const womenRankings = isWomen && sport === "basketball" && scope.division === "1" && (pathname === "/basketball/rankings" || pathname.startsWith("/basketball/rankings/") || pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/"));
   const womenTeams = isWomen && sport === "basketball" && scope.division === "1" && ["/basketball/ratings", "/basketball/teams", "/basketball/team-stats", "/basketball/standings"].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const sportName = sport === "basketball" ? "Women's basketball" : "football";
+  const publishedWomenDivisionOne = isWomen && sport === "basketball" && scope.division === "1";
   const detail = isWomen
     ? scope.division === "1"
       ? "The women’s source-native edition includes observed player production, roster context, upcoming games and a separately validated women’s forecast model."
@@ -29,13 +30,13 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
 
   return (
     <section className="scope-unavailable" aria-labelledby="scope-unavailable-title">
-      <div className="eyebrow">SCOPE NOT PUBLISHED</div>
+      <div className="eyebrow">{publishedWomenDivisionOne ? "WOMEN'S D1 PUBLISHED" : "SCOPE NOT PUBLISHED"}</div>
       <h1 id="scope-unavailable-title">{sportName} · {scopeLabel(scope)}</h1>
       <p>{detail}</p>
       {womenRankings ? <WomensBasketballRankings /> : womenTeams ? <WomensBasketballTeams /> : isWomen && sport === "basketball" && scope.division === "1" ? <WomensBasketballSnapshot /> : null}
       <div className="scope-unavailable-actions">
-        <Link className="button" href={sport === "basketball" ? "/basketball/ncaa/?division=1" : "/football/source-stats/"}>
-          Open published archive
+        <Link className="button" href={publishedWomenDivisionOne ? "/basketball/?gender=women&division=1" : sport === "basketball" ? "/basketball/ncaa/?division=1" : "/football/source-stats/"}>
+          {publishedWomenDivisionOne ? "Open women’s dashboard" : "Open published archive"}
         </Link>
         <Link className="hero-link" href="/research/coverage/">View coverage details →</Link>
       </div>
