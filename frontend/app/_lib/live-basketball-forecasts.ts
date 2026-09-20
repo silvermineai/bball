@@ -31,6 +31,12 @@ type LiveScorecardResponse = {
   games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[] }>;
 };
 
+export type LiveGameMarketComparison = {
+  modelId: string;
+  forecastCreatedAt: string | null;
+  comparisons: Comparison[];
+};
+
 export type LiveMarketComparisonStatus = "checking_forecast" | "checking_market" | "ready" | "unavailable";
 
 /** Keep an empty market map from being presented as a completed zero-quote read. */
@@ -204,6 +210,41 @@ export async function loadLiveBasketballMarketComparisons(
       .filter((game) => game.model_id === modelId)
       .map((game) => [game.game_id, game.comparisons || []]),
   ) as Record<string, Comparison[]>;
+}
+
+/**
+ * Load the current market evidence for one brief without mixing forecast
+ * editions. The forecast lookup is intentionally exact-game and the
+ * scorecard row must repeat the same immutable model ID before comparisons
+ * are returned.
+ */
+export async function loadLiveBasketballGameMarketComparison(
+  signal: AbortSignal | undefined,
+  gameId: string,
+): Promise<LiveGameMarketComparison | null> {
+  const forecastResponse = await fetchWithTransientRetry(
+    `/api/basketball/research/forecasts?season=2027&gameId=${encodeURIComponent(gameId)}&model=latest&status=all&limit=1`,
+    signal,
+  );
+  if (!forecastResponse.ok) throw new Error("Live matchup forecast unavailable.");
+  const forecastPayload = await forecastResponse.json() as { rows?: LiveForecastRow[] };
+  const forecast = forecastPayload.rows?.find((row) => row.game_id === gameId);
+  if (!forecast?.model_id) return null;
+
+  const scorecardResponse = await fetchWithTransientRetry(
+    `/api/research/scorecard?sport=basketball&model=${encodeURIComponent(forecast.model_id)}&limit=5000`,
+    signal,
+  );
+  if (!scorecardResponse.ok) throw new Error("Live market comparisons unavailable.");
+  const scorecard = await scorecardResponse.json() as LiveScorecardResponse;
+  const game = (scorecard.games || []).find(
+    (row) => row.game_id === gameId && row.model_id === forecast.model_id,
+  );
+  return {
+    modelId: forecast.model_id,
+    forecastCreatedAt: forecast.created_at || null,
+    comparisons: game?.comparisons || [],
+  };
 }
 
 export function mergeLiveBasketballForecasts(games: BBGame[], rows: LiveForecastRow[]) {

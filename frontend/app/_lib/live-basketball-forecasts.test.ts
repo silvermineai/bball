@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -233,6 +233,38 @@ describe("live basketball forecast merge", () => {
       { signal: undefined },
     );
     await expect(loadLiveBasketballMarketComparisons(undefined, null)).resolves.toEqual({});
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("pins a brief market lookup to the exact game's live forecast edition", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ rows: [{ game_id: "g1", model_id: "model-live", created_at: "2026-09-20T12:00:00Z" }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ games: [
+          { game_id: "g1", model_id: "wrong-model", comparisons: [{ provider: "wrong", bookmaker: "wrong", market: "spreads" }] },
+          { game_id: "g1", model_id: "model-live", comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }] },
+        ] }),
+      });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballGameMarketComparison(undefined, "g1")).resolves.toEqual({
+      modelId: "model-live",
+      forecastCreatedAt: "2026-09-20T12:00:00Z",
+      comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }],
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/api/basketball/research/forecasts?season=2027&gameId=g1&model=latest&status=all&limit=1", { signal: undefined });
+    expect(fetcher).toHaveBeenNthCalledWith(2, "/api/research/scorecard?sport=basketball&model=model-live&limit=5000", { signal: undefined });
+    vi.unstubAllGlobals();
+  });
+
+  it("withholds a brief market result when the exact forecast has no immutable edition", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rows: [{ game_id: "g1" }] }) });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballGameMarketComparison(undefined, "g1")).resolves.toBeNull();
     expect(fetcher).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
   });

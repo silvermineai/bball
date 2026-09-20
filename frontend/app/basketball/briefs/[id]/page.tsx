@@ -26,6 +26,7 @@ import type { Metric, ScoutProfile } from "../../../_lib/scouting-types";
 import BriefNotebook from "../BriefNotebook";
 import ManualMarketCheck from "../ManualMarketCheck";
 import LiveBriefForecastStatus from "../LiveBriefForecastStatus";
+import LiveBriefMarketTrail from "../LiveBriefMarketTrail";
 import { buildNotebookShotPrep } from "../../../blog/notebook-shot-prep";
 import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
@@ -1039,6 +1040,7 @@ export default async function Page({
           appear here. Quotes are last qualifying observations, not verified
           closing lines or a live price feed.
         </p>
+        <LiveBriefMarketTrail gameId={g.id} />
         {record ? (
           <p>
             Forecast registered <EvidenceTime value={record.registered_at} />.
