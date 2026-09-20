@@ -12,6 +12,15 @@ type Meta = {
   pregame: number;
   research_receipts?: number;
   research_latest_capture_at?: string | null;
+  research_capture_summary?: {
+    attempts: number;
+    captures_with_quotes: number;
+    captures_with_validated_markets: number;
+    latest_captured_at: string | null;
+    latest_validated_capture_at: string | null;
+    latest_no_quote_capture_at: string | null;
+    latest_failed_validation_at: string | null;
+  };
   research_capture?: {
     provider?: string;
     captured_at?: string;
@@ -241,6 +250,7 @@ export default function Markets() {
               <tr><th scope="row">Retained observations</th><td className="numeric">{meta.total.toLocaleString()}</td><td>Rows held in the historical archive</td></tr>
               <tr><th scope="row">Pregame flagged</th><td className="numeric">{(meta.pregame || 0).toLocaleString()}</td><td>Rows with a verified pre-tip timing flag</td></tr>
               <tr><th scope="row">Capture receipts</th><td className="numeric">{(meta.research_receipts || 0).toLocaleString()}</td><td>Research capture attempts retained</td></tr>
+              <tr><th scope="row">Validated capture attempts</th><td className="numeric">{(meta.research_capture_summary?.captures_with_validated_markets || 0).toLocaleString()}</td><td>Attempts that retained at least one timing-validated market</td></tr>
               <tr><th scope="row">Future summaries checked</th><td className="numeric">{(meta.research_capture?.summary_count || 0).toLocaleString()}</td><td>Scheduled games inspected by the capture</td></tr>
               <tr><th scope="row">Complete quotes</th><td className="numeric">{(meta.research_capture?.summary_with_pickcenter || 0).toLocaleString()}</td><td>Summaries containing a complete quote set</td></tr>
               <tr><th scope="row">Non-empty odds payloads</th><td className="numeric">{(meta.research_capture?.summary_with_odds || 0).toLocaleString()}</td><td>Summaries with provider odds data; these still require quote validation</td></tr>
@@ -248,6 +258,9 @@ export default function Markets() {
             </tbody>
           </table>
         </div> : null}
+        {meta?.research_capture_summary?.latest_no_quote_capture_at && meta.research_capture_summary.latest_validated_capture_at ? <p className="note" role="status">
+          The latest capture had no published quote, while the archive retains an earlier validated capture from {clock(meta.research_capture_summary.latest_validated_capture_at)}. Current availability and historical evidence are shown separately.
+        </p> : null}
         {archivePartial ? <p className="note" role="status">This archive read is partial while {unavailableSources.length ? unavailableSources.join(", ") : "one binding"} is busy. Counts reflect only the feed that answered; missing observations remain unavailable.</p> : null}
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market feed capabilities">
           {meta.provider_capabilities.map((capability, index) => <span key={`${capability.provider}-${index}`}>

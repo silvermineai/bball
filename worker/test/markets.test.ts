@@ -182,6 +182,30 @@ describe("market archive metadata", () => {
     await expect(accepted.json()).resolves.toMatchObject({ research_capture: { market_status: "validated_quotes" } });
   });
 
+  it("keeps prior validated capture evidence visible when the latest attempt has no quote", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 3, pregame: 3 }] },
+      { results: [{ receipts: 4, latest_captured_at: "2026-09-16T18:00:00Z" }] },
+      { results: [
+        { payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", summary_count: 20, summary_with_pickcenter: 0, accepted_markets: 0, rejected_records: 0 }), captured_at: "2026-09-16T18:00:00Z" },
+        { payload_json: JSON.stringify({ provider: "CollegeBasketballData.com API", sport: "basketball", source_rows: 12, rows_with_lines: 4, accepted_markets: 3, rejected_records: 0 }), captured_at: "2026-09-15T18:00:00Z" },
+      ] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: { market_status: "no_quotes_published", captured_at: "2026-09-16T18:00:00Z" },
+      research_capture_summary: {
+        attempts: 2,
+        captures_with_quotes: 1,
+        captures_with_validated_markets: 1,
+        latest_captured_at: "2026-09-16T18:00:00Z",
+        latest_validated_capture_at: "2026-09-15T18:00:00Z",
+        latest_no_quote_capture_at: "2026-09-16T18:00:00Z",
+      },
+    });
+  });
+
   it("returns retained football betting release receipts", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [{ season: 2025 }] },

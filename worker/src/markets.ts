@@ -93,6 +93,16 @@ type ResearchCapture = {
   market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "validated_quotes" | "unknown";
 };
 
+type ResearchCaptureSummary = {
+  attempts: number;
+  captures_with_quotes: number;
+  captures_with_validated_markets: number;
+  latest_captured_at: string | null;
+  latest_validated_capture_at: string | null;
+  latest_no_quote_capture_at: string | null;
+  latest_failed_validation_at: string | null;
+};
+
 function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captured_at" | "market_status">): ResearchCapture["market_status"] {
   const sourceRows = capture.summary_count ?? capture.source_rows;
   const pricedRows = capture.summary_with_pickcenter ?? capture.rows_with_lines;
@@ -140,6 +150,34 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Keep the latest capture status separate from the history of attempts. A
+ * later public summary with no line must not make an earlier validated line
+ * archive look as though it never existed, while a stale validated attempt
+ * must not be presented as current coverage.
+ */
+function summarizeResearchCaptures(values: unknown): ResearchCaptureSummary {
+  const captures = Array.isArray(values)
+    ? values.map(parseResearchCapture).filter((value): value is ResearchCapture => value !== null)
+    : [];
+  const byNewest = [...captures].sort((a, b) => b.captured_at.localeCompare(a.captured_at));
+  const firstAt = (predicate: (capture: ResearchCapture) => boolean) =>
+    byNewest.find(predicate)?.captured_at || null;
+  return {
+    attempts: captures.length,
+    captures_with_quotes: captures.filter((capture) =>
+      capture.market_status === "validated_quotes" || capture.market_status === "quotes_failed_validation",
+    ).length,
+    captures_with_validated_markets: captures.filter((capture) =>
+      (capture.accepted_markets || 0) > 0,
+    ).length,
+    latest_captured_at: byNewest[0]?.captured_at || null,
+    latest_validated_capture_at: firstAt((capture) => (capture.accepted_markets || 0) > 0),
+    latest_no_quote_capture_at: firstAt((capture) => capture.market_status === "no_quotes_published"),
+    latest_failed_validation_at: firstAt((capture) => capture.market_status === "quotes_failed_validation"),
+  };
 }
 
 function parseArchiveReceipts(value: unknown): ArchiveReceipt[] {
@@ -211,7 +249,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total, sum(CASE WHEN datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at')) THEN 1 ELSE 0 END) AS pregame FROM audit_markets m WHERE m.sport=?").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=?").bind(sport),
-          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider') IN ('ESPN Summary','CollegeBasketballData.com API') ORDER BY captured_at DESC LIMIT 1").bind(sport),
+          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider') IN ('ESPN Summary','CollegeBasketballData.com API') ORDER BY captured_at DESC LIMIT 20").bind(sport),
         ]), DB_TIMEOUT_MS)
         : Promise.resolve(null);
       const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);
@@ -236,7 +274,13 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       const legacyArchive = (legacy?.[1]?.results[0] || {}) as { total?: number; pregame?: number | null };
       const ledgerArchive = (ledger?.[1]?.results[0] || {}) as { total?: number; pregame?: number | null };
       const ledgerReceipts = (ledger?.[2]?.results[0] || {}) as { receipts?: number; latest_captured_at?: string | null };
-      const latestCapture = parseResearchCapture(ledger?.[3]?.results[0]);
+      const captureRows = ledger?.[3]?.results || [];
+      const captureHistory = captureRows
+        .map((row) => parseResearchCapture(row))
+        .filter((value): value is ResearchCapture => value !== null)
+        .sort((a, b) => b.captured_at.localeCompare(a.captured_at));
+      const latestCapture = captureHistory[0] || null;
+      const captureSummary = summarizeResearchCaptures(captureRows);
       const receipts = legacy?.[2]?.results || [];
       const capabilities = providerCapabilities.filter((item) => item.sports.includes(sport));
       const publicCapabilities = capabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability);
@@ -249,6 +293,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         research_receipts: Number(ledgerReceipts.receipts || 0),
         research_latest_capture_at: ledgerReceipts.latest_captured_at || null,
         ...(latestCapture ? { research_capture: (({ provider: _provider, ...capture }) => capture)(latestCapture) } : {}),
+        research_capture_summary: captureSummary,
         provider_capabilities: publicCapabilities,
         archive_receipts: publicReceipts,
         ...(legacyFailed || ledgerFailed
