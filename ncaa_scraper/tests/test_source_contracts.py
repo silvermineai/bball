@@ -75,6 +75,27 @@ def test_football_discovery_surfaces_fbs_only_and_unstable_ncaa_identity():
     assert any(blocker["code"] == "missing_division" for blocker in candidates["box"]["blockers"])
 
 
+def test_football_discovery_includes_publisher_scope_evidence_and_join_audit():
+    result = discover_lower_division_sources("MFB", 3, season=2026)
+    candidates = {candidate["dataset"]: candidate for candidate in result["candidates"]}
+    ncaa = candidates["ncaa_player_stats"]
+    assert ncaa["source_evidence"]["scope_claim"] == ["fbs", "fcs"]
+    assert "raw.capture_fbs" in ncaa["source_evidence"]["scope_basis"]
+    assert any(
+        blocker["code"] == "publisher_scope_excludes_target_division"
+        for blocker in ncaa["blockers"]
+    )
+
+    box = candidates["box"]
+    team_scope = box["observation"]["team_scope"]
+    assert set(("d2", "d3")).issubset(team_scope["observed_divisions"])
+    assert team_scope["player_rows_by_division"].get("d3", 0) == 0
+    assert any(
+        blocker["code"] == "target_division_player_rows_absent"
+        for blocker in box["blockers"]
+    )
+
+
 def test_mbb_discovery_accepts_receipted_explicit_d2_and_d3_rows():
     for division, expected in ((2, 1020), (3, 1031)):
         result = discover_lower_division_sources("MBB", division, season=2026)

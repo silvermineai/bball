@@ -32,6 +32,57 @@ REQUIRED_IDENTITY_FIELDS = (
 )
 REQUIRED_RECEIPT_FIELDS = ("url", "sha256")
 
+# Keep source scope evidence next to the catalog instead of burying it in a
+# UI note.  The release pages are public, versioned contracts; their stated
+# capture scope is stronger evidence than a school-name or conference guess.
+# In particular, the NCAA football release is built from FBS and FCS capture
+# stages.  It must not be presented as a D2/D3 player archive merely because
+# the companion ESPN team release contains lower-division team rows.
+FOOTBALL_SOURCE_EVIDENCE = {
+    "ncaa_player_stats": {
+        "publisher": "SportsDataverse",
+        "upstream": "stats.ncaa.org official box scores and play-by-play",
+        "license": "CC BY 4.0 (publisher release)",
+        "release_page": "https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/ncaa_mfb_player_stats",
+        "scope_claim": ["fbs", "fcs"],
+        "scope_basis": "publisher release notes name raw.capture_fbs and raw.capture_fcs; no D2/D3 capture stage is listed",
+        "identity_note": "The release has source names and team/contest IDs, but no stable athlete ID.",
+    },
+    "box": {
+        "publisher": "SportsDataverse",
+        "upstream": "ESPN college-football API",
+        "license": "CC BY 4.0 (publisher release)",
+        "release_page": "https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/espn_cfb_player_box",
+        "scope_claim": ["unscoped player rows"],
+        "scope_basis": "player-box rows do not carry a division; the companion team release is only a mapping observation and cannot create missing player coverage",
+        "identity_note": "The player-box release carries stable athlete and team IDs, but division must be observed from the exact team release and every target row must be present.",
+    },
+    "passing": {
+        "publisher": "SportsDataverse",
+        "upstream": "ESPN college-football API",
+        "license": "CC BY 4.0 (publisher release)",
+        "release_page": "https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/espn_cfb_passing",
+        "scope_claim": ["fbs"],
+        "scope_basis": "retained rows carry division=fbs; no D2/D3 rows are present",
+    },
+    "rushing": {
+        "publisher": "SportsDataverse",
+        "upstream": "ESPN college-football API",
+        "license": "CC BY 4.0 (publisher release)",
+        "release_page": "https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/espn_cfb_rushing",
+        "scope_claim": ["fbs"],
+        "scope_basis": "retained rows carry division=fbs; no D2/D3 rows are present",
+    },
+    "receiving": {
+        "publisher": "SportsDataverse",
+        "upstream": "ESPN college-football API",
+        "license": "CC BY 4.0 (publisher release)",
+        "release_page": "https://github.com/sportsdataverse/sportsdataverse-data/releases/tag/espn_cfb_receiving",
+        "scope_claim": ["fbs"],
+        "scope_basis": "retained rows carry division=fbs; no D2/D3 rows are present",
+    },
+}
+
 
 def _release_url(tag: str, asset_template: str) -> str:
     return f"{RELEASES}/{tag}/{asset_template}"
@@ -151,6 +202,51 @@ def _valid_receipt(receipt: Mapping[str, Any] | None) -> bool:
     return bool(url) and len(digest) == 64 and all(char in "0123456789abcdef" for char in digest)
 
 
+def _cached_team_scope(year: int | None) -> tuple[dict[str, Any] | None, dict[str, str]]:
+    """Read the exact-season team scope used only as a join observation.
+
+    ESPN's team reference release labels D2/D3 teams, while its player-box
+    release does not.  Returning the mapping separately lets diagnostics show
+    whether player rows actually join to those teams without treating the
+    existence of a team as proof that player production was published.
+    """
+
+    if year is None:
+        return None, {}
+    root = Path(__file__).resolve().parents[2]
+    path = root / ".local" / "football" / f"cfb_teams_{year}.csv"
+    if not path.exists():
+        return None, {}
+    try:
+        with path.open("rt", encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        receipt_path = Path(str(path) + ".receipt.json")
+        receipt: dict[str, Any] = {}
+        if receipt_path.exists():
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        mapping = {
+            str(row.get("team_id")): str(row.get("division"))
+            for row in rows
+            if row.get("team_id") and row.get("division")
+        }
+        counts: dict[str, int] = {}
+        for division in mapping.values():
+            counts[division] = counts.get(division, 0) + 1
+        return (
+            {
+                "asset": str(path),
+                "rows": len(rows),
+                "observed_divisions": sorted(counts),
+                "team_rows_by_division": counts,
+                "receipt_valid": _valid_receipt(receipt) and receipt.get("sha256") == digest,
+            },
+            mapping,
+        )
+    except (OSError, UnicodeError, TypeError, ValueError, json.JSONDecodeError):
+        return {"asset": str(path), "status": "unreadable"}, {}
+
+
 def validate_player_source_rows(
     rows: Iterable[Mapping[str, Any]],
     receipt: Mapping[str, Any] | None,
@@ -206,6 +302,8 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
             handle_context = gzip.open(path, "rt", encoding="utf-8-sig", newline="")
         else:
             handle_context = path.open("rt", encoding="utf-8-sig", newline="")
+        team_scope, team_divisions = _cached_team_scope(year) if dataset == "box" else (None, {})
+        mapped_rows: dict[str, int] = {}
         with handle_context as handle:
             reader = csv.DictReader(handle)
             fields = list(reader.fieldnames or [])
@@ -215,12 +313,15 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
                 rows += 1
                 if row.get("division") not in (None, ""):
                     values.add(str(row["division"]))
+                mapped_division = team_divisions.get(str(row.get("team_id") or ""))
+                if mapped_division:
+                    mapped_rows[mapped_division] = mapped_rows.get(mapped_division, 0) + 1
         receipt_path = Path(str(path) + ".receipt.json")
         receipt: dict[str, Any] = {}
         if receipt_path.exists():
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        return {
+        observation = {
             "season": year,
             "asset": str(path),
             "rows": rows,
@@ -228,6 +329,10 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
             "observed_divisions": sorted(values),
             "receipt_valid": _valid_receipt(receipt) and receipt.get("sha256") == digest,
         }
+        if team_scope is not None:
+            observation["team_scope"] = team_scope
+            observation["team_scope"]["player_rows_by_division"] = mapped_rows
+        return observation
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
         return {"season": year, "asset": str(path), "status": "unreadable"}
 
@@ -323,6 +428,32 @@ def discover_lower_division_sources(
         if code != "MBB" and observation and "division" in observation.get("fields", []):
             if target not in observation.get("observed_divisions", []):
                 blockers.append({"code": "target_division_absent", "message": f"Retained {season} asset contains no division={target} rows; observed divisions: {observation.get('observed_divisions', [])}."})
+        source_evidence = FOOTBALL_SOURCE_EVIDENCE.get(dataset) if code == "MFB" else None
+        if source_evidence:
+            claimed_scope = source_evidence.get("scope_claim", [])
+            if target not in claimed_scope and "unscoped player rows" not in claimed_scope:
+                blockers.append(
+                    {
+                        "code": "publisher_scope_excludes_target_division",
+                        "message": (
+                            f"The retained release documents scope={','.join(claimed_scope)}; "
+                            f"it does not publish a player contract for division={target}."
+                        ),
+                    }
+                )
+            if dataset == "box" and observation:
+                team_scope = observation.get("team_scope") or {}
+                mapped = team_scope.get("player_rows_by_division", {})
+                if target not in mapped:
+                    blockers.append(
+                        {
+                            "code": "target_division_player_rows_absent",
+                            "message": (
+                                f"The exact-season player-box rows map to no division={target} teams "
+                                f"in the retained team release; mapped rows by division={mapped}."
+                            ),
+                        }
+                    )
         candidate_status = (
             "ready"
             if code == "MBB" and observation and not blockers
@@ -340,6 +471,7 @@ def discover_lower_division_sources(
                 "required_identity_fields": list(spec["required_identity"]),
                 "known_missing_scope_fields": list(spec.get("known_missing_scope", ())),
                 "notes": list(spec.get("notes", ())),
+                "source_evidence": source_evidence,
                 "observation": observation,
                 "status": candidate_status,
                 "blockers": blockers,
