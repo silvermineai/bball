@@ -34,6 +34,7 @@ import {
   type ForecastLabView,
 } from "../../_lib/forecast-lab-view";
 import { latestForecastLabMarketQuote } from "../../_lib/forecast-lab-market";
+import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 
 type View = ForecastLabView;
 type Sort = ForecastLabSort;
@@ -86,6 +87,22 @@ type LiveModel = {
   evaluation_interval_coverage?: number | null;
 };
 type LiveCatalog = { models: LiveModel[] };
+type LiveMarketMetadata = {
+  total?: number;
+  pregame?: number;
+  research_receipts?: number;
+  research_latest_capture_at?: string | null;
+  research_capture?: {
+    summary_count?: number;
+    summary_with_pickcenter?: number;
+    summary_with_odds?: number;
+    accepted_markets?: number;
+    rejected_records?: number;
+    market_status?: MarketCaptureStatus;
+  };
+  source?: "partial" | "unavailable";
+  unavailable_reason?: string;
+};
 function numeric(value: number | null | undefined, digits = 1) {
   return value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 }
@@ -188,6 +205,8 @@ export default function ForecastLab({
   const [liveForecastModelId, setLiveForecastModelId] = useState<string | null>(null);
   const [liveMarkets, setLiveMarkets] = useState<Record<string, Comparison[]> | null>(null);
   const [liveMarketsError, setLiveMarketsError] = useState("");
+  const [marketMetadata, setMarketMetadata] = useState<LiveMarketMetadata | null>(null);
+  const [marketMetadataError, setMarketMetadataError] = useState("");
   const [liveGamesError, setLiveGamesError] = useState("");
   const [latestGames, setLatestGames] = useState<BBGame[] | null>(null);
   const [latestGamesError, setLatestGamesError] = useState("");
@@ -298,6 +317,28 @@ export default function ForecastLab({
   }, [liveForecastModelId, modelSelection]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Market capture status unavailable.");
+        return response.json() as Promise<LiveMarketMetadata>;
+      })
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setMarketMetadata(value);
+          setMarketMetadataError("");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setMarketMetadata(null);
+          setMarketMetadataError(reason instanceof Error ? reason.message : "Market capture status unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     const next = forecastLabFilterSearch({ query, view, sort, gameId: marketGameId, model: modelSelection });
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${next}`);
   }, [marketGameId, modelSelection, query, sort, view]);
@@ -371,6 +412,15 @@ export default function ForecastLab({
     ? modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length
     : 0;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
+  const capture = marketMetadata?.research_capture;
+  const captureSummary = marketMetadata?.source === "unavailable"
+    ? marketMetadata.unavailable_reason || "The market capture warehouse is temporarily unavailable."
+    : capture?.summary_count != null
+    ? `The latest public capture checked ${capture.summary_count.toLocaleString()} future summaries; ${(capture.summary_with_pickcenter || 0).toLocaleString()} contained complete quote sets${capture.summary_with_odds == null ? "" : ` and ${(capture.summary_with_odds || 0).toLocaleString()} had a non-empty odds payload`}.`
+    : marketMetadata?.research_receipts
+      ? `A public capture has run${marketMetadata.research_latest_capture_at ? ` · latest ${date(marketMetadata.research_latest_capture_at)}` : ""}.`
+      : "No public market capture is recorded for this slate.";
+  const captureStatus = capture?.market_status;
   useEffect(() => {
     if (rows.length && !rows.some((row) => row.game.id === marketGameId)) {
       setMarketGameId(rows[0].game.id);
@@ -501,6 +551,7 @@ export default function ForecastLab({
           <div className="eyebrow">Market evidence / availability</div>
           <h2>{verifiedMarketGames ? `${verifiedMarketGames.toLocaleString()} games with verified quotes.` : "No verified quotes in this edition."}</h2>
           <p>{verifiedMarketGames ? "These rows passed the participant, timestamp and pregame checks and can enter the settled model-versus-market scorecard." : liveMarketsError ? `${liveMarketsError} No market snapshot is available in the bundled edition.` : "No market snapshot has been captured for the current slate. That is unavailable evidence, not a zero edge; the browser-only line checker remains available for a line you observed."}</p>
+          <p className="note">{marketMetadataError || captureSummary} {captureStatus ? `Capture status: ${marketCaptureStatusLabel(captureStatus)}. ${marketCaptureStatusDetail(captureStatus)}` : ""}</p>
           <p><Link href="/research/markets/">Open market archive →</Link> · <Link href="/research/scorecard/?sport=basketball">Open forecast record →</Link></p>
         </div>
       </section>
