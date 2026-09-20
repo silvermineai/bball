@@ -5,6 +5,11 @@ import Link from "next/link";
 import WomensForecastReadiness from "./WomensForecastReadiness";
 import WomensShotProfileCourt from "./WomensShotProfileCourt";
 import { womensForecastLabels } from "../_lib/womens-forecast-display";
+import {
+  WOMENS_FORECAST_API_HREF,
+  WOMENS_FORECAST_READINESS_HREF,
+  WOMENS_FORECAST_SLATE_HREF,
+} from "../_lib/womens-forecast-links";
 
 type Leader = { player_id: string; name: string; team: string; position: string; value: number };
 type Forecast = { game_id: string; date?: string; home?: string; away?: string; prediction: { home_win_probability: number; predicted_margin: number; margin_low?: number; margin_high?: number; predicted_home_score: number; predicted_away_score: number; estimate_type: string } };
@@ -36,6 +41,11 @@ export default function WomensBasketballSnapshot() {
     <div className="scope-snapshot-head">
       <div><span className="eyebrow">WOMEN&apos;S DATA + MODEL</span><h2>Women&apos;s basketball · D1</h2><p>Player production from the 2026 season, 2027 roster and schedule context, and a separate Silvermine model for each upcoming game.</p></div>
       <div className="scope-snapshot-counts"><strong>{edition.coverage.players.toLocaleString()}</strong><span>players</span><strong>{edition.coverage.teams.toLocaleString()}</strong><span>teams</span><strong>{edition.coverage.upcoming_games}</strong><span>upcoming</span></div>
+    </div>
+    <div className="hero-actions" aria-label="Women&apos;s basketball model resources">
+      <a className="button" href={WOMENS_FORECAST_SLATE_HREF}>Open women&apos;s forecast slate ↗</a>
+      <a className="hero-link" href={WOMENS_FORECAST_READINESS_HREF}>Model readiness →</a>
+      <a className="hero-link" href={WOMENS_FORECAST_API_HREF}>Forecast JSON ↗</a>
     </div>
     <div className="scope-snapshot-grid">
       {Object.entries(edition.leaders).map(([key, group]) => <section className="field-card" key={key}><div className="eyebrow">{group.label}</div><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th className="numeric">Value</th></tr></thead><tbody>{group.rows.slice(0, 8).map((row) => <tr key={`${key}-${row.player_id}`}><td>{row.name}</td><td>{row.team}</td><td className="numeric">{row.value.toFixed(1)}</td></tr>)}</tbody></table></section>)}

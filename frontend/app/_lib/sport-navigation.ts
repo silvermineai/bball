@@ -25,6 +25,7 @@ const BASKETBALL_ITEMS: SportNavItem[] = [
   { label: "Games", href: "/basketball/matchups/", match: ["/basketball/matchups", "/basketball/games", "/basketball/briefs", "/basketball/gameplan"] },
   { label: "Predictions", href: "/basketball/forecast-lab/", match: ["/basketball/forecast-lab", "/research/scorecard"] },
   { label: "Rankings", href: "/basketball/rankings/", match: ["/basketball/rankings", "/basketball/ncaa-rankings"] },
+  { label: "Division", href: "/research/coverage/?sport=basketball", match: ["/research/coverage"] },
 ];
 
 const BASKETBALL_EXPLORE: SportNavItem[] = [
@@ -69,6 +70,7 @@ export const SPORT_NAVIGATION: Record<Sport, SportNavConfig> = {
       { label: "Games", href: "/football/matchups/", match: ["/football/matchups"] },
       { label: "Predictions", href: "/football/", match: ["/football", "/football/"], exact: true },
       { label: "Rankings", href: "/football/ratings/", match: ["/football/ratings"] },
+      { label: "Division", href: "/research/coverage/?sport=football", match: ["/research/coverage"] },
     ],
     explore: [
       { label: "National leaders", href: "/football/ncaa-leaders/", match: ["/football/ncaa-leaders"] },
@@ -92,8 +94,11 @@ export const DIVISION_OPTIONS: Array<{ value: Division; label: string }> = [
   { value: "3", label: "D3" },
 ];
 
-export function sportForPathname(pathname: string, gender: string | null = null): Sport {
+export function sportForPathname(pathname: string, gender: string | null = null, sport: string | null = null): Sport {
   if (pathname === "/football" || pathname.startsWith("/football/")) return "football";
+  if (pathname === "/research/coverage" || pathname.startsWith("/research/coverage/")) {
+    return sport === "football" ? "football" : gender === "women" ? "womens-basketball" : "mens-basketball";
+  }
   return gender === "women" ? "womens-basketball" : "mens-basketball";
 }
 

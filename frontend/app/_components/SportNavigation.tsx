@@ -29,7 +29,7 @@ export default function SportNavigation() {
   // scope link aligned with the URL after those transitions.
   const searchParams = useSearchParams();
   const currentSearch = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  const currentSport = sportForPathname(pathname, searchParams.get("gender"));
+  const currentSport = sportForPathname(pathname, searchParams.get("gender"), searchParams.get("sport"));
   const config = SPORT_NAVIGATION[currentSport];
   // Men's and women's basketball are separate sport tabs. Football is a
   // men's archive, so normalize any manually-entered gender query before

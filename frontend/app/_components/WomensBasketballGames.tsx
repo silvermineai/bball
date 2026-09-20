@@ -11,6 +11,10 @@ import {
   type WomensMatchupSort,
   type WomensScheduleRow,
 } from "../_lib/womens-matchups";
+import {
+  WOMENS_FORECAST_API_HREF,
+  WOMENS_FORECAST_READINESS_HREF,
+} from "../_lib/womens-forecast-links";
 
 type Edition = { season: number; generated_at: string; upcoming?: WomensScheduleRow[] };
 type ForecastEdition = {
@@ -65,6 +69,10 @@ export default function WomensBasketballGames() {
     <div className="eyebrow">WOMEN&apos;S BASKETBALL · D1 · 2026–27</div>
     <h2 id="womens-matchup-title">The full forecast slate</h2>
     <p className="muted">Every retained women&apos;s D1 forecast row is searchable here. Exact game IDs keep schedule context attached; primary and cold-start estimates stay visibly separate.</p>
+    <div className="hero-actions" aria-label="Women&apos;s forecast resources">
+      <a className="button" href={WOMENS_FORECAST_API_HREF}>Download women&apos;s forecast JSON ↗</a>
+      <a className="hero-link" href={WOMENS_FORECAST_READINESS_HREF}>Open model readiness →</a>
+    </div>
     {!forecast ? <p className="muted">Loading the women&apos;s forecast slate…</p> : <>
       <div className="strip"><div><strong>{forecast.forecasts.length.toLocaleString()}</strong><span>forecast rows</span></div><div><strong>{rows.length.toLocaleString()}</strong><span>matching filters</span></div><div><strong>{forecast.forecasts.filter((row) => row.prediction?.estimate_type !== "cold_start").length.toLocaleString()}</strong><span>primary rows</span></div><div><strong>{forecast.forecasts.filter((row) => row.prediction?.estimate_type === "cold_start").length.toLocaleString()}</strong><span>cold-start rows</span></div></div>
       <div className="toolbar">

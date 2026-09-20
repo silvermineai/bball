@@ -6,6 +6,7 @@ describe("sport navigation", () => {
     expect(sportForPathname("/football/players/", "men")).toBe("football");
     expect(sportForPathname("/basketball/matchups/", "men")).toBe("mens-basketball");
     expect(sportForPathname("/basketball/matchups/", "women")).toBe("womens-basketball");
+    expect(sportForPathname("/research/coverage/", "men", "football")).toBe("football");
     expect(Object.keys(SPORT_NAVIGATION)).toEqual(["mens-basketball", "womens-basketball", "football"]);
   });
 
@@ -42,10 +43,15 @@ describe("sport navigation", () => {
   it("keeps the core stat tabs consistent across each sport tab", () => {
     const labels = Object.values(SPORT_NAVIGATION).map((config) => config.items.map((item) => item.label));
     expect(labels).toEqual([
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Rankings", "Division"],
     ]);
+
+    expect(SPORT_NAVIGATION["womens-basketball"].items.find((item) => item.label === "Division")?.href)
+      .toBe("/research/coverage/?sport=basketball");
+    expect(SPORT_NAVIGATION.football.items.find((item) => item.label === "Division")?.href)
+      .toBe("/research/coverage/?sport=football");
   });
 
   it("surfaces validated player shooting and recruiting-fit labs in Explore", () => {
