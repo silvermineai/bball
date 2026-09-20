@@ -19,6 +19,7 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
   const valid = comparisons
     .filter((comparison) => comparison.market === "spreads" || comparison.market === "totals")
     .filter((comparison) => comparison.line != null && Number.isFinite(comparison.line))
+    .filter((comparison) => Number.isFinite(comparison.model_difference))
     .filter((comparison) => comparison.market !== "totals" || (comparison.line as number) >= 0);
   const timestamp = (comparison: Comparison) => comparison.updated_at || comparison.captured_at || "";
   const newest = (market: Comparison["market"]) => valid

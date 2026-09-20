@@ -62,4 +62,13 @@ describe("market comparison display", () => {
     ]);
     expect(summary).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
   });
+
+  it("does not count a line without a finite model gap as a comparison", () => {
+    const summary = summarizeMarketLines([
+      { ...comparison("spreads", Number.NaN), line: 3.5 },
+      { ...comparison("totals", Number.POSITIVE_INFINITY), line: 145.5 },
+    ]);
+    expect(summary).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
+    expect(hasQualifiedMarketComparison(summary)).toBe(false);
+  });
 });
