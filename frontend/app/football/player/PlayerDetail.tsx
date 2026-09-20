@@ -39,7 +39,6 @@ type Detail = {
   source_receipts?: {
     dataset: string;
     season: number;
-    url: string;
     fetched_at: string;
     sha256: string;
   }[];

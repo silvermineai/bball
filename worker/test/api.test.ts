@@ -143,6 +143,7 @@ describe("bball api", () => {
         production: Array<{ category: string; epa: number; rank: number; yards_per_play: number; success_rate: number }>;
         box_categories: Array<{ category: string; games: number }>;
       };
+      source_receipts: Array<Record<string, unknown>>;
     };
     expect(body.name).toBe("Example Player");
     expect(body.summary.production[0]).toMatchObject({
@@ -155,6 +156,7 @@ describe("bball api", () => {
     expect(body.summary.box_categories).toEqual([
       { category: "rushing", records: 1, games: 1 },
     ]);
+    expect(body.source_receipts.every((receipt) => !("url" in receipt))).toBe(true);
   });
 
   it("returns a compact exact-ID football career trail", async () => {

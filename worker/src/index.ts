@@ -438,7 +438,10 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
   const sourceReceipts = receiptResult.results.flatMap((row) => {
     const receipt = parseObject(row.receipt_json);
     return typeof receipt.url === "string" && typeof receipt.fetched_at === "string" && typeof receipt.sha256 === "string"
-      ? [{ dataset: row.dataset, season: row.season, url: receipt.url, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
+      // Keep the private locator out of the public dossier. The release clock
+      // and digest are enough to audit the exact edition without turning this
+      // endpoint into an outbound provider directory.
+      ? [{ dataset: row.dataset, season: row.season, fetched_at: receipt.fetched_at, sha256: receipt.sha256 }]
       : [];
   });
   c.header("Cache-Control", "public, max-age=300");
