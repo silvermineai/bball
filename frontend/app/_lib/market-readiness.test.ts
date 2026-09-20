@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketCaptureDiagnostic, marketReadinessLabel, marketReadinessState } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessLabel, marketReadinessState } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -37,5 +37,32 @@ describe("market connector readiness", () => {
 
   it("withholds a capture diagnostic when the receipt has no summary count", () => {
     expect(marketCaptureDiagnostic({ research_receipts: 1 })).toBeNull();
+  });
+
+  it("explains the retained-to-comparison funnel", () => {
+    expect(formatMarketComparisonReadiness({
+      retained_observations: 12,
+      selected_game_observations: 9,
+      outside_selected_cohort: 3,
+      eligible_observations: 7,
+      comparable_observations: 6,
+      superseded_observations: 2,
+      selected_comparisons: 4,
+      rejection_counts: {},
+    })).toBe("Comparison funnel: 9 of 12 retained quote rows matched the selected forecast cohort (3 outside it); 7 passed pregame, participant and freshness checks; 6 passed model and line validation; 4 remain after provider, bookmaker and market selection (2 superseded).");
+  });
+
+  it("fails closed for inconsistent comparison counts", () => {
+    expect(formatMarketComparisonReadiness({
+      retained_observations: 2,
+      selected_game_observations: 3,
+      outside_selected_cohort: 0,
+      eligible_observations: 3,
+      comparable_observations: 3,
+      superseded_observations: 0,
+      selected_comparisons: 3,
+      rejection_counts: {},
+    })).toBe("");
+    expect(formatMarketComparisonReadiness(undefined)).toBe("");
   });
 });

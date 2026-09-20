@@ -1,4 +1,5 @@
 import type { MarketCaptureStatus } from "./market-availability";
+import type { SportSummary } from "./research-types";
 
 export type MarketReadinessMetadata = {
   source?: "partial" | "unavailable";
@@ -70,4 +71,42 @@ export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null
   const accepted = capture.accepted_markets;
   const rejected = capture.rejected_records;
   return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
+}
+
+type ComparisonReadiness = NonNullable<SportSummary["comparison_readiness"]>;
+
+function count(value: number | null | undefined): number | null {
+  return Number.isInteger(value) && (value ?? 0) >= 0 ? value ?? 0 : null;
+}
+
+/**
+ * Explain how retained quote rows become model comparisons without treating
+ * retained or rejected rows as usable market evidence.
+ */
+export function formatMarketComparisonReadiness(readiness: ComparisonReadiness | null | undefined): string {
+  if (!readiness) return "";
+  const retained = count(readiness.retained_observations);
+  const selected = count(readiness.selected_game_observations);
+  const outside = count(readiness.outside_selected_cohort);
+  const eligible = count(readiness.eligible_observations);
+  const comparable = count(readiness.comparable_observations);
+  const superseded = count(readiness.superseded_observations);
+  const selectedComparisons = count(readiness.selected_comparisons);
+  if (
+    retained === null ||
+    selected === null ||
+    outside === null ||
+    eligible === null ||
+    comparable === null ||
+    superseded === null ||
+    selectedComparisons === null
+  ) return "";
+  if (
+    selected > retained ||
+    outside !== retained - selected ||
+    eligible > selected ||
+    comparable > eligible ||
+    superseded !== comparable - selectedComparisons
+  ) return "";
+  return `Comparison funnel: ${selected.toLocaleString()} of ${retained.toLocaleString()} retained quote rows matched the selected forecast cohort (${outside.toLocaleString()} outside it); ${eligible.toLocaleString()} passed pregame, participant and freshness checks; ${comparable.toLocaleString()} passed model and line validation; ${selectedComparisons.toLocaleString()} remain after provider, bookmaker and market selection${superseded ? ` (${superseded.toLocaleString()} superseded)` : ""}.`;
 }
