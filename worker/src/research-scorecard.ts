@@ -154,9 +154,13 @@ type MarketComparisonReadiness = {
 
 function marketExclusion(quote: Json, prediction: Json, state: Json, now: string): MarketRejection | null {
   const q = parse(quote.payload_json) || {};
-  const starts = String(prediction.starts_at);
-  const stateStarts = String(state.starts_at ?? "");
-  const boundary = starts < stateStarts ? starts : stateStarts;
+  // Source adapters use both millisecond and microsecond ISO spellings. Work
+  // in normalized instants so equivalent clocks do not become a false
+  // schedule mismatch during forecast-versus-market comparison.
+  const starts = iso(prediction.starts_at);
+  const stateStarts = iso(state.starts_at);
+  if (!starts || !stateStarts) return "invalid_clock";
+  const boundary = new Date(Math.min(Date.parse(starts), Date.parse(stateStarts))).toISOString();
   const captured = String(quote.captured_at);
   const updated = String(quote.updated_at);
   const capturedTime = Date.parse(captured);
@@ -167,7 +171,7 @@ function marketExclusion(quote: Json, prediction: Json, state: Json, now: string
   const age = capturedTime - updatedTime;
   if (!Object.keys(q).length) return "invalid_payload";
   if (String(q.home_id ?? "") !== String(state.home_id ?? "") || String(q.away_id ?? "") !== String(state.away_id ?? "")) return "participants_changed";
-  if (String(q.starts_at ?? "") !== boundary) return "schedule_changed";
+  if (iso(q.starts_at) !== boundary) return "schedule_changed";
   if (![capturedTime, updatedTime, nowTime, boundaryTime, registeredTime].every(Number.isFinite)) return "invalid_clock";
   if (capturedTime < registeredTime) return "captured_before_registration";
   if (capturedTime >= boundaryTime) return "captured_after_start";
@@ -458,33 +462,54 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
   const countBinds: Array<string | number> = [sport, season, now];
   if (modelId) countBinds.push(modelId);
   const count = await db.prepare(`SELECT count(*) AS total FROM audit_predictions WHERE sport=? AND CAST(json_extract(payload_json,'$.season') AS INTEGER)=? AND registered_at<=?${modelClause}`).bind(...countBinds).first<{ total: number }>();
-  const predictionBinds: Array<string | number> = [now, sport, season, now];
+  // The canonical game row can retain a date-only placeholder after ESPN has
+  // confirmed an exact tip. Include the latest source clock so a forecast is
+  // eligible against a quote once that evidence exists, without rewriting the
+  // canonical schedule or treating an unconfirmed observation as a clock.
+  const predictionBinds: Array<string | number> = [now, sport, now, sport, season, now];
   if (modelId) predictionBinds.push(modelId);
   const result = await db.prepare(`
     WITH latest_state AS (
       SELECT sport, game_id, payload_json,
              ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS state_rank
-        FROM audit_game_states WHERE observed_at<=?
+       FROM audit_game_states WHERE observed_at<=?
+    ), latest_clock AS (
+      SELECT sport, game_id, source_start, source_time_valid, observed_at,
+             ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS clock_rank
+        FROM audit_schedule_times
+       WHERE sport=? AND observed_at<=?
     ), candidates AS (
       SELECT p.*, s.payload_json AS state_json,
+             c.source_start AS source_start, c.source_time_valid AS source_time_valid,
+             c.observed_at AS source_observed_at,
         CASE
           WHEN s.payload_json IS NULL OR s.payload_json='null' THEN 'missing_schedule'
           WHEN json_extract(p.payload_json,'$.home_id') != json_extract(s.payload_json,'$.home_id')
             OR json_extract(p.payload_json,'$.away_id') != json_extract(s.payload_json,'$.away_id') THEN 'participants_changed'
-          WHEN p.time_tbd=1 OR json_extract(s.payload_json,'$.time_tbd')=1 THEN 'unconfirmed_start'
-          WHEN p.starts_at != json_extract(s.payload_json,'$.starts_at') THEN 'schedule_changed'
+          WHEN (p.time_tbd=1 OR json_extract(s.payload_json,'$.time_tbd')=1)
+            AND NOT (
+              c.source_time_valid=1
+              AND substr(c.source_start,1,10)=substr(p.starts_at,1,10)
+              AND substr(c.source_start,1,10)=substr(json_extract(s.payload_json,'$.starts_at'),1,10)
+            ) THEN 'unconfirmed_start'
+          WHEN NOT (
+              c.source_time_valid=1
+              AND substr(c.source_start,1,10)=substr(p.starts_at,1,10)
+              AND substr(c.source_start,1,10)=substr(json_extract(s.payload_json,'$.starts_at'),1,10)
+            ) AND p.starts_at != json_extract(s.payload_json,'$.starts_at') THEN 'schedule_changed'
           WHEN p.registered_at >= p.starts_at THEN 'registered_after_start'
           WHEN p.generated_at > p.registered_at OR json_extract(p.payload_json,'$.model_cutoff') > p.generated_at THEN 'invalid_clock'
           ELSE NULL
         END AS exclusion
         FROM audit_predictions p
         LEFT JOIN latest_state s ON s.sport=p.sport AND s.game_id=p.game_id AND s.state_rank=1
+        LEFT JOIN latest_clock c ON c.sport=p.sport AND c.game_id=p.game_id AND c.clock_rank=1
        WHERE p.sport=? AND CAST(json_extract(p.payload_json,'$.season') AS INTEGER)=? AND p.registered_at<=?${modelId ? " AND p.model_id=?" : ""}
     ), ranked AS (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY CASE WHEN exclusion IS NULL THEN 0 ELSE 1 END, CASE WHEN exclusion IS NULL THEN registered_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN registered_at ELSE NULL END DESC, CASE WHEN exclusion IS NULL THEN generated_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN generated_at ELSE NULL END DESC, id) AS pick
         FROM candidates
     )
-    SELECT id,sport,game_id,model_id,generated_at,registered_at,starts_at,time_tbd,payload_json,state_json,exclusion
+    SELECT id,sport,game_id,model_id,generated_at,registered_at,starts_at,time_tbd,payload_json,state_json,source_start,source_time_valid,source_observed_at,exclusion
       FROM ranked WHERE pick=1 ORDER BY starts_at,sport,game_id
   `).bind(...predictionBinds).all();
   const rawRows = result.results as Array<Record<string, unknown>>;
@@ -509,16 +534,35 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const payload = parse(row.payload_json) || {};
     const state = parse(row.state_json);
     const prediction = object(payload.prediction) || {};
+    const sourceStart = row.source_time_valid === 1 ? iso(row.source_start) : null;
+    const canonicalStart = iso(row.starts_at);
+    const stateStart = iso(state?.starts_at);
+    const sourceClockResolved = Boolean(
+      state && sourceStart && canonicalStart && stateStart
+      && sourceStart.slice(0, 10) === canonicalStart.slice(0, 10)
+      && sourceStart.slice(0, 10) === stateStart.slice(0, 10),
+    );
+    const effectiveStartsAt = sourceClockResolved && sourceStart ? sourceStart : row.starts_at;
+    const effectiveState = sourceClockResolved && state && sourceStart
+      ? { ...state, starts_at: sourceStart, time_tbd: 0 }
+      : state;
+    const effectiveRow = sourceClockResolved && sourceStart
+      ? { ...row, starts_at: sourceStart, time_tbd: 0 }
+      : row;
     const exclusion = typeof row.exclusion === "string" ? row.exclusion : null;
-    const status = exclusion ? "excluded" : finalStatus(state, now);
-    const homeScore = number(state?.home_score);
-    const awayScore = number(state?.away_score);
+    const status = exclusion ? "excluded" : finalStatus(effectiveState, now);
+    const homeScore = number(effectiveState?.home_score);
+    const awayScore = number(effectiveState?.away_score);
     const marginLow = number(prediction.margin_low);
     const marginHigh = number(prediction.margin_high);
     const validMarginInterval = marginLow !== null && marginHigh !== null && marginLow <= marginHigh;
     const item: Json = {
-      id: row.id, sport, game_id: row.game_id, model_id: row.model_id, generated_at: row.generated_at, registered_at: row.registered_at, starts_at: row.starts_at,
-      time_tbd: Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
+      id: row.id, sport, game_id: row.game_id, model_id: row.model_id, generated_at: row.generated_at, registered_at: row.registered_at, starts_at: effectiveStartsAt,
+      canonical_starts_at: row.starts_at,
+      source_starts_at: sourceStart,
+      source_time_valid: sourceClockResolved ? true : row.source_time_valid == null ? null : row.source_time_valid === 1,
+      source_observed_at: iso(row.source_observed_at),
+      time_tbd: sourceClockResolved ? 0 : Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
       home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: probability(prediction.home_win_probability), margin_low: validMarginInterval ? marginLow : null, margin_high: validMarginInterval ? marginHigh : null,
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,
       actual_total: status === "settled" && homeScore !== null && awayScore !== null ? homeScore + awayScore : null,
@@ -527,16 +571,16 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     };
     const gameQuotes = quotesByGame.get(String(row.game_id)) || [];
     comparisonReadiness.selected_game_observations += gameQuotes.length;
-    if (!exclusion && state) {
+    if (!exclusion && effectiveState) {
       const chosen = new Map<string, Json>();
       for (const quote of gameQuotes) {
-        const marketReason = marketExclusion(quote, { ...row, payload_json: row.payload_json }, state, now);
+        const marketReason = marketExclusion(quote, { ...effectiveRow, payload_json: row.payload_json }, effectiveState, now);
         if (marketReason) {
           reject(marketReason);
           continue;
         }
         comparisonReadiness.eligible_observations += 1;
-        const comparisonReason = comparisonExclusion({ ...row, payload_json: row.payload_json }, quote);
+        const comparisonReason = comparisonExclusion({ ...effectiveRow, payload_json: row.payload_json }, quote);
         if (comparisonReason) {
           reject(comparisonReason);
           continue;
@@ -544,7 +588,7 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
         comparisonReadiness.comparable_observations += 1;
         chosen.set(`${quote.provider}|${quote.bookmaker}|${quote.market}`, quote);
       }
-      item.comparisons = [...chosen.values()].map((quote) => compare({ ...row, payload_json: row.payload_json }, quote, state)).filter((quote): quote is Json => quote !== null);
+      item.comparisons = [...chosen.values()].map((quote) => compare({ ...effectiveRow, payload_json: row.payload_json }, quote, effectiveState)).filter((quote): quote is Json => quote !== null);
       comparisonReadiness.selected_comparisons += (item.comparisons as Json[]).length;
     } else {
       for (const _quote of gameQuotes) reject("forecast_excluded");

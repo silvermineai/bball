@@ -22,6 +22,12 @@ export type LedgerGame = {
   generated_at: string;
   registered_at: string;
   starts_at: string;
+  /** Canonical schedule instant retained when a source clock resolves a TBD row. */
+  canonical_starts_at?: string | null;
+  /** Exact source-confirmed start used for comparison eligibility, when available. */
+  source_starts_at?: string | null;
+  source_time_valid?: boolean | null;
+  source_observed_at?: string | null;
   time_tbd: number;
   home_name: string;
   away_name: string;

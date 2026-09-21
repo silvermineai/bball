@@ -242,6 +242,114 @@ describe("live research scorecard", () => {
     expect(body.sports.basketball.pending_market_metrics).toEqual([]);
   });
 
+  it("uses a confirmed source clock to qualify a forecast whose canonical row was time TBD", async () => {
+    const selected = {
+      id: "registration-clocked",
+      sport: "basketball",
+      game_id: "game-clocked",
+      model_id: "model-clocked",
+      generated_at: "2026-09-19T00:00:00.000000Z",
+      registered_at: "2026-09-19T00:01:00.000000Z",
+      starts_at: "2026-11-02T05:00:00.000000Z",
+      time_tbd: 1,
+      source_start: "2026-11-02T18:00:00.000000Z",
+      source_time_valid: 1,
+      source_observed_at: "2026-09-19T12:00:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home-clocked", away_id: "away-clocked", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 5, total: 145, home_win_probability: 0.7, margin_low: -8, margin_high: 18 },
+      }),
+      state_json: JSON.stringify({
+        home_id: "home-clocked", away_id: "away-clocked", starts_at: "2026-11-02T05:00:00.000000Z", time_tbd: 1,
+        completed: 0, home_score: null, away_score: null,
+      }),
+      exclusion: null,
+    };
+    const quote = {
+      id: "quote-clocked",
+      sport: "basketball",
+      game_id: "game-clocked",
+      provider: "ESPN Summary",
+      bookmaker: "Public Book",
+      market: "spreads",
+      captured_at: "2026-09-20T12:30:00.000000Z",
+      updated_at: "2026-09-20T12:29:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home-clocked", away_id: "away-clocked", starts_at: "2026-11-02T18:00:00.000000Z",
+        line: -3.5, home_price: 1.91, away_price: 1.91,
+      }),
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => {
+            return sql.includes("FROM audit_predictions p")
+              ? { results: [selected] }
+              : sql.includes("audit_schedule_times")
+                ? { results: [{ sport: "basketball", game_id: "game-clocked", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: 1, observed_at: "2026-09-19T12:00:00.000000Z" }] }
+                : sql.includes("SELECT id,sport,game_id,provider")
+                  ? { results: [quote] }
+                  : { results: [] };
+          },
+        }),
+      };
+    });
+    const response = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-clocked&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare } as never },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { games: Array<Record<string, unknown>>; sports: { basketball: { comparison_readiness: Record<string, unknown> } } };
+    expect(body.games[0]).toMatchObject({
+      status: "scheduled",
+      exclusion: null,
+      time_tbd: 0,
+      starts_at: "2026-11-02T18:00:00.000Z",
+      canonical_starts_at: "2026-11-02T05:00:00.000000Z",
+      source_starts_at: "2026-11-02T18:00:00.000Z",
+      source_time_valid: true,
+      comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })],
+    });
+    expect(body.sports.basketball.comparison_readiness).toMatchObject({
+      selected_game_observations: 1,
+      eligible_observations: 1,
+      comparable_observations: 1,
+      selected_comparisons: 1,
+    });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("c.source_time_valid=1"))).toBe(true);
+
+    const unconfirmed = { ...selected, source_start: null, source_time_valid: 0, exclusion: "unconfirmed_start" };
+    const unconfirmedPrepare = vi.fn((sql: string) => {
+      const first = async () => sql.includes("audit_predictions") ? { total: 1 } : { total: 0 };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p")
+            ? { results: [unconfirmed] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: [quote] }
+              : { results: [] },
+        }),
+      };
+    });
+    const unconfirmedResponse = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-clocked&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare: unconfirmedPrepare } as never },
+    );
+    const unconfirmedBody = await unconfirmedResponse.json() as { games: Array<Record<string, unknown>> };
+    expect(unconfirmedBody.games[0]).toMatchObject({ status: "excluded", exclusion: "unconfirmed_start", time_tbd: 1, comparisons: [] });
+  });
+
   it("withholds null and invalid numeric evidence instead of coercing it into metrics", async () => {
     const incompleteFinal = {
       id: "registration-incomplete",
