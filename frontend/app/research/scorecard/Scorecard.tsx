@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureDiagnostic, marketReadinessLabel, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketCaptureDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.estimate_type || "unknown", g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, g.comparisons.length, JSON.stringify(g.comparisons)];
@@ -451,17 +451,7 @@ export default function Scorecard() {
           {pendingMarketObservations != null && <span>Awaiting source finals <b>{pendingMarketObservations.toLocaleString()}</b></span>}
         </div>
         <p className="note" role="status" style={{ marginTop: 12 }}>
-          {marketReadiness === "validated"
-            ? "A capture reported at least one validated market. Each quote still needs exact forecast registration, participant identity, kickoff and freshness checks before it can enter this scorecard."
-            : marketReadiness === "captured_rejected"
-              ? "A capture ran, but its published quotes failed validation. The scorecard withholds model-versus-market comparisons until exact game and pregame clock evidence passes."
-              : marketReadiness === "captured_no_quotes"
-                ? "A capture ran without a validated quote. No line or model edge is inferred from the schedule or an unpriced summary."
-                : marketReadiness === "unavailable"
-                  ? "The market metadata read is unavailable. Quote readiness and model-versus-market comparisons remain unverified."
-                  : marketReadiness === "checking"
-                    ? "Checking the capture receipt before describing market readiness."
-                    : "No validated capture receipt is recorded for this sport. Quote readiness remains unverified."}
+          {marketReadinessScorecardNote(marketReadiness)}
         </p>
         {marketCaptureNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureNote} This is capture evidence; only exact-game, pregame quotes enter the comparison ledger.</p>}
         {readiness && (

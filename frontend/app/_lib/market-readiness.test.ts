@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -57,6 +57,12 @@ describe("market connector readiness", () => {
         summary_with_pickcenter: 0,
       },
     })).toContain("0 future summaries of 12 eligible games; 0 contained complete quote sets; 12 summary requests failed");
+  });
+
+  it("gives the scorecard a distinct incomplete-capture instruction", () => {
+    expect(marketReadinessScorecardNote("captured_incomplete")).toContain("could not be read");
+    expect(marketReadinessScorecardNote("captured_incomplete")).toContain("Retry");
+    expect(marketReadinessScorecardNote("captured_incomplete")).toContain("no line or model edge");
   });
 
   it("explains the retained-to-comparison funnel", () => {

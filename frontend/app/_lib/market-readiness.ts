@@ -91,6 +91,27 @@ export function marketReadinessDetail(
   }
 }
 
+/** Copy used beside the scorecard so an incomplete read cannot look like an
+ * ordinary no-quote capture or invite a model-versus-line conclusion. */
+export function marketReadinessScorecardNote(state: MarketReadinessState): string {
+  switch (state) {
+    case "validated":
+      return "A capture reported at least one validated market. Each quote still needs exact forecast registration, participant identity, kickoff and freshness checks before it can enter this scorecard.";
+    case "captured_rejected":
+      return "A capture ran, but its published quotes failed validation. The scorecard withholds model-versus-market comparisons until exact game and pregame clock evidence passes.";
+    case "captured_no_quotes":
+      return "A capture ran without a validated quote. No line or model edge is inferred from the schedule or an unpriced summary.";
+    case "captured_incomplete":
+      return "A capture ran, but one or more eligible summaries could not be read. Retry the bounded capture before interpreting market availability; no line or model edge is inferred.";
+    case "unavailable":
+      return "The market metadata read is unavailable. Quote readiness and model-versus-market comparisons remain unverified.";
+    case "checking":
+      return "Checking the capture receipt before describing market readiness.";
+    case "unverified":
+      return "No validated capture receipt is recorded for this sport. Quote readiness remains unverified.";
+  }
+}
+
 /** Describe what the latest public capture inspected without implying a quote. */
 export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null | undefined): string | null {
   const capture = metadata?.research_capture;
