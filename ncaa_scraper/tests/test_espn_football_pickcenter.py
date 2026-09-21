@@ -1,7 +1,11 @@
 import json
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from ncaa_scraper import espn_football_pickcenter as collector
 from ncaa_scraper.espn_football_pickcenter import BASE_URL, build_parser, ingest, parse_football_pickcenter
 
 
@@ -127,6 +131,57 @@ class EspnFootballPickcenterTests(unittest.TestCase):
         payload["pickcenter"][0]["homeTeamOdds"]["teamId"] = "999"
         with self.assertRaises(ValueError):
             parse_football_pickcenter(payload, GAME, "2026-09-19T20:00:00Z", "receipt")
+
+    def test_ingest_records_partial_capture_when_summary_requests_fail(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {
+            "captured_at": "2026-09-19T20:00:00Z",
+            "sha256": "failed-capture",
+            "eligible_games": 2,
+            "summary_fetch_failures": 2,
+            "summary_count": 0,
+            "summary_with_pickcenter": 0,
+        }
+        result = ingest(conn, [], receipt, [GAME, {**GAME, "id": "401900003"}], receipt["captured_at"])
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 0})
+        payload = json.loads(conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(payload["eligible_games"], 2)
+        self.assertEqual(payload["summary_fetch_failures"], 2)
+        self.assertEqual(payload["market_status"], "capture_incomplete")
+
+    def test_fetch_upcoming_counts_http_failures_against_eligible_games(self):
+        class FailedResponse:
+            status_code = 503
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        games = [GAME, {**GAME, "id": "401900003"}]
+        with tempfile.TemporaryDirectory() as directory, \
+            patch.object(collector, "schedules", return_value=games), \
+            patch.object(collector, "_future_games", return_value=games), \
+            patch.object(collector.requests, "get", return_value=FailedResponse()), \
+            patch.object(collector.time, "sleep"), \
+            patch.object(collector, "CACHE", Path(directory)):
+            summaries, receipt = collector.fetch_upcoming(season=2026, horizon_days=30, limit=2)
+        self.assertEqual(summaries, [])
+        self.assertEqual(receipt["eligible_games"], 2)
+        self.assertEqual(receipt["summary_fetch_failures"], 2)
+        self.assertEqual(receipt["summary_count"], 0)
 
 
 if __name__ == "__main__":

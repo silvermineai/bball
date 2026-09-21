@@ -168,6 +168,7 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
     games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
     captured = now.isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
+    fetch_failures = 0
     CACHE.mkdir(parents=True, exist_ok=True)
     for index, game in enumerate(games):
         if index:
@@ -183,6 +184,7 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
                 allow_redirects=False,
             ) as response:
                 if response.status_code != 200:
+                    fetch_failures += 1
                     continue
                 chunks: list[bytes] = []
                 size = 0
@@ -195,14 +197,17 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
                         break
                     chunks.append(chunk)
                 if not chunks:
+                    fetch_failures += 1
                     continue
                 body = b"".join(chunks)
                 summary = json.loads(body.decode("utf-8"))
                 if not isinstance(summary, dict):
+                    fetch_failures += 1
                     continue
                 (CACHE / f"espn-football-summary-{event_id}.json").write_bytes(body)
                 summaries.append({"event_id": event_id, "summary": summary, "url": url})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
+            fetch_failures += 1
             continue
     summary_count, pickcenter_count = summary_capture_counts(summaries)
     receipt = {
@@ -215,6 +220,8 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "urls": [item["url"] for item in summaries],
         # Retain bounded capture diagnostics so the public market endpoint can
         # distinguish an empty quote response from an unobserved schedule.
+        "eligible_games": len(games),
+        "summary_fetch_failures": fetch_failures,
         "summary_count": summary_count,
         "summary_with_pickcenter": pickcenter_count,
         "timing_basis": "summary_capture",
@@ -257,24 +264,43 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
     # Keep the receipt self-describing. The source response is private, but
     # these bounded counts are safe publication metadata and make a failed or
     # empty football capture auditable without implying that a line existed.
+    eligible_games = receipt.get("eligible_games", len(games))
+    if not isinstance(eligible_games, int) or eligible_games < 0:
+        eligible_games = len(games)
+    fetch_failures = receipt.get("summary_fetch_failures", 0)
+    if not isinstance(fetch_failures, int) or fetch_failures < 0:
+        fetch_failures = 0
+    summary_count = receipt.get("summary_count", len(summaries))
+    if not isinstance(summary_count, int) or summary_count < 0:
+        summary_count = len(summaries)
+    summary_with_pickcenter = receipt.get("summary_with_pickcenter")
+    if not isinstance(summary_with_pickcenter, int) or summary_with_pickcenter < 0:
+        summary_with_pickcenter = sum(
+            1
+            for item in summaries
+            if isinstance(item, dict)
+            and isinstance(item.get("summary"), dict)
+            and isinstance(item["summary"].get("pickcenter"), list)
+            and bool(item["summary"].get("pickcenter"))
+        )
     conn.execute(
         "UPDATE audit_receipts SET payload_json=? WHERE id=?",
         (encoded({
             **receipt,
-            "summary_count": receipt.get("summary_count", len(summaries)),
-            "summary_with_pickcenter": receipt.get(
-                "summary_with_pickcenter",
-                sum(
-                    1
-                    for item in summaries
-                    if isinstance(item, dict)
-                    and isinstance(item.get("summary"), dict)
-                    and isinstance(item["summary"].get("pickcenter"), list)
-                    and bool(item["summary"].get("pickcenter"))
-                )
-            ),
+            "eligible_games": eligible_games,
+            "summary_fetch_failures": fetch_failures,
+            "summary_count": summary_count,
+            "summary_with_pickcenter": summary_with_pickcenter,
             "accepted_markets": accepted,
             "rejected_records": rejected,
+            "market_status": (
+                "capture_incomplete" if fetch_failures > 0 and eligible_games > 0 else
+                "validated_quotes" if accepted > 0 else
+                "quotes_failed_validation" if rejected > 0 else
+                "no_quotes_published" if summary_count > 0 else
+                "no_eligible_summaries" if eligible_games == 0 else
+                "capture_incomplete"
+            ),
         }), receipt_id),
     )
     conn.commit()
