@@ -18,6 +18,7 @@ import { prospectLearningChecks } from "./learning-questions";
 import { recordedProspectFields } from "./recorded-fields";
 import ProspectProductionBridge from "./ProspectProductionBridge";
 import { prospectRankTrajectory } from "./rank-trajectory";
+import { prospectGradeTrajectory } from "./grade-trajectory";
 
 type Prospect = {
   athlete_id: string;
@@ -158,6 +159,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
   const latestHistory = history.at(-1);
   const rankTrajectory = prospectRankTrajectory(history);
+  const gradeTrajectory = prospectGradeTrajectory(history);
   const classContext = prospectClassContext(classContextPayload, prospect?.rank ?? null);
   const peerContext = prospect ? prospectPeerContext(peerContextPayload, {
     season,
@@ -301,6 +303,16 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
                 <div><dt>Average recorded rank</dt><dd>#{rankTrajectory.averageRank.toFixed(1)}<small>ranked captures only</small></dd></div>
               </div>
               <p className="note" style={{ marginTop: 12 }}>The endpoint comparison uses the first and latest retained ranked captures. Best rank, average rank and range summarize the same exact-ID history; unranked captures remain in the coverage denominator and are not scored.</p>
+            </>}
+            {gradeTrajectory && <>
+              <div className="raw-stat-grid" style={{ marginTop: 16 }}>
+                <div><dt>First recorded grade</dt><dd>{gradeTrajectory.firstGrade.toFixed(1)}</dd></div>
+                <div><dt>Latest recorded grade</dt><dd>{gradeTrajectory.latestGrade.toFixed(1)}<small>{gradeTrajectory.direction === "higher" ? `+${gradeTrajectory.netChange.toFixed(1)}` : gradeTrajectory.direction === "lower" ? gradeTrajectory.netChange.toFixed(1) : "= 0.0"} from first graded capture</small></dd></div>
+                <div><dt>Best recorded grade</dt><dd>{gradeTrajectory.bestGrade.toFixed(1)}<small>{gradeTrajectory.gradeSpan.toFixed(1)} point observed range</small></dd></div>
+                <div><dt>Grade coverage</dt><dd>{gradeTrajectory.gradedCaptures} / {gradeTrajectory.totalCaptures}<small>{(gradeTrajectory.gradeCoverage * 100).toFixed(0)}% of captures</small></dd></div>
+                <div><dt>Average recorded grade</dt><dd>{gradeTrajectory.averageGrade.toFixed(1)}<small>graded captures only</small></dd></div>
+              </div>
+              <p className="note" style={{ marginTop: 12 }}>Grade movement uses positive finite values from this exact athlete ID and source edition history. Higher or lower describes the recorded source scale; it is not a Silvermine grade or a projection of role or production.</p>
             </>}
             {(() => {
               const ranked = history.map((entry) => entry.rank).filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
