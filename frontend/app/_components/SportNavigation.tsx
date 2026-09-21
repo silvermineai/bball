@@ -46,6 +46,7 @@ export default function SportNavigation() {
   return (
     <div className="sport-desk-nav" aria-label="Sport navigation">
       <div className="sport-switcher" role="tablist" aria-label="Choose a sport">
+        <span className="sport-switcher-heading" aria-hidden="true">Sport</span>
         {(Object.keys(SPORT_NAVIGATION) as Array<keyof typeof SPORT_NAVIGATION>).map((sport) => {
           const active = sport === currentSport;
           return (
@@ -57,13 +58,17 @@ export default function SportNavigation() {
               role="tab"
               aria-selected={active}
             >
-              {SPORT_NAVIGATION[sport].label}
+              <span className="sport-switcher-tab-name">{SPORT_NAVIGATION[sport].label}</span>
+              <span className="sport-switcher-tab-meta">
+                {sport === "football" ? "Men's archive" : sport === "womens-basketball" ? "Women's" : "Men's"}
+              </span>
             </Link>
           );
         })}
       </div>
       <div className="sport-desk-row">
         <nav className="sport-tabs" aria-label={`${config.label} sections`}>
+          <span className="sport-sections-label" aria-hidden="true">Sections</span>
           <Link
             href={hrefWithScope(config.home)}
             className={`sport-tab sport-tab-home${pathname === config.home || pathname === config.home.slice(0, -1) ? " is-active" : ""}`}

@@ -6205,8 +6205,21 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   min-height: 45px;
   border-bottom: 1px solid #294463;
 }
+.sport-switcher-heading,
+.sport-sections-label {
+  color: #718aa8;
+  font: 600 9px/1 "IBM Plex Mono", monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.sport-switcher-heading {
+  align-self: center;
+  margin-right: 10px;
+}
 .sport-switcher-tab {
   position: relative;
+  display: grid;
+  gap: 3px;
   padding: 14px 16px 12px;
   color: #a9bdd5;
   font: 600 13px/1 "Barlow Condensed", sans-serif;
@@ -6226,6 +6239,14 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   height: 3px;
   background: #60c8a0;
 }
+.sport-switcher-tab-name { line-height: 1; }
+.sport-switcher-tab-meta {
+  color: #718aa8;
+  font: 600 8px/1 "IBM Plex Mono", monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.sport-switcher-tab.is-active .sport-switcher-tab-meta { color: #9cddc5; }
 .sport-desk-row {
   display: flex;
   align-items: center;
@@ -6242,6 +6263,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   scrollbar-width: none;
 }
 .sport-tabs::-webkit-scrollbar { display: none; }
+.sport-sections-label { flex: 0 0 auto; margin-right: -8px; }
 .sport-tab,
 .sport-explore > summary {
   flex: 0 0 auto;
@@ -6319,9 +6341,13 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (max-width: 650px) {
   .sport-switcher,
   .sport-desk-row { padding-left: 18px; padding-right: 18px; }
-  .sport-switcher { min-height: 42px; }
+  .sport-switcher { min-height: 50px; overflow-x: auto; align-items: stretch; scrollbar-width: none; }
+  .sport-switcher::-webkit-scrollbar { display: none; }
+  .sport-switcher-heading { display: none; }
   .sport-switcher-tab { padding: 13px 13px 11px; }
+  .sport-switcher-tab-meta { font-size: 7px; }
   .sport-tabs { gap: 18px; }
+  .sport-sections-label { display: none; }
   .sport-tab,
   .sport-explore > summary { padding: 12px 0 11px; }
   .sport-scope { justify-content: flex-start; overflow-x: auto; padding-bottom: 9px; }
