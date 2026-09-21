@@ -31,12 +31,85 @@ export type WomensLowerTeamRecord = {
   rank: number;
 };
 
+export type WomensLowerScheduleEvidence = {
+  division: "2" | "3";
+  retained_contests: number;
+  exact_two_team_contests: number;
+  final_contests: number;
+  scheduled_contests: number;
+  postponed_contests: number;
+  other_status_contests: number;
+  unique_contest_ids: number;
+  unique_team_slugs: number;
+  team_sides: number;
+  missing_team_slugs: number;
+  first_date: string | null;
+  last_date: string | null;
+};
+
 const finiteScore = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
 function isFinal(contest: WomensLowerScheduleContest) {
   return String(contest.state || contest.status || "").toLowerCase() === "f"
     || String(contest.status || "").toLowerCase() === "final";
+}
+
+/**
+ * Describe the retained source schedule without filling missing identities or
+ * treating a scheduled row as a forecastable game. Contest IDs and team slugs
+ * are counted exactly as published by NCAA; missing slugs remain visible.
+ */
+export function summarizeWomensLowerScheduleEvidence(
+  contests: readonly WomensLowerScheduleContest[],
+  division: "2" | "3",
+): WomensLowerScheduleEvidence {
+  const scoped = contests.filter((contest) => contest.division === Number(division));
+  const exact = scoped.filter((contest) => Number.isInteger(contest.contest_id) && contest.teams.length === 2);
+  const statusCounts = { final: 0, scheduled: 0, postponed: 0, other: 0 };
+  const ids = new Set<number>();
+  const slugs = new Set<string>();
+  let teamSides = 0;
+  let missingTeamSlugs = 0;
+  const dates = exact
+    .map((contest) => contest.contest_date || "")
+    .filter(Boolean)
+    .sort((left, right) => {
+      const parse = (value: string) => {
+        const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+        return match ? match[3] + "-" + match[1] + "-" + match[2] : value;
+      };
+      return parse(left).localeCompare(parse(right));
+    });
+  for (const contest of exact) {
+    ids.add(contest.contest_id);
+    const state = String(contest.state || contest.status || "").toLowerCase();
+    if (state === "f" || state === "final") statusCounts.final += 1;
+    else if (state === "o" || state === "postponed") statusCounts.postponed += 1;
+    else if (state === "p" || state === "pre" || state === "scheduled") statusCounts.scheduled += 1;
+    else statusCounts.other += 1;
+    for (const team of contest.teams) {
+      teamSides += 1;
+      const slug = String(team.slug || "").trim();
+      if (slug) slugs.add(slug);
+      else missingTeamSlugs += 1;
+    }
+  }
+  return {
+    division,
+    retained_contests: scoped.length,
+    exact_two_team_contests: exact.length,
+    final_contests: statusCounts.final,
+    scheduled_contests: statusCounts.scheduled,
+    postponed_contests: statusCounts.postponed,
+    other_status_contests: statusCounts.other,
+    unique_contest_ids: ids.size,
+    unique_team_slugs: slugs.size,
+    team_sides: teamSides,
+    missing_team_slugs: missingTeamSlugs,
+    first_date: dates[0] || null,
+    last_date: dates[dates.length - 1] || null,
+  };
 }
 
 /**

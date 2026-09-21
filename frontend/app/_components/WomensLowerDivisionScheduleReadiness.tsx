@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import { summarizeLowerDivisionTargetProbe, type LowerDivisionTargetProbe, type LowerDivisionTargetProbeSummary } from "../_lib/lower-division-target-probe";
-import { summarizeWomensLowerSchedule, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
+import { summarizeWomensLowerSchedule, summarizeWomensLowerScheduleEvidence, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
 
 type ScheduleTeam = { home?: boolean; name?: string; slug?: string; score?: number | null; winner?: boolean | null };
 type ScheduleContest = {
@@ -75,6 +75,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
   const upcoming = useMemo(() => asset ? upcomingWomensSchedule(asset, division) : [], [asset, division]);
   const calendarCount = asset?.calendar?.filter((day) => day.division === Number(division)).reduce((sum, day) => sum + day.count, 0) || 0;
   const records = useMemo(() => asset ? summarizeWomensLowerSchedule(asset.contests || [], division) : [], [asset, division]);
+  const evidence = useMemo(() => asset ? summarizeWomensLowerScheduleEvidence(asset.contests || [], division) : null, [asset, division]);
   const downloadRecords = () => downloadCsv(
     `womens-d${division}-team-records.csv`,
     toCsv(
@@ -92,6 +93,18 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
     </> : <>
       <p className="note">Rows are shown only when the retained schedule carries division={division}, a contest ID, and two team records. Team names and slugs are kept as source labels; missing slugs remain missing, and no name-only join creates a prediction.</p>
       {targetProbe ? <div className="notice" style={{ marginBottom: 14 }}><strong>{targetProbe.season} target-season availability probe</strong><p className="muted" style={{ margin: "4px 0 0" }}>NCAA endpoint checked for months {targetProbe.months.join(", ")}: {targetProbe.contests.toLocaleString()} contests and {targetProbe.calendarDays.toLocaleString()} calendar days returned across {targetProbe.receipts.toLocaleString()} receipt-backed responses ({new Date(targetProbe.generatedAt).toLocaleString()}). Empty responses remain unavailable data; predictions stay gated until a current exact-division schedule is published.</p></div> : null}
+      {evidence ? <div className="paper-panel" style={{ marginBottom: 16 }} aria-label={"Women’s D" + division + " schedule integrity"}>
+        <div className="eyebrow">SCHEDULE INTEGRITY · SOURCE IDs</div>
+        <h4>What the retained NCAA schedule can support</h4>
+        <div className="scope-snapshot-counts">
+          <strong>{evidence.exact_two_team_contests.toLocaleString()}</strong><span>two-team contests</span>
+          <strong>{evidence.final_contests.toLocaleString()}</strong><span>finals</span>
+          <strong>{evidence.scheduled_contests.toLocaleString()}</strong><span>scheduled</span>
+          <strong>{evidence.unique_team_slugs.toLocaleString()}</strong><span>unique source slugs</span>
+        </div>
+        <p className="muted">Season span: {evidence.first_date || "—"} through {evidence.last_date || "—"} · {evidence.unique_contest_ids.toLocaleString()} unique contest IDs · {evidence.postponed_contests.toLocaleString()} postponed · {evidence.other_status_contests.toLocaleString()} other status rows.</p>
+        <p className="note">The capture has {evidence.team_sides.toLocaleString()} team sides; {evidence.missing_team_slugs.toLocaleString()} do not carry a publisher slug. Those sides stay isolated from team aggregation, cross-provider joins, and prediction eligibility. Names are display labels only.</p>
+      </div> : null}
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} contests retained</span><strong>{upcoming.length.toLocaleString()}</strong><span>upcoming</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
       <div className="section-heading" style={{ marginTop: 18 }}>

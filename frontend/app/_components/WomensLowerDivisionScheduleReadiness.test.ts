@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scopedWomensSchedule, upcomingWomensSchedule } from "./WomensLowerDivisionScheduleReadiness";
+import { summarizeWomensLowerScheduleEvidence } from "../_lib/womens-lower-schedule";
 
 const asset = {
   contests: [
@@ -19,5 +20,21 @@ describe("women lower division schedule readiness", () => {
     const now = Date.parse("2026-11-01T00:00:00Z");
     expect(upcomingWomensSchedule(asset, "2", now).map((row) => row.contest_id)).toEqual([2]);
   });
-});
 
+  it("reports source identity and status coverage without inferring missing slugs", () => {
+    const evidence = summarizeWomensLowerScheduleEvidence([
+      ...asset.contests.map((contest, index) => ({ ...contest, state: index === 0 ? "F" : "P" })),
+      { division: 2, contest_id: 4, contest_date: "11/04/2026", state: "O", teams: [{ home: true, name: "Postponed" }, { home: false, slug: "away" }] },
+    ], "2");
+    expect(evidence.retained_contests).toBe(3);
+    expect(evidence.exact_two_team_contests).toBe(3);
+    expect(evidence.final_contests).toBe(1);
+    expect(evidence.scheduled_contests).toBe(1);
+    expect(evidence.postponed_contests).toBe(1);
+    expect(evidence.unique_contest_ids).toBe(3);
+    expect(evidence.unique_team_slugs).toBe(1);
+    expect(evidence.missing_team_slugs).toBe(5);
+    expect(evidence.first_date).toBe("10/31/2026");
+    expect(evidence.last_date).toBe("11/04/2026");
+  });
+});
