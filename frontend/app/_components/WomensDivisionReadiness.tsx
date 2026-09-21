@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DivisionCoverageMatrix from "./DivisionCoverageMatrix";
 import { divisionPlayerReadiness } from "../_lib/division-player-readiness";
 import WomensLowerDivisionStats from "./WomensLowerDivisionStats";
+import WomensLowerDivisionScheduleReadiness from "./WomensLowerDivisionScheduleReadiness";
 
 type Division = { status: string; rows: number; reason: string };
 type Signal = { game_id: string; date?: string | null; home?: string | null; away?: string | null; source_flag: string };
@@ -92,6 +93,7 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
       </div> : null}
       <details className="paper-panel" style={{ marginTop: 18 }}><summary><strong>What is required before publishing D{division}</strong></summary><ul>{publication.import_contract.next_required_inputs.map((item) => <li key={item}>{item}</li>)}</ul><p className="note">Required scope: {(publication.import_contract.required_scope_fields || ["sport", "gender", "division", "season"]).join(", ")}. Required identities: {(publication.import_contract.required_identity_fields || ["team_id", "team_display_name", "athlete_id", "athlete_display_name"]).join(", ")}. Accepted division values: {(publication.import_contract.accepted_division_values || [2, 3]).join(", ")}.</p><p className="note">The importer also requires explicit division labels, stable identities, receipt hashes, and conflict rejection.</p></details>
       <p className="muted">Readiness ledger captured {date(publication.generated_at)}. Values are source evidence; no D{division} rows are inferred.</p>
+      <WomensLowerDivisionScheduleReadiness division={division} />
       <WomensLowerDivisionStats division={division} />
     </>}
   </section>;
