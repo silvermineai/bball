@@ -52,6 +52,7 @@ export default function SourceStats() {
   const [dataset, setDataset] = useState<Dataset>("box");
   const [season, setSeason] = useState("2025");
   const [query, setQuery] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
@@ -66,6 +67,7 @@ export default function SourceStats() {
     if (requested && ["all", "box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats", "rosters", "recruits", "team_talent", "returning_production"].includes(requested)) setDataset(requested);
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
+    setTeamFilter(/^\d{1,15}$/.test(params.get("team") || "") ? params.get("team") || "" : "");
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 1000) setPage(requestedPage);
     setHydrated(true);
@@ -90,9 +92,10 @@ export default function SourceStats() {
     if (dataset === "box") url.searchParams.delete("dataset"); else url.searchParams.set("dataset", dataset);
     if (season === "2025") url.searchParams.delete("season"); else url.searchParams.set("season", season);
     if (query.trim()) url.searchParams.set("q", query.trim()); else url.searchParams.delete("q");
+    if (teamFilter) url.searchParams.set("team", teamFilter); else url.searchParams.delete("team");
     if (page) url.searchParams.set("page", String(page)); else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [dataset, hydrated, meta, page, query, season]);
+  }, [dataset, hydrated, meta, page, query, season, teamFilter]);
 
   useEffect(() => {
     if (!meta) return;
@@ -100,12 +103,13 @@ export default function SourceStats() {
     setResult(null);
     const params = new URLSearchParams({ dataset, season, page: String(page) });
     if (query.trim()) params.set("q", query.trim());
+    if (teamFilter) params.set("team", teamFilter);
     fetch(`/api/football/source-stats?${params}`, { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("The football source records could not be loaded."); return response.json() as Promise<Result>; })
       .then((value) => { if (!controller.signal.aborted) setResult(value); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The football source records could not be loaded."); });
     return () => controller.abort();
-  }, [dataset, meta, page, query, retryNonce, season]);
+  }, [dataset, meta, page, query, retryNonce, season, teamFilter]);
 
   const labels = meta?.dataset_labels || fallbackLabels;
   const change = (fn: () => void) => { setPage(0); setError(""); fn(); };
@@ -128,6 +132,7 @@ export default function SourceStats() {
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
         const params = new URLSearchParams({ dataset, season, page: String(requestedPage) });
         if (query.trim()) params.set("q", query.trim());
+        if (teamFilter) params.set("team", teamFilter);
         const response = await fetch(`/api/football/source-stats?${params}`);
         if (!response.ok) throw new Error("The complete football source export could not be loaded.");
         const payload = await response.json() as Result;
@@ -188,6 +193,7 @@ export default function SourceStats() {
         <label className="control"><span>PLAYER, TEAM ID OR SOURCE FIELD</span><input type="search" maxLength={100} value={query} placeholder="Search literal source text" onChange={(event) => { setQuery(event.target.value); setPage(0); }} /></label>
         {result && <><button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></>}
       </div>
+      {teamFilter && <p className="note" role="status">Exact source team key filter: <code>{teamFilter}</code> · <button className="text-link" type="button" onClick={() => { setTeamFilter(""); setPage(0); }}>Clear filter</button></p>}
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive, specialist and retained player releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
       {error && <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => { setError(""); setRetryNonce((value) => value + 1); }}>Retry football source archive</button></div>}

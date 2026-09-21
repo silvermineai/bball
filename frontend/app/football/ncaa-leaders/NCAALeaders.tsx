@@ -82,8 +82,8 @@ export default function NCAALeaders({ release }: { release: Release }) {
           <em>the box score.</em>
         </h1>
         <p>
-          Leaderboards built from the complete {release.season} player
-          player-game release. Each table aggregates one source name, team ID
+          Leaderboards built from the complete {release.season} player-game
+          release. Each table aggregates one source name, team ID
           and category within the season, so the board is useful for triage
           without pretending the release provides a verified athlete identity.
         </p>
@@ -160,7 +160,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
                       <th scope="row">
                         <strong>{leader.name}</strong>
                         <small>{leader.team} · {leader.position || "Position unavailable"}</small>
-                        <small>Team ID {leader.team_id}</small>
+                        <small>Team ID {leader.team_id} · <Link href={`/football/source-stats/?dataset=ncaa_player_stats&season=${release.season}&team=${encodeURIComponent(leader.team_id)}`}>Open source rows ↗</Link></small>
                       </th>
                       <td className="numeric"><strong>{format(leader.primary)}</strong></td>
                       <td className="numeric">{leader.games}<small>{leader.records} source rows</small></td>
