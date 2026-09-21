@@ -80,6 +80,17 @@ def test_source_contract_exposes_auditable_candidate_without_publishing_rows():
         "robots_allowed": False,
     }
     assert contracts["ncaa_wbb_national_rankings"]["robots_policy"]["status"] == "disallowed"
+    schedule = contracts["ncaa_com_wbb_lower_division_schedule"]
+    assert schedule["status"] == "candidate_unverified"
+    assert schedule["evidence"] == {
+        "api_contract_validated": True,
+        "target_season_rows": 0,
+        "target_season_receipt_verified": False,
+        "explicit_division_request": True,
+    }
+    assert schedule["query_contract"]["calendar"]["required_variables"] == [
+        "sportCode=WBB", "seasonYear", "division=2|3", "month=1..12"
+    ]
     assert result["divisions"]["2"]["rows"] == result["divisions"]["3"]["rows"] == 0
 
 

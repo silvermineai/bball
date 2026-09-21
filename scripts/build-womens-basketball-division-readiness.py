@@ -33,6 +33,26 @@ NCAA_STATS_ROBOTS = {
     "rule": "User-agent: * Disallow: /",
 }
 
+# NCAA.com exposes a separate scoreboard contract for D2/D3.  The persisted
+# query is exact-scope because division is carried in every request; it does
+# not turn a name or conference into a classification.  The capture script
+# lives in scripts/scrape-womens-lower-division-schedules.py and stays
+# fail-closed when the target season has no schedule response.
+NCAA_LOWER_SCHEDULE_URL = "https://www.ncaa.com/scoreboard/basketball-women/d2"
+NCAA_LOWER_SCHEDULE_API = "https://sdataprod.ncaa.com"
+NCAA_LOWER_SCHEDULE_QUERIES = {
+    "calendar": {
+        "meta": "NCAA_schedules_games_web",
+        "sha256": "c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80",
+        "required_variables": ["sportCode=WBB", "seasonYear", "division=2|3", "month=1..12"],
+    },
+    "contests": {
+        "meta": "GetContests_web",
+        "sha256": "4bcb5e6432fa9da365c0c19af01b1f9015cc7eb5c21e7af2dba308784a166df7",
+        "required_variables": ["sportCode=WBB", "seasonYear", "division=2|3", "contestDate=MM/DD/YYYY"],
+    },
+}
+
 # These are the only fields that can establish a lower-division scope.  A
 # source flag such as ``away_non_div1_team`` is deliberately excluded: it
 # tells us only that a row is outside Division I.
@@ -286,6 +306,27 @@ def build_readiness(
             ],
             "reason": "NCAA.com explicitly scopes these pages to D2 or D3 and publishes current individual/team tables. Athlete IDs are absent, so the tables remain separate from the ESPN identity and forecast editions.",
         })
+    source_contracts.append({
+        "key": "ncaa_com_wbb_lower_division_schedule",
+        "label": "NCAA.com lower-division schedule API",
+        "status": "candidate_unverified",
+        "scope": "women’s basketball · D2/D3 · exact division query",
+        "source_url": NCAA_LOWER_SCHEDULE_URL,
+        "evidence": {
+            "api_contract_validated": True,
+            "target_season_rows": 0,
+            "target_season_receipt_verified": False,
+            "explicit_division_request": True,
+        },
+        "required": [
+            "target-season calendar and contest responses with SHA-256 receipts",
+            "explicit division=2 or division=3 on every request and normalized row",
+            "contest ID and publisher team slugs for every two-team contest",
+        ],
+        "api_url": NCAA_LOWER_SCHEDULE_API,
+        "query_contract": NCAA_LOWER_SCHEDULE_QUERIES,
+        "reason": "The public API contract returns exact D2/D3 contests for completed seasons. The current target season returns no schedule response yet, so no lower-division upcoming rows or forecasts are published.",
+    })
     audit = {
         "status": "blocked_by_missing_explicit_division_labels" if assets and not assets_with_division else "needs_review",
         "assets_inspected": len(assets),
