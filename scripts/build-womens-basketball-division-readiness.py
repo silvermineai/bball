@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EDITION = ROOT / "frontend/public/data/basketball/womens-edition.json"
 SCHEDULE = ROOT / ".local/womens-basketball/wbb_schedule_2027.parquet"
 OUT = ROOT / "frontend/public/data/basketball/womens-division-readiness.json"
+LOWER_STATS = ROOT / "frontend/public/data/basketball/womens-lower-division-stats.json"
 
 # The NCAA national-ranking endpoint is a lawful candidate source for a
 # lower-division player/team edition.  It is deliberately recorded as an
@@ -174,6 +175,7 @@ def build_readiness(
     edition: dict[str, Any],
     schedule_rows: list[dict[str, Any]],
     asset_evidence: list[dict[str, Any]] | None = None,
+    lower_stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a division contract from observed fields only.
 
@@ -244,6 +246,39 @@ def build_readiness(
             "reason": "This is an eligible source candidate, but no permitted, receipt-backed WBB capture is retained yet; no rows are published from it.",
         },
     ]
+    native_leaderboards: dict[str, Any] = {}
+    if isinstance(lower_stats, dict):
+        for division in ("d2", "d3"):
+            current = lower_stats.get("divisions", {}).get(division, {})
+            individual = current.get("individual", []) if isinstance(current, dict) else []
+            team = current.get("team", []) if isinstance(current, dict) else []
+            native_leaderboards[division] = {
+                "status": "published_source_native",
+                "individual_rows": sum(len(item.get("rows", [])) for item in individual if isinstance(item, dict)),
+                "team_rows": sum(len(item.get("rows", [])) for item in team if isinstance(item, dict)),
+                "individual_statistics": len(individual),
+                "team_statistics": len(team),
+                "receipt_count": sum(1 for item in lower_stats.get("receipts", []) if isinstance(item, dict) and item.get("url")),
+                "identity_status": current.get("identity_status"),
+                "through_games": current.get("through_games"),
+            }
+        source_contracts.append({
+            "key": "ncaa_com_wbb_lower_division_stats",
+            "label": "NCAA.com lower-division leaderboards",
+            "status": "ready",
+            "scope": "women’s basketball · D2/D3 · source-native leaderboards",
+            "source_url": "https://www.ncaa.com/stats/basketball-women/d2",
+            "evidence": {
+                "capture_present": True,
+                "rows_published": sum(item["individual_rows"] + item["team_rows"] for item in native_leaderboards.values()),
+                "receipt_verified": bool(lower_stats.get("receipts")),
+            },
+            "required": [
+                "stable athlete IDs before identity joins or player-model use",
+                "retain source team slug and per-response SHA-256 receipt",
+            ],
+            "reason": "NCAA.com explicitly scopes these pages to D2 or D3 and publishes current individual/team tables. Athlete IDs are absent, so the tables remain separate from the ESPN identity and forecast editions.",
+        })
     audit = {
         "status": "blocked_by_missing_explicit_division_labels" if assets and not assets_with_division else "needs_review",
         "assets_inspected": len(assets),
@@ -273,11 +308,13 @@ def build_readiness(
                 "status": "unavailable",
                 "rows": 0,
                 "reason": "The retained release has no complete Division II player/team tables or explicit D2 label.",
+                "source_native_leaderboards": native_leaderboards.get("d2"),
             },
             "3": {
                 "status": "unavailable",
                 "rows": 0,
                 "reason": "The retained release has no complete Division III player/team tables or explicit D3 label.",
+                "source_native_leaderboards": native_leaderboards.get("d3"),
             },
         },
         "non_division_one_schedule_signals": {
@@ -318,7 +355,8 @@ def main() -> None:
         import polars as pl
 
         rows = pl.read_parquet(SCHEDULE).to_dicts()
-    OUT.write_text(json.dumps(build_readiness(edition, rows, inspect_retained_assets()), ensure_ascii=False, indent=2, allow_nan=False) + "\n")
+    lower_stats = json.loads(LOWER_STATS.read_text()) if LOWER_STATS.exists() else None
+    OUT.write_text(json.dumps(build_readiness(edition, rows, inspect_retained_assets(), lower_stats), ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     print(f"Published {OUT} ({len(rows):,} schedule rows inspected)")
 
 

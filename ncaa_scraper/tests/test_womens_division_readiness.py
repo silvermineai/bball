@@ -103,3 +103,31 @@ def test_next_input_contract_accepts_explicit_scope_and_rejects_conflicts():
     missing = MODULE.validate_labeled_release([{**row, "division": None}], receipt)
     assert missing["accepted"] is False
     assert "missing_or_invalid_division" in {error["code"] for error in missing["errors"]}
+
+
+def test_ncaa_com_lower_division_tables_are_source_native_without_identity_join():
+    result = MODULE.build_readiness(
+        {"coverage": {}},
+        [],
+        [],
+        {
+            "divisions": {
+                "d2": {
+                    "individual": [{"rows": [{"rank": 1}, {"rank": 2}]}],
+                    "team": [{"rows": [{"rank": 1}]}],
+                    "identity_status": "source_names_and_team_slugs_only",
+                    "through_games": "Saturday, March 28, 2026",
+                },
+                "d3": {"individual": [], "team": [], "identity_status": "source_names_and_team_slugs_only"},
+            },
+            "receipts": [{"url": "https://www.ncaa.com/stats/basketball-women/d2", "sha256": "a" * 64}],
+        },
+    )
+    d2 = result["divisions"]["2"]["source_native_leaderboards"]
+    assert d2["individual_rows"] == 2
+    assert d2["team_rows"] == 1
+    assert d2["identity_status"] == "source_names_and_team_slugs_only"
+    contract = {item["key"]: item for item in result["source_contracts"]}["ncaa_com_wbb_lower_division_stats"]
+    assert contract["status"] == "ready"
+    assert contract["evidence"] == {"capture_present": True, "rows_published": 3, "receipt_verified": True}
+    assert result["divisions"]["2"]["rows"] == 0
