@@ -5777,6 +5777,8 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .division-coverage-matrix h3 { margin: 8px 0 10px; }
 .division-coverage-matrix .data-table { margin-top: 12px; }
 .wbb-player-card { margin-top: 28px; }
+.wbb-recruiting-metric { display: grid; gap: 6px; min-width: 110px; color: var(--muted); font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.wbb-recruiting-metric select { min-width: 110px; border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 8px 9px; color: var(--ink); font: 12px/1.2 "IBM Plex Sans", sans-serif; letter-spacing: 0; text-transform: none; }
 .wbb-player-controls { display: grid; grid-template-columns: 140px minmax(0, 1fr) 105px minmax(120px, .45fr); gap: 8px 12px; align-items: center; margin: 18px 0 12px; }
 .wbb-player-controls label { color: var(--muted); font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
 .wbb-player-controls input, .wbb-player-controls select { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 9px 10px; color: var(--ink); }
@@ -5817,6 +5819,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 @media (max-width: 800px) { .scope-snapshot-head { display: block; } .scope-snapshot-counts { margin-top: 16px; } .scope-snapshot-grid { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .wbb-shot-map-layout { grid-template-columns: 1fr; } .wbb-shot-map-controls { grid-template-columns: 1fr; } .wbb-shot-map-controls label { padding-top: 0; } .wbb-shot-search-results { grid-column: 1; } }
 @media (max-width: 700px) { .wbb-player-controls { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .wbb-recruiting-metric { width: 100%; margin-top: 10px; } }
 @media (max-width: 700px) { .wbb-team-source-controls { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .division-player-controls { grid-template-columns: 1fr; } }
 
