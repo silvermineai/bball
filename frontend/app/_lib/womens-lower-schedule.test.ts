@@ -33,4 +33,25 @@ describe("women's lower division schedule summaries", () => {
     expect(rows.map((row) => row.games)).toEqual([1, 1]);
     expect(rows.every((row) => row.points_against > 0)).toBe(true);
   });
+
+  it("does not merge missing-slug teams by display name", () => {
+    const rows = summarizeWomensLowerSchedule([
+      {
+        ...contest(1, 70, 60),
+        teams: [
+          { home: true, name: "Unidentified", score: 70 },
+          { home: false, slug: "away", name: "Away", score: 60 },
+        ],
+      },
+      {
+        ...contest(2, 80, 60),
+        teams: [
+          { home: true, name: "Unidentified", score: 80 },
+          { home: false, slug: "away", name: "Away", score: 60 },
+        ],
+      },
+    ], "2");
+    expect(rows.filter((row) => row.slug == null)).toHaveLength(2);
+    expect(rows.filter((row) => row.slug == null).every((row) => row.games === 1)).toBe(true);
+  });
 });

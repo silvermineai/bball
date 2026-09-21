@@ -56,14 +56,17 @@ export function summarizeWomensLowerSchedule(
     const away = contest.teams.find((team) => team.home === false) || contest.teams[1];
     if (!home || !away || !finiteScore(home.score) || !finiteScore(away.score)) continue;
     const rows = [
-      { team: home, score: home.score, opponent: away.score },
-      { team: away, score: away.score, opponent: home.score },
+      { side: "home", team: home, score: home.score, opponent: away.score },
+      { side: "away", team: away, score: away.score, opponent: home.score },
     ];
     for (const row of rows) {
       const slug = String(row.team.slug || "").trim();
       const name = String(row.team.name || row.team.slug || "").trim();
       if (!slug && !name) continue;
-      const key = slug || `name:${name.toLowerCase()}`;
+      // A missing publisher slug is not a safe cross-game identity. Keep the
+      // observation isolated to this contest side rather than merging by
+      // display name, which could collapse two distinct teams.
+      const key = slug || `contest:${contest.contest_id}:${row.side}`;
       const existing = grouped.get(key) || {
         division,
         team_key: key,
@@ -94,4 +97,3 @@ export function summarizeWomensLowerSchedule(
     .sort((left, right) => right.win_pct - left.win_pct || right.margin - left.margin || right.points_for - left.points_for || left.team.localeCompare(right.team) || left.team_key.localeCompare(right.team_key))
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
-
