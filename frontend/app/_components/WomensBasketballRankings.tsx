@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   filterWomensRankingRows,
   paginateWomensRankingRows,
   womensRankingCountLabel,
   womensRankingSampleLabel,
+  womensPlayerTableHref,
   type WomensRankingRow,
 } from "../_lib/womens-rankings-view";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
@@ -85,7 +87,7 @@ export default function WomensBasketballRankings() {
       </div>
       {board ? <>
         <p className="note">{board.description || board.label} · {womensRankingCountLabel(coverage[metric]?.qualified)} qualified players · observed values {womensRankingCountLabel(coverage[metric]?.observed)}{board.min_sample != null && board.sample_unit ? ` · minimum ${board.min_sample.toLocaleString()} ${board.sample_unit}` : ""}. Showing {rows.length ? `${page * 50 + 1}–${page * 50 + rows.length}` : "0"} of {matchingRows.length.toLocaleString()} matching rows. Equal values share a rank; board ranks remain global when searching.</p>
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">Games</th>{usingBox ? <th className="numeric">Box rows</th> : null}{board.sample_unit ? <th className="numeric">Rate sample</th> : null}<th className="numeric">{board.unit}</th></tr></thead><tbody>{rows.map((row) => <tr key={`${metric}-${row.player_id}`}><td className="rank-number">{row.rank}</td><th scope="row">{row.name}<small>{usingBox ? "Exact box player " : "Source player "}{row.player_id}</small></th><td>{row.team}</td><td>{row.position || "—"}</td><td className="numeric">{row.games.toLocaleString()}</td>{usingBox ? <td className="numeric">{(row as RankingRow & { box_rows?: number }).box_rows?.toLocaleString() || "—"}</td> : null}{board.sample_unit ? <td className="numeric">{womensRankingSampleLabel(row, board) || "—"}</td> : null}<td className="numeric"><strong>{formatValue(row.value, board.unit)}</strong></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">Games</th>{usingBox ? <th className="numeric">Box rows</th> : null}{board.sample_unit ? <th className="numeric">Rate sample</th> : null}<th className="numeric">{board.unit}</th></tr></thead><tbody>{rows.map((row) => <tr key={`${metric}-${row.player_id}`}><td className="rank-number">{row.rank}</td><th scope="row"><Link href={womensPlayerTableHref(row.player_id)}>{row.name}</Link><small>{usingBox ? "Exact box player " : "Source player "}{row.player_id} · <Link href={womensPlayerTableHref(row.player_id)}>open production</Link></small></th><td>{row.team}</td><td>{row.position || "—"}</td><td className="numeric">{row.games.toLocaleString()}</td>{usingBox ? <td className="numeric">{(row as RankingRow & { box_rows?: number }).box_rows?.toLocaleString() || "—"}</td> : null}{board.sample_unit ? <td className="numeric">{womensRankingSampleLabel(row, board) || "—"}</td> : null}<td className="numeric"><strong>{formatValue(row.value, board.unit)}</strong></td></tr>)}</tbody></table></div>
         {!rows.length ? <p className="empty">No qualified players match this search.</p> : null}
         {matchingRows.length > 50 && <div className="pagination" aria-label="Women&apos;s player ranking pages"><span>Page {page + 1} of {Math.ceil(matchingRows.length / 50)}</span><div><button className="button secondary" type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>← Previous</button><button className="button secondary" type="button" disabled={(page + 1) * 50 >= matchingRows.length} onClick={() => setPage((current) => current + 1)}>Next →</button></div></div>}
       </> : null}

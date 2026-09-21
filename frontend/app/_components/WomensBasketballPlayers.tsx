@@ -95,6 +95,8 @@ export default function WomensBasketballPlayers() {
   const pageSize = 100;
 
   useEffect(() => {
+    const initialQuery = new URLSearchParams(window.location.search).get("q");
+    if (initialQuery) setQuery(initialQuery);
     Promise.all([
       fetch("/data/basketball/womens-edition.json"),
       fetch("/data/basketball/womens-box-player-stats.json"),

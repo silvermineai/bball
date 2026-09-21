@@ -4,6 +4,7 @@ import {
   paginateWomensRankingRows,
   womensRankingCountLabel,
   womensRankingSampleLabel,
+  womensPlayerTableHref,
   type WomensRankingRow,
 } from "./womens-rankings-view";
 
@@ -14,6 +15,10 @@ const rows: WomensRankingRow[] = [
 ];
 
 describe("women's ranking board view", () => {
+  it("hands an exact source player ID to the women’s production table", () => {
+    expect(womensPlayerTableHref("5239100")).toBe("/basketball/players/?gender=women&division=1&q=5239100");
+  });
+
   it("filters by player, team, or source player ID without renumbering", () => {
     expect(filterWomensRankingRows(rows, "north state").map((row) => row.rank)).toEqual([1, 3]);
     expect(filterWomensRankingRows(rows, "102")).toEqual([rows[1]]);

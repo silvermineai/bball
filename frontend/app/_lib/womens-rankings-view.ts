@@ -14,6 +14,11 @@ export type WomensRankingSampleRule = {
   sample_unit?: string;
 };
 
+/** Keep the women’s source-player handoff in its own identity namespace. */
+export function womensPlayerTableHref(playerId: string | number): string {
+  return `/basketball/players/?gender=women&division=1&q=${encodeURIComponent(String(playerId))}`;
+}
+
 /** Keep absent coverage distinct from a source-reported zero. */
 export function womensRankingCountLabel(value: unknown): string {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
