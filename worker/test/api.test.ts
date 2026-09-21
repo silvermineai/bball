@@ -1620,6 +1620,32 @@ describe("bball api", () => {
     expect(binds.some((args) => args.includes(500) && args.includes(0))).toBe(true);
   });
 
+  it("attaches the verified team-season source receipt to aggregate rows", async () => {
+    const receipt = {
+      url: "https://example.test/team-season-2026.parquet",
+      fetched_at: "2026-09-08T18:15:25.291888Z",
+      sha256: "d".repeat(64),
+    };
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => sql.includes("count(*) AS total")
+        ? { first: async () => ({ total: 1, non_null: 1 }) }
+        : sql.includes("receipt_json")
+          ? { first: async () => ({ receipt_json: JSON.stringify(receipt) }) }
+          : { all: async () => ({ results: [{ team_id: "150", team_name: "Example", team_abbreviation: "EX", value: 82.1, display: "82.1" }] }) },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/team-stats?season=2026&category=offensive&stat=avgPoints",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      source: { dataset: "team_season", season: 2026, ...receipt },
+      rows: [{ id: "150", value: 82.1 }],
+    });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("FROM bb_sources WHERE dataset=? AND season=?"))).toBe(true);
+  });
+
   it("rejects invalid team and boutique source parameters before querying D1", async () => {
     for (const path of [
       "/api/basketball/research/team-stats?category=made-up&stat=avgPoints",

@@ -4,6 +4,13 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
+type SourceReceipt = {
+  dataset: "team_season";
+  season: number;
+  url: string | null;
+  fetched_at: string | null;
+  sha256: string | null;
+};
 export type TeamField = {
   category: "general" | "offensive" | "defensive";
   key: string;
@@ -86,6 +93,21 @@ function edgeCache() {
   return typeof caches === "undefined" ? null : (caches as unknown as { default: Cache }).default;
 }
 
+function sourceReceipt(season: number, receiptJson: string | null | undefined): SourceReceipt | null {
+  if (!receiptJson) return null;
+  try {
+    const value = JSON.parse(receiptJson) as Record<string, unknown>;
+    const url = typeof value.url === "string" && value.url.length <= 2000 ? value.url : null;
+    const fetchedAt = typeof value.fetched_at === "string" && value.fetched_at.length <= 100 ? value.fetched_at : null;
+    const sha256 = typeof value.sha256 === "string" && /^[a-f0-9]{64}$/i.test(value.sha256) ? value.sha256.toLowerCase() : null;
+    // A receipt without its content hash is not a verifiable release identity.
+    if (!sha256) return null;
+    return { dataset: "team_season", season, url, fetched_at: fetchedAt, sha256 };
+  } catch {
+    return null;
+  }
+}
+
 export const teamStats = new Hono<{ Bindings: Bindings }>();
 teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const { season, category, stat, q, ids: idsQuery, page, limit, direction, meta } = c.req.valid("query");
@@ -141,9 +163,22 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
        FROM bb_team_season WHERE ${where}
       ORDER BY ${order} LIMIT ? OFFSET ?`,
     ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
+    // Keep the aggregate row and its immutable source release together. A
+    // missing or malformed receipt stays null; it must never be replaced by
+    // a guessed URL or an unverified publisher label.
+    let source: SourceReceipt | null = null;
+    try {
+      const receipt = await withTimeout(db.prepare(
+        "SELECT receipt_json FROM bb_sources WHERE dataset=? AND season=?",
+      ).bind("team_season", season).first<{ receipt_json?: string }>(), DB_TIMEOUT_MS);
+      source = sourceReceipt(season, receipt?.receipt_json);
+    } catch {
+      source = null;
+    }
     const response = c.json({
     season, field, page, page_size: limit,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
+    source,
     rows: rows.results.map((row) => ({
       id: row.team_id, team: row.team_name || row.team_id, abbreviation: row.team_abbreviation,
       value: typeof row.value === "number" ? row.value : null,
