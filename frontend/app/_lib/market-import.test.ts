@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketImportMatchesGame, marketImportPrediction, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
+import { marketImportMatchState, marketImportMatchesGame, marketImportPrediction, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
@@ -55,6 +55,14 @@ describe("market import preflight", () => {
     expect(result.errors.join(" ")).toContain("before starts_at");
     expect(result.errors.join(" ")).toContain("updated_at cannot be after");
     expect(result.errors.join(" ")).toContain("h2h requires valid");
+  });
+
+  it("classifies exact joins separately from missing or mismatched schedule evidence", () => {
+    const row = previewRow();
+    const game = { id: "401", starts_at: "2027-01-01T20:00:00Z", home_name: "North State", away_name: "South State" };
+    expect(marketImportMatchState(row, game)).toBe("exact");
+    expect(marketImportMatchState(row, null)).toBe("missing_schedule");
+    expect(marketImportMatchState({ ...row, homeName: "Different Home" }, game)).toBe("identity_or_clock_mismatch");
   });
 
   it("rejects provider updates too stale for scorecard comparison", () => {

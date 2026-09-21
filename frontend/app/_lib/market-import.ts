@@ -59,6 +59,14 @@ export function marketImportMatchesGame(row: MarketImportRow, game: ExactSchedul
   return Number.isFinite(gameTime) && Number.isFinite(rowTime) && gameTime === rowTime;
 }
 
+export type MarketImportMatchState = "exact" | "missing_schedule" | "identity_or_clock_mismatch";
+
+/** Keep a valid CSV row distinct from one that fails the exact schedule join. */
+export function marketImportMatchState(row: MarketImportRow, game: ExactScheduleGame | null): MarketImportMatchState {
+  if (!game) return "missing_schedule";
+  return marketImportMatchesGame(row, game) ? "exact" : "identity_or_clock_mismatch";
+}
+
 /** Parse RFC 4180-style CSV locally; the selected file never leaves the browser. */
 export function parseMarketCsv(text: string): string[][] {
   const rows: string[][] = [];
