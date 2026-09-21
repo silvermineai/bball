@@ -202,8 +202,12 @@ export type LowerFootballPlayer = {
   games: number;
   source_rows: number;
   primary: number;
+  /** The observed category total divided by distinct retained game IDs. */
+  per_game: number;
   metrics: Record<string, number>;
 };
+
+export type LowerFootballRankingBasis = "total" | "per_game";
 
 const finite = (value: number) => Number.isFinite(value);
 
@@ -249,6 +253,7 @@ export function aggregateLowerFootballPlayers(
       games: 0,
       source_rows: 0,
       primary: 0,
+      per_game: 0,
       metrics: {},
       game_ids: new Set<string>(),
     };
@@ -262,9 +267,26 @@ export function aggregateLowerFootballPlayers(
     .map(({ game_ids: _gameIds, ...player }) => ({
       ...player,
       primary: player.metrics[definition.metric] || 0,
+      per_game: 0,
+    }))
+    .map((player) => ({
+      ...player,
+      per_game: player.games > 0 ? player.primary / player.games : 0,
     }))
     .filter((player) => player.primary > 0)
     .sort((left, right) => right.primary - left.primary || left.athlete.localeCompare(right.athlete) || left.athlete_id.localeCompare(right.athlete_id));
+}
+
+/**
+ * Pick the published ranking value without turning a missing game into a
+ * zero-value performance. Both values are derived only from retained rows;
+ * callers should display the basis alongside the rank.
+ */
+export function lowerFootballPlayerRankValue(
+  player: Pick<LowerFootballPlayer, "primary" | "per_game">,
+  basis: LowerFootballRankingBasis,
+) {
+  return basis === "per_game" ? player.per_game : player.primary;
 }
 
 /**

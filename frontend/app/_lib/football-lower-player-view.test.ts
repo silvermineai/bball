@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -48,8 +48,19 @@ describe("lower football player aggregation", () => {
       row({ game_id: "g2", stats: ["5/10", "100", "1"] }),
       row({ athlete_id: "a2", athlete: "Other QB", stats: ["20/20", "50", "0"] }),
     ], "d2", "passing");
-    expect(result[0]).toMatchObject({ athlete_id: "a1", games: 2, source_rows: 2, primary: 300, metrics: { passingYards: 300, passingTouchdowns: 3 } });
+    expect(result[0]).toMatchObject({ athlete_id: "a1", games: 2, source_rows: 2, primary: 300, per_game: 150, metrics: { passingYards: 300, passingTouchdowns: 3 } });
     expect(result).toHaveLength(2);
+  });
+
+  it("supports an explicit per-game ranking basis from distinct retained games", () => {
+    const result = aggregateLowerFootballPlayers([
+      row(),
+      row({ game_id: "g2", stats: ["5/10", "100", "1"] }),
+      row({ athlete_id: "a2", athlete: "Other QB", stats: ["20/20", "180", "0"] }),
+    ], "d2", "passing");
+    expect(lowerFootballPlayerRankValue(result[0], "total")).toBe(300);
+    expect(lowerFootballPlayerRankValue(result[0], "per_game")).toBe(150);
+    expect(lowerFootballPlayerRankValue(result[1], "per_game")).toBe(180);
   });
 
   it("fails closed across divisions and categories", () => {
