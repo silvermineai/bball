@@ -12,11 +12,13 @@ import {
   type LowerFootballResults,
 } from "../../_lib/football-lower-results";
 import { lowerFootballReadiness } from "../../_lib/football-lower-readiness";
+import { validateFootballLowerPlayerReadiness, type FootballLowerPlayerReadiness } from "../../_lib/football-lower-player-readiness";
 import { date, fmt, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
 export default function LowerDivisionResults() {
   const [archive, setArchive] = useState<LowerFootballResults | null>(null);
+  const [playerReadiness, setPlayerReadiness] = useState<FootballLowerPlayerReadiness | null>(null);
   const [division, setDivision] = useState<LowerFootballDivision>("d2");
   const [query, setQuery] = useState("");
   const [forecastQuery, setForecastQuery] = useState("");
@@ -29,6 +31,15 @@ export default function LowerDivisionResults() {
       .then((response) => { if (!response.ok) throw new Error("The lower-division results archive could not be loaded."); return response.json() as Promise<unknown>; })
       .then((payload) => { if (!controller.signal.aborted) setArchive(validateLowerFootballResults(payload)); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The lower-division results archive is unavailable."); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/data/football/lower-division-player-readiness.json", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("The lower-division player-source ledger could not be loaded."); return response.json() as Promise<unknown>; })
+      .then((payload) => { if (!controller.signal.aborted) setPlayerReadiness(validateFootballLowerPlayerReadiness(payload)); })
+      .catch(() => { if (!controller.signal.aborted) setPlayerReadiness(null); });
     return () => controller.abort();
   }, []);
 
@@ -75,6 +86,14 @@ export default function LowerDivisionResults() {
             </tr>)}</tbody>
           </table>
         </div>
+        {playerReadiness ? <div className="paper-panel" style={{ marginTop: 20 }} aria-label="Football lower-division player source readiness">
+          <div className="eyebrow">PLAYER SOURCE INTAKE · D2/D3</div>
+          <h3>No lower-division player rows until the source contract passes.</h3>
+          <p className="note">{playerReadiness.classification_policy} The ledger records public NCAA and ESPN endpoint contracts without treating endpoint discovery as captured player data.</p>
+          <div className="table-scroll"><table className="data-table"><thead><tr><th>Division</th><th>Status</th><th className="numeric">Candidate assets</th><th className="numeric">Rows published</th><th>Blocking evidence</th></tr></thead><tbody>{(["2", "3"] as const).map((value) => { const item = playerReadiness.divisions[value]; return <tr key={value}><th scope="row">D{value}</th><td><span className={item.status === "ready" ? "readiness-state readiness-state-ready" : "readiness-state readiness-state-missing"}>{item.status === "ready" ? "Ready" : "Blocked"}</span></td><td className="numeric">{item.candidate_count.toLocaleString()}</td><td className="numeric">{item.rows_published.toLocaleString()}</td><td>{item.blockers.length ? item.blockers.join(" · ") : item.reason}</td></tr>; })}</tbody></table></div>
+          <div className="table-scroll" style={{ marginTop: 14 }}><table className="data-table"><thead><tr><th>Public endpoint candidate</th><th>Scope</th><th>Status</th><th>Required before import</th></tr></thead><tbody>{playerReadiness.source_contracts.map((contract, index) => <tr key={contract.key + contract.url}><th scope="row">Candidate {index + 1}<small>Endpoint contract retained for intake audit</small></th><td>{contract.scope}</td><td>{contract.discovery_status === "candidate_unverified" ? "Candidate · unverified" : contract.discovery_status}</td><td>{contract.required_before_import.join(" · ")}</td></tr>)}</tbody></table></div>
+          <p className="note">{playerReadiness.limitations.join(" ")}</p>
+        </div> : null}
         <div className="toolbar" style={{ marginTop: 18 }}>
           <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => setDivision(event.target.value as LowerFootballDivision)}><option value="d2">Division II</option><option value="d3">Division III</option></select></label>
           <label className="control"><span>TEAM OR GAME</span><input type="search" maxLength={100} value={query} placeholder="Search a team or game ID" onChange={(event) => setQuery(event.target.value)} /></label>

@@ -83,6 +83,81 @@ FOOTBALL_SOURCE_EVIDENCE = {
     },
 }
 
+# Public endpoint contracts that can be evaluated before a player import is
+# attempted.  The ESPN group-35 feed is a useful discovery surface for
+# Division II/III events, but it combines those divisions and therefore cannot
+# classify a player row on its own.  The NCAA national-ranking page accepts an
+# explicit football division, but no capture is retained in this repository;
+# the robots policy, response schema, row identities, and immutable receipt
+# must be verified for the exact season before publication.
+FOOTBALL_PUBLIC_PLAYER_ENDPOINTS = (
+    {
+        "key": "ncaa_mfb_national_ranking",
+        "publisher": "NCAA Statistics",
+        "url_template": (
+            "https://stats.ncaa.org/rankings/national_ranking"
+            "?academic_year={season}&division={division}&sport_code=MFB"
+        ),
+        "method": "GET",
+        "scope": "exact requested football division",
+        "discovery_status": "candidate_unverified",
+        "expected_fields": [
+            "season",
+            "division",
+            "player_id",
+            "name",
+            "team_id",
+            "team_name",
+            "stat_value",
+        ],
+        "required_before_import": [
+            "robots-permitted capture",
+            "explicit division=2 or division=3 on every row",
+            "stable player and team identity fields",
+            "response URL and SHA-256 receipt",
+        ],
+        "reason": (
+            "The query carries an explicit division parameter, but no exact-"
+            "season football response is retained and the response schema has "
+            "not passed the import contract."
+        ),
+    },
+    {
+        "key": "espn_mfb_group_35_event_summary",
+        "publisher": "ESPN",
+        "url_template": (
+            "https://site.api.espn.com/apis/site/v2/sports/football/"
+            "college-football/summary?event={event_id}"
+        ),
+        "discovery_url_template": (
+            "https://site.api.espn.com/apis/site/v2/sports/football/"
+            "college-football/scoreboard?dates={yyyymmdd}&groups=35"
+        ),
+        "method": "GET",
+        "scope": "combined D2/D3 event discovery and game box score",
+        "discovery_status": "candidate_unverified",
+        "expected_fields": [
+            "event_id",
+            "team_id",
+            "athlete_id",
+            "athlete_name",
+            "stat_name",
+            "stat_value",
+        ],
+        "required_before_import": [
+            "robots-permitted capture of the group-35 schedule",
+            "exact D2/D3 team classification from a source-labeled team release",
+            "stable athlete and team IDs on every box-score row",
+            "per-response URL and SHA-256 receipt",
+        ],
+        "reason": (
+            "ESPN group 35 discovers Division II/III games but combines both "
+            "divisions; event summaries must be joined to an explicit, exact-"
+            "division team release before any player rows can be published."
+        ),
+    },
+)
+
 
 def _release_url(tag: str, asset_template: str) -> str:
     return f"{RELEASES}/{tag}/{asset_template}"
@@ -488,6 +563,31 @@ def discover_lower_division_sources(
             "NCAA Statistics national-ranking derivative; no direct scraping"
             if code == "MBB"
             else "SportsDataverse release assets; no direct scraping"
+        ),
+        "public_endpoint_contracts": (
+            [
+                {
+                    **contract,
+                    "url": contract["url_template"].format(
+                        season=season if season is not None else "{season}",
+                        division=target,
+                        event_id="{event_id}",
+                        yyyymmdd="{yyyymmdd}",
+                    ),
+                    **(
+                        {
+                            "discovery_url": contract["discovery_url_template"].format(
+                                yyyymmdd="{yyyymmdd}"
+                            )
+                        }
+                        if contract.get("discovery_url_template")
+                        else {}
+                    ),
+                }
+                for contract in FOOTBALL_PUBLIC_PLAYER_ENDPOINTS
+            ]
+            if code == "MFB"
+            else []
         ),
         "required_scope_fields": list(REQUIRED_SCOPE_FIELDS),
         "required_identity_fields": list(REQUIRED_IDENTITY_FIELDS),

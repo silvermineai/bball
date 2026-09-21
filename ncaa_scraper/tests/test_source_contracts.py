@@ -96,6 +96,26 @@ def test_football_discovery_includes_publisher_scope_evidence_and_join_audit():
     )
 
 
+def test_football_discovery_records_public_player_endpoint_contracts_without_importing_rows():
+    result = discover_lower_division_sources("MFB", 2, season=2026)
+    contracts = {item["key"]: item for item in result["public_endpoint_contracts"]}
+
+    ncaa = contracts["ncaa_mfb_national_ranking"]
+    assert "academic_year=2026" in ncaa["url"]
+    assert "division=2" in ncaa["url"]
+    assert ncaa["discovery_status"] == "candidate_unverified"
+    assert "robots-permitted capture" in ncaa["required_before_import"]
+
+    espn = contracts["espn_mfb_group_35_event_summary"]
+    assert "summary?event={event_id}" in espn["url"]
+    assert "groups=35" in espn["discovery_url"]
+    assert "combined D2/D3" in espn["scope"]
+    assert any("exact D2/D3 team classification" in value for value in espn["required_before_import"])
+    # Endpoint discovery is evidence for the next intake step, never a player
+    # archive.  The source candidates above must not change the blocked status.
+    assert result["status"] == "blocked"
+
+
 def test_mbb_discovery_accepts_receipted_explicit_d2_and_d3_rows():
     for division, expected in ((2, 1020), (3, 1031)):
         result = discover_lower_division_sources("MBB", division, season=2026)

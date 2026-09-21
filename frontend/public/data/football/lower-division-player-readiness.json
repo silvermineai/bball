@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "sport": "football",
+  "gender": "men",
+  "season": 2026,
+  "generated_at": "2026-09-21T06:27:25.409839Z",
+  "status": "blocked",
+  "source_contracts": [
+    {
+      "key": "ncaa_mfb_national_ranking",
+      "publisher": "NCAA Statistics",
+      "url_template": "https://stats.ncaa.org/rankings/national_ranking?academic_year={season}&division={division}&sport_code=MFB",
+      "method": "GET",
+      "scope": "exact requested football division",
+      "discovery_status": "candidate_unverified",
+      "expected_fields": [
+        "season",
+        "division",
+        "player_id",
+        "name",
+        "team_id",
+        "team_name",
+        "stat_value"
+      ],
+      "required_before_import": [
+        "robots-permitted capture",
+        "explicit division=2 or division=3 on every row",
+        "stable player and team identity fields",
+        "response URL and SHA-256 receipt"
+      ],
+      "reason": "The query carries an explicit division parameter, but no exact-season football response is retained and the response schema has not passed the import contract.",
+      "url": "https://stats.ncaa.org/rankings/national_ranking?academic_year=2026&division=2&sport_code=MFB"
+    },
+    {
+      "key": "espn_mfb_group_35_event_summary",
+      "publisher": "ESPN",
+      "url_template": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event={event_id}",
+      "discovery_url_template": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates={yyyymmdd}&groups=35",
+      "method": "GET",
+      "scope": "combined D2/D3 event discovery and game box score",
+      "discovery_status": "candidate_unverified",
+      "expected_fields": [
+        "event_id",
+        "team_id",
+        "athlete_id",
+        "athlete_name",
+        "stat_name",
+        "stat_value"
+      ],
+      "required_before_import": [
+        "robots-permitted capture of the group-35 schedule",
+        "exact D2/D3 team classification from a source-labeled team release",
+        "stable athlete and team IDs on every box-score row",
+        "per-response URL and SHA-256 receipt"
+      ],
+      "reason": "ESPN group 35 discovers Division II/III games but combines both divisions; event summaries must be joined to an explicit, exact-division team release before any player rows can be published.",
+      "url": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event={event_id}",
+      "discovery_url": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates={yyyymmdd}&groups=35"
+    },
+    {
+      "key": "ncaa_mfb_national_ranking",
+      "publisher": "NCAA Statistics",
+      "url_template": "https://stats.ncaa.org/rankings/national_ranking?academic_year={season}&division={division}&sport_code=MFB",
+      "method": "GET",
+      "scope": "exact requested football division",
+      "discovery_status": "candidate_unverified",
+      "expected_fields": [
+        "season",
+        "division",
+        "player_id",
+        "name",
+        "team_id",
+        "team_name",
+        "stat_value"
+      ],
+      "required_before_import": [
+        "robots-permitted capture",
+        "explicit division=2 or division=3 on every row",
+        "stable player and team identity fields",
+        "response URL and SHA-256 receipt"
+      ],
+      "reason": "The query carries an explicit division parameter, but no exact-season football response is retained and the response schema has not passed the import contract.",
+      "url": "https://stats.ncaa.org/rankings/national_ranking?academic_year=2026&division=3&sport_code=MFB"
+    }
+  ],
+  "divisions": {
+    "2": {
+      "status": "blocked",
+      "candidate_count": 5,
+      "blockers": [
+        "missing_athlete_id",
+        "missing_division",
+        "publisher_scope_excludes_target_division",
+        "target_division_absent",
+        "target_division_player_rows_absent"
+      ],
+      "rows_published": 0,
+      "reason": "No football D2/D3 player rows are published from these candidate endpoints. The source contract is recorded for intake and remains blocked until every row passes the explicit-division, identity, and receipt gates."
+    },
+    "3": {
+      "status": "blocked",
+      "candidate_count": 5,
+      "blockers": [
+        "missing_athlete_id",
+        "missing_division",
+        "publisher_scope_excludes_target_division",
+        "target_division_absent",
+        "target_division_player_rows_absent"
+      ],
+      "rows_published": 0,
+      "reason": "No football D2/D3 player rows are published from these candidate endpoints. The source contract is recorded for intake and remains blocked until every row passes the explicit-division, identity, and receipt gates."
+    }
+  },
+  "classification_policy": "A group-35 event, school name, conference, non-D1 flag, or missing division never classifies a player as D2 or D3. Only a source row with an explicit division and stable player/team IDs can enter the lower-division player archive.",
+  "required_before_import": [
+    "robots-permitted exact-season capture",
+    "sport=football and gender=men on every row",
+    "division=2 or division=3 on every row",
+    "season, team_id, team_display_name, athlete_id, and athlete_display_name",
+    "source URL, fetched timestamp, and SHA-256 receipt",
+    "conflicting duplicate rejection before publication"
+  ],
+  "limitations": [
+    "The retained combined event surface is a Division II/III discovery feed; it is not an exact division label.",
+    "The current derived football release documents only its retained top-level capture stages and supplies no D2/D3 player contract.",
+    "No lower-division player stats, ranks, or identities are substituted from D1, FBS, FCS, team names, or schedule rows."
+  ]
+}
