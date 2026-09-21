@@ -157,6 +157,7 @@ describe("bball api", () => {
         production: Array<{ category: string; epa: number; rank: number; yards_per_play: number; success_rate: number }>;
         box_categories: Array<{ category: string; games: number }>;
         box_totals: Array<{ category: string; games: number; totals: Record<string, number> }>;
+        box_rates: Array<{ category: string; games: number; rates: Record<string, number> }>;
       };
       source_receipts: Array<Record<string, unknown>>;
     };
@@ -178,6 +179,11 @@ describe("bball api", () => {
       { category: "passing", records: 1, games: 1, totals: { completions: 3, interceptions: 0, passingAttempts: 5, passingTouchdowns: 1, passingYards: 42 } },
       { category: "rushing", records: 1, games: 1, totals: { rushingAttempts: 12, rushingTouchdowns: 2, rushingYards: 75 } },
     ]);
+    expect(body.summary.box_rates).toHaveLength(3);
+    expect(body.summary.box_rates[0]).toEqual({ category: "defensive", games: 1, rates: { passesDefendedPerGame: 3, sacksPerGame: 1, tacklesPerGame: 11 } });
+    expect(body.summary.box_rates[1]).toEqual({ category: "passing", games: 1, rates: { completionPct: 60, interceptionRatePct: 0, touchdownRatePct: 20, yardsPerAttempt: 8.4 } });
+    expect(body.summary.box_rates[2]).toMatchObject({ category: "rushing", games: 1, rates: { yardsPerAttempt: 6.25 } });
+    expect(body.summary.box_rates[2].rates.touchdownRatePct).toBeCloseTo(16.6667, 3);
     expect(body.source_receipts.every((receipt) => !("url" in receipt))).toBe(true);
   });
 

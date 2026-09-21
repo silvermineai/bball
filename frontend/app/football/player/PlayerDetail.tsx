@@ -41,6 +41,11 @@ type Detail = {
       games: number;
       totals: Record<string, number>;
     }[];
+    box_rates?: {
+      category: string;
+      games: number;
+      rates: Record<string, number>;
+    }[];
   };
   source_receipts?: {
     dataset: string;
@@ -70,6 +75,22 @@ type Career = {
   rows: CareerRow[];
 };
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const rateLabel = (value: string) => ({
+  completionPct: "Completion",
+  yardsPerAttempt: "Yards / attempt",
+  touchdownRatePct: "Touchdown rate",
+  interceptionRatePct: "Interception rate",
+  yardsPerReception: "Yards / reception",
+  fieldGoalPct: "Field-goal rate",
+  extraPointPct: "Extra-point rate",
+  kickingPointsPerGame: "Kicking points / game",
+  yardsPerPunt: "Yards / punt",
+  yardsPerReturn: "Yards / return",
+  tacklesPerGame: "Tackles / game",
+  sacksPerGame: "Sacks / game",
+  passesDefendedPerGame: "Passes defended / game",
+}[value] || label(value));
+const formatRate = (key: string, value: number) => key.endsWith("Pct") ? `${fmt(value, 1)}%` : fmt(value, 2);
 const sourceLabels: Record<string, string> = {
   box: "Box-score rows",
   passing: "Passing aggregates",
@@ -207,6 +228,28 @@ export default function PlayerDetail() {
                           <td className="numeric">{item.games.toLocaleString()}</td>
                           <td>{Object.entries(item.totals).map(([key, value]) => (
                             <span className="table-subrow" key={key}><strong>{label(key)}</strong><small>{Number.isInteger(value) ? fmt(value, 0) : fmt(value, 2)}</small></span>
+                          ))}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {(data.summary.box_rates || []).length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div className="eyebrow">Derived rates from exact-ID box totals</div>
+                  <p className="note">
+                    Descriptive rates computed only where the retained source provided both numerator and denominator. They are not publisher ranks or projections.
+                  </p>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead><tr><th>Category</th><th className="numeric">Games</th><th>Derived rates</th></tr></thead>
+                      <tbody>{(data.summary.box_rates || []).map((item) => (
+                        <tr key={item.category}>
+                          <td><strong>{label(item.category)}</strong></td>
+                          <td className="numeric">{item.games.toLocaleString()}</td>
+                          <td>{Object.entries(item.rates).map(([key, value]) => (
+                            <span className="table-subrow" key={key}><strong>{rateLabel(key)}</strong><small>{formatRate(key, value)}</small></span>
                           ))}</td>
                         </tr>
                       ))}</tbody>

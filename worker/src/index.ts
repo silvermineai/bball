@@ -372,6 +372,58 @@ const FOOTBALL_BOX_METRICS: Record<string, Array<{ key: string; source?: string 
   ],
 };
 
+type FootballBoxTotals = {
+  category: string;
+  records: number;
+  games: number;
+  totals: Record<string, number>;
+};
+
+/**
+ * Derive a small set of rate stats only when both the source numerator and
+ * denominator survived the retained box rows.  These are descriptive season
+ * rates; they do not fill missing source fields or mix categories.
+ */
+function deriveFootballBoxRates(rows: FootballBoxTotals[]) {
+  const rate = (numerator: number | undefined, denominator: number | undefined, scale = 1) =>
+    numerator != null && denominator != null && Number.isFinite(numerator) && Number.isFinite(denominator) && denominator > 0
+      ? (numerator / denominator) * scale
+      : null;
+  return rows.flatMap((row) => {
+    const totals = row.totals;
+    const rates: Record<string, number> = {};
+    const add = (key: string, value: number | null) => {
+      if (value != null && Number.isFinite(value)) rates[key] = value;
+    };
+    if (row.category === "passing") {
+      add("completionPct", rate(totals.completions, totals.passingAttempts, 100));
+      add("yardsPerAttempt", rate(totals.passingYards, totals.passingAttempts));
+      add("touchdownRatePct", rate(totals.passingTouchdowns, totals.passingAttempts, 100));
+      add("interceptionRatePct", rate(totals.interceptions, totals.passingAttempts, 100));
+    } else if (row.category === "rushing") {
+      add("yardsPerAttempt", rate(totals.rushingYards, totals.rushingAttempts));
+      add("touchdownRatePct", rate(totals.rushingTouchdowns, totals.rushingAttempts, 100));
+    } else if (row.category === "receiving") {
+      add("yardsPerReception", rate(totals.receivingYards, totals.receptions));
+      add("touchdownRatePct", rate(totals.receivingTouchdowns, totals.receptions, 100));
+    } else if (row.category === "kicking") {
+      add("fieldGoalPct", rate(totals.fieldGoalsMade, totals.fieldGoalAttempts, 100));
+      add("extraPointPct", rate(totals.extraPointsMade, totals.extraPointAttempts, 100));
+      add("kickingPointsPerGame", rate(totals.totalKickingPoints, row.games));
+    } else if (row.category === "punting") {
+      add("yardsPerPunt", rate(totals.puntYards, totals.punts));
+    } else if (["kickReturns", "puntReturns"].includes(row.category)) {
+      const prefix = row.category === "kickReturns" ? "kickReturn" : "puntReturn";
+      add("yardsPerReturn", rate(totals[`${prefix}Yards`], totals[`${prefix}s` as keyof typeof totals]));
+    } else if (row.category === "defensive") {
+      add("tacklesPerGame", rate(totals.totalTackles, row.games));
+      add("sacksPerGame", rate(totals.sacks, row.games));
+      add("passesDefendedPerGame", rate(totals.passesDefended, row.games));
+    }
+    return Object.keys(rates).length ? [{ category: row.category, games: row.games, rates }] : [];
+  });
+}
+
 /**
  * Return the compact, exact-athlete career trail used by a player dossier.
  * The UI should not download the full career index just to open one player.
@@ -510,7 +562,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       };
     })
     .sort((a, b) => a.category.localeCompare(b.category));
-  const boxTotals = [...new Set(summaryRows.filter((row) => row.dataset === "box").map((row) => row.category))]
+  const boxTotals: FootballBoxTotals[] = [...new Set(summaryRows.filter((row) => row.dataset === "box").map((row) => row.category))]
     .map((category) => {
       const categoryRows = summaryRows.filter((row) => row.dataset === "box" && row.category === category);
       const totals: Record<string, number> = {};
@@ -544,6 +596,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
     })
     .filter((row) => Object.keys(row.totals).length > 0)
     .sort((a, b) => a.category.localeCompare(b.category));
+  const boxRates = deriveFootballBoxRates(boxTotals);
   const first = rows[0]?.stats || (summaryRows[0]?.stats as Record<string, string> | undefined);
   const name = first?.athlete_name ?? first?.passer_player_name ?? first?.rusher_player_name ?? first?.receiver_player_name ?? id;
   const sourceReceipts = receiptResult.results.flatMap((row) => {
@@ -556,7 +609,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       : [];
   });
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories, box_totals: boxTotals }, source_receipts: sourceReceipts });
+  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories, box_totals: boxTotals, box_rates: boxRates }, source_receipts: sourceReceipts });
 });
 
 app.get("/api/football/coverage", async (c) => {
