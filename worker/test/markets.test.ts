@@ -25,6 +25,7 @@ describe("market archive metadata", () => {
       expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
       expect.objectContaining({ markets: ["h2h"], provider_update_clock: false }),
       expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
+      expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
     ]);
     expect(body.archive_receipts).toEqual([]);
     expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, horizon_days: 90, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
@@ -42,6 +43,7 @@ describe("market archive metadata", () => {
     expect(response.status).toBe(200);
     const statements = (prepare.mock.calls as unknown as Array<[string]>).map(([sql]) => sql).join("\n");
     expect(statements).toContain("provider IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API')");
+    expect(statements).toContain("provider LIKE 'CSV:%'");
     await expect(response.json()).resolves.toMatchObject({ research_receipts: 2, research_latest_capture_at: "2026-09-15T18:00:00Z" });
   });
 
@@ -73,6 +75,29 @@ describe("market archive metadata", () => {
       },
     });
     expect(JSON.stringify(body)).not.toContain("CollegeBasketballData.com");
+  });
+
+  it("surfaces a validated licensed CSV capture without exposing the provider name or license URL", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 2, pregame: 2 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "Licensed Sportsbook Export",
+        source_kind: "licensed_csv",
+        sport: "basketball",
+        source_rows: 1,
+        rows_with_lines: 1,
+        accepted_markets: 1,
+        rejected_records: 0,
+        license_url: "https://provider.example/terms",
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    const body = await response.text();
+    expect(body).toContain('"market_status":"validated_quotes"');
+    expect(body).not.toContain("Licensed Sportsbook Export");
+    expect(body).not.toContain("provider.example/terms");
   });
 
   it("preserves the distinction between ESPN odds payloads and pickcenter quotes", async () => {

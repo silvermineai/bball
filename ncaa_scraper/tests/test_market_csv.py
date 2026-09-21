@@ -1,5 +1,6 @@
 import sqlite3
 import tempfile
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -72,6 +73,13 @@ class MarketCsvTests(unittest.TestCase):
         quote = self.conn.execute("SELECT * FROM audit_markets").fetchone()
         self.assertEqual(quote[1:6], ("basketball", "bb-1", "CSV:Licensed Feed", "licensed-book", "spreads"))
         receipt = self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0]
+        receipt_payload = json.loads(receipt)
+        receipt_row = self.conn.execute("SELECT provider FROM audit_receipts").fetchone()
+        self.assertEqual(receipt_row[0], "CSV:Licensed Feed")
+        self.assertEqual(receipt_payload["source_kind"], "licensed_csv")
+        self.assertEqual(receipt_payload["source_rows"], 1)
+        self.assertEqual(receipt_payload["accepted_markets"], 1)
+        self.assertEqual(receipt_payload["market_status"], "validated_quotes")
         self.assertIn("provider.example/terms", receipt)
 
     @patch("ncaa_scraper.market_csv.schedules", return_value=[GAME])

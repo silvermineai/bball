@@ -62,6 +62,14 @@ const providerCapabilities = [
     docs_url: "https://www.espn.com/college-football/",
     policy: "Public summary pickcenter values are captured prospectively with the observation clock; exact event, participant and start-time checks are required, and historical summaries are not replayed.",
   },
+  {
+    provider: "Licensed CSV export",
+    sports: ["football", "basketball"],
+    markets: ["h2h", "spreads", "totals"],
+    provider_update_clock: true,
+    docs_url: "https://bball.silvermine.dev/research/markets",
+    policy: "Operator supplied exports must include provider terms, exact source game IDs, and pregame capture and update clocks; invalid files are rejected before any row is written.",
+  },
 ];
 
 type ArchiveReceipt = {
@@ -121,7 +129,11 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
   try {
     const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
     const provider = payload.provider;
-    if (provider !== "ESPN Summary" && provider !== "CollegeBasketballData.com API" && provider !== "The Odds API") return null;
+    const licensedCsv = payload.source_kind === "licensed_csv"
+      && typeof provider === "string"
+      && provider.trim().length > 0;
+    if (provider !== "ESPN Summary" && provider !== "CollegeBasketballData.com API" && provider !== "The Odds API" && !licensedCsv) return null;
+    if (typeof provider !== "string") return null;
     if (typeof payload.sport !== "string") return null;
     const result: ResearchCapture = { provider, captured_at: row.captured_at };
     if (typeof payload.season === "number" && Number.isInteger(payload.season)) result.season = payload.season;
@@ -257,8 +269,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
         ? withTimeout(researchDb(c.env).batch([
           researchDb(c.env).prepare("SELECT DISTINCT g.season FROM audit_markets m JOIN bb_games g ON g.id=m.game_id WHERE m.sport=? ORDER BY g.season DESC").bind(sport),
           researchDb(c.env).prepare("SELECT count(*) AS total, sum(CASE WHEN datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at')) THEN 1 ELSE 0 END) AS pregame FROM audit_markets m WHERE m.sport=?").bind(sport),
-          researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND provider IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API')").bind(sport),
-          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND json_extract(payload_json,'$.provider') IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API') ORDER BY captured_at DESC LIMIT 20").bind(sport),
+          researchDb(c.env).prepare("SELECT count(*) AS receipts, max(captured_at) AS latest_captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND (provider IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API') OR provider LIKE 'CSV:%')").bind(sport),
+          researchDb(c.env).prepare("SELECT payload_json,captured_at FROM audit_receipts WHERE json_extract(payload_json,'$.sport')=? AND (provider IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API') OR provider LIKE 'CSV:%') ORDER BY captured_at DESC LIMIT 20").bind(sport),
         ]), DB_TIMEOUT_MS)
         : Promise.resolve(null);
       const [legacyResult, ledgerResult] = await Promise.allSettled([legacyPromise, ledgerPromise]);

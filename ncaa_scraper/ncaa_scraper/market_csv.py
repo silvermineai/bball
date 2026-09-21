@@ -139,6 +139,7 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
     games = {str(game["id"]): game for game in schedules(sport)}
     receipt = {
         "provider": provider,
+        "source_kind": "licensed_csv",
         "sport": sport,
         "imported_at": imported_at,
         "source_file": source_name,
@@ -147,9 +148,10 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
         "rows": len(rows),
     }
     receipt_id = digest(receipt)
+    provider_key = "CSV:" + provider
     conn.execute(
         "INSERT OR IGNORE INTO audit_receipts VALUES (?,?,?,?)",
-        (receipt_id, imported_at, provider, encoded(receipt)),
+        (receipt_id, imported_at, provider_key, encoded(receipt)),
     )
     accepted = 0
     inserted = 0
@@ -179,7 +181,6 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
                     f"row {row_number}: duplicate game/bookmaker/market/capture identity"
                 )
             seen_quotes.add(quote_identity)
-            provider_key = "CSV:" + provider
             # The receipt ID is provenance for the import, not part of the
             # quote's identity. Re-importing the same licensed snapshot must
             # be idempotent, while a changed quote at the same capture clock
@@ -213,6 +214,24 @@ def import_rows(conn: sqlite3.Connection, sport: str, rows: list[dict[str, str]]
     if errors:
         conn.rollback()
         raise ValueError("CSV import rejected: " + "; ".join(errors[:8]) + ("; …" if len(errors) > 8 else ""))
+    # Make a successful licensed import visible as a capture attempt in the
+    # same bounded status vocabulary used by API collectors. The receipt is
+    # updated only after every row passes validation, so a partial file can
+    # never look like a validated quote capture.
+    conn.execute(
+        "UPDATE audit_receipts SET payload_json=? WHERE id=?",
+        (
+            encoded({
+                **receipt,
+                "source_rows": len(rows),
+                "rows_with_lines": accepted,
+                "accepted_markets": accepted,
+                "rejected_records": 0,
+                "market_status": "validated_quotes" if accepted else "no_quotes_published",
+            }),
+            receipt_id,
+        ),
+    )
     conn.commit()
     return {
         "accepted_markets": accepted,
