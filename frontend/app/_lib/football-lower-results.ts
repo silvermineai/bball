@@ -32,6 +32,8 @@ export type LowerFootballForecast = Omit<LowerFootballResult, "home_division" | 
   prediction: LowerFootballPrediction;
 };
 
+export type LowerFootballForecastSort = "kickoff" | "home_win_probability" | "home_margin" | "uncertainty";
+
 export type LowerFootballTeam = {
   team_id: string;
   team: string;
@@ -196,4 +198,60 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
 
 export function lowerResultsForDivision(archive: LowerFootballResults, division: LowerFootballDivision) {
   return archive.rows.filter((row) => row.scope_division === division);
+}
+
+/**
+ * Select and order upcoming forecasts without ever crossing the archive's
+ * exact-division boundary.  The uncertainty sort uses the published margin
+ * interval; it does not invent a confidence score from the point estimate.
+ */
+export function lowerForecastsForDivision(
+  archive: LowerFootballResults,
+  division: LowerFootballDivision,
+  query = "",
+  sort: LowerFootballForecastSort = "kickoff",
+) {
+  const needle = query.trim().toLowerCase();
+  const rows = archive.forecasts[division].filter((row) =>
+    !needle || `${row.home_name} ${row.away_name} ${row.game_id}`.toLowerCase().includes(needle),
+  );
+  const value = (row: LowerFootballForecast) => {
+    if (sort === "home_win_probability") return row.prediction.home_win_probability;
+    if (sort === "home_margin") return row.prediction.home_margin;
+    if (sort === "uncertainty") return row.prediction.margin_high - row.prediction.margin_low;
+    return Date.parse(row.kickoff);
+  };
+  return [...rows].sort((left, right) => {
+    const leftValue = value(left);
+    const rightValue = value(right);
+    if (sort === "kickoff" || sort === "uncertainty") {
+      return leftValue - rightValue || left.game_id.localeCompare(right.game_id);
+    }
+    return rightValue - leftValue || left.game_id.localeCompare(right.game_id);
+  });
+}
+
+/** The interval width is the model's published uncertainty signal in points. */
+export function lowerForecastUncertainty(row: LowerFootballForecast) {
+  return row.prediction.margin_high - row.prediction.margin_low;
+}
+
+export function lowerForecastCsvRows(rows: LowerFootballForecast[]) {
+  return rows.map((row) => [
+    row.scope_division,
+    row.game_id,
+    row.kickoff,
+    row.away_name,
+    row.home_name,
+    row.neutral ? "neutral" : "home field",
+    row.model_id,
+    row.prediction.away_score,
+    row.prediction.home_score,
+    row.prediction.total,
+    row.prediction.home_margin,
+    row.prediction.home_win_probability,
+    row.prediction.margin_low,
+    row.prediction.margin_high,
+    lowerForecastUncertainty(row),
+  ] as (string | number | null)[]);
 }
