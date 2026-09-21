@@ -17,6 +17,7 @@ import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-con
 import { prospectLearningChecks } from "./learning-questions";
 import { recordedProspectFields } from "./recorded-fields";
 import ProspectProductionBridge from "./ProspectProductionBridge";
+import { prospectRankTrajectory } from "./rank-trajectory";
 
 type Prospect = {
   athlete_id: string;
@@ -156,6 +157,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const destinationChanges = commitmentTransitions(history);
   const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
   const latestHistory = history.at(-1);
+  const rankTrajectory = prospectRankTrajectory(history);
   const classContext = prospectClassContext(classContextPayload, prospect?.rank ?? null);
   const peerContext = prospect ? prospectPeerContext(peerContextPayload, {
     season,
@@ -290,6 +292,16 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <span className="note">{history.length} captures</span>
             </div>
             <p className="note">This timeline uses every retained edition for the exact athlete ID. A blank rank means no rank was recorded in that capture; it is not a zero or a demotion.</p>
+            {rankTrajectory && <>
+              <div className="raw-stat-grid" style={{ marginTop: 16 }}>
+                <div><dt>First ranked capture</dt><dd>#{rankTrajectory.firstRank}<small>{new Date(history.find((entry) => entry.rank === rankTrajectory.firstRank)?.captured_at || "").toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }) || "Date unavailable"}</small></dd></div>
+                <div><dt>Latest ranked capture</dt><dd>#{rankTrajectory.latestRank}<small>{rankTrajectory.direction === "improved" ? `▲ ${rankTrajectory.netChange} places` : rankTrajectory.direction === "declined" ? `▼ ${Math.abs(rankTrajectory.netChange)} places` : "= 0 places"}</small></dd></div>
+                <div><dt>Best recorded rank</dt><dd>#{rankTrajectory.bestRank}<small>{rankTrajectory.rankSpan} place range</small></dd></div>
+                <div><dt>Rank coverage</dt><dd>{rankTrajectory.rankedCaptures} / {rankTrajectory.totalCaptures}<small>{(rankTrajectory.rankCoverage * 100).toFixed(0)}% of captures</small></dd></div>
+                <div><dt>Average recorded rank</dt><dd>#{rankTrajectory.averageRank.toFixed(1)}<small>ranked captures only</small></dd></div>
+              </div>
+              <p className="note" style={{ marginTop: 12 }}>The endpoint comparison uses the first and latest retained ranked captures. Best rank, average rank and range summarize the same exact-ID history; unranked captures remain in the coverage denominator and are not scored.</p>
+            </>}
             {(() => {
               const ranked = history.map((entry) => entry.rank).filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
               const ceiling = Math.max(...ranked, 25);
