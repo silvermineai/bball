@@ -16,7 +16,7 @@ function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankR
   const destination = destinationName(person.team_id, programs);
   return <tr>
     <td className="numeric"><strong>#{rank}</strong></td>
-    <th scope="row"><strong>{person.name}</strong><small>{person.category} · source player ID {stats.id}</small></th>
+    <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(stats.id)}&season=${stats.season}`}><strong>{person.name}</strong></Link><small>{person.category} · exact source player ID {stats.id}</small></th>
     <td>{destination ? <Link href={`/basketball/programs/${encodeURIComponent(person.team_id)}/`}>{destination}</Link> : "Destination unavailable"}<small>{destination ? "Recorded destination" : "No exact directory match"}</small></td>
     <td>{stats.team}<small>{stats.season} prior season</small></td>
     <td className="numeric">{stats.games}</td>
@@ -31,7 +31,7 @@ function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankR
 
 export default function TransferProductionBoard({ people, programs, rosters, edition, reviewedAt }: { people: RecruitingPerson[]; programs: ProspectProgram[]; rosters: BBRosters; edition: string; reviewedAt: string }) {
   const rows = rankRecruitingProduction(people);
-  const ranked = rows.filter((row) => row.score != null).slice(0, 20);
+  const ranked = rows.filter((row) => row.score != null);
   const destinations = summarizeRecruitingDestinationProduction(people);
   const rosterAudits = auditRecruitingDestinationRoster(people, rosters);
   const eligible = rows.length;
@@ -42,7 +42,7 @@ export default function TransferProductionBoard({ people, programs, rosters, edi
       <div><div className="eyebrow">Transfer production / exact prior player IDs</div><h2 id="transfer-production-board">Which incoming players carried prior workload?</h2></div>
       <span className="note">{ranked.length.toLocaleString()} ranked · {eligible.toLocaleString()} eligible</span>
     </div>
-    <p className="note">The index standardizes the retained transfer cohort&apos;s prior MPG, scoring, rebounding, playmaking, steals, blocks, true shooting and effective field-goal rate. It is a transparent comparison aid; missing fields stay missing and it does not project a new-school role, eligibility or future performance.</p>
+    <p className="note">The index standardizes every eligible retained transfer row&apos;s prior MPG, scoring, rebounding, playmaking, steals, blocks, true shooting and effective field-goal rate. Each row links to its exact source player file. It is a transparent comparison aid; missing fields stay missing and it does not project a new-school role, eligibility or future performance.</p>
     <div className="strip" aria-label="Transfer production coverage" style={{ marginBottom: 16 }}>
       <div><strong>{eligible.toLocaleString()}</strong><span>Transfers with stats</span></div>
       <div><strong>{ranked.length.toLocaleString()}</strong><span>With ≥4 scored fields</span></div>

@@ -56,6 +56,17 @@ describe("recruiting production rank", () => {
     expect(rows[0].availableFields).toBe(8);
   });
 
+  it("keeps every eligible exact-ID row available to the full ranking table", () => {
+    const rows = rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", mpg: 18, ppg: 10, rpg: 2, apg: 1, spg: 0.2, ts: 0.44 } }),
+      person({ key: "1-player-c", name: "C Player", stats: { ...person().stats!, id: "1003", mpg: 12, ppg: 6, rpg: 1, apg: 1, spg: 0.1, ts: 0.4 } }),
+    ]);
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((row) => row.stats.id))).toEqual(new Set(["1001", "1002", "1003"]));
+    expect(rows.map((row) => row.person.name)).toEqual(["A Player", "B Player", "C Player"]);
+  });
+
   it("does not turn missing source fields into zeroes", () => {
     const rows = rankRecruitingProduction([
       person(),
