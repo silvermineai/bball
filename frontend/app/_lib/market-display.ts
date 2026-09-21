@@ -11,6 +11,23 @@ export type MarketLineSummary = {
 };
 
 /**
+ * Put a qualifying quote's update clock in context beside the scheduled tip.
+ * The scorecard already applies the server timing gates; this display keeps
+ * the remaining freshness evidence reviewable without calling a quote a
+ * closing line or inferring a price when a clock is missing.
+ */
+export function comparisonTimingLabel(comparison: Pick<Comparison, "updated_at">, startsAt: string): string {
+  const tip = Date.parse(startsAt);
+  const updated = Date.parse(comparison.updated_at);
+  if (!Number.isFinite(tip) || !Number.isFinite(updated)) return "Timing unavailable";
+  if (updated >= tip) return "Post-tip update";
+  const hours = (tip - updated) / 3_600_000;
+  if (hours < 1) return "Updated less than 1h before tip";
+  if (hours < 24) return `Updated ${Number.isInteger(hours) ? hours : hours.toFixed(1)}h before tip`;
+  return `Updated ${Math.round(hours)}h before tip`;
+}
+
+/**
  * Pick one qualifying spread and total for compact forecast tables.
  * Provider identity stays in the deep evidence view; the landing board only
  * needs the observed line, model difference and capture clock.

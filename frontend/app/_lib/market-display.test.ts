@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel, comparisonQuoteSummary, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
+import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel, comparisonQuoteSummary, comparisonTimingLabel, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -39,6 +39,13 @@ describe("market comparison display", () => {
   it("keeps a compact quote summary useful in exports", () => {
     const quote = { ...comparison("h2h", 0.043), market_home_probability: 0.512, line: null };
     expect(comparisonQuoteSummary(quote)).toBe("Verified line h2h 51.2% home · model +4.3 probability pts · captured 2026-09-10T12:00:00Z");
+  });
+
+  it("makes the quote update clock readable relative to tip", () => {
+    expect(comparisonTimingLabel({ updated_at: "2026-09-12T14:00:00Z" }, "2026-09-12T16:00:00Z")).toBe("Updated 2h before tip");
+    expect(comparisonTimingLabel({ updated_at: "2026-09-12T12:00:00Z" }, "2026-09-12T12:30:00Z")).toBe("Updated less than 1h before tip");
+    expect(comparisonTimingLabel({ updated_at: "2026-09-12T10:00:00Z" }, "2026-09-12T11:00:00Z")).toBe("Updated 1h before tip");
+    expect(comparisonTimingLabel({ updated_at: "not-a-clock" }, "2026-09-12T16:00:00Z")).toBe("Timing unavailable");
   });
 
   it("summarizes only observed spread and total lines", () => {
