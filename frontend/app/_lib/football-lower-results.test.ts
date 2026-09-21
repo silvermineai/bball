@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
+import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
 const row = (division: "d2" | "d3", score_complete = true) => ({
   game_id: `${division}-1`, kickoff: "2026-09-01T00:00:00Z", week: 1,
@@ -86,5 +86,16 @@ describe("lower-division football results", () => {
     const explanation = lowerForecastExplanation(item, null);
     expect(explanation.rating_gap).toBeNull();
     expect(explanation.venue).toBe("home_field");
+  });
+
+  it("supports the availability page selecting the requested D3 scope", () => {
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now", rows: [],
+      teams: { d2: [], d3: [] }, limitations: [],
+      forecasts: { d2: [forecast("d2", "d2-only", "2026-09-01T00:00:00Z", 0.5, -10, 10)], d3: [forecast("d3", "d3-only", "2026-09-01T00:00:00Z", 0.5, -10, 10)] },
+    });
+    expect(lowerForecastsForDivision(archive, "d3").map((item) => item.game_id)).toEqual(["d3-only"]);
+    expect(lowerDivisionSelection("d3")).toBe("d3");
+    expect(lowerDivisionSelection(undefined)).toBe("d2");
   });
 });

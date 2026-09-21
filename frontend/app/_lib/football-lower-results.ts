@@ -41,6 +41,10 @@ export type LowerFootballForecastExplanation = {
   venue: "home_field" | "neutral";
 };
 
+export function lowerDivisionSelection(value: LowerFootballDivision | undefined): LowerFootballDivision {
+  return value === "d3" ? "d3" : "d2";
+}
+
 export type LowerFootballTeam = {
   team_id: string;
   team: string;

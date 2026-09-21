@@ -13,7 +13,7 @@ export default function FootballDivisionAvailability({ division }: { division: L
         The retained football edition includes upcoming Division {availability.division} schedule rows, completed scores, source-derived team records, and an exact-division Silvermine rating and forecast when the training gate passes. The model uses only dated scores, venue, and team identity; player stats and player rankings remain a separate source surface.
       </p>
       <DivisionCoverageMatrix sport="football" gender="men" division={availability.division} />
-      <LowerDivisionResults />
+      <LowerDivisionResults initialDivision={availability.division === "3" ? "d3" : "d2"} />
       <div className="scope-unavailable-actions">
         <Link className="button" href={`/football/matchups/?division=${availability.division}`}>
           Open D{availability.division} schedule and results →

@@ -6,6 +6,7 @@ import {
   lowerForecastExplanation,
   lowerForecastsForDivision,
   lowerForecastUncertainty,
+  lowerDivisionSelection,
   lowerResultsForDivision,
   validateLowerFootballResults,
   type LowerFootballDivision,
@@ -17,14 +18,18 @@ import { validateFootballLowerPlayerReadiness, type FootballLowerPlayerReadiness
 import { date, fmt, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
-export default function LowerDivisionResults() {
+export default function LowerDivisionResults({ initialDivision = "d2" }: { initialDivision?: LowerFootballDivision }) {
   const [archive, setArchive] = useState<LowerFootballResults | null>(null);
   const [playerReadiness, setPlayerReadiness] = useState<FootballLowerPlayerReadiness | null>(null);
-  const [division, setDivision] = useState<LowerFootballDivision>("d2");
+  const [division, setDivision] = useState<LowerFootballDivision>(() => lowerDivisionSelection(initialDivision));
   const [query, setQuery] = useState("");
   const [forecastQuery, setForecastQuery] = useState("");
   const [forecastSort, setForecastSort] = useState<LowerFootballForecastSort>("kickoff");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setDivision(lowerDivisionSelection(initialDivision));
+  }, [initialDivision]);
 
   useEffect(() => {
     const controller = new AbortController();
