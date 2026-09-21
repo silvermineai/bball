@@ -84,7 +84,7 @@ export function matchupFactorContextLabel(game: BBGame) {
 
 export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
-  "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "eFG edge", "TO edge", "ORB edge",
+  "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "Away efficiency", "Home efficiency", "eFG edge", "TO edge", "ORB edge",
   "FTR edge", "Forecast model edition", "Forecast generated", "Forecast target season", "Four Factor model edition", "Four Factor same edition", "Four Factor generated", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
   "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace", "Verified market home probability", "Moneyline probability gap",
 ];
@@ -107,7 +107,7 @@ export function forecastCsvRows(
     return [
       game.id, game.starts_at, game.away_name, game.home_name, game.prediction ? "primary" : "cold-start",
       prediction?.away_score, prediction?.home_score, prediction?.home_win_probability,
-      prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace,
+      prediction?.home_margin, prediction?.margin_low, prediction?.margin_high, prediction?.total, prediction?.pace, prediction?.away_efficiency, prediction?.home_efficiency,
       factorValues.get("efg"), factorValues.get("tov"), factorValues.get("orb"), factorValues.get("ftr"),
       game.forecast_model_id ?? (publishedModelId || null), game.forecast_created_at ?? null, game.season,
       game.matchup_factors_model_id ?? null,
@@ -264,7 +264,7 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Efficiency</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
@@ -283,6 +283,7 @@ export default function LiveDashboardForecastTable({
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric"><strong>{fmt(prediction.pace)}</strong><small>possessions</small></td>
+                <td className="numeric">{prediction.away_efficiency == null && prediction.home_efficiency == null ? "—" : <><span>{fmt(prediction.away_efficiency, 1)} / {fmt(prediction.home_efficiency, 1)}</span><small>A / H pts per 100</small></>}</td>
                 <td className="numeric">
                   {strongestFactorEdge(game) || "—"}<small>{matchupFactorContextLabel(game)}</small>
                   {factorEdges.length > 0 && <details className="forecast-factor-details"><summary>All four</summary>{factorEdges.map((edge) => <small key={edge.key}>{factorLabels[edge.key]} {edge.value >= 0 ? "H" : "A"} {fmt(Math.abs(edge.value) * 100, 1)}</small>)}</details>}

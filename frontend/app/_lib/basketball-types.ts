@@ -1,6 +1,9 @@
 export type BBPrediction = {
   home_score: number;
   away_score: number;
+  /** Expected points per 100 model possessions, implied by the score and pace. */
+  home_efficiency?: number;
+  away_efficiency?: number;
   home_margin: number;
   total: number;
   pace: number;

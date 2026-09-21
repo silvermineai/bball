@@ -350,13 +350,22 @@ def apply_calibration(p, calibration):
     probability = 1 / (
         1 + math.exp(-max(-30, min(30, intercept + slope * p["home_margin"])))
     )
+    # KenPom-style scoring rates implied by this same forecast and its
+    # estimated possessions. These are model outputs, not observed stats.
+    pace = p["pace"]
+    home_efficiency = 100 * p["home_score"] / pace if pace > 0 else None
+    away_efficiency = 100 * p["away_score"] / pace if pace > 0 else None
     numeric_keys = ("home_score", "away_score", "home_margin", "total", "pace")
-    return {
+    result = {
         **{k: round(p[k], 2) for k in numeric_keys},
         "home_win_probability": round(probability, 5),
         "margin_low": round(p["home_margin"] - calibration["margin_half_width"], 2),
         "margin_high": round(p["home_margin"] + calibration["margin_half_width"], 2),
     }
+    if home_efficiency is not None and away_efficiency is not None:
+        result["home_efficiency"] = round(home_efficiency, 2)
+        result["away_efficiency"] = round(away_efficiency, 2)
+    return result
 
 
 def train(games, cutoff, target_season=2027):

@@ -80,6 +80,25 @@ class BasketballModelTests(unittest.TestCase):
         neutral = raw_predict(model, {"home_id": "home", "away_id": "away", "neutral": "true"})
         self.assertAlmostEqual(home["home_margin"] - neutral["home_margin"], 5.6)
 
+    def test_calibrated_prediction_reports_efficiency_implied_by_pace(self):
+        model = fit([sample(i, 2024) for i in range(160)])
+        model["calibration"] = {
+            "logistic_coefficients": [0.0, 0.1],
+            "margin_half_width": 10.0,
+        }
+        prediction = forecast(model, {**sample(1, 2024), "home_id": "0", "away_id": "1"})
+        self.assertIsNotNone(prediction)
+        self.assertAlmostEqual(
+            prediction["home_efficiency"],
+            100 * prediction["home_score"] / prediction["pace"],
+            delta=0.02,
+        )
+        self.assertAlmostEqual(
+            prediction["away_efficiency"],
+            100 * prediction["away_score"] / prediction["pace"],
+            delta=0.02,
+        )
+
     def test_incremental_refresh_reuses_historical_source_releases(self):
         self.assertFalse(source_refresh_enabled(True, True, 2025))
         self.assertTrue(source_refresh_enabled(True, True, 2026))

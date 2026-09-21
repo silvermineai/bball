@@ -120,9 +120,9 @@ describe("forecastCsvRows", () => {
       matchup_factors: { season: 2026, factors: {}, edges: { efg: 0.012, tov: -0.031, orb: 0.018, ftr: 0 } },
     }]);
     expect(rows[0].slice(0, 8)).toEqual(["late", "2026-11-10T04:00:00Z", "Away late", "Home late", "primary", 70, 75, 0.58]);
-    expect(rows[0].slice(13, 17)).toEqual([0.012, -0.031, 0.018, 0]);
-    expect(rows[0].slice(17, 20)).toEqual([null, null, 2027]);
-    expect(rows[0][20]).toBeNull();
+    expect(rows[0].slice(15, 19)).toEqual([0.012, -0.031, 0.018, 0]);
+    expect(rows[0].slice(19, 22)).toEqual([null, null, 2027]);
+    expect(rows[0][22]).toBeNull();
   });
 
   it("keeps the exact forecast edition and row clock alongside descriptive factor provenance", () => {
@@ -132,7 +132,7 @@ describe("forecastCsvRows", () => {
       forecast_created_at: "2026-09-17T10:24:29.481035Z",
       matchup_factors_model_id: "basketball-efficiency-v2-factor",
     }], {}, [], [], "basketball-efficiency-v2-fallback");
-    expect(rows[0].slice(17, 23)).toEqual([
+    expect(rows[0].slice(19, 25)).toEqual([
       "basketball-efficiency-v2-current",
       "2026-09-17T10:24:29.481035Z",
       2027,

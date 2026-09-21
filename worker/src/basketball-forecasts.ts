@@ -226,6 +226,8 @@ export function parseForecastMatchupFactors(value: unknown): {
 const predictionNumericFields = [
   "home_score",
   "away_score",
+  "home_efficiency",
+  "away_efficiency",
   "home_margin",
   "total",
   "pace",

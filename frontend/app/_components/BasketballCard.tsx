@@ -170,6 +170,10 @@ export default function BasketballCard({
             <span>{fmt(p.pace)}</span>
           </div>
           <div className="match-detail muted">
+            <span>Projected efficiency · A / H</span>
+            <span>{p.away_efficiency == null || p.home_efficiency == null ? "—" : `${fmt(p.away_efficiency, 1)} / ${fmt(p.home_efficiency, 1)} pts per 100`}</span>
+          </div>
+          <div className="match-detail muted">
             <span>Largest factor mismatch</span>
             <span>
               {strongestFactor
