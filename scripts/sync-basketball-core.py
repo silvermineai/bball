@@ -87,6 +87,60 @@ def forecast_records(overview):
             yield game, prediction
 
 
+FACTOR_KEYS = ("efg", "tov", "orb", "ftr")
+FACTOR_VALUE_KEYS = ("home_offense", "home_defense", "away_offense", "away_defense")
+
+
+def forecast_payload(game, prediction):
+    """Persist the prediction with its exact-edition matchup context.
+
+    The overview is the immutable model edition used to create the score. The
+    D1 sync must carry that edition's four-factor context with the forecast
+    row; otherwise the API has to fall back to a stale static overview and can
+    expose context from a different model vintage. A non-null malformed
+    factor payload fails the publication rather than being silently dropped.
+    """
+    if not isinstance(prediction, dict):
+        raise ValueError("Forecast prediction must be an object")
+    payload = dict(prediction)
+    factors = game.get("matchup_factors")
+    if factors is None:
+        return payload
+    if not isinstance(factors, dict):
+        raise ValueError(f"Forecast {game.get('id')} has invalid matchup factors")
+    season = factors.get("season")
+    factor_values = factors.get("factors")
+    edges = factors.get("edges")
+    if (
+        not isinstance(season, int)
+        or isinstance(season, bool)
+        or not isinstance(factor_values, dict)
+        or not isinstance(edges, dict)
+        or set(factor_values) != set(FACTOR_KEYS)
+        or set(edges) != set(FACTOR_KEYS)
+    ):
+        raise ValueError(f"Forecast {game.get('id')} has invalid matchup factors")
+    for key in FACTOR_KEYS:
+        values = factor_values[key]
+        edge = edges[key]
+        if (
+            not isinstance(values, dict)
+            or set(values) != set(FACTOR_VALUE_KEYS)
+            or not isinstance(edge, (int, float))
+            or isinstance(edge, bool)
+            or not -1 <= edge <= 1
+            or any(
+                not isinstance(values[field], (int, float))
+                or isinstance(values[field], bool)
+                or not 0 <= values[field] <= 1
+                for field in FACTOR_VALUE_KEYS
+            )
+        ):
+            raise ValueError(f"Forecast {game.get('id')} has invalid matchup factors")
+    payload["matchup_factors"] = factors
+    return payload
+
+
 def published_model_metadata(model, expected_forecasts):
     """Return the public model contract used to validate a complete D1 edition."""
     metadata = {
@@ -236,7 +290,7 @@ def build(season=2023):
                     game["id"],
                     model["id"],
                     overview["generated_at"],
-                    json.dumps(prediction, separators=(",", ":")),
+                    json.dumps(forecast_payload(game, prediction), separators=(",", ":")),
                 )
             )
             + ");\n"

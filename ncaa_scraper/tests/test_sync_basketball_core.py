@@ -27,6 +27,42 @@ class BasketballCoreSyncTests(unittest.TestCase):
         self.assertEqual([game["id"] for game, _ in rows], ["primary", "cold"])
         self.assertEqual(rows[1][1]["home_margin"], -2)
 
+    def test_forecast_payload_keeps_exact_edition_matchup_factors(self):
+        game = {
+            "id": "game-1",
+            "matchup_factors": {
+                "season": 2026,
+                "factors": {
+                    key: {
+                        "home_offense": 0.5,
+                        "home_defense": 0.4,
+                        "away_offense": 0.45,
+                        "away_defense": 0.35,
+                    }
+                    for key in ("efg", "tov", "orb", "ftr")
+                },
+                "edges": {key: 0.05 for key in ("efg", "tov", "orb", "ftr")},
+            },
+        }
+        prediction = {"home_margin": 4.5, "home_win_probability": 0.62}
+        payload = MODULE.forecast_payload(game, prediction)
+        self.assertEqual(payload["home_margin"], 4.5)
+        self.assertEqual(payload["matchup_factors"], game["matchup_factors"])
+        self.assertNotIn("matchup_factors", prediction)
+
+    def test_forecast_payload_fails_closed_on_malformed_matchup_factors(self):
+        game = {"id": "game-1", "matchup_factors": {"season": 2026, "factors": {}, "edges": {}}}
+        with self.assertRaisesRegex(ValueError, "invalid matchup factors"):
+            MODULE.forecast_payload(game, {"home_margin": 4.5})
+
+    def test_forecast_payload_allows_cold_start_without_factor_context(self):
+        payload = MODULE.forecast_payload(
+            {"id": "cold", "matchup_factors": None},
+            {"estimate_type": "cold_start", "home_margin": 1.2},
+        )
+        self.assertEqual(payload["estimate_type"], "cold_start")
+        self.assertNotIn("matchup_factors", payload)
+
     def test_published_model_metadata_declares_complete_forecast_count(self):
         model = {
             "version": "basketball-efficiency-v2",
