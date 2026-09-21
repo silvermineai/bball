@@ -22,6 +22,7 @@ import type { ProspectProgram } from "../../_lib/prospect-schools";
 import RecruitingCoverageBoundary from "../../_components/RecruitingCoverageBoundary";
 import { assessRecruitingCoverage } from "../../_lib/recruiting-coverage";
 import ArchivedTeamOutlook from "./ArchivedTeamOutlook";
+import TransferProductionBoard from "./TransferProductionBoard";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
   if (!player) return <span className="note">No recorded player in this evidence set</span>;
@@ -161,6 +162,7 @@ export default function Page() {
         </div>
       </section>
       <ArchivedTeamOutlook release={archivedTeamOutlook} />
+      <TransferProductionBoard people={data.people} programs={programDirectory} edition={data.edition} reviewedAt={data.reviewed_at} />
       <section className="section" aria-labelledby="recruiting-production">
         <div className="section-heading">
           <div>

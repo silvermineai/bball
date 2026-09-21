@@ -1,0 +1,75 @@
+import { describe, expect, it } from "vitest";
+import { rankRecruitingProduction } from "./recruiting-production-rank";
+import type { RecruitingPerson } from "./recruiting";
+import release from "../../public/data/basketball/recruiting.json";
+
+const person = (overrides: Partial<RecruitingPerson> = {}): RecruitingPerson => ({
+  key: "1-player",
+  name: "A Player",
+  team_id: "1",
+  category: "transfer",
+  previous_program: "Old College",
+  stats: {
+    id: "1001",
+    team_id: "2",
+    team: "Old College",
+    season: 2026,
+    games: 30,
+    mpg: 30,
+    ppg: 18,
+    rpg: 7,
+    apg: 4,
+    spg: 1.2,
+    bpg: 0.5,
+    topg: 2,
+    efg: 0.55,
+    ts: 0.58,
+    three_pct: 0.35,
+    ft_pct: 0.75,
+    ft_rate: 0.25,
+    three_rate: 0.4,
+    tov_rate: 0.14,
+    incomplete_box_games: 0,
+    identity_basis: "exact review",
+  },
+  ...overrides,
+});
+
+describe("recruiting production rank", () => {
+  it("admits the retained release only through its exact numeric source IDs", () => {
+    const rows = rankRecruitingProduction(release.people as RecruitingPerson[]);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => /^\d{1,15}$/.test(row.stats.id))).toBe(true);
+    expect(new Set(rows.map((row) => row.stats.id)).size).toBe(rows.length);
+  });
+
+  it("ranks eligible transfer production within the retained cohort", () => {
+    const rows = rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", mpg: 18, ppg: 10, rpg: 2, apg: 1, spg: 0.2, ts: 0.44 } }),
+      person({ key: "1-player-c", name: "C Player", stats: null }),
+      person({ key: "1-player-d", name: "D Player", category: "freshman" }),
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].person.name).toBe("A Player");
+    expect(rows[0].score).not.toBeNull();
+    expect(rows[0].availableFields).toBe(8);
+  });
+
+  it("does not turn missing source fields into zeroes", () => {
+    const rows = rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", apg: null, rpg: null, spg: null, bpg: null, ts: null, efg: null } }),
+    ]);
+    const missing = rows.find((row) => row.person.name === "B Player")!;
+    expect(missing.availableFields).toBe(2);
+    expect(missing.score).toBeNull();
+  });
+
+  it("withholds the board when exact source IDs are duplicated", () => {
+    expect(rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player" }),
+    ])).toEqual([]);
+  });
+});
