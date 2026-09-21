@@ -26,6 +26,12 @@ const FOOTBALL_DIVISION_ARCHIVES = [
 ];
 
 export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pathname: string) {
+  // The women's Division tab is itself the published scope desk. Let its
+  // router render the requested D1/D2/D3 readiness surface instead of
+  // replacing it with the generic unavailable snapshot.
+  if (sport === "basketball" && scope.gender === "women" && (pathname === "/basketball/wbb-readiness" || pathname.startsWith("/basketball/wbb-readiness/"))) {
+    return false;
+  }
   if (scope.gender === "women") return true;
   if (sport === "football") {
     if (scope.division === "1") return false;

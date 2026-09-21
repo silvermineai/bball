@@ -25,6 +25,12 @@ describe("sport scope boundary", () => {
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/recruiting/")).toBe(true);
   });
 
+  it("lets the women's Division tab render its scope readiness desk", () => {
+    expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/wbb-readiness/")).toBe(false);
+    expect(isPublishedBoundary("basketball", { gender: "women", division: "2" }, "/basketball/wbb-readiness/")).toBe(false);
+    expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "3" }, "/basketball/wbb-readiness/")).toBe("published");
+  });
+
   it("allows published men’s NCAA D2/D3 archives", () => {
     expect(isPublishedBoundary("basketball", { gender: "men", division: "2" }, "/basketball/ncaa-rankings/")).toBe(false);
     expect(isPublishedBoundary("basketball", { gender: "men", division: "3" }, "/basketball/players/")).toBe(true);
