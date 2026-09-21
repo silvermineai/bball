@@ -623,6 +623,50 @@ th,
   height: 5px;
   background: var(--ink);
 }
+.forecast-confidence-panel {
+  border-left: 3px solid var(--blue);
+  background: color-mix(in srgb, var(--blue) 7%, var(--surface));
+  margin: 0 0 12px;
+  padding: 9px 11px 10px;
+}
+.forecast-confidence-panel.is-unavailable {
+  border-left-color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 5%, var(--surface));
+}
+.forecast-confidence-heading,
+.forecast-confidence-values {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.forecast-confidence-heading {
+  font-size: 11px;
+}
+.forecast-confidence-heading span {
+  color: var(--blue);
+  font: 9px "IBM Plex Mono", monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.forecast-confidence-panel.is-unavailable .forecast-confidence-heading span {
+  color: var(--muted);
+}
+.forecast-confidence-values {
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.forecast-confidence-values b {
+  font-weight: 700;
+}
+.forecast-confidence-panel small {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  line-height: 1.45;
+  margin-top: 6px;
+}
 .analysis-readiness {
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--paper) 68%, transparent);

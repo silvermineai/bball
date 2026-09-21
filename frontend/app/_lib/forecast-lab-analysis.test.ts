@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -62,6 +62,29 @@ describe("forecast lab matchup signals", () => {
       margin_low: -8,
       margin_high: 8,
     } as BBGame["prediction"], true).label).toBe("Near even");
+  });
+
+  it("summarizes the strongest side without inventing confidence for malformed rows", () => {
+    expect(forecastConfidenceSummary({
+      home_margin: -3,
+      home_win_probability: 0.38,
+      margin_low: -11,
+      margin_high: 5,
+    } as BBGame["prediction"], true)).toMatchObject({
+      strongest_side: "Away",
+      strongest_probability: 0.62,
+      label: "Lean signal",
+      range_width: 16,
+    });
+    expect(forecastConfidenceSummary({
+      home_win_probability: Number.NaN,
+      margin_low: -5,
+      margin_high: 5,
+    } as BBGame["prediction"], true)).toMatchObject({
+      strongest_side: "Unavailable",
+      strongest_probability: null,
+      label: "Unavailable",
+    });
   });
 
   it("keeps cold-start and malformed estimates visibly separate", () => {

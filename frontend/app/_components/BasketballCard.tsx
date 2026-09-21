@@ -8,7 +8,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
+import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 
@@ -42,6 +42,7 @@ export default function BasketballCard({
   });
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const signalContext = forecastSignalContext(p, !!g.prediction);
+  const confidence = forecastConfidenceSummary(p, !!g.prediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
@@ -99,6 +100,17 @@ export default function BasketballCard({
           </div>
           <div className="prob-bar" aria-hidden="true">
             <span style={{ width: `${p.home_win_probability * 100}%` }} />
+          </div>
+          <div className={`forecast-confidence-panel ${confidence.estimate === "unavailable" ? "is-unavailable" : ""}`} aria-label="Model confidence context">
+            <div className="forecast-confidence-heading">
+              <strong>Model confidence context</strong>
+              <span>{confidence.label}</span>
+            </div>
+            <div className="forecast-confidence-values">
+              <span><b>{confidence.strongest_side}</b> {confidence.strongest_probability == null ? "—" : `${fmt(confidence.strongest_probability * 100, 1)}%`} strongest-side probability</span>
+              <span>{confidence.range_width == null ? "—" : `${fmt(confidence.range_width, 1)} pts`} range width</span>
+            </div>
+            <small>{confidence.range_context}. The probability and range are from forecast edition <span className="mono">{forecastEdition.modelId || "unavailable"}</span>; this context does not include a market quote.</small>
           </div>
           <div className="analysis-readiness" aria-label="Game analysis packet">
             <div className="analysis-readiness-heading">

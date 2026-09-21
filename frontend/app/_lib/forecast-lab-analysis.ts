@@ -105,6 +105,13 @@ export type ForecastSignalContext = {
   range_context: "Range crosses even" | "Range stays home side" | "Range stays away side" | "Unavailable";
 };
 
+export type ForecastConfidenceSummary = ForecastSignalContext & {
+  /** The side represented by the strongest stored win probability. */
+  strongest_side: "Home" | "Away" | "Even" | "Unavailable";
+  /** Kept null when the prediction fails the same integrity checks as the signal context. */
+  strongest_probability: number | null;
+};
+
 /**
  * Put the probability and interval into a small, honest decision context.
  * The label is descriptive only: it does not turn a model probability into a
@@ -162,6 +169,31 @@ export function forecastSignalContext(
     probability_edge_pp: Number(probabilityEdge.toFixed(1)),
     range_width: Number(rangeWidth.toFixed(1)),
     range_context: rangeContext,
+  };
+}
+
+/**
+ * Give matchup cards one compact, auditable confidence read. This is only a
+ * restatement of the stored probability and calibrated range; it never adds a
+ * market line or turns an unavailable value into a default.
+ */
+export function forecastConfidenceSummary(
+  prediction: BBPrediction | null | undefined,
+  primary: boolean,
+): ForecastConfidenceSummary {
+  const context = forecastSignalContext(prediction, primary);
+  if (!prediction || context.estimate === "unavailable") {
+    return { ...context, strongest_side: "Unavailable", strongest_probability: null };
+  }
+  const strongestProbability = Math.max(prediction.home_win_probability, 1 - prediction.home_win_probability);
+  return {
+    ...context,
+    strongest_side: prediction.home_win_probability === 0.5
+      ? "Even"
+      : prediction.home_win_probability > 0.5
+        ? "Home"
+        : "Away",
+    strongest_probability: strongestProbability,
   };
 }
 
