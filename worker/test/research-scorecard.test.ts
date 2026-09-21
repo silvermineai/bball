@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { researchScorecard } from "../src/research-scorecard";
+import { marketBookmakerKey, researchScorecard } from "../src/research-scorecard";
 
 describe("live research scorecard", () => {
+  it("normalizes bookmaker presentation aliases without losing the source label", () => {
+    expect(marketBookmakerKey("Draft Kings")).toBe("draftkings");
+    expect(marketBookmakerKey("DraftKings")).toBe("draftkings");
+    expect(marketBookmakerKey("  BOOK-1 ")).toBe("book1");
+    expect(marketBookmakerKey("   ")).toBe("");
+  });
+
   it("returns the selected registration with parsed status and metrics", async () => {
     const selected = {
       id: "registration-1",
@@ -61,6 +68,21 @@ describe("live research scorecard", () => {
       captured_at: "2026-01-01T11:00:00.000000Z",
       updated_at: "2026-01-01T10:59:00.000000Z",
     };
+    const bookmakerAliasQuote = {
+      ...eligibleQuote,
+      id: "quote-bookmaker-alias",
+      bookmaker: "Book 1",
+      captured_at: "2026-01-01T12:30:00.000000Z",
+      updated_at: "2026-01-01T12:29:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home",
+        away_id: "away",
+        starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -4,
+        home_price: 1.91,
+        away_price: 1.91,
+      }),
+    };
     const invalidPricesQuote = {
       ...eligibleQuote,
       id: "quote-invalid-prices",
@@ -89,7 +111,7 @@ describe("live research scorecard", () => {
           all: async () => sql.includes("ROW_NUMBER() OVER")
             ? { results: [selected] }
             : sql.includes("SELECT id,sport,game_id,provider")
-              ? { results: [supersededQuote, eligibleQuote, preRegistrationQuote, invalidPricesQuote] }
+            ? { results: [supersededQuote, eligibleQuote, bookmakerAliasQuote, preRegistrationQuote, invalidPricesQuote] }
               : { results: [] },
         }),
       };
@@ -107,7 +129,7 @@ describe("live research scorecard", () => {
     expect(body.market_observations).toBe(7);
     expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
-    expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })] });
+    expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ bookmaker: "Book 1", market: "spreads", model_difference: 1 })] });
     expect(body.sports.basketball).toMatchObject({
       games: 1,
       registered_versions: 1,
@@ -121,17 +143,17 @@ describe("live research scorecard", () => {
         model_id: "model-1",
         market: "spreads",
         games: 1,
-        model_difference_mean: 1.5,
+        model_difference_mean: 1,
         market_overround_mean: expect.closeTo(1 / 1.91 + 1 / 1.91 - 1, 8),
       }],
     });
     expect(body.sports.basketball.comparison_readiness).toEqual({
       retained_observations: 7,
-      selected_game_observations: 4,
-      outside_selected_cohort: 3,
-      eligible_observations: 3,
-      comparable_observations: 2,
-      superseded_observations: 1,
+      selected_game_observations: 5,
+      outside_selected_cohort: 2,
+      eligible_observations: 4,
+      comparable_observations: 3,
+      superseded_observations: 2,
       selected_comparisons: 1,
       rejection_counts: {
         captured_before_registration: 1,

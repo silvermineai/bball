@@ -103,6 +103,19 @@ function mean(values: number[]): number | null {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
 
+/**
+ * Provider payloads have used both `Draft Kings` and `DraftKings` for the
+ * same bookmaker. Treat spacing, punctuation and case as presentation details
+ * when selecting and aggregating quotes, while retaining the source label in
+ * the returned comparison. This prevents one bookmaker from being counted as
+ * two market references without inventing or merging different prices.
+ */
+export function marketBookmakerKey(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized || raw;
+}
+
 function eligibility(row: Json, state: Json | null): string | null {
   if (!state) return "missing_schedule";
   const payload = parse(row.payload_json) || {};
@@ -310,7 +323,7 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     for (const row of rows) for (const quote of (row.comparisons as Json[])) {
       if (!statuses.has(String(row.status))) continue;
       const modelId = String(row.model_id || "");
-      const key = `${modelId}|${quote.provider}|${quote.bookmaker}|${quote.market}`;
+      const key = `${modelId}|${quote.provider}|${marketBookmakerKey(quote.bookmaker)}|${quote.market}`;
       groups.set(key, [...(groups.get(key) || []), { ...quote, model_id: modelId }]);
     }
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, quotes]) => {
@@ -587,7 +600,7 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
           continue;
         }
         comparisonReadiness.comparable_observations += 1;
-        chosen.set(`${quote.provider}|${quote.bookmaker}|${quote.market}`, quote);
+        chosen.set(`${quote.provider}|${marketBookmakerKey(quote.bookmaker)}|${quote.market}`, quote);
       }
       item.comparisons = [...chosen.values()].map((quote) => compare({ ...effectiveRow, payload_json: row.payload_json }, quote, effectiveState)).filter((quote): quote is Json => quote !== null);
       comparisonReadiness.selected_comparisons += (item.comparisons as Json[]).length;
