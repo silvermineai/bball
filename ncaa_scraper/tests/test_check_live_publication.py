@@ -16,6 +16,7 @@ from scripts.check_live_publication import (
     matchup_personnel_coverage,
     player_box_field_metadata,
     womens_forecast_metadata,
+    womens_lower_division_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
     validate_reviewed_recruiting_release,
@@ -24,6 +25,48 @@ from scripts.check_live_publication import (
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    @staticmethod
+    def womens_lower_division_payload():
+        divisions = {}
+        for division in (2, 3):
+            key = f"d{division}"
+            divisions[key] = {
+                "source_scope": {"sport": "basketball", "gender": "women", "division": division},
+                "identity_status": "source_names_and_team_slugs_only",
+                "identity_note": "No athlete ID is published.",
+                "individual": [{
+                    "source_url": f"https://www.ncaa.com/stats/basketball-women/{key}/current/individual/1009",
+                    "headers": ["Rank", "Name"],
+                    "rows": [{"rank": 1, "name": "Example"}],
+                }],
+                "team": [{
+                    "source_url": f"https://www.ncaa.com/stats/basketball-women/{key}/current/team/1002",
+                    "headers": ["Rank", "Team"],
+                    "rows": [{"rank": 1, "team": "Example"}],
+                }],
+            }
+        return {
+            "schema_version": 1,
+            "generated_at": "2026-09-10T18:00:00Z",
+            "source": {"publisher": "NCAA.com", "limitation": "No stable athlete ID is published."},
+            "receipts": [{
+                "url": "https://www.ncaa.com/stats/basketball-women/d2",
+                "status": 200,
+                "sha256": "a" * 64,
+                "bytes": 100,
+            }],
+            "divisions": divisions,
+        }
+
+    def test_womens_lower_division_metadata_requires_explicit_scope_and_identity_boundary(self):
+        payload = self.womens_lower_division_payload()
+        summary = womens_lower_division_metadata(payload, datetime(2026, 9, 10, 20, tzinfo=timezone.utc), 36)
+        self.assertEqual(summary["receipt_count"], 1)
+        self.assertEqual(summary["d2"]["individual_rows"], 1)
+        payload["divisions"]["d3"]["individual"][0]["rows"][0]["athlete_id"] = "unsafe"
+        with self.assertRaisesRegex(ValueError, "unsafe identity"):
+            womens_lower_division_metadata(payload, datetime(2026, 9, 10, 20, tzinfo=timezone.utc), 36)
+
     def test_daily_monitor_requires_complete_warehouse_audit(self):
         complete = {
             "audit_status": "complete",
@@ -290,6 +333,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.matchup_personnel_payload()
             if path == "/data/basketball/womens-forecast.json":
                 return LivePublicationCheckTest.womens_forecast_payload()
+            if path == "/data/basketball/womens-lower-division-stats.json":
+                return LivePublicationCheckTest.womens_lower_division_payload()
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),

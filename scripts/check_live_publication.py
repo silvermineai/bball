@@ -410,6 +410,96 @@ def womens_forecast_metadata(payload: dict) -> dict:
     }
 
 
+def womens_lower_division_metadata(
+    payload: dict,
+    checked_at: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate the read-only NCAA.com women’s D2/D3 edition.
+
+    These tables are useful source evidence, but NCAA.com does not expose a
+    stable athlete ID in the rendered rows. The monitor therefore verifies
+    explicit route scope and receipt integrity while refusing to treat the
+    rows as an identity-linked player archive.
+    """
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("women's lower-division statistics asset is malformed")
+    generated_at = payload.get("generated_at")
+    try:
+        generated = timestamp(generated_at)
+    except (TypeError, ValueError):
+        raise ValueError("women's lower-division statistics asset has an invalid generation time") from None
+    age = (checked_at - generated).total_seconds() / 3600
+    if age < -24 or age > max_age_hours:
+        raise ValueError(f"women's lower-division statistics asset is {max(age, 0):.1f} hours old")
+    source = payload.get("source")
+    if (
+        not isinstance(source, dict)
+        or source.get("publisher") != "NCAA.com"
+        or not isinstance(source.get("limitation"), str)
+        or "athlete ID" not in source["limitation"]
+    ):
+        raise ValueError("women's lower-division statistics source contract is malformed")
+    receipts = payload.get("receipts")
+    if not isinstance(receipts, list) or not receipts:
+        raise ValueError("women's lower-division statistics asset has no receipts")
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("url"), str)
+            or not receipt["url"].startswith("https://www.ncaa.com/stats/basketball-women/")
+            or receipt.get("status") != 200
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+            or not isinstance(receipt.get("bytes"), int)
+            or receipt["bytes"] <= 0
+        ):
+            raise ValueError("women's lower-division statistics receipt is malformed")
+    divisions = payload.get("divisions")
+    if not isinstance(divisions, dict):
+        raise ValueError("women's lower-division statistics has no division map")
+    summary: dict[str, object] = {"receipt_count": len(receipts), "generated_age_hours": max(age, 0)}
+    for division in ("d2", "d3"):
+        record = divisions.get(division)
+        expected_division = int(division[1])
+        if (
+            not isinstance(record, dict)
+            or record.get("source_scope") != {"sport": "basketball", "gender": "women", "division": expected_division}
+            or record.get("identity_status") != "source_names_and_team_slugs_only"
+            or not isinstance(record.get("identity_note"), str)
+        ):
+            raise ValueError(f"women's lower-division {division} scope or identity contract is malformed")
+        counts: dict[str, int] = {}
+        for kind in ("individual", "team"):
+            tables = record.get(kind)
+            if not isinstance(tables, list) or not tables:
+                raise ValueError(f"women's lower-division {division} has no {kind} tables")
+            total = 0
+            for table in tables:
+                if (
+                    not isinstance(table, dict)
+                    or not isinstance(table.get("source_url"), str)
+                    or not table["source_url"].startswith(f"https://www.ncaa.com/stats/basketball-women/{division}/")
+                    or not isinstance(table.get("headers"), list)
+                    or not table["headers"]
+                    or not isinstance(table.get("rows"), list)
+                    or not table["rows"]
+                ):
+                    raise ValueError(f"women's lower-division {division} {kind} table is malformed")
+                for row in table["rows"]:
+                    if not isinstance(row, dict) or "athlete_id" in row:
+                        raise ValueError(f"women's lower-division {division} row has an unsafe identity field")
+                total += len(table["rows"])
+            counts[kind] = total
+        summary[division] = {
+            "individual_rows": counts["individual"],
+            "team_rows": counts["team"],
+            "individual_statistics": len(record["individual"]),
+            "team_statistics": len(record["team"]),
+        }
+    return summary
+
+
 def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
     """Require the roster challenger to name the exact primary forecast edition."""
     model = payload.get("roster_model")
@@ -969,6 +1059,11 @@ def check_live(
     womens_forecast = womens_forecast_metadata(
         get_json(base_url, "/data/basketball/womens-forecast.json")
     )
+    womens_lower_division = womens_lower_division_metadata(
+        get_json(base_url, "/data/basketball/womens-lower-division-stats.json"),
+        checked_at,
+        max_age_hours,
+    )
     matchup_personnel = get_json(
         base_url,
         f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
@@ -1133,6 +1228,11 @@ def check_live(
         "womens_forecast_rows": womens_forecast["forecast_rows"],
         "womens_forecast_validation_games": womens_forecast["validation_games"],
         "womens_forecast_calibration_games": womens_forecast["calibration_games"],
+        "womens_lower_division_receipts": womens_lower_division["receipt_count"],
+        "womens_d2_individual_rows": womens_lower_division["d2"]["individual_rows"],
+        "womens_d2_team_rows": womens_lower_division["d2"]["team_rows"],
+        "womens_d3_individual_rows": womens_lower_division["d3"]["individual_rows"],
+        "womens_d3_team_rows": womens_lower_division["d3"]["team_rows"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],
