@@ -223,11 +223,15 @@ export default function BasketballCard({
                 <span>{fmt(rosterScenario.roster_home_win_probability * 100, 1)}%</span>
               </div>
               <div className="match-detail muted">
+                <span>Scenario predicted net · A / H</span>
+                <span>{fmt(rosterScenario.away_predicted_net, 1)} / {fmt(rosterScenario.home_predicted_net, 1)}</span>
+              </div>
+              <div className="match-detail muted">
                 <span>Scenario margin range</span>
                 <span>{fmt(rosterScenario.roster_margin_low, 1)} to {fmt(rosterScenario.roster_margin_high, 1)}</span>
               </div>
               <small>
-                Uses prior net efficiency and exact-ID recorded continuity. Probability and range reuse this primary edition&apos;s held-out calibration; the scenario does not replace the prospective ledger forecast.
+                Uses prior net efficiency and exact-ID recorded continuity. The team-net pair shows the scenario&apos;s predicted efficiency levels for the away and home teams. Probability and range reuse this primary edition&apos;s held-out calibration; the scenario does not replace the prospective ledger forecast.
               </small>
             </div>
           )}
