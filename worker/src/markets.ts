@@ -96,6 +96,9 @@ type ResearchCapture = {
   summary_with_pickcenter?: number;
   summary_with_odds?: number;
   eligible_games?: number;
+  candidate_games?: number;
+  capture_limit?: number;
+  capture_truncated?: boolean;
   summary_fetch_failures?: number;
   source_rows?: number;
   rows_with_lines?: number;
@@ -172,6 +175,15 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.eligible_games === "number" && Number.isInteger(payload.eligible_games) && payload.eligible_games >= 0) {
       result.eligible_games = payload.eligible_games;
+    }
+    if (typeof payload.candidate_games === "number" && Number.isInteger(payload.candidate_games) && payload.candidate_games >= 0) {
+      result.candidate_games = payload.candidate_games;
+    }
+    if (typeof payload.capture_limit === "number" && Number.isInteger(payload.capture_limit) && payload.capture_limit >= 1 && payload.capture_limit <= 300) {
+      result.capture_limit = payload.capture_limit;
+    }
+    if (typeof payload.capture_truncated === "boolean") {
+      result.capture_truncated = payload.capture_truncated;
     }
     if (typeof payload.summary_fetch_failures === "number" && Number.isInteger(payload.summary_fetch_failures) && payload.summary_fetch_failures >= 0) {
       result.summary_fetch_failures = payload.summary_fetch_failures;

@@ -299,9 +299,13 @@ def summary_capture_diagnostics(summaries: list[dict]) -> dict[str, int]:
 
 def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS, limit: int = 120) -> tuple[list[dict], dict]:
     now = datetime.now(timezone.utc)
-    games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
     if limit < 1 or limit > 300:
         raise ValueError("limit must be between 1 and 300")
+    # Keep the request bounded while recording the size of the eligible slate.
+    # A receipt that says "120 eligible games" is otherwise easy to mistake
+    # for complete coverage when the schedule contains hundreds more games.
+    candidate_games = _future_games(schedules(SPORT), season, horizon_days, now)
+    games = candidate_games[:limit]
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
     fetch_failures = 0
@@ -349,7 +353,13 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],
+        # ``eligible_games`` is the bounded set actually requested. Keep the
+        # full candidate count beside it so publication can expose deliberate
+        # request limits without treating an unrequested game as a failed read.
         "eligible_games": len(games),
+        "candidate_games": len(candidate_games),
+        "capture_limit": limit,
+        "capture_truncated": len(candidate_games) > len(games),
         "summary_fetch_failures": fetch_failures,
         **diagnostics,
         "timing_basis": "summary_capture",

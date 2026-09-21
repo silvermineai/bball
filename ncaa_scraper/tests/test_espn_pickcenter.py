@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+from ncaa_scraper import espn_pickcenter as collector
 from ncaa_scraper.espn_pickcenter import BASE_URL, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
 from ncaa_scraper.odds_feed import schedules
 
@@ -59,6 +60,35 @@ class EspnPickcenterTests(unittest.TestCase):
             {"event_id": "two", "summary": summary()},
             {"event_id": "three", "summary": {}},
         ]), (3, 1))
+
+    def test_bounded_capture_receipt_reports_unrequested_candidates(self):
+        class FailedResponse:
+            status_code = 503
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        candidates = [
+            {**GAME, "id": "401900001"},
+            {**GAME, "id": "401900002"},
+            {**GAME, "id": "401900003"},
+        ]
+        with patch.object(collector, "schedules", return_value=candidates), patch.object(
+            collector, "_future_games", return_value=candidates
+        ), patch.object(collector.requests, "get", return_value=FailedResponse()), patch.object(
+            collector.time, "sleep"
+        ), patch.object(collector, "CACHE", Path(".local/test-market-cache")):
+            summaries, receipt = collector.fetch_upcoming(
+                season=2027, horizon_days=30, limit=2
+            )
+        self.assertEqual(summaries, [])
+        self.assertEqual(receipt["eligible_games"], 2)
+        self.assertEqual(receipt["candidate_games"], 3)
+        self.assertEqual(receipt["capture_limit"], 2)
+        self.assertTrue(receipt["capture_truncated"])
 
     def test_capture_diagnostics_separate_odds_payloads_from_complete_quotes(self):
         with_odds = {"event_id": "one", "summary": {"pickcenter": [], "odds": [{"provider": {"name": "A book"}}]}}

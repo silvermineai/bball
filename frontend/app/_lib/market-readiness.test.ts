@@ -109,4 +109,20 @@ describe("market connector readiness", () => {
     })).toBe("");
     expect(formatMarketComparisonReadiness(undefined)).toBe("");
   });
+  it("reports when a capture is deliberately bounded below the eligible slate", () => {
+    expect(marketCaptureDiagnostic({
+      research_capture: {
+        summary_count: 120,
+        eligible_games: 120,
+        candidate_games: 1629,
+        capture_limit: 120,
+        capture_truncated: true,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        accepted_markets: 0,
+        rejected_records: 0,
+      },
+    })).toContain("120 of 1,629 eligible games (limit 120)");
+  });
+
 });
