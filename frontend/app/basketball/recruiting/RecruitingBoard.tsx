@@ -5,6 +5,8 @@ import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchJson } from "../../_lib/fetch-json";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
+import { parseRecruitingRelease } from "../../_lib/recruiting";
+import { buildRecruitingProductionIndex, type RecruitingProductionIndex } from "../../_lib/recruiting-production-index";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
   recruitingShortlistKey,
@@ -661,6 +663,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [exportMessage, setExportMessage] = useState("");
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [shortlistHydrated, setShortlistHydrated] = useState(false);
+  const [productionIndex, setProductionIndex] = useState<RecruitingProductionIndex | null>(null);
+  const [productionStatus, setProductionStatus] = useState<"checking" | "live" | "unavailable">("checking");
   const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax, destinationLimit });
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
@@ -816,6 +820,30 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   }, [boardRequest]);
   useEffect(() => {
     const controller = new AbortController();
+    setProductionIndex(null);
+    setProductionStatus("checking");
+    fetch(`/api/basketball/research/recruiting?season=${season}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("The reviewed production release is unavailable.");
+        return response.json() as Promise<unknown>;
+      })
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        const release = parseRecruitingRelease(payload, Number(season));
+        const index = release ? buildRecruitingProductionIndex(release) : null;
+        if (!index) throw new Error("The reviewed production release failed exact-ID integrity checks.");
+        setProductionIndex(index);
+        setProductionStatus("live");
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setProductionStatus("unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, [season]);
+  useEffect(() => {
+    const controller = new AbortController();
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
       const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
@@ -827,6 +855,10 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     return () => controller.abort();
   }, []);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
+  const pageProductionRows = result?.rows.flatMap((row) => {
+    const production = productionIndex?.byAthleteId.get(row.athlete_id);
+    return production ? [{ prospect: row, production }] : [];
+  }) || [];
   const movementEvidence = result?.rank_movement
     ? result.rank_movement.moved_up + result.rank_movement.moved_down + result.rank_movement.unchanged + result.rank_movement.rank_unavailable
     : 0;
@@ -1233,6 +1265,29 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               </tr>)}</tbody>
             </table></div>
             <p className="note" style={{ marginTop: 12 }}>“Committed here” requires the prospect’s exact committed-team ID to equal the recorded school ID. “Uncommitted” means the committed-team field is empty in this edition. Neither count predicts enrollment or eligibility.</p>
+          </section>}
+          {productionStatus === "live" && productionIndex && <section className="paper-panel" aria-labelledby="recruiting-production-links-title" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">College production bridge / exact athlete IDs</div><h3 id="recruiting-production-links-title">Prior production beside the recorded class.</h3></div>
+              <span className="note">{pageProductionRows.length} links on this page</span>
+            </div>
+            <p className="note">This table joins the active prospect page to the separately reviewed production release only through the exact publisher athlete ID. The release carries {productionIndex.linkedRows.toLocaleString()} unique production links among {productionIndex.sourceRows.toLocaleString()} retained people; an absent row remains unavailable and is not a zero. It describes prior production and does not establish eligibility, transfer status or a future role.</p>
+            <p className="note">Production release edition <code>{productionIndex.edition}</code> · reviewed {new Date(productionIndex.reviewedAt).toLocaleString("en-US", { dateStyle: "medium", timeZone: "UTC" })} UTC.</p>
+            {pageProductionRows.length ? <div className="table-scroll"><table className="data-table">
+              <thead><tr><th>Prospect / exact ID</th><th>Prior team</th><th className="numeric">Season</th><th className="numeric">Games</th><th className="numeric">MIN/G</th><th className="numeric">PTS/G</th><th className="numeric">REB/G</th><th className="numeric">AST/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th></tr></thead>
+              <tbody>{pageProductionRows.map(({ prospect, production }) => <tr key={`production-link-${prospect.athlete_id}`}>
+                <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${prospect.athlete_id}`}>{prospect.name}</Link><small>Prospect ID {prospect.athlete_id} · rank {prospect.rank == null ? "unavailable" : `#${prospect.rank}`}</small></th>
+                <td>{production.team}<small>Production ID {production.id}</small></td>
+                <td className="numeric">{production.season}</td>
+                <td className="numeric">{production.games.toLocaleString()}</td>
+                <td className="numeric">{number(production.mpg, 1)}</td>
+                <td className="numeric">{number(production.ppg, 1)}</td>
+                <td className="numeric">{number(production.rpg, 1)}</td>
+                <td className="numeric">{number(production.apg, 1)}</td>
+                <td className="numeric">{production.ts == null ? "—" : `${number(production.ts * 100, 1)}%`}</td>
+                <td className="numeric">{production.efg == null ? "—" : `${number(production.efg * 100, 1)}%`}</td>
+              </tr>)}</tbody>
+            </table></div> : <p className="empty">No exact-ID production rows are linked on this page. Open a prospect dossier for its individual bridge check.</p>}
           </section>}
           <div className="table-wrap" id="prospect-board-table">
             <table className="data-table">
