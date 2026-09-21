@@ -1,8 +1,9 @@
 import { getOverview } from "../../_lib/data";
 import { fmt, date } from "../../_lib/format";
 import Link from "next/link";
+import ScopedDashboard from "../../_components/ScopedDashboard";
 export const metadata = { title: "Football power ratings" };
-export default function Page() {
+function RatingsPage() {
   const d = getOverview();
   return (
     <>
@@ -58,4 +59,8 @@ export default function Page() {
       </p>
     </>
   );
+}
+
+export default function Page() {
+  return <ScopedDashboard sport="football"><RatingsPage /></ScopedDashboard>;
 }

@@ -4,13 +4,14 @@ import path from "node:path";
 import EfficiencyDesk from "./EfficiencyDesk";
 import type { EfficiencyIndex } from "../../_lib/football-efficiency";
 import { getFootballEfficiencyModel } from "../../_lib/data";
+import ScopedDashboard from "../../_components/ScopedDashboard";
 export const metadata = {
   title: "Football team efficiency and matchup comparisons",
   description:
     "Compare offensive EPA, opponent production, explosive plays and short-yardage conversion with game-by-game source evidence.",
   alternates: { canonical: "/football/efficiency/" },
 };
-export default function Page() {
+function EfficiencyPage() {
   const data = JSON.parse(
     fs.readFileSync(
       path.join(process.cwd(), "public/data/football/efficiency.json"),
@@ -43,4 +44,8 @@ export default function Page() {
       <EfficiencyDesk data={data} model={model} />
     </>
   );
+}
+
+export default function Page() {
+  return <ScopedDashboard sport="football"><EfficiencyPage /></ScopedDashboard>;
 }
