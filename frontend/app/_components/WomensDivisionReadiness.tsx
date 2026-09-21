@@ -6,7 +6,15 @@ import { divisionPlayerReadiness } from "../_lib/division-player-readiness";
 import WomensLowerDivisionStats from "./WomensLowerDivisionStats";
 import WomensLowerDivisionScheduleReadiness from "./WomensLowerDivisionScheduleReadiness";
 
-type Division = { status: string; rows: number; reason: string };
+type Division = {
+  status: string;
+  rows: number;
+  reason: string;
+  source_native_leaderboards?: {
+    individual_rows?: number;
+    team_rows?: number;
+  };
+};
 type Signal = { game_id: string; date?: string | null; home?: string | null; away?: string | null; source_flag: string };
 type RetainedAsset = {
   asset: string;
@@ -57,13 +65,14 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
   }, []);
   const current = publication?.divisions[division];
   const signals = publication?.non_division_one_schedule_signals;
+  const sourceNative = current?.source_native_leaderboards;
   return <section className="field-card" aria-labelledby="wbb-division-readiness-title">
     <div className="eyebrow">WOMEN&apos;S DIVISION INTAKE · D{division}</div>
     <h2 id="wbb-division-readiness-title">Division {division} readiness</h2>
     {!publication || !current ? <p className="muted">Loading the women&apos;s division evidence ledger…</p> : <>
       <p className="muted">{current.reason} The boundary is explicit so D1 production, rankings, and forecasts cannot leak into this scope.</p>
       <DivisionCoverageMatrix sport="basketball" gender="women" division={division} />
-      <div className="scope-snapshot-counts"><strong>0</strong><span>D{division} rows</span><strong>{publication.published.player_rows.toLocaleString()}</strong><span>D1 players published</span><strong>{publication.published.team_rows.toLocaleString()}</strong><span>D1 team rows published</span></div>
+      <div className="scope-snapshot-counts"><strong>{current.rows.toLocaleString()}</strong><span>identity-linked D{division} rows</span><strong>{(sourceNative?.individual_rows || 0).toLocaleString()}</strong><span>source-native player rows</span><strong>{(sourceNative?.team_rows || 0).toLocaleString()}</strong><span>source-native team rows</span></div>
       {publication.asset_audit && publication.retained_assets?.length ? <div className="paper-panel" style={{ marginTop: 18 }}>
         <div className="eyebrow">RETAINED ASSET AUDIT</div>
         <h3>{publication.asset_audit.assets_inspected.toLocaleString()} files inspected · {publication.asset_audit.assets_with_explicit_division.toLocaleString()} explicit division labels</h3>
