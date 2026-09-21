@@ -11,6 +11,8 @@ X_MIN = -25.0
 X_MAX = 25.0
 Y_MIN = -5.25
 Y_MAX = 41.75
+BAND_LABELS = ("Rim", "Paint", "Midrange", "3-point")
+SIDE_LABELS = ("Chart left", "Middle", "Chart right")
 
 
 def _number(value):
@@ -30,6 +32,25 @@ def _made(value) -> bool:
 def _identity(value, fallback: str) -> str:
     text = str(value or "").strip()
     return text or fallback
+
+
+def _band(x: float, y: float) -> str:
+    distance = math.hypot(x, y)
+    if distance <= 4:
+        return "Rim"
+    if distance <= 12:
+        return "Paint"
+    if distance >= 22.15:
+        return "3-point"
+    return "Midrange"
+
+
+def _side(x: float) -> str:
+    if x < -8:
+        return "Chart left"
+    if x > 8:
+        return "Chart right"
+    return "Middle"
 
 
 def build_shot_profiles(rows: list[dict]) -> list[dict]:
@@ -55,6 +76,8 @@ def build_shot_profiles(rows: list[dict]) -> list[dict]:
                 "makes": 0,
                 "located_attempts": 0,
                 "cells": defaultdict(lambda: [0, 0]),
+                "bands": defaultdict(lambda: [0, 0]),
+                "sides": defaultdict(lambda: [0, 0]),
             },
         )
         name = str(row.get("shooter_clean_name") or "").strip()
@@ -78,6 +101,13 @@ def build_shot_profiles(rows: list[dict]) -> list[dict]:
         cell[0] += 1
         if _made(row.get("made")):
             cell[1] += 1
+        band = profile["bands"][_band(x, y)]
+        side = profile["sides"][_side(x)]
+        band[0] += 1
+        side[0] += 1
+        if _made(row.get("made")):
+            band[1] += 1
+            side[1] += 1
 
     output = []
     for profile in profiles.values():
@@ -96,6 +126,14 @@ def build_shot_profiles(rows: list[dict]) -> list[dict]:
                     {"column": column, "row": grid_row, "attempts": values[0], "makes": values[1]}
                     for (column, grid_row), values in sorted(profile["cells"].items())
                     if values[0]
+                ],
+                "bands": [
+                    {"label": label, "attempts": profile["bands"][label][0], "makes": profile["bands"][label][1]}
+                    for label in BAND_LABELS
+                ],
+                "sides": [
+                    {"label": label, "attempts": profile["sides"][label][0], "makes": profile["sides"][label][1]}
+                    for label in SIDE_LABELS
                 ],
             }
         )

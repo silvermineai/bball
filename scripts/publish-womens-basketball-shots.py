@@ -19,7 +19,7 @@ def main():
     rows, receipt = client().load("shots", 2026)
     profiles = build_shot_profiles(rows)
     publication = {
-        "schema_version": 1,
+        "schema_version": 2,
         "sport": "basketball",
         "gender": "women",
         "season": 2026,
@@ -44,6 +44,7 @@ def main():
         "limitations": [
             "Profiles are keyed by the shot release's shooter identity and are not silently joined to player-season IDs.",
             "The map bins source coordinates for display; all source attempts remain in the attempt totals.",
+            "Distance-band and court-side summaries use located coordinates only; missing locations remain outside those rates.",
         ],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -13,6 +13,17 @@ def test_profiles_keep_attempt_denominators_and_bin_coordinates():
     assert profiles[0]["makes"] == 1
     assert profiles[0]["located_attempts"] == 2
     assert sum(cell["attempts"] for cell in profiles[0]["cells"]) == 2
+    assert profiles[0]["bands"] == [
+        {"label": "Rim", "attempts": 1, "makes": 0},
+        {"label": "Paint", "attempts": 0, "makes": 0},
+        {"label": "Midrange", "attempts": 0, "makes": 0},
+        {"label": "3-point", "attempts": 1, "makes": 1},
+    ]
+    assert profiles[0]["sides"] == [
+        {"label": "Chart left", "attempts": 1, "makes": 1},
+        {"label": "Middle", "attempts": 1, "makes": 0},
+        {"label": "Chart right", "attempts": 0, "makes": 0},
+    ]
 
 
 def test_profiles_flag_identity_collisions_without_joining_names():

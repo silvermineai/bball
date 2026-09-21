@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CourtLines } from "./PlayerShotLocationCourt";
 import { PLAYER_COURT } from "../_lib/player-shot-locations";
+import { womensShotTendencyStats, type WomensShotTendency } from "../_lib/womens-shot-summary";
 
 type Cell = { column: number; row: number; attempts: number; makes: number };
 type Profile = {
@@ -14,6 +15,8 @@ type Profile = {
   makes: number;
   located_attempts: number;
   cells: Cell[];
+  bands: WomensShotTendency[];
+  sides: WomensShotTendency[];
 };
 type Publication = {
   coverage: { source_attempts: number; profiles: number; located_attempts: number; ambiguous_profiles: number };
@@ -53,20 +56,22 @@ export default function WomensShotProfileCourt() {
   const selected = publication?.profiles.find((profile) => profile.profile_id === selectedId) || matches[0] || null;
   const maximum = Math.max(0, ...(selected?.cells.map((cell) => cell.attempts) || []));
   const cellMap = new Map((selected?.cells || []).map((cell) => [`${cell.column}-${cell.row}`, cell]));
+  const bands = womensShotTendencyStats(selected?.bands || [], selected?.located_attempts || 0);
+  const sides = womensShotTendencyStats(selected?.sides || [], selected?.located_attempts || 0);
 
   return <section className="field-card" aria-labelledby="wbb-shot-map-title">
-    <div className="eyebrow">PLAYER SHOT MAP · 2026 SOURCE COORDINATES</div>
+    <div className="eyebrow">PLAYER SHOT MAP · 2026 COURT COORDINATES</div>
     <h2 id="wbb-shot-map-title">Where each player likes to shoot</h2>
-    <p className="muted">Search the retained shot identities, then inspect attempt concentration on the court. The map uses the supplied court feet coordinates; it does not guess a join to the season player table.</p>
+    <p className="muted">Find a retained shot profile, then inspect attempt concentration, distance bands and court-side tendencies. Profiles stay in their recorded identity namespace so uncertain player joins remain visible.</p>
     {!publication ? <p className="muted">Loading shot-coordinate profiles…</p> : <>
       <div className="wbb-shot-map-controls">
         <label htmlFor="wbb-shot-search">Find a player</label>
-        <input id="wbb-shot-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, team, or source ID" />
+        <input id="wbb-shot-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, team, or profile ID" />
         <div className="wbb-shot-search-results" role="listbox" aria-label="Shot profile matches">
           {matches.map((profile) => <button className={profile.profile_id === selected?.profile_id ? "active" : ""} key={profile.profile_id} type="button" onClick={() => setSelectedId(profile.profile_id)} role="option" aria-selected={profile.profile_id === selected?.profile_id}>
             <span>{profile.name}<small>{profile.team} · {profile.attempts.toLocaleString()} attempts</small></span>
           </button>)}
-          {!matches.length ? <span className="muted">No source profile matches.</span> : null}
+          {!matches.length ? <span className="muted">No shot profile matches.</span> : null}
         </div>
       </div>
       {selected ? <div className="wbb-shot-map-layout">
@@ -81,18 +86,28 @@ export default function WomensShotProfileCourt() {
               return <rect key={`${column}-${row}`} x={column * cellWidth} y={row * cellHeight} width={cellWidth} height={cellHeight} fill={fill(cell?.attempts || 0, maximum)} stroke={cell?.attempts ? "rgba(206, 97, 47, .22)" : "transparent"} strokeWidth="1"><title>{cell ? `${cell.attempts.toLocaleString()} attempts · ${cell.makes.toLocaleString()} makes` : "No recorded attempts"}</title></rect>;
             })}
           </svg>
-          <p className="muted">Warmer cells indicate more attempts. The drawing shows one half court; every source attempt remains in the totals.</p>
+          <p className="muted">Warmer cells indicate more attempts. The drawing shows one half court; every recorded attempt remains in the totals.</p>
         </div>
         <div className="wbb-shot-map-summary">
-          <div className="wbb-shot-map-player"><strong>{selected.name}</strong><span>{selected.team}</span><small>Source shooter ID · {selected.profile_id}</small>{selected.identity_status === "ambiguous" ? <small className="status-warn">Identity fields vary in the release; review before joining.</small> : null}</div>
+          <div className="wbb-shot-map-player"><strong>{selected.name}</strong><span>{selected.team}</span><small>Shot profile ID · {selected.profile_id}</small>{selected.identity_status === "ambiguous" ? <small className="status-warn">Identity fields vary in this archive; review before joining.</small> : null}</div>
           <dl>
             <div><dt>Attempts</dt><dd>{selected.attempts.toLocaleString()}</dd></div>
             <div><dt>Made</dt><dd>{selected.makes.toLocaleString()} · {selected.attempts ? `${((selected.makes / selected.attempts) * 100).toFixed(1)}%` : "—"}</dd></div>
             <div><dt>Located</dt><dd>{selected.located_attempts.toLocaleString()} · {selected.attempts ? `${((selected.located_attempts / selected.attempts) * 100).toFixed(1)}%` : "—"}</dd></div>
           </dl>
+          <div className="wbb-shot-tendency">
+            <h3>Distance bands</h3>
+            <p>Exact coordinate distances from the basket.</p>
+            {bands.map((row) => <div key={row.label}><span>{row.label}</span><strong>{(row.share * 100).toFixed(1)}%<small>{row.attempts.toLocaleString()} ATT · {row.makeRate == null ? "—" : `${(row.makeRate * 100).toFixed(1)}% FG`}</small></strong></div>)}
+          </div>
+          <div className="wbb-shot-tendency">
+            <h3>Court-side tendency</h3>
+            <p>Chart left, middle and right split at the lane edges.</p>
+            {sides.map((row) => <div key={row.label}><span>{row.label}</span><strong>{(row.share * 100).toFixed(1)}%<small>{row.attempts.toLocaleString()} ATT · {row.makeRate == null ? "—" : `${(row.makeRate * 100).toFixed(1)}% FG`}</small></strong></div>)}
+          </div>
         </div>
       </div> : null}
-      <p className="muted">{publication.coverage.profiles.toLocaleString()} source shooter profiles · {publication.coverage.source_attempts.toLocaleString()} attempts · {publication.coverage.ambiguous_profiles.toLocaleString()} profiles flagged for identity review.</p>
+      <p className="muted">{publication.coverage.profiles.toLocaleString()} shooter profiles · {publication.coverage.source_attempts.toLocaleString()} attempts · {publication.coverage.ambiguous_profiles.toLocaleString()} profiles flagged for identity review.</p>
     </>}
   </section>;
 }
