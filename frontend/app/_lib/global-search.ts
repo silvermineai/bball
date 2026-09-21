@@ -1,6 +1,15 @@
 export type SearchProgram = { id: string; name: string };
 export type SearchRecruitingPerson = { key: string; name: string; category?: string };
 export type SearchRosterPerson = { id: string; name: string; team?: string | null; status?: string | null };
+export type SearchFootballPersonnel = {
+  id?: string | null;
+  record_key?: string | null;
+  name: string;
+  team?: string | null;
+  division?: string | null;
+  source: "roster" | "recruit";
+  season?: number;
+};
 
 export type SearchResult = {
   id: string;
@@ -91,6 +100,41 @@ export function searchRosterPeople(
       detail: `Roster observation${person.team ? ` · ${person.team}` : ""}${person.status ? ` · ${person.status.replaceAll("_", " ")}` : ""}`,
       href: `/basketball/recruiting/?view=observations&rosterQ=${encodeURIComponent(person.name)}`,
     }));
+}
+
+/** Search receipt-backed football roster and recruiting rows without joining by name. */
+export function searchFootballPersonnel(
+  people: SearchFootballPersonnel[],
+  query: string,
+  limit = 4,
+): SearchResult[] {
+  const needle = normalize(query);
+  if (!needle) return [];
+  return people
+    .filter((person) => normalize(`${person.name} ${person.team || ""}`).includes(needle))
+    .sort((a, b) => {
+      const aName = normalize(a.name);
+      const bName = normalize(b.name);
+      return Number(!aName.startsWith(needle)) - Number(!bName.startsWith(needle)) || aName.localeCompare(bName) || (a.record_key || "").localeCompare(b.record_key || "");
+    })
+    .slice(0, limit)
+    .map((person) => {
+      const season = person.season || 2026;
+      const stableId = person.id?.trim();
+      const recordKey = person.record_key?.trim() || person.name;
+      const isRoster = person.source === "roster";
+      const href = isRoster && stableId
+        ? `/football/player/?id=${encodeURIComponent(stableId)}&season=${season}`
+        : `/football/recruiting/?view=${isRoster ? "rosters" : "recruits"}&season=${season}&q=${encodeURIComponent(person.name)}`;
+      return {
+        id: `football-${person.source}-${stableId || recordKey}`,
+        name: person.name,
+        type: "player" as const,
+        sport: "football" as const,
+        detail: `${isRoster ? "Football roster" : "Football recruiting"}${person.team ? ` · ${person.team}` : ""}${person.division ? ` · ${person.division.toUpperCase()}` : ""}${!stableId ? " · no stable ID" : ""}`,
+        href,
+      };
+    });
 }
 
 const resultKey = (result: SearchResult) => `${result.type}|${result.sport || ""}|${result.href}`;

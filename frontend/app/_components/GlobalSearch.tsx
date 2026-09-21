@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { combineSearchResults, searchPrograms, searchRecruitingPeople, searchRosterPeople, type SearchProgram, type SearchResult, type SearchRecruitingPerson, type SearchRosterPerson } from "../_lib/global-search";
+import { combineSearchResults, searchFootballPersonnel, searchPrograms, searchRecruitingPeople, searchRosterPeople, type SearchFootballPersonnel, type SearchProgram, type SearchResult, type SearchRecruitingPerson, type SearchRosterPerson } from "../_lib/global-search";
 
 type PlayerRow = { id?: string; name?: string | null; team?: string | null; position?: string | null; season?: number };
 type PlayerResponse = { rows?: PlayerRow[] };
@@ -12,6 +12,7 @@ type LegacyResponse = { results?: LegacyRow[] };
 type RecruitingResponse = { people?: SearchRecruitingPerson[] };
 type ProspectResponse = { rows?: Array<{ athlete_id?: string; name?: string; position?: string | null; committed_team_name?: string | null }> };
 type RosterResponse = { players?: SearchRosterPerson[] };
+type FootballRecruitingResponse = { rows?: SearchFootballPersonnel[] };
 
 let programsPromise: Promise<SearchProgram[]> | null = null;
 let recruitingPromise: Promise<SearchRecruitingPerson[]> | null = null;
@@ -75,8 +76,12 @@ export default function GlobalSearch() {
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
         fetch(`/api/search?q=${encodeURIComponent(needle)}&sport=s_fbl`, { signal: controller.signal })
           .then((response) => response.ok ? response.json() as Promise<LegacyResponse> : { results: [] }),
+        fetch(`/api/football/recruiting?view=rosters&season=2026&q=${encodeURIComponent(needle)}&page=0&limit=5`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<FootballRecruitingResponse> : { rows: [] }),
+        fetch(`/api/football/recruiting?view=recruits&season=2026&q=${encodeURIComponent(needle)}&page=0&limit=5`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<FootballRecruitingResponse> : { rows: [] }),
       ])
-        .then(([players, programs, recruitingPeople, prospects, rosterPeople, basketballArchive, football]) => {
+        .then(([players, programs, recruitingPeople, prospects, rosterPeople, basketballArchive, football, footballRoster, footballRecruits]) => {
           const playerResults: SearchResult[] = (players.rows || [])
             .filter((row): row is PlayerRow & { id: string; name: string } => !!row.id && !!row.name)
             .slice(0, 5)
@@ -136,7 +141,8 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...prospectResults, ...rosterResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
+          const footballRecruitingResults = searchFootballPersonnel([...(footballRoster.rows || []), ...(footballRecruits.rows || [])], needle, 4);
+          setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...prospectResults, ...rosterResults, ...footballRecruitingResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
           setOpen(true);
         })
         .catch((reason: unknown) => {

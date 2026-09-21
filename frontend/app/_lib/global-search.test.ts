@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combineSearchResults, searchPrograms, searchRecruitingPeople, searchRosterPeople } from "./global-search";
+import { combineSearchResults, searchFootballPersonnel, searchPrograms, searchRecruitingPeople, searchRosterPeople } from "./global-search";
 
 describe("global basketball search", () => {
   it("prioritizes program names that start with the query", () => {
@@ -42,5 +42,16 @@ describe("global basketball search", () => {
     expect(rows.map((row) => row.name)).toEqual(["Smithson, Alex", "Jordan Smith"]);
     expect(rows[0]).toMatchObject({ type: "player", sport: "basketball", detail: "Roster observation · Kentucky · new to dataset" });
     expect(rows[0].href).toBe("/basketball/recruiting/?view=observations&rosterQ=Smithson%2C%20Alex");
+  });
+
+  it("routes football roster IDs to player records and recruits to the evidence desk", () => {
+    const rows = searchFootballPersonnel([
+      { source: "roster", id: "22", record_key: "r2", name: "Jordan Smith", team: "Duke", division: "fbs", season: 2026 },
+      { source: "recruit", id: null, record_key: "c1", name: "Smithson, Alex", team: "Kentucky", division: "fcs", season: 2026 },
+    ], "smith");
+    expect(rows.map((row) => row.name)).toEqual(["Smithson, Alex", "Jordan Smith"]);
+    expect(rows[0]).toMatchObject({ sport: "football", detail: "Football recruiting · Kentucky · FCS · no stable ID" });
+    expect(rows[0].href).toBe("/football/recruiting/?view=recruits&season=2026&q=Smithson%2C%20Alex");
+    expect(rows[1].href).toBe("/football/player/?id=22&season=2026");
   });
 });
