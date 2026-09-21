@@ -33,22 +33,6 @@ USER_AGENT = "SilvermineResearch/1.0 (service@silvermineai.com)"
 DIVISIONS = ("d2", "d3")
 DELAY_SECONDS = 0.25
 
-# Keep the first lower-division edition useful while limiting capture load.
-# These are the core counting, rate, shooting, and team context measures used
-# by the existing basketball tables.  The source selector still records every
-# available NCAA.com option in ``available_statistics`` for future expansion.
-INDIVIDUAL_STAT_IDS = {
-    "471", "1009", "106", "1011", "104", "1018", "107", "1019",
-    "1001", "108", "1003", "1005", "268", "1013", "854", "852",
-    "103", "1016", "105", "997", "109", "1007", "110", "555",
-}
-TEAM_STAT_IDS = {
-    "472", "220", "218", "114", "115", "288", "1002", "116", "1004",
-    "117", "855", "853", "1015", "112", "113", "111", "219", "998",
-    "118", "517", "119", "516", "1006", "289", "169",
-}
-
-
 def slug(value: str) -> str:
     value = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
     return value or "unknown"
@@ -83,6 +67,17 @@ def selectors(soup: BeautifulSoup, kind: str) -> list[tuple[str, str]]:
     if not rows:
         raise RuntimeError(f"NCAA.com page published no {kind} statistic options")
     return rows
+
+
+def statistics_to_capture(soup: BeautifulSoup, kind: str) -> list[tuple[str, str]]:
+    """Return the complete source-published statistic selector set.
+
+    Keeping this as a named contract makes it possible to test that the
+    publisher does not silently narrow the source's current catalog.  Any
+    future filtering must be explicit in the published limitation instead of
+    dropping a legal public table while still advertising it as available.
+    """
+    return selectors(soup, kind)
 
 
 def parse_table(soup: BeautifulSoup, kind: str, label: str, source_url: str) -> dict:
@@ -163,17 +158,18 @@ def main() -> None:
             "identity_status": "source_names_and_team_slugs_only",
             "identity_note": "NCAA.com publishes no athlete ID in these tables; rows remain separate and are not joined to ESPN identities.",
             "available_statistics": {
-                "individual": [{"label": label, "source_path": path} for label, path in selectors(index, "individual")],
-                "team": [{"label": label, "source_path": path} for label, path in selectors(index, "team")],
+                "individual": [{"label": label, "source_path": path} for label, path in statistics_to_capture(index, "individual")],
+                "team": [{"label": label, "source_path": path} for label, path in statistics_to_capture(index, "team")],
             },
             "individual": [],
             "team": [],
         }
         for kind in ("individual", "team"):
-            for label, path in selectors(index, kind):
-                stat_id = path.rstrip("/").rsplit("/", 1)[-1]
-                if stat_id not in (INDIVIDUAL_STAT_IDS if kind == "individual" else TEAM_STAT_IDS):
-                    continue
+            # Capture every statistic currently exposed by the source selector.
+            # The selector is the source-of-truth for legal public coverage;
+            # keeping the full set prevents metadata from promising tables that
+            # the published artifact silently omitted.
+            for label, path in statistics_to_capture(index, kind):
                 url = f"{BASE}{path}"
                 page, _ = fetch(url)
                 division_record[kind].append(parse_table(page, kind, label, url))

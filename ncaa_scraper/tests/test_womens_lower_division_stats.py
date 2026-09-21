@@ -44,6 +44,26 @@ def test_selectors_only_accept_statistic_paths():
       <option value="https://bad.example/stats">Bad</option>
     </select>
     """
-    assert MODULE.selectors(BeautifulSoup(html, "html.parser"), "individual") == [
+    soup = BeautifulSoup(html, "html.parser")
+    expected = [
         ("Points Per Game", "/stats/basketball-women/d2/current/individual/102")
     ]
+    assert MODULE.selectors(soup, "individual") == expected
+
+
+def test_capture_contract_includes_every_source_selector():
+    html = """
+    <select id="select-container-individual">
+      <option value="/stats/basketball-women/d2/current/individual/102">Points Per Game</option>
+      <option value="/stats/basketball-women/d2/current/individual/554">Double Doubles</option>
+    </select>
+    <select id="select-container-team">
+      <option value="/stats/basketball-women/d2/current/team/1292">Bench Points Per Game</option>
+      <option value="/stats/basketball-women/d2/current/team/269">Points</option>
+    </select>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    assert MODULE.statistics_to_capture(soup, "individual") == MODULE.selectors(soup, "individual")
+    assert MODULE.statistics_to_capture(soup, "team") == MODULE.selectors(soup, "team")
+    assert len(MODULE.statistics_to_capture(soup, "individual")) == 2
+    assert len(MODULE.statistics_to_capture(soup, "team")) == 2
