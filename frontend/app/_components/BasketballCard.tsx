@@ -7,7 +7,7 @@ import type {
   BBTeam,
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
-import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
+import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel } from "../_lib/market-display";
 import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
@@ -305,6 +305,7 @@ export default function BasketballCard({
                     Verified line · {quote.market}
                     <small>Captured {quote.captured_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)} · updated {quote.updated_at.replace("T", " ").replace("Z", " UTC").slice(0, 22)}</small>
                     {comparisonGapLabel(quote) && <small className={`market-gap-${comparisonGapDirection(quote)}`}>Model gap · {comparisonGapLabel(quote)}</small>}
+                    {comparisonGapDirectionLabel(quote) && <small>{comparisonGapDirectionLabel(quote)}</small>}
                   </span>
                   <strong>
                     {quote.market === "h2h"
