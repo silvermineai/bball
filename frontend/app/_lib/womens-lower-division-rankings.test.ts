@@ -14,9 +14,18 @@ const statistic = {
   through_games: "2026-03-01",
 } as unknown as WomensLowerDivisionStatistic;
 
+const ratioStatistic = {
+  ...statistic,
+  label: "Assist/Turnover Ratio",
+  statistic: "assist_turnover_ratio",
+  headers: ["Rank", "Name", "Team", "Position", "G", "AST", "TO", "Ratio"],
+  rows: [],
+} as unknown as WomensLowerDivisionStatistic;
+
 describe("women's lower-division rankings", () => {
   it("preserves source rank and identifies the published value field", () => {
     expect(womensLowerRankingValueLabel(statistic)).toBe("PPG");
+    expect(womensLowerRankingValueLabel(ratioStatistic)).toBe("Ratio");
     expect(womensLowerRankingRows(statistic).map((row) => [row.rank, row.name, row.value])).toEqual([[1, "Bea Cole", "23.1"], [2, "Ava Reed", "21.4"]]);
   });
 

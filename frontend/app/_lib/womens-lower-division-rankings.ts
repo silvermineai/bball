@@ -23,7 +23,7 @@ const numeric = (value: unknown): number | null => {
 };
 
 function valueField(statistic: WomensLowerDivisionStatistic): string {
-  return statistic.headers.find((header) => !identityFields.has(header)) || statistic.headers.at(-1) || "Value";
+  return [...statistic.headers].reverse().find((header) => !identityFields.has(header)) || statistic.headers.at(-1) || "Value";
 }
 
 export function womensLowerRankingRows(
