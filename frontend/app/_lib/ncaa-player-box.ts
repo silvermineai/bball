@@ -37,6 +37,30 @@ export function completeStatsSum(
   return values.reduce((total, value) => total + value, 0);
 }
 
+/**
+ * Pool the additive box-score fields used by the player-card summary.
+ *
+ * A player can have multiple team stints in one edition. Keeping this helper
+ * exact-ID and all-or-nothing per field means the card can show defensive
+ * production and double-doubles without turning an absent source field into a
+ * false zero.
+ */
+export function playerSeasonBoxSummary(rows: ReadonlyArray<{ stats: NumericStats }>) {
+  const offensiveRebounds = completeStatsSum(rows, "orb");
+  const defensiveRebounds = completeStatsSum(rows, "drb");
+  return {
+    minutes: completeStatsSum(rows, "mins"),
+    points: completeStatsSum(rows, "pts"),
+    rebounds: safeSum(offensiveRebounds, defensiveRebounds),
+    assists: completeStatsSum(rows, "ast"),
+    steals: completeStatsSum(rows, "stl"),
+    blocks: completeStatsSum(rows, "blk"),
+    turnovers: completeStatsSum(rows, "tov"),
+    fouls: completeStatsSum(rows, "pf"),
+    doubleDoubles: completeStatsSum(rows, "dbl_dbl"),
+  };
+}
+
 /** Compute eFG% only when makes, threes and attempts are all source-reported. */
 export function effectiveFieldGoal(
   fieldGoalsMade: number | null | undefined,

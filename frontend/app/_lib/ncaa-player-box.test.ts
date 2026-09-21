@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
 
 describe("NCAA player box rate helpers", () => {
   it("keeps missing source fields unavailable while preserving recorded zero makes", () => {
@@ -26,6 +26,27 @@ describe("NCAA player box rate helpers", () => {
     expect(completeStatsSum([{ stats: { pts: 20 } }, { stats: { pts: 30 } }], "pts")).toBe(50);
     expect(completeStatsSum([{ stats: { pts: 20 } }, { stats: { pts: null } }], "pts")).toBeNull();
     expect(completeStatsSum([{ stats: { pts: 0 } }, { stats: { pts: 5 } }], "pts")).toBe(5);
+  });
+
+  it("keeps defensive production and double-doubles tied to exact retained stints", () => {
+    expect(playerSeasonBoxSummary([
+      { stats: { mins: 500, pts: 300, orb: 40, drb: 80, ast: 60, stl: 18, blk: 12, tov: 30, pf: 45, dbl_dbl: 4 } },
+      { stats: { mins: 200, pts: 120, orb: 15, drb: 25, ast: 24, stl: 7, blk: 3, tov: 11, pf: 18, dbl_dbl: 2 } },
+    ])).toEqual({
+      minutes: 700,
+      points: 420,
+      rebounds: 160,
+      assists: 84,
+      steals: 25,
+      blocks: 15,
+      turnovers: 41,
+      fouls: 63,
+      doubleDoubles: 6,
+    });
+    expect(playerSeasonBoxSummary([
+      { stats: { stl: 2, blk: null, dbl_dbl: 1 } },
+      { stats: { stl: 3, blk: 1, dbl_dbl: null } },
+    ])).toMatchObject({ steals: 5, blocks: null, doubleDoubles: null });
   });
 
   it("derives player rates only from their recorded denominators", () => {
