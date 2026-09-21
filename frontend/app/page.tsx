@@ -2,8 +2,8 @@ import StatsDashboard from "./_components/StatsDashboard";
 import ScopedDashboard from "./_components/ScopedDashboard";
 
 export const metadata = {
-  title: "College basketball stats, ratings and predictions",
-  description: "College basketball team stats, player production, upcoming games and Silvermine model predictions.",
+  title: "College sports stats, ratings and predictions",
+  description: "College basketball and football team stats, player production, upcoming games and Silvermine model predictions.",
 };
 
 export default function Page() {
