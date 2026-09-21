@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, divisionDeskHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
+import { buildScopeHref, divisionAwareNavHref, divisionDeskHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -36,6 +36,8 @@ describe("sport navigation", () => {
       .toBe("/basketball/players/?season=2027&gender=women&division=3");
     expect(buildScopeHref("/research/coverage/?sport=football", "?season=2027", "men", "2"))
       .toBe("/research/coverage/?season=2027&sport=football&gender=men&division=2");
+    expect(buildScopeHref("/football/matchups/#lower-division-results-title", "", "men", "3"))
+      .toBe("/football/matchups/?gender=men&division=3#lower-division-results-title");
   });
 
   it("advertises the published women's D1 sport tab", () => {
@@ -46,6 +48,17 @@ describe("sport navigation", () => {
     expect(divisionDeskHref("womens-basketball")).toBe("/basketball/wbb-readiness/");
     expect(divisionDeskHref("mens-basketball")).toBe("/research/coverage/?sport=basketball");
     expect(divisionDeskHref("football")).toBe("/research/coverage/?sport=football");
+  });
+
+  it("keeps football lower-division stat tabs on the exact-division archive", () => {
+    const teams = SPORT_NAVIGATION.football.items.find((item) => item.label === "Teams")!;
+    const predictions = SPORT_NAVIGATION.football.items.find((item) => item.label === "Predictions")!;
+    const rankings = SPORT_NAVIGATION.football.items.find((item) => item.label === "Rankings")!;
+    expect(divisionAwareNavHref("football", "2", teams)).toBe("/football/matchups/#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "3", predictions)).toBe("/football/matchups/#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "2", rankings)).toBe("/football/matchups/#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "1", teams)).toBe(teams.href);
+    expect(divisionAwareNavHref("mens-basketball", "3", teams)).toBe(teams.href);
   });
 
   it("keeps the core stat tabs consistent across each sport tab", () => {

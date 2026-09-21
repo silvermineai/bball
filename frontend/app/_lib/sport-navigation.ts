@@ -105,6 +105,14 @@ export function divisionDeskHref(sport: Sport): string {
       : "/research/coverage/?sport=basketball";
 }
 
+/** Keep lower-division football tabs on the exact-division archive desk. */
+export function divisionAwareNavHref(sport: Sport, division: Division, item: SportNavItem): string {
+  if (sport === "football" && division !== "1" && ["Teams", "Predictions", "Rankings"].includes(item.label)) {
+    return "/football/matchups/#lower-division-results-title";
+  }
+  return item.href;
+}
+
 export function sportForPathname(pathname: string, gender: string | null = null, sport: string | null = null): Sport {
   if (pathname === "/football" || pathname.startsWith("/football/")) return "football";
   if (pathname === "/research/coverage" || pathname.startsWith("/research/coverage/")) {
@@ -139,7 +147,8 @@ export function isNavItemActive(pathname: string, item: SportNavItem): boolean {
 }
 
 export function buildScopeHref(pathname: string, currentSearch: string, gender: Gender, division: Division): string {
-  const [basePath, embeddedQuery = ""] = pathname.split("?", 2);
+  const [pathAndQuery, hash = ""] = pathname.split("#", 2);
+  const [basePath, embeddedQuery = ""] = pathAndQuery.split("?", 2);
   const params = new URLSearchParams(currentSearch);
   for (const [key, value] of new URLSearchParams(embeddedQuery)) {
     params.set(key, value);
@@ -147,5 +156,5 @@ export function buildScopeHref(pathname: string, currentSearch: string, gender: 
   params.set("gender", gender);
   params.set("division", division);
   const query = params.toString();
-  return `${basePath}${query ? `?${query}` : ""}`;
+  return `${basePath}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   buildScopeHref,
+  divisionAwareNavHref,
   divisionDeskHref,
   DIVISION_OPTIONS,
   isNavItemActive,
@@ -79,7 +80,7 @@ export default function SportNavigation() {
           </Link>
           {config.items.map((item) => {
             const active = isNavItemActive(pathname, item);
-            const itemHref = item.label === "Division" ? divisionDeskHref(currentSport) : item.href;
+            const itemHref = item.label === "Division" ? divisionDeskHref(currentSport) : divisionAwareNavHref(currentSport, division, item);
             return (
               <Link
                 key={item.label}
