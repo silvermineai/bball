@@ -36,6 +36,18 @@ export type Release = {
     matching_team_directory_keys: number;
     reason: string;
   };
+  source_category_coverage?: Array<{
+    category: string;
+    rows: number;
+    rows_with_source_name: number;
+    rows_with_position_or_number: number;
+    rows_with_stat_fields: number;
+    rows_with_explicit_division: number;
+    rows_with_stable_athlete_id: number;
+    team_placeholder_rows: number;
+    fields: string[];
+    identity_status: "source_name_and_team_only" | "mixed_identity_fields";
+  }>;
   categories: Category[];
   available_seasons?: number[];
 };
@@ -216,6 +228,51 @@ export default function NCAALeaders({ release }: { release: Release }) {
           )}
         </section>
       )}
+      {release.source_category_coverage?.length ? (
+        <section className="section paper-panel" aria-labelledby="ncaa-source-category-coverage">
+          <div className="eyebrow">Source coverage / every category</div>
+          <h2 id="ncaa-source-category-coverage">See what the release actually contains.</h2>
+          <p>
+            The coverage ledger includes every category in this retained NCAA
+            edition, including rows that cannot support a leaderboard. Fields
+            are listed exactly as supplied; a stable athlete ID is never
+            inferred from a name, team or contest key.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Source category</th>
+                  <th className="numeric">Rows</th>
+                  <th className="numeric">Player-shaped rows</th>
+                  <th className="numeric">Rows with stat fields</th>
+                  <th className="numeric">Team placeholders</th>
+                  <th>Identity / fields</th>
+                </tr>
+              </thead>
+              <tbody>
+                {release.source_category_coverage.map((item) => (
+                  <tr key={item.category}>
+                    <th scope="row">
+                      {item.category}
+                      <small>{item.rows_with_explicit_division.toLocaleString()} explicit division fields</small>
+                    </th>
+                    <td className="numeric">{item.rows.toLocaleString()}</td>
+                    <td className="numeric">{item.rows_with_position_or_number.toLocaleString()}</td>
+                    <td className="numeric">{item.rows_with_stat_fields.toLocaleString()}</td>
+                    <td className="numeric">{item.team_placeholder_rows.toLocaleString()}</td>
+                    <td>
+                      <strong>{item.identity_status === "source_name_and_team_only" ? "Name + team only" : "Mixed identity fields"}</strong>
+                      <small>{item.rows_with_stable_athlete_id.toLocaleString()} stable athlete IDs</small>
+                      <small>{item.fields.length ? item.fields.join(" · ") : "No stat fields observed"}</small>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

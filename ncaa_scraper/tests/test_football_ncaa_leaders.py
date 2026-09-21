@@ -59,6 +59,20 @@ class FootballNCAALeaderTests(unittest.TestCase):
         self.assertEqual(coverage["matching_team_directory_keys"], 0)
         self.assertIn("does not carry a division field", coverage["reason"])
 
+    def test_source_coverage_keeps_unranked_categories_and_identity_boundary(self):
+        self.add("1", "other", "source-team", "g1", {"name": "Rostered Player", "position": "WR", "number": "8", "category": "other"})
+        self.add("2", "other", "source-team", "g1", {"name": "TEAM", "category": "other"})
+        self.add("3", "passing", "source-team", "g1", {"name": "Quarterback", "position": "QB", "number": "1", "pass_yards": "42", "category": "passing"})
+        result = build_leaders(self.conn, 2025)
+        coverage = {item["category"]: item for item in result["source_category_coverage"]}
+        self.assertEqual(coverage["other"]["rows"], 2)
+        self.assertEqual(coverage["other"]["rows_with_position_or_number"], 1)
+        self.assertEqual(coverage["other"]["rows_with_stat_fields"], 0)
+        self.assertEqual(coverage["other"]["team_placeholder_rows"], 1)
+        self.assertEqual(coverage["other"]["identity_status"], "source_name_and_team_only")
+        self.assertEqual(coverage["passing"]["fields"], ["pass_yards"])
+        self.assertEqual(coverage["passing"]["rows_with_stable_athlete_id"], 0)
+
     def test_release_exposes_only_seasons_with_supported_categories(self):
         self.conn.execute(
             "CREATE TABLE football_sources (dataset TEXT, season INTEGER, receipt_json TEXT)"

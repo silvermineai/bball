@@ -57,6 +57,24 @@ CATEGORIES = {
     },
 }
 
+# These fields describe the source envelope rather than a player statistic.
+# Everything else that is present and non-empty is retained as an observed
+# source field in the coverage manifest.  The NCAA football release does not
+# provide a stable athlete identifier; keeping this explicit prevents the
+# coverage table from implying an identity join.
+IDENTITY_FIELDS = {
+    "name",
+    "player_name",
+    "category",
+    "contest_id",
+    "team_id",
+    "number",
+    "position",
+    "espn_game_id",
+    "season",
+    "division",
+}
+
 
 def number(value: object) -> float | None:
     try:
@@ -133,11 +151,12 @@ def build_leaders(
     team_directory_ids = set(team_names)
 
     grouped: dict[tuple[str, str, str], dict] = {}
+    category_coverage: dict[str, dict] = {}
     player_rows = 0
     rows_with_explicit_division = 0
     source_team_games: dict[str, set[str]] = defaultdict(set)
     for row in conn.execute(
-        "SELECT team_id,game_id,stats_json FROM football_stats "
+        "SELECT athlete_id,team_id,game_id,stats_json FROM football_stats "
         "WHERE dataset='ncaa_player_stats' AND season=? ORDER BY record_key",
         (season,),
     ):
@@ -146,6 +165,39 @@ def build_leaders(
         except (TypeError, json.JSONDecodeError):
             continue
         category = str(payload.get("category") or "").strip()
+        if category:
+            summary = category_coverage.setdefault(
+                category,
+                {
+                    "rows": 0,
+                    "rows_with_source_name": 0,
+                    "rows_with_position_or_number": 0,
+                    "rows_with_stat_fields": 0,
+                    "rows_with_explicit_division": 0,
+                    "rows_with_stable_athlete_id": 0,
+                    "team_placeholder_rows": 0,
+                    "fields": set(),
+                },
+            )
+            summary["rows"] += 1
+            name_value = str(payload.get("name") or payload.get("player_name") or "").strip()
+            if name_value:
+                summary["rows_with_source_name"] += 1
+            if payload.get("position") or payload.get("number"):
+                summary["rows_with_position_or_number"] += 1
+            if str(payload.get("division") or "").strip():
+                summary["rows_with_explicit_division"] += 1
+            if row["athlete_id"] or payload.get("athlete_id"):
+                summary["rows_with_stable_athlete_id"] += 1
+            if name_value.upper() in {"TEAM", "TOTAL"}:
+                summary["team_placeholder_rows"] += 1
+            stat_fields = [
+                key for key, value in payload.items()
+                if key not in IDENTITY_FIELDS and value not in (None, "")
+            ]
+            if stat_fields:
+                summary["rows_with_stat_fields"] += 1
+                summary["fields"].update(stat_fields)
         spec = CATEGORIES.get(category)
         name = str(payload.get("name") or payload.get("player_name") or "").strip()
         team_id = str(row["team_id"] or payload.get("team_id") or "").strip()
@@ -245,6 +297,25 @@ def build_leaders(
         matching_team_directory_keys=matching_team_directory_keys,
     )
 
+    source_category_coverage = []
+    for category in sorted(category_coverage):
+        summary = category_coverage[category]
+        stable_ids = summary["rows_with_stable_athlete_id"]
+        source_category_coverage.append(
+            {
+                "category": category,
+                "rows": summary["rows"],
+                "rows_with_source_name": summary["rows_with_source_name"],
+                "rows_with_position_or_number": summary["rows_with_position_or_number"],
+                "rows_with_stat_fields": summary["rows_with_stat_fields"],
+                "rows_with_explicit_division": summary["rows_with_explicit_division"],
+                "rows_with_stable_athlete_id": stable_ids,
+                "team_placeholder_rows": summary["team_placeholder_rows"],
+                "fields": sorted(summary["fields"]),
+                "identity_status": "source_name_and_team_only" if stable_ids == 0 else "mixed_identity_fields",
+            }
+        )
+
     return {
         "schema_version": 1,
         "season": season,
@@ -256,6 +327,7 @@ def build_leaders(
             "names are not merged across teams or seasons."
         ),
         "division_coverage": coverage,
+        "source_category_coverage": source_category_coverage,
         "categories": categories,
     }
 
