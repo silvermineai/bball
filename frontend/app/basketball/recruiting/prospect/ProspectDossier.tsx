@@ -17,8 +17,10 @@ import { prospectPeerContext, type ProspectPeerContextPayload } from "./peer-con
 import { prospectLearningChecks } from "./learning-questions";
 import { recordedProspectFields } from "./recorded-fields";
 import ProspectProductionBridge from "./ProspectProductionBridge";
+import ProspectRosterBridge from "./ProspectRosterBridge";
 import { prospectRankTrajectory } from "./rank-trajectory";
 import { prospectGradeTrajectory } from "./grade-trajectory";
+import { parseRecruitingRosterBridge, type RecruitingRosterBridge } from "../../../_lib/recruiting-roster-bridge";
 
 type Prospect = {
   athlete_id: string;
@@ -51,7 +53,7 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; sha256_scope: "release_edition" | "unavailable"; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; source?: { provider: string; methodology: string }; unavailable_reason?: string };
+type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; sha256_scope: "release_edition" | "unavailable"; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; roster_bridge?: unknown; source?: { provider: string; methodology: string }; unavailable_reason?: string };
 
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
@@ -73,6 +75,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const [sourceReceipt, setSourceReceipt] = useState<Response["source_receipt"]>(null);
   const [classContextPayload, setClassContextPayload] = useState<ProspectClassContextPayload | null>(null);
   const [peerContextPayload, setPeerContextPayload] = useState<ProspectPeerContextPayload | null>(null);
+  const [rosterBridge, setRosterBridge] = useState<RecruitingRosterBridge | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [mentions, setMentions] = useState<PublisherMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -94,6 +97,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     setSourceReceipt(null);
     setClassContextPayload(null);
     setPeerContextPayload(null);
+    setRosterBridge(null);
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The prospect record is unavailable.");
@@ -106,6 +110,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
         setSourceReceipt(value.source_receipt || null);
         setClassContextPayload(value.class_context || null);
         setPeerContextPayload(value.peer_context || null);
+        setRosterBridge(parseRecruitingRosterBridge(value.roster_bridge, athleteId));
         const validatedHistory = validateRecruitingHistory(value.history);
         setHistory(validatedHistory || []);
         setHistoryStatus(validatedHistory ? "verified" : "unavailable");
@@ -253,6 +258,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
             </> : <p className="empty">A valid unfiltered class denominator is not attached to this exact prospect response. The recorded rank remains visible without an inferred cohort size.</p>}
           </section>
           <ProspectProductionBridge athleteId={prospect.athlete_id} season={Number(season)} />
+          <ProspectRosterBridge bridge={rosterBridge} />
           <section className="paper-panel" aria-label="Prospect position peer context" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Position peers / same retained edition</div><h2>{peerContext ? `${peerContext.position} measurements in context.` : "Position peer context unavailable"}</h2></div>

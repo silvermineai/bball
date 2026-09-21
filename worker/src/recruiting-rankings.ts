@@ -2,6 +2,7 @@ import { researchDb } from "./research-db";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { buildRecruitingRosterBridge } from "./recruiting-roster-bridge";
 
 export const recruitingRankings = new Hono<{ Bindings: Env }>();
 const CACHE_TTL = 300;
@@ -377,7 +378,42 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
                 WHERE r.season=c.season AND r.edition=c.edition) AS invalid_source_hashes
          FROM bb_espn_recruiting_current c
         WHERE season=?`,
-    ).bind(season).first<{ edition: string; captured_at: string; source_rows?: number | null; invalid_source_hashes?: number | null }>(), DB_TIMEOUT_MS);
+      ).bind(season).first<{ edition: string; captured_at: string; source_rows?: number | null; invalid_source_hashes?: number | null }>(), DB_TIMEOUT_MS);
+    // Attach a narrow roster-production bridge only to exact prospect lookups.
+    // This keeps the national board cheap while giving a dossier a direct,
+    // source-receipted handoff when the same publisher athlete ID is present
+    // in the retained college archive.
+    let rosterBridge: ReturnType<typeof buildRecruitingRosterBridge> = null;
+    if (athlete_id) {
+      const [rosterRows, participationRows, rosterReceipts] = await withTimeout(Promise.all([
+        db.prepare(
+          `SELECT season,team_id,profile_json
+             FROM bb_rosters
+            WHERE athlete_id=? AND season IN (?,?)
+            ORDER BY season DESC,team_id ASC`,
+        ).bind(athlete_id, season, season - 1).all(),
+        db.prepare(
+          `SELECT season,team_id,athlete_id,name,games,minutes
+             FROM bb_participation
+            WHERE athlete_id=? AND season IN (?,?)
+            ORDER BY season DESC,team_id ASC`,
+        ).bind(athlete_id, season, season - 1).all(),
+        db.prepare(
+          `SELECT dataset,season,
+                  json_extract(receipt_json,'$.fetched_at') AS fetched_at,
+                  json_extract(receipt_json,'$.sha256') AS sha256
+             FROM bb_sources
+            WHERE dataset IN ('rosters','player_box','player_season') AND season IN (?,?)
+            ORDER BY season DESC,dataset ASC`,
+        ).bind(season, season - 1).all(),
+      ]), DB_TIMEOUT_MS);
+      rosterBridge = buildRecruitingRosterBridge(
+        athlete_id,
+        rosterRows.results as Array<{ season: number; team_id: unknown; profile_json: unknown }>,
+        participationRows.results as Array<{ season: number; team_id: unknown; athlete_id: unknown; name: unknown; games: unknown; minutes: unknown }>,
+        rosterReceipts.results as Array<{ dataset: unknown; season: unknown; fetched_at: unknown; sha256: unknown }>,
+      );
+    }
     // The collector stores the SHA-256 of each detail response on its row,
     // so those values are expected to differ. The release-level digest is the
     // `edition` itself: fetch_release derives it from the complete normalized
@@ -520,6 +556,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         sha256_scope: sourceReceiptVerified ? "release_edition" : "unavailable",
         integrity: sourceReceiptVerified ? "verified" : "unavailable",
       } : null,
+      roster_bridge: rosterBridge,
       history: historyRows
         ? historyRows.results.map((row) => ({
           edition: String((row as { edition?: string }).edition || ""),
