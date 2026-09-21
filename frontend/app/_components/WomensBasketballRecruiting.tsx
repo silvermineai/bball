@@ -52,7 +52,7 @@ export default function WomensBasketballRecruiting() {
       <div className="hero-actions">
         <Link className="button" href="/basketball/players/?gender=women&division=1">Browse women&apos;s player table ↗</Link>
         <Link className="button secondary" href="/basketball/?gender=women&division=1">Open women&apos;s dashboard ↗</Link>
-        <Link className="hero-link" href="/research/coverage/?sport=basketball">Review division coverage →</Link>
+        <Link className="hero-link" href="/research/coverage/?sport=basketball&gender=women&division=1">Review division coverage →</Link>
       </div>
       <p className="muted">Roster edition captured {date(edition.generated_at)}. A roster observation describes the retained source row; it does not prove a recruiting transaction.</p>
     </>}
