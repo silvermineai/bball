@@ -161,6 +161,28 @@ def derived_values(total: dict[str, float], contests: int) -> dict[str, float]:
     return values
 
 
+def published_box_sample(total: dict[str, float], contests: int, double_doubles: int | None = None) -> dict[str, float | int]:
+    """Retain one internally coherent exact-ID sample for rate calculations.
+
+    The national leader tables and the box archive can cover different game
+    counts. Keeping box totals together prevents downstream clients from
+    combining a publisher numerator with a shorter archive denominator.
+    """
+
+    values = derived_values(total, contests)
+    if double_doubles is not None:
+        values["dbl_dbl"] = float(double_doubles)
+    sample: dict[str, float | int] = {"games": contests}
+    integer_fields = {
+        "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga",
+        "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf",
+        "o_poss", "tpm", "tpa", "dbl_dbl",
+    }
+    for field, value in values.items():
+        sample[field] = round(value) if field in integer_fields else round(value, 6)
+    return sample
+
+
 def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, season: int = 2026) -> dict:
     if release.get("schema_version") not in (1, 2) or release.get("season") != season:
         raise ValueError("Unsupported NCAA individual release")
@@ -183,6 +205,7 @@ def enrich_release(release: dict, conn: sqlite3.Connection, receipt: dict, seaso
         derived = derived_values(total, contests)
         if player_id in double_doubles:
             derived["dbl_dbl"] = float(double_doubles[player_id])
+        player["box_sample"] = published_box_sample(total, contests, double_doubles.get(player_id))
         division_ids.add(str(player.get("division")))
         for field in DERIVED_FIELDS:
             if player.get(field) is not None or field not in derived:

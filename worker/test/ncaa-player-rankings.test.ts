@@ -208,6 +208,62 @@ describe("NCAA player rankings availability", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it("derives fallback rate boards only from one coherent exact-ID box sample", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 busy"); });
+    const common = { division: 1, team_ncaa_id: 42, team_name: "Example U", games: 30, mins: 900 };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        {
+          ...common,
+          player_id: 7,
+          name: "Mixed Leader",
+          pts: 600,
+          fga: 120,
+          fta: 40,
+          box_sample: { games: 10, mins: 300, pts: 100, fga: 100, fta: 40, fgm: 40, tpm: 10 },
+        },
+        {
+          ...common,
+          player_id: 8,
+          name: "Same Rate",
+          pts: 500,
+          fga: 100,
+          fta: 20,
+          box_sample: { games: 10, mins: 300, pts: 100, fga: 100, fta: 40, fgm: 40, tpm: 10 },
+        },
+        {
+          ...common,
+          player_id: 9,
+          name: "No Coherent Sample",
+          pts: 700,
+          fga: 100,
+          fta: 20,
+        },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=ts&minGames=5&minMinutes=200&minVolume=100",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<Record<string, unknown>> };
+    expect(body.total).toBe(2);
+    expect(body.rows.map((row) => row.rank)).toEqual([1, 1]);
+    expect(body.rows[0]).toMatchObject({
+      games: 10,
+      minutes: 300,
+      points: 100,
+      fga: 100,
+      fta: 40,
+      sample_basis: "exact_id_box",
+    });
+    expect(body.rows[0].value).toBeCloseTo(100 / (2 * (100 + 0.475 * 40)) * 100);
+  });
+
   it("keeps the published exact-ID response ranked against the full cohort", async () => {
     const prepare = vi.fn(() => { throw new Error("D1 busy"); });
     const player = { division: 1, team_ncaa_id: 42, team_name: "Example U", games: 20, mins: 600 };
@@ -247,8 +303,8 @@ describe("NCAA player rankings availability", () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({
       season: 2026,
       players: [
-        { ...player, player_id: 7, name: "Missing Threes", tpm: null },
-        { ...player, player_id: 8, name: "Recorded Threes", tpm: 24 },
+        { ...player, player_id: 7, name: "Missing Threes", tpm: null, box_sample: { ...player, tpm: null } },
+        { ...player, player_id: 8, name: "Recorded Threes", tpm: 24, box_sample: { ...player, tpm: 24 } },
       ],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     const response = await ncaaPlayerRankings.request(
@@ -358,8 +414,8 @@ describe("NCAA player rankings availability", () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({
       season: 2026,
       players: [
-        { ...player, player_id: 7, name: "Small Sample", tov: 24 },
-        { ...player, player_id: 8, name: "Qualified Sample", tov: 50 },
+        { ...player, player_id: 7, name: "Small Sample", tov: 24, box_sample: { ...player, tov: 24 } },
+        { ...player, player_id: 8, name: "Qualified Sample", tov: 50, box_sample: { ...player, tov: 50 } },
       ],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     const response = await ncaaPlayerRankings.request(
@@ -386,10 +442,10 @@ describe("NCAA player rankings availability", () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({
       season: 2026,
       players: [
-        { ...player, player_id: 7, name: "Qualified", fgm: 150, fga: 300, tpm: 48, tpa: 120 },
-        { ...player, player_id: 8, name: "Small Sample", fgm: 70, fga: 150, tpm: 35, tpa: 100 },
-        { ...player, player_id: 9, name: "Missing Three Attempts", fgm: 120, fga: 240, tpm: 30, tpa: null },
-        { ...player, player_id: 10, name: "Impossible Residual", fgm: 40, fga: 200, tpm: 48, tpa: 100 },
+        { ...player, player_id: 7, name: "Qualified", box_sample: { ...player, fgm: 150, fga: 300, tpm: 48, tpa: 120 } },
+        { ...player, player_id: 8, name: "Small Sample", box_sample: { ...player, fgm: 70, fga: 150, tpm: 35, tpa: 100 } },
+        { ...player, player_id: 9, name: "Missing Three Attempts", box_sample: { ...player, fgm: 120, fga: 240, tpm: 30, tpa: null } },
+        { ...player, player_id: 10, name: "Impossible Residual", box_sample: { ...player, fgm: 40, fga: 200, tpm: 48, tpa: 100 } },
       ],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     const response = await ncaaPlayerRankings.request(

@@ -73,6 +73,31 @@ class NCAAIndividualEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["coverage"]["divisions"]["1"]["ast"], 2)
         self.assertEqual(enriched["supplements"]["apg"]["source_sha256"], "a" * 64)
 
+    def test_enrichment_retains_a_coherent_box_sample_when_publisher_totals_differ(self):
+        release = {
+            "schema_version": 2,
+            "season": 2026,
+            "coverage": {"divisions": {"1": {}}},
+            "players": [{
+                "player_id": "404",
+                "division": 1,
+                "games": 30,
+                "pts": 600,
+                "ast": 120,
+            }],
+        }
+
+        player = enrich_release(release, self.conn, {"sha256": "a" * 64, "url": "box"})["players"][0]
+
+        self.assertEqual(player["games"], 30)
+        self.assertEqual(player["pts"], 600)
+        self.assertEqual(player["ast"], 120)
+        self.assertEqual(player["box_sample"]["games"], 1)
+        self.assertEqual(player["box_sample"]["pts"], 21)
+        self.assertEqual(player["box_sample"]["ast"], 10)
+        self.assertEqual(player["box_sample"]["mins"], 31.5)
+        self.assertEqual(player["box_sample"]["dbl_dbl"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

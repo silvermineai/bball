@@ -76,6 +76,7 @@ type PublishedIndividualPlayer = {
   ftm?: unknown;
   o_poss?: unknown;
   mins?: unknown;
+  box_sample?: unknown;
   [key: string]: unknown;
 };
 
@@ -103,6 +104,25 @@ const publishedMinutes = (player: PublishedIndividualPlayer): number | null => {
   return games != null && games > 0 && mpg != null ? games * mpg : null;
 };
 
+const publishedBoxSample = (player: PublishedIndividualPlayer): PublishedIndividualPlayer | null =>
+  player.box_sample && typeof player.box_sample === "object" && !Array.isArray(player.box_sample)
+    ? player.box_sample as PublishedIndividualPlayer
+    : null;
+
+// These values combine two or more totals. They must come from the retained
+// exact-ID box sample because the publisher leader tables can cover a
+// different number of games than the archived box rows.
+const publishedBoxMetrics = new Set<Metric>([
+  "orpg", "drpg", "fpg", "topg", "ts", "efg", "per40", "ast_to", "stocks40",
+  "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "ft_rate",
+  "orb40", "drb40", "reb40", "points_poss", "ast_rate",
+]);
+
+const publishedMetricSample = (
+  player: PublishedIndividualPlayer,
+  metric: Metric,
+): PublishedIndividualPlayer | null => publishedBoxMetrics.has(metric) ? publishedBoxSample(player) : player;
+
 const publishedSupportedMetrics = new Set<Metric>([
   "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl",
   "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "two_pct", "ft_pct", "ft_rate",
@@ -110,54 +130,56 @@ const publishedSupportedMetrics = new Set<Metric>([
 ]);
 
 const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number | null => {
-  const games = finite(player.games) || 0;
-  const ppg = finite(player.ppg);
-  const minutes = publishedMinutes(player);
-  const points = finite(player.pts) ?? (ppg != null && games > 0 ? ppg * games : null);
-  const fga = finite(player.fga);
-  const fta = finite(player.fta);
-  const fgm = finite(player.fgm);
-  const tpa = finite(player.tpa);
-  const tpm = finite(player.tpm);
-  const turnovers = finite(player.tov);
-  const possessions = finite(player.o_poss);
-  const orb = finite(player.orb);
-  const drb = finite(player.drb);
-  const direct = (key: string) => finite(player[key]);
+  const sample = publishedMetricSample(player, metric);
+  if (!sample) return null;
+  const games = finite(sample.games) || 0;
+  const ppg = finite(sample.ppg);
+  const minutes = publishedMinutes(sample);
+  const points = finite(sample.pts) ?? (ppg != null && games > 0 ? ppg * games : null);
+  const fga = finite(sample.fga);
+  const fta = finite(sample.fta);
+  const fgm = finite(sample.fgm);
+  const tpa = finite(sample.tpa);
+  const tpm = finite(sample.tpm);
+  const turnovers = finite(sample.tov);
+  const possessions = finite(sample.o_poss);
+  const orb = finite(sample.orb);
+  const drb = finite(sample.drb);
+  const direct = (key: string) => finite(sample[key]);
   switch (metric) {
-    case "ppg": return finite(player.ppg);
-    case "rpg": return finite(player.rpg);
+    case "ppg": return finite(sample.ppg);
+    case "rpg": return finite(sample.rpg);
     case "orpg": return games > 0 && orb != null ? orb / games : null;
     case "drpg": return games > 0 && drb != null ? drb / games : null;
-    case "apg": return finite(player.apg);
-    case "spg": return finite(player.spg);
-    case "bpg": return finite(player.bpg);
-    case "dbl_dbl": return finite(player.dbl_dbl);
-    case "fpg": return games > 0 && finite(player.pf) != null ? (finite(player.pf) as number) / games : null;
-    case "mpg": return finite(player.mpg) ?? (games > 0 && minutes != null ? minutes / games : null);
+    case "apg": return finite(sample.apg);
+    case "spg": return finite(sample.spg);
+    case "bpg": return finite(sample.bpg);
+    case "dbl_dbl": return finite(sample.dbl_dbl);
+    case "fpg": return games > 0 && finite(sample.pf) != null ? (finite(sample.pf) as number) / games : null;
+    case "mpg": return finite(sample.mpg) ?? (games > 0 && minutes != null ? minutes / games : null);
     case "topg": return games > 0 && turnovers != null ? turnovers / games : null;
     case "ts": return fga != null && fta != null && points != null && (fga + 0.475 * fta) > 0 ? 100 * points / (2 * (fga + 0.475 * fta)) : null;
     case "efg": return fga != null && fga > 0 && fgm != null && tpm != null ? 100 * (fgm + 0.5 * tpm) / fga : null;
     case "per40": return minutes != null && minutes > 0 && points != null ? 40 * points / minutes : null;
-    case "ast_to": return turnovers != null && turnovers > 0 && finite(player.ast) != null ? (finite(player.ast) as number) / turnovers : null;
-    case "stocks40": return minutes != null && minutes > 0 && finite(player.stl) != null && finite(player.blk) != null ? 40 * ((finite(player.stl) as number) + (finite(player.blk) as number)) / minutes : null;
+    case "ast_to": return turnovers != null && turnovers > 0 && finite(sample.ast) != null ? (finite(sample.ast) as number) / turnovers : null;
+    case "stocks40": return minutes != null && minutes > 0 && finite(sample.stl) != null && finite(sample.blk) != null ? 40 * ((finite(sample.stl) as number) + (finite(sample.blk) as number)) / minutes : null;
     case "tov_rate": return possessions != null && possessions > 0 && turnovers != null ? 100 * turnovers / possessions : null;
     case "usage_rate": return null;
     case "three_rate": return fga != null && fga > 0 && tpa != null ? 100 * tpa / fga : null;
-    case "three_pct": return finite(player.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
+    case "three_pct": return finite(sample.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
     case "two_pct": {
       if (fga == null || fgm == null || tpa == null || tpm == null) return null;
       const attempts = fga - tpa;
       const makes = fgm - tpm;
       return attempts > 0 && makes >= 0 && makes <= attempts ? 100 * makes / attempts : null;
     }
-    case "ft_pct": return finite(player.ft_pct) ?? (fta != null && fta > 0 && finite(player.ftm) != null ? 100 * (finite(player.ftm) as number) / fta : null);
+    case "ft_pct": return finite(sample.ft_pct) ?? (fta != null && fta > 0 && finite(sample.ftm) != null ? 100 * (finite(sample.ftm) as number) / fta : null);
     case "ft_rate": return fga != null && fga > 0 && fta != null ? 100 * fta / fga : null;
     case "orb40": return minutes != null && minutes > 0 && orb != null ? 40 * orb / minutes : null;
     case "drb40": return minutes != null && minutes > 0 && drb != null ? 40 * drb / minutes : null;
-    case "reb40": return minutes != null && minutes > 0 && finite(player.reb) != null ? 40 * (finite(player.reb) as number) / minutes : null;
+    case "reb40": return minutes != null && minutes > 0 && finite(sample.reb) != null ? 40 * (finite(sample.reb) as number) / minutes : null;
     case "points_poss": return possessions != null && possessions > 0 && points != null ? points / possessions : null;
-    case "ast_rate": return possessions != null && possessions > 0 && finite(player.ast) != null ? 100 * (finite(player.ast) as number) / possessions : null;
+    case "ast_rate": return possessions != null && possessions > 0 && finite(sample.ast) != null ? 100 * (finite(sample.ast) as number) / possessions : null;
     case "poss_share": return null;
     case "rim_pct":
     case "mid_pct":
@@ -209,16 +231,18 @@ async function publishedRankingsFallback(
     const search = args.q?.toLowerCase();
     const playerIds = args.playerIds;
     const volume = (player: PublishedIndividualPlayer): number | null | undefined => {
-      if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(player.fga);
-      if (args.metric === "three_pct") return finite(player.tpa);
+      const sample = publishedMetricSample(player, args.metric);
+      if (!sample) return null;
+      if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(sample.fga);
+      if (args.metric === "three_pct") return finite(sample.tpa);
       if (args.metric === "two_pct") {
-        const fga = finite(player.fga);
-        const tpa = finite(player.tpa);
+        const fga = finite(sample.fga);
+        const tpa = finite(sample.tpa);
         return fga != null && tpa != null && fga >= tpa ? fga - tpa : null;
       }
-      if (args.metric === "ft_pct") return finite(player.fta);
-      if (args.metric === "ast_to") return finite(player.tov);
-      if (["tov_rate", "ast_rate", "points_poss"].includes(args.metric)) return finite(player.o_poss);
+      if (args.metric === "ft_pct") return finite(sample.fta);
+      if (args.metric === "ast_to") return finite(sample.tov);
+      if (["tov_rate", "ast_rate", "points_poss"].includes(args.metric)) return finite(sample.o_poss);
       // The D1 query ignores minVolume for counting and per-game metrics.
       // Preserve that behavior in the published fallback: a rate cutoff can
       // remain in a shared URL when the reader switches to PPG, APG, etc.
@@ -227,8 +251,10 @@ async function publishedRankingsFallback(
     const filteredPlayers = players
       .filter((player) => finite(player.division) === 1)
       .filter((player) => {
-        const games = finite(player.games) || 0;
-        const minutes = publishedMinutes(player);
+        const sample = publishedMetricSample(player, args.metric);
+        if (!sample) return false;
+        const games = finite(sample.games) || 0;
+        const minutes = publishedMinutes(sample);
         return games >= args.minGames && minutes != null && minutes >= args.minMinutes;
       })
       .filter((player) => !search || [player.name, player.team_name, player.player_id].some((value) => String(value || "").toLowerCase().includes(search)))
@@ -242,7 +268,15 @@ async function publishedRankingsFallback(
       .filter((row): row is { player: PublishedIndividualPlayer; value: number } => row.value != null)
       .sort((a, b) => (args.metric === "topg" || args.metric === "tov_rate" ? a.value - b.value : b.value - a.value) || String(a.player.name || "").localeCompare(String(b.player.name || "")));
     const start = args.page * 50;
-    const rankedRows = filteredPlayers.map((row, index) => ({ ...row, rank: index + 1 }));
+    let priorValue: number | null = null;
+    let competitionRank = 0;
+    const rankedRows = filteredPlayers.map((row, index) => {
+      if (priorValue == null || row.value !== priorValue) {
+        competitionRank = index + 1;
+        priorValue = row.value;
+      }
+      return { ...row, rank: competitionRank };
+    });
     const visibleRows = args.playerIds?.length
       ? rankedRows.filter(({ player }) => args.playerIds!.includes(String(player.player_id || "")))
       : rankedRows.slice(start, start + 50);
@@ -257,35 +291,40 @@ async function publishedRankingsFallback(
       page_size: 50,
       total: rankedRows.length,
       source: "published_fallback",
-      rows: visibleRows.slice(0, 50).map(({ player, value, rank }) => ({
-        season: 2026,
-        player_id: String(player.player_id || ""),
-        team_id: String(player.team_ncaa_id || ""),
-        player_name: typeof player.name === "string" ? player.name : null,
-        team_name: typeof player.team_name === "string" ? player.team_name : null,
-        position: typeof player.position === "string" ? player.position : null,
-        class_year: typeof player.class_year === "string" ? player.class_year : null,
-        games: finite(player.games) || 0,
-        minutes: publishedMinutes(player),
-        points: finite(player.pts),
-        rebounds: finite(player.reb),
-        offensive_rebounds: finite(player.orb),
-        defensive_rebounds: finite(player.drb),
-        assists: finite(player.ast),
-        steals: finite(player.stl),
-        blocks: finite(player.blk),
-        double_doubles: finite(player.dbl_dbl),
-        fouls: finite(player.pf),
-        turnovers: finite(player.tov),
-        fga: finite(player.fga),
-        fgm: finite(player.fgm),
-        tpa: finite(player.tpa),
-        tpm: finite(player.tpm),
-        fta: finite(player.fta),
-        ftm: finite(player.ftm),
-        value,
-        rank,
-      })),
+      rows: visibleRows.slice(0, 50).map(({ player, value, rank }) => {
+        const sample = publishedMetricSample(player, args.metric) || player;
+        const boxSample = sample !== player;
+        return {
+          season: 2026,
+          player_id: String(player.player_id || ""),
+          team_id: String(player.team_ncaa_id || ""),
+          player_name: typeof player.name === "string" ? player.name : null,
+          team_name: typeof player.team_name === "string" ? player.team_name : null,
+          position: typeof player.position === "string" ? player.position : null,
+          class_year: typeof player.class_year === "string" ? player.class_year : null,
+          games: finite(sample.games) || 0,
+          minutes: publishedMinutes(sample),
+          points: finite(sample.pts),
+          rebounds: finite(sample.reb),
+          offensive_rebounds: finite(sample.orb),
+          defensive_rebounds: finite(sample.drb),
+          assists: finite(sample.ast),
+          steals: finite(sample.stl),
+          blocks: finite(sample.blk),
+          double_doubles: finite(sample.dbl_dbl),
+          fouls: finite(sample.pf),
+          turnovers: finite(sample.tov),
+          fga: finite(sample.fga),
+          fgm: finite(sample.fgm),
+          tpa: finite(sample.tpa),
+          tpm: finite(sample.tpm),
+          fta: finite(sample.fta),
+          ftm: finite(sample.ftm),
+          sample_basis: boxSample ? "exact_id_box" : "publisher_stat",
+          value,
+          rank,
+        };
+      }),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     return response;
