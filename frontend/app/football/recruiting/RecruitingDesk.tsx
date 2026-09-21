@@ -5,9 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
 
 type View = "rosters" | "recruits" | "talent" | "returning";
+type Division = "all" | "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
 type Receipt = { dataset: string; season: number; fetched_at: string; sha256: string };
 type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }>; coverage?: { completeness: "not_established"; note: string } };
-type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; raw?: Record<string, unknown>; record_key?: string };
+type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; division?: string | null; raw?: Record<string, unknown>; record_key?: string };
 type Result = {
   view: View;
   label: string;
@@ -17,6 +18,7 @@ type Result = {
   page_size: number;
   total: number;
   source_receipts: Receipt[];
+  division_scope?: { requested: Division; source: string; note: string };
   summary?: {
     total: number;
     programs: number;
@@ -33,6 +35,7 @@ const labels: Record<View, string> = {
   talent: "Team talent",
   returning: "Returning production",
 };
+const divisionLabels: Record<Division, string> = { all: "All divisions", fbs: "FBS", fcs: "FCS", d2: "Division II", d3: "Division III", naia: "NAIA", unknown: "Division unavailable" };
 const percent = (value: unknown) => typeof value === "number" ? `${fmt(value * 100, 1)}%` : "—";
 const value = (row: Row, key: string) => row[key] == null ? "—" : String(row[key]);
 
@@ -41,6 +44,7 @@ export default function RecruitingDesk() {
   const [season, setSeason] = useState("2026");
   const [query, setQuery] = useState("");
   const [team, setTeam] = useState("");
+  const [division, setDivision] = useState<Division>("all");
   const [page, setPage] = useState(0);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -54,6 +58,8 @@ export default function RecruitingDesk() {
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
     setTeam(params.get("team") || "");
+    const requestedDivision = params.get("division") as Division | null;
+    if (requestedDivision && requestedDivision in divisionLabels) setDivision(requestedDivision);
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 1000) setPage(requestedPage);
     setHydrated(true);
@@ -73,9 +79,10 @@ export default function RecruitingDesk() {
     if (season === "2026") url.searchParams.delete("season"); else url.searchParams.set("season", season);
     if (query.trim()) url.searchParams.set("q", query.trim()); else url.searchParams.delete("q");
     if (team.trim()) url.searchParams.set("team", team.trim()); else url.searchParams.delete("team");
+    if (division === "all") url.searchParams.delete("division"); else url.searchParams.set("division", division);
     if (page) url.searchParams.set("page", String(page)); else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, meta, page, query, season, team, view]);
+  }, [division, hydrated, meta, page, query, season, team, view]);
   useEffect(() => {
     if (!meta) return;
     const controller = new AbortController();
@@ -84,12 +91,13 @@ export default function RecruitingDesk() {
     const params = new URLSearchParams({ view, season, page: String(page), limit: "40" });
     if (query.trim()) params.set("q", query.trim());
     if (team.trim()) params.set("team", team.trim());
+    if (division !== "all") params.set("division", division);
     fetch(`/api/football/recruiting?${params}`, { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("The football recruiting records could not be loaded."); return response.json() as Promise<Result>; })
       .then((data) => { if (!controller.signal.aborted) setResult(data); })
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The football recruiting records could not be loaded."); });
     return () => controller.abort();
-  }, [meta, page, query, retry, season, team, view]);
+  }, [division, meta, page, query, retry, season, team, view]);
   const selectedReceipt = useMemo(() => result?.source_receipts[0] || null, [result]);
   const updateView = (next: View) => { setPage(0); setView(next); };
   return <>
@@ -106,6 +114,7 @@ export default function RecruitingDesk() {
       <label className="control"><span>SEASON</span><select value={season} onChange={(event) => { setPage(0); setSeason(event.target.value); }}>{(meta?.seasons || [2026]).map((item) => <option key={item} value={item}>{item}{item === 2026 ? " · current source" : ""}</option>)}</select></label>
       <label className="control"><span>PLAYER, PROGRAM OR SOURCE FIELD</span><input type="search" maxLength={100} value={query} placeholder="Search literal source text" onChange={(event) => { setPage(0); setQuery(event.target.value); }} /></label>
       <label className="control"><span>TEAM ID</span><input inputMode="numeric" pattern="[0-9]*" maxLength={15} value={team} placeholder="Optional ID" onChange={(event) => { setPage(0); setTeam(event.target.value.replace(/\D/g, "")); }} /></label>
+      <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => { setPage(0); setDivision(event.target.value as Division); }}>{Object.entries(divisionLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
     </div>
     {selectedReceipt && <details className="paper-panel" style={{ marginBottom: 22 }} open><summary><strong>{labels[view]} edition receipt</strong> · {date(selectedReceipt.fetched_at)}</summary><p className="note" style={{ marginTop: 14 }}>Retained edition · SHA-256 <span className="mono">{selectedReceipt.sha256.slice(0, 20)}…</span></p></details>}
     <p className="note">These records are source-listed personnel context. A roster row does not prove current eligibility, a commitment does not establish enrollment, and missing records do not prove a departure. Recruiting grades and stars are shown only when the attributed release supplies them.</p>
@@ -115,7 +124,7 @@ export default function RecruitingDesk() {
           <div><div className="eyebrow">Recruiting class / active filters</div><h2>Read the class before the page.</h2></div>
           <span className="note">{result.summary.total.toLocaleString()} source rows reconciled</span>
         </div>
-        <p className="note">These counts use the same season, search and team filters as the table. Grades and stars are retained source fields; missing values remain unavailable. No composite class score is inferred.</p>
+        <p className="note">These counts use the same season, search, team and division filters as the table. Grades and stars are retained source fields; missing values remain unavailable. No composite class score is inferred.</p>
         <div className="strip" style={{ marginBottom: 16 }}>
           <div><strong>{result.summary.total.toLocaleString()}</strong><span>Recruit records</span></div>
           <div><strong>{result.summary.programs.toLocaleString()}</strong><span>Programs represented</span></div>
@@ -134,11 +143,12 @@ export default function RecruitingDesk() {
         <p className="note" style={{ marginTop: 12 }}>A record count describes the retained recruiting release. It does not establish enrollment, eligibility, playing time or a program&apos;s future roster strength.</p>
       </section>}
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div>
-      <div className="table-scroll"><table className="data-table"><thead><tr>{view === "rosters" ? <><th>Player</th><th>Program</th><th>Position</th><th>Experience</th><th>Status</th><th>Listed size</th></> : view === "recruits" ? <><th>Recruit</th><th>Program</th><th>Position</th><th>Stars</th><th>Grade</th></> : view === "talent" ? <><th>Program</th><th>Talent composite</th><th>Talent rank</th><th>Blue-chip ratio</th><th>Recruit count</th></> : <><th>Program</th><th>Offense returning</th><th>Defense returning</th><th>Overall returning</th><th>Returning players</th><th>Estimated</th></>}</tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.record_key}-${row.id || row.team_id}`}>
-        {view === "rosters" && <><th scope="row">{row.id ? <Link href={`/football/player/?id=${encodeURIComponent(String(row.id))}&season=${result.season}`}>{value(row, "name")}</Link> : value(row, "name")}<small>{row.id ? `Athlete ${row.id}` : "No stable athlete ID"}</small></th><td>{value(row, "team")}</td><td>{value(row, "position")}</td><td>{value(row, "experience")}</td><td>{value(row, "status")}{row.active != null && <small>{row.active ? "Active flag" : "Inactive flag"}</small>}</td><td>{row.height == null && row.weight == null ? "—" : `${row.height == null ? "—" : `${fmt(Number(row.height), 0)} in`} · ${row.weight == null ? "—" : `${fmt(Number(row.weight), 0)} lb`}`}</td></>}
-        {view === "recruits" && <><th scope="row">{value(row, "name")}<small>{value(row, "id") === "—" ? "No recruit ID" : `Recruit ${value(row, "id")}`}</small></th><td>{value(row, "team")}</td><td>{value(row, "position")}</td><td className="numeric">{value(row, "stars")}</td><td className="numeric">{row.grade == null ? "—" : fmt(Number(row.grade), 2)}</td></>}
-        {view === "talent" && <><th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(String(row.team || row.team_id || ""))}`}>{value(row, "team")}</Link><small>Team {value(row, "team_id")}</small></th><td className="numeric">{row.talent_composite == null ? "—" : fmt(Number(row.talent_composite), 1)}</td><td className="numeric">{value(row, "talent_rank")}</td><td className="numeric">{percent(row.blue_chip_ratio)}</td><td className="numeric">{value(row, "n_recruits")}</td></>}
-        {view === "returning" && <><th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(String(row.team || row.team_id || ""))}`}>{value(row, "team")}</Link><small>Team {value(row, "team_id")}</small></th><td className="numeric">{percent(row.off_returning)}</td><td className="numeric">{percent(row.def_returning)}</td><td className="numeric">{percent(row.overall_returning)}</td><td className="numeric">{value(row, "n_returning")}</td><td>{row.is_estimated == null ? "—" : row.is_estimated ? "Yes" : "No"}</td></>}
+      <p className="note">{result.division_scope?.note || "Division is shown only when the source row or exact season/team directory supplies it."}</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr>{view === "rosters" ? <><th>Player</th><th>Program</th><th>Division</th><th>Position</th><th>Experience</th><th>Status</th><th>Listed size</th></> : view === "recruits" ? <><th>Recruit</th><th>Program</th><th>Division</th><th>Position</th><th>Stars</th><th>Grade</th></> : view === "talent" ? <><th>Program</th><th>Division</th><th>Talent composite</th><th>Talent rank</th><th>Blue-chip ratio</th><th>Recruit count</th></> : <><th>Program</th><th>Division</th><th>Offense returning</th><th>Defense returning</th><th>Overall returning</th><th>Returning players</th><th>Estimated</th></>}</tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.record_key}-${row.id || row.team_id}`}>
+        {view === "rosters" && <><th scope="row">{row.id ? <Link href={`/football/player/?id=${encodeURIComponent(String(row.id))}&season=${result.season}`}>{value(row, "name")}</Link> : value(row, "name")}<small>{row.id ? `Athlete ${row.id}` : "No stable athlete ID"}</small></th><td>{value(row, "team")}</td><td>{value(row, "division")}</td><td>{value(row, "position")}</td><td>{value(row, "experience")}</td><td>{value(row, "status")}{row.active != null && <small>{row.active ? "Active flag" : "Inactive flag"}</small>}</td><td>{row.height == null && row.weight == null ? "—" : `${row.height == null ? "—" : `${fmt(Number(row.height), 0)} in`} · ${row.weight == null ? "—" : `${fmt(Number(row.weight), 0)} lb`}`}</td></>}
+        {view === "recruits" && <><th scope="row">{value(row, "name")}<small>{value(row, "id") === "—" ? "No recruit ID" : `Recruit ${value(row, "id")}`}</small></th><td>{value(row, "team")}</td><td>{value(row, "division")}</td><td>{value(row, "position")}</td><td className="numeric">{value(row, "stars")}</td><td className="numeric">{row.grade == null ? "—" : fmt(Number(row.grade), 2)}</td></>}
+        {view === "talent" && <><th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(String(row.team || row.team_id || ""))}`}>{value(row, "team")}</Link><small>Team {value(row, "team_id")}</small></th><td>{value(row, "division")}</td><td className="numeric">{row.talent_composite == null ? "—" : fmt(Number(row.talent_composite), 1)}</td><td className="numeric">{value(row, "talent_rank")}</td><td className="numeric">{percent(row.blue_chip_ratio)}</td><td className="numeric">{value(row, "n_recruits")}</td></>}
+        {view === "returning" && <><th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(String(row.team || row.team_id || ""))}`}>{value(row, "team")}</Link><small>Team {value(row, "team_id")}</small></th><td>{value(row, "division")}</td><td className="numeric">{percent(row.off_returning)}</td><td className="numeric">{percent(row.def_returning)}</td><td className="numeric">{percent(row.overall_returning)}</td><td className="numeric">{value(row, "n_returning")}</td><td>{row.is_estimated == null ? "—" : row.is_estimated ? "Yes" : "No"}</td></>}
       </tr>)}</tbody></table></div>
       {!result.rows.length && <p className="empty">No source rows match these filters.</p>}
       <div className="pagination"><span>{result.total.toLocaleString()} rows · values remain attributable to the release</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div></div>

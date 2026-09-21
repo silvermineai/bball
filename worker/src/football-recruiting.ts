@@ -24,11 +24,13 @@ type RecruitSummaryRow = {
   stars_unavailable: number | null;
 };
 type PublicReceipt = { dataset: Dataset; season: number; fetched_at: string; sha256: string };
+type Division = "all" | "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
 const query = z.object({
   view: z.enum(["rosters", "recruits", "talent", "returning"]).default("rosters"),
   season: z.coerce.number().int().min(2002).max(2035).default(2026),
   q: z.string().trim().max(100).default(""),
   team: z.string().regex(/^\d{1,15}$/).optional(),
+  division: z.enum(["all", "fbs", "fcs", "d2", "d3", "naia", "unknown"]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(40),
   meta: z.enum(["0", "1"]).default("0"),
@@ -80,13 +82,19 @@ function publicReceipt(row: { dataset: Dataset; season: number; receipt_json: st
     : null;
 }
 
-function shape(view: View, row: Record<string, unknown>, raw: Record<string, unknown>) {
+type TeamDirectoryRow = { division: string | null; conference: string | null };
+
+function shape(view: View, row: Record<string, unknown>, raw: Record<string, unknown>, teamDirectory: Map<string, TeamDirectoryRow>) {
+  const teamContext = row.team_id ? teamDirectory.get(String(row.team_id)) : undefined;
+  const division = text(raw, "division") || teamContext?.division || null;
+  const conference = text(raw, "conference_short_name", "conference_name") || teamContext?.conference || null;
   if (view === "rosters") return {
     id: row.athlete_id ?? null,
     name: text(raw, "full_name", "athlete_display_name", "display_name", "short_name") || row.athlete_id || "Unknown player",
     team_id: row.team_id,
     team: text(raw, "team_display_name", "team_short_display_name", "team_location", "team_name") || row.team_id,
-    division: text(raw, "division"),
+    division,
+    conference,
     position: text(raw, "position_name", "position", "position_abbreviation"),
     experience: text(raw, "experience_display_value", "experience_abbreviation"),
     status: text(raw, "status_name", "status_type", "status_abbreviation"),
@@ -101,6 +109,8 @@ function shape(view: View, row: Record<string, unknown>, raw: Record<string, unk
     name: text(raw, "player_name") || "Unknown recruit",
     team_id: row.team_id,
     team: text(raw, "team") || row.team_id,
+    division,
+    conference,
     position: text(raw, "position"),
     stars: number(raw, "stars"),
     grade: number(raw, "grade"),
@@ -109,6 +119,8 @@ function shape(view: View, row: Record<string, unknown>, raw: Record<string, unk
     id: row.team_id,
     team_id: row.team_id,
     team: text(raw, "team") || row.team_id,
+    division,
+    conference,
     talent_composite: number(raw, "talent_composite"),
     talent_rank: number(raw, "talent_rank"),
     blue_chip_ratio: number(raw, "blue_chip_ratio"),
@@ -118,6 +130,8 @@ function shape(view: View, row: Record<string, unknown>, raw: Record<string, unk
     id: row.team_id,
     team_id: row.team_id,
     team: text(raw, "team", "team_name") || row.team_id,
+    division,
+    conference,
     off_returning: number(raw, "off_returning"),
     def_returning: number(raw, "def_returning"),
     overall_returning: number(raw, "overall_returning"),
@@ -171,14 +185,25 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
   const conditions = ["s.dataset=?", "s.season=?"];
   const binds: Array<string | number> = [selected.dataset, q.season];
   if (q.team) { conditions.push("s.team_id=?"); binds.push(q.team); }
+  if (q.division !== "all") {
+    const directory = `SELECT 1 FROM football_stats team_scope WHERE team_scope.dataset='teams' AND team_scope.season=? AND team_scope.team_id=s.team_id AND lower(json_extract(team_scope.stats_json,'$.division'))=?`;
+    if (q.division === "unknown") {
+      conditions.push(`NOT EXISTS (${directory.replace(" AND lower(json_extract(team_scope.stats_json,'$.division'))=?", "")})`);
+      binds.push(q.season);
+    } else {
+      conditions.push(`EXISTS (${directory})`);
+      binds.push(q.season, q.division);
+    }
+  }
   if (q.q) { conditions.push(`${searchable} LIKE ? ESCAPE '\\'`); binds.push(`%${q.q.replace(/[\\%_]/g, (value) => `\\${value}`)}%`); }
   const where = conditions.join(" AND ");
   let count: { total: number } | null;
   let rows: { results: Array<{ record_key: string; athlete_id: string | null; team_id: string | null; stats_json: string }> };
   let receipts: { results: Array<{ dataset: Dataset; season: number; receipt_json: string }> };
+  let teamDirectoryRows: { results: Array<{ team_id: string; stats_json: string }> } = { results: [] };
   let recruitSummary: RecruitSummaryRow | null = null;
   try {
-    [count, rows, receipts, recruitSummary] = await withTimeout(Promise.all([
+    [count, rows, receipts, recruitSummary, teamDirectoryRows] = await withTimeout(Promise.all([
       db.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`).bind(...binds).first<{ total: number }>(),
       db.prepare(`SELECT record_key,athlete_id,team_id,stats_json FROM football_stats s WHERE ${where} ORDER BY record_key LIMIT ? OFFSET ?`).bind(...binds, q.limit, q.page * q.limit).all<{ record_key: string; athlete_id: string | null; team_id: string | null; stats_json: string }>(),
       db.prepare("SELECT dataset,season,receipt_json FROM football_sources WHERE dataset=? AND season=?").bind(selected.dataset, q.season).all<{ dataset: Dataset; season: number; receipt_json: string }>(),
@@ -194,9 +219,21 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
                             sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NULL THEN 1 ELSE 0 END) AS stars_unavailable
                        FROM football_stats s WHERE ${where}`).bind(...binds).first<RecruitSummaryRow>()
         : Promise.resolve(null),
+      selected.dataset === "rosters"
+        ? Promise.resolve({ results: [] as Array<{ team_id: string; stats_json: string }> })
+        : db.prepare("SELECT team_id,stats_json FROM football_stats WHERE dataset='teams' AND season=?").bind(q.season).all<{ team_id: string; stats_json: string }>(),
     ]), DB_TIMEOUT_MS);
   } catch {
     return c.json({ error: "The football recruiting archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
+  }
+  const teamDirectory = new Map<string, TeamDirectoryRow>();
+  for (const teamRow of teamDirectoryRows.results) {
+    const team = parseJson(teamRow.stats_json);
+    if (!team) continue;
+    teamDirectory.set(String(teamRow.team_id), {
+      division: text(team, "division"),
+      conference: text(team, "conference_short_name", "conference_name"),
+    });
   }
   const response = c.json({
     view: q.view,
@@ -206,7 +243,12 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
     page: q.page,
     page_size: q.limit,
     total: Number(count?.total || 0),
-    filters: { q: q.q, team: q.team ?? null },
+    filters: { q: q.q, team: q.team ?? null, division: q.division },
+    division_scope: {
+      requested: q.division,
+      source: "exact season/team_id join to the retained teams dataset",
+      note: "A missing team-directory row remains unavailable; no division is inferred from a team name or recruiting record.",
+    },
     source_receipts: receipts.results.flatMap((row) => {
       const receipt = publicReceipt(row);
       return receipt ? [receipt] : [];
@@ -226,7 +268,7 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
     } : undefined,
     rows: rows.results.flatMap((row) => {
       const raw = parseJson(row.stats_json);
-      return raw ? [{ ...shape(q.view, row, raw), record_key: row.record_key, raw }] : [];
+      return raw ? [{ ...shape(q.view, row, raw, teamDirectory), record_key: row.record_key, raw }] : [];
     }),
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

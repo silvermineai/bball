@@ -45,6 +45,34 @@ describe("football recruiting desk", () => {
     expect(body.source_receipts[0]).not.toHaveProperty("url");
   });
 
+  it("adds exact team-directory division context to recruiting rows", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("json_extract(s.stats_json,'$.grade')")) {
+        return { bind: () => ({ first: async () => ({ total: 1, programs: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }) }) };
+      }
+      if (sql.includes("SELECT count(*)")) {
+        return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+      }
+      if (sql.includes("dataset='teams'")) {
+        return { bind: () => ({ all: async () => ({ results: [{ team_id: "5", stats_json: JSON.stringify({ division: "fcs", conference_short_name: "Pioneer" }) }] }) }) };
+      }
+      if (sql.includes("football_sources")) {
+        return { bind: () => ({ all: async () => ({ results: [{ dataset: "recruits", season: 2026, receipt_json: receipt }] }) }) };
+      }
+      if (sql.includes("SELECT record_key")) {
+        return { bind: () => ({ all: async () => ({ results: [{ record_key: "0", athlete_id: null, team_id: "5", stats_json: JSON.stringify({ recruit_id: "r1", player_name: "Example Recruit", team: "Example State", stars: "3", grade: "84", position: "QB" }) }] }) }) };
+      }
+      return { bind: () => ({ first: async () => ({ total: 1 }) }) };
+    });
+    const response = await footballRecruiting.request("/?view=recruits&season=2026&division=fcs", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { filters: Record<string, unknown>; division_scope: Record<string, unknown>; rows: Array<Record<string, unknown>> };
+    expect(body).toMatchObject({ filters: { division: "fcs" }, division_scope: { requested: "fcs" }, rows: [{ division: "fcs", conference: "Pioneer" }] });
+    const filteredSql = prepare.mock.calls.find(([sql]) => String(sql).includes("SELECT record_key"))?.[0] || "";
+    expect(filteredSql).toContain("EXISTS (SELECT 1 FROM football_stats team_scope");
+    expect(filteredSql).toContain("team_scope.team_id=s.team_id");
+  });
+
   it("returns a retryable response when the recruiting warehouse is busy", async () => {
     const response = await footballRecruiting.request("/?view=talent&season=2026", {}, { DB: { prepare: () => ({ bind: () => ({ all: vi.fn().mockRejectedValue(new Error("D1 busy")) }) }) } });
     expect(response.status).toBe(503);
