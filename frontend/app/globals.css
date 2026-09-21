@@ -658,6 +658,15 @@ th,
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   color: var(--accent);
 }
+.analysis-integrity {
+  color: var(--accent);
+  display: block;
+  font: 9px "IBM Plex Mono", monospace;
+  margin-top: 6px;
+}
+.analysis-integrity.is-review {
+  color: #9b5a20;
+}
 .match-card-details {
   border-top: 1px solid var(--line);
   margin-top: 14px;

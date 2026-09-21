@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -9,6 +9,40 @@ const factors: BBMatchupFactors = {
 };
 
 describe("forecast lab matchup signals", () => {
+  it("marks a stored primary row verified only when prediction and lineage checks pass", () => {
+    expect(forecastIntegrity({
+      prediction: {
+        home_margin: 4,
+        home_win_probability: 0.65,
+        margin_low: -8,
+        margin_high: 16,
+      } as BBGame["prediction"],
+      fallback_prediction: null,
+      forecast_model_id: "model-current",
+      matchup_factors: factors,
+      matchup_factors_same_edition: true,
+    })).toEqual({ ok: true, label: "Verified record", missing: [] });
+  });
+
+  it("surfaces integrity blockers without converting context gaps into model errors", () => {
+    expect(forecastIntegrity({
+      prediction: {
+        home_margin: 12,
+        home_win_probability: 0.65,
+        margin_low: -8,
+        margin_high: 8,
+      } as BBGame["prediction"],
+      fallback_prediction: null,
+      forecast_model_id: null,
+      matchup_factors: factors,
+      matchup_factors_same_edition: false,
+    })).toEqual({
+      ok: false,
+      label: "Review before prep",
+      missing: ["valid prediction values", "forecast edition", "same-edition factor context"],
+    });
+  });
+
   it("labels primary probability strength without turning it into a recommendation", () => {
     expect(forecastSignalContext({
       home_margin: 4.25,

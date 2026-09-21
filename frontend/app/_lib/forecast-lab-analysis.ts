@@ -38,6 +38,40 @@ export type ForecastEvidenceCoverage = {
   market: "verified" | "unavailable";
 };
 
+export type ForecastIntegrity = {
+  ok: boolean;
+  label: "Verified record" | "Review before prep";
+  missing: string[];
+};
+
+/**
+ * Keep the card's integrity claim narrower than its evidence/readiness score.
+ * A missing schedule clock or roster scenario is a coverage gap; malformed
+ * prediction values, an unlabeled edition, or mismatched factor lineage are
+ * reasons to pause before using the row for game prep.
+ */
+export function forecastIntegrity(
+  game: Pick<BBGame, "prediction" | "fallback_prediction" | "forecast_model_id" | "matchup_factors" | "matchup_factors_same_edition">,
+  publishedModelId?: string | null,
+): ForecastIntegrity {
+  const prediction = game.prediction || game.fallback_prediction;
+  const missing: string[] = [];
+  if (forecastSignalContext(prediction, !!game.prediction).estimate === "unavailable") {
+    missing.push("valid prediction values");
+  }
+  if (!(game.forecast_model_id || publishedModelId)) {
+    missing.push("forecast edition");
+  }
+  if (game.matchup_factors && game.matchup_factors_same_edition === false) {
+    missing.push("same-edition factor context");
+  }
+  return {
+    ok: missing.length === 0,
+    label: missing.length === 0 ? "Verified record" : "Review before prep",
+    missing,
+  };
+}
+
 /** Give each game card a compact, evidence-first readiness label. */
 export function forecastEvidenceLabel(evidence: ForecastEvidenceCoverage): string {
   if (!evidence.complete) return `${evidence.present}/${evidence.total} core evidence`;

@@ -8,7 +8,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
-import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
+import { forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 
@@ -62,6 +62,7 @@ export default function BasketballCard({
     roster: !!rosterScenario,
     market: marketQuotes.length > 0,
   });
+  const integrity = forecastIntegrity(g, forecastEdition.modelId);
   const scheduleLabel = g.source_time_valid && g.source_start
     ? "confirmed tip"
     : g.time_tbd
@@ -110,6 +111,10 @@ export default function BasketballCard({
               {contextLayers.map((layer) => <span className="analysis-badge" key={layer}>{layer}</span>)}
             </div>
             <small className="analysis-readiness-note">{forecastEvidenceDetail(evidence)}</small>
+            <small className={integrity.ok ? "analysis-integrity" : "analysis-integrity is-review"}>
+              Data integrity: <strong>{integrity.label}</strong>
+              {integrity.missing.length ? ` · ${integrity.missing.join(", ")}` : " · prediction and lineage checks passed"}
+            </small>
           </div>
           <div className="match-detail">
             <span>{g.home_name} win estimate</span>
