@@ -85,6 +85,7 @@ Existing basketball URLs such as `/scout/333` redirect to the native `/basketbal
 The women’s desk is a separate sport edition, never a men’s fallback. It publishes observed player production, game-box aggregates, team source fields, shot-location profiles, player rankings, team ratings, upcoming games and an independently fit 2026–27 forecast. The current women’s model contains **2,283 upcoming forecasts** (2,207 primary and 76 cold-start rows), with **5,897 held-out 2026 games** and **17,339 calibration games** retained in the publication artifact. Women’s Division II and III rows remain explicit intake boundaries until a retained release supplies division labels and stable identities; no rows are inferred from school names or conference names.
 
 Open the women’s desk at `/basketball/?gender=women&division=1`; the shared sport tabs preserve the same Teams, Players, Recruiting, Games, Predictions, Learn, Rankings and Division workflow.
+The Women’s Division tab routes D1 to forecast readiness and D2/D3 to the source-native lower-division stat and intake desk at `/basketball/wbb-readiness/?gender=women&division=2` or `3`.
 
 See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
 
