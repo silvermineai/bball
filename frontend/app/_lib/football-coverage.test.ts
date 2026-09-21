@@ -22,6 +22,9 @@ describe("football division coverage", () => {
         player_stats_available: true,
         player_records: 2,
         players: 1,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 1,
         upcoming_games: 2,
         forecast_games: 1,
@@ -32,6 +35,9 @@ describe("football division coverage", () => {
         player_stats_available: true,
         player_records: 1,
         players: 1,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 1,
         upcoming_games: 1,
         forecast_games: 0,
@@ -42,6 +48,9 @@ describe("football division coverage", () => {
         player_stats_available: false,
         player_records: 0,
         players: 0,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 1,
         upcoming_games: 1,
         forecast_games: 0,
@@ -52,6 +61,9 @@ describe("football division coverage", () => {
         player_stats_available: false,
         player_records: 0,
         players: 0,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 1,
         upcoming_games: 1,
         forecast_games: 0,
@@ -69,6 +81,9 @@ describe("football division coverage", () => {
         player_stats_available: false,
         player_records: 0,
         players: 0,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 0,
         upcoming_games: 0,
         forecast_games: 0,
@@ -79,11 +94,39 @@ describe("football division coverage", () => {
         player_stats_available: false,
         player_records: 0,
         players: 0,
+        observed_player_stats_available: false,
+        observed_player_records: 0,
+        observed_players: 0,
         teams: 0,
         upcoming_games: 0,
         forecast_games: 0,
         games_without_forecast: 0,
       },
+    ]);
+  });
+
+  it("keeps observed lower-division player counts separate from the canonical edition", () => {
+    const coverage = footballDivisionCoverage(
+      [],
+      [],
+      ["d2", "d3"],
+      [
+        { id: "athlete-1", team_id: "team-1", division: "d2" },
+        { id: "athlete-1", team_id: "team-1", division: "d2" },
+        { id: "athlete-2", team_id: "team-2", division: "d3" },
+      ],
+    );
+
+    expect(coverage.map((row) => ({
+      division: row.division,
+      player_stats_available: row.player_stats_available,
+      players: row.players,
+      observed_player_stats_available: row.observed_player_stats_available,
+      observed_player_records: row.observed_player_records,
+      observed_players: row.observed_players,
+    }))).toEqual([
+      { division: "d2", player_stats_available: false, players: 0, observed_player_stats_available: true, observed_player_records: 2, observed_players: 1 },
+      { division: "d3", player_stats_available: false, players: 0, observed_player_stats_available: true, observed_player_records: 1, observed_players: 1 },
     ]);
   });
 });

@@ -31,6 +31,12 @@ type Player = {
   production: Record<string, Production>;
 };
 
+type ObservedLowerPlayerRow = {
+  athlete_id?: string | null;
+  team_id?: string | null;
+  division?: string | null;
+};
+
 type EventLeader = {
   player_name: string;
   team: string | null;
@@ -66,6 +72,19 @@ function getPlayers(season: number) {
   if (!fs.existsSync(file)) return [] as Player[];
   const data = JSON.parse(fs.readFileSync(file, "utf8")) as { players?: Player[] };
   return data.players || [];
+}
+
+function getObservedLowerPlayers() {
+  const file = path.join(process.cwd(), "public/data/football/lower-division-player-stats-2026.json");
+  if (!fs.existsSync(file)) return [] as Array<{ id: string; team_id: string; division: string }>;
+  try {
+    const data = JSON.parse(fs.readFileSync(file, "utf8")) as { rows?: ObservedLowerPlayerRow[] };
+    return (data.rows || [])
+      .filter((row): row is { athlete_id: string; team_id: string; division: string } => typeof row.athlete_id === "string" && typeof row.team_id === "string" && typeof row.division === "string")
+      .map((row) => ({ id: row.athlete_id, team_id: row.team_id, division: row.division }));
+  } catch {
+    return [] as Array<{ id: string; team_id: string; division: string }>;
+  }
 }
 
 function getEventEditions(season: number) {
@@ -152,7 +171,7 @@ function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
 export default function FootballDashboard() {
   const overview = getOverview();
   const players = getPlayers(overview.season);
-  const divisionCoverage = footballDivisionCoverage(overview.upcoming, players);
+  const divisionCoverage = footballDivisionCoverage(overview.upcoming, players, undefined, getObservedLowerPlayers());
   const forecasts = overview.upcoming.filter((game) => game.prediction);
   const completedPlayerSeason = overview.season - 1;
   const eventEditions = getEventEditions(overview.season);
@@ -236,8 +255,8 @@ export default function FootballDashboard() {
         <table className="data-table dashboard-table">
           <thead><tr><th>Imported division</th><th className="numeric">Players</th><th className="numeric">Team rows</th><th className="numeric">Upcoming games</th><th className="numeric">Forecasts</th><th className="numeric">No forecast</th></tr></thead>
           <tbody>{divisionCoverage.map((row) => <tr key={row.division}>
-            <th scope="row">{row.division.toUpperCase()}<small>{row.player_stats_available ? `${row.player_records.toLocaleString()} player records in the edition` : "Player edition unavailable"}</small></th>
-            <td className="numeric">{row.player_stats_available ? row.players.toLocaleString() : "—"}</td>
+            <th scope="row">{row.division.toUpperCase()}<small>{row.player_stats_available ? `${row.player_records.toLocaleString()} player records in the edition` : row.observed_player_stats_available ? `${row.observed_player_records.toLocaleString()} rows in the observed game archive` : "Player edition unavailable"}</small></th>
+            <td className="numeric">{row.player_stats_available ? row.players.toLocaleString() : row.observed_player_stats_available ? row.observed_players.toLocaleString() : "—"}</td>
             <td className="numeric">{row.teams.toLocaleString()}</td>
             <td className="numeric">{row.upcoming_games.toLocaleString()}</td>
             <td className="numeric"><strong>{row.forecast_games.toLocaleString()}</strong></td>
@@ -245,7 +264,7 @@ export default function FootballDashboard() {
           </tr>)}</tbody>
         </table>
       </div>
-      <p className="note">Division II and Division III schedule coverage is available from the retained release. The current identified player production edition covers FBS and FCS only, so D2/D3 player counts remain unavailable. The primary board covers FBS-versus-FBS games; the matchup desk also publishes independently gated exact-division D2/D3 ratings and forecasts when their model artifact is available.</p>
+      <p className="note">Division II and Division III schedule coverage, exact-division ratings, forecasts, and an observed player production archive are available. The player archive is built from retained game summaries and is separate from the national player-stat edition; missing games and categories remain unavailable. The primary board covers FBS-versus-FBS games, while the matchup desk publishes independently gated exact-division D2/D3 ratings and forecasts.</p>
     </section>
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>

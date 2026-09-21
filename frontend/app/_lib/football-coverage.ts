@@ -19,6 +19,10 @@ export type FootballDivisionCoverage = {
   player_stats_available: boolean;
   player_records: number;
   players: number;
+  /** Exact-ID rows from a separate observed lower-division game archive. */
+  observed_player_stats_available: boolean;
+  observed_player_records: number;
+  observed_players: number;
   teams: number;
   upcoming_games: number;
   forecast_games: number;
@@ -48,9 +52,11 @@ export function footballDivisionCoverage(
   games: FootballCoverageGame[],
   players: FootballCoveragePlayer[],
   divisions = ["fbs", "fcs", "d2", "d3"],
+  observedPlayers: FootballCoveragePlayer[] = [],
 ): FootballDivisionCoverage[] {
   return divisions.map((division) => {
     const divisionPlayers = players.filter((player) => canonicalDivision(player.division) === division);
+    const divisionObservedPlayers = observedPlayers.filter((player) => canonicalDivision(player.division) === division);
     const divisionGames = games.filter((game) =>
       new Set([canonicalDivision(game.home_division), canonicalDivision(game.away_division)]).has(division),
     );
@@ -69,6 +75,9 @@ export function footballDivisionCoverage(
       player_stats_available: divisionPlayers.length > 0,
       player_records: divisionPlayers.length,
       players: playerIds.size,
+      observed_player_stats_available: divisionObservedPlayers.length > 0,
+      observed_player_records: divisionObservedPlayers.length,
+      observed_players: new Set(divisionObservedPlayers.map((player) => player.id)).size,
       teams: teamIds.size,
       upcoming_games: divisionGames.length,
       forecast_games: forecastGames,

@@ -64,3 +64,19 @@ def test_scope_or_identity_fail_closed():
 
 def test_empty_current_schedule_is_distinct_from_unscoped_rows():
     assert parse_schedule_calendar({"data": {"schedules": None}}, 3) == []
+
+
+def test_contest_with_missing_team_slug_keeps_the_row_without_inventing_identity():
+    payload = {"data": {"contests": [{
+        "contestId": 456,
+        "url": "/game/456",
+        "sportUrl": "basketball-women",
+        "startDate": "03/05/2026",
+        "teams": [
+            {"isHome": True, "seoname": "alpha", "nameShort": "Alpha"},
+            {"isHome": False, "seoname": "", "nameShort": "Beta"},
+        ],
+    }]}}
+    row = parse_contests(payload, 3, 2025, "03/05/2026")[0]
+    assert row["teams"][1]["name"] == "Beta"
+    assert row["teams"][1]["slug"] is None

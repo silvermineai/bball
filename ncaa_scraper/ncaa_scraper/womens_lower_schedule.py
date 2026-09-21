@@ -107,11 +107,14 @@ def parse_contests(payload: dict[str, Any], division: int, season_year: int, req
             raise ValueError(f"NCAA contestId={key} does not have exactly two teams")
         normalized_teams = []
         for team in teams:
-            if not isinstance(team, dict) or not team.get("seoname") or not team.get("nameShort"):
+            # Some historical rows omit a team slug while retaining the
+            # publisher's display name. Keep the contest with a null slug so
+            # the schedule remains visible, but never invent an identity.
+            if not isinstance(team, dict) or not team.get("nameShort"):
                 raise ValueError(f"NCAA contestId={key} has incomplete team identity")
             normalized_teams.append({
                 "home": bool(team.get("isHome")),
-                "slug": str(team["seoname"]),
+                "slug": str(team["seoname"]) if team.get("seoname") else None,
                 "name": str(team["nameShort"]),
                 "conference": team.get("conferenceSeo"),
                 "score": team.get("score"),
@@ -132,4 +135,3 @@ def parse_contests(payload: dict[str, Any], division: int, season_year: int, req
             "teams": normalized_teams,
         })
     return result
-

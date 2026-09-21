@@ -135,9 +135,9 @@ export function sportAvailabilityMessage(sport: Sport, division: Division): stri
   }
   if (sport !== "football") return null;
   if (division === "1") {
-    return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedules and score-derived record boards are available, while lower-division player tables and forecasts are not yet published.";
+    return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedules, score-derived team boards, and observed player tables are available, while lower-division forecast rows remain separately gated.";
   }
-  return `Football coverage: D${division} schedule rows, score-derived team records, exact-division ratings and validated forecasts are published. Lower-division player tables and player rankings remain unavailable; no D1 rows are substituted.`;
+  return `Football coverage: D${division} schedule rows, score-derived team records, exact-division ratings, validated forecasts, and an observed player production archive are published. The player archive covers retained game summaries; national player rankings remain separately gated, and no D1 rows are substituted.`;
 }
 
 export function isNavItemActive(pathname: string, item: SportNavItem): boolean {

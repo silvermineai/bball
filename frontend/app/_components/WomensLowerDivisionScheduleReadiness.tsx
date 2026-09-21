@@ -76,7 +76,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <p className="note">No target-season D{division} schedule asset is published yet. The exact-division capture pipeline is ready; games stay out of the prediction board until a receipt-backed schedule and a separately validated women&apos;s model are present.</p>
       <div className="scope-snapshot-counts"><strong>0</strong><span>schedule rows</span><strong>—</strong><span>predictions</span></div>
     </> : <>
-      <p className="note">Rows are shown only when the retained schedule carries division={division} and two publisher team slugs. Team names are kept as source labels; no name-only join creates a prediction.</p>
+      <p className="note">Rows are shown only when the retained schedule carries division={division}, a contest ID, and two team records. Team names and slugs are kept as source labels; missing slugs remain missing, and no name-only join creates a prediction.</p>
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} contests retained</span><strong>{upcoming.length.toLocaleString()}</strong><span>upcoming</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
       {upcoming.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th></tr></thead><tbody>{upcoming.slice(0, 25).map((contest) => { const teams = teamNames(contest); return <tr key={contest.contest_id}><td>{displayDate(contest.contest_date)}<small>{contest.start_time || "Time pending"}</small></td><th scope="row">{teams.away}</th><td>{teams.home}</td><td>{contest.status || contest.state || "scheduled"}</td></tr>; })}</tbody></table></div> : <p className="empty">No upcoming D{division} contests are present in this retained schedule asset.</p>}
@@ -84,4 +84,3 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
     </>}
   </div>;
 }
-
