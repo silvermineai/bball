@@ -26,6 +26,7 @@ import {
   type FootballMatchupSignal,
   type FootballMatchupSort,
 } from "../../_lib/football-matchup-view";
+import { footballForecastReadiness } from "../../_lib/football-forecast-readiness";
 export default function MatchupBrowser({
   games,
   generated,
@@ -97,6 +98,10 @@ export default function MatchupBrowser({
     }))
     .filter(({ game, comparisons }) => Boolean(game.prediction) && comparisons.length > 0)
     .sort((left, right) => left.game.kickoff.localeCompare(right.game.kickoff));
+  const forecastReadiness = footballForecastReadiness(
+    activeGames,
+    new Set(marketLinkedRows.map(({ game }) => game.id)),
+  );
   const linkedComparisons = (game: Game) => applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [];
   const prepRows = prepIds
     .map((id) => scopedGames.find((game) => game.id === id))
@@ -323,6 +328,35 @@ export default function MatchupBrowser({
       </p>
       {liveMarketComparisons && <p className="note" role="status">Live football market ledger checked; {marketLinkedRows.length.toLocaleString()} upcoming games have one or more qualifying comparisons from the active model edition.</p>}
       {liveMarketError && <p className="note" role="status">{liveMarketError} The archived market coverage panel remains available.</p>}
+      <section className="paper-panel football-forecast-readiness" aria-labelledby="football-forecast-readiness-title">
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div>
+            <div className="eyebrow">FORECAST READINESS / UPCOMING SLATE</div>
+            <h2 id="football-forecast-readiness-title">What each division has behind its forecast</h2>
+          </div>
+          <span className="note">{forecastReadiness.total_forecasted.toLocaleString()} validated forecast rows</span>
+        </div>
+        <p className="note">
+          Counts use the exact source division on both teams. A missing row is kept visible as unavailable; malformed values do not count as forecasts. Market links require a qualifying pregame comparison for the same game and model edition.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Division</th><th className="numeric">Scheduled</th><th className="numeric">Validated forecast</th><th className="numeric">Missing / invalid</th><th className="numeric">Model ID missing</th><th className="numeric">Market linked</th></tr></thead>
+            <tbody>{forecastReadiness.rows.map((row) => <tr key={row.division}>
+              <th scope="row">{row.division === "d1" ? "D1 · FBS/FCS" : row.division.toUpperCase()}</th>
+              <td className="numeric">{row.scheduled.toLocaleString()}</td>
+              <td className="numeric">{row.forecasted.toLocaleString()}</td>
+              <td className="numeric">{row.missing_forecast.toLocaleString()}</td>
+              <td className="numeric">{row.unlabeled_forecast.toLocaleString()}</td>
+              <td className="numeric">{row.market_linked.toLocaleString()}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        {forecastReadiness.mixed_division_games || forecastReadiness.invalid_forecasts ? <p className="note" style={{ marginTop: 12 }}>
+          {forecastReadiness.mixed_division_games ? `${forecastReadiness.mixed_division_games.toLocaleString()} mixed or unknown-division ${forecastReadiness.mixed_division_games === 1 ? "game remains" : "games remain"} outside the division totals. ` : ""}
+          {forecastReadiness.invalid_forecasts ? `${forecastReadiness.invalid_forecasts.toLocaleString()} malformed forecast ${forecastReadiness.invalid_forecasts === 1 ? "row was" : "rows were"} withheld.` : ""}
+        </p> : null}
+      </section>
       <section className="paper-panel football-market-status" aria-labelledby="football-market-status-title">
         <div>
           <div className="eyebrow">MARKET EVIDENCE</div>
