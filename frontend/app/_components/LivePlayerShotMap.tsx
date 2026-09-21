@@ -219,6 +219,7 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
           shots={shots}
           playerName={selected.player_name || `Player ${selected.player_id}`}
           title={`${selected.player_name || "Player"} shot profile`}
+          showEvents
           className="dashboard-shot-court"
         />
       ) : (
