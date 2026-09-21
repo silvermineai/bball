@@ -197,6 +197,13 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
   const sortValue = (player: Player) => {
     const stats = productionForCategory(player, category)?.stats;
     if (!stats) return null;
+    // Source-box categories have one named native total. Do not let the EPA
+    // sort controls imply that an unavailable EPA value is being ranked.
+    if (sourceBoxMetric) {
+      const selected = productionForCategory(player, category);
+      const rank = selectedRank(player, selected);
+      return rank == null ? null : -rank;
+    }
     if (sort === "rank") {
       const selected = productionForCategory(player, category);
       const rank = selectedRank(player, selected);
@@ -307,7 +314,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </label>
         <label className="control">
           <span>ORDER BY</span>
-          <select value={sort} onChange={(e) => { setSort(e.target.value as FootballPlayerSort); setPage(0); }}>
+          <select value={sort} disabled={Boolean(sourceBoxMetric)} onChange={(e) => { setSort(e.target.value as FootballPlayerSort); setPage(0); }}>
             {footballPlayerSorts.map((value) => <option key={value} value={value}>{sortLabels[value]}</option>)}
           </select>
         </label>
@@ -370,7 +377,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </label>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Ordered by {sourceBoxMetric && sort === "rank" ? `source-box order by ${sourceBoxMetric}` : division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
+        Ordered by {sourceBoxMetric ? `source-box order by ${sourceBoxMetric}` : division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
           ? "the best available ranked category per player"
           : category}. Team
