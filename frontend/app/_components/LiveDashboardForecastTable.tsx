@@ -57,6 +57,7 @@ const factorLabels: Record<BBFactorKey, string> = {
 
 /** Keep the compact board explainable without turning each row into a card. */
 export function strongestFactorEdge(game: BBGame) {
+  if (game.matchup_factors_same_edition === false) return null;
   const strongest = matchupFactorEdges(game)
     .map((edge) => [edge.key, edge.value] as [BBFactorKey, number])
     .sort((left, right) => Math.abs(right[1]) - Math.abs(left[1]))[0];

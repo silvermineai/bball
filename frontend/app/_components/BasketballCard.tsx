@@ -49,7 +49,7 @@ export default function BasketballCard({
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const signalContext = forecastSignalContext(p, !!g.prediction);
   const confidence = forecastConfidenceSummary(p, !!g.prediction);
-  const strongestFactor = strongestMatchupSignal(g.matchup_factors);
+  const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition !== false);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
     .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))

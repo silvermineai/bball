@@ -117,6 +117,14 @@ describe("strongestFactorEdge", () => {
   it("returns null when the matchup has no factor edge", () => {
     expect(strongestFactorEdge(games[0])).toBeNull();
   });
+
+  it("withholds an other-edition factor from the model-edge column", () => {
+    expect(strongestFactorEdge({
+      ...games[0],
+      matchup_factors_same_edition: false,
+      matchup_factors: { season: 2026, factors: {}, edges: { efg: 0.08 } },
+    })).toBeNull();
+  });
 });
 
 describe("matchupFactorEdges", () => {

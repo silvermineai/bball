@@ -1,5 +1,6 @@
 import type { BBGame } from "./basketball-types";
 import type { Comparison } from "./research-types";
+import { strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factorLabels: Record<string, string> = {
   efg: "shot-making",
@@ -52,11 +53,9 @@ export function basketballEditorialLens(game: BBGame): BasketballEditorialLens |
   const market = marketLens(game);
   if (market) return market;
   const width = prediction.margin_high - prediction.margin_low;
-  const strongest = Object.entries(game.matchup_factors?.edges || {})
-    .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
-    .sort(([, a], [, b]) => Math.abs(b as number) - Math.abs(a as number))[0];
-  const factor = strongest ? factorLabels[strongest[0]] : null;
-  const edge = strongest ? (strongest[1] as number) : null;
+  const factorSignal = strongestMatchupSignal(game.matchup_factors, game.matchup_factors_same_edition !== false);
+  const factor = factorSignal ? factorLabels[factorSignal.factor] : null;
+  const edge = factorSignal?.edge ?? null;
   if (Math.abs(prediction.home_margin) <= 3) {
     return {
       title: "A one-possession question",

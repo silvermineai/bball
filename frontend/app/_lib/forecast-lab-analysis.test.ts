@@ -191,6 +191,7 @@ describe("forecast lab matchup signals", () => {
   it("returns null when no factor evidence is available", () => {
     expect(strongestMatchupSignal(null)).toBeNull();
     expect(strongestMatchupSignal({ season: 2026, factors: {}, edges: {} })).toBeNull();
+    expect(strongestMatchupSignal(factors, false)).toBeNull();
   });
 
   it("turns each factor into an actionable film question", () => {

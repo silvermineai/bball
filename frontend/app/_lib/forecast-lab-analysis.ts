@@ -237,8 +237,9 @@ export function forecastEvidenceCoverage({
  */
 export function strongestMatchupSignal(
   factors: BBMatchupFactors | null | undefined,
+  sameEdition = true,
 ): ForecastMatchupSignal | null {
-  if (!factors || !Number.isInteger(factors.season)) return null;
+  if (!sameEdition || !factors || !Number.isInteger(factors.season)) return null;
   return FACTORS.reduce<ForecastMatchupSignal | null>((best, factor) => {
     const edge = factors.edges[factor.key];
     if (edge == null || !Number.isFinite(edge)) return best;

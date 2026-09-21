@@ -51,6 +51,18 @@ describe("basketball editorial lens", () => {
     expect(basketballEditorialLens(unforecasted)).toBeNull();
   });
 
+  it("withholds a factor angle when context came from another edition", () => {
+    const otherEdition = {
+      ...game(9, -2, 20, {
+        season: 2026,
+        factors: {},
+        edges: { efg: 0.031, orb: -0.01 },
+      }),
+      matchup_factors_same_edition: false,
+    };
+    expect(basketballEditorialLens(otherEdition)?.title).toBe("Read the baseline in context");
+  });
+
   it("turns a large verified market gap into reporting questions", () => {
     const withMarket = {
       ...game(6, -8, 20),
