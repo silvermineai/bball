@@ -163,6 +163,16 @@ export type RecruitingClassRankConcentration = {
   top100Share: number;
 };
 
+export type RecruitingDestinationIdentityCoverage = {
+  season: string;
+  retainedDestinations: number;
+  exactIdDestinations: number;
+  nameOnlyDestinations: number;
+  retainedCommitments: number;
+  exactIdCommitments: number;
+  exactIdCommitmentShare: number | null;
+};
+
 export type RecruitingDestinationRecurrence = {
   teamId: string;
   team: string;
@@ -371,6 +381,55 @@ export function classDestinationRecurrence(
       || b.ranked - a.ranked
       || b.commitments - a.commitments
       || a.teamId.localeCompare(b.teamId));
+}
+
+/**
+ * Report how much of each bounded destination response can be joined to an
+ * exact source team ID. Name-only rows stay visible in the denominator but
+ * are excluded from exact-ID joins; this is an evidence coverage metric, not
+ * a claim about destinations omitted from the source response.
+ */
+export function classDestinationIdentityCoverage(
+  snapshots: ClassSnapshot[],
+): RecruitingDestinationIdentityCoverage[] {
+  return snapshots.flatMap((snapshot) => {
+    if (!classSnapshotReceipt(snapshot) || !Array.isArray(snapshot.commitment_destinations)) return [];
+    const destinations = snapshot.commitment_destinations;
+    const exactIds = new Set<string>();
+    let retainedCommitments = 0;
+    let exactIdCommitments = 0;
+    let exactIdDestinations = 0;
+    for (const destination of destinations) {
+      const team = typeof destination.team === "string" ? destination.team.trim() : "";
+      const total = destination.total;
+      const ranked = destination.ranked_total;
+      const top100 = destination.top100_total;
+      if (!team
+        || !Number.isSafeInteger(total) || total <= 0
+        || !Number.isSafeInteger(ranked) || ranked < 0 || ranked > total
+        || !Number.isSafeInteger(top100) || top100 < 0 || top100 > ranked
+        || !Number.isFinite(destination.source_rank_points) || destination.source_rank_points < 0) return [];
+      const teamId = destination.team_id?.trim() || null;
+      if (teamId && exactIds.has(teamId)) return [];
+      if (teamId) exactIds.add(teamId);
+      retainedCommitments += total;
+      if (teamId) {
+        exactIdDestinations += 1;
+        exactIdCommitments += total;
+      }
+    }
+    const committed = snapshot.cohort?.committed;
+    if (committed != null && (!Number.isSafeInteger(committed) || committed < 0 || retainedCommitments > committed)) return [];
+    return [{
+      season: snapshot.season,
+      retainedDestinations: destinations.length,
+      exactIdDestinations,
+      nameOnlyDestinations: destinations.length - exactIdDestinations,
+      retainedCommitments,
+      exactIdCommitments,
+      exactIdCommitmentShare: retainedCommitments > 0 ? exactIdCommitments / retainedCommitments : null,
+    }];
+  });
 }
 
 /**
@@ -733,6 +792,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   const destinationRows = classDestinationRows(classSnapshots, 5);
   const destinationRecurrenceRows = classDestinationRecurrence(classSnapshots, 12);
+  const destinationIdentityRows = classDestinationIdentityCoverage(classSnapshots);
   const positionMixRows = classPositionMix(classSnapshots);
   const movementRows = classMovementRows(classSnapshots);
   const rankConcentrationRows = classRankConcentration(classSnapshots);
@@ -863,6 +923,25 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             <td className="numeric">{row.top100.toLocaleString()}</td>
             <td className="numeric">{row.sourceRankPoints.toLocaleString()}</td>
             <td>{row.seasons.join(" · ")}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </section>}
+      {destinationIdentityRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-destination-identity-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Destination identity / verified class editions</div><h3 id="recruiting-destination-identity-title">See how much destination evidence is joinable.</h3></div>
+          <span className="note">Bounded source rows</span>
+        </div>
+        <p className="note">This audit covers only destination rows retained by the source response. Exact source team IDs can open a program dossier; name-only rows remain in the commitment denominator but cannot be safely joined. The response is bounded, so omitted destinations are not treated as zero.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Retained destinations</th><th className="numeric">Exact-ID destinations</th><th className="numeric">Name-only destinations</th><th className="numeric">Retained commitments</th><th className="numeric">Exact-ID commitments</th><th className="numeric">ID join share</th></tr></thead>
+          <tbody>{destinationIdentityRows.map((row) => <tr key={`destination-identity-${row.season}`}>
+            <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button><small>Verified release digest</small></th>
+            <td className="numeric">{row.retainedDestinations.toLocaleString()}</td>
+            <td className="numeric"><strong>{row.exactIdDestinations.toLocaleString()}</strong></td>
+            <td className="numeric">{row.nameOnlyDestinations.toLocaleString()}</td>
+            <td className="numeric">{row.retainedCommitments.toLocaleString()}</td>
+            <td className="numeric">{row.exactIdCommitments.toLocaleString()}</td>
+            <td className="numeric">{row.exactIdCommitmentShare == null ? "—" : `${(row.exactIdCommitmentShare * 100).toFixed(1)}%`}<small>of retained commitment rows</small></td>
           </tr>)}</tbody>
         </table></div>
       </section>}

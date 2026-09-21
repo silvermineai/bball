@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
   classDestinationRecurrence,
+  classDestinationIdentityCoverage,
   classRankConcentration,
   classMovementRows,
   classPositionMix,
@@ -285,6 +286,48 @@ describe("recruiting destination recurrence", () => {
     }]);
     expect(classDestinationRecurrence([verified, verified])).toEqual([]);
     expect(classDestinationRecurrence([verified], 0)).toEqual([]);
+  });
+});
+
+describe("recruiting destination identity coverage", () => {
+  const digest = "a".repeat(64);
+  const snapshot = {
+    season: "2027",
+    total: 10,
+    cohort: { ranked: 8, graded: 8, committed: 5 },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition: digest,
+    source_receipt: {
+      dataset: "recruiting_rankings",
+      captured_at: "2026-09-18T00:00:00Z",
+      source_rows: 10,
+      sha256: digest,
+      sha256_scope: "release_edition" as const,
+      integrity: "verified" as const,
+    },
+    position_breakdown: [],
+    commitment_destinations: [
+      { team_id: "7", team: "North State", total: 3, ranked_total: 2, top100_total: 1, source_rank_points: 100, best_rank: 1, average_rank: 20 },
+      { team_id: null, team: "Name-only State", total: 1, ranked_total: 1, top100_total: 0, source_rank_points: 80, best_rank: 40, average_rank: 40 },
+    ],
+  };
+
+  it("separates exact-ID join coverage from name-only bounded rows", () => {
+    expect(classDestinationIdentityCoverage([snapshot])).toEqual([{
+      season: "2027",
+      retainedDestinations: 2,
+      exactIdDestinations: 1,
+      nameOnlyDestinations: 1,
+      retainedCommitments: 4,
+      exactIdCommitments: 3,
+      exactIdCommitmentShare: 0.75,
+    }]);
+  });
+
+  it("withholds duplicate IDs, impossible totals, and unverified releases", () => {
+    expect(classDestinationIdentityCoverage([{ ...snapshot, commitment_destinations: [snapshot.commitment_destinations[0], snapshot.commitment_destinations[0]] }])).toEqual([]);
+    expect(classDestinationIdentityCoverage([{ ...snapshot, cohort: { ...snapshot.cohort, committed: 2 } }])).toEqual([]);
+    expect(classDestinationIdentityCoverage([{ ...snapshot, source_receipt: null }])).toEqual([]);
   });
 });
 
