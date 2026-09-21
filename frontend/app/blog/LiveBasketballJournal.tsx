@@ -6,7 +6,9 @@ import type { BBFactorKey, BBGame, BBTeam } from "../_lib/basketball-types";
 import type { Comparison } from "../_lib/research-types";
 import { date, fmt, kick } from "../_lib/format";
 import { basketballEditorialLens } from "../_lib/basketball-editorial";
+import { fetchJson } from "../_lib/fetch-json";
 import { comparisonQuoteSummary } from "../_lib/market-display";
+import { marketReadinessDetail, marketReadinessLabel, marketReadinessState, marketCaptureDiagnostic, type MarketReadinessMetadata } from "../_lib/market-readiness";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import {
   forecastModelId,
@@ -28,6 +30,8 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [edition, setEdition] = useState<{ modelId: string; capturedAt: string } | null>(null);
   const [markets, setMarkets] = useState<Record<string, Comparison[]>>({});
+  const [marketMetadata, setMarketMetadata] = useState<MarketReadinessMetadata | null>(null);
+  const [marketMetadataStatus, setMarketMetadataStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [savedGames, setSavedGames] = useState<Record<string, SavedGame>>({});
   const [savedMessage, setSavedMessage] = useState("");
@@ -130,6 +134,28 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
     return () => controller.abort();
   }, [edition?.modelId]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setMarketMetadataStatus("checking");
+    fetchJson<MarketReadinessMetadata>("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal })
+      .then((value) => {
+        if (!controller.signal.aborted) {
+          setMarketMetadata(value);
+          setMarketMetadataStatus("ready");
+        }
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          setMarketMetadata(null);
+          setMarketMetadataStatus("unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  const marketReadiness = marketReadinessState(marketMetadata, marketMetadataStatus === "checking");
+  const marketDiagnostic = marketCaptureDiagnostic(marketMetadata);
+
   return (
     <>
       <p className="note" role="status">
@@ -139,6 +165,23 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
             ? "Live forecast refresh unavailable; showing the bundled journal edition."
             : "Checking the live forecast edition…"}
       </p>
+      <section className="paper-panel" aria-label="Market evidence for upcoming games" style={{ marginBottom: 22 }}>
+        <div className="section-heading" style={{ marginBottom: 8 }}>
+          <div>
+            <div className="eyebrow">Upcoming slate / quote evidence</div>
+            <h2>Market readiness</h2>
+          </div>
+          <Link href="/research/markets/">Open market archive →</Link>
+        </div>
+        <p className="note" role="status">
+          <strong>{marketReadinessLabel(marketReadiness)}.</strong>{" "}
+          {marketDiagnostic || marketReadinessDetail(marketMetadata, marketMetadataStatus === "checking")}
+        </p>
+        {marketDiagnostic && <p className="note" style={{ marginTop: 6 }}>{marketReadinessDetail(marketMetadata, marketMetadataStatus === "checking")}</p>}
+        <p className="note" style={{ marginTop: 6 }}>
+          Only exact game, participant, timing and pre-tip evidence can produce a comparison here; no line or model edge is inferred when that evidence is absent.
+        </p>
+      </section>
       {savedIds.length > 0 && <div className="journal-prep-list" role="status">
         <div><strong>{savedIds.length}</strong><span>game{savedIds.length === 1 ? "" : "s"} in your private prep list</span></div>
         <div className="button-row"><button className="button secondary" type="button" onClick={exportPrepList}>Export prep list ↓</button><button className="hero-link" type="button" onClick={() => { setSavedIds([]); setSavedGames({}); try { window.localStorage.removeItem(PREP_LIST_KEY); } catch { /* optional storage */ } setSavedMessage("Prep list cleared."); }}>Clear list</button></div>

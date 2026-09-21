@@ -44,6 +44,24 @@ describe("market connector readiness", () => {
     })).toBe("Latest capture inspected 71 future summaries; 0 contained complete quote sets and 0 had a non-empty odds payload; 0 markets passed validation; 0 summaries were rejected.");
   });
 
+  it("gives the upcoming slate a safe no-quote readiness message", () => {
+    const metadata = {
+      research_receipts: 45,
+      research_capture: {
+        summary_count: 120,
+        eligible_games: 120,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        accepted_markets: 0,
+        rejected_records: 0,
+        market_status: "no_quotes_published" as const,
+      },
+    };
+    expect(marketReadinessLabel(marketReadinessState(metadata))).toBe("Capture ran · no quote qualified");
+    expect(marketCaptureDiagnostic(metadata)).toContain("120 future summaries of 120 eligible games");
+    expect(marketReadinessDetail(metadata)).toContain("No line is inferred");
+  });
+
   it("withholds a capture diagnostic when the receipt has no summary count", () => {
     expect(marketCaptureDiagnostic({ research_receipts: 1 })).toBeNull();
   });
