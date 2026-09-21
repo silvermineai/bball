@@ -6,6 +6,7 @@ import {
   loadProgramProspectClass,
   programProspectRankChange,
   programProspectRankChangeLabel,
+  topProgramProspects,
   programProspectEvidence,
   PROGRAM_PROSPECT_CLASSES,
   summarizeProgramProspects,
@@ -36,6 +37,17 @@ describe("program prospect evidence", () => {
     expect(programProspectRankChangeLabel({ rank: 30, previous_rank: 12 })).toBe("▼ 18");
     expect(programProspectRankChangeLabel({ rank: 12, previous_rank: 12 })).toBe("—");
     expect(programProspectRankChangeLabel({ rank: 12, previous_rank: null })).toBe("—");
+  });
+
+  it("selects the highest recorded ranks across classes before unranked rows", () => {
+    const rows = [
+      { ...prospect({ athlete_id: "old-low", name: "Old low", rank: 80 }), season: 2026, evidence: "Recorded commitment" as const },
+      { ...prospect({ athlete_id: "new-high", name: "New high", rank: 4 }), season: 2027, evidence: "Listed school" as const },
+      { ...prospect({ athlete_id: "mid", name: "Mid", rank: 20 }), season: 2025, evidence: "Committed elsewhere" as const },
+      { ...prospect({ athlete_id: "missing", name: "Missing", rank: null }), season: 2025, evidence: "Listed school" as const },
+    ];
+    expect(topProgramProspects(rows, 3).map((row) => row.name)).toEqual(["New high", "Mid", "Old low"]);
+    expect(topProgramProspects(rows, 0)).toEqual([]);
   });
 
   it("covers every retained national recruiting class", () => {

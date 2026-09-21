@@ -290,6 +290,20 @@ export function combineProgramProspectClasses(releases: RecruitingClass[], teamI
     );
 }
 
+/** Select the best recorded ranks across classes without moving missing ranks ahead of evidence. */
+export function topProgramProspects(rows: ProgramProspectRow[], limit = 12): ProgramProspectRow[] {
+  if (!Number.isSafeInteger(limit) || limit < 1) return [];
+  return [...rows]
+    .sort((a, b) =>
+      Number(a.rank == null) - Number(b.rank == null)
+      || (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER)
+      || a.season - b.season
+      || a.name.localeCompare(b.name)
+      || a.athlete_id.localeCompare(b.athlete_id),
+    )
+    .slice(0, limit);
+}
+
 /** Every recruiting class currently retained by the national board. */
 export const PROGRAM_PROSPECT_CLASSES = [2025, 2026, 2027, 2028, 2029, 2030] as const;
 
@@ -328,6 +342,7 @@ export default function ProgramProspects({
   }, [teamId]);
 
   const rows = combineProgramProspectClasses(releases, teamId);
+  const topRows = topProgramProspects(rows);
   const summary = summarizeProgramProspects(rows);
   const roleContext = buildProgramRoleContext(rows, teamId, readiness, rosterSeason, rosterSource);
 
@@ -390,7 +405,7 @@ export default function ProgramProspects({
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Program evidence</th><th>Origin</th><th>Record</th></tr></thead>
-              <tbody>{rows.slice(0, 12).map((row) => (
+              <tbody>{topRows.map((row) => (
                 <tr key={`${row.season}-${row.athlete_id}`}>
                   <td>{row.season}</td>
                   <th scope="row">{row.name}<small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th>
