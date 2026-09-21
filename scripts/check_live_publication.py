@@ -8,6 +8,7 @@ import json
 import re
 import time
 from datetime import datetime, timezone
+from math import isfinite
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -179,6 +180,51 @@ def forecast_coverage(payload: dict, expected_season: int, expected_rows: int) -
     ):
         raise ValueError("latest basketball model does not cover every upcoming game")
     return total
+
+
+def validate_forecast_prediction(row: dict) -> dict:
+    """Require the published game estimate to reconcile to its model fields.
+
+    The forecast API is the public boundary for both D1-backed rows and the
+    static overview fallback. Checking the first row here catches a malformed
+    or partially serialized model edition before the homepage presents an
+    apparently authoritative prediction. The efficiency fields are derived
+    from the same projected score and pace, so they must reconcile within the
+    two-decimal publication precision.
+    """
+    if not isinstance(row, dict) or row.get("prediction_integrity") != "valid":
+        raise ValueError("latest basketball model has an invalid prediction payload")
+    prediction = row.get("prediction")
+    if not isinstance(prediction, dict):
+        raise ValueError("latest basketball model has no prediction payload")
+    required = (
+        "home_score", "away_score", "home_margin", "total", "pace",
+        "home_win_probability", "margin_low", "margin_high",
+        "home_efficiency", "away_efficiency",
+    )
+    values: dict[str, float] = {}
+    for key in required:
+        value = prediction.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value):
+            raise ValueError(f"latest basketball model prediction field {key} is malformed")
+        values[key] = float(value)
+    if values["pace"] <= 0 or values["home_score"] < 0 or values["away_score"] < 0:
+        raise ValueError("latest basketball model prediction has invalid score or pace")
+    if not 0 <= values["home_win_probability"] <= 1:
+        raise ValueError("latest basketball model prediction has invalid win probability")
+    if values["margin_low"] > values["margin_high"]:
+        raise ValueError("latest basketball model prediction has an inverted margin interval")
+    if not values["margin_low"] <= values["home_margin"] <= values["margin_high"]:
+        raise ValueError("latest basketball model prediction margin is outside its interval")
+    if abs(values["home_margin"] - (values["home_score"] - values["away_score"])) > 0.05:
+        raise ValueError("latest basketball model prediction margin does not reconcile")
+    if abs(values["total"] - (values["home_score"] + values["away_score"])) > 0.05:
+        raise ValueError("latest basketball model prediction total does not reconcile")
+    for side in ("home", "away"):
+        expected = 100 * values[f"{side}_score"] / values["pace"]
+        if abs(values[f"{side}_efficiency"] - expected) > 0.02:
+            raise ValueError(f"latest basketball model {side} efficiency does not reconcile")
+    return {"estimate_type": prediction.get("estimate_type", "primary"), "pace": values["pace"]}
 
 
 def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
@@ -736,6 +782,7 @@ def check_live(
     game_id = personnel_game.get("game_id")
     if not isinstance(game_id, str) or not re.fullmatch(r"\d{1,20}", game_id):
         raise ValueError("latest basketball model has an invalid game identity")
+    forecast_prediction = validate_forecast_prediction(personnel_game)
     matchup_personnel = get_json(
         base_url,
         f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
@@ -894,6 +941,8 @@ def check_live(
         "forecast_rows": latest["forecasts"],
         "forecast_upcoming_rows": upcoming_forecast_rows,
         "forecast_roster_scenario_rows": roster_scenario_rows,
+        "forecast_prediction_estimate_type": forecast_prediction["estimate_type"],
+        "forecast_prediction_pace": forecast_prediction["pace"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],

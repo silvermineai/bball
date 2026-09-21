@@ -9,6 +9,7 @@ from scripts.check_live_publication import (
     DAILY_PUBLICATION_MAX_AGE_HOURS,
     check_live,
     forecast_coverage,
+    validate_forecast_prediction,
     roster_forecast_alignment,
     market_metadata,
     matchup_personnel_coverage,
@@ -48,6 +49,28 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(forecast_coverage({"season": 2027, "status": "upcoming", "total": 12}, 2027, 12), 12)
         with self.assertRaisesRegex(ValueError, "every upcoming game"):
             forecast_coverage({"season": 2027, "status": "upcoming", "total": 11}, 2027, 12)
+
+    def test_forecast_prediction_requires_reconciled_efficiency_fields(self):
+        row = {
+            "prediction_integrity": "valid",
+            "prediction": {
+                "home_score": 80,
+                "away_score": 64,
+                "home_margin": 16,
+                "total": 144,
+                "pace": 70,
+                "home_win_probability": 0.8,
+                "margin_low": 2,
+                "margin_high": 30,
+                "home_efficiency": 114.29,
+                "away_efficiency": 91.43,
+                "estimate_type": "primary",
+            },
+        }
+        self.assertEqual(validate_forecast_prediction(row), {"estimate_type": "primary", "pace": 70.0})
+        row["prediction"]["away_efficiency"] = 89
+        with self.assertRaisesRegex(ValueError, "away efficiency"):
+            validate_forecast_prediction(row)
 
     def test_roster_challenger_requires_the_exact_forecast_edition(self):
         payload = {
@@ -172,7 +195,26 @@ class LivePublicationCheckTest(unittest.TestCase):
                         "status": "matched",
                         "matched_rows": 0,
                     },
-                    "rows": [{"season": 2027, "game_id": "401902275", "home_id": "1", "away_id": "2"}],
+                    "rows": [{
+                        "season": 2027,
+                        "game_id": "401902275",
+                        "home_id": "1",
+                        "away_id": "2",
+                        "prediction_integrity": "valid",
+                        "prediction": {
+                            "home_score": 80,
+                            "away_score": 64,
+                            "home_margin": 16,
+                            "total": 144,
+                            "pace": 70,
+                            "home_win_probability": 0.8,
+                            "margin_low": 2,
+                            "margin_high": 30,
+                            "home_efficiency": 114.29,
+                            "away_efficiency": 91.43,
+                            "estimate_type": "primary",
+                        },
+                    }],
                 }
             if path.startswith("/api/basketball/research/matchup-personnel?"):
                 return LivePublicationCheckTest.matchup_personnel_payload()
