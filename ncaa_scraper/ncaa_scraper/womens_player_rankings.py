@@ -54,7 +54,12 @@ BOX_METRICS = {
     "free_throw": ("Free-throw percentage", ("shooting", "free_throw_pct"), "FT%"),
     "true_shooting": ("True shooting percentage", ("derived", "true_shooting_pct"), "TS%"),
     "effective_field_goal": ("Effective field-goal percentage", ("derived", "effective_field_goal_pct"), "eFG%"),
+    "two_point": ("Two-point percentage", ("derived", "two_point_pct"), "2P%"),
+    "three_point_rate": ("Three-point attempt rate", ("derived", "three_point_rate"), "3PA/FGA%"),
+    "free_throw_rate": ("Free-throw attempt rate", ("derived", "free_throw_rate"), "FTA/FGA%"),
     "points_per_40": ("Points per 40 minutes", ("derived", "points_per_40"), "P40"),
+    "rebounds_per_40": ("Rebounds per 40 minutes", ("derived", "rebounds_per_40"), "REB/40"),
+    "stocks_per_40": ("Steals plus blocks per 40 minutes", ("derived", "stocks_per_40"), "STOCKS/40"),
     "assist_turnover": ("Assist-to-turnover ratio", ("derived", "assist_turnover"), "AST/TO"),
 }
 
@@ -67,7 +72,12 @@ BOX_SAMPLE_RULES = {
     "free_throw": ("free_throws_attempted", 50, "FTA"),
     "true_shooting": ("true_shooting_attempts", 100, "FGA + 0.475 × FTA"),
     "effective_field_goal": ("field_goals_attempted", 100, "FGA"),
+    "two_point": ("two_point_field_goals_attempted", 100, "2PA"),
+    "three_point_rate": ("field_goals_attempted", 100, "FGA"),
+    "free_throw_rate": ("field_goals_attempted", 100, "FGA"),
     "points_per_40": ("minutes", 400, "minutes"),
+    "rebounds_per_40": ("minutes", 400, "minutes"),
+    "stocks_per_40": ("minutes", 400, "minutes"),
     "assist_turnover": ("turnovers", 25, "turnovers"),
 }
 
@@ -83,7 +93,12 @@ BOX_METRIC_DESCRIPTIONS = {
     "free_throw": "Free throws made divided by free-throw attempts in played source box rows.",
     "true_shooting": "Points divided by twice (field-goal attempts + 0.475 × free-throw attempts) in played source box rows.",
     "effective_field_goal": "Field goals made plus half of three-point makes, divided by field-goal attempts in played source box rows.",
+    "two_point": "Two-point makes divided by two-point attempts, derived by subtracting recorded three-point totals from overall field-goal totals.",
+    "three_point_rate": "Three-point attempts divided by field-goal attempts in played source box rows; this describes shot selection, not accuracy.",
+    "free_throw_rate": "Free-throw attempts divided by field-goal attempts in played source box rows; this describes foul pressure and shot mix.",
     "points_per_40": "Recorded points scaled to 40 minutes from played source box rows.",
+    "rebounds_per_40": "Recorded rebounds scaled to 40 minutes from played source box rows.",
+    "stocks_per_40": "Recorded steals plus blocks scaled to 40 minutes; this is an event rate, not a complete defensive grade.",
     "assist_turnover": "Recorded assists divided by turnovers in played source box rows; zero-turnover samples remain unavailable.",
 }
 
@@ -120,17 +135,33 @@ def _box_metric_value(player: dict[str, Any], path: tuple[str, str]) -> float | 
     fgm = _number(totals.get("field_goals_made"))
     fga = _number(totals.get("field_goals_attempted"))
     tpm = _number(totals.get("three_point_field_goals_made"))
+    tpa = _number(totals.get("three_point_field_goals_attempted"))
     fta = _number(totals.get("free_throws_attempted"))
     minutes = _number(totals.get("minutes"))
+    rebounds = _number(totals.get("rebounds"))
     assists = _number(totals.get("assists"))
+    steals = _number(totals.get("steals"))
+    blocks = _number(totals.get("blocks"))
     turnovers = _number(totals.get("turnovers"))
     if path[1] == "true_shooting_pct":
         denominator = None if fga is None or fta is None else 2 * (fga + 0.475 * fta)
         return 100 * points / denominator if points is not None and denominator is not None and denominator > 0 else None
     if path[1] == "effective_field_goal_pct":
         return 100 * (fgm + 0.5 * tpm) / fga if fgm is not None and tpm is not None and fga is not None and fga > 0 else None
+    if path[1] == "two_point_pct":
+        attempts = None if fga is None or tpa is None else fga - tpa
+        makes = None if fgm is None or tpm is None else fgm - tpm
+        return 100 * makes / attempts if attempts is not None and makes is not None and attempts > 0 and 0 <= makes <= attempts else None
+    if path[1] == "three_point_rate":
+        return 100 * tpa / fga if tpa is not None and fga is not None and fga > 0 and 0 <= tpa <= fga else None
+    if path[1] == "free_throw_rate":
+        return 100 * fta / fga if fta is not None and fga is not None and fga > 0 and fta >= 0 else None
     if path[1] == "points_per_40":
         return 40 * points / minutes if points is not None and minutes is not None and minutes > 0 else None
+    if path[1] == "rebounds_per_40":
+        return 40 * rebounds / minutes if rebounds is not None and minutes is not None and minutes > 0 else None
+    if path[1] == "stocks_per_40":
+        return 40 * (steals + blocks) / minutes if steals is not None and blocks is not None and minutes is not None and minutes > 0 else None
     if path[1] == "assist_turnover":
         return assists / turnovers if assists is not None and turnovers is not None and turnovers > 0 else None
     return None
@@ -147,6 +178,10 @@ def _box_metric_sample(player: dict[str, Any], metric: str) -> float | None:
         fga = _number(totals.get("field_goals_attempted"))
         fta = _number(totals.get("free_throws_attempted"))
         return fga + 0.475 * fta if fga is not None and fta is not None else None
+    if rule[0] == "two_point_field_goals_attempted":
+        fga = _number(totals.get("field_goals_attempted"))
+        tpa = _number(totals.get("three_point_field_goals_attempted"))
+        return fga - tpa if fga is not None and tpa is not None and fga >= tpa else None
     return _number(totals.get(rule[0]))
 
 

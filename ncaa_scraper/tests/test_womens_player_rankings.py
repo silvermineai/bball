@@ -57,6 +57,8 @@ def box_player(
     points,
     rebounds=0,
     assists=0,
+    steals=0,
+    blocks=0,
     turnovers=0,
     minutes=0,
     fga=0,
@@ -77,7 +79,10 @@ def box_player(
         "per_game": {"points": points, "rebounds": rebounds, "assists": assists},
         "totals": {
             "points": points * games,
+            "rebounds": rebounds * games,
             "assists": assists * games,
+            "steals": steals,
+            "blocks": blocks,
             "turnovers": turnovers,
             "minutes": minutes,
             "field_goals_attempted": fga,
@@ -145,6 +150,30 @@ def test_box_rankings_add_volume_qualified_efficiency_and_workload_lenses():
     assert boards["true_shooting"]["min_sample"] == 100
     assert boards["true_shooting"]["sample_unit"] == "FGA + 0.475 × FTA"
     assert result["coverage"]["true_shooting"] == {"observed": 2, "qualified": 1}
+
+
+def test_box_rankings_add_auditable_shot_mix_and_two_way_rate_lenses():
+    result = build_box_rankings([
+        box_player(
+            "qualified", "Qualified", 20, points=15, rebounds=8, steals=30, blocks=15,
+            minutes=600, fga=200, fgm=100, tpa=80, tpm=30, fta=80,
+        ),
+        box_player(
+            "tiny", "Tiny sample", 20, points=10, rebounds=3, steals=5, blocks=2,
+            minutes=300, fga=50, fgm=25, tpa=20, tpm=8, fta=10,
+        ),
+    ])
+
+    boards = result["leaderboards"]
+    assert boards["two_point"]["rows"][0]["value"] == 58.33
+    assert boards["two_point"]["rows"][0]["sample"] == 120
+    assert boards["three_point_rate"]["rows"][0]["value"] == 40
+    assert boards["free_throw_rate"]["rows"][0]["value"] == 40
+    assert boards["rebounds_per_40"]["rows"][0]["value"] == 10.67
+    assert boards["stocks_per_40"]["rows"][0]["value"] == 3
+    assert boards["stocks_per_40"]["sample_unit"] == "minutes"
+    assert result["coverage"]["two_point"] == {"observed": 2, "qualified": 1}
+    assert result["coverage"]["stocks_per_40"] == {"observed": 2, "qualified": 1}
 
 
 def test_rankings_assign_the_same_rank_to_equal_values():
