@@ -4,6 +4,7 @@ import {
   footballCohortPercentile,
   footballCohortPercentiles,
   computeFcsEpaRanks,
+  computeProvisionalProductionRanks,
   computeSourceBoxRanks,
   footballPlayerRankKey,
   footballPlayerFilterSearch,
@@ -102,6 +103,21 @@ describe("football player index category selection", () => {
 });
 
 describe("football player division rankings", () => {
+  it("provides a separate observed EPA order for an incomplete season", () => {
+    const ranks = computeProvisionalProductionRanks(
+      [
+        { id: "2", team_id: "b", name: "Beta", division: "fbs", categories: ["passing"], production: { passing: { plays: 4, yards: 20, epa: 2, epa_per_play: 0.5, touchdowns: 0, rank: null } } },
+        { id: "1", team_id: "a", name: "Alpha", division: "fbs", categories: ["passing"], production: { passing: { plays: 3, yards: 30, epa: 7, epa_per_play: 2.3, touchdowns: 1, rank: null } } },
+        { id: "3", team_id: "c", name: "Missing EPA", division: "fbs", categories: ["passing"], production: { passing: { plays: 99, yards: 900, epa: null, epa_per_play: null, touchdowns: 9, rank: null } } },
+      ],
+      "passing",
+      "fbs",
+    );
+    expect(ranks.get(footballPlayerRankKey("1", "a", "passing"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "passing"))).toBe(2);
+    expect(ranks.has(footballPlayerRankKey("3", "c", "passing"))).toBe(false);
+  });
+
   it("computes an explicit FCS EPA ordering without assigning a source rank", () => {
     const ranks = computeFcsEpaRanks(
       [

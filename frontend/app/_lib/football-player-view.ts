@@ -262,6 +262,40 @@ export function computeFcsEpaRanks(
   return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, row.category), index + 1]));
 }
 
+/**
+ * Rank an in-progress season by observed total EPA when the publisher has not
+ * assigned a qualified source rank yet.  This is deliberately separate from
+ * the retained source rank and has no minimum-play claim; callers must label
+ * it as provisional and keep the season's sample warning visible.
+ */
+export function computeProvisionalProductionRanks(
+  players: FootballRankablePlayer[],
+  category: string,
+  division: FootballPlayerDivision = "all",
+) {
+  const rows = players.flatMap((player) => {
+    if (player.division !== "fbs" && player.division !== "fcs") return [];
+    if (division !== "all" && player.division !== division) return [];
+    const selected = category === "all"
+      ? productionForCategory(player, category)
+      : player.production[category]
+        ? { category, stats: player.production[category] }
+        : null;
+    const epa = selected?.stats.epa;
+    return selected && epa != null && Number.isFinite(epa) && (selected.stats.plays ?? 0) > 0
+      ? [{ player, category: selected.category, epa }]
+      : [];
+  });
+  rows.sort((left, right) =>
+    right.epa - left.epa ||
+    left.player.name.localeCompare(right.player.name) ||
+    left.player.id.localeCompare(right.player.id) ||
+    left.player.team_id.localeCompare(right.player.team_id) ||
+    left.category.localeCompare(right.category),
+  );
+  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, row.category), index + 1]));
+}
+
 /** Select the source row that the player index should display. */
 export function productionForCategory(
   player: FootballPlayerProduction,
