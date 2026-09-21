@@ -2,11 +2,24 @@ import type { RecruitingPerson } from "./recruiting";
 
 export type ProspectProduction = NonNullable<RecruitingPerson["stats"]>;
 
+export const PROSPECT_PRODUCTION_METRICS = [
+  "games", "mpg", "ppg", "rpg", "apg", "spg", "bpg", "topg",
+  "efg", "ts", "three_pct", "ft_pct", "ft_rate", "three_rate", "tov_rate",
+] as const;
+
+export type ProspectProductionMetric = typeof PROSPECT_PRODUCTION_METRICS[number];
+
+export type ProspectProductionMetricContext = {
+  rank: number;
+  cohort: number;
+};
+
 export type ProspectProductionRelease = {
   season: number;
   edition: string;
   reviewedAt: string;
   production: ProspectProduction | null;
+  productionContext: Partial<Record<ProspectProductionMetric, ProspectProductionMetricContext>>;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -55,6 +68,7 @@ export function parseProspectProductionRelease(
       edition: payload.edition,
       reviewedAt: payload.reviewed_at,
       production: null,
+      productionContext: {},
     };
   }
 
@@ -96,6 +110,40 @@ export function parseProspectProductionRelease(
   }));
   if (Object.values(metrics).some((value) => Number.isNaN(value))) return null;
 
+  // Compare only unique, numeric source IDs in this same reviewed release.
+  // This keeps the denominator useful without joining by name or treating a
+  // missing metric as zero.
+  const targetValues: Partial<Record<ProspectProductionMetric, number | null>> = {
+    games,
+    mpg,
+    ...metrics,
+  };
+  const valuesByMetric = new Map<ProspectProductionMetric, number[]>();
+  const seenSourceIds = new Set<string>();
+  for (const candidate of payload.people) {
+    if (!isRecord(candidate) || !isRecord(candidate.stats)) continue;
+    const candidateId = stringValue(candidate.stats.id);
+    if (!candidateId || !/^\d{1,15}$/.test(candidateId) || seenSourceIds.has(candidateId)) continue;
+    seenSourceIds.add(candidateId);
+    for (const metric of PROSPECT_PRODUCTION_METRICS) {
+      const value = finiteNumber(candidate.stats[metric], true);
+      if (value === undefined || value === null) continue;
+      const values = valuesByMetric.get(metric) || [];
+      values.push(value);
+      valuesByMetric.set(metric, values);
+    }
+  }
+  const productionContext: Partial<Record<ProspectProductionMetric, ProspectProductionMetricContext>> = {};
+  for (const metric of PROSPECT_PRODUCTION_METRICS) {
+    const target = targetValues[metric];
+    const values = valuesByMetric.get(metric) || [];
+    if (target == null || !values.length) continue;
+    productionContext[metric] = {
+      rank: 1 + values.filter((value) => value > target).length,
+      cohort: values.length,
+    };
+  }
+
   return {
     season: expectedSeason,
     edition: payload.edition,
@@ -123,5 +171,6 @@ export function parseProspectProductionRelease(
       incomplete_box_games: incompleteBoxGames,
       identity_basis: identityBasis,
     },
+    productionContext,
   };
 }

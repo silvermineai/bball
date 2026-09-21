@@ -36,13 +36,16 @@ const stats = (overrides: Record<string, unknown> = {}) => ({
 describe("prospect production release", () => {
   it("returns exact-ID production and preserves missing metrics", () => {
     const result = parseProspectProductionRelease(
-      payload([{ stats: stats() }]),
+      payload([{ stats: stats() }, { stats: stats({ id: "5292603", ppg: 8.5, games: 30 }) }]),
       2027,
       "5292602",
     );
     expect(result?.production?.team).toBe("Seton Hall");
     expect(result?.production?.games).toBe(31);
     expect(result?.production?.three_pct).toBeNull();
+    expect(result?.productionContext.ppg).toEqual({ rank: 2, cohort: 2 });
+    expect(result?.productionContext.games).toEqual({ rank: 1, cohort: 2 });
+    expect(result?.productionContext.three_pct).toBeUndefined();
   });
 
   it("returns an explicit unavailable production result when no exact ID exists", () => {
@@ -52,6 +55,21 @@ describe("prospect production release", () => {
       "5292602",
     );
     expect(result?.production).toBeNull();
+    expect(result?.productionContext).toEqual({});
+  });
+
+  it("uses competition ranks with ties and ignores duplicate source IDs", () => {
+    const result = parseProspectProductionRelease(
+      payload([
+        { stats: stats({ ppg: 6.5 }) },
+        { stats: stats({ id: "5292603", ppg: 6.5 }) },
+        { stats: stats({ id: "5292603", ppg: 99 }) },
+        { stats: stats({ id: "not-a-source-id", ppg: 100 }) },
+      ]),
+      2027,
+      "5292602",
+    );
+    expect(result?.productionContext.ppg).toEqual({ rank: 1, cohort: 2 });
   });
 
   it("rejects a season mismatch or malformed candidate", () => {

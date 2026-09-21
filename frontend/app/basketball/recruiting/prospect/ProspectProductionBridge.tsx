@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseProspectProductionRelease, type ProspectProduction } from "../../../_lib/prospect-production";
+import { parseProspectProductionRelease, type ProspectProduction, type ProspectProductionMetric, type ProspectProductionRelease } from "../../../_lib/prospect-production";
 
 type BridgeState = {
   release: ReturnType<typeof parseProspectProductionRelease>;
@@ -14,22 +14,22 @@ const number = (value: number | null | undefined, digits = 1) =>
 const percent = (value: number | null | undefined) =>
   value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 
-function ProductionTable({ production }: { production: ProspectProduction }) {
+function ProductionTable({ production, context }: { production: ProspectProduction; context: ProspectProductionRelease["productionContext"] }) {
   const rows = [
-    ["Games", production.games.toLocaleString()],
-    ["MIN/G", number(production.mpg)],
-    ["PTS/G", number(production.ppg)],
-    ["REB/G", number(production.rpg)],
-    ["AST/G", number(production.apg)],
-    ["STL/G", number(production.spg)],
-    ["BLK/G", number(production.bpg)],
-    ["TO/G", number(production.topg)],
-    ["eFG%", percent(production.efg)],
-    ["TS%", percent(production.ts)],
-    ["3P%", percent(production.three_pct)],
-    ["FT%", percent(production.ft_pct)],
-  ] as const;
-  return <div className="table-scroll"><table className="data-table"><thead><tr><th>Observed prior production</th><th className="numeric">Value</th></tr></thead><tbody>{rows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{value}</strong></td></tr>)}</tbody></table></div>;
+    ["Games", "games", production.games.toLocaleString()],
+    ["MIN/G", "mpg", number(production.mpg)],
+    ["PTS/G", "ppg", number(production.ppg)],
+    ["REB/G", "rpg", number(production.rpg)],
+    ["AST/G", "apg", number(production.apg)],
+    ["STL/G", "spg", number(production.spg)],
+    ["BLK/G", "bpg", number(production.bpg)],
+    ["TO/G", "topg", number(production.topg)],
+    ["eFG%", "efg", percent(production.efg)],
+    ["TS%", "ts", percent(production.ts)],
+    ["3P%", "three_pct", percent(production.three_pct)],
+    ["FT%", "ft_pct", percent(production.ft_pct)],
+  ] as const satisfies readonly [string, ProspectProductionMetric, string][];
+  return <div className="table-scroll"><table className="data-table"><thead><tr><th>Observed prior production</th><th className="numeric">Value</th><th className="numeric">Within-edition rank</th></tr></thead><tbody>{rows.map(([label, metric, value]) => { const comparison = context[metric]; return <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{value}</strong></td><td className="numeric">{comparison ? <><strong>#{comparison.rank}</strong><small>of {comparison.cohort} exact-ID links</small></> : "—"}</td></tr>; })}</tbody></table></div>;
 }
 
 export default function ProspectProductionBridge({ athleteId, season }: { athleteId: string; season: number }) {
@@ -75,8 +75,8 @@ export default function ProspectProductionBridge({ athleteId, season }: { athlet
         <div><strong>{production.games}</strong><span>Games</span></div>
         <div><strong>{number(production.mpg)}</strong><span>Minutes / game</span></div>
       </div>
-      <ProductionTable production={production} />
-      <p className="note" style={{ marginTop: 12 }}>Edition <span className="source-hash">{release?.edition}</span> · reviewed {release ? new Date(release.reviewedAt).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" }) : "date unavailable"} · exact athlete ID {production.id}. {production.identity_basis}</p>
+      <ProductionTable production={production} context={release?.productionContext || {}} />
+      <p className="note" style={{ marginTop: 12 }}>Edition <span className="source-hash">{release?.edition}</span> · reviewed {release ? new Date(release.reviewedAt).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" }) : "date unavailable"} · exact athlete ID {production.id}. {production.identity_basis} Within-edition ranks are descending raw-metric comparisons among unique exact-ID production links; they are not player grades, projections or role claims.</p>
     </>}
   </section>;
 }
