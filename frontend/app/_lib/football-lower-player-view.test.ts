@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -100,6 +100,19 @@ describe("lower football player aggregation", () => {
       { key: "passingTouchdowns", label: "TD", categories: ["passing"], source_rows: 1, populated_values: 0 },
       { key: "passingYards", label: "YDS", categories: ["passing"], source_rows: 1, populated_values: 1 },
       { key: "rushingYards", label: "rushingYards", categories: ["rushing"], source_rows: 1, populated_values: 1 },
+    ]);
+  });
+
+  it("exports raw event rows with exact IDs and a stable union of provider fields", () => {
+    const exported = lowerFootballRawExport([
+      row({ game_id: "g2", date: "2026-09-02T00:00:00Z", labels: ["C/ATT", "YDS", "TD"], stats: ["5/10", "100", "1"] }),
+      row({ division: "d3", game_id: "g3", keys: ["passingYards"], stats: ["999"] }),
+      row({ game_id: "g1", date: "2026-09-01T00:00:00Z", labels: ["C/ATT", "YDS", "TD"], stats: ["10/20", "200", "2"] }),
+    ], "d2");
+    expect(exported.headers).toEqual(["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Position", "Team", "Team ID", "Provider labels", "completions/passingAttempts", "passingTouchdowns", "passingYards"]);
+    expect(exported.rows).toEqual([
+      [2026, "D2", "2026-09-01T00:00:00Z", "g1", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "10/20", "2", "200"],
+      [2026, "D2", "2026-09-02T00:00:00Z", "g2", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "5/10", "1", "100"],
     ]);
   });
 });

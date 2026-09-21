@@ -6,6 +6,7 @@ import {
   aggregateLowerFootballPlayers,
   lowerFootballCategories,
   lowerFootballCategoryDefinition,
+  lowerFootballRawExport,
   lowerFootballSourceFieldCoverage,
   lowerFootballSourceFields,
   lowerFootballSourceRows,
@@ -65,6 +66,10 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
       rows.map((row, index) => [index + 1, row.division.toUpperCase(), definition.label, rankingBasis === "per_game" ? "per_game" : "total", row.athlete, row.athlete_id, row.team, row.team_id, row.games, row.source_rows, row.primary, row.per_game, ...Object.keys(rows[0]?.metrics || {}).map((key) => row.metrics[key] ?? null)]),
     ),
   );
+  const downloadRaw = () => {
+    const exported = lowerFootballRawExport(archive?.rows || [], target);
+    downloadCsv("football-" + target + "-player-event-rows-2026.csv", toCsv(exported.headers, exported.rows));
+  };
   if (!archive) return <section className="paper-panel" aria-live="polite"><div className="eyebrow">D{division} PLAYER ARCHIVE</div>{error ? <p className="status-error" role="alert">{error}</p> : <p>Loading the retained lower-division player event archive…</p>}</section>;
   return <section className="paper-panel" aria-labelledby="lower-football-player-title">
     <div className="section-heading"><div><div className="eyebrow">MEN&apos;S FOOTBALL · D{division} PLAYER ARCHIVE</div><h2 id="lower-football-player-title">Rank observed game production.</h2></div><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download CSV ↓</button></div>
@@ -73,6 +78,7 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
     <p className="note">{rows.length.toLocaleString()} qualified players · {archive.coverage.rows_by_division[target]?.toLocaleString() || 0} source rows in D{division} · ranked by {rankingBasis === "per_game" ? `average ${definition.metric} per retained game` : `summed ${definition.metric}`} with missing values excluded.</p>
     <details className="ranking-recorded-details" style={{ marginBottom: 18 }}>
       <summary>Source field coverage · {sourceFieldCoverage.length} fields · {archive.receipts.length.toLocaleString()} receipts</summary>
+      <div className="button-row" style={{ marginTop: 12 }}><button className="button secondary" type="button" onClick={downloadRaw} disabled={!archive.rows.length}>Download raw event rows CSV ↓</button><span className="note">Exact athlete, team, game, category, and provider field values are retained.</span></div>
       <p className="note">These counts audit provider fields within exact {target.toUpperCase()} rows. A populated-value count excludes blank provider cells; it does not turn an unavailable value into zero.</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th>Provider label</th><th>Categories</th><th className="numeric">Rows carrying field</th><th className="numeric">Populated values</th></tr></thead><tbody>{sourceFieldCoverage.map((field) => <tr key={field.key}><th scope="row"><code>{field.key}</code></th><td>{field.label}</td><td>{field.categories.join(", ")}</td><td className="numeric">{field.source_rows.toLocaleString()}</td><td className="numeric">{field.populated_values.toLocaleString()}</td></tr>)}</tbody></table></div>
       <p className="note">Receipt digest: <code>{archive.source.receipt_sha256}</code>. The archive contains {archive.coverage.players_by_division[target]?.toLocaleString() || 0} exact athlete IDs across {archive.coverage.teams.toLocaleString()} retained teams in the combined D2/D3 release; this table stays within D{division}.</p>

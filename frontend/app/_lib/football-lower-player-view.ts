@@ -322,6 +322,51 @@ export function lowerFootballSourceFields(row: LowerFootballRawRow): Array<{ key
   }));
 }
 
+export type LowerFootballRawExport = {
+  headers: string[];
+  rows: Array<Array<string | number | null>>;
+};
+
+/**
+ * Export every retained event row for one exact lower-division scope. The
+ * athlete, team, and game IDs stay in the row so consumers can reproduce the
+ * player/category aggregation without a name-based join.
+ */
+export function lowerFootballRawExport(
+  rows: readonly LowerFootballRawRow[],
+  division: "d2" | "d3",
+): LowerFootballRawExport {
+  const scoped = rows
+    .filter((row) => row.division === division)
+    .slice()
+    .sort((left, right) => String(left.date || "").localeCompare(String(right.date || ""))
+      || left.game_id.localeCompare(right.game_id)
+      || left.athlete_id.localeCompare(right.athlete_id)
+      || left.category.localeCompare(right.category));
+  const fields = [...new Set(scoped.flatMap((row) => row.keys))].sort();
+  const headers = ["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Position", "Team", "Team ID", "Provider labels", ...fields];
+  return {
+    headers,
+    rows: scoped.map((row) => {
+      const values = new Map(row.keys.map((key, index) => [key, row.stats[index] == null || row.stats[index] === "" ? null : row.stats[index]]));
+      return [
+        row.season,
+        row.division.toUpperCase(),
+        row.date || null,
+        row.game_id,
+        row.category,
+        row.athlete || null,
+        row.athlete_id,
+        row.position || null,
+        row.team || null,
+        row.team_id,
+        row.labels?.length ? JSON.stringify(row.labels) : null,
+        ...fields.map((field) => values.get(field) ?? null),
+      ];
+    }),
+  };
+}
+
 export type LowerFootballSourceFieldCoverage = {
   key: string;
   label: string;
