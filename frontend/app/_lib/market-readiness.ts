@@ -62,6 +62,27 @@ export function marketReadinessLabel(state: MarketReadinessState): string {
   }
 }
 
+/** Explain the readiness state without treating an empty capture as a quote. */
+export function marketReadinessDetail(
+  metadata: MarketReadinessMetadata | null | undefined,
+  checking = false,
+): string {
+  switch (marketReadinessState(metadata, checking)) {
+    case "checking":
+      return "Waiting for the market metadata read before classifying quote evidence.";
+    case "unavailable":
+      return "Market metadata is unavailable. Quote readiness remains unverified.";
+    case "unverified":
+      return "No capture receipt with a classified outcome is recorded. No line is inferred from the schedule or model estimate.";
+    case "captured_no_quotes":
+      return "A capture ran without a validated quote. No line is inferred from an unpriced summary or an empty odds payload.";
+    case "captured_rejected":
+      return "A capture ran, but its published quotes failed exact-game or pregame timing checks. Comparisons remain withheld.";
+    case "validated":
+      return "At least one quote passed capture validation. Each quote still needs exact forecast registration and comparison checks.";
+  }
+}
+
 /** Describe what the latest public capture inspected without implying a quote. */
 export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null | undefined): string | null {
   const capture = metadata?.research_capture;

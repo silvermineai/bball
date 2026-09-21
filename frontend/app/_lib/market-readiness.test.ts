@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessLabel, marketReadinessState } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -21,6 +21,13 @@ describe("market connector readiness", () => {
   it("keeps an in-flight request visibly separate", () => {
     expect(marketReadinessState(null, true)).toBe("checking");
     expect(marketReadinessLabel("checking")).toContain("Checking");
+    expect(marketReadinessDetail(null, true)).toContain("Waiting");
+  });
+
+  it("explains missing and rejected evidence without inventing a line", () => {
+    expect(marketReadinessDetail({ provider_capabilities: [{}] })).toContain("No capture receipt");
+    expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "no_quotes_published" } })).toContain("No line is inferred");
+    expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "quotes_failed_validation" } })).toContain("failed exact-game");
   });
 
   it("reports capture coverage separately from accepted quotes", () => {

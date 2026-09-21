@@ -5,6 +5,7 @@ import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import { normalizeMarketSeason } from "../../_lib/market-view";
 import { marketCaptureNextStep, marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
+import { marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "../../_lib/market-readiness";
 
 type Meta = {
   seasons: number[];
@@ -247,6 +248,9 @@ export default function Markets() {
   const pages = useMemo(() => Math.max(1, Math.ceil((data?.total || 0) / 40)), [data]);
   const captureStatus = meta?.research_capture?.market_status;
   const captureNextStep = marketCaptureNextStep(captureStatus);
+  const marketReadiness = marketReadinessState(meta, !meta && !error);
+  const readinessDetail = marketReadinessDetail(meta, !meta && !error);
+  const captureDiagnostic = marketCaptureDiagnostic(meta);
   return (
     <section className="section" aria-label="Historical market archive">
       <div className="paper-panel brief-archive-note">
@@ -272,6 +276,14 @@ export default function Markets() {
               <tr><th scope="row">Validated markets</th><td className="numeric">{(meta.research_capture?.accepted_markets || 0).toLocaleString()}</td><td>Quotes passing exact-game and timing checks</td></tr>
             </tbody>
           </table>
+        </div> : null}
+        {meta ? <div className="analysis-readiness" role="status" aria-label="Prospective market capture readiness">
+          <div className="analysis-readiness-heading">
+            <span>Prospective market capture</span>
+            <strong>{marketReadinessLabel(marketReadiness)}</strong>
+          </div>
+          <p style={{ margin: "8px 0 0" }}>{captureDiagnostic || readinessDetail}</p>
+          {captureDiagnostic && <p className="note" style={{ margin: "6px 0 0" }}>{readinessDetail}</p>}
         </div> : null}
         {meta?.research_capture_summary?.latest_no_quote_capture_at && meta.research_capture_summary.latest_validated_capture_at ? <p className="note" role="status">
           The latest capture had no published quote, while the archive retains an earlier validated capture from {clock(meta.research_capture_summary.latest_validated_capture_at)}. Current availability and historical evidence are shown separately.
