@@ -59,15 +59,16 @@ function NationalProspectPanel({ records, loading }: { records: NationalProspect
       </div>
       <p className="note">These rows are joined only by the publisher athlete ID. They preserve the class, recorded rank, grade, destination and capture edition; a missing row is unavailable evidence, not a claim that the player was never ranked.</p>
       {loading ? <p className="empty" role="status">Checking national prospect editions…</p> : records.length ? (
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Position</th><th>Recorded destination</th><th>Capture</th></tr></thead><tbody>
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Position</th><th>Recorded destination</th><th>Capture</th></tr></thead><tbody>
           {records.map((record) => <tr key={`${record.season}-${record.athlete_id}`}>
             <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${record.season}&id=${encodeURIComponent(record.athlete_id)}`}>{record.season}</Link><small>Exact ID {record.athlete_id}</small></th>
             <td>{record.name}</td>
             <td className="numeric">{record.rank == null || record.rank <= 0 ? "—" : `#${record.rank}`}</td>
+            <td className="numeric">{record.rank == null || record.previous_rank == null ? "—" : record.previous_rank - record.rank === 0 ? "—" : record.previous_rank - record.rank > 0 ? `▲ ${record.previous_rank - record.rank}` : `▼ ${Math.abs(record.previous_rank - record.rank)}`}<small>{record.previous_rank == null ? "Prior rank unavailable" : `prior #${record.previous_rank}`}</small></td>
             <td className="numeric">{record.grade == null || record.grade <= 0 ? "—" : record.grade.toFixed(1)}</td>
             <td>{record.position || "—"}</td>
             <td>{record.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(record.committed_team_id)}/`}>{record.committed_team_name || "Recorded destination"}</Link> : record.committed_team_name || record.status || "Not recorded"}</td>
-            <td><small>{record.captured_at ? new Date(record.captured_at).toLocaleDateString("en-US", { timeZone: "UTC" }) : "Date unavailable"}</small><small className="source-hash">{record.edition ? `${record.edition.slice(0, 12)}…` : "Edition unavailable"}</small></td>
+            <td><small>{record.captured_at ? new Date(record.captured_at).toLocaleDateString("en-US", { timeZone: "UTC" }) : "Date unavailable"}</small><small>{record.previous_captured_at ? `Prior ${new Date(record.previous_captured_at).toLocaleDateString("en-US", { timeZone: "UTC" })}` : "Prior capture unavailable"}</small><small className="source-hash">{record.edition ? `${record.edition.slice(0, 12)}…` : "Edition unavailable"}</small></td>
           </tr>)}
         </tbody></table></div>
       ) : <p className="empty" role="status">No exact-ID row is retained in the tracked national prospect editions for this player.</p>}

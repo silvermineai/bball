@@ -36,6 +36,8 @@ export type NationalProspectEvidence = {
   name: string;
   position: string | null;
   rank: number | null;
+  previous_rank: number | null;
+  previous_captured_at: string | null;
   grade: number | null;
   committed_team_id: string | null;
   committed_team_name: string | null;
@@ -65,13 +67,15 @@ export function parsePlayerNationalProspectPayload(
   const nullableNumber = (value: unknown) => value == null ? null : typeof value === "number" && Number.isFinite(value) ? value : undefined;
   const position = nullableString(row.position);
   const rank = nullableNumber(row.rank);
+  const previousRank = nullableNumber(row.previous_rank);
+  const previousCapturedAt = nullableString(row.previous_captured_at);
   const grade = nullableNumber(row.grade);
   const committedTeamId = nullableString(row.committed_team_id);
   const committedTeamName = nullableString(row.committed_team_name);
   const status = nullableString(row.status);
   const capturedAt = nullableString(payload.captured_at);
   const edition = nullableString(payload.edition);
-  if (position === undefined || rank === undefined || grade === undefined
+  if (position === undefined || rank === undefined || previousRank === undefined || previousCapturedAt === undefined || grade === undefined
     || committedTeamId === undefined || committedTeamName === undefined
     || status === undefined || capturedAt === undefined || edition === undefined) return null;
   return {
@@ -80,6 +84,8 @@ export function parsePlayerNationalProspectPayload(
     name: row.name.trim(),
     position,
     rank,
+    previous_rank: previousRank,
+    previous_captured_at: previousCapturedAt,
     grade,
     committed_team_id: committedTeamId,
     committed_team_name: committedTeamName,
