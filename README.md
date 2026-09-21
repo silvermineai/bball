@@ -4,7 +4,7 @@ College sports statistics, scouting and recruiting research from Silvermine.
 
 **Live:** https://bball.silvermine.dev
 
-The publication covers football and men’s college basketball with a Next.js frontend, Python bulk-data pipelines, independent forecast models and Cloudflare D1 storage. Native basketball pages now include 2026–27 forecasts, efficiency ratings, player statistics, NCAA impact rankings and roster observations. The site RSS feed also carries the latest permitted ESPN/NCAA publisher-wire headlines with original links and NCAA division scope.
+The publication covers football, men’s college basketball and women’s college basketball with a Next.js frontend, Python bulk-data pipelines, independent forecast models and Cloudflare D1 storage. Native basketball pages now include 2026–27 forecasts, efficiency ratings, player statistics, impact rankings and roster observations. The site RSS feed also carries permitted publisher-wire headlines with original links and NCAA division scope.
 
 Cloudflare uses four stores: `bball-football-v1` holds the high-volume football research archive, `bball-silvermine` keeps native scouting and compatibility tables, `bball-research-v2` holds basketball research datasets, both sports’ append-only forecast ledger, market evidence and immutable brief-archive metadata, and `bball-ncaa-box-v1` holds the high-volume NCAA player-game archive. The Worker’s `FOOTBALL_DB` and `NCAA_BOX_DB` bindings keep those large archives out of the shared stores while preserving the same public APIs. This keeps scheduled research refreshes independent of the legacy stores’ size ceilings.
 
@@ -79,6 +79,12 @@ See [football architecture, source policy, model design, refresh workflow and re
 The independent 2025–26 test scored 5,734 games at **67.2% winner accuracy** and **10.39-point margin MAE**. The weekly evaluation desk also publishes independent 2023–24 and 2024–25 transitions, with downloadable rows and fit evidence for all three dated tests. The historical player archive retains **3.68 million identified box-score rows** across 24 seasons. The nominal 80% margin interval covered **79.0%** of test outcomes. These retrospective results do not establish a betting advantage. Future roster listings are unconfirmed; roster absence does not imply departure.
 
 Existing basketball URLs such as `/scout/333` redirect to the native `/basketball/scout/333/` dossier aliases. Native pages replace the old desk, player index, recruiting landing page, scouting archive, rankings, team, game and press indexes; game-planning and other remaining archive tools use the preserved application.
+
+## Women’s basketball
+
+The women’s desk is a separate sport edition, never a men’s fallback. It publishes observed player production, game-box aggregates, team source fields, shot-location profiles, player rankings, team ratings, upcoming games and an independently fit 2026–27 forecast. The current women’s model contains **2,283 upcoming forecasts** (2,207 primary and 76 cold-start rows), with **5,897 held-out 2026 games** and **17,339 calibration games** retained in the publication artifact. Women’s Division II and III rows remain explicit intake boundaries until a retained release supplies division labels and stable identities; no rows are inferred from school names or conference names.
+
+Open the women’s desk at `/basketball/?gender=women&division=1`; the shared sport tabs preserve the same Teams, Players, Recruiting, Games, Predictions, Learn, Rankings and Division workflow.
 
 See [basketball architecture, source policy, model design and refresh workflow](docs/BASKETBALL.md).
 
