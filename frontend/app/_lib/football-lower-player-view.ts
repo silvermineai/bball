@@ -10,6 +10,8 @@ export type LowerFootballRawRow = {
   position?: string | null;
   category: string;
   keys: string[];
+  /** Provider display labels aligned to keys when the response supplied them. */
+  labels?: string[];
   stats: string[];
 };
 
@@ -117,6 +119,39 @@ export function aggregateLowerFootballPlayers(
     }))
     .filter((player) => player.primary > 0)
     .sort((left, right) => right.primary - left.primary || left.athlete.localeCompare(right.athlete) || left.athlete_id.localeCompare(right.athlete_id));
+}
+
+/**
+ * Return the retained source rows for one exact lower-division player scope.
+ *
+ * The archive has an athlete ID and team ID on every accepted row. Keep both
+ * in the selector so a transfer or provider duplicate cannot merge two
+ * programs, and keep the requested division/category in the predicate so a
+ * detail panel can never leak a neighboring scope.
+ */
+export function lowerFootballSourceRows(
+  rows: readonly LowerFootballRawRow[],
+  division: "d2" | "d3",
+  category: LowerFootballCategory,
+  athleteId: string,
+  teamId: string,
+): LowerFootballRawRow[] {
+  return rows
+    .filter((row) => row.division === division
+      && row.category === category
+      && row.athlete_id === athleteId
+      && row.team_id === teamId)
+    .slice()
+    .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || right.game_id.localeCompare(left.game_id));
+}
+
+/** Pair a retained source row's field names with its raw values for display. */
+export function lowerFootballSourceFields(row: LowerFootballRawRow): Array<{ key: string; label: string; value: string | null }> {
+  return row.keys.map((key, index) => ({
+    key,
+    label: row.labels?.[index] || key,
+    value: row.stats[index] == null || row.stats[index] === "" ? null : String(row.stats[index]),
+  }));
 }
 
 export function lowerFootballCategoryDefinition(category: LowerFootballCategory) {
