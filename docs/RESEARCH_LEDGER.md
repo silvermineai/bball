@@ -52,6 +52,16 @@ Model and market errors are compared on exactly the same settled games, separate
 
 The legacy SportsDataverse betting archive remains outside this evaluation because it does not provide a verified publisher clock/bookmaker. Its importer no longer promotes future archive rows to verified pregame observations solely because they were downloaded before a scheduled game.
 
+### Connector configuration preflight
+
+Before starting a capture, run the redacted connector preflight:
+
+```bash
+PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_config
+```
+
+It reports whether `THE_ODDS_API_KEY`/`ODDS_API_KEY` or `CBBD_API_KEY`/`COLLEGE_BASKETBALL_DATA_API_KEY` is configured, and lists the no-credential ESPN and licensed-CSV paths. It never prints credential values or makes a provider request. A `missing` status keeps the capture fail-closed; configure the server environment or use the exact-match CSV path below.
+
 ### Licensed CSV imports
 
 When a licensed provider supplies a CSV export instead of an API credential, `market_csv.py` provides the same fail-closed path without scraping sportsbook pages. Every import requires the sport, provider name, license URL and source file. Required columns are `game_id`, `market` (`spreads`, `totals` or `h2h`), `starts_at`, `captured_at`, `updated_at`, `home_name`, `away_name`, `bookmaker`, plus a line and both decimal prices (or American prices) for the selected market. The importer checks the exact source game ID, participant names, UTC start, pregame capture and provider-update clocks, stores a file SHA-256 receipt, and rolls back the entire file if any row fails. It never infers a game from a team-name search.
