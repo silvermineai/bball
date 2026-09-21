@@ -18,6 +18,48 @@ import {
 } from "../_lib/division-player-detail";
 
 type Publication = { season: number; generated_at: string; players: DivisionPlayerWithEvidence[] };
+type LiveRankingRow = {
+  player_id: string | number;
+  division: string | number;
+  name: string;
+  team_name?: string | null;
+  publisher_rank?: number | null;
+  payload?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+type LiveRankingResponse = {
+  season?: number;
+  total?: number;
+  pages?: number;
+  rows?: LiveRankingRow[];
+  provenance?: { kind?: string; dataset?: string; note?: string };
+};
+
+// The live source-native endpoint covers these measures. The remaining
+// retained D2/D3 fields stay available through the static archive until a
+// matching public endpoint exists; no field is synthesized in the fallback.
+const liveMetrics = new Set<string>([
+  "ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct",
+  "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl",
+  "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta",
+  "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins",
+]);
+
+export function normalizeLiveRow(row: LiveRankingRow, metric: DivisionRankingMetric): DivisionPlayerWithEvidence {
+  const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+  const sourceRank = typeof row.publisher_rank === "number" ? row.publisher_rank : null;
+  const selectedValue = row[metric];
+  return {
+    ...payload,
+    player_id: String(row.player_id),
+    division: String(row.division),
+    name: row.name || String(payload.name || row.player_id),
+    team_name: row.team_name ?? (typeof payload.team_name === "string" ? payload.team_name : null),
+    [metric]: typeof selectedValue === "number" ? selectedValue : null,
+    [`${metric}_rank`]: sourceRank,
+    source_stats: payload.source_stats as DivisionPlayerWithEvidence["source_stats"],
+  } as DivisionPlayerWithEvidence;
+}
 
 const value = (raw: number | null | undefined, digits = 1) =>
   typeof raw === "number" && Number.isFinite(raw) ? raw.toFixed(digits) : "—";
@@ -37,6 +79,9 @@ const captured = (raw: string) => {
 
 export default function DivisionPlayerRankings({ division }: { division: "2" | "3" }) {
   const [publication, setPublication] = useState<Publication | null>(null);
+  const [liveRows, setLiveRows] = useState<DivisionPlayerWithEvidence[] | null>(null);
+  const [liveTotal, setLiveTotal] = useState<number | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"checking" | "ready" | "unavailable" | "static">("checking");
   const [query, setQuery] = useState("");
   const [metric, setMetric] = useState<DivisionRankingMetric>("ppg");
   const [minGames, setMinGames] = useState("5");
@@ -54,6 +99,44 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!liveMetrics.has(metric)) {
+      setLiveRows(null);
+      setLiveTotal(null);
+      setLiveStatus("static");
+      return;
+    }
+    const controller = new AbortController();
+    setLiveStatus("checking");
+    const params = new URLSearchParams({ division, stat: metric, min_games: minGames, page: "0" });
+    if (query.trim()) params.set("q", query.trim());
+    const load = async () => {
+      const firstResponse = await fetch(`/api/basketball/research/ncaa-leaders?${params.toString()}`, { signal: controller.signal });
+      if (!firstResponse.ok) throw new Error("Live division rankings unavailable");
+      const first = await firstResponse.json() as LiveRankingResponse;
+      const pageCount = Math.min(3, Math.max(1, Number(first.pages) || 1));
+      const pages = [first, ...await Promise.all(Array.from({ length: pageCount - 1 }, (_, index) => {
+        const pageParams = new URLSearchParams(params);
+        pageParams.set("page", String(index + 1));
+        return fetch(`/api/basketball/research/ncaa-leaders?${pageParams.toString()}`, { signal: controller.signal })
+          .then((response) => response.ok ? response.json() as Promise<LiveRankingResponse> : Promise.reject(new Error("Live division rankings unavailable")));
+      }))];
+      const rows = pages.flatMap((page) => (page.rows || []).map((row) => normalizeLiveRow(row, metric)));
+      if (controller.signal.aborted) return;
+      setLiveRows(rows);
+      setLiveTotal(Number(first.total) || rows.length);
+      setLiveStatus("ready");
+    };
+    load().catch((reason: unknown) => {
+      if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+        setLiveRows(null);
+        setLiveTotal(null);
+        setLiveStatus("unavailable");
+      }
+    });
+    return () => controller.abort();
+  }, [division, metric, minGames, query]);
+
   const result = useMemo(() => rankDivisionPlayers(publication?.players || [], {
     division,
     metric,
@@ -61,6 +144,9 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
     minGames: Number(minGames),
     limit: 100,
   }), [division, metric, minGames, publication, query]);
+  const activeResult = useMemo(() => liveRows
+    ? rankDivisionPlayers(liveRows, { division, metric, query: "", minGames: 0, limit: 100 })
+    : result, [division, liveRows, metric, result]);
   const coverage = useMemo(() => divisionMetricCoverage(publication?.players || [], {
     division,
     metric,
@@ -85,10 +171,10 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
           {[0, 5, 10, 15, 20].map((games) => <option key={games} value={games}>{games ? `${games} games` : "Any recorded games"}</option>)}
         </select>
       </div>
-      <p className="note">{result.total.toLocaleString()} qualifying players · showing {result.rows.length} · {divisionMetricLabel(metric)} · season {publication.season} · captured {captured(publication.generated_at)}.</p>
-      <p className="note" role="status">Metric coverage: {coverage.valueRows.toLocaleString()} of {coverage.gameQualifiedRows.toLocaleString()} search and game-qualified {division === "2" ? "Division II" : "Division III"} rows have a recorded {divisionMetricLabel(metric).toLowerCase()} value{coverage.missingValueRows ? `; ${coverage.missingValueRows.toLocaleString()} remain unavailable` : "."} The {coverage.divisionRows.toLocaleString()}-row division denominator is retained for context.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th><th>Recorded stats</th></tr></thead><tbody>{result.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td><td><details className="ranking-recorded-details"><summary>Open retained fields</summary><p className="note">Source values retained for this player row. A dash means the release did not contain a finite numeric value; no value is inferred.</p>{divisionPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{detailValue(player, key, kind)}</strong></span>)}</div></div>)}{player.source_stats && Object.keys(player.source_stats).length ? <p className="note">Publisher evidence: {Object.entries(player.source_stats).map(([key, evidence]) => `${key}${evidence.rank == null ? "" : ` (#${evidence.rank})`}${evidence.value == null ? "" : ` = ${evidence.value}`}`).join(" · ")}</p> : null}</details></td></tr>)}</tbody></table></div>
-      {!result.rows.length ? <p className="empty">No retained players match this ranking filter.</p> : null}
+      <p className="note">{liveStatus === "ready" ? `${(liveTotal ?? activeResult.total).toLocaleString()} live qualifying players` : `${activeResult.total.toLocaleString()} qualifying players`} · showing {activeResult.rows.length} · {divisionMetricLabel(metric)} · season {publication.season} · {liveStatus === "ready" ? "current source API" : `captured ${captured(publication.generated_at)}`}{liveStatus === "unavailable" ? " · live refresh unavailable; using the retained archive" : ""}.</p>
+      <p className="note" role="status">{liveStatus === "ready" ? "Live publisher rows are filtered by exact division, selected metric, and minimum games. Missing source fields remain absent; the table falls back to the retained archive only when the live request is unavailable." : `Metric coverage: ${coverage.valueRows.toLocaleString()} of ${coverage.gameQualifiedRows.toLocaleString()} search and game-qualified ${division === "2" ? "Division II" : "Division III"} rows have a recorded ${divisionMetricLabel(metric).toLowerCase()} value${coverage.missingValueRows ? `; ${coverage.missingValueRows.toLocaleString()} remain unavailable` : "."} The ${coverage.divisionRows.toLocaleString()}-row division denominator is retained for context.`}</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th><th>Recorded stats</th></tr></thead><tbody>{activeResult.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td><td><details className="ranking-recorded-details"><summary>Open retained fields</summary><p className="note">Source values retained for this player row. A dash means the release did not contain a finite numeric value; no value is inferred.</p>{divisionPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{detailValue(player, key, kind)}</strong></span>)}</div></div>)}{player.source_stats && Object.keys(player.source_stats).length ? <p className="note">Publisher evidence: {Object.entries(player.source_stats).map(([key, evidence]) => `${key}${evidence.rank == null ? "" : ` (#${evidence.rank})`}${evidence.value == null ? "" : ` = ${evidence.value}`}`).join(" · ")}</p> : null}</details></td></tr>)}</tbody></table></div>
+      {!activeResult.rows.length ? <p className="empty">No retained players match this ranking filter.</p> : null}
       <p className="muted">These are final-season descriptive records from the retained national individual archive. They do not infer eligibility, role, availability, future performance, or a composite player grade.</p>
     </>}
   </section>;
