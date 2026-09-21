@@ -215,10 +215,31 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
             rejected += 1
     # Keep the bounded capture diagnostics with the receipt. This lets the
     # public market status explain an empty capture without exposing raw
-    # summaries or treating rejected rows as missing data.
+    # summaries or treating rejected rows as missing data. In particular, a
+    # failed request for every eligible game is different from a successful
+    # response that contained no published quote.
+    eligible_games = receipt.get("eligible_games")
+    fetch_failures = receipt.get("summary_fetch_failures", 0)
+    if not isinstance(eligible_games, int) or eligible_games < 0:
+        eligible_games = len(summaries)
+    if not isinstance(fetch_failures, int) or fetch_failures < 0:
+        fetch_failures = 0
     conn.execute(
         "UPDATE audit_receipts SET payload_json=? WHERE id=?",
-        (encoded({**receipt, "accepted_markets": accepted, "rejected_records": rejected}), receipt_id),
+        (encoded({
+            **receipt,
+            "eligible_games": eligible_games,
+            "summary_fetch_failures": fetch_failures,
+            "accepted_markets": accepted,
+            "rejected_records": rejected,
+            "market_status": (
+                "validated_quotes" if accepted > 0 else
+                "quotes_failed_validation" if rejected > 0 else
+                "capture_incomplete" if fetch_failures > 0 and eligible_games > 0 else
+                "no_quotes_published" if summaries else
+                "no_eligible_summaries"
+            ),
+        }), receipt_id),
     )
     conn.commit()
     return {"accepted_markets": accepted, "rejected_records": rejected}
@@ -283,6 +304,7 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
         raise ValueError("limit must be between 1 and 300")
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
+    fetch_failures = 0
     CACHE.mkdir(parents=True, exist_ok=True)
     for index, game in enumerate(games):
         if index:
@@ -293,6 +315,7 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
         try:
             with requests.get(url, headers={"Accept": "application/json", "User-Agent": "SilvermineResearch/1.0 (bball.silvermine.dev)"}, timeout=(5, 15), stream=True, allow_redirects=False) as response:
                 if response.status_code != 200:
+                    fetch_failures += 1
                     continue
                 chunks: list[bytes] = []
                 size = 0
@@ -305,14 +328,17 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
                         break
                     chunks.append(chunk)
                 if not chunks:
+                    fetch_failures += 1
                     continue
                 body = b"".join(chunks)
                 summary = json.loads(body.decode("utf-8"))
                 if not isinstance(summary, dict):
+                    fetch_failures += 1
                     continue
                 (CACHE / f"espn-summary-{event_id}.json").write_bytes(body)
                 summaries.append({"event_id": event_id, "summary": summary, "url": url})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
+            fetch_failures += 1
             continue
     diagnostics = summary_capture_diagnostics(summaries)
     receipt = {
@@ -323,6 +349,8 @@ def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],
+        "eligible_games": len(games),
+        "summary_fetch_failures": fetch_failures,
         **diagnostics,
         "timing_basis": "summary_capture",
         "sha256": digest(summaries),

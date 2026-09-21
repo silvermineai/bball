@@ -29,6 +29,8 @@ type Meta = {
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
+    eligible_games?: number;
+    summary_fetch_failures?: number;
     source_rows?: number;
     rows_with_lines?: number;
     accepted_markets?: number;
@@ -43,6 +45,8 @@ type Meta = {
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
+    eligible_games?: number;
+    summary_fetch_failures?: number;
     accepted_markets?: number;
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
@@ -270,6 +274,8 @@ export default function Markets() {
               <tr><th scope="row">Capture receipts</th><td className="numeric">{(meta.research_receipts || 0).toLocaleString()}</td><td>Research capture attempts retained</td></tr>
               <tr><th scope="row">Validated capture attempts</th><td className="numeric">{(meta.research_capture_summary?.captures_with_validated_markets || 0).toLocaleString()}</td><td>Attempts that retained at least one timing-validated market</td></tr>
               <tr><th scope="row">Future summaries checked</th><td className="numeric">{(meta.research_capture?.summary_count || 0).toLocaleString()}</td><td>Scheduled games inspected by the capture</td></tr>
+              <tr><th scope="row">Eligible games</th><td className="numeric">{meta.research_capture?.eligible_games == null ? "—" : meta.research_capture.eligible_games.toLocaleString()}</td><td>Confirmed future games in the requested capture window</td></tr>
+              <tr><th scope="row">Summary requests failed</th><td className="numeric">{(meta.research_capture?.summary_fetch_failures || 0).toLocaleString()}</td><td>Games whose public summary could not be read; these remain unresolved</td></tr>
               <tr><th scope="row">Capture window</th><td className="numeric">{meta.research_capture?.horizon_days != null ? `${meta.research_capture.horizon_days} days` : "—"}</td><td>Prospective schedule window requested by the connector</td></tr>
               <tr><th scope="row">Complete quotes</th><td className="numeric">{(meta.research_capture?.summary_with_pickcenter || 0).toLocaleString()}</td><td>Summaries containing a complete quote set</td></tr>
               <tr><th scope="row">Non-empty odds payloads</th><td className="numeric">{(meta.research_capture?.summary_with_odds || 0).toLocaleString()}</td><td>Summaries with provider odds data; these still require quote validation</td></tr>
@@ -292,13 +298,14 @@ export default function Markets() {
           <summary>Recent capture attempts</summary>
           <div className="table-scroll" style={{ marginTop: 12 }}>
             <table className="data-table">
-              <thead><tr><th>Captured (UTC)</th><th>Season</th><th>Window</th><th>Status</th><th className="numeric">Summaries / rows</th><th className="numeric">Quotes accepted</th><th className="numeric">Rejected</th></tr></thead>
+              <thead><tr><th>Captured (UTC)</th><th>Season</th><th>Window</th><th>Status</th><th className="numeric">Summaries / rows</th><th className="numeric">Fetch failures</th><th className="numeric">Quotes accepted</th><th className="numeric">Rejected</th></tr></thead>
               <tbody>{meta.research_capture_history.map((capture, index) => <tr key={`${capture.captured_at}-${capture.season || "all"}-${index}`}>
                 <th scope="row">{clock(capture.captured_at)}</th>
                 <td>{capture.season ?? "—"}</td>
                 <td>{capture.horizon_days != null ? `${capture.horizon_days} days` : "—"}</td>
                 <td>{capture.market_status ? marketCaptureStatusLabel(capture.market_status) : "Unclassified"}</td>
                 <td className="numeric">{(capture.summary_count ?? capture.source_rows ?? 0).toLocaleString()}<small>{capture.summary_with_pickcenter != null ? `${capture.summary_with_pickcenter.toLocaleString()} complete quotes` : `${(capture.rows_with_lines ?? 0).toLocaleString()} rows with lines`}</small></td>
+                <td className="numeric">{(capture.summary_fetch_failures ?? 0).toLocaleString()}</td>
                 <td className="numeric">{(capture.accepted_markets ?? 0).toLocaleString()}</td>
                 <td className="numeric">{(capture.rejected_records ?? 0).toLocaleString()}</td>
               </tr>)}</tbody>

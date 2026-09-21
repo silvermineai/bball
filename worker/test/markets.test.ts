@@ -127,6 +127,33 @@ describe("market archive metadata", () => {
     });
   });
 
+  it("labels an all-failed eligible capture incomplete instead of no quotes", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 0, pregame: 0 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "ESPN Summary",
+        sport: "basketball",
+        season: 2027,
+        eligible_games: 12,
+        summary_count: 0,
+        summary_with_pickcenter: 0,
+        summary_fetch_failures: 12,
+        accepted_markets: 0,
+        rejected_records: 0,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: {
+        eligible_games: 12,
+        summary_fetch_failures: 12,
+        market_status: "capture_incomplete",
+      },
+    });
+  });
+
   it("surfaces a configured Odds API capture without exposing its provider identity", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },

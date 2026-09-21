@@ -12,6 +12,8 @@ export type MarketReadinessMetadata = {
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
+    eligible_games?: number;
+    summary_fetch_failures?: number;
     accepted_markets?: number;
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
@@ -24,6 +26,7 @@ export type MarketReadinessState =
   | "unverified"
   | "captured_no_quotes"
   | "captured_rejected"
+  | "captured_incomplete"
   | "validated";
 
 /**
@@ -43,6 +46,8 @@ export function marketReadinessState(
       return "validated";
     case "quotes_failed_validation":
       return "captured_rejected";
+    case "capture_incomplete":
+      return "captured_incomplete";
     case "no_eligible_summaries":
     case "no_quotes_published":
       return "captured_no_quotes";
@@ -58,6 +63,7 @@ export function marketReadinessLabel(state: MarketReadinessState): string {
     case "unverified": return "Capture not qualified";
     case "captured_no_quotes": return "Capture ran · no quote qualified";
     case "captured_rejected": return "Capture ran · quotes rejected";
+    case "captured_incomplete": return "Capture incomplete · retry required";
     case "validated": return "Validated quote capture available";
   }
 }
@@ -78,6 +84,8 @@ export function marketReadinessDetail(
       return "A capture ran without a validated quote. No line is inferred from an unpriced summary or an empty odds payload.";
     case "captured_rejected":
       return "A capture ran, but its published quotes failed exact-game or pregame timing checks. Comparisons remain withheld.";
+    case "captured_incomplete":
+      return "A capture ran, but one or more eligible game summaries could not be read. Comparisons remain withheld until a complete capture is available.";
     case "validated":
       return "At least one quote passed capture validation. Each quote still needs exact forecast registration and comparison checks.";
   }
@@ -91,7 +99,9 @@ export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null
   const oddsPayloads = capture.summary_with_odds;
   const accepted = capture.accepted_markets;
   const rejected = capture.rejected_records;
-  return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
+  const eligible = capture.eligible_games;
+  const failures = capture.summary_fetch_failures;
+  return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries${eligible == null ? "" : ` of ${eligible.toLocaleString()} eligible games`}; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${failures == null ? "" : `; ${failures.toLocaleString()} summary requests failed`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
 }
 
 type ComparisonReadiness = NonNullable<SportSummary["comparison_readiness"]>;

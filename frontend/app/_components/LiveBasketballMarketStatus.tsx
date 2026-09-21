@@ -33,6 +33,8 @@ type MarketMetadata = {
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
+    eligible_games?: number;
+    summary_fetch_failures?: number;
     accepted_markets?: number;
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
@@ -82,7 +84,7 @@ export default function LiveBasketballMarketStatus() {
       : " A connector capture has run."
       : " No line capture is recorded yet.";
   const captureDiagnostic = archive?.research_capture?.summary_count != null
-    ? ` The latest public capture checked ${archive.research_capture.summary_count.toLocaleString()} future summaries${archive.research_capture.horizon_days != null ? ` within a ${archive.research_capture.horizon_days}-day window` : ""}; ${(archive.research_capture.summary_with_pickcenter || 0).toLocaleString()} included complete market quotes${archive.research_capture.summary_with_odds != null ? `, and ${archive.research_capture.summary_with_odds.toLocaleString()} had a non-empty odds payload` : ""}${archive.research_capture.accepted_markets != null ? `; ${archive.research_capture.accepted_markets.toLocaleString()} markets passed validation` : ""}${archive.research_capture.rejected_records != null ? `; ${archive.research_capture.rejected_records.toLocaleString()} summaries were rejected` : ""}.`
+    ? ` The latest public capture checked ${archive.research_capture.summary_count.toLocaleString()} future summaries${archive.research_capture.eligible_games == null ? "" : ` of ${archive.research_capture.eligible_games.toLocaleString()} eligible games`}${archive.research_capture.horizon_days != null ? ` within a ${archive.research_capture.horizon_days}-day window` : ""}; ${(archive.research_capture.summary_with_pickcenter || 0).toLocaleString()} included complete market quotes${archive.research_capture.summary_with_odds != null ? `, and ${archive.research_capture.summary_with_odds.toLocaleString()} had a non-empty odds payload` : ""}${archive.research_capture.summary_fetch_failures != null ? `; ${archive.research_capture.summary_fetch_failures.toLocaleString()} summary requests failed` : ""}${archive.research_capture.accepted_markets != null ? `; ${archive.research_capture.accepted_markets.toLocaleString()} markets passed validation` : ""}${archive.research_capture.rejected_records != null ? `; ${archive.research_capture.rejected_records.toLocaleString()} summaries were rejected` : ""}.`
     : "";
   const captureStatus = archive?.research_capture?.market_status;
   const captureStatusNote = captureStatus

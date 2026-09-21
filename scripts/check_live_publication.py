@@ -114,7 +114,7 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     if not isinstance(capture, dict):
         raise ValueError(f"{sport} market capture metadata is malformed")
     status = capture.get("market_status")
-    allowed = {"no_eligible_summaries", "no_quotes_published", "quotes_failed_validation", "validated_quotes"}
+    allowed = {"no_eligible_summaries", "no_quotes_published", "quotes_failed_validation", "capture_incomplete", "validated_quotes"}
     if status not in allowed:
         raise ValueError(f"{sport} market capture has an unresolved status")
     captured_at = capture.get("captured_at")
@@ -139,6 +139,8 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     if priced_rows is None:
         priced_rows = nonnegative_int("rows_with_lines")
     summary_with_odds = nonnegative_int("summary_with_odds")
+    eligible_games = nonnegative_int("eligible_games")
+    fetch_failures = nonnegative_int("summary_fetch_failures") or 0
     accepted = nonnegative_int("accepted_markets") or 0
     rejected = nonnegative_int("rejected_records") or 0
     source_count = summary_count if summary_count is not None else source_rows
@@ -148,8 +150,15 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
         raise ValueError(f"{sport} market capture has more quote summaries than inspected summaries")
     if summary_with_odds is not None and summary_count is not None and summary_with_odds > summary_count:
         raise ValueError(f"{sport} market capture has more odds summaries than inspected summaries")
+    if eligible_games is not None:
+        if source_count is not None and source_count > eligible_games:
+            raise ValueError(f"{sport} market capture inspected more summaries than eligible games")
+        if fetch_failures > eligible_games:
+            raise ValueError(f"{sport} market capture has more fetch failures than eligible games")
+        if source_count is not None and source_count + fetch_failures > eligible_games:
+            raise ValueError(f"{sport} market capture counts exceed eligible games")
     if status == "no_eligible_summaries":
-        if source_count != 0 or accepted or rejected:
+        if source_count != 0 or eligible_games not in (None, 0) or accepted or rejected:
             raise ValueError(f"{sport} market capture no-eligible status does not reconcile")
     elif status == "no_quotes_published":
         if source_count <= 0 or (priced_rows or 0) != 0 or accepted or rejected:
@@ -157,6 +166,9 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     elif status == "quotes_failed_validation":
         if source_count <= 0 or (priced_rows or 0) <= 0 or accepted or rejected <= 0:
             raise ValueError(f"{sport} market capture rejected status does not reconcile")
+    elif status == "capture_incomplete":
+        if eligible_games is None or eligible_games <= 0 or fetch_failures <= 0 or accepted or rejected:
+            raise ValueError(f"{sport} market capture incomplete status does not reconcile")
     elif accepted <= 0:
         raise ValueError(f"{sport} market capture validated status has no accepted markets")
     return status

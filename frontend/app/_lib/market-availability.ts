@@ -2,6 +2,7 @@ export type MarketCaptureStatus =
   | "no_eligible_summaries"
   | "no_quotes_published"
   | "quotes_failed_validation"
+  | "capture_incomplete"
   | "validated_quotes"
   | "unknown";
 
@@ -13,6 +14,8 @@ export function marketCaptureStatusLabel(status: MarketCaptureStatus | null | un
       return "Captured summaries contained no published quotes";
     case "quotes_failed_validation":
       return "Published quotes failed exact-game or timing checks";
+    case "capture_incomplete":
+      return "Capture incomplete · some eligible summaries could not be read";
     case "validated_quotes":
       return "Validated quotes are available";
     default:
@@ -28,6 +31,8 @@ export function marketCaptureStatusDetail(status: MarketCaptureStatus | null | u
       return "The captured game summaries did not publish a complete market. No line is inferred.";
     case "quotes_failed_validation":
       return "A quote was seen, but it did not pass exact participants, start-time and pregame checks.";
+    case "capture_incomplete":
+      return "Some eligible game summaries could not be read during the capture. Quote availability remains unresolved; no line is inferred.";
     case "validated_quotes":
       return "At least one quote passed the exact participants, start-time and pregame checks.";
     default:
@@ -44,6 +49,8 @@ export function marketCaptureNextStep(status: MarketCaptureStatus | null | undef
       return "Use the authorized CSV template for a licensed export, or rerun capture when the provider publishes a complete pregame market.";
     case "quotes_failed_validation":
       return "Correct the rejected rows using exact game IDs, participants, and pregame capture/update clocks before importing again.";
+    case "capture_incomplete":
+      return "Retry the bounded capture after the source responds; use the authorized CSV template only when a complete quote and timing record is available.";
     case "validated_quotes":
       return "Open the forecast record to inspect the qualifying model-to-line comparisons.";
     default:

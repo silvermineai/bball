@@ -96,6 +96,8 @@ type LiveMarketMetadata = {
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
+    eligible_games?: number;
+    summary_fetch_failures?: number;
     accepted_markets?: number;
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
@@ -416,7 +418,7 @@ export default function ForecastLab({
   const captureSummary = marketMetadata?.source === "unavailable"
     ? marketMetadata.unavailable_reason || "The market capture warehouse is temporarily unavailable."
     : capture?.summary_count != null
-    ? `The latest public capture checked ${capture.summary_count.toLocaleString()} future summaries; ${(capture.summary_with_pickcenter || 0).toLocaleString()} contained complete quote sets${capture.summary_with_odds == null ? "" : ` and ${(capture.summary_with_odds || 0).toLocaleString()} had a non-empty odds payload`}.`
+    ? `The latest public capture checked ${capture.summary_count.toLocaleString()} future summaries${capture.eligible_games == null ? "" : ` of ${capture.eligible_games.toLocaleString()} eligible games`}; ${(capture.summary_with_pickcenter || 0).toLocaleString()} contained complete quote sets${capture.summary_with_odds == null ? "" : ` and ${(capture.summary_with_odds || 0).toLocaleString()} had a non-empty odds payload`}${capture.summary_fetch_failures == null ? "" : `; ${capture.summary_fetch_failures.toLocaleString()} summary requests failed`}.`
     : marketMetadata?.research_receipts
       ? `A public capture has run${marketMetadata.research_latest_capture_at ? ` · latest ${date(marketMetadata.research_latest_capture_at)}` : ""}.`
       : "No public market capture is recorded for this slate.";

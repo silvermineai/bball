@@ -292,6 +292,35 @@ class EspnPickcenterTests(unittest.TestCase):
         payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
         self.assertEqual(payload["rejected_records"], 0)
 
+    def test_ingest_marks_all_failed_summary_requests_incomplete(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {
+            "captured_at": "2026-11-09T20:00:00Z",
+            "sha256": "fixture",
+            "eligible_games": 3,
+            "summary_fetch_failures": 3,
+            "summary_count": 0,
+            "summary_with_pickcenter": 0,
+            "summary_with_odds": 0,
+        }
+        result = ingest(self.conn, [], receipt, [GAME], receipt["captured_at"])
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 0})
+        payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(payload["eligible_games"], 3)
+        self.assertEqual(payload["summary_fetch_failures"], 3)
+        self.assertEqual(payload["market_status"], "capture_incomplete")
+
 
 if __name__ == "__main__":
     unittest.main()

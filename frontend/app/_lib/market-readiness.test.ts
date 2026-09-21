@@ -16,6 +16,7 @@ describe("market connector readiness", () => {
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "no_quotes_published" } })).toBe("captured_no_quotes");
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "quotes_failed_validation" } })).toBe("captured_rejected");
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "validated_quotes" } })).toBe("validated");
+    expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "capture_incomplete" } })).toBe("captured_incomplete");
   });
 
   it("keeps an in-flight request visibly separate", () => {
@@ -28,6 +29,7 @@ describe("market connector readiness", () => {
     expect(marketReadinessDetail({ provider_capabilities: [{}] })).toContain("No capture receipt");
     expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "no_quotes_published" } })).toContain("No line is inferred");
     expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "quotes_failed_validation" } })).toContain("failed exact-game");
+    expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "capture_incomplete" } })).toContain("could not be read");
   });
 
   it("reports capture coverage separately from accepted quotes", () => {
@@ -44,6 +46,17 @@ describe("market connector readiness", () => {
 
   it("withholds a capture diagnostic when the receipt has no summary count", () => {
     expect(marketCaptureDiagnostic({ research_receipts: 1 })).toBeNull();
+  });
+
+  it("shows unreadable eligible games in the capture diagnostic", () => {
+    expect(marketCaptureDiagnostic({
+      research_capture: {
+        summary_count: 0,
+        eligible_games: 12,
+        summary_fetch_failures: 12,
+        summary_with_pickcenter: 0,
+      },
+    })).toContain("0 future summaries of 12 eligible games; 0 contained complete quote sets; 12 summary requests failed");
   });
 
   it("explains the retained-to-comparison funnel", () => {

@@ -95,20 +95,24 @@ type ResearchCapture = {
   summary_count?: number;
   summary_with_pickcenter?: number;
   summary_with_odds?: number;
+  eligible_games?: number;
+  summary_fetch_failures?: number;
   source_rows?: number;
   rows_with_lines?: number;
   accepted_markets?: number;
   rejected_records?: number;
-  market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "validated_quotes" | "unknown";
+  market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "capture_incomplete" | "validated_quotes" | "unknown";
 };
 
 type ResearchCaptureSummary = {
   attempts: number;
   captures_with_quotes: number;
   captures_with_validated_markets: number;
+  captures_incomplete: number;
   latest_captured_at: string | null;
   latest_validated_capture_at: string | null;
   latest_no_quote_capture_at: string | null;
+  latest_incomplete_capture_at: string | null;
   latest_failed_validation_at: string | null;
 };
 
@@ -117,6 +121,8 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   const pricedRows = capture.summary_with_pickcenter ?? capture.rows_with_lines;
   const accepted = capture.accepted_markets ?? 0;
   const rejected = capture.rejected_records ?? 0;
+  const eligibleGames = capture.eligible_games;
+  const fetchFailures = capture.summary_fetch_failures ?? 0;
   // A capture receipt is evidence about the connector's own counters, not a
   // license to infer that quotes existed.  If the counters contradict one
   // another, keep the status unresolved so publication checks and consumers
@@ -124,7 +130,9 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   if (sourceRows === 0 && (pricedRows !== undefined && pricedRows !== 0 || accepted > 0 || rejected > 0)) return "unknown";
   if (sourceRows !== undefined && pricedRows !== undefined && pricedRows > sourceRows) return "unknown";
   if (pricedRows === 0 && (accepted > 0 || rejected > 0)) return "unknown";
-  if (sourceRows === 0) return "no_eligible_summaries";
+  if (eligibleGames !== undefined && (eligibleGames < 0 || sourceRows !== undefined && sourceRows > eligibleGames || fetchFailures > eligibleGames || (sourceRows !== undefined && sourceRows + fetchFailures > eligibleGames))) return "unknown";
+  if (fetchFailures > 0 && accepted === 0 && eligibleGames !== undefined && eligibleGames > 0) return "capture_incomplete";
+  if (sourceRows === 0) return eligibleGames === 0 || eligibleGames === undefined ? "no_eligible_summaries" : "unknown";
   if (accepted > 0) return "validated_quotes";
   if (rejected > 0 && pricedRows !== 0) return "quotes_failed_validation";
   if (pricedRows === 0) return "no_quotes_published";
@@ -157,6 +165,12 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.summary_with_odds === "number" && Number.isInteger(payload.summary_with_odds) && payload.summary_with_odds >= 0) {
       result.summary_with_odds = payload.summary_with_odds;
+    }
+    if (typeof payload.eligible_games === "number" && Number.isInteger(payload.eligible_games) && payload.eligible_games >= 0) {
+      result.eligible_games = payload.eligible_games;
+    }
+    if (typeof payload.summary_fetch_failures === "number" && Number.isInteger(payload.summary_fetch_failures) && payload.summary_fetch_failures >= 0) {
+      result.summary_fetch_failures = payload.summary_fetch_failures;
     }
     if (typeof payload.source_rows === "number" && Number.isInteger(payload.source_rows) && payload.source_rows >= 0) {
       result.source_rows = payload.source_rows;
@@ -198,9 +212,11 @@ function summarizeResearchCaptures(values: unknown): ResearchCaptureSummary {
     captures_with_validated_markets: captures.filter((capture) =>
       (capture.accepted_markets || 0) > 0,
     ).length,
+    captures_incomplete: captures.filter((capture) => capture.market_status === "capture_incomplete").length,
     latest_captured_at: byNewest[0]?.captured_at || null,
     latest_validated_capture_at: firstAt((capture) => (capture.accepted_markets || 0) > 0),
     latest_no_quote_capture_at: firstAt((capture) => capture.market_status === "no_quotes_published"),
+    latest_incomplete_capture_at: firstAt((capture) => capture.market_status === "capture_incomplete"),
     latest_failed_validation_at: firstAt((capture) => capture.market_status === "quotes_failed_validation"),
   };
 }

@@ -422,6 +422,20 @@ class LivePublicationCheckTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "receipts but no latest capture status"):
             validate_market_capture({"research_receipts": 1}, "basketball")
 
+    def test_market_capture_marks_unreadable_eligible_summaries_incomplete(self):
+        self.assertEqual(validate_market_capture({
+            "research_capture": {
+                "captured_at": "2026-09-10T18:00:00Z",
+                "eligible_games": 12,
+                "summary_count": 0,
+                "summary_with_pickcenter": 0,
+                "summary_fetch_failures": 12,
+                "accepted_markets": 0,
+                "rejected_records": 0,
+                "market_status": "capture_incomplete",
+            },
+        }, "basketball"), "capture_incomplete")
+
     def test_market_capture_rejects_inconsistent_no_quote_status(self):
         with self.assertRaisesRegex(ValueError, "no-quote status does not reconcile"):
             validate_market_capture({
