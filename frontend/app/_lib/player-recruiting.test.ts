@@ -3,8 +3,10 @@ import recruiting from "../../public/data/basketball/recruiting.json";
 import rosters from "../../public/data/basketball/rosters.json";
 import {
   parseLivePlayerRecruitingPayload,
+  parsePlayerNationalProspectPayload,
   playerRecruitingStatRows,
   playerRecruitingContext,
+  playerNationalProspectRequests,
   playerRecruitingContextRequests,
   playerRecruitingReadiness,
 } from "./player-recruiting";
@@ -15,6 +17,27 @@ const recruitingRelease = recruiting as unknown as RecruitingRelease;
 const rosterRelease = rosters as unknown as BBRosters;
 
 describe("player recruiting context", () => {
+  it("builds national prospect requests only for numeric exact source IDs", () => {
+    expect(playerNationalProspectRequests("abc")).toEqual([]);
+    expect(playerNationalProspectRequests("123")).toHaveLength(6);
+    expect(playerNationalProspectRequests("123")[0]).toEqual({
+      season: 2025,
+      url: "/api/basketball/research/recruiting-rankings?season=2025&athlete_id=123&page=0",
+    });
+  });
+
+  it("parses one national prospect row by exact ID and withholds duplicates", () => {
+    const payload = {
+      season: 2027,
+      edition: "a".repeat(64),
+      captured_at: "2026-09-21T12:00:00Z",
+      rows: [{ athlete_id: "123", name: "Exact Prospect", position: "G", rank: 42, grade: 94.5, committed_team_id: "1", committed_team_name: "Example", status: "committed" }],
+    };
+    expect(parsePlayerNationalProspectPayload(payload, 2027, "123")).toMatchObject({ athlete_id: "123", season: 2027, rank: 42, committed_team_id: "1" });
+    expect(parsePlayerNationalProspectPayload({ ...payload, rows: [...payload.rows, payload.rows[0]] }, 2027, "123")).toBeNull();
+    expect(parsePlayerNationalProspectPayload(payload, 2026, "123")).toBeNull();
+  });
+
   it("targets the live retained recruiting and roster editions", () => {
     expect(playerRecruitingContextRequests()).toEqual({
       recruiting: "/api/basketball/research/recruiting?season=2027",

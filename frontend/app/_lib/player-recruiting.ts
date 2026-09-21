@@ -19,6 +19,76 @@ export function playerRecruitingContextRequests(
   };
 }
 
+export const NATIONAL_PROSPECT_SEASONS = [2025, 2026, 2027, 2028, 2029, 2030] as const;
+
+/** Build exact-ID national archive requests without allowing name discovery to become a join. */
+export function playerNationalProspectRequests(id: string) {
+  if (!/^\d{1,15}$/.test(id.trim())) return [];
+  return NATIONAL_PROSPECT_SEASONS.map((season) => ({
+    season,
+    url: `/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${encodeURIComponent(id)}&page=0`,
+  }));
+}
+
+export type NationalProspectEvidence = {
+  season: number;
+  athlete_id: string;
+  name: string;
+  position: string | null;
+  rank: number | null;
+  grade: number | null;
+  committed_team_id: string | null;
+  committed_team_name: string | null;
+  status: string | null;
+  captured_at: string | null;
+  edition: string | null;
+};
+
+/**
+ * Parse one exact-ID national prospect response. A missing row is a normal
+ * unavailable result; malformed or duplicate matching rows are withheld.
+ */
+export function parsePlayerNationalProspectPayload(
+  payload: unknown,
+  expectedSeason: number,
+  expectedAthleteId: string,
+): NationalProspectEvidence | null {
+  if (!isRecord(payload)
+    || payload.season !== expectedSeason
+    || !/^\d{1,15}$/.test(expectedAthleteId)
+    || !Array.isArray(payload.rows)) return null;
+  const matches = payload.rows.filter((value) => isRecord(value) && String(value.athlete_id || "") === expectedAthleteId);
+  if (matches.length !== 1) return null;
+  const row = matches[0];
+  if (!isRecord(row) || typeof row.name !== "string" || !row.name.trim()) return null;
+  const nullableString = (value: unknown) => value == null ? null : typeof value === "string" ? value : undefined;
+  const nullableNumber = (value: unknown) => value == null ? null : typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  const position = nullableString(row.position);
+  const rank = nullableNumber(row.rank);
+  const grade = nullableNumber(row.grade);
+  const committedTeamId = nullableString(row.committed_team_id);
+  const committedTeamName = nullableString(row.committed_team_name);
+  const status = nullableString(row.status);
+  const capturedAt = nullableString(payload.captured_at);
+  const edition = nullableString(payload.edition);
+  if (position === undefined || rank === undefined || grade === undefined
+    || committedTeamId === undefined || committedTeamName === undefined
+    || status === undefined || capturedAt === undefined || edition === undefined) return null;
+  return {
+    season: expectedSeason,
+    athlete_id: expectedAthleteId,
+    name: row.name.trim(),
+    position,
+    rank,
+    grade,
+    committed_team_id: committedTeamId,
+    committed_team_name: committedTeamName,
+    status,
+    captured_at: capturedAt,
+    edition,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

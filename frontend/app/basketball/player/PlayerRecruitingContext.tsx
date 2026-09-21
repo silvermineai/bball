@@ -8,12 +8,15 @@ import {
   publicationDate,
 } from "../../_lib/recruiting";
 import {
+  parsePlayerNationalProspectPayload,
   playerRecruitingContext,
   parseLivePlayerRecruitingPayload,
+  playerNationalProspectRequests,
   playerRecruitingContextRequests,
   playerRecruitingReadiness,
   playerRecruitingStatRows,
   type PlayerRecruitingContext as PlayerRecruitingContextData,
+  type NationalProspectEvidence,
 } from "../../_lib/player-recruiting";
 
 type ReleaseMeta = {
@@ -44,6 +47,34 @@ function RecruitingStatGrid({
   );
 }
 
+function NationalProspectPanel({ records, loading }: { records: NationalProspectEvidence[]; loading: boolean }) {
+  return (
+    <section className="section paper-panel" aria-label="National prospect archive evidence">
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">National prospect archive / Exact source ID</div>
+          <h2>What the broader class archive records.</h2>
+        </div>
+        <Link className="hero-link" href="/basketball/recruiting/">Open national board →</Link>
+      </div>
+      <p className="note">These rows are joined only by the publisher athlete ID. They preserve the class, recorded rank, grade, destination and capture edition; a missing row is unavailable evidence, not a claim that the player was never ranked.</p>
+      {loading ? <p className="empty" role="status">Checking national prospect editions…</p> : records.length ? (
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Position</th><th>Recorded destination</th><th>Capture</th></tr></thead><tbody>
+          {records.map((record) => <tr key={`${record.season}-${record.athlete_id}`}>
+            <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${record.season}&id=${encodeURIComponent(record.athlete_id)}`}>{record.season}</Link><small>Exact ID {record.athlete_id}</small></th>
+            <td>{record.name}</td>
+            <td className="numeric">{record.rank == null || record.rank <= 0 ? "—" : `#${record.rank}`}</td>
+            <td className="numeric">{record.grade == null || record.grade <= 0 ? "—" : record.grade.toFixed(1)}</td>
+            <td>{record.position || "—"}</td>
+            <td>{record.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(record.committed_team_id)}/`}>{record.committed_team_name || "Recorded destination"}</Link> : record.committed_team_name || record.status || "Not recorded"}</td>
+            <td><small>{record.captured_at ? new Date(record.captured_at).toLocaleDateString("en-US", { timeZone: "UTC" }) : "Date unavailable"}</small><small className="source-hash">{record.edition ? `${record.edition.slice(0, 12)}…` : "Edition unavailable"}</small></td>
+          </tr>)}
+        </tbody></table></div>
+      ) : <p className="empty" role="status">No exact-ID row is retained in the tracked national prospect editions for this player.</p>}
+    </section>
+  );
+}
+
 export default function PlayerRecruitingContext({
   id,
 }: {
@@ -51,6 +82,8 @@ export default function PlayerRecruitingContext({
 }) {
   const [context, setContext] = useState<PlayerRecruitingContextData | null>(null);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta | null>(null);
+  const [nationalProspects, setNationalProspects] = useState<NationalProspectEvidence[]>([]);
+  const [nationalProspectsLoading, setNationalProspectsLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,6 +91,20 @@ export default function PlayerRecruitingContext({
     setContext(null);
     setReleaseMeta(null);
     setError("");
+    setNationalProspects([]);
+    const prospectRequests = playerNationalProspectRequests(id);
+    setNationalProspectsLoading(prospectRequests.length > 0);
+    Promise.allSettled(prospectRequests.map(async ({ season, url }) => {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) return null;
+      return parsePlayerNationalProspectPayload(await response.json(), season, id);
+    })).then((results) => {
+      if (controller.signal.aborted) return;
+      setNationalProspects(results.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []).sort((a, b) => a.season - b.season));
+      setNationalProspectsLoading(false);
+    }).catch(() => {
+      if (!controller.signal.aborted) setNationalProspectsLoading(false);
+    });
     const requests = playerRecruitingContextRequests();
     Promise.all([
       fetch(requests.recruiting, { signal: controller.signal }),
@@ -132,6 +179,7 @@ export default function PlayerRecruitingContext({
           ))}
         </div>
       </section>
+      <NationalProspectPanel records={nationalProspects} loading={nationalProspectsLoading} />
       <div className="strip">
         <div><strong>{announcements.length}</strong><span>Reviewed announcement records</span></div>
         <div><strong>{announcements.reduce((sum, row) => sum + row.timeline.length, 0)}</strong><span>Dated source events</span></div>
