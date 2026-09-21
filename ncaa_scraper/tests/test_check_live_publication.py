@@ -19,6 +19,7 @@ from scripts.check_live_publication import (
     womens_forecast_metadata,
     womens_lower_division_metadata,
     womens_lower_schedule_archive_metadata,
+    womens_lower_ratings_metadata,
     mens_lower_schedule_archive_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
@@ -82,6 +83,41 @@ class LivePublicationCheckTest(unittest.TestCase):
         payload["contests"][0]["gender"] = "women"
         with self.assertRaisesRegex(ValueError, "contest is malformed"):
             mens_lower_schedule_archive_metadata(payload)
+
+    @staticmethod
+    def womens_lower_ratings_payload():
+        divisions = {}
+        for division in (2, 3):
+            key = f"d{division}"
+            divisions[key] = {
+                "division": division,
+                "model_id": f"wbb-lower-ratings-v1-{key}-" + "a" * 12,
+                "model_status": "research_only",
+                "forecast_status": "not_published",
+                "coverage": {"valid_final_games": 100, "teams": 1, "source_receipts": 2, "excluded": {}},
+                "ratings": [{"rank": 1, "team_id": f"team-{division}", "team": "Example", "games": 100}],
+                "target_schedule": {"season": 2027, "status": "missing", "games": 0, "note": "No target schedule."},
+                "source": {"schedule_asset_sha256": "b" * 64, "receipt_count": 2, "receipt_digest": "c" * 64},
+            }
+        return {
+            "schema_version": 1,
+            "sport": "basketball",
+            "gender": "women",
+            "target_season": 2027,
+            "model_status": "research_only",
+            "forecast_status": "not_published",
+            "generated_at": "2026-09-10T18:00:00Z",
+            "divisions": divisions,
+        }
+
+    def test_womens_lower_ratings_metadata_requires_research_gate_and_exact_ranks(self):
+        payload = self.womens_lower_ratings_payload()
+        summary = womens_lower_ratings_metadata(payload)
+        self.assertEqual(summary["d2"]["valid_final_games"], 100)
+        self.assertEqual(summary["d3"]["teams"], 1)
+        payload["divisions"]["d2"]["target_schedule"]["status"] = "ready"
+        with self.assertRaisesRegex(ValueError, "forecast gate"):
+            womens_lower_ratings_metadata(payload)
 
     @staticmethod
     def womens_lower_division_payload():
@@ -441,6 +477,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.womens_lower_division_payload()
             if path == "/data/basketball/womens-lower-division-schedules.json":
                 return LivePublicationCheckTest.womens_lower_schedule_payload()
+            if path == "/data/basketball/womens-lower-division-ratings.json":
+                return LivePublicationCheckTest.womens_lower_ratings_payload()
             if path == "/data/basketball/mens-lower-division-schedules.json":
                 return LivePublicationCheckTest.mens_lower_schedule_payload()
             candidates = (

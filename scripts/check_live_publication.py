@@ -657,6 +657,108 @@ def womens_lower_schedule_archive_metadata(payload: dict) -> dict:
     }
 
 
+def womens_lower_ratings_metadata(payload: dict) -> dict:
+    """Validate the research-only women’s D2/D3 rating artifact.
+
+    The lower-division rating board is deliberately separate from the D1
+    forecast edition.  Validate its identity and forecast gate here so a
+    deploy cannot silently publish a malformed or falsely prospective board.
+    """
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != 1
+        or payload.get("sport") != "basketball"
+        or payload.get("gender") != "women"
+        or payload.get("model_status") != "research_only"
+        or payload.get("forecast_status") != "not_published"
+        or payload.get("target_season") != 2027
+    ):
+        raise ValueError("women's lower-division ratings artifact has an invalid publication contract")
+    generated_at = payload.get("generated_at")
+    try:
+        timestamp(generated_at)
+    except (TypeError, ValueError):
+        raise ValueError("women's lower-division ratings artifact has an invalid generation time") from None
+    divisions = payload.get("divisions")
+    if not isinstance(divisions, dict):
+        raise ValueError("women's lower-division ratings artifact has no division map")
+    summary: dict[str, object] = {}
+    for division in ("d2", "d3"):
+        record = divisions.get(division)
+        if (
+            not isinstance(record, dict)
+            or record.get("division") != int(division[1])
+            or record.get("model_status") != "research_only"
+            or record.get("forecast_status") != "not_published"
+            or not isinstance(record.get("model_id"), str)
+            or not record["model_id"].startswith(f"wbb-lower-ratings-v1-{division}-")
+        ):
+            raise ValueError(f"women's lower-division {division} ratings scope is malformed")
+        coverage = record.get("coverage")
+        if (
+            not isinstance(coverage, dict)
+            or not isinstance(coverage.get("valid_final_games"), int)
+            or coverage["valid_final_games"] <= 0
+            or not isinstance(coverage.get("teams"), int)
+            or coverage["teams"] <= 0
+            or not isinstance(coverage.get("source_receipts"), int)
+            or coverage["source_receipts"] <= 0
+            or not isinstance(coverage.get("excluded"), dict)
+        ):
+            raise ValueError(f"women's lower-division {division} ratings coverage is malformed")
+        ratings = record.get("ratings")
+        if not isinstance(ratings, list) or len(ratings) != coverage["teams"]:
+            raise ValueError(f"women's lower-division {division} ratings do not reconcile with team coverage")
+        ranks = []
+        seen_team_ids: set[str] = set()
+        for row in ratings:
+            if (
+                not isinstance(row, dict)
+                or not isinstance(row.get("rank"), int)
+                or row["rank"] <= 0
+                or not isinstance(row.get("team_id"), str)
+                or not row["team_id"]
+                or row["team_id"] in seen_team_ids
+                or not isinstance(row.get("team"), str)
+                or not row["team"].strip()
+                or not isinstance(row.get("games"), int)
+                or row["games"] <= 0
+            ):
+                raise ValueError(f"women's lower-division {division} rating row is malformed")
+            seen_team_ids.add(row["team_id"])
+            ranks.append(row["rank"])
+        if sorted(ranks) != list(range(1, len(ratings) + 1)):
+            raise ValueError(f"women's lower-division {division} ratings have non-contiguous ranks")
+        target_schedule = record.get("target_schedule")
+        if (
+            not isinstance(target_schedule, dict)
+            or target_schedule.get("season") != 2027
+            or target_schedule.get("status") != "missing"
+            or target_schedule.get("games") != 0
+            or not isinstance(target_schedule.get("note"), str)
+        ):
+            raise ValueError(f"women's lower-division {division} forecast gate is malformed")
+        source = record.get("source")
+        if (
+            not isinstance(source, dict)
+            or not isinstance(source.get("schedule_asset_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", source["schedule_asset_sha256"])
+            or not isinstance(source.get("receipt_count"), int)
+            or source["receipt_count"] <= 0
+            or not isinstance(source.get("receipt_digest"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", source["receipt_digest"])
+        ):
+            raise ValueError(f"women's lower-division {division} ratings source evidence is malformed")
+        summary[division] = {
+            "valid_final_games": coverage["valid_final_games"],
+            "teams": coverage["teams"],
+            "receipt_count": coverage["source_receipts"],
+            "model_id": record["model_id"],
+            "forecast_status": record["forecast_status"],
+        }
+    return summary
+
+
 def mens_lower_schedule_archive_metadata(payload: dict) -> dict:
     """Validate the exact-division historical men’s schedule archive.
 
@@ -1334,6 +1436,9 @@ def check_live(
     womens_lower_schedule = womens_lower_schedule_archive_metadata(
         get_json(base_url, "/data/basketball/womens-lower-division-schedules.json")
     )
+    womens_lower_ratings = womens_lower_ratings_metadata(
+        get_json(base_url, "/data/basketball/womens-lower-division-ratings.json")
+    )
     mens_lower_schedule = mens_lower_schedule_archive_metadata(
         get_json(base_url, "/data/basketball/mens-lower-division-schedules.json")
     )
@@ -1514,6 +1619,12 @@ def check_live(
         "womens_lower_schedule_receipts": womens_lower_schedule["receipt_count"],
         "womens_d2_schedule_contests": womens_lower_schedule["d2_contests"],
         "womens_d3_schedule_contests": womens_lower_schedule["d3_contests"],
+        "womens_d2_rating_games": womens_lower_ratings["d2"]["valid_final_games"],
+        "womens_d2_rating_teams": womens_lower_ratings["d2"]["teams"],
+        "womens_d2_rating_model": womens_lower_ratings["d2"]["model_id"],
+        "womens_d3_rating_games": womens_lower_ratings["d3"]["valid_final_games"],
+        "womens_d3_rating_teams": womens_lower_ratings["d3"]["teams"],
+        "womens_d3_rating_model": womens_lower_ratings["d3"]["model_id"],
         "mens_lower_schedule_season": mens_lower_schedule["season_year"],
         "mens_lower_schedule_receipts": mens_lower_schedule["receipt_count"],
         "mens_d2_schedule_contests": mens_lower_schedule["d2_contests"],
