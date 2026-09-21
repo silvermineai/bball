@@ -167,7 +167,12 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
         if source_count <= 0 or (priced_rows or 0) <= 0 or accepted or rejected <= 0:
             raise ValueError(f"{sport} market capture rejected status does not reconcile")
     elif status == "capture_incomplete":
-        if eligible_games is None or eligible_games <= 0 or fetch_failures <= 0 or accepted or rejected:
+        # A partial capture can retain valid quotes from the responses that
+        # succeeded. Those rows remain historical evidence, but the public
+        # readiness state must stay incomplete until every eligible summary
+        # has a bounded outcome. Do not require accepted/rejected counters to
+        # be zero here; the worker classifies mixed outcomes conservatively.
+        if eligible_games is None or eligible_games <= 0 or fetch_failures <= 0:
             raise ValueError(f"{sport} market capture incomplete status does not reconcile")
     elif accepted <= 0:
         raise ValueError(f"{sport} market capture validated status has no accepted markets")
@@ -510,6 +515,98 @@ def womens_lower_division_metadata(
             "team_statistics": len(record["team"]),
         }
     return summary
+
+
+def womens_lower_schedule_archive_metadata(payload: dict) -> dict:
+    """Validate the exact-division historical women’s schedule archive.
+
+    The archive is intentionally checked separately from the current-season
+    forecast release: completed-season contests can prove the capture and
+    identity contract even when the target-season endpoint has not published
+    any rows yet.
+    """
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("women's lower-division schedule asset is malformed")
+    source = payload.get("source")
+    if (
+        not isinstance(source, dict)
+        or source.get("publisher") != "NCAA.com"
+        or not isinstance(source.get("season_year"), int)
+        or source.get("season_year") <= 0
+        or not isinstance(source.get("identity_limit"), str)
+    ):
+        raise ValueError("women's lower-division schedule source contract is malformed")
+    receipts = payload.get("receipts")
+    if not isinstance(receipts, list) or not receipts:
+        raise ValueError("women's lower-division schedule asset has no receipts")
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("url"), str)
+            or not receipt["url"].startswith("https://sdataprod.ncaa.com?")
+            or receipt.get("status") != 200
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+            or not isinstance(receipt.get("bytes"), int)
+            or receipt["bytes"] <= 0
+        ):
+            raise ValueError("women's lower-division schedule receipt is malformed")
+    calendar = payload.get("calendar")
+    if not isinstance(calendar, list) or not calendar:
+        raise ValueError("women's lower-division schedule has no calendar rows")
+    calendar_counts = {"d2": 0, "d3": 0}
+    for day in calendar:
+        if (
+            not isinstance(day, dict)
+            or day.get("sport") != "basketball"
+            or day.get("gender") != "women"
+            or day.get("division") not in (2, 3)
+            or not isinstance(day.get("contest_date"), str)
+            or not isinstance(day.get("count"), int)
+            or isinstance(day.get("count"), bool)
+            or day["count"] < 0
+        ):
+            raise ValueError("women's lower-division schedule calendar row is malformed")
+        calendar_counts[f"d{day['division']}"] += day["count"]
+    contests = payload.get("contests")
+    if not isinstance(contests, list) or not contests:
+        raise ValueError("women's lower-division schedule has no contests")
+    seen: set[tuple[int, int]] = set()
+    contest_counts = {"d2": 0, "d3": 0}
+    for contest in contests:
+        if (
+            not isinstance(contest, dict)
+            or contest.get("sport") != "basketball"
+            or contest.get("gender") != "women"
+            or contest.get("division") not in (2, 3)
+            or not isinstance(contest.get("contest_id"), int)
+            or contest["contest_id"] <= 0
+            or not isinstance(contest.get("teams"), list)
+            or len(contest["teams"]) != 2
+        ):
+            raise ValueError("women's lower-division schedule contest is malformed")
+        key = (contest["division"], contest["contest_id"])
+        if key in seen:
+            raise ValueError("women's lower-division schedule has duplicate contest IDs")
+        seen.add(key)
+        for team in contest["teams"]:
+            if (
+                not isinstance(team, dict)
+                or not isinstance(team.get("name"), str)
+                or not team["name"].strip()
+                or (team.get("slug") is not None and not isinstance(team.get("slug"), str))
+            ):
+                raise ValueError("women's lower-division schedule team identity is malformed")
+        contest_counts[f"d{contest['division']}"] += 1
+    return {
+        "season_year": source["season_year"],
+        "receipt_count": len(receipts),
+        "contests": len(contests),
+        "d2_contests": contest_counts["d2"],
+        "d3_contests": contest_counts["d3"],
+        "calendar_d2": calendar_counts["d2"],
+        "calendar_d3": calendar_counts["d3"],
+    }
 
 
 def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:

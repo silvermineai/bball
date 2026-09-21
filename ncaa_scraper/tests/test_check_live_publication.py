@@ -436,6 +436,20 @@ class LivePublicationCheckTest(unittest.TestCase):
             },
         }, "basketball"), "capture_incomplete")
 
+    def test_market_capture_allows_accepted_subset_when_some_summaries_failed(self):
+        self.assertEqual(validate_market_capture({
+            "research_capture": {
+                "captured_at": "2026-09-10T18:00:00Z",
+                "eligible_games": 10,
+                "summary_count": 9,
+                "summary_with_pickcenter": 2,
+                "summary_fetch_failures": 1,
+                "accepted_markets": 3,
+                "rejected_records": 1,
+                "market_status": "capture_incomplete",
+            },
+        }, "basketball"), "capture_incomplete")
+
     def test_market_capture_rejects_inconsistent_no_quote_status(self):
         with self.assertRaisesRegex(ValueError, "no-quote status does not reconcile"):
             validate_market_capture({
