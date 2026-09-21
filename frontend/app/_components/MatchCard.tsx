@@ -5,12 +5,19 @@ import { footballModelFactors } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
+import { footballMatchupContextRows, type FootballMatchupContextRow } from "../_lib/football-matchup-context";
 import { footballForecastEvidence } from "../_lib/football-forecast-evidence";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
   rushing: "Rush",
   receiving: "Receive",
 };
+function contextValue(row: FootballMatchupContextRow, value: number | null) {
+  if (value == null) return "—";
+  if (row.format === "rank") return `#${fmt(value, 0)}`;
+  if (row.format === "percent") return `${fmt(value * 100, 1)}%`;
+  return fmt(value, 1);
+}
 export default function MatchCard({
   game: g,
   efficiencyScenario,
@@ -131,18 +138,20 @@ export default function MatchCard({
             <strong>Personnel context</strong>
             <span>Retained team-level recruiting edition</span>
           </div>
-          <div className="football-card-intel-grid">
-            {[recruiting.away, recruiting.home].map((team) => team ? (
-              <div key={team.team_id}>
-                <h4>{team.team}</h4>
-                <ul>
-                  <li><strong>{team.talent_rank == null ? "—" : `#${team.talent_rank}`}</strong><small>Talent rank · {team.talent_composite == null ? "composite unavailable" : `${fmt(team.talent_composite, 1)} composite`}</small></li>
-                  <li><strong>{team.overall_returning == null ? "—" : `${fmt(team.overall_returning * 100, 1)}%`}</strong><small>Returning production · {team.n_returning == null ? "player count unavailable" : `${fmt(team.n_returning, 0)} players`}</small></li>
-                  <li><strong>{team.blue_chip_ratio == null ? "—" : `${fmt(team.blue_chip_ratio * 100, 1)}%`}</strong><small>Blue-chip ratio · {team.returning_estimated == null ? "estimate status unavailable" : team.returning_estimated ? "returning estimate" : "reported returning"}</small></li>
-                </ul>
-              </div>
-            ) : <div key="missing"><h4>Team personnel context</h4><p>Exact team-ID context unavailable.</p></div>)}</div>
-          <small className="football-card-intel-note">Personnel context is descriptive and season-scoped; it does not alter the primary forecast or establish eligibility, availability or starting roles.</small>
+          <div className="table-scroll">
+            <table className="data-table matchup-context-table">
+              <thead><tr><th>Measure</th><th>{recruiting.away?.team || "Away"}<small>Team ID {recruiting.away?.team_id || "unavailable"}</small></th><th>{recruiting.home?.team || "Home"}<small>Team ID {recruiting.home?.team_id || "unavailable"}</small></th><th>Read</th></tr></thead>
+              <tbody>{footballMatchupContextRows(recruiting.away, recruiting.home).map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">{row.label}<small>{row.direction === "lower" ? "Lower is stronger" : "Higher is stronger"}</small></th>
+                  <td className="numeric">{contextValue(row, row.away)}</td>
+                  <td className="numeric">{contextValue(row, row.home)}</td>
+                  <td>{row.edge === "home" ? "Home higher" : row.edge === "away" ? "Away higher" : row.edge === "even" ? "Even" : "Unavailable"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <small className="football-card-intel-note">Personnel context is descriptive and season-scoped; it does not alter the primary forecast or establish eligibility, availability or starting roles. Returning fields retain their reported or estimated status in the recruiting desk.</small>
         </section>
       )}
       {efficiencyScenario && (
