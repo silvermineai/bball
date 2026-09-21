@@ -57,6 +57,46 @@ CATEGORIES = {
     },
 }
 
+# The NCAA release places several stat families under ``other``.  They are
+# different source rows with different meanings, so publishing one combined
+# "other" leaderboard would add the fields together and produce a misleading
+# ranking.  Keep each family separate while retaining the source category in
+# the release for auditability.
+DERIVED_CATEGORIES = {
+    "interceptions": {
+        "source_category": "other",
+        "label": "Interceptions",
+        "primary": "int",
+        "primary_label": "Interceptions",
+        "metrics": ("int", "intyds", "int_ret_tds"),
+        "required": "int",
+    },
+    "pass_defense": {
+        "source_category": "other",
+        "label": "Pass defense",
+        "primary": "pdef",
+        "primary_label": "Passes defended",
+        "metrics": ("pdef", "pbu"),
+        "required": "pdef",
+    },
+    "kick_returns": {
+        "source_category": "other",
+        "label": "Kick returns",
+        "primary": "ko_ret_yds",
+        "primary_label": "Kick-return yards",
+        "metrics": ("ko_ret_yds", "ko_ret", "kick_ret_tds", "long_kor"),
+        "required": "ko_ret",
+    },
+    "scrimmage": {
+        "source_category": "other",
+        "label": "Scrimmage production",
+        "primary": "yds",
+        "primary_label": "Scrimmage yards",
+        "metrics": ("yds", "plays"),
+        "required": "yds",
+    },
+}
+
 # These fields describe the source envelope rather than a player statistic.
 # Everything else that is present and non-empty is retained as an observed
 # source field in the coverage manifest.  The NCAA football release does not
@@ -86,6 +126,25 @@ def number(value: object) -> float | None:
 
 def display_number(value: float) -> int | float:
     return int(value) if value.is_integer() else round(value, 2)
+
+
+def category_specs(category: str, payload: dict) -> list[tuple[str, dict]]:
+    """Return leaderboard families represented by one source row.
+
+    A source row can only enter a derived family when its required field is
+    actually present.  This prevents zero-filling absent fields and keeps the
+    denominator for rates tied to the source rows for that metric family.
+    """
+    base = CATEGORIES.get(category)
+    if base:
+        return [(category, base)]
+    if category != "other":
+        return []
+    return [
+        (key, spec)
+        for key, spec in DERIVED_CATEGORIES.items()
+        if payload.get(spec["required"]) not in (None, "")
+    ]
 
 
 def _division_coverage(
@@ -198,7 +257,6 @@ def build_leaders(
             if stat_fields:
                 summary["rows_with_stat_fields"] += 1
                 summary["fields"].update(stat_fields)
-        spec = CATEGORIES.get(category)
         name = str(payload.get("name") or payload.get("player_name") or "").strip()
         team_id = str(row["team_id"] or payload.get("team_id") or "").strip()
         if team_id:
@@ -216,39 +274,42 @@ def build_leaders(
             # Keep its source label for player display, but never rank that row
             # as an individual.
             team_names.setdefault(team_id, name)
-        if not spec or not name or not team_id or (
+        specs = category_specs(category, payload)
+        if not specs or not name or not team_id or (
             not payload.get("position") and not payload.get("number")
         ):
             continue
         player_rows += 1
         if str(payload.get("division") or "").strip().lower() in {"d1", "d2", "d3", "1", "2", "3", "i", "ii", "iii"}:
             rows_with_explicit_division += 1
-        key = (category, name, team_id)
-        item = grouped.setdefault(
-            key,
-            {
-                "name": name,
-                "team_id": team_id,
-                "team": team_names.get(team_id, team_id),
-                "position": str(payload.get("position") or ""),
-                "records": 0,
-                "games": set(),
-                "metrics": defaultdict(float),
-            },
-        )
-        item["records"] += 1
         game_id = str(row["game_id"] or payload.get("espn_game_id") or payload.get("contest_id") or "").strip()
-        if game_id:
-            item["games"].add(game_id)
-        if not item["position"] and payload.get("position"):
-            item["position"] = str(payload["position"])
-        for metric in spec["metrics"]:
-            value = number(payload.get(metric))
-            if value is not None:
-                item["metrics"][metric] += value
+        for category_key, spec in specs:
+            key = (category_key, name, team_id)
+            item = grouped.setdefault(
+                key,
+                {
+                    "name": name,
+                    "team_id": team_id,
+                    "team": team_names.get(team_id, team_id),
+                    "position": str(payload.get("position") or ""),
+                    "records": 0,
+                    "games": set(),
+                    "metrics": defaultdict(float),
+                },
+            )
+            item["records"] += 1
+            if game_id:
+                item["games"].add(game_id)
+            if not item["position"] and payload.get("position"):
+                item["position"] = str(payload["position"])
+            for metric in spec["metrics"]:
+                value = number(payload.get(metric))
+                if value is not None:
+                    item["metrics"][metric] += value
 
     categories = []
-    for key, spec in CATEGORIES.items():
+    all_categories = {**CATEGORIES, **DERIVED_CATEGORIES}
+    for key, spec in all_categories.items():
         rows = []
         for (category, _, _), item in grouped.items():
             if category != key:
@@ -280,19 +341,29 @@ def build_leaders(
                 }
             )
         rows.sort(key=lambda row: (-float(row["primary"]), -row["games"], row["name"], row["team_id"]))
+        # Derived families are only present in the source when their required
+        # fields were published.  Do not create empty cards for older seasons
+        # that never contained the ``other`` metric family.
+        if not rows and spec.get("source_category"):
+            continue
         for rank, row in enumerate(rows[:limit], start=1):
             row["rank"] = rank
-        categories.append(
-            {
-                "key": key,
-                "label": spec["label"],
-                "primary": spec["primary"],
-                "primary_label": spec["primary_label"],
-                "rank_basis": "source-category total",
-                "rate_basis": "source-category total divided by observed game IDs",
-                "leaders": rows[:limit],
-            }
-        )
+        category_payload = {
+            "key": key,
+            "label": spec["label"],
+            "primary": spec["primary"],
+            "primary_label": spec["primary_label"],
+            "rank_basis": "source metric total" if spec.get("source_category") else "source-category total",
+            "rate_basis": (
+                "source metric total divided by observed game IDs"
+                if spec.get("source_category")
+                else "source-category total divided by observed game IDs"
+            ),
+            "leaders": rows[:limit],
+        }
+        if spec.get("source_category"):
+            category_payload["source_category"] = spec["source_category"]
+        categories.append(category_payload)
 
     matching_team_directory_keys = sum(
         1 for team_id in source_team_games if team_id in team_directory_ids

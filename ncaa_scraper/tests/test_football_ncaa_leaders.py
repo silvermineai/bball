@@ -84,6 +84,71 @@ class FootballNCAALeaderTests(unittest.TestCase):
         self.assertEqual(coverage["passing"]["fields"], ["pass_yards"])
         self.assertEqual(coverage["passing"]["rows_with_stable_athlete_id"], 0)
 
+    def test_other_source_rows_publish_separate_metric_families(self):
+        self.add(
+            "1",
+            "other",
+            "source-team",
+            "g1",
+            {
+                "name": "Defender",
+                "position": "DB",
+                "number": "1",
+                "int": "1",
+                "intyds": "22",
+                "int_ret_tds": "1",
+                "pbu": "2",
+                "pdef": "3.00",
+                "category": "other",
+            },
+        )
+        self.add(
+            "2",
+            "other",
+            "source-team",
+            "g2",
+            {
+                "name": "Returner",
+                "position": "RB",
+                "number": "2",
+                "ko_ret": "3",
+                "ko_ret_yds": "75",
+                "kick_ret_tds": "1",
+                "long_kor": "40",
+                "category": "other",
+            },
+        )
+        self.add(
+            "3",
+            "other",
+            "source-team",
+            "g3",
+            {
+                "name": "Runner",
+                "position": "RB",
+                "number": "3",
+                "yds": "90",
+                "plays": "12",
+                "category": "other",
+            },
+        )
+
+        result = build_leaders(self.conn, 2025, limit=10)
+        categories = {item["key"]: item for item in result["categories"]}
+        self.assertEqual(
+            set(categories) & {"interceptions", "pass_defense", "kick_returns", "scrimmage"},
+            {"interceptions", "pass_defense", "kick_returns", "scrimmage"},
+        )
+        self.assertEqual(categories["interceptions"]["source_category"], "other")
+        self.assertEqual(categories["interceptions"]["leaders"][0]["primary"], 1)
+        self.assertEqual(categories["interceptions"]["leaders"][0]["primary_per_game"], 1)
+        self.assertEqual(categories["pass_defense"]["leaders"][0]["primary"], 3)
+        self.assertEqual(categories["kick_returns"]["leaders"][0]["primary"], 75)
+        self.assertEqual(categories["scrimmage"]["leaders"][0]["primary"], 90)
+        # A missing metric family is not zero-filled into another leaderboard.
+        self.assertEqual(len(categories["interceptions"]["leaders"]), 1)
+        self.assertEqual(len(categories["kick_returns"]["leaders"]), 1)
+
     def test_release_exposes_only_seasons_with_supported_categories(self):
         self.conn.execute(
             "CREATE TABLE football_sources (dataset TEXT, season INTEGER, receipt_json TEXT)"

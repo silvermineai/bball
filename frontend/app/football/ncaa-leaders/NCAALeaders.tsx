@@ -16,6 +16,7 @@ type Leader = {
 type Category = {
   key: string;
   label: string;
+  source_category?: string;
   primary: string;
   primary_label: string;
   rank_basis?: string;
@@ -153,7 +154,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
                 <div className="eyebrow">{category.label}</div>
                 <h2>{category.primary_label}</h2>
                 <p className="note">
-                  Rank: {category.rank_basis || "source-category total"}. Rate context: {category.rate_basis || "unavailable"}.
+                  Source category: <code>{category.source_category || category.key}</code>. Rank: {category.rank_basis || "source-category total"}. Rate context: {category.rate_basis || "unavailable"}.
                 </p>
               </div>
               <Link href={"/football/source-stats/?dataset=ncaa_player_stats&season=" + release.season}>
