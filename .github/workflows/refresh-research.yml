@@ -176,6 +176,26 @@ jobs:
           python scripts/publish-womens-basketball-model.py
           python scripts/check-womens-basketball-forecast-readiness.py
 
+      - name: Refresh women’s lower-division source tables
+        # The lower-division NCAA tables are useful source-native evidence,
+        # but they do not carry stable athlete IDs. Capture them separately,
+        # obey robots.txt, and keep the readiness ledger fail-closed when an
+        # upstream policy or page shape changes.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: |
+          set +e
+          python scripts/publish-womens-lower-division-stats.py > /tmp/womens-lower-division.log 2>&1
+          status=$?
+          cat /tmp/womens-lower-division.log
+          if [ "$status" -ne 0 ]; then
+            if grep -Eqi "robots(\\.txt| policy)|cannot verify|disallow|no page requested" /tmp/womens-lower-division.log; then
+              echo "::warning::Women’s lower-division source policy could not be verified; retaining the cached source-native release."
+            else
+              exit "$status"
+            fi
+          fi
+          python scripts/build-womens-basketball-division-readiness.py
+
       - name: Refresh selected sources, models and publication
         env:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}
