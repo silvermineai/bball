@@ -141,7 +141,10 @@ export default function GlobalSearch() {
                 ? `/football/matchups/?team=${encodeURIComponent(row.name)}`
                 : `/football/player/?id=${encodeURIComponent(row.id)}`,
             }));
-          const footballRecruitingResults = searchFootballPersonnel([...(footballRoster.rows || []), ...(footballRecruits.rows || [])], needle, 4);
+          const footballRecruitingResults = searchFootballPersonnel([
+            ...(footballRoster.rows || []).map((row) => ({ ...row, source: "roster" as const, season: 2026 })),
+            ...(footballRecruits.rows || []).map((row) => ({ ...row, source: "recruit" as const, season: 2026 })),
+          ], needle, 4);
           setResults(combineSearchResults([...playerResults.slice(0, 3), ...legacyBasketballResults, ...ncaaResults, ...recruitingResults, ...prospectResults, ...rosterResults, ...footballRecruitingResults, ...footballResults], searchPrograms(programs, needle, 4), 8, needle));
           setOpen(true);
         })
