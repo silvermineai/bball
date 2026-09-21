@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scopeFallbackArchiveHref } from "./ScopeUnavailable";
+import { isWomensShootingDesk, scopeFallbackArchiveHref } from "./ScopeUnavailable";
 
 describe("scope unavailable fallback actions", () => {
   it("does not reset lower-division football to the D1 source archive", () => {
@@ -14,5 +14,11 @@ describe("scope unavailable fallback actions", () => {
 
   it("retains the D1 football fallback only for the D1 scope", () => {
     expect(scopeFallbackArchiveHref("football", false, false, null, null)).toBe("/football/source-stats/");
+  });
+
+  it("recognizes both women-facing shooting navigation paths", () => {
+    expect(isWomensShootingDesk("/basketball/shooting")).toBe(true);
+    expect(isWomensShootingDesk("/basketball/ncaa-shooting/")).toBe(true);
+    expect(isWomensShootingDesk("/basketball/players")).toBe(false);
   });
 });
