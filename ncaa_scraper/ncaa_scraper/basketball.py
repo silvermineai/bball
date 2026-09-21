@@ -159,6 +159,40 @@ def numeric_box(row, player=False):
     }
 
 
+def player_box_source_integrity(rows):
+    """Audit source player-box identities before the normalized upsert.
+
+    ``bb_player_box`` is keyed by ``(game_id, team_id, athlete_id)``.  An
+    ``INSERT OR REPLACE`` therefore makes repeated source rows invisible after
+    import.  Count every repeated identity in the receipt and reject a repeat
+    whose normalized stat payload differs; choosing one conflicting row would
+    make downstream player totals depend on source row order.
+    """
+    seen = {}
+    duplicate_rows = 0
+    conflicting_rows = 0
+    missing_identity_rows = 0
+    for row in rows:
+        raw_ids = (row.get("game_id"), row.get("team_id"), row.get("athlete_id"))
+        if any(value in (None, "") for value in raw_ids):
+            missing_identity_rows += 1
+            continue
+        key = tuple(identity(value) for value in raw_ids)
+        payload = json.dumps(numeric_box(row, True), sort_keys=True, separators=(",", ":"), default=str)
+        prior = seen.get(key)
+        if prior is None:
+            seen[key] = payload
+            continue
+        duplicate_rows += 1
+        if prior != payload:
+            conflicting_rows += 1
+    return {
+        "duplicate_source_player_box_rows": duplicate_rows,
+        "conflicting_source_player_box_rows": conflicting_rows,
+        "missing_source_player_box_identity_rows": missing_identity_rows,
+    }
+
+
 def ingest(conn, dataset, year, rows, receipt):
     # Schedule rows are upserted by source game ID. Count repeated IDs before
     # that primary-key write so a malformed publisher file cannot disappear
@@ -175,6 +209,19 @@ def ingest(conn, dataset, year, rows, receipt):
                     "duplicate_source_contest_ids": duplicate_source_ids,
                 },
             }
+    elif dataset == "player_box":
+        integrity = player_box_source_integrity(rows)
+        receipt = {
+            **receipt,
+            "integrity": {
+                **(receipt.get("integrity") or {}),
+                **integrity,
+            },
+        }
+        if integrity["conflicting_source_player_box_rows"]:
+            raise ValueError(
+                "Conflicting source player-box identity rows cannot be imported"
+            )
     with conn:
         conn.execute(
             "INSERT OR REPLACE INTO bb_sources VALUES (?,?,?)",

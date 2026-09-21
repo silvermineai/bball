@@ -17,6 +17,7 @@ from ncaa_scraper.basketball import (
     matchup_factor_edges,
     ncaa_player_box_field_coverage,
     player_index,
+    player_box_source_integrity,
     _prior_production,
     publisher_leaders,
     publisher_value_leaders,
@@ -626,6 +627,50 @@ class BasketballIngestTests(unittest.TestCase):
             ).fetchone()[0]
         )
         self.assertEqual(receipt["integrity"]["duplicate_source_contest_ids"], 1)
+
+    def test_player_box_integrity_counts_repeated_source_identity(self):
+        row = {
+            "game_id": "same-game",
+            "team_id": "same-team",
+            "athlete_id": "same-player",
+            "points": "12",
+            "minutes": "20",
+        }
+        self.assertEqual(
+            player_box_source_integrity([row, dict(row)]),
+            {
+                "duplicate_source_player_box_rows": 1,
+                "conflicting_source_player_box_rows": 0,
+                "missing_source_player_box_identity_rows": 0,
+            },
+        )
+        ingest(self.conn, "player_box", 2027, [row, dict(row)], {"url": "https://example.test"})
+        receipt = json.loads(
+            self.conn.execute(
+                "SELECT receipt_json FROM bb_sources WHERE dataset='player_box' AND season=2027"
+            ).fetchone()[0]
+        )
+        self.assertEqual(receipt["integrity"]["duplicate_source_player_box_rows"], 1)
+        self.assertEqual(
+            self.conn.execute("SELECT count(*) FROM bb_player_box").fetchone()[0], 1
+        )
+
+    def test_player_box_integrity_rejects_conflicting_repeat_before_upsert(self):
+        row = {
+            "game_id": "same-game",
+            "team_id": "same-team",
+            "athlete_id": "same-player",
+            "points": "12",
+            "minutes": "20",
+        }
+        with self.assertRaisesRegex(ValueError, "Conflicting source player-box"):
+            ingest(self.conn, "player_box", 2027, [row, {**row, "points": "13"}], {})
+        self.assertEqual(
+            self.conn.execute("SELECT count(*) FROM bb_player_box").fetchone()[0], 0
+        )
+        self.assertEqual(
+            self.conn.execute("SELECT count(*) FROM bb_sources").fetchone()[0], 0
+        )
 
     def test_roster_absence_is_not_a_departure_and_names_do_not_join(self):
         self.conn.execute(
