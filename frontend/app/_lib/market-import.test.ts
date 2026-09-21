@@ -69,6 +69,12 @@ describe("market import preflight", () => {
     expect(result.errors).toContain("Row 2: updated_at must be before starts_at.");
   });
 
+  it("rejects duplicate quote identities before the server import", () => {
+    const row = "401,spreads,2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2026-12-31T19:59:00Z,Home,Away,Book,-3,1.91,1.91,,,,,,,event-1";
+    const result = validateMarketImportCsv(`${header}\n${row}\n${row.replace("event-1", "event-2")}`, new Date("2026-12-31T21:00:00Z"));
+    expect(result.errors).toContain("Row 3: duplicate game/bookmaker/market/capture identity.");
+  });
+
   it("matches server price and total-line validation before upload", () => {
     const negativeTotal = `${header}\n401,totals,2027-01-01T20:00:00Z,2026-12-31T20:00:00Z,2026-12-31T19:59:00Z,Home,Away,Book,-1,1.91,1.91,1.91,1.91,,,,,event-1`;
     const totalResult = validateMarketImportCsv(negativeTotal, new Date("2026-12-31T21:00:00Z"));

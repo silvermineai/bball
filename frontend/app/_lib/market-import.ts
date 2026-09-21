@@ -149,6 +149,10 @@ export function validateMarketImportCsv(text: string, now = new Date()): MarketI
   if (errors.length) return { headers, rows: Math.max(0, parsed.length - 1), markets: {}, errors, warnings };
   const index = new Map(headers.map((header, position) => [header, position]));
   const counts: Record<string, number> = {};
+  // The server importer rejects repeated game/bookmaker/market/capture
+  // identities before writing anything. Catch the same file-level ambiguity
+  // locally so a clean browser preflight does not become a failed import.
+  const seenQuotes = new Set<string>();
   const addError = (message: string) => { if (errors.length < 8) errors.push(message); };
   parsed.slice(1).forEach((cells, rowIndex) => {
     const row = rowIndex + 2;
@@ -168,6 +172,11 @@ export function validateMarketImportCsv(text: string, now = new Date()): MarketI
     const startsDate = isoTimestamp(starts) ? new Date(starts) : null;
     const capturedDate = isoTimestamp(captured) ? new Date(captured) : null;
     const updatedDate = isoTimestamp(updated) ? new Date(updated) : null;
+    if (value("game_id") && value("bookmaker") && markets.has(market) && capturedDate && Number.isFinite(capturedDate.valueOf())) {
+      const identity = [value("game_id"), value("bookmaker"), market, capturedDate.valueOf()].join("\u001f");
+      if (seenQuotes.has(identity)) addError(`Row ${row}: duplicate game/bookmaker/market/capture identity.`);
+      else seenQuotes.add(identity);
+    }
     if (capturedDate && capturedDate >= now) addError(`Row ${row}: captured_at must be before the current time.`);
     if (startsDate && capturedDate && capturedDate >= startsDate) addError(`Row ${row}: captured_at must be before starts_at.`);
     if (startsDate && updatedDate && updatedDate >= startsDate) addError(`Row ${row}: updated_at must be before starts_at.`);
