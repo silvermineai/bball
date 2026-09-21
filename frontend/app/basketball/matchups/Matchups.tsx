@@ -587,6 +587,7 @@ export default function Matchups({
               publisherAwayRating={publisherRatings[g.away_id]}
               forecastModelId={model.id}
               forecastCreatedAt={generatedAt}
+              model={model}
             />
             <div className="matchup-card-actions">
               <button

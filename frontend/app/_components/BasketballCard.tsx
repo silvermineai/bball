@@ -2,6 +2,7 @@ import Link from "next/link";
 import type {
   BBFactorKey,
   BBGame,
+  BBOverview,
   BBRosterScenario,
   BBRosterSummary,
   BBTeam,
@@ -11,6 +12,7 @@ import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel
 import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
+import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
 import RotationWatchPanel from "./RotationWatchPanel";
 
 export default function BasketballCard({
@@ -24,6 +26,7 @@ export default function BasketballCard({
   publisherAwayRating,
   forecastModelId,
   forecastCreatedAt,
+  model,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
@@ -35,6 +38,7 @@ export default function BasketballCard({
   publisherAwayRating?: { team: string; value: number | null };
   forecastModelId?: string | null;
   forecastCreatedAt?: string | null;
+  model?: Pick<BBOverview["model"], "teams" | "efficiency" | "tempo"> | null;
 }) {
   const p = g.prediction || g.fallback_prediction || null;
   const forecastEdition = resolveForecastEdition(g, {
@@ -42,6 +46,7 @@ export default function BasketballCard({
     generatedAt: forecastCreatedAt,
   });
   const coldStart = !g.prediction && !!g.fallback_prediction;
+  const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const signalContext = forecastSignalContext(p, !!g.prediction);
   const confidence = forecastConfidenceSummary(p, !!g.prediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors);
@@ -186,6 +191,31 @@ export default function BasketballCard({
             <span>Projected efficiency · A / H</span>
             <span>{p.away_efficiency == null || p.home_efficiency == null ? "—" : `${fmt(p.away_efficiency, 1)} / ${fmt(p.home_efficiency, 1)} pts per 100`}</span>
           </div>
+          {scoreExplanation && (
+            <details className="match-card-details matchup-model-equation">
+              <summary>How the model got there</summary>
+              <p className="factor-source">
+                Exact coefficient reconstruction for this forecast edition. Each term is points per 100 possessions; score equals projected efficiency × pace ÷ 100.
+              </p>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Term</th><th className="numeric">{scoreExplanation.away.team}</th><th className="numeric">{scoreExplanation.home.team}</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row">League baseline</th><td className="numeric">{fmt(scoreExplanation.away.league, 2)}</td><td className="numeric">{fmt(scoreExplanation.home.league, 2)}</td></tr>
+                    <tr><th scope="row">Own offense effect</th><td className="numeric">{scoreExplanation.away.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.ownOffense, 2)}</td><td className="numeric">{scoreExplanation.home.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.ownOffense, 2)}</td></tr>
+                    <tr><th scope="row">Opponent defense effect</th><td className="numeric">{scoreExplanation.away.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.opponentDefense, 2)}</td><td className="numeric">{scoreExplanation.home.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.opponentDefense, 2)}</td></tr>
+                    <tr><th scope="row">Venue effect</th><td className="numeric">{scoreExplanation.away.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.away.venue, 2)}</td><td className="numeric">{scoreExplanation.home.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.home.venue, 2)}</td></tr>
+                    <tr><th scope="row"><strong>Projected efficiency</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.efficiency, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.efficiency, 2)}</strong></td></tr>
+                    <tr><th scope="row">Projected pace</th><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td></tr>
+                    <tr><th scope="row"><strong>Score from equation</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.projectedScore, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.projectedScore, 2)}</strong></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <small className="factor-source">A missing or edition-mismatched coefficient set suppresses this reconstruction rather than showing stale arithmetic.</small>
+            </details>
+          )}
           <div className="match-detail muted">
             <span>Largest factor mismatch</span>
             <span>
