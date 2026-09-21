@@ -72,6 +72,30 @@ const PLAYER_COURT_LANE_EDGE_FT = 8;
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
+/**
+ * Prefer the source aggregate for the all-attempt denominator while retaining
+ * every returned coordinate row if a malformed response reports too few.
+ * Returning rows are evidence; they must never disappear from the total.
+ */
+export function recordedPlayerAttemptCount(
+  recordedAttempts: number | null | undefined,
+  returnedRows: number,
+) {
+  const returned = Number.isFinite(returnedRows) && returnedRows >= 0 ? Math.trunc(returnedRows) : 0;
+  const recorded = isFiniteNumber(recordedAttempts) && recordedAttempts >= 0 ? Math.trunc(recordedAttempts) : null;
+  return recorded == null ? returned : Math.max(recorded, returned);
+}
+
+/** Number of source attempts whose coordinate rows were not returned. */
+export function unreturnedPlayerAttemptCount(
+  recordedAttempts: number | null | undefined,
+  returnedRows: number,
+) {
+  const returned = Number.isFinite(returnedRows) && returnedRows >= 0 ? Math.trunc(returnedRows) : 0;
+  const recorded = isFiniteNumber(recordedAttempts) && recordedAttempts >= 0 ? Math.trunc(recordedAttempts) : null;
+  return recorded == null ? 0 : Math.max(0, recorded - returned);
+}
+
 /** Treat only source-explicit made values as makes; null/unknown is not a miss. */
 export function isMadePlayerShot(shot: Pick<PlayerShotLocation, "made">) {
   return shot.made === true || shot.made === 1;

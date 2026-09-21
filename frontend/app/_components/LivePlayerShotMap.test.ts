@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { eligibleShotMapLeaders, playerCardShotLocations, shotMapCoverageLabel } from "./LivePlayerShotMap";
+import { recordedPlayerAttemptCount, unreturnedPlayerAttemptCount } from "../_lib/player-shot-locations";
 
 describe("homepage player shot map", () => {
+  it("keeps the source attempt denominator when coordinate rows are compacted", () => {
+    expect(recordedPlayerAttemptCount(200, 198)).toBe(200);
+    expect(unreturnedPlayerAttemptCount(200, 198)).toBe(2);
+    expect(recordedPlayerAttemptCount(null, 198)).toBe(198);
+    // A response must not hide returned evidence if its aggregate is invalid.
+    expect(recordedPlayerAttemptCount(3, 5)).toBe(5);
+    expect(unreturnedPlayerAttemptCount(3, 5)).toBe(0);
+  });
+
   it("shows coordinate coverage against every retained attempt", () => {
     expect(shotMapCoverageLabel({ attempts: 200, located_count: 198 })).toBe("198 / 200 located coordinates (99.0%)");
     expect(shotMapCoverageLabel({ attempts: 2 })).toBe("— / 2 located coordinates");

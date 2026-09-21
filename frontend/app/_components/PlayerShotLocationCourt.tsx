@@ -13,6 +13,8 @@ import {
   summarizePlayerShotBands,
   summarizePlayerShotSides,
   matchesPlayerShotOutcome,
+  recordedPlayerAttemptCount,
+  unreturnedPlayerAttemptCount,
   toPlayerCourtPoint,
   type PlayerShotOutcomeFilter,
   type PlayerShotLocation,
@@ -24,6 +26,8 @@ export type PlayerShotLocationCourtProps = {
   title?: string;
   compact?: boolean;
   showEvents?: boolean;
+  /** Source-reported attempts, including rows that are not returned as coordinates. */
+  recordedAttempts?: number | null;
   /** Initial marker filter; the density heatmap always remains all plotted attempts. */
   eventFilter?: PlayerShotOutcomeFilter;
   className?: string;
@@ -41,6 +45,7 @@ export default function PlayerShotLocationCourt({
   title = "Shot location profile",
   compact = false,
   showEvents = false,
+  recordedAttempts,
   eventFilter: initialEventFilter = "all",
   className = "",
 }: PlayerShotLocationCourtProps) {
@@ -56,7 +61,16 @@ export default function PlayerShotLocationCourt({
   const missing = shots.filter((shot) => classifyPlayerShotLocation(shot) === "missing").length;
   const beyondHalfCourt = shots.filter((shot) => classifyPlayerShotLocation(shot) === "beyond_half_court").length;
   const maximumAttempts = Math.max(0, ...zones.map((zone) => zone.attempts));
-  const totalAttempts = shots.length;
+  // The coordinate payload normally includes one row per attempt, including
+  // null coordinates. Keep the source aggregate authoritative when it is
+  // available, though: a compact API response may omit rows while still
+  // reporting the complete attempt denominator.
+  const sourceAttempts = typeof recordedAttempts === "number" && Number.isFinite(recordedAttempts) && recordedAttempts >= 0
+    ? Math.trunc(recordedAttempts)
+    : null;
+  const totalAttempts = recordedPlayerAttemptCount(sourceAttempts, shots.length);
+  const unreturnedAttempts = unreturnedPlayerAttemptCount(sourceAttempts, shots.length);
+  const sourceCountMismatch = sourceAttempts != null && sourceAttempts < shots.length;
   const made = plotted.filter(isMadePlayerShot).length;
   const knownOutcomes = plotted.filter(hasKnownPlayerShotOutcome).length;
   const unknownOutcomes = plotted.length - knownOutcomes;
@@ -174,8 +188,9 @@ export default function PlayerShotLocationCourt({
             </div>
           </div>
           <p className="mt-3 text-xs leading-5 text-graphite">
-            {missing.toLocaleString()} attempt{missing === 1 ? "" : "s"} lack a usable coordinate
+            {(missing + unreturnedAttempts).toLocaleString()} attempt{missing + unreturnedAttempts === 1 ? "" : "s"} lack a usable coordinate
             {beyondHalfCourt ? `; ${beyondHalfCourt.toLocaleString()} beyond the half-court drawing` : ""}. They are retained in All attempts and omitted from the map. {unknownOutcomes.toLocaleString()} plotted outcome{unknownOutcomes === 1 ? "" : "s"} remain excluded from shooting rates.
+            {sourceCountMismatch ? " The source attempt total is lower than the returned coordinate rows; the larger returned-row count is shown for integrity." : ""}
           </p>
         </div>
       </div>
