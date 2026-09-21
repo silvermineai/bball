@@ -46,6 +46,16 @@ export type FootballEfficiencyScenario = {
   base_margin: number;
   challenger_margin: number;
   margin_delta: number;
+  /** Stable key for the exact lagged team-game feature state. */
+  feature_state_id?: string;
+  /** Residual-model terms used to produce the research challenger margin. */
+  feature_contributions?: Array<{
+    key: string;
+    value: number;
+    standardized: number;
+    coefficient: number;
+    contribution: number;
+  }>;
 };
 export type FootballEfficiencyTransition = {
   test_season: number;

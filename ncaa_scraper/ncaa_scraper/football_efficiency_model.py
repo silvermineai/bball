@@ -34,6 +34,18 @@ SHRINKAGE_PLAYS = 300.0
 RIDGE_PENALTY = 100.0
 
 
+def _digest(value) -> str:
+    """Return a stable digest for a retained feature state.
+
+    The digest is deliberately calculated from the exact game IDs and rates
+    that feed a scenario.  It gives the matchup desk a compact lineage key
+    without asking it to treat a rounded feature value as a source receipt.
+    """
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()[:16]
+
+
 def _number(value):
     try:
         value = float(value)
@@ -113,7 +125,9 @@ def _feature_state(games, advanced, target_season):
             "def_epa": (totals["def_epa"] + SHRINKAGE_PLAYS * prior["epa"]) / (totals["def_plays"] + SHRINKAGE_PLAYS),
             "def_ypp": (totals["def_yards"] + SHRINKAGE_PLAYS * prior["ypp"]) / (totals["def_plays"] + SHRINKAGE_PLAYS),
         }
-    return {"prior": prior, "rates": rates, "games": selected}
+    state = {"prior": prior, "rates": rates, "games": sorted(selected)}
+    state["id"] = _digest(state)
+    return state
 
 
 def _feature_vector(game, state, base_margin):
@@ -176,9 +190,41 @@ def _fit(rows):
 
 
 def _correct(row, model):
+    return _correction_detail(row, model)["margin"]
+
+
+def _correction_detail(row, model):
+    """Return a challenger margin and an auditable feature contribution list.
+
+    ``_correct`` remains the small numeric helper used by the retrospective
+    evaluator.  The richer result is for the upcoming-game desk: each
+    contribution is still tied to the same fitted residual model and can be
+    rendered without inventing a new player or availability grade.
+    """
     x = np.asarray(row["features"], dtype=float)
-    correction = model["coefficients"][0] + float(np.sum(((x - model["mean"]) / model["scale"]) * model["coefficients"][1:]))
-    return row["base_margin"] + correction
+    standardized = (x - model["mean"]) / model["scale"]
+    contributions = standardized * model["coefficients"][1:]
+    correction = model["coefficients"][0] + float(np.sum(contributions))
+    return {
+        "margin": row["base_margin"] + correction,
+        "correction": correction,
+        "features": [
+            {
+                "key": key,
+                "value": float(value),
+                "standardized": float(z),
+                "coefficient": float(coefficient),
+                "contribution": float(contribution),
+            }
+            for key, value, z, coefficient, contribution in zip(
+                FEATURES,
+                x,
+                standardized,
+                model["coefficients"][1:],
+                contributions,
+            )
+        ],
+    }
 
 
 def _metrics(rows, model):
@@ -259,8 +305,41 @@ def build(conn, games, primary_model, upcoming, target_season=2026):
             if base is None:
                 continue
             row = {"game": game, "base_margin": base[0], "features": _feature_vector(game, current_state, base[0])}
-            challenger = _correct(row, production_model)
-            scenarios.append({"game_id": game["id"], "base_margin": round(base[0], 2), "challenger_margin": round(challenger, 2), "margin_delta": round(challenger - base[0], 2)})
+            detail = _correction_detail(row, production_model)
+            challenger = detail["margin"]
+            scenarios.append({
+                "game_id": game["id"],
+                "base_margin": round(base[0], 2),
+                "challenger_margin": round(challenger, 2),
+                "margin_delta": round(challenger - base[0], 2),
+                "feature_state_id": current_state["id"],
+                "feature_contributions": [
+                    {
+                        **feature,
+                        "value": round(feature["value"], 6),
+                        "standardized": round(feature["standardized"], 6),
+                        "coefficient": round(feature["coefficient"], 6),
+                        "contribution": round(feature["contribution"], 4),
+                    }
+                    for feature in detail["features"]
+                ],
+            })
+    source_receipts = []
+    for row in conn.execute(
+        "SELECT season,receipt_json FROM football_sources "
+        "WHERE dataset='team_advanced' ORDER BY season"
+    ):
+        try:
+            receipt = json.loads(row[1])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if receipt.get("fetched_at") and receipt.get("sha256"):
+            source_receipts.append({
+                "dataset": "team_advanced",
+                "season": int(row[0]),
+                "fetched_at": receipt["fetched_at"],
+                "sha256": receipt["sha256"],
+            })
     payload = {
         "version": VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -269,7 +348,14 @@ def build(conn, games, primary_model, upcoming, target_season=2026):
         "model": production_model,
         "evaluation": evaluation,
         "transition_evaluations": transition_evaluations,
-        "coverage": {"advanced_rows": len(advanced), "training_rows": len(production_rows), "holdout_rows": len(holdout), "current_scenarios": len(scenarios), "current_teams": len(current_state["rates"]) if current_state else 0},
+        "coverage": {"advanced_rows": len(advanced), "training_rows": len(production_rows), "holdout_rows": len(holdout), "current_scenarios": len(scenarios), "current_teams": len(current_state["rates"]) if current_state else 0, "current_feature_games": len(current_state["games"]) if current_state else 0},
+        "feature_state": {
+            "id": current_state["id"] if current_state else None,
+            "source_dataset": "team_advanced",
+            "game_ids": current_state["games"] if current_state else [],
+            "team_ids": sorted(current_state["rates"]) if current_state else [],
+        },
+        "source_receipts": source_receipts,
         "limitations": ["Research-only challenger; primary football probabilities, intervals and ledger registrations are unchanged.", "Advanced source coverage is incomplete for 2026 and unknown teams shrink to the prior league mean.", "No injuries, transfers, depth charts, weather or coaching features are included.", "The dated transitions are retrospective and mixed; they are not evidence of future market advantage."],
         "scenarios": scenarios,
     }

@@ -3,6 +3,7 @@ import unittest
 
 from ncaa_scraper.football_efficiency_model import (
     _correct,
+    _correction_detail,
     _fit,
     _metrics,
     _transition_evaluations,
@@ -25,6 +26,27 @@ class FootballEfficiencyModelTests(unittest.TestCase):
         self.assertIsNotNone(model)
         self.assertEqual(len(model["features"]), 5)
         self.assertTrue(math.isfinite(_correct(self.rows()[0], model)))
+
+    def test_correction_detail_reconciles_to_margin_and_declares_features(self):
+        model = _fit(self.rows())
+        row = self.rows()[3]
+        detail = _correction_detail(row, model)
+        self.assertEqual(
+            [feature["key"] for feature in detail["features"]],
+            [
+                "base_margin",
+                "home_off_epa_minus_away_off_epa",
+                "home_def_epa_minus_away_def_epa",
+                "home_off_ypp_minus_away_off_ypp",
+                "home_def_ypp_minus_away_def_ypp",
+            ],
+        )
+        self.assertAlmostEqual(detail["margin"], _correct(row, model))
+        self.assertAlmostEqual(
+            detail["correction"],
+            model["coefficients"][0]
+            + sum(feature["contribution"] for feature in detail["features"]),
+        )
 
     def test_metrics_reports_baseline_and_challenger(self):
         rows = self.rows()

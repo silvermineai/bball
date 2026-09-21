@@ -12,6 +12,13 @@ const categoryLabel: Record<string, string> = {
   rushing: "Rush",
   receiving: "Receive",
 };
+const efficiencyFeatureLabels: Record<string, string> = {
+  base_margin: "Score-model margin",
+  home_off_epa_minus_away_off_epa: "Offensive EPA/play gap",
+  home_def_epa_minus_away_def_epa: "Defensive EPA/play gap",
+  home_off_ypp_minus_away_off_ypp: "Offensive yards/play gap",
+  home_def_ypp_minus_away_def_ypp: "Defensive yards/play gap",
+};
 function contextValue(row: FootballMatchupContextRow, value: number | null) {
   if (value == null) return "—";
   if (row.format === "rank") return `#${fmt(value, 0)}`;
@@ -160,6 +167,27 @@ export default function MatchCard({
           Margin {fmt(efficiencyScenario.challenger_margin)} · shift {efficiencyScenario.margin_delta > 0 ? "+" : ""}{fmt(efficiencyScenario.margin_delta)} pts
           <br />
           Advanced lagged rates do not change the primary probability, range or ledger.
+          {efficiencyScenario.feature_contributions?.length ? (
+            <details className="forecast-factor-disclosure" style={{ marginTop: 10 }}>
+              <summary>Show challenger evidence</summary>
+              <p className="factor-source">Each term is from the retained team advanced game rows used by the dated residual model. State <code>{efficiencyScenario.feature_state_id || "unlabeled"}</code>.</p>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Feature</th><th className="numeric">Observed gap</th><th className="numeric">Margin contribution</th></tr></thead>
+                  <tbody>{efficiencyScenario.feature_contributions
+                    .slice()
+                    .sort((left, right) => Math.abs(right.contribution) - Math.abs(left.contribution))
+                    .map((feature) => (
+                      <tr key={feature.key}>
+                        <th scope="row">{efficiencyFeatureLabels[feature.key] || feature.key}</th>
+                        <td className="numeric">{fmt(feature.value, 3)}</td>
+                        <td className="numeric">{feature.contribution >= 0 ? "+" : ""}{fmt(feature.contribution, 2)}</td>
+                      </tr>
+                    ))}</tbody>
+                </table>
+              </div>
+            </details>
+          ) : null}
         </div>
       )}
       {g.market_comparisons?.length ? (
