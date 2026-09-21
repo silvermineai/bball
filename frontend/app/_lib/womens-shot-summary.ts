@@ -9,6 +9,14 @@ export type WomensShotTendencyStat = WomensShotTendency & {
   makeRate: number | null;
 };
 
+/** Build a label-search handoff; shot profile IDs remain separate from player IDs. */
+export function womensShotProfileSearchHref(name: string) {
+  const params = new URLSearchParams({ gender: "women", division: "1" });
+  const query = name.trim();
+  if (query) params.set("q", query);
+  return "/basketball/ncaa-shooting/?" + params.toString();
+}
+
 /**
  * Calculate tendency shares against located attempts only. Missing locations
  * remain in the profile total and cannot silently dilute a court-region rate.

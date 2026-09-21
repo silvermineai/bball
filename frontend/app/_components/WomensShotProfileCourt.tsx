@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CourtLines } from "./PlayerShotLocationCourt";
 import { PLAYER_COURT } from "../_lib/player-shot-locations";
 import { womensShotTendencyStats, type WomensShotTendency } from "../_lib/womens-shot-summary";
+import { useSearchParams } from "next/navigation";
 
 type Cell = { column: number; row: number; attempts: number; makes: number };
 type Profile = {
@@ -34,8 +35,9 @@ const fill = (attempts: number, maximum: number) => {
 };
 
 export default function WomensShotProfileCourt() {
+  const searchParams = useSearchParams();
   const [publication, setPublication] = useState<Publication | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") || "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
     fetch("/data/basketball/womens-shots.json")

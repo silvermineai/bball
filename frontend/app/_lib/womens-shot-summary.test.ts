@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { womensShotTendencyStats } from "./womens-shot-summary";
+import { womensShotProfileSearchHref, womensShotTendencyStats } from "./womens-shot-summary";
 
 describe("women's shot tendency summaries", () => {
   it("uses located attempts for shares and recorded attempts for shooting rates", () => {
@@ -16,5 +16,10 @@ describe("women's shot tendency summaries", () => {
     expect(womensShotTendencyStats([
       { label: "Rim", attempts: 4, makes: 5 },
     ], 0)[0]).toMatchObject({ makes: 0, share: 0, makeRate: null });
+  });
+
+  it("creates a women’s shot archive label-search handoff without joining IDs", () => {
+    expect(womensShotProfileSearchHref("Jade Jones")).toBe("/basketball/ncaa-shooting/?gender=women&division=1&q=Jade+Jones");
+    expect(womensShotProfileSearchHref("")).toBe("/basketball/ncaa-shooting/?gender=women&division=1");
   });
 });

@@ -13,6 +13,7 @@ import {
 } from "../../_lib/womens-player-profile";
 import { formatWomensPlayerStat, womensPlayerDetailGroups, womensPlayerFieldLabel } from "../../_lib/womens-player-detail";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../../_lib/womens-source-scope";
+import { womensShotProfileSearchHref } from "../../_lib/womens-shot-summary";
 
 type Edition = {
   observed_player_season: number;
@@ -89,6 +90,8 @@ export default function WomensPlayerProfile() {
   return <>
     <Link className="eyebrow" href="/basketball/players/?sport=basketball&gender=women">← Women&apos;s player table</Link>
     <div className="page-title">
+      <div className="hero-actions"><Link className="hero-link" href={womensShotProfileSearchHref(profile.name)}>Search women&apos;s shot-coordinate archive ↗</Link></div>
+      <p className="note">The shot archive opens as a name search because its source profile IDs are separate from this player ID. Review the returned team label and identity status before treating a shot profile as the same athlete.</p>
       <div className="eyebrow">Women&apos;s player file / exact athlete ID {profile.player_id}</div>
       <h1>{profile.name}</h1>
       <p>{profile.team}{profile.position ? ` · ${profile.position}` : ""}. This profile keeps season-release and game-box evidence together by exact publisher athlete ID. {WOMENS_SOURCE_SCOPE_NOTE}</p>
