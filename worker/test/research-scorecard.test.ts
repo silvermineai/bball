@@ -324,7 +324,7 @@ describe("live research scorecard", () => {
       comparable_observations: 1,
       selected_comparisons: 1,
     });
-    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("c.source_time_valid=1"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("audit_schedule_times") && String(sql).includes("latest_clock"))).toBe(true);
 
     const unconfirmed = { ...selected, source_start: null, source_time_valid: 0, exclusion: "unconfirmed_start" };
     const unconfirmedPrepare = vi.fn((sql: string) => {

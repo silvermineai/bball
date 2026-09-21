@@ -462,57 +462,53 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
   const countBinds: Array<string | number> = [sport, season, now];
   if (modelId) countBinds.push(modelId);
   const count = await db.prepare(`SELECT count(*) AS total FROM audit_predictions WHERE sport=? AND CAST(json_extract(payload_json,'$.season') AS INTEGER)=? AND registered_at<=?${modelClause}`).bind(...countBinds).first<{ total: number }>();
-  // The canonical game row can retain a date-only placeholder after ESPN has
-  // confirmed an exact tip. Include the latest source clock so a forecast is
-  // eligible against a quote once that evidence exists, without rewriting the
-  // canonical schedule or treating an unconfirmed observation as a clock.
-  const predictionBinds: Array<string | number> = [now, sport, now, sport, season, now];
+  const predictionBinds: Array<string | number> = [now, sport, season, now];
   if (modelId) predictionBinds.push(modelId);
   const result = await db.prepare(`
     WITH latest_state AS (
       SELECT sport, game_id, payload_json,
              ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS state_rank
        FROM audit_game_states WHERE observed_at<=?
-    ), latest_clock AS (
-      SELECT sport, game_id, source_start, source_time_valid, observed_at,
-             ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS clock_rank
-        FROM audit_schedule_times
-       WHERE sport=? AND observed_at<=?
     ), candidates AS (
       SELECT p.*, s.payload_json AS state_json,
-             c.source_start AS source_start, c.source_time_valid AS source_time_valid,
-             c.observed_at AS source_observed_at,
         CASE
           WHEN s.payload_json IS NULL OR s.payload_json='null' THEN 'missing_schedule'
           WHEN json_extract(p.payload_json,'$.home_id') != json_extract(s.payload_json,'$.home_id')
             OR json_extract(p.payload_json,'$.away_id') != json_extract(s.payload_json,'$.away_id') THEN 'participants_changed'
-          WHEN (p.time_tbd=1 OR json_extract(s.payload_json,'$.time_tbd')=1)
-            AND NOT (
-              c.source_time_valid=1
-              AND substr(c.source_start,1,10)=substr(p.starts_at,1,10)
-              AND substr(c.source_start,1,10)=substr(json_extract(s.payload_json,'$.starts_at'),1,10)
-            ) THEN 'unconfirmed_start'
-          WHEN NOT (
-              c.source_time_valid=1
-              AND substr(c.source_start,1,10)=substr(p.starts_at,1,10)
-              AND substr(c.source_start,1,10)=substr(json_extract(s.payload_json,'$.starts_at'),1,10)
-            ) AND p.starts_at != json_extract(s.payload_json,'$.starts_at') THEN 'schedule_changed'
+          WHEN p.time_tbd=1 OR json_extract(s.payload_json,'$.time_tbd')=1 THEN 'unconfirmed_start'
+          WHEN p.starts_at != json_extract(s.payload_json,'$.starts_at') THEN 'schedule_changed'
           WHEN p.registered_at >= p.starts_at THEN 'registered_after_start'
           WHEN p.generated_at > p.registered_at OR json_extract(p.payload_json,'$.model_cutoff') > p.generated_at THEN 'invalid_clock'
           ELSE NULL
         END AS exclusion
         FROM audit_predictions p
         LEFT JOIN latest_state s ON s.sport=p.sport AND s.game_id=p.game_id AND s.state_rank=1
-        LEFT JOIN latest_clock c ON c.sport=p.sport AND c.game_id=p.game_id AND c.clock_rank=1
        WHERE p.sport=? AND CAST(json_extract(p.payload_json,'$.season') AS INTEGER)=? AND p.registered_at<=?${modelId ? " AND p.model_id=?" : ""}
     ), ranked AS (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY CASE WHEN exclusion IS NULL THEN 0 ELSE 1 END, CASE WHEN exclusion IS NULL THEN registered_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN registered_at ELSE NULL END DESC, CASE WHEN exclusion IS NULL THEN generated_at ELSE NULL END ASC, CASE WHEN exclusion IS NOT NULL THEN generated_at ELSE NULL END DESC, id) AS pick
         FROM candidates
     )
-    SELECT id,sport,game_id,model_id,generated_at,registered_at,starts_at,time_tbd,payload_json,state_json,source_start,source_time_valid,source_observed_at,exclusion
+    SELECT id,sport,game_id,model_id,generated_at,registered_at,starts_at,time_tbd,payload_json,state_json,exclusion
       FROM ranked WHERE pick=1 ORDER BY starts_at,sport,game_id
   `).bind(...predictionBinds).all();
   const rawRows = result.results as Array<Record<string, unknown>>;
+  // Resolve source-confirmed clocks in a small, indexed read. Keeping this
+  // outside the 98k-row prediction/window query avoids a D1 CPU blow-up while
+  // preserving the exact source-date checks below.
+  const clockResult = await db.prepare(`
+    WITH latest_clock AS (
+      SELECT sport,game_id,source_start,source_time_valid,observed_at,
+             ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS clock_rank
+        FROM audit_schedule_times
+       WHERE sport=? AND observed_at<=?
+    )
+    SELECT sport,game_id,source_start,source_time_valid,observed_at
+      FROM latest_clock WHERE clock_rank=1
+  `).bind(sport, now).all();
+  const clockByGame = new Map<string, Record<string, unknown>>();
+  for (const clock of clockResult.results as Array<Record<string, unknown>>) {
+    clockByGame.set(String(clock.game_id), clock);
+  }
   const quotesResult = await db.prepare("SELECT id,sport,game_id,provider,bookmaker,market,captured_at,updated_at,payload_json FROM audit_markets WHERE sport=? ORDER BY captured_at,updated_at,id").bind(sport).all();
   const quotesByGame = new Map<string, Json[]>();
   for (const quote of quotesResult.results as Array<Record<string, unknown>>) {
@@ -534,7 +530,8 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const payload = parse(row.payload_json) || {};
     const state = parse(row.state_json);
     const prediction = object(payload.prediction) || {};
-    const sourceStart = row.source_time_valid === 1 ? iso(row.source_start) : null;
+    const sourceClock = clockByGame.get(String(row.game_id));
+    const sourceStart = sourceClock?.source_time_valid === 1 ? iso(sourceClock.source_start) : null;
     const canonicalStart = iso(row.starts_at);
     const stateStart = iso(state?.starts_at);
     const sourceClockResolved = Boolean(
@@ -549,7 +546,11 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const effectiveRow = sourceClockResolved && sourceStart
       ? { ...row, starts_at: sourceStart, time_tbd: 0 }
       : row;
-    const exclusion = typeof row.exclusion === "string" ? row.exclusion : null;
+    let exclusion = typeof row.exclusion === "string" ? row.exclusion : null;
+    // The SQL eligibility pass deliberately remains cheap and canonical. A
+    // validated source clock can clear only the two schedule-time exclusions;
+    // participant, registration, and model-clock failures remain excluded.
+    if (sourceClockResolved && (exclusion === "unconfirmed_start" || exclusion === "schedule_changed")) exclusion = null;
     const status = exclusion ? "excluded" : finalStatus(effectiveState, now);
     const homeScore = number(effectiveState?.home_score);
     const awayScore = number(effectiveState?.away_score);
@@ -560,8 +561,8 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       id: row.id, sport, game_id: row.game_id, model_id: row.model_id, generated_at: row.generated_at, registered_at: row.registered_at, starts_at: effectiveStartsAt,
       canonical_starts_at: row.starts_at,
       source_starts_at: sourceStart,
-      source_time_valid: sourceClockResolved ? true : row.source_time_valid == null ? null : row.source_time_valid === 1,
-      source_observed_at: iso(row.source_observed_at),
+      source_time_valid: sourceClockResolved ? true : sourceClock?.source_time_valid == null ? null : sourceClock.source_time_valid === 1,
+      source_observed_at: iso(sourceClock?.observed_at),
       time_tbd: sourceClockResolved ? 0 : Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
       home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: probability(prediction.home_win_probability), margin_low: validMarginInterval ? marginLow : null, margin_high: validMarginInterval ? marginHigh : null,
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,
