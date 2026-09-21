@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Game } from "../_lib/data";
 import { date, fmt, kick } from "../_lib/format";
 import {
+  dashboardFootballMarketComparisons,
   loadLiveFootballForecasts,
   mergeLiveFootballForecasts,
 } from "../_lib/live-football-forecasts";
@@ -115,7 +116,7 @@ export default function LiveFootballDashboardForecastTable({
   const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
   const rows = sortFootballMatchups(signalGames, sort).slice(0, rowLimit);
   const marketGames = signalGames.filter((game) => {
-    const market = summarizeMarketLines(marketComparisons?.[game.id] || []);
+    const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
     return hasQualifiedMarketComparison(market);
   }).length;
   const downloadFilteredCsv = () => downloadCsv(
@@ -163,7 +164,7 @@ export default function LiveFootballDashboardForecastTable({
         <tbody>
           {rows.map((game) => {
             const prediction = game.prediction!;
-            const market = summarizeMarketLines(marketComparisons?.[game.id] || []);
+            const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>

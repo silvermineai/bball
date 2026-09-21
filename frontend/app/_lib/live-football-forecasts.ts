@@ -64,6 +64,19 @@ export type LiveFootballMarketComparisonSet = {
   comparisons: Comparison[];
 };
 
+/**
+ * Keep the landing board useful while its live scorecard request is in flight
+ * or unavailable. Once a complete live map exists, an empty entry is
+ * authoritative and must clear any older static comparison.
+ */
+export function dashboardFootballMarketComparisons(
+  game: Game,
+  liveComparisons: Record<string, Comparison[]> | null,
+): Comparison[] {
+  if (liveComparisons === null) return game.market_comparisons || [];
+  return liveComparisons[game.id] || [];
+}
+
 export async function loadLiveFootballForecasts(
   signal?: AbortSignal,
   options: { maxPages?: number; cacheBust?: string } = {},

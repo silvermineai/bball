@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { applyLiveFootballMarketComparisons, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { applyLiveFootballMarketComparisons, dashboardFootballMarketComparisons, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -173,6 +173,23 @@ describe("live football forecast merge", () => {
     const published = { ...game(null), market_comparisons: [staticQuote] };
     expect(applyLiveFootballMarketComparisons(published, null).market_comparisons).toEqual([staticQuote]);
     expect(applyLiveFootballMarketComparisons(published, {}).market_comparisons).toEqual([]);
+  });
+
+  it("uses static landing evidence only until a complete live market map is available", () => {
+    const quote = {
+      provider: "archive",
+      bookmaker: "book",
+      market: "spreads" as const,
+      captured_at: "2026-09-01T12:00:00Z",
+      updated_at: "2026-09-01T12:00:00Z",
+      line: -3.5,
+      model_difference: 2,
+      market_home_probability: null,
+    };
+    const published = { ...game(null), market_comparisons: [quote] };
+    expect(dashboardFootballMarketComparisons(published, null)).toEqual([quote]);
+    expect(dashboardFootballMarketComparisons(published, { "game-1": [] })).toEqual([]);
+    expect(dashboardFootballMarketComparisons(published, {})).toEqual([]);
   });
 
   it("fails closed when a market quote belongs to another model edition", () => {
