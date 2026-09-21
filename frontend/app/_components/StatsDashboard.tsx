@@ -84,7 +84,7 @@ function DivisionLeaderTable({ leaders, season }: { leaders: Record<"1" | "2" | 
         <div><span className="eyebrow">DIVISION LEADER SNAPSHOT</span><h3 id="dashboard-division-leaders">The same questions across D1, D2 and D3</h3></div>
         <Link href="/basketball/ncaa/">Open the complete national archive →</Link>
       </div>
-      <p className="dashboard-caption">Source-native NCAA leader rows, kept in separate division cohorts. A dash means the retained edition did not publish that measure for the selected division.</p>
+      <p className="dashboard-caption">Source-native national leader rows, kept in separate division cohorts. A dash means the retained edition did not publish that measure for the selected division.</p>
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table">
           <thead><tr><th>Division</th><th>Scoring leader</th><th className="numeric">PPG</th><th>Rebounding leader</th><th className="numeric">RPG</th><th>Playmaking leader</th><th className="numeric">APG</th><th className="numeric">Rows</th></tr></thead>

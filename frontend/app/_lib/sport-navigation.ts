@@ -114,7 +114,7 @@ export function sportAvailabilityMessage(sport: Sport, division: Division): stri
     if (division === "1") {
       return "Women's basketball coverage: D1 player, team, game, ranking and forecast tables are published. D2 and D3 remain separate intake scopes.";
     }
-    return `Women's basketball coverage: D${division} source-native NCAA leaderboards are published for names and team slugs. Stable-ID player archives, rankings, and forecasts remain unavailable; no D1 rows are substituted.`;
+    return `Women's basketball coverage: D${division} source-native leaderboards are published for names and team slugs. Stable-ID player archives, rankings, and forecasts remain unavailable; no D1 rows are substituted.`;
   }
   if (sport !== "football") return null;
   if (division === "1") {
