@@ -128,6 +128,14 @@ describe("bball api", () => {
               },
               {
                 dataset: "box",
+                category: "passing",
+                team_id: "10",
+                // The current ESPN box release uses stat_1–stat_5 for
+                // completion/attempt, yards, yards/attempt, TD and INT.
+                stats_json: JSON.stringify({ game_id: "403", stat_1: "3/5", stat_2: "42", stat_4: "1", stat_5: "0" }),
+              },
+              {
+                dataset: "box",
                 category: "defensive",
                 team_id: "10",
                 stats_json: JSON.stringify({ game_id: "402", totalTackles: "11", soloTackles: "4", sacks: "1", tacklesForLoss: "2", passesDefended: "3", hurries: "2", defensiveTouchdowns: "1" }),
@@ -162,10 +170,12 @@ describe("bball api", () => {
     });
     expect(body.summary.box_categories).toEqual([
       { category: "defensive", records: 1, games: 1 },
+      { category: "passing", records: 1, games: 1 },
       { category: "rushing", records: 1, games: 1 },
     ]);
     expect(body.summary.box_totals).toEqual([
       { category: "defensive", records: 1, games: 1, totals: { defensiveTouchdowns: 1, hurries: 2, passesDefended: 3, sacks: 1, soloTackles: 4, tacklesForLoss: 2, totalTackles: 11 } },
+      { category: "passing", records: 1, games: 1, totals: { completions: 3, interceptions: 0, passingAttempts: 5, passingTouchdowns: 1, passingYards: 42 } },
       { category: "rushing", records: 1, games: 1, totals: { rushingAttempts: 12, rushingTouchdowns: 2, rushingYards: 75 } },
     ]);
     expect(body.source_receipts.every((receipt) => !("url" in receipt))).toBe(true);

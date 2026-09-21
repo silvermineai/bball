@@ -306,13 +306,17 @@ const footballPlayerQuery = z.object({
 // imply a rate or a best-of value that the source did not publish. A few older
 // releases encode made/attempted values in one slash-delimited field; those
 // are split into their two source components before summing.
-const FOOTBALL_BOX_METRICS: Record<string, Array<{ key: string; source?: string; part?: number }>> = {
+const FOOTBALL_BOX_METRICS: Record<string, Array<{ key: string; source?: string | string[]; part?: number }>> = {
   passing: [
-    { key: "completions", source: "completions/passingAttempts", part: 0 },
-    { key: "passingAttempts", source: "completions/passingAttempts", part: 1 },
-    { key: "passingYards" },
-    { key: "passingTouchdowns" },
-    { key: "interceptions" },
+    // Recent ESPN box releases retain the five passing values as stat_1–stat_5
+    // (completion/attempt, yards, yards/attempt, touchdowns, interceptions).
+    // Older editions expose the same values with descriptive field names. Keep
+    // both source spellings so the dossier can sum only observed source fields.
+    { key: "completions", source: ["completions/passingAttempts", "stat_1"], part: 0 },
+    { key: "passingAttempts", source: ["completions/passingAttempts", "stat_1"], part: 1 },
+    { key: "passingYards", source: ["passingYards", "stat_2"] },
+    { key: "passingTouchdowns", source: ["passingTouchdowns", "stat_4"] },
+    { key: "interceptions", source: ["interceptions", "stat_5"] },
   ],
   rushing: [
     { key: "rushingAttempts" },
@@ -514,9 +518,14 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
         let total = 0;
         let observed = false;
         for (const row of categoryRows) {
-          const raw = row.stats[metric.source || metric.key];
+          const sources = metric.source == null
+            ? [metric.key]
+            : Array.isArray(metric.source) ? metric.source : [metric.source];
+          const source = sources.find((candidate) => row.stats[candidate] != null && row.stats[candidate] !== "");
+          if (!source) continue;
+          const raw = row.stats[source];
           if (raw == null || raw === "") continue;
-          const value = metric.source
+          const value = metric.part != null
             ? String(raw).split("/")[metric.part ?? 0]
             : raw;
           const parsed = number(value);
