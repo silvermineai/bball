@@ -6,7 +6,7 @@ import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
-export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
@@ -107,6 +107,7 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "ast_to", label: "Assist control", description: "assist / turnover ratio", volume: 0 },
   { key: "ast_rate", label: "Assist rate", description: "assist possession rate", volume: 50 },
   { key: "points_poss", label: "Points per possession", description: "points per possession", volume: 0 },
+  { key: "usage_rate", label: "Offensive load", description: "estimated usage rate", volume: 50 },
   { key: "stocks40", label: "Defensive events", description: "steals + blocks per 40", volume: 200 },
   { key: "tov_rate", label: "Turnover rate", description: "turnovers per possession", volume: 50 },
   { key: "three_rate", label: "3-point shot rate", description: "3PA / FGA", volume: 50 },
@@ -151,6 +152,7 @@ const metricGuidance: Record<Metric, string> = {
   ast_to: "Assist control is assists divided by turnovers; players with no recorded turnovers remain unavailable.",
   ast_rate: "Assist rate is the source possession-based playmaking rate.",
   points_poss: "Points per possession uses recorded points and offensive possessions.",
+  usage_rate: "Estimated usage rate is the share of team shooting and turnover possessions used while on the floor; the live board requires a 50-event volume floor.",
   stocks40: "Defensive events per 40 combines steals and blocks, normalized by recorded minutes.",
   tov_rate: "Turnover rate is recorded turnovers divided by recorded offensive possessions.",
   three_rate: "Three-point shot rate is 3PA / FGA, a shot-selection measure rather than accuracy.",
@@ -271,7 +273,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   }, [metric, query, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
-  const percentageMetric = ["ts", "efg", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
+  const percentageMetric = ["ts", "efg", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "usage_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
   const displayMetric = (row: PlayerRow) => {
     if (metric === "balanced_index") return fmt(row.value, 2);
     const value = row.value;
