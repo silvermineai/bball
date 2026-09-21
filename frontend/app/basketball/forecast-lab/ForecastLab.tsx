@@ -37,6 +37,7 @@ import {
 import { completeForecastLabMarketQuotes, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "../../_lib/forecast-lab-market";
 import { comparisonGapDirectionLabel } from "../../_lib/market-display";
 import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
+import { matchupTeamRatings } from "../../_lib/forecast-team-context";
 
 type View = ForecastLabView;
 type Sort = ForecastLabSort;
@@ -44,6 +45,7 @@ type Sort = ForecastLabSort;
 type Row = {
   game: BBGame;
   prediction: NonNullable<BBGame["prediction"]>;
+  teamRatings: ReturnType<typeof matchupTeamRatings>;
   scenario: BBRosterScenario | null;
   comparisons: Comparison[];
   modelDelta: ModelDelta | null;
@@ -126,6 +128,7 @@ function signed(value: number | null | undefined, suffix = " pts") {
 
 function modelRow(
   game: BBGame,
+  teamRatings: ReturnType<typeof matchupTeamRatings>,
   scenario: BBRosterScenario | undefined,
   comparisons: Comparison[] | undefined,
   modelDelta: ModelDelta | null,
@@ -138,6 +141,7 @@ function modelRow(
   return {
     game,
     prediction,
+    teamRatings,
     scenario: scenario || null,
     comparisons: marketComparisons,
     modelDelta,
@@ -218,6 +222,7 @@ export default function ForecastLab({
   const [scheduleClockConfirmed, setScheduleClockConfirmed] = useState<number | null>(null);
   const [scheduleClockError, setScheduleClockError] = useState("");
   const scenarioByGame = useMemo(() => new Map(scenarios.map((row) => [row.game_id, row])), [scenarios]);
+  const modelTeamIds = useMemo(() => new Set(overview.model.teams), [overview.model.teams]);
   const scheduleClockByGame = useMemo(() => new Map(scheduleClocks.map((row) => [row.game_id, row])), [scheduleClocks]);
   const activeGames = liveGames || overview.upcoming;
 
@@ -361,6 +366,7 @@ export default function ForecastLab({
       .filter((game) => !search || `${game.home_name} ${game.away_name}`.toLowerCase().includes(search))
       .map((game) => modelRow(
         game,
+        matchupTeamRatings(overview.ratings, game.home_id, game.away_id, modelTeamIds),
         modelSelection === "latest" && rosterEditionMatches ? scenarioByGame.get(game.id) : undefined,
         modelSelection === "latest" ? (liveMarkets || markets)[game.id] : undefined,
         modelSelection === "latest"
@@ -392,7 +398,7 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, overview.model.id, query, rosterPrimaryModelId, scenarioByGame, scheduleClockByGame, sort, view]);
+  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, modelTeamIds, overview.model.id, overview.ratings, query, rosterPrimaryModelId, scenarioByGame, scheduleClockByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.reduce(
@@ -630,7 +636,7 @@ export default function ForecastLab({
             return <tr key={row.game.id}>
               <td><strong>{row.game.away_name} at {row.game.home_name}</strong><small>{row.game.time_tbd ? `${date(row.game.starts_at)} · time TBD` : kick(row.game.starts_at)}{row.game.neutral ? " · neutral" : ""}</small>{scheduleClockByGame.get(row.game.id)?.source_time_valid && scheduleClockByGame.get(row.game.id)?.source_start && <small>Recorded start: {kick(scheduleClockByGame.get(row.game.id)!.source_start!)}</small>}<small><Link href={`/basketball/briefs/${row.game.id}/`}>Open matchup brief →</Link></small></td>
               <td><strong>{row.evidence.present}/{row.evidence.total} core checks</strong><small>{row.evidence.complete ? "Ready for full matchup review" : `Missing: ${row.evidence.missing.join(", ")}`}</small><small>{row.evidence.market === "verified" ? "Verified market lineage available" : "Market lineage unavailable"}</small></td>
-              <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.signal.label} · {row.signal.probability_edge_pp == null ? "probability unavailable" : `${numeric(row.signal.probability_edge_pp)} pp from even`}</small><small>{row.signal.range_context} · {numeric(p.margin_high - p.margin_low, 1)}-point range</small><small>{row.game.forecast_model_id || "edition unavailable"} · {row.game.forecast_created_at && Number.isFinite(Date.parse(row.game.forecast_created_at)) ? `generated ${marketClock(row.game.forecast_created_at)}` : "forecast clock unavailable"}</small></td>
+              <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.signal.label} · {row.signal.probability_edge_pp == null ? "probability unavailable" : `${numeric(row.signal.probability_edge_pp)} pp from even`}</small><small>{row.signal.range_context} · {numeric(p.margin_high - p.margin_low, 1)}-point range</small>{row.teamRatings.home && row.teamRatings.away ? <small>Prior profile: {row.teamRatings.away.name} {signed(row.teamRatings.away.adj_net, " net")} ({row.teamRatings.away.games} g) · {row.teamRatings.home.name} {signed(row.teamRatings.home.adj_net, " net")} ({row.teamRatings.home.games} g)</small> : <small>Prior team profile unavailable for one or both model IDs</small>}<small>{row.game.forecast_model_id || "edition unavailable"} · {row.game.forecast_created_at && Number.isFinite(Date.parse(row.game.forecast_created_at)) ? `generated ${marketClock(row.game.forecast_created_at)}` : "forecast clock unavailable"}</small></td>
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
