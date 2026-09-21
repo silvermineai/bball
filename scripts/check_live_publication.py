@@ -234,6 +234,7 @@ def football_personnel_readiness_metadata(
     checked_at: datetime,
     max_age_hours: float,
     expected_season: int = 2026,
+    expected_model_id: str | None = None,
 ) -> tuple[dict, float]:
     """Validate the exact-ID personnel context published for football games.
 
@@ -246,6 +247,11 @@ def football_personnel_readiness_metadata(
         raise ValueError("football personnel readiness has an unknown version")
     if payload.get("target_season") != expected_season:
         raise ValueError("football personnel readiness has the wrong target season")
+    primary_model_id = payload.get("primary_model_id")
+    if not isinstance(primary_model_id, str) or not primary_model_id.strip():
+        raise ValueError("football personnel readiness has no primary model identity")
+    if expected_model_id is not None and primary_model_id != expected_model_id:
+        raise ValueError("football personnel readiness model identity does not match the forecast edition")
     generated_at = payload.get("generated_at")
     if not isinstance(generated_at, str):
         raise ValueError("football personnel readiness has no generation clock")
@@ -1658,6 +1664,7 @@ def check_live(
         get_json(base_url, "/data/football/personnel-readiness-2026.json"),
         checked_at,
         max_age_hours,
+        expected_model_id=football_latest.get("model_id"),
     )
 
     schedule_clock_total = schedule_clock_confirmed = 0

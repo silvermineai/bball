@@ -10,6 +10,7 @@ def payload():
         "version": "football-personnel-readiness-v1",
         "generated_at": "2026-09-21T20:00:00Z",
         "target_season": 2026,
+        "primary_model_id": "model-1",
         "coverage": {
             "forecast_games": 1,
             "team_sides": 2,
@@ -44,7 +45,7 @@ class FootballPersonnelPublicationTests(unittest.TestCase):
     now = datetime(2026, 9, 21, 21, tzinfo=timezone.utc)
 
     def test_validates_exact_id_rows_and_fresh_receipts(self):
-        coverage, age = football_personnel_readiness_metadata(payload(), self.now, 36)
+        coverage, age = football_personnel_readiness_metadata(payload(), self.now, 36, expected_model_id="model-1")
         self.assertEqual(coverage["forecast_games"], 1)
         self.assertEqual(age, 2.0)
 
@@ -63,6 +64,10 @@ class FootballPersonnelPublicationTests(unittest.TestCase):
         bad["games"].append(copy.deepcopy(bad["games"][0]))
         with self.assertRaisesRegex(ValueError, "game identity is not unique"):
             football_personnel_readiness_metadata(bad, self.now, 36)
+
+    def test_rejects_context_from_another_model_edition(self):
+        with self.assertRaisesRegex(ValueError, "model identity"):
+            football_personnel_readiness_metadata(payload(), self.now, 36, expected_model_id="different-model")
 
 
 if __name__ == "__main__":

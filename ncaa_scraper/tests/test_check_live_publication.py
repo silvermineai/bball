@@ -535,6 +535,7 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "version": "football-personnel-readiness-v1",
                     "generated_at": "2026-09-10T19:00:00Z",
                     "target_season": 2026,
+                    "primary_model_id": "football-model-1",
                     "coverage": {
                         "forecast_games": 1,
                         "team_sides": 2,
