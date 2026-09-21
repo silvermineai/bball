@@ -53,6 +53,41 @@ def test_missing_division_and_receipt_block_import_without_reclassification():
     }
 
 
+def test_lower_football_contract_rejects_conflicting_duplicate_stat_rows():
+    row = {
+        "sport": "football",
+        "gender": "men",
+        "division": 2,
+        "season": 2026,
+        "team_id": "team-2",
+        "team_display_name": "Example State",
+        "athlete_id": "athlete-2",
+        "athlete_display_name": "Example Player",
+        "event_id": "game-1",
+        "stat_name": "rushing_yards",
+        "stat_value": 120,
+    }
+    receipt = {"url": "https://example.test/mfb.csv", "sha256": "a" * 64}
+    accepted = validate_player_source_rows([row, {**row}], receipt, sport="football", gender="men", division=2)
+    assert accepted["accepted"] is True
+    rejected = validate_player_source_rows([row, {**row, "stat_value": 121}], receipt, sport="football", gender="men", division=2)
+    assert rejected["accepted"] is False
+    assert "conflicting_duplicate" in {error["code"] for error in rejected["errors"]}
+
+
+def test_lower_football_contract_reports_malformed_rows():
+    result = validate_player_source_rows(
+        [None],
+        {"url": "https://example.test/mfb.csv", "sha256": "a" * 64},
+        sport="football",
+        gender="men",
+        division=3,
+    )
+    assert result["accepted"] is False
+    assert result["rows"] == 1
+    assert {error["code"] for error in result["errors"]} == {"malformed_row"}
+
+
 def test_wbb_discovery_reports_missing_division_for_each_player_asset():
     result = discover_lower_division_sources("WBB", 3)
     assert result["status"] == "blocked"

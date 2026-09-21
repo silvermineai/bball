@@ -330,7 +330,12 @@ def validate_player_source_rows(
     gender: str,
     division: str | int,
 ) -> dict[str, Any]:
-    """Validate a labeled lower-division player release without reclassifying rows."""
+    """Validate a labeled lower-division player release without reclassifying rows.
+
+    The identity key includes an optional event/contest ID and stat label so a
+    source can publish one player across multiple games or categories while a
+    conflicting repeat of the same identity/stat row is rejected.
+    """
 
     expected_division = str(division)
     errors: list[dict[str, Any]] = []
@@ -339,7 +344,13 @@ def validate_player_source_rows(
     if not _valid_receipt(receipt):
         errors.append({"code": "invalid_receipt", "message": "A source URL and 64-character SHA-256 receipt are required before import."})
 
+    seen: dict[tuple[str, ...], str] = {}
+    row_count = 0
     for index, row in enumerate(rows):
+        row_count += 1
+        if not isinstance(row, Mapping):
+            errors.append({"row": index, "code": "malformed_row", "message": "Each release row must be a mapping."})
+            continue
         if str(row.get("sport") or "").strip().lower() != sport.lower():
             errors.append({"row": index, "code": "wrong_sport", "message": f"Rows must carry sport={sport}."})
         if str(row.get("gender") or "").strip().lower() != gender.lower():
@@ -350,9 +361,25 @@ def validate_player_source_rows(
             if row.get(field) in (None, ""):
                 errors.append({"row": index, "code": f"missing_{field}", "message": f"Rows must carry {field}."})
 
+        identity = (
+            str(row.get("season") or ""),
+            str(row.get("division") or ""),
+            str(row.get("team_id") or ""),
+            str(row.get("athlete_id") or ""),
+            str(row.get("event_id") or row.get("game_id") or row.get("contest_id") or ""),
+            str(row.get("stat_name") or row.get("stat_label") or row.get("category") or row.get("metric") or ""),
+        )
+        payload = json.dumps(dict(row), sort_keys=True, ensure_ascii=False, default=str)
+        prior = seen.get(identity)
+        if prior is None:
+            seen[identity] = payload
+        elif prior != payload:
+            errors.append({"row": index, "code": "conflicting_duplicate", "message": "Conflicting duplicate identity/stat rows are rejected."})
+
     return {
         "accepted": not errors,
         "status": "ready" if not errors else "blocked",
+        "rows": row_count,
         "required_scope_fields": list(REQUIRED_SCOPE_FIELDS),
         "required_identity_fields": list(REQUIRED_IDENTITY_FIELDS),
         "required_receipt_fields": list(REQUIRED_RECEIPT_FIELDS),
