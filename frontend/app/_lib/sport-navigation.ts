@@ -120,7 +120,7 @@ export function sportAvailabilityMessage(sport: Sport, division: Division): stri
   if (division === "1") {
     return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedules and score-derived record boards are available, while lower-division player tables and forecasts are not yet published.";
   }
-  return `Football coverage: D${division} schedule rows and score-derived team records are available. Player tables, opponent-adjusted ratings and model forecasts for D${division} are not yet published.`;
+  return `Football coverage: D${division} schedule rows, score-derived team records, exact-division ratings and validated forecasts are published. Lower-division player tables and player rankings remain unavailable; no D1 rows are substituted.`;
 }
 
 export function isNavItemActive(pathname: string, item: SportNavItem): boolean {
