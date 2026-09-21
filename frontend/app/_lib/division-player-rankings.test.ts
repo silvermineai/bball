@@ -54,4 +54,28 @@ describe("division player rankings", () => {
     expect(result.total).toBe(1);
     expect(result.rows[0]).toMatchObject({ name: "Volume Leader", value: 400, rank: 1 });
   });
+
+  it("carries exact publisher evidence through the filtered ranking row", () => {
+    const result = rankDivisionPlayers([{
+      player_id: 11,
+      division: 2,
+      name: "Evidence Leader",
+      games: 20,
+      pts: 500,
+      source_stats: {
+        ppg: {
+          headers: ["Rank", "Player", "PTS", "PPG"],
+          cells: ["4", "Evidence Leader, North", "500", "25.0"],
+          rank: 4,
+          value: 25,
+        },
+      },
+    }], { division: "2", metric: "pts" });
+    expect(result.rows[0].source_stats?.ppg).toEqual({
+      headers: ["Rank", "Player", "PTS", "PPG"],
+      cells: ["4", "Evidence Leader, North", "500", "25.0"],
+      rank: 4,
+      value: 25,
+    });
+  });
 });

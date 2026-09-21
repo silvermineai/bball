@@ -38,6 +38,13 @@ export type DivisionPlayer = {
   three_fga?: number | null;
   ftm?: number | null;
   fta?: number | null;
+  /** Exact cells retained from the publisher's source row, when present. */
+  source_stats?: Record<string, {
+    headers: string[];
+    cells: string[];
+    rank: number | null;
+    value: number | null;
+  }>;
   [key: string]: unknown;
 };
 

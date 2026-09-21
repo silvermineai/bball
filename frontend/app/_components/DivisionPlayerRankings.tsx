@@ -10,11 +10,22 @@ import {
   type DivisionPlayer,
   type DivisionRankingMetric,
 } from "../_lib/division-player-rankings";
+import {
+  divisionPlayerDetailGroups,
+  retainedPlayerValue,
+  type DivisionPlayerWithEvidence,
+} from "../_lib/division-player-detail";
 
-type Publication = { season: number; generated_at: string; players: DivisionPlayer[] };
+type Publication = { season: number; generated_at: string; players: DivisionPlayerWithEvidence[] };
 
 const value = (raw: number | null | undefined, digits = 1) =>
   typeof raw === "number" && Number.isFinite(raw) ? raw.toFixed(digits) : "—";
+
+const detailValue = (player: DivisionPlayer, key: string, kind: "count" | "minutes" | "rate") => {
+  const raw = retainedPlayerValue(player, key);
+  if (raw == null) return "—";
+  return value(raw, kind === "rate" ? 2 : kind === "minutes" ? 1 : 0);
+};
 
 const captured = (raw: string) => {
   const date = new Date(raw);
@@ -68,7 +79,7 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
         </select>
       </div>
       <p className="note">{result.total.toLocaleString()} qualifying players · showing {result.rows.length} · {divisionMetricLabel(metric)} · season {publication.season} · captured {captured(publication.generated_at)}.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th></tr></thead><tbody>{result.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th><th>Recorded stats</th></tr></thead><tbody>{result.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td><td><details className="ranking-recorded-details"><summary>Open retained fields</summary><p className="note">Source values retained for this player row. A dash means the release did not contain a finite numeric value; no value is inferred.</p>{divisionPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{detailValue(player, key, kind)}</strong></span>)}</div></div>)}{player.source_stats && Object.keys(player.source_stats).length ? <p className="note">Publisher evidence: {Object.entries(player.source_stats).map(([key, evidence]) => `${key}${evidence.rank == null ? "" : ` (#${evidence.rank})`}${evidence.value == null ? "" : ` = ${evidence.value}`}`).join(" · ")}</p> : null}</details></td></tr>)}</tbody></table></div>
       {!result.rows.length ? <p className="empty">No retained players match this ranking filter.</p> : null}
       <p className="muted">These are final-season descriptive records from the retained national individual archive. They do not infer eligibility, role, availability, future performance, or a composite player grade.</p>
     </>}
