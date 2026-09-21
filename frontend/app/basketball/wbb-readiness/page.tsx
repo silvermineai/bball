@@ -8,12 +8,12 @@ export const metadata = {
 export default function Page() {
   return <>
     <div className="page-title">
-      <div className="eyebrow">Women&apos;s basketball · model accountability</div>
-      <h1>Forecast readiness before game probabilities.</h1>
+      <div className="eyebrow">Women&apos;s basketball · division desk</div>
+      <h1>Division coverage and forecast readiness.</h1>
       <p>
-        This desk shows whether source-native women&apos;s schedule and team-box
-        inputs support a separately fitted, calibrated forecast. Missing inputs
-        stay visible and men&apos;s model rows never fill the gap.
+        D1 opens the separately fitted forecast evidence. D2 and D3 open their
+        source-native player and team tables with the intake gates that keep
+        unsupported identities and statistics visible.
       </p>
     </div>
     <section className="section">
