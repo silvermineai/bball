@@ -6,6 +6,7 @@ import {
   paginateWomensLowerDivisionRows,
   summarizeWomensLowerDivisionCoverage,
   summarizeWomensLowerDivisionTeams,
+  womensLowerIndividualExport,
 } from "./womens-lower-division-view";
 
 const rows = [
@@ -99,5 +100,27 @@ describe("women's lower-division source row view", () => {
       ],
     }]);
     expect(summary.map((team) => team.team_source_path)).toEqual(["/schools/central-east", "/schools/central-west"]);
+  });
+
+  it("exports all individual leaderboards with statistic context and source fields", () => {
+    const result = womensLowerIndividualExport([
+      {
+        statistic: "scoring",
+        label: "Scoring",
+        source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101",
+        rows: [{ rank: 1, team_source_path: "/schools/north", source_fields: { Rank: "1", Name: "Ari Jones", PPG: "20.0" } }],
+      },
+      {
+        statistic: "assists",
+        label: "Assists",
+        source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/102",
+        rows: [{ rank: 2, source_fields: { Rank: "2", Name: "Ari Jones", AST: "100" } }],
+      },
+    ]);
+    expect(result.headers).toEqual(["Statistic", "Source label", "Source URL", "Source rank", "Team source path", "Rank", "Name", "PPG", "AST"]);
+    expect(result.rows).toEqual([
+      ["scoring", "Scoring", "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101", 1, "/schools/north", "1", "Ari Jones", "20.0", null],
+      ["assists", "Assists", "https://www.ncaa.com/stats/basketball-women/d2/current/individual/102", 2, null, "2", "Ari Jones", null, "100"],
+    ]);
   });
 });

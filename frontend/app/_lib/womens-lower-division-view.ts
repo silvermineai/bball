@@ -33,7 +33,46 @@ export type WomensLowerDivisionCoverage = {
   through_games: string | null;
 };
 
+export type WomensLowerIndividualExport = {
+  headers: string[];
+  rows: Array<Array<string | number | null>>;
+};
+
 export const LOWER_DIVISION_PAGE_SIZE = 25;
+
+/**
+ * Export every source-native individual leaderboard in one exact division.
+ * Statistic context and source URLs stay on every row because repeated names
+ * do not establish athlete identity.
+ */
+export function womensLowerIndividualExport(
+  statistics: ReadonlyArray<{
+    statistic: string;
+    label: string;
+    source_url: string;
+    rows: readonly LowerDivisionRow[];
+  }>,
+  query = "",
+  minimumGames = 0,
+): WomensLowerIndividualExport {
+  const retained = statistics.flatMap((statistic) => filterWomensLowerDivisionRows(statistic.rows, query, minimumGames).map((row) => ({ statistic, row })));
+  const fields = [...new Set(retained.flatMap(({ row }) => Object.keys(row.source_fields || {})))];
+  const headers = ["Statistic", "Source label", "Source URL", "Source rank", "Team source path", ...fields];
+  return {
+    headers,
+    rows: retained.map(({ statistic, row }) => [
+      statistic.statistic,
+      statistic.label,
+      statistic.source_url,
+      row.rank == null ? null : typeof row.rank === "number" || typeof row.rank === "string" ? row.rank : String(row.rank),
+      row.team_source_path == null ? null : String(row.team_source_path),
+      ...fields.map((field) => {
+        const value = row.source_fields?.[field];
+        return value == null ? null : typeof value === "number" || typeof value === "string" ? value : String(value);
+      }),
+    ]),
+  };
+}
 
 /**
  * Summarize one exact-division source edition without interpreting any row.

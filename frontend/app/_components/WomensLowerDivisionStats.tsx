@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { parseWomensLowerDivisionEdition, type WomensLowerDivisionEdition, type WomensLowerDivisionStatistic } from "../_lib/womens-lower-division-integrity";
-import { filterWomensLowerDivisionRows, lowerDivisionCellValue, LOWER_DIVISION_PAGE_SIZE, paginateWomensLowerDivisionRows, summarizeWomensLowerDivisionCoverage, summarizeWomensLowerDivisionTeams, type LowerDivisionRow } from "../_lib/womens-lower-division-view";
+import { filterWomensLowerDivisionRows, lowerDivisionCellValue, LOWER_DIVISION_PAGE_SIZE, paginateWomensLowerDivisionRows, summarizeWomensLowerDivisionCoverage, summarizeWomensLowerDivisionTeams, womensLowerIndividualExport, type LowerDivisionRow } from "../_lib/womens-lower-division-view";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 type Row = LowerDivisionRow & { team_source_path?: string };
@@ -71,6 +71,11 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
     team.best_source_rank,
     team.statistics.map((stat) => `${stat.label} (${stat.rows})`).join("; "),
   ]);
+  const downloadAllIndividual = () => {
+    if (!current) return;
+    const exported = womensLowerIndividualExport(current.individual as Statistic[], query, Number(minimumGames) || 0);
+    downloadCsv("womens-d" + division + "-individual-leaderboards.csv", toCsv(exported.headers, exported.rows));
+  };
   return <section className="field-card" aria-labelledby="wbb-lower-stats-title" style={{ marginTop: 18 }}>
     <div className="eyebrow">SOURCE-NATIVE LOWER DIVISION · WOMEN&apos;S D{division}</div>
     <h2 id="wbb-lower-stats-title">D{division} leaderboards are now visible</h2>
@@ -90,6 +95,7 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
         <input id="wbb-lower-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Player or team" />
         <label htmlFor="wbb-lower-min-games">MINIMUM GAMES</label>
         <select id="wbb-lower-min-games" value={minimumGames} onChange={(event) => setMinimumGames(event.target.value)}><option value="0">Any recorded games</option><option value="5">5+</option><option value="10">10+</option><option value="20">20+</option></select>
+        {kind === "individual" ? <button className="button secondary" type="button" onClick={downloadAllIndividual} disabled={!current.individual.length}>Download all individual leaderboards ↓</button> : null}
       </div>
       {kind === "team-summary" ? <><div className="scope-snapshot-counts"><strong>{matchingTeamSummaries.length.toLocaleString()}</strong><span>matching source teams</span><strong>{current.team.length.toLocaleString()}</strong><span>team leaderboards</span><strong>{teamSummaries.reduce((sum, team) => sum + team.appearances, 0).toLocaleString()}</strong><span>retained appearances</span></div>
         <div className="section-heading" style={{ marginTop: 14 }}><p className="note">This index groups rows only when NCAA.com provides the same exact team URL path. It describes leaderboard coverage; it is not a composite rating or identity join.</p><button className="button secondary" type="button" onClick={() => downloadCsv(`womens-d${division}-team-coverage-index.csv`, toCsv(["Team", "Source team path", "Leaderboard appearances", "Distinct statistics", "Best source rank", "Statistics"], teamSummaryExportRows as CsvCell[][]))} disabled={!matchingTeamSummaries.length}>Download team index CSV ↓</button></div>
