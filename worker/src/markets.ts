@@ -131,7 +131,11 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   if (sourceRows !== undefined && pricedRows !== undefined && pricedRows > sourceRows) return "unknown";
   if (pricedRows === 0 && (accepted > 0 || rejected > 0)) return "unknown";
   if (eligibleGames !== undefined && (eligibleGames < 0 || sourceRows !== undefined && sourceRows > eligibleGames || fetchFailures > eligibleGames || (sourceRows !== undefined && sourceRows + fetchFailures > eligibleGames))) return "unknown";
-  if (fetchFailures > 0 && accepted === 0 && eligibleGames !== undefined && eligibleGames > 0) return "capture_incomplete";
+  // A partially readable capture cannot establish complete market coverage,
+  // even when some rows passed validation. Keep the public readiness state
+  // conservative so consumers do not mistake the accepted subset for a
+  // complete prospective slate.
+  if (fetchFailures > 0 && eligibleGames !== undefined && eligibleGames > 0) return "capture_incomplete";
   if (sourceRows === 0) return eligibleGames === 0 || eligibleGames === undefined ? "no_eligible_summaries" : "unknown";
   if (accepted > 0) return "validated_quotes";
   if (rejected > 0 && pricedRows !== 0) return "quotes_failed_validation";
