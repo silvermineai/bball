@@ -10,6 +10,7 @@ from scripts.check_live_publication import (
     check_live,
     forecast_coverage,
     validate_forecast_prediction,
+    validate_forecast_matchup_context,
     roster_forecast_alignment,
     market_metadata,
     validate_market_capture,
@@ -173,6 +174,40 @@ class LivePublicationCheckTest(unittest.TestCase):
         row["prediction"]["away_efficiency"] = 89
         with self.assertRaisesRegex(ValueError, "away efficiency"):
             validate_forecast_prediction(row)
+
+    def test_forecast_matchup_context_reports_exact_and_older_editions(self):
+        exact = {
+            "matchup_factors_integrity": "valid",
+            "matchup_factors_source": "forecast_payload",
+            "matchup_factors_model_id": "model-current",
+            "matchup_factors_same_edition": True,
+            "matchup_factors": {"season": 2026},
+        }
+        self.assertEqual(
+            validate_forecast_matchup_context(exact, "model-current"),
+            {
+                "integrity": "valid",
+                "source": "forecast_payload",
+                "model_id": "model-current",
+                "same_edition": True,
+            },
+        )
+        older = {**exact, "matchup_factors_source": "published_asset", "matchup_factors_model_id": "model-old", "matchup_factors_same_edition": False}
+        self.assertEqual(validate_forecast_matchup_context(older, "model-current")["same_edition"], False)
+
+    def test_forecast_matchup_context_rejects_inconsistent_provenance(self):
+        with self.assertRaisesRegex(ValueError, "edition flag"):
+            validate_forecast_matchup_context({
+                "matchup_factors_integrity": "valid",
+                "matchup_factors_source": "published_asset",
+                "matchup_factors_model_id": "model-old",
+                "matchup_factors_same_edition": True,
+                "matchup_factors": {},
+            }, "model-current")
+        self.assertEqual(
+            validate_forecast_matchup_context({"matchup_factors_integrity": "unavailable"}, "model-current")["same_edition"],
+            None,
+        )
 
     @staticmethod
     def womens_forecast_payload():

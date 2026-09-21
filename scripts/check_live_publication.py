@@ -310,6 +310,48 @@ def validate_forecast_prediction(row: dict) -> dict:
     return {"estimate_type": prediction.get("estimate_type", "primary"), "pace": values["pace"]}
 
 
+def validate_forecast_matchup_context(row: dict, expected_model_id: str) -> dict:
+    """Report the provenance of a forecast row's four-factor context.
+
+    A factor asset can cover the same game IDs while belonging to an older
+    model edition.  That context remains useful as dated descriptive evidence,
+    but it must be visible to the publication monitor so a stale asset cannot
+    be mistaken for inputs to the current score.  This check therefore
+    validates the API's explicit provenance fields without failing a release
+    merely because the older context is unavailable or clearly labeled.
+    """
+    if not isinstance(row, dict):
+        raise ValueError("latest basketball model has no inspectable matchup context")
+    integrity = row.get("matchup_factors_integrity")
+    factors = row.get("matchup_factors")
+    source = row.get("matchup_factors_source")
+    factor_model_id = row.get("matchup_factors_model_id")
+    same_edition = row.get("matchup_factors_same_edition")
+    if integrity not in {"valid", "invalid", "unavailable"}:
+        raise ValueError("latest basketball model has an invalid matchup context status")
+    if integrity == "valid":
+        if not isinstance(factors, dict) or source not in {"forecast_payload", "published_asset"}:
+            raise ValueError("latest basketball model has incomplete matchup context provenance")
+        if not isinstance(factor_model_id, str) or not factor_model_id.strip():
+            raise ValueError("latest basketball model matchup context has no model ID")
+        if not isinstance(same_edition, bool) or same_edition != (factor_model_id == expected_model_id):
+            raise ValueError("latest basketball model matchup context edition flag is inconsistent")
+        return {
+            "integrity": integrity,
+            "source": source,
+            "model_id": factor_model_id,
+            "same_edition": same_edition,
+        }
+    if factors is not None or source is not None or factor_model_id is not None or same_edition is not None:
+        raise ValueError("latest basketball model has inconsistent unavailable matchup context")
+    return {
+        "integrity": integrity,
+        "source": None,
+        "model_id": None,
+        "same_edition": None,
+    }
+
+
 def womens_forecast_metadata(payload: dict) -> dict:
     """Validate the source-native published women's forecast asset.
 
@@ -1261,6 +1303,19 @@ def check_live(
     if not isinstance(game_id, str) or not re.fullmatch(r"\d{1,20}", game_id):
         raise ValueError("latest basketball model has an invalid game identity")
     forecast_prediction = validate_forecast_prediction(personnel_game)
+    # Probe the ordinary upcoming board separately from the roster challenger:
+    # the latter intentionally suppresses static factor attachment. This
+    # keeps the publication report honest about whether the visible factor
+    # context belongs to the exact forecast edition or is older descriptive
+    # evidence.
+    factor_probe = get_json(
+        base_url,
+        f"/api/basketball/research/forecasts?season=2027&status=upcoming&model=latest&limit=1&page=0&publication_check={probe_key}",
+    )
+    factor_probe_rows = factor_probe.get("rows")
+    if not isinstance(factor_probe_rows, list) or not factor_probe_rows or not isinstance(factor_probe_rows[0], dict):
+        raise ValueError("latest basketball model has no inspectable matchup context row")
+    forecast_matchup_context = validate_forecast_matchup_context(factor_probe_rows[0], model_id)
     womens_forecast = womens_forecast_metadata(
         get_json(base_url, "/data/basketball/womens-forecast.json")
     )
@@ -1435,6 +1490,10 @@ def check_live(
         "forecast_roster_scenario_rows": roster_scenario_rows,
         "forecast_prediction_estimate_type": forecast_prediction["estimate_type"],
         "forecast_prediction_pace": forecast_prediction["pace"],
+        "forecast_matchup_factor_integrity": forecast_matchup_context["integrity"],
+        "forecast_matchup_factor_source": forecast_matchup_context["source"],
+        "forecast_matchup_factor_model": forecast_matchup_context["model_id"],
+        "forecast_matchup_factor_same_edition": forecast_matchup_context["same_edition"],
         "womens_forecast_model": womens_forecast["model_id"],
         "womens_forecast_rows": womens_forecast["forecast_rows"],
         "womens_forecast_validation_games": womens_forecast["validation_games"],
