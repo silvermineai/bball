@@ -5756,6 +5756,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   letter-spacing: .06em;
 }
 .readiness-state-ready { color: #28603d; border-color: #8eb49a; background: #edf7ed; }
+.readiness-state-partial { color: #79530c; border-color: #d2b26a; background: #fff8df; }
 .readiness-state-missing, .readiness-state-blocked { color: #9d3d25; border-color: #dca08e; background: #fff2ed; }
 .plain-list { margin: 12px 0 0; padding-left: 22px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .plain-list code { color: var(--ink); font: 10px "IBM Plex Mono", monospace; }

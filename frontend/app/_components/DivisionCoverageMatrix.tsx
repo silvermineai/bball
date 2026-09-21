@@ -6,11 +6,11 @@ export default function DivisionCoverageMatrix({ sport, gender, division }: { sp
   return <section className="paper-panel division-coverage-matrix" aria-labelledby={`${sport}-${gender}-d${division}-coverage-title`}>
     <div className="eyebrow">{gender === "women" ? "WOMEN'S" : "MEN'S"} {sportLabel.toUpperCase()} · D{division} COVERAGE</div>
     <h3 id={`${sport}-${gender}-d${division}-coverage-title`}>What this division supports</h3>
-    <p className="note">Recorded means a division-labeled release passed the scope checks. Unavailable means the surface is intentionally withheld; another division is never substituted.</p>
+    <p className="note">Recorded means a division-labeled release passed the scope checks. Partial means a source-native subset is available while a fuller release remains gated. Unavailable means the surface is intentionally withheld; another division is never substituted.</p>
     <div className="table-scroll">
       <table className="data-table">
         <thead><tr><th>Surface</th><th>Status</th><th>Release boundary</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.surface}><th scope="row">{row.label}</th><td><span className={`readiness-state readiness-state-${row.state === "recorded" ? "ready" : "missing"}`}>{row.state === "recorded" ? "Recorded" : "Unavailable"}</span></td><td>{row.note}</td></tr>)}</tbody>
+        <tbody>{rows.map((row) => <tr key={row.surface}><th scope="row">{row.label}</th><td><span className={`readiness-state readiness-state-${row.state === "recorded" ? "ready" : row.state === "partial" ? "partial" : "missing"}`}>{row.state === "recorded" ? "Recorded" : row.state === "partial" ? "Partial" : "Unavailable"}</span></td><td>{row.note}</td></tr>)}</tbody>
       </table>
     </div>
   </section>;

@@ -2,7 +2,13 @@ export type DivisionCoverageSport = "basketball" | "football";
 export type DivisionCoverageGender = "men" | "women";
 export type LowerDivision = "2" | "3";
 export type DivisionCoverageSurface = "players" | "teams" | "matches" | "rankings" | "predictions" | "recruiting";
-export type DivisionCoverageState = "recorded" | "unavailable";
+/**
+ * `partial` is used when a source-native subset is published while a fuller
+ * canonical release remains gated.  Keeping this distinct from `recorded`
+ * prevents an observed event archive from being presented as a complete
+ * national player-stat edition.
+ */
+export type DivisionCoverageState = "recorded" | "partial" | "unavailable";
 
 export type DivisionCoverageRow = {
   surface: DivisionCoverageSurface;
@@ -34,10 +40,13 @@ export function divisionCoverage(
     : sport === "basketball" && gender === "men"
       ? new Set<DivisionCoverageSurface>(["players", "teams", "matches", "rankings"])
       : new Set<DivisionCoverageSurface>();
+  const partial = sport === "football" && gender === "men"
+    ? new Set<DivisionCoverageSurface>(["players"])
+    : new Set<DivisionCoverageSurface>();
   return surfaces.map(([surface, label]) => ({
     surface,
     label,
-    state: recorded.has(surface) ? "recorded" : "unavailable",
+    state: recorded.has(surface) ? "recorded" : partial.has(surface) ? "partial" : "unavailable",
     note: recorded.has(surface)
       ? surface === "matches"
         ? `Retained Division ${division} schedule rows and completed score results.`
@@ -50,6 +59,8 @@ export function divisionCoverage(
               : surface === "rankings"
               ? `Within-division recorded fields for Division ${division}.`
               : `Validated Division ${division} ${surface} archive rows.`
+      : partial.has(surface)
+        ? `Observed exact-ID Division ${division} player production from retained game summaries is published; the canonical national player-stat edition remains separately gated and missing categories are not treated as zero.`
       : sport === "basketball" && gender === "women" && surface === "players"
         ? `No stable-ID Division ${division} player archive. Source-native leaderboard rows are displayed separately with names and team slugs only.`
         : `No validated Division ${division} ${surface} release.`,
