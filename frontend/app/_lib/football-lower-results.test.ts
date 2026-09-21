@@ -52,6 +52,21 @@ describe("lower-division football results", () => {
     expect(lowerForecastsForDivision(archive, "d3").map((item) => item.game_id)).toEqual(["d3-only"]);
   });
 
+  it("drops a forecast whose source scope disagrees with its keyed division", () => {
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now", rows: [],
+      teams: { d2: [], d3: [] }, limitations: [],
+      forecasts: {
+        d2: [forecast("d3", "miskeyed-d3", "2026-09-01T00:00:00Z", 0.5, -10, 10)],
+        d3: [forecast("d3", "valid-d3", "2026-09-01T00:00:00Z", 0.5, -10, 10)],
+      },
+    });
+    expect(archive.forecasts.d2).toEqual([]);
+    expect(archive.forecasts.d3.map((item) => item.game_id)).toEqual(["valid-d3"]);
+    expect(archive.coverage.d2.forecast_games).toBe(0);
+    expect(archive.coverage.d3.forecast_games).toBe(1);
+  });
+
   it("exports the published interval width alongside each forecast", () => {
     const item = forecast("d2", "d2-1", "2026-09-01T00:00:00Z", 0.6, -10, 14);
     expect(lowerForecastUncertainty(item)).toBe(24);

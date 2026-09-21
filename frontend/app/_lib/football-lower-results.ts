@@ -195,7 +195,9 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
     const sourceModel = raw.models && typeof raw.models === "object" ? (raw.models as Record<string, unknown>)[division] : null;
     if (validModel(sourceModel, division)) models[division] = sourceModel;
     const sourceForecasts = raw.forecasts && typeof raw.forecasts === "object" ? (raw.forecasts as Record<string, unknown>)[division] : [];
-    forecasts[division] = Array.isArray(sourceForecasts) ? sourceForecasts.filter(validForecast) : [];
+    forecasts[division] = Array.isArray(sourceForecasts)
+      ? sourceForecasts.filter((item): item is LowerFootballForecast => validForecast(item) && item.scope_division === division)
+      : [];
     coverage[division].upcoming_games = Number(raw.coverage && typeof raw.coverage === "object" && (raw.coverage as Record<string, unknown>)[division] && typeof (raw.coverage as Record<string, unknown>)[division] === "object" ? ((raw.coverage as Record<string, unknown>)[division] as Record<string, unknown>).upcoming_games || 0 : 0);
     coverage[division].forecast_games = forecasts[division].length;
   }
