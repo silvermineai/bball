@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Comparison } from "./research-types";
-import { latestForecastLabMarketQuote } from "./forecast-lab-market";
+import { completeForecastLabMarketQuotes, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "./forecast-lab-market";
 
 const quote = (overrides: Partial<Comparison> = {}): Comparison => ({
   provider: "licensed-feed",
@@ -36,5 +36,15 @@ describe("Forecast Lab market quote selection", () => {
     const incomplete = quote({ market: "h2h", line: null, market_home_probability: null });
     const complete = quote({ market: "h2h", line: null, market_home_probability: 0.56, updated_at: "2026-09-10T12:00:00Z" });
     expect(latestForecastLabMarketQuote([complete, incomplete], "h2h")).toBe(complete);
+  });
+
+  it("counts only complete, bounded quotes as market evidence", () => {
+    const incomplete = quote({ line: null });
+    const invalidTotal = quote({ market: "totals", line: -1 });
+    const invalidMoneyline = quote({ market: "h2h", line: null, market_home_probability: 1.2 });
+    const complete = quote({ market: "totals", line: 146.5 });
+    expect(completeForecastLabMarketQuotes([incomplete, invalidTotal, invalidMoneyline, complete])).toEqual([complete]);
+    expect(hasCompleteForecastLabMarket([incomplete, invalidTotal, invalidMoneyline])).toBe(false);
+    expect(hasCompleteForecastLabMarket([incomplete, complete])).toBe(true);
   });
 });

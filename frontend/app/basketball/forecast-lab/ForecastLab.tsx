@@ -33,7 +33,7 @@ import {
   type ForecastLabSort,
   type ForecastLabView,
 } from "../../_lib/forecast-lab-view";
-import { latestForecastLabMarketQuote } from "../../_lib/forecast-lab-market";
+import { completeForecastLabMarketQuotes, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "../../_lib/forecast-lab-market";
 import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 
 type View = ForecastLabView;
@@ -144,7 +144,7 @@ function modelRow(
       scheduled,
       factors: !!factorSignal,
       roster: !!scenario,
-      market: marketComparisons.length > 0,
+      market: hasCompleteForecastLabMarket(marketComparisons),
     }),
   };
 }
@@ -380,7 +380,7 @@ export default function ForecastLab({
       candidates.filter((row): row is Row => !!row).filter((row) => {
         if (view === "scenario") return !!row.scenario;
         if (view === "cold-start") return !row.game.prediction && !!row.game.fallback_prediction;
-        if (view === "market") return row.comparisons.length > 0;
+        if (view === "market") return hasCompleteForecastLabMarket(row.comparisons);
         if (view === "model-delta") return !!row.modelDelta;
         if (view === "factor") return !!row.factorSignal;
         if (view === "coverage-gap") return !row.evidence.complete;
@@ -409,7 +409,7 @@ export default function ForecastLab({
   const unconfirmedStartCount = modeledGames.length - confirmedStartCount;
   const activeMarkets = liveMarkets || markets;
   const verifiedMarketGames = modelSelection === "latest"
-    ? modeledGames.filter((game) => (activeMarkets[game.id] || []).length > 0).length
+    ? modeledGames.filter((game) => hasCompleteForecastLabMarket(activeMarkets[game.id] || [])).length
     : 0;
   const marketRow = rows.find((row) => row.game.id === marketGameId) || rows[0];
   const capture = marketMetadata?.research_capture;
@@ -474,7 +474,7 @@ export default function ForecastLab({
         row.factorSignal == null ? null : Math.abs(row.factorSignal.edge) * 100,
         row.factorSignal?.season,
         row.factorSignal ? factorSignalModelId : null,
-        row.comparisons.length,
+        completeForecastLabMarketQuotes(row.comparisons).length,
         marketQuote(row.comparisons, "spreads")?.provider,
         marketQuote(row.comparisons, "spreads")?.bookmaker,
         marketQuote(row.comparisons, "spreads")?.captured_at,
@@ -630,7 +630,7 @@ export default function ForecastLab({
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
                               <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
-              <td>{row.comparisons.length ? <><strong>{row.comparisons.length} verified quote{row.comparisons.length === 1 ? "" : "s"}</strong>{marketQuote(row.comparisons, "spreads") && <small>{marketQuote(row.comparisons, "spreads")!.bookmaker} · spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>{marketQuote(row.comparisons, "totals")!.bookmaker} · total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>{marketQuote(row.comparisons, "h2h")!.bookmaker} · no-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}{(["spreads", "totals", "h2h"] as const).map((market) => { const q = marketQuote(row.comparisons, market); return q ? <small key={`${market}-clock`}>{market.toUpperCase()} · {q.provider} · captured {marketClock(q.captured_at)} · updated {marketClock(q.updated_at)}</small> : null; })}</> : <span className="muted">No verified market quote</span>}</td>
+              <td>{hasCompleteForecastLabMarket(row.comparisons) ? <><strong>{completeForecastLabMarketQuotes(row.comparisons).length} verified quote{completeForecastLabMarketQuotes(row.comparisons).length === 1 ? "" : "s"}</strong>{marketQuote(row.comparisons, "spreads") && <small>{marketQuote(row.comparisons, "spreads")!.bookmaker} · spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)}</small>}{marketQuote(row.comparisons, "totals") && <small>{marketQuote(row.comparisons, "totals")!.bookmaker} · total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)}</small>}{marketQuote(row.comparisons, "h2h") && <small>{marketQuote(row.comparisons, "h2h")!.bookmaker} · no-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")}</small>}{(["spreads", "totals", "h2h"] as const).map((market) => { const q = marketQuote(row.comparisons, market); return q ? <small key={`${market}-clock`}>{market.toUpperCase()} · {q.provider} · captured {marketClock(q.captured_at)} · updated {marketClock(q.updated_at)}</small> : null; })}</> : <span className="muted">No verified market quote</span>}</td>
               <td className="numeric">{row.modelDelta ? <><strong>{signed(row.modelDelta.margin)}</strong><small>margin vs latest</small><small>{signed(row.modelDelta.total)} total · {signed(row.modelDelta.winProbability * 100, " pp")} home probability</small></> : <span className="muted">—</span>}</td>
             </tr>;
           })}</tbody>
