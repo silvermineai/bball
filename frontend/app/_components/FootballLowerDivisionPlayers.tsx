@@ -9,30 +9,26 @@ import {
   lowerFootballSourceFields,
   lowerFootballSourceRows,
   type LowerFootballCategory,
+  type LowerFootballPlayerArchive,
   type LowerFootballRawRow,
+  validateLowerFootballPlayerArchive,
 } from "../_lib/football-lower-player-view";
-
-type Archive = {
-  season: number;
-  generated_at: string;
-  coverage: { events_discovered: number; events_with_d2_d3_team: number; games: number; player_rows: number; players: number; teams: number; rows_by_division: Record<string, number>; players_by_division: Record<string, number> };
-  rows: LowerFootballRawRow[];
-};
 
 const number = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
 export default function FootballLowerDivisionPlayers({ division }: { division: "2" | "3" }) {
   const target = `d${division}` as "d2" | "d3";
-  const [archive, setArchive] = useState<Archive | null>(null);
+  const [archive, setArchive] = useState<LowerFootballPlayerArchive | null>(null);
+  const [error, setError] = useState("");
   const [category, setCategory] = useState<LowerFootballCategory>("passing");
   const [query, setQuery] = useState("");
   const [minimumGames, setMinimumGames] = useState("1");
   const [selectedKey, setSelectedKey] = useState("");
   useEffect(() => {
     fetch("/data/football/lower-division-player-stats-2026.json")
-      .then((response) => response.ok ? response.json() as Promise<Archive> : null)
-      .then((value) => setArchive(value))
-      .catch(() => setArchive(null));
+      .then((response) => { if (!response.ok) throw new Error("The lower-division player archive could not be loaded."); return response.json() as Promise<unknown>; })
+      .then((value) => { setArchive(validateLowerFootballPlayerArchive(value)); setError(""); })
+      .catch((reason: unknown) => { setArchive(null); setError(reason instanceof Error ? reason.message : "The lower-division player archive failed integrity validation."); });
   }, []);
   const rows = useMemo(() => {
     const ranked = aggregateLowerFootballPlayers(archive?.rows || [], target, category, query);
@@ -56,7 +52,7 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
       rows.map((row, index) => [index + 1, row.division.toUpperCase(), definition.label, row.athlete, row.athlete_id, row.team, row.team_id, row.games, row.source_rows, row.primary, ...Object.keys(rows[0]?.metrics || {}).map((key) => row.metrics[key] ?? null)]),
     ),
   );
-  if (!archive) return <section className="paper-panel" aria-live="polite"><div className="eyebrow">D{division} PLAYER ARCHIVE</div><p>Loading the retained lower-division player event archive…</p></section>;
+  if (!archive) return <section className="paper-panel" aria-live="polite"><div className="eyebrow">D{division} PLAYER ARCHIVE</div>{error ? <p className="status-error" role="alert">{error}</p> : <p>Loading the retained lower-division player event archive…</p>}</section>;
   return <section className="paper-panel" aria-labelledby="lower-football-player-title">
     <div className="section-heading"><div><div className="eyebrow">MEN&apos;S FOOTBALL · D{division} PLAYER ARCHIVE</div><h2 id="lower-football-player-title">Rank observed game production.</h2></div><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download CSV ↓</button></div>
     <p className="note">Exact publisher athlete IDs and team IDs are aggregated from {archive.coverage.games.toLocaleString()} retained D2/D3 event summaries. This is an observed 2026 game archive through {new Date(archive.generated_at).toLocaleDateString("en-US", { timeZone: "UTC" })}; it is not a claim that an unobserved game or missing category is zero.</p>

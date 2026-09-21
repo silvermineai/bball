@@ -15,6 +15,152 @@ export type LowerFootballRawRow = {
   stats: string[];
 };
 
+export type LowerFootballPlayerArchive = {
+  schema_version: 1;
+  sport: "football";
+  gender: "men";
+  season: number;
+  generated_at: string;
+  scope: string;
+  source_policy: string;
+  source: {
+    publisher: string;
+    scoreboard_url: string;
+    summary_url_template: string;
+    team_url_template: string;
+    receipt_count: number;
+    receipt_sha256: string;
+  };
+  coverage: {
+    events_discovered: number;
+    events_with_d2_d3_team: number;
+    games: number;
+    player_rows: number;
+    players: number;
+    teams: number;
+    rows_by_division: Record<"d2" | "d3", number>;
+    players_by_division: Record<"d2" | "d3", number>;
+  };
+  receipts: Array<{ url: string; fetched_at: string; sha256: string }>;
+  games: Array<{
+    game_id: string;
+    date: string | null;
+    name: string | null;
+    status: string | null;
+    home_team_id: string | null;
+    away_team_id: string | null;
+  }>;
+  rows: LowerFootballRawRow[];
+};
+
+const archiveDivisions = ["d2", "d3"] as const;
+const sha256 = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+const integer = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0;
+const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+const dateString = (value: unknown) => value == null || (typeof value === "string" && !Number.isNaN(Date.parse(value)));
+
+function validLowerPlayerRow(value: unknown, season: number, gameIds: ReadonlySet<string>): value is LowerFootballRawRow {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return row.season === season
+    && (row.division === "d2" || row.division === "d3")
+    && text(row.game_id) && gameIds.has(row.game_id)
+    && text(row.team_id) && text(row.athlete_id) && text(row.athlete)
+    && text(row.category) && Array.isArray(row.keys) && row.keys.every(text)
+    && Array.isArray(row.stats) && row.stats.every((item) => typeof item === "string")
+    && (row.labels == null || (Array.isArray(row.labels) && row.labels.every((item) => typeof item === "string")))
+    && dateString(row.date);
+}
+
+/**
+ * Validate the lower-division player release before it becomes a ranking
+ * cohort. Counts and identities are checked against the retained rows; the
+ * receipt digest binds the individual summary responses to this edition.
+ */
+export function validateLowerFootballPlayerArchive(value: unknown): LowerFootballPlayerArchive {
+  if (!value || typeof value !== "object") throw new Error("Lower-division football player archive is malformed.");
+  const raw = value as Record<string, unknown>;
+  const source = raw.source as Record<string, unknown> | undefined;
+  const coverage = raw.coverage as Record<string, unknown> | undefined;
+  if (raw.schema_version !== 1 || raw.sport !== "football" || raw.gender !== "men"
+    || !integer(raw.season) || !text(raw.generated_at) || Number.isNaN(Date.parse(raw.generated_at as string))
+    || !text(raw.scope) || !text(raw.source_policy) || !source || !coverage
+    || !text(source.publisher) || !text(source.scoreboard_url) || !text(source.summary_url_template)
+    || !text(source.team_url_template) || !integer(source.receipt_count) || !sha256(source.receipt_sha256)) {
+    throw new Error("Lower-division football player archive has an unsupported edition.");
+  }
+  const receipts = Array.isArray(raw.receipts) ? raw.receipts.filter((item): item is { url: string; fetched_at: string; sha256: string } => {
+    if (!item || typeof item !== "object") return false;
+    const receipt = item as Record<string, unknown>;
+    return text(receipt.url) && text(receipt.fetched_at) && !Number.isNaN(Date.parse(receipt.fetched_at as string)) && sha256(receipt.sha256);
+  }) : [];
+  if (receipts.length !== source.receipt_count || receipts.length === 0
+    || receipts.some((receipt) => !sha256(receipt.sha256))) {
+    throw new Error("Lower-division football player archive has incomplete source receipts.");
+  }
+  // The builder computes the aggregate digest from sorted response hashes.
+  // The static client validates the digest shape and every receipt identity;
+  // the builder-side publication check remains authoritative for the value.
+  const gamesRaw = Array.isArray(raw.games) ? raw.games : [];
+  const games = gamesRaw.filter((item): item is LowerFootballPlayerArchive["games"][number] => {
+    if (!item || typeof item !== "object") return false;
+    const game = item as Record<string, unknown>;
+    return text(game.game_id) && dateString(game.date)
+      && (game.name == null || typeof game.name === "string")
+      && (game.status == null || typeof game.status === "string")
+      && (game.home_team_id == null || text(game.home_team_id))
+      && (game.away_team_id == null || text(game.away_team_id));
+  });
+  if (games.length !== gamesRaw.length || games.length !== coverage.games) {
+    throw new Error("Lower-division football player archive has invalid game coverage.");
+  }
+  const gameIds = new Set(games.map((game) => game.game_id));
+  if (gameIds.size !== games.length) throw new Error("Lower-division football player archive has duplicate game IDs.");
+  const rowsRaw = Array.isArray(raw.rows) ? raw.rows : [];
+  const rows = rowsRaw.filter((item): item is LowerFootballRawRow => validLowerPlayerRow(item, raw.season as number, gameIds));
+  if (rows.length !== rowsRaw.length || rows.length !== coverage.player_rows) {
+    throw new Error("Lower-division football player archive has invalid player rows.");
+  }
+  const rowsByDivision = Object.fromEntries(archiveDivisions.map((division) => [division, rows.filter((row) => row.division === division).length])) as Record<"d2" | "d3", number>;
+  const playersByDivision = Object.fromEntries(archiveDivisions.map((division) => [division, new Set(rows.filter((row) => row.division === division).map((row) => row.athlete_id)).size])) as Record<"d2" | "d3", number>;
+  const rawRowsByDivision = coverage.rows_by_division as Record<string, unknown> | undefined;
+  const rawPlayersByDivision = coverage.players_by_division as Record<string, unknown> | undefined;
+  if (!archiveDivisions.every((division) => rawRowsByDivision && rawPlayersByDivision
+    && integer(rawRowsByDivision[division]) && integer(rawPlayersByDivision[division])
+    && rawRowsByDivision[division] === rowsByDivision[division]
+    && rawPlayersByDivision[division] === playersByDivision[division])
+    || coverage.events_discovered == null || coverage.events_with_d2_d3_team == null
+    || !integer(coverage.events_discovered) || !integer(coverage.events_with_d2_d3_team)
+    || !integer(coverage.players) || !integer(coverage.teams)
+    || coverage.players !== new Set(rows.map((row) => row.athlete_id)).size
+    || coverage.teams !== new Set(rows.map((row) => row.team_id)).size) {
+    throw new Error("Lower-division football player archive coverage does not match its rows.");
+  }
+  return {
+    schema_version: 1,
+    sport: "football",
+    gender: "men",
+    season: raw.season,
+    generated_at: raw.generated_at,
+    scope: raw.scope,
+    source_policy: raw.source_policy,
+    source: source as LowerFootballPlayerArchive["source"],
+    coverage: {
+      events_discovered: coverage.events_discovered as number,
+      events_with_d2_d3_team: coverage.events_with_d2_d3_team as number,
+      games: coverage.games as number,
+      player_rows: coverage.player_rows as number,
+      players: coverage.players as number,
+      teams: coverage.teams as number,
+      rows_by_division: rowsByDivision,
+      players_by_division: playersByDivision,
+    },
+    receipts,
+    games,
+    rows,
+  };
+}
+
 export type LowerFootballCategory =
   | "passing"
   | "rushing"

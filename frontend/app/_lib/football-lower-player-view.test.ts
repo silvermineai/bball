@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballSourceFields, lowerFootballSourceRows } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -17,6 +17,31 @@ const row = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("lower football player aggregation", () => {
+  const validArchive = () => ({
+    schema_version: 1, sport: "football", gender: "men", season: 2026,
+    generated_at: "2026-09-21T10:00:00Z", scope: "exact D2/D3 event archive",
+    source_policy: "stable IDs only",
+    source: {
+      publisher: "ESPN", scoreboard_url: "https://example.test/scoreboard",
+      summary_url_template: "https://example.test/summary?event={event_id}",
+      team_url_template: "https://example.test/team/{team_id}", receipt_count: 1,
+      receipt_sha256: "a".repeat(64),
+    },
+    coverage: {
+      events_discovered: 1, events_with_d2_d3_team: 1, games: 1, player_rows: 1,
+      players: 1, teams: 1, rows_by_division: { d2: 1, d3: 0 }, players_by_division: { d2: 1, d3: 0 },
+    },
+    receipts: [{ url: "https://example.test/summary?event=g1", fetched_at: "2026-09-21T10:00:00Z", sha256: "a".repeat(64) }],
+    games: [{ game_id: "g1", date: "2026-09-01T00:00:00Z", name: "Example", status: "STATUS_FINAL", home_team_id: "t1", away_team_id: "t2" }],
+    rows: [row()],
+  });
+
+  it("validates source identity, division coverage, and game references before ranking", () => {
+    expect(validateLowerFootballPlayerArchive(validArchive()).coverage.player_rows).toBe(1);
+    expect(() => validateLowerFootballPlayerArchive({ ...validArchive(), rows: [row({ game_id: "unretained" })] })).toThrow(/invalid player rows/);
+    expect(() => validateLowerFootballPlayerArchive({ ...validArchive(), coverage: { ...validArchive().coverage, players: 2 } })).toThrow(/coverage does not match/);
+  });
+
   it("aggregates exact athlete and team identities across games", () => {
     const result = aggregateLowerFootballPlayers([
       row(),
