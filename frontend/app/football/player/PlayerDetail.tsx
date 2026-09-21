@@ -71,6 +71,7 @@ type Career = {
   player_id: string;
   seasons: number[];
   source_records: number;
+  box_records?: number;
   box_games: Record<string, number>;
   box_totals?: {
     season: number;
@@ -270,7 +271,7 @@ export default function PlayerDetail() {
               </p>
             </section>
           )}
-          {career?.rows.length ? <FootballCareerPanel career={career} selectedSeason={data.season} name={data.name} /> : null}
+          {career && (career.rows.length || (career.box_totals || []).length) ? <FootballCareerPanel career={career} selectedSeason={data.season} name={data.name} /> : null}
           <section className="section paper-panel">
             <div className="section-heading">
               <h2>Source receipts.</h2>
@@ -391,7 +392,7 @@ function FootballCareerPanel({
         <Link className="hero-link" href={`/football/careers/?q=${encodeURIComponent(name)}`}>Open career index →</Link>
       </div>
       <p className="note">
-        {career.seasons.length} source seasons · {career.source_records.toLocaleString()} category records · {boxGames.toLocaleString()} box-score games. Category totals stay separate; this panel never adds passing, rushing and receiving EPA into one grade.
+        {career.seasons.length} source seasons · {career.source_records.toLocaleString()} category records · {(career.box_records || 0).toLocaleString()} exact-ID box rows · {boxGames.toLocaleString()} box-score games. Category totals stay separate; this panel never adds passing, rushing and receiving EPA into one grade.
       </p>
       <div className="strip" style={{ marginTop: 18 }}>
         <div><strong>{latestEpa == null ? "—" : fmt(latestEpa)}</strong><span>Latest season EPA · source categories</span></div>

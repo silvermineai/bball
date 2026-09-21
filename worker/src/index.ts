@@ -457,6 +457,7 @@ app.get("/api/football/players/:id/career", async (c) => {
   // underlying source rows.
   if (!result.results.length) return c.json({ error: "No career records found" }, 404);
   const boxGames = new Map<number, Set<string>>();
+  const boxRecords = result.results.filter((row) => row.dataset === "box").length;
   const careerBoxTotals = new Map<string, FootballCareerBoxTotals & { game_ids: Set<string> }>();
   for (const row of result.results) {
     if (row.dataset !== "box") continue;
@@ -508,6 +509,10 @@ app.get("/api/football/players/:id/career", async (c) => {
     player_id: id,
     seasons,
     source_records: rows.length,
+    // Keep box-only athletes visible in the career dossier.  source_records
+    // remains the count of EPA category rows for backwards compatibility;
+    // box_records makes the separate exact-ID coverage explicit.
+    box_records: boxRecords,
     box_games: Object.fromEntries([...boxGames.entries()].map(([season, games]) => [season, games.size])),
     box_totals: [...careerBoxTotals.values()]
       .map(({ game_ids, ...row }) => ({ ...row, games: game_ids.size }))
