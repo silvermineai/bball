@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   filterWomensSourceTeams,
   formatWomensTeamStat,
+  womensTeamMetricValue,
   womensTeamMetrics,
   type WomensSourceTeam,
 } from "../_lib/womens-team-table";
@@ -73,7 +74,7 @@ export default function WomensBasketballTeams() {
             <select id="wbb-team-min-games" value={minimumGames} onChange={(event) => setMinimumGames(event.target.value)}><option value="0">Any recorded games</option><option value="5">5+</option><option value="10">10+</option></select>
           </div>
           <p className="note">{edition.coverage.team_stats_teams.toLocaleString()} source teams · {edition.coverage.team_stats_fields.toLocaleString()} retained metrics · showing {sourceRows.length} matching rows · observed season {edition.observed_player_season} · {selectedSourceMetric.description}</p>
-          <div className="table-scroll"><table className="data-table"><thead><tr><th>Team</th><th className="numeric">Games</th><th className="numeric">{selectedSourceMetric.label}</th><th>Recorded field</th></tr></thead><tbody>{sourceRows.map((row) => <tr key={row.team_id}><th scope="row">{row.team}<small>Source team {row.team_id}{row.abbreviation ? ` · ${row.abbreviation}` : ""}</small></th><td className="numeric">{formatWomensTeamStat(row.stats.gamesPlayed, sourceMetrics.find((metric) => metric.key === "gamesPlayed"))}</td><td className="numeric"><strong>{formatWomensTeamStat(row.stats[selectedSourceMetric.key], selectedSourceMetric)}</strong></td><td><code>{selectedSourceMetric.key}</code><small>{selectedSourceMetric.name}</small></td></tr>)}</tbody></table></div>
+          <div className="table-scroll"><table className="data-table"><thead><tr><th>Team</th><th className="numeric">Games</th><th className="numeric">{selectedSourceMetric.label}</th><th>{selectedSourceMetric.derived ? "Derived field" : "Recorded field"}</th></tr></thead><tbody>{sourceRows.map((row) => <tr key={row.team_id}><th scope="row">{row.team}<small>Source team {row.team_id}{row.abbreviation ? ` · ${row.abbreviation}` : ""}</small></th><td className="numeric">{formatWomensTeamStat(row.stats.gamesPlayed, sourceMetrics.find((metric) => metric.key === "gamesPlayed"))}</td><td className="numeric"><strong>{formatWomensTeamStat(womensTeamMetricValue(row, selectedSourceMetric.key), selectedSourceMetric)}</strong></td><td><code>{selectedSourceMetric.key}</code><small>{selectedSourceMetric.name}</small></td></tr>)}</tbody></table></div>
           {!sourceRows.length ? <p className="empty">No source teams match this search and threshold.</p> : null}
           <p className="muted">Source values are published team-season records. They are not a new rating, ranking, or forecast.</p>
         </>}
