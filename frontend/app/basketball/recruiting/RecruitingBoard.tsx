@@ -57,6 +57,17 @@ export type RecruitingBoardResult = {
     height: number;
     weight: number;
   };
+  identity_quality?: {
+    blank_name_rows: number;
+    invalid_athlete_id_rows: number;
+    committed_id_without_name: number;
+    committed_name_without_id: number;
+    duplicate_name_groups: number;
+    duplicate_name_rows: number;
+    malformed_school_list_rows: number;
+    non_array_school_list_rows: number;
+    duplicate_school_id_rows: number;
+  };
   position_breakdown?: Array<{ position: string; total: number }>;
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   recorded_school_programs?: RecordedSchoolProgramRow[];
@@ -706,6 +717,24 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <div><dt>Listed size</dt><dd>{coverageRate(Math.min(result.field_coverage.height, result.field_coverage.weight), result.field_coverage.total)}</dd></div>
               <div><dt>Position / state / region rank</dt><dd>{coverageRate(Math.min(result.field_coverage.position_rank, result.field_coverage.state_rank, result.field_coverage.region_rank), result.field_coverage.total)}</dd></div>
             </div>
+          </section>}
+          {result.identity_quality && <section className="paper-panel recruiting-field-coverage" aria-label="Recruiting identity integrity" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Identity audit / active cohort</div><h3>Know which joins need an exact ID.</h3></div>
+              <span className="note">Shape checks only</span>
+            </div>
+            <p className="note">These checks describe retained row shape in the active edition. They do not merge prospects by name, repair source values or change the source ranking. Duplicate names require the athlete ID before comparing records.</p>
+            <div className="raw-stat-grid">
+              <div><dt>Duplicate-name groups</dt><dd>{result.identity_quality.duplicate_name_groups.toLocaleString()}</dd></div>
+              <div><dt>Rows in those groups</dt><dd>{result.identity_quality.duplicate_name_rows.toLocaleString()}</dd></div>
+              <div><dt>Commitment ID without name</dt><dd>{result.identity_quality.committed_id_without_name.toLocaleString()}</dd></div>
+              <div><dt>Commitment name without ID</dt><dd>{result.identity_quality.committed_name_without_id.toLocaleString()}</dd></div>
+              <div><dt>Malformed school lists</dt><dd>{result.identity_quality.malformed_school_list_rows.toLocaleString()}</dd></div>
+              <div><dt>Non-array school lists</dt><dd>{result.identity_quality.non_array_school_list_rows.toLocaleString()}</dd></div>
+              <div><dt>Duplicate school IDs</dt><dd>{result.identity_quality.duplicate_school_id_rows.toLocaleString()}</dd></div>
+              <div><dt>Blank / invalid identity rows</dt><dd>{(result.identity_quality.blank_name_rows + result.identity_quality.invalid_athlete_id_rows).toLocaleString()}</dd></div>
+            </div>
+            {(result.identity_quality.duplicate_name_groups > 0 || result.identity_quality.committed_id_without_name > 0 || result.identity_quality.committed_name_without_id > 0 || result.identity_quality.malformed_school_list_rows > 0 || result.identity_quality.non_array_school_list_rows > 0 || result.identity_quality.duplicate_school_id_rows > 0) && <p className="note" role="status">One or more identity-shape flags are present. Use the prospect dossier and exact athlete ID before making a cross-source comparison.</p>}
           </section>}
           <p className="note" role="status">
             Active class edition <span className="source-hash">{result.edition || "unavailable"}</span>

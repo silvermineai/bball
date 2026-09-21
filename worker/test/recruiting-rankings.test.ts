@@ -104,6 +104,53 @@ describe("ESPN recruiting rankings", () => {
     expect(body).not.toContain("sports.core.api.espn.com");
   });
 
+  it("publishes cohort identity-shape flags without changing the source rows", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("duplicate_name_groups")
+            ? {
+                blank_name_rows: 1,
+                invalid_athlete_id_rows: 0,
+                committed_id_without_name: 2,
+                committed_name_without_id: 1,
+                duplicate_name_groups: 3,
+                duplicate_name_rows: 7,
+                malformed_school_list_rows: 1,
+                non_array_school_list_rows: 1,
+                duplicate_school_id_rows: 2,
+              }
+            : sql.includes("WITH cohort_rows")
+              ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+              : sql.includes("count(*)")
+                ? { total: 1, committed_total: 1, ranked_total: 1, grade_total: 1 }
+                : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { identity_quality: Record<string, number> };
+    expect(response.status).toBe(200);
+    expect(body.identity_quality).toEqual({
+      blank_name_rows: 1,
+      invalid_athlete_id_rows: 0,
+      committed_id_without_name: 2,
+      committed_name_without_id: 1,
+      duplicate_name_groups: 3,
+      duplicate_name_rows: 7,
+      malformed_school_list_rows: 1,
+      non_array_school_list_rows: 1,
+      duplicate_school_id_rows: 2,
+    });
+    const identityQuery = sqlCalls.find((sql) => sql.includes("duplicate_name_groups"));
+    expect(identityQuery).toContain("r.edition=c.edition");
+    expect(identityQuery).toContain("count(DISTINCT athlete_id)");
+    expect(identityQuery).toContain("json_each(school_ids_json)");
+  });
+
   it("orders commitment destinations by transparent source-rank points", async () => {
     const sqlCalls: string[] = [];
     const prepare = vi.fn((sql: string) => {

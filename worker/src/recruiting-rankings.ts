@@ -151,6 +151,43 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}`,
     ).bind(...binds).first<Record<string, number | null>>(), DB_TIMEOUT_MS);
+    // Keep identity and list-shape exceptions visible at the same cohort
+    // boundary as the board. These checks never change a ranking; they tell a
+    // reader where name joins or school-list aggregates need exact-ID review.
+    const identityQuality = await withTimeout(db.prepare(
+      `WITH cohort AS (
+        SELECT r.*
+          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
+         WHERE ${filters}
+      ), name_groups AS (
+        SELECT lower(trim(name)) AS normalized_name,
+               count(*) AS row_count,
+               count(DISTINCT athlete_id) AS identity_count
+          FROM cohort
+         WHERE name IS NOT NULL AND trim(name) <> ''
+         GROUP BY lower(trim(name))
+      ), school_shape AS (
+        SELECT athlete_id,
+               CASE WHEN json_valid(school_ids_json) THEN 0 ELSE 1 END AS malformed,
+               CASE WHEN json_valid(school_ids_json) AND json_type(school_ids_json) <> 'array' THEN 1 ELSE 0 END AS non_array,
+               CASE WHEN json_valid(school_ids_json) AND json_type(school_ids_json) = 'array'
+                 AND (SELECT count(*) FROM json_each(school_ids_json)) !=
+                     (SELECT count(DISTINCT CAST(value AS TEXT)) FROM json_each(school_ids_json))
+                 THEN 1 ELSE 0 END AS duplicate_ids
+          FROM cohort
+      )
+      SELECT
+        COALESCE(sum(CASE WHEN name IS NULL OR trim(name)='' THEN 1 ELSE 0 END),0) AS blank_name_rows,
+        COALESCE(sum(CASE WHEN athlete_id IS NULL OR trim(athlete_id)='' OR athlete_id GLOB '*[^0-9]*' THEN 1 ELSE 0 END),0) AS invalid_athlete_id_rows,
+        COALESCE(sum(CASE WHEN NULLIF(trim(committed_team_id),'') IS NOT NULL AND NULLIF(trim(committed_team_name),'') IS NULL THEN 1 ELSE 0 END),0) AS committed_id_without_name,
+        COALESCE(sum(CASE WHEN NULLIF(trim(committed_team_id),'') IS NULL AND NULLIF(trim(committed_team_name),'') IS NOT NULL THEN 1 ELSE 0 END),0) AS committed_name_without_id,
+        (SELECT count(*) FROM name_groups WHERE identity_count > 1) AS duplicate_name_groups,
+        (SELECT COALESCE(sum(row_count),0) FROM name_groups WHERE identity_count > 1) AS duplicate_name_rows,
+        (SELECT COALESCE(sum(malformed),0) FROM school_shape) AS malformed_school_list_rows,
+        (SELECT COALESCE(sum(non_array),0) FROM school_shape) AS non_array_school_list_rows,
+        (SELECT COALESCE(sum(duplicate_ids),0) FROM school_shape) AS duplicate_school_id_rows
+        FROM cohort`,
+    ).bind(...binds).first<Record<string, number | null>>(), DB_TIMEOUT_MS);
     const rows = await withTimeout(db.prepare(
       `SELECT r.athlete_id,r.name,r.position,r.grade,${currentRank} AS rank,r.position_rank,r.state_rank,r.region_rank,
               r.status,r.committed_team_id,r.committed_team_name,r.school_ids_json,r.high_school,
@@ -412,6 +449,17 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         hometown: Number(fieldCoverage?.hometown || 0),
         height: Number(fieldCoverage?.height || 0),
         weight: Number(fieldCoverage?.weight || 0),
+      },
+      identity_quality: {
+        blank_name_rows: Number(identityQuality?.blank_name_rows || 0),
+        invalid_athlete_id_rows: Number(identityQuality?.invalid_athlete_id_rows || 0),
+        committed_id_without_name: Number(identityQuality?.committed_id_without_name || 0),
+        committed_name_without_id: Number(identityQuality?.committed_name_without_id || 0),
+        duplicate_name_groups: Number(identityQuality?.duplicate_name_groups || 0),
+        duplicate_name_rows: Number(identityQuality?.duplicate_name_rows || 0),
+        malformed_school_list_rows: Number(identityQuality?.malformed_school_list_rows || 0),
+        non_array_school_list_rows: Number(identityQuality?.non_array_school_list_rows || 0),
+        duplicate_school_id_rows: Number(identityQuality?.duplicate_school_id_rows || 0),
       },
       position_breakdown: positions.results.map((row) => ({
         position: String((row as { position?: string }).position || "Unknown"),
