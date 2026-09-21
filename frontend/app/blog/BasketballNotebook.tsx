@@ -11,6 +11,7 @@ import { buildNotebookGameRead } from "./notebook-game-read";
 import { notebookModelValidation } from "./notebook-model-validation";
 import { notebookRosterRoleContext, summarizeNotebookRoster } from "./notebook-roster";
 import { buildNotebookShotPrep } from "./notebook-shot-prep";
+import { notebookPersonnelWatch } from "./notebook-personnel-watch";
 import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
 import { buildNotebookEvidenceRows } from "./notebook-evidence";
 
@@ -134,6 +135,10 @@ export default function BasketballNotebook({
     },
   ];
   const shotPrepCount = shotPrepRows.reduce((sum, group) => sum + group.rows.length, 0);
+  const personnelWatchRows = [
+    { teamName: game.away_name, rows: notebookPersonnelWatch(awayPlayers) },
+    { teamName: game.home_name, rows: notebookPersonnelWatch(homePlayers) },
+  ];
   const shotEvidence = shotPrepRows.flatMap((group) => group.rows).reduce(
     (totals, row) => ({
       attempts: totals.attempts + (row.profile.matched.attempts ?? 0),
@@ -473,6 +478,25 @@ export default function BasketballNotebook({
           These rows preserve recorded production for preparation; they are not
           a projected rotation or an availability decision.
         </p>
+        <section className="paper-panel" aria-label="Personnel watch signals" style={{ marginBottom: 20 }}>
+          <div className="section-heading" style={{ marginBottom: 8 }}>
+            <div><div className="eyebrow">Personnel watch / retained player fields</div><h3>What should the staff test first?</h3></div>
+            <span className="note">Exact player IDs</span>
+          </div>
+          <p className="note">These role signals come from the same completed-season player records. Each question is attached to a recorded workload or rate field; missing denominators remain unavailable.</p>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Program / player</th><th>Recorded role signals</th><th>Film question</th></tr></thead>
+              <tbody>{personnelWatchRows.flatMap((group) => group.rows.map((row) => (
+                <tr key={`${group.teamName}-${row.player.id}`}>
+                  <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(row.player.id)}&season=${row.player.season}`}>{row.player.name}</Link><small>{group.teamName} · {row.player.position || "Position unavailable"}</small></th>
+                  <td>{row.signals.length ? row.signals.map((signal) => <span key={signal.label} className="tag" style={{ marginRight: 6 }}>{signal.label} {signal.value}</span>) : <span className="note">No denominator-backed role signal</span>}</td>
+                  <td>{row.signals.length ? row.signals[0].question : "Use the workload table and player profile; no additional role question is supported by the retained fields."}</td>
+                </tr>
+              )))}</tbody>
+            </table>
+          </div>
+        </section>
         <div className="two-col">
           {([
             { teamName: game.away_name, players: awayPlayers },
