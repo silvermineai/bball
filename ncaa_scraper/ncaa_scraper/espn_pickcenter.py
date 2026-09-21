@@ -76,8 +76,16 @@ def _close(obj: object) -> dict:
     return obj["close"]
 
 
-def validate_identity(summary: dict, game: dict) -> tuple[str, str]:
-    """Return the canonical start and event ID after strict ESPN identity checks."""
+def validate_identity(summary: dict, game: dict) -> tuple[str, str, bool]:
+    """Return the source start, event ID and timing flag after strict checks.
+
+    The canonical basketball schedule often carries a date-only placeholder
+    while ESPN has already assigned an exact tip.  In that case the summary's
+    own ``timeValid`` flag is the required timing evidence: we retain the
+    exact ESPN instant only when the event ID, participants and calendar date
+    still match the canonical row.  A date-only ESPN event can never qualify
+    a market quote.
+    """
     header = summary.get("header")
     if not isinstance(header, dict):
         raise ValueError("Missing ESPN summary header")
@@ -94,7 +102,14 @@ def validate_identity(summary: dict, game: dict) -> tuple[str, str]:
     if not isinstance(raw_start, str):
         raise ValueError("Missing ESPN start time")
     start = timestamp(raw_start)
-    if start != timestamp(game["starts_at"]):
+    canonical_start = timestamp(game["starts_at"])
+    source_time_valid = header.get("timeValid") is True or competition.get("timeValid") is True
+    if bool(game.get("time_tbd")):
+        if not source_time_valid:
+            raise ValueError("ESPN start time is not confirmed")
+        if start[:10] != canonical_start[:10]:
+            raise ValueError("ESPN calendar date does not match schedule")
+    elif start != canonical_start:
         raise ValueError("ESPN start time does not match schedule")
     competitors = competition.get("competitors")
     if not isinstance(competitors, list) or len(competitors) != 2:
@@ -110,12 +125,12 @@ def validate_identity(summary: dict, game: dict) -> tuple[str, str]:
         side_ids[side] = team_id
     if side_ids != {"home": str(game["home_id"]), "away": str(game["away_id"])}:
         raise ValueError("ESPN participants do not match schedule")
-    return start, event_id
+    return start, event_id, source_time_valid
 
 
 def parse_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: str) -> list[tuple[str, str, str, dict]]:
     """Parse one summary into validated ledger market rows."""
-    start, event_id = validate_identity(summary, game)
+    start, event_id, source_time_valid = validate_identity(summary, game)
     captured = timestamp(captured_at)
     if start <= captured:
         raise ValueError("Game already started at capture")
@@ -136,6 +151,10 @@ def parse_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: st
             "starts_at": start,
             "event_id": event_id,
             "receipt_id": receipt_id,
+            # Preserve how an exact start was established. This is useful for
+            # audits when the canonical schedule still labels a game TBD.
+            "canonical_time_tbd": bool(game.get("time_tbd")),
+            "source_time_valid": source_time_valid,
         }
         # ESPN can mark one market (usually moneyline) as ``OFF`` while still
         # publishing complete spread and total quotes. Validate each market
@@ -213,7 +232,9 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
         game for game in games
         if game["season"] == season
         and not game["completed"]
-        and not game["time_tbd"]
+        # Include date-only rows so the public ESPN summary can promote them
+        # only when its own event payload confirms an exact start. The parser
+        # rejects summaries that remain time TBD, so this never invents a tip.
         and now < datetime.fromisoformat(game["starts_at"].replace("Z", "+00:00")) <= until
     ]
 

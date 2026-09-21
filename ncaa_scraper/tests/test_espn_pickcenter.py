@@ -2,10 +2,11 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from ncaa_scraper.espn_pickcenter import BASE_URL, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
+from ncaa_scraper.espn_pickcenter import BASE_URL, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
 from ncaa_scraper.odds_feed import schedules
 
 
@@ -80,6 +81,42 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual(rows[0][0], "Draft Kings")
         self.assertAlmostEqual(rows[0][3]["home_price"], 2.2)
         self.assertEqual(rows[2][3]["line"], 155.5)
+
+    def test_parser_accepts_exact_source_clock_for_canonical_tbd_game(self):
+        game = {
+            **GAME,
+            "starts_at": "2026-11-10T05:00:00.000000Z",
+            "time_tbd": 1,
+        }
+        payload = summary()
+        payload["header"]["competitions"][0]["date"] = "2026-11-10T23:00:00Z"
+        payload["header"]["timeValid"] = True
+        rows = parse_pickcenter(payload, game, "2026-11-09T20:00:00Z", "receipt")
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[0][3]["starts_at"], "2026-11-10T23:00:00.000000Z")
+        self.assertTrue(rows[0][3]["canonical_time_tbd"])
+        self.assertTrue(rows[0][3]["source_time_valid"])
+
+    def test_parser_rejects_tbd_game_when_source_clock_is_not_confirmed(self):
+        game = {
+            **GAME,
+            "starts_at": "2026-11-10T05:00:00.000000Z",
+            "time_tbd": 1,
+        }
+        payload = summary()
+        payload["header"]["competitions"][0]["date"] = "2026-11-10T23:00:00Z"
+        with self.assertRaisesRegex(ValueError, "not confirmed"):
+            parse_pickcenter(payload, game, "2026-11-09T20:00:00Z", "receipt")
+
+    def test_future_capture_candidates_include_tbd_rows_for_source_clock_check(self):
+        game = {**GAME, "time_tbd": 1}
+        selected = _future_games(
+            [game],
+            2027,
+            90,
+            datetime(2026, 11, 9, 20, tzinfo=timezone.utc),
+        )
+        self.assertEqual([row["id"] for row in selected], [GAME["id"]])
 
     def test_parser_rejects_wrong_start_or_missing_close_quote(self):
         wrong = summary()
