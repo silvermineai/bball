@@ -7,11 +7,11 @@ import SportNavigation from "./_components/SportNavigation";
 export const metadata: Metadata = {
   metadataBase: new URL("https://bball.silvermine.dev"),
   title: {
-    default: "Silvermine · College basketball stats",
+    default: "Silvermine · College sports stats",
     template: "%s · Silvermine",
   },
   description:
-    "College basketball team stats, player production, upcoming games and Silvermine model predictions.",
+    "College basketball and football team stats, player production, upcoming games and Silvermine model predictions.",
   alternates: {
     types: { "application/rss+xml": "/feed.xml" },
   },
