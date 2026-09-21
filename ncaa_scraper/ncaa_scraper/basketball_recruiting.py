@@ -372,11 +372,45 @@ def sql_export(release):
             )
             + ");"
         )
+    # D1 rejects a single SQL statement once the serialized recruiting
+    # release grows beyond its statement-size limit.  Keep the row's JSON
+    # shape intact, but seed oversized arrays empty and append each member in
+    # its own small, resumable statement.  The array-length guard makes a
+    # rerun idempotent and lets an interrupted import continue where it left
+    # off instead of duplicating evidence.
+    oversized: list[tuple[str, list[object]]] = []
+    base_release = dict(release)
+    for key, value in release.items():
+        if isinstance(value, list) and len(compact(value)) > 90_000:
+            oversized.append((key, value))
+            base_release[key] = []
+        elif isinstance(value, dict):
+            for nested_key, nested_value in value.items():
+                if isinstance(nested_value, list) and len(compact(nested_value)) > 90_000:
+                    oversized.append((f"{key}.{nested_key}", nested_value))
+                    base_release[key] = dict(value)
+                    base_release[key][nested_key] = []
     lines.append(
         "INSERT OR IGNORE INTO bb_recruiting_releases (edition,season,payload_json) VALUES ("
-        + ",".join(map(quote, [edition, release["season"], compact(release)]))
+        + ",".join(map(quote, [edition, release["season"], compact(base_release)]))
         + ");"
     )
+    for key, values in oversized:
+        path = f"$.{key}"
+        for index, value in enumerate(values):
+            lines.append(
+                "UPDATE bb_recruiting_releases SET payload_json=json_insert(payload_json,"
+                + quote(path + "[#]")
+                + ",json("
+                + quote(compact(value))
+                + ")) WHERE edition="
+                + quote(edition)
+                + " AND json_array_length(payload_json,"
+                + quote(path)
+                + ")="
+                + str(index)
+                + ";"
+            )
     lines.append(
         "INSERT INTO bb_recruiting_current (season,edition) VALUES ("
         + ",".join(map(quote, [release["season"], edition]))

@@ -190,6 +190,31 @@ class RecruitingTests(unittest.TestCase):
             new_release["edition"],
         )
 
+    def test_large_review_queue_is_chunked_for_d1_statement_limits(self):
+        release = build(self.doc, self.box, self.programs, self.rosters)
+        oversized = copy.deepcopy(release)
+        for row in oversized["review_queue"]["rows"]:
+            row["audit_note"] = "x" * 2_000
+        sql = sql_export(oversized)
+        self.assertLess(max(map(len, sql.splitlines())), 90_000)
+        db = sqlite3.connect(":memory:")
+        self.addCleanup(db.close)
+        db.executescript(
+            (ROOT / "worker/migrations/0012_basketball_recruiting.sql").read_text()
+        )
+        db.executescript(sql)
+        payload = json.loads(
+            db.execute(
+                "SELECT payload_json FROM bb_recruiting_releases WHERE edition=?",
+                (release["edition"],),
+            ).fetchone()[0]
+        )
+        self.assertEqual(
+            len(payload["review_queue"]["rows"]),
+            len(oversized["review_queue"]["rows"]),
+        )
+        self.assertEqual(payload["review_queue"]["rows"][0]["audit_note"], "x" * 2_000)
+
     def test_availability_is_additional_evidence(self):
         release = build(self.doc, self.box, self.programs)
         mccoy = next(p for p in release["people"] if p["name"] == "Brandon McCoy Jr.")
