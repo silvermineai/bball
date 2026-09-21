@@ -102,6 +102,12 @@ describe("sport navigation", () => {
     expect(isNavItemActive("/basketball/recruiting/fit/", recruitingFit!)).toBe(true);
   });
 
+  it("keeps football notebooks inside the football desk", () => {
+    const journal = SPORT_NAVIGATION.football.explore.find((item) => item.label === "Journal");
+    expect(journal?.href).toBe("/football/blog/");
+    expect(isNavItemActive("/football/blog/", journal!)).toBe(true);
+  });
+
   it("does not offer a nonexistent women's football scope", () => {
     expect(sportSupportsGenderScope("football")).toBe(false);
     expect(sportSupportsGenderScope("mens-basketball")).toBe(true);

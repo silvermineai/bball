@@ -80,7 +80,7 @@ export const SPORT_NAVIGATION: Record<Sport, SportNavConfig> = {
       { label: "Player careers", href: "/football/careers/", match: ["/football/careers"] },
       { label: "Events & defense", href: "/football/events/", match: ["/football/events"] },
       { label: "Methodology", href: "/football/methodology/", match: ["/football/methodology"] },
-      { label: "Journal", href: "/blog/", match: ["/blog"] },
+      { label: "Journal", href: "/football/blog/", match: ["/football/blog"] },
     ],
   },
 };
