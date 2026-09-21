@@ -317,20 +317,26 @@
     {
       "key": "ncaa_wbb_national_rankings",
       "label": "NCAA national individual/team rankings",
-      "status": "candidate_unverified",
+      "status": "blocked",
       "scope": "women’s basketball · D2/D3",
       "source_url": "https://stats.ncaa.org/rankings/national_ranking",
       "evidence": {
         "capture_present": false,
         "rows_published": 0,
-        "receipt_verified": false
+        "receipt_verified": false,
+        "robots_allowed": false
       },
       "required": [
         "robots-permitted capture for the exact season and division",
         "stable player/team IDs and explicit division value",
         "immutable response SHA-256 receipt"
       ],
-      "reason": "This is an eligible source candidate, but no permitted, receipt-backed WBB capture is retained yet; no rows are published from it."
+      "robots_policy": {
+        "status": "disallowed",
+        "url": "https://stats.ncaa.org/robots.txt",
+        "rule": "User-agent: * Disallow: /"
+      },
+      "reason": "The current stats.ncaa.org robots policy disallows crawling this endpoint. No rows are published until that policy permits a receipt-backed capture."
     },
     {
       "key": "ncaa_com_wbb_lower_division_stats",

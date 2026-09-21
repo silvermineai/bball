@@ -3,7 +3,7 @@
   "sport": "football",
   "gender": "men",
   "season": 2026,
-  "generated_at": "2026-09-21T06:58:57.622012Z",
+  "generated_at": "2026-09-21T09:58:31.441520Z",
   "status": "blocked",
   "source_contracts": [
     {
@@ -12,7 +12,12 @@
       "url_template": "https://stats.ncaa.org/rankings/national_ranking?academic_year={season}&division={division}&sport_code=MFB",
       "method": "GET",
       "scope": "exact requested football division",
-      "discovery_status": "candidate_unverified",
+      "discovery_status": "blocked_by_robots",
+      "robots_policy": {
+        "status": "disallowed",
+        "url": "https://stats.ncaa.org/robots.txt",
+        "rule": "User-agent: * Disallow: /"
+      },
       "expected_fields": [
         "season",
         "division",
@@ -63,7 +68,12 @@
       "url_template": "https://stats.ncaa.org/rankings/national_ranking?academic_year={season}&division={division}&sport_code=MFB",
       "method": "GET",
       "scope": "exact requested football division",
-      "discovery_status": "candidate_unverified",
+      "discovery_status": "blocked_by_robots",
+      "robots_policy": {
+        "status": "disallowed",
+        "url": "https://stats.ncaa.org/robots.txt",
+        "rule": "User-agent: * Disallow: /"
+      },
       "expected_fields": [
         "season",
         "division",

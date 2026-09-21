@@ -143,7 +143,8 @@ def test_football_discovery_records_public_player_endpoint_contracts_without_imp
     ncaa = contracts["ncaa_mfb_national_ranking"]
     assert "academic_year=2026" in ncaa["url"]
     assert "division=2" in ncaa["url"]
-    assert ncaa["discovery_status"] == "candidate_unverified"
+    assert ncaa["discovery_status"] == "blocked_by_robots"
+    assert ncaa["robots_policy"]["status"] == "disallowed"
     assert "robots-permitted capture" in ncaa["required_before_import"]
 
     espn = contracts["espn_mfb_group_35_event_summary"]

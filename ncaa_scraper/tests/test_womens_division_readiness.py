@@ -72,12 +72,14 @@ def test_source_contract_exposes_auditable_candidate_without_publishing_rows():
     contracts = {item["key"]: item for item in result["source_contracts"]}
     assert contracts["sportsdataverse_wbb_bulk"]["status"] == "blocked"
     assert contracts["sportsdataverse_wbb_bulk"]["evidence"]["assets_with_explicit_division"] == 0
-    assert contracts["ncaa_wbb_national_rankings"]["status"] == "candidate_unverified"
+    assert contracts["ncaa_wbb_national_rankings"]["status"] == "blocked"
     assert contracts["ncaa_wbb_national_rankings"]["evidence"] == {
         "capture_present": False,
         "rows_published": 0,
         "receipt_verified": False,
+        "robots_allowed": False,
     }
+    assert contracts["ncaa_wbb_national_rankings"]["robots_policy"]["status"] == "disallowed"
     assert result["divisions"]["2"]["rows"] == result["divisions"]["3"]["rows"] == 0
 
 

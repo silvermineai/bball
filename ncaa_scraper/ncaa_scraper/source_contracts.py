@@ -89,7 +89,14 @@ FOOTBALL_SOURCE_EVIDENCE = {
 # classify a player row on its own.  The NCAA national-ranking page accepts an
 # explicit football division, but no capture is retained in this repository;
 # the robots policy, response schema, row identities, and immutable receipt
-# must be verified for the exact season before publication.
+# must be verified for the exact season before publication.  The current
+# robots file explicitly disallows the NCAA stats host, so its endpoint is
+# recorded as blocked rather than presented as a scrape lead.
+NCAA_STATS_ROBOTS_POLICY = {
+    "status": "disallowed",
+    "url": "https://stats.ncaa.org/robots.txt",
+    "rule": "User-agent: * Disallow: /",
+}
 FOOTBALL_PUBLIC_PLAYER_ENDPOINTS = (
     {
         "key": "ncaa_mfb_national_ranking",
@@ -100,7 +107,8 @@ FOOTBALL_PUBLIC_PLAYER_ENDPOINTS = (
         ),
         "method": "GET",
         "scope": "exact requested football division",
-        "discovery_status": "candidate_unverified",
+        "discovery_status": "blocked_by_robots",
+        "robots_policy": NCAA_STATS_ROBOTS_POLICY,
         "expected_fields": [
             "season",
             "division",

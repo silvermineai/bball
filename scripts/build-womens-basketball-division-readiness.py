@@ -22,11 +22,16 @@ SCHEDULE = ROOT / ".local/womens-basketball/wbb_schedule_2027.parquet"
 OUT = ROOT / "frontend/public/data/basketball/womens-division-readiness.json"
 LOWER_STATS = ROOT / "frontend/public/data/basketball/womens-lower-division-stats.json"
 
-# The NCAA national-ranking endpoint is a lawful candidate source for a
-# lower-division player/team edition.  It is deliberately recorded as an
-# intake candidate until a robots-permitted, receipt-backed capture exists;
-# the endpoint itself never turns a non-D1 signal into a D2/D3 classification.
+# The NCAA national-ranking endpoint is retained as a documented source
+# contract, but the current stats.ncaa.org robots file disallows crawling the
+# host.  It therefore remains blocked until the publisher changes that policy
+# and a receipt-backed capture can be made lawfully.
 NCAA_NATIONAL_RANKING_URL = "https://stats.ncaa.org/rankings/national_ranking"
+NCAA_STATS_ROBOTS = {
+    "status": "disallowed",
+    "url": "https://stats.ncaa.org/robots.txt",
+    "rule": "User-agent: * Disallow: /",
+}
 
 # These are the only fields that can establish a lower-division scope.  A
 # source flag such as ``away_non_div1_team`` is deliberately excluded: it
@@ -230,20 +235,22 @@ def build_readiness(
         {
             "key": "ncaa_wbb_national_rankings",
             "label": "NCAA national individual/team rankings",
-            "status": "candidate_unverified",
+            "status": "blocked",
             "scope": "women’s basketball · D2/D3",
             "source_url": NCAA_NATIONAL_RANKING_URL,
             "evidence": {
                 "capture_present": False,
                 "rows_published": 0,
                 "receipt_verified": False,
+                "robots_allowed": False,
             },
             "required": [
                 "robots-permitted capture for the exact season and division",
                 "stable player/team IDs and explicit division value",
                 "immutable response SHA-256 receipt",
             ],
-            "reason": "This is an eligible source candidate, but no permitted, receipt-backed WBB capture is retained yet; no rows are published from it.",
+            "robots_policy": NCAA_STATS_ROBOTS,
+            "reason": "The current stats.ncaa.org robots policy disallows crawling this endpoint. No rows are published until that policy permits a receipt-backed capture.",
         },
     ]
     native_leaderboards: dict[str, Any] = {}
