@@ -219,10 +219,13 @@ export default function Page() {
           <div className="eyebrow">05 / Keep studying</div>
           <h3 style={{ marginTop: 12 }}>The journal carries the method into the season.</h3>
           <p>
-            Read the forecast and EPA guides, then open the source and coverage
+            Read forecast-backed game notebooks and EPA guides, then open the source and coverage
             pages when a number needs a second look.
           </p>
         </div>
+        <Link className="button secondary" href="/football/blog/">
+          Read football notebooks ↗
+        </Link>
         <Link className="button secondary" href="/blog/">
           Read the journal ↗
         </Link>
