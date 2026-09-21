@@ -64,7 +64,7 @@ The [weekly evaluation](FOOTBALL_EVALUATION.md) now compares two independent dat
 
 ## Team efficiency
 
-The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 10,340 retained advanced team-game records across 2020–2026 with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. The historical expansion archives ten additional source releases in R2 and verifies their complete D1 rows. Rates remain descriptive and do not modify forecasts.
+The [efficiency desk](FOOTBALL_EFFICIENCY.md) now exposes all 10,340 retained advanced team-game records across 2020–2026 with 12 play-weighted measures, two-team comparisons, opponent-only FBS filtering and game-level evidence. The historical expansion archives ten additional source releases in R2 and verifies their complete D1 rows. Rates remain descriptive and do not modify forecasts. The research-only challenger now carries a stable feature-state ID, the exact lagged game/team IDs and source-receipt hashes used for each current scenario, plus signed per-feature residual contributions on matchup cards. That evidence explains the challenger margin without changing the primary forecast, probability, interval or market ledger.
 
 ## Player rankings
 
