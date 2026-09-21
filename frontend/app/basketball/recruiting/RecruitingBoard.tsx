@@ -6,7 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchJson } from "../../_lib/fetch-json";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { parseRecruitingRelease } from "../../_lib/recruiting";
-import { buildRecruitingProductionIndex, type RecruitingProductionIndex } from "../../_lib/recruiting-production-index";
+import { buildRecruitingProductionIndex, exactRecruitingProduction, type RecruitingProductionIndex } from "../../_lib/recruiting-production-index";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
   recruitingShortlistKey,
@@ -856,7 +856,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   }, []);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
   const pageProductionRows = result?.rows.flatMap((row) => {
-    const production = productionIndex?.byAthleteId.get(row.athlete_id);
+    const production = exactRecruitingProduction(productionIndex, row.athlete_id);
     return production ? [{ prospect: row, production }] : [];
   }) || [];
   const movementEvidence = result?.rank_movement
@@ -1292,9 +1292,10 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           <div className="table-wrap" id="prospect-board-table">
             <table className="data-table">
               <caption className="sr-only">{season} basketball recruiting prospects</caption>
-              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Recorded schools</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Recorded schools</th><th>Prior college production</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
               <tbody>{result.rows.map((row) => {
                 const schools = prospectSchools(row.school_ids, programs, row.committed_team_id);
+                const production = exactRecruitingProduction(productionIndex, row.athlete_id);
                 return <tr key={row.athlete_id}>
                 <td>{number(row.rank)}</td>
                 <td>{!row.previous_captured_at ? <span className="note">New / —</span> : row.previous_rank == null || row.rank == null ? <span className="note">Rank unavailable<small>prior capture retained</small></span> : <span className={row.previous_rank - row.rank > 0 ? "movement-up" : row.previous_rank - row.rank < 0 ? "movement-down" : "note"}>{row.previous_rank - row.rank > 0 ? "▲" : row.previous_rank - row.rank < 0 ? "▼" : "="} {Math.abs(row.previous_rank - row.rank)} <small>from #{row.previous_rank}</small></span>}</td>
@@ -1304,6 +1305,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
                 <td>{size(row.height_inches, row.weight_pounds)}</td>
                 <td>{row.committed_team_name ? row.committed_team_id ? <><Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name} →</Link>{fitHref(row.committed_team_id) && <small><Link href={fitHref(row.committed_team_id)!}>Open roster fit →</Link></small>}</> : row.committed_team_name : row.status || "—"}</td>
                 <td>{schools.length ? <><strong>{schools.length}</strong><small>{schools.slice(0, 3).map((school) => school.name).join(" · ")}{schools.length > 3 ? ` · +${schools.length - 3}` : ""}</small><small><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}#recorded-schools`}>Open school list →</Link></small></> : <span className="note">Not recorded</span>}</td>
+                <td>{productionStatus === "checking" ? <span className="note">Checking reviewed stats…</span> : production ? <><strong>{production.ppg == null ? "PTS/G unavailable" : `${number(production.ppg, 1)} PTS/G`}</strong><small>{production.mpg == null ? "MIN/G unavailable" : `${number(production.mpg, 1)} MIN/G`} · {production.games.toLocaleString()} GP</small><small><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${row.athlete_id}#production`}>Open exact-ID stats →</Link></small></> : productionStatus === "unavailable" ? <span className="note">Stats release unavailable</span> : <span className="note">No exact-ID link<small>Not a zero</small></span>}</td>
                 <td>{row.hometown || "—"}</td>
                 <td><small>{result.captured_at ? `${captureLabel(result.captured_at)} UTC` : "Capture date unavailable"}</small><small className="source-hash">{result.edition || "Edition unavailable"}</small></td>
                 <td><button className="button secondary" type="button" onClick={() => toggleShortlist(row)} aria-pressed={shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id))}>{shortlist.some((entry) => entry.key === recruitingShortlistKey(season, row.athlete_id)) ? "Saved" : "Save"}</button></td>

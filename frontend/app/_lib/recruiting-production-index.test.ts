@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseRecruitingRelease, type RecruitingRelease } from "./recruiting";
-import { buildRecruitingProductionIndex } from "./recruiting-production-index";
+import { buildRecruitingProductionIndex, exactRecruitingProduction } from "./recruiting-production-index";
 
 const source = JSON.parse(
   readFileSync("public/data/basketball/recruiting.json", "utf8"),
@@ -22,6 +22,16 @@ describe("recruiting production index", () => {
     const linked = [...(index?.byAthleteId.keys() || [])][0];
     expect(linked).toMatch(/^\d{1,15}$/);
     expect(index?.byAthleteId.get(linked)?.id).toBe(linked);
+  });
+
+  it("looks up production by exact numeric athlete ID only", () => {
+    const release = parseRecruitingRelease(source)!;
+    const index = buildRecruitingProductionIndex(release)!;
+    const linked = [...index.byAthleteId.keys()][0];
+    expect(exactRecruitingProduction(index, linked)?.id).toBe(linked);
+    expect(exactRecruitingProduction(index, "not-an-athlete-id")).toBeNull();
+    expect(exactRecruitingProduction(index, "260209")).toBeNull();
+    expect(exactRecruitingProduction(null, linked)).toBeNull();
   });
 
   it("withholds the bridge when a reviewed packet repeats an athlete ID", () => {

@@ -20,6 +20,19 @@ export type RecruitingProductionIndex = {
   byAthleteId: ReadonlyMap<string, RecruitingProductionRow>;
 };
 
+/**
+ * Look up prior production by exact athlete ID only. The prospect board and
+ * reviewed production release are separate editions, so there is no name
+ * fallback or cross-season inference here.
+ */
+export function exactRecruitingProduction(
+  index: RecruitingProductionIndex | null | undefined,
+  athleteId: string,
+): RecruitingProductionRow | null {
+  if (!index || !/^\d{1,15}$/.test(athleteId)) return null;
+  return index.byAthleteId.get(athleteId) || null;
+}
+
 export function buildRecruitingProductionIndex(
   release: RecruitingRelease,
 ): RecruitingProductionIndex | null {
@@ -50,4 +63,3 @@ export function buildRecruitingProductionIndex(
     byAthleteId,
   };
 }
-

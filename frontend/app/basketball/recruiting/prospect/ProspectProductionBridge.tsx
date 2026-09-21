@@ -59,7 +59,7 @@ export default function ProspectProductionBridge({ athleteId, season }: { athlet
 
   const production = state.release?.production;
   const release = state.release;
-  return <section className="section paper-panel" aria-labelledby="prospect-production-title">
+  return <section id="production" className="section paper-panel" aria-labelledby="prospect-production-title">
     <div className="section-heading" style={{ marginBottom: 12 }}>
       <div><div className="eyebrow">Production handoff / exact source ID</div><h2 id="prospect-production-title">What the retained college record shows.</h2></div>
       <span className="note">No name-only join</span>
