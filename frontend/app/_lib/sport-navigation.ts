@@ -110,6 +110,14 @@ export function divisionAwareNavHref(sport: Sport, division: Division, item: Spo
   if (sport === "football" && division !== "1" && ["Teams", "Predictions", "Rankings"].includes(item.label)) {
     return "/football/matchups/#lower-division-results-title";
   }
+  // The men’s NCAA ranking explorer is the only ranking surface that keeps
+  // D1, D2 and D3 in their own cohorts. The general rankings landing page is
+  // useful as a D1 directory, but its team board would hide the exact
+  // lower-division player ranking table behind the scope gate. Women’s
+  // basketball intentionally keeps its own source-native D1 ranking board.
+  if (sport === "mens-basketball" && item.label === "Rankings") {
+    return "/basketball/ncaa-rankings/";
+  }
   return item.href;
 }
 

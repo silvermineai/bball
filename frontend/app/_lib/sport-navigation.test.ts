@@ -61,6 +61,14 @@ describe("sport navigation", () => {
     expect(divisionAwareNavHref("mens-basketball", "3", teams)).toBe(teams.href);
   });
 
+  it("opens the men’s within-division ranking explorer from every division", () => {
+    const rankings = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Rankings")!;
+    expect(divisionAwareNavHref("mens-basketball", "1", rankings)).toBe("/basketball/ncaa-rankings/");
+    expect(divisionAwareNavHref("mens-basketball", "2", rankings)).toBe("/basketball/ncaa-rankings/");
+    expect(divisionAwareNavHref("mens-basketball", "3", rankings)).toBe("/basketball/ncaa-rankings/");
+    expect(divisionAwareNavHref("womens-basketball", "1", rankings)).toBe(rankings.href);
+  });
+
   it("keeps the core stat tabs consistent across each sport tab", () => {
     const labels = Object.values(SPORT_NAVIGATION).map((config) => config.items.map((item) => item.label));
     expect(labels).toEqual([
