@@ -11,6 +11,7 @@ assert _SPEC and _SPEC.loader
 _SPEC.loader.exec_module(_MODULE)
 build_team_stats = _MODULE.build_team_stats
 build_player_box_stats = _MODULE.build_player_box_stats
+source_field_coverage = _MODULE.source_field_coverage
 
 
 def test_player_box_stats_keep_played_rows_and_exclude_dnp_from_aggregates():
@@ -66,7 +67,7 @@ def test_player_box_stats_keep_played_rows_and_exclude_dnp_from_aggregates():
 
     players, coverage = build_player_box_stats(rows)
 
-    assert coverage == {
+    assert {key: value for key, value in coverage.items() if key != "source_fields"} == {
         "rows": 3,
         "players": 1,
         "games": 3,
@@ -86,6 +87,22 @@ def test_player_box_stats_keep_played_rows_and_exclude_dnp_from_aggregates():
         "three_point_pct": 40.0,
         "free_throw_pct": 100.0,
     }
+    fields = {item["field"]: item for item in coverage["source_fields"]}
+    assert fields["points"]["observed_rows"] == 2
+    assert fields["points"]["finite_numeric_rows"] == 2
+    assert fields["did_not_play"]["observed_rows"] == 3
+
+
+def test_source_field_coverage_keeps_missingness_and_numeric_quality_separate():
+    coverage = source_field_coverage([
+        {"points": "12", "starter": "true", "future_text": "x"},
+        {"points": "", "starter": "false", "future_text": None},
+        {"points": "not-published", "starter": None, "future_text": "y"},
+    ])
+    by_field = {item["field"]: item for item in coverage}
+    assert by_field["points"] == {"field": "points", "observed_rows": 2, "finite_numeric_rows": 1}
+    assert by_field["starter"] == {"field": "starter", "observed_rows": 2, "finite_numeric_rows": 0}
+    assert by_field["future_text"] == {"field": "future_text", "observed_rows": 2, "finite_numeric_rows": 0}
 
 
 def test_team_stats_preserve_all_numeric_source_fields_and_receipt_shape():

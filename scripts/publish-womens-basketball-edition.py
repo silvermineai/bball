@@ -40,6 +40,45 @@ BOX_STAT_FIELDS = (
     ("free_throws_attempted", "free_throws_attempted"),
 )
 
+# Keep a receipt-backed ledger for every player-box field that is useful for
+# player production or game context.  The ledger is deliberately generated
+# from the raw release rows rather than from the aggregate output, so a field
+# that is present only on some rows remains visible as partial source coverage.
+BOX_SOURCE_FIELD_ORDER = (
+    "game_id",
+    "game_date",
+    "athlete_id",
+    "athlete_display_name",
+    "athlete_position_abbreviation",
+    "team_id",
+    "team_display_name",
+    "opponent_team_id",
+    "opponent_team_display_name",
+    "minutes",
+    "field_goals_made",
+    "field_goals_attempted",
+    "three_point_field_goals_made",
+    "three_point_field_goals_attempted",
+    "free_throws_made",
+    "free_throws_attempted",
+    "offensive_rebounds",
+    "defensive_rebounds",
+    "rebounds",
+    "assists",
+    "steals",
+    "blocks",
+    "turnovers",
+    "fouls",
+    "points",
+    "starter",
+    "ejected",
+    "did_not_play",
+    "active",
+    "team_winner",
+    "team_score",
+    "opponent_team_score",
+)
+
 
 def num(value):
     try:
@@ -47,6 +86,36 @@ def num(value):
         return parsed if math.isfinite(parsed) else None
     except (TypeError, ValueError):
         return None
+
+
+def source_field_coverage(rows):
+    """Count observed and finite values without coercing missing data.
+
+    This is a source audit, not a completeness claim: ``observed_rows`` counts
+    non-empty source cells and ``finite_numeric_rows`` counts only values that
+    can be safely used as numeric statistics.  Identity/context fields retain
+    identity and context fields are still counted, but are never used to
+    manufacture player totals.
+    """
+    fields = set(BOX_SOURCE_FIELD_ORDER)
+    fields.update(key for row in rows for key in row)
+    output = []
+    for field in sorted(fields):
+        observed = 0
+        numeric = 0
+        for row in rows:
+            value = row.get(field)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                continue
+            observed += 1
+            if num(value) is not None:
+                numeric += 1
+        output.append({
+            "field": field,
+            "observed_rows": observed,
+            "finite_numeric_rows": numeric,
+        })
+    return output
 
 
 def build_player_box_stats(rows):
@@ -152,6 +221,7 @@ def build_player_box_stats(rows):
         "dnp_rows": dnp_rows,
         "skipped_rows": skipped_rows,
         "teams": len({player["team_id"] for player in output if player["team_id"]}),
+        "source_fields": source_field_coverage(rows),
     }
 
 

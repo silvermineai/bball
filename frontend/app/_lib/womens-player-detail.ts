@@ -105,3 +105,14 @@ export function womensPlayerFieldLabel(key: string): string {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/^./, (value) => value.toUpperCase());
 }
+
+/** Return one bounded page without changing the caller's source ordering. */
+export function paginateWomensPlayerRows<T>(
+  rows: T[],
+  page: number,
+  pageSize = 100,
+): T[] {
+  if (!Number.isInteger(pageSize) || pageSize < 1) return [];
+  const safePage = Number.isInteger(page) && page > 0 ? page : 0;
+  return rows.slice(safePage * pageSize, (safePage + 1) * pageSize);
+}

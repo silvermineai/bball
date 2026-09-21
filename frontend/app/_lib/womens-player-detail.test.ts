@@ -4,6 +4,7 @@ import {
   unlistedWomensPlayerFields,
   womensPlayerDetailCount,
   womensPlayerDetailGroups,
+  paginateWomensPlayerRows,
 } from "./womens-player-detail";
 
 describe("women's player retained detail", () => {
@@ -26,5 +27,13 @@ describe("women's player retained detail", () => {
     const stats = { points: 10, futureMetric: 3, missingMetric: null };
     expect(womensPlayerDetailCount(stats)).toBe(2);
     expect(unlistedWomensPlayerFields(stats)).toEqual(["futureMetric", "missingMetric"]);
+  });
+
+  it("pages the complete retained player cohort without dropping rows", () => {
+    const rows = Array.from({ length: 205 }, (_, index) => index);
+    expect(paginateWomensPlayerRows(rows, 0)).toHaveLength(100);
+    expect(paginateWomensPlayerRows(rows, 2)).toEqual([200, 201, 202, 203, 204]);
+    expect(paginateWomensPlayerRows(rows, -1)).toEqual(rows.slice(0, 100));
+    expect(paginateWomensPlayerRows(rows, 0, 0)).toEqual([]);
   });
 });
