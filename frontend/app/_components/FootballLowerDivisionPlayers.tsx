@@ -6,6 +6,7 @@ import {
   aggregateLowerFootballPlayers,
   lowerFootballCategories,
   lowerFootballCategoryDefinition,
+  lowerFootballGameContext,
   lowerFootballRawExport,
   lowerFootballSourceFieldCoverage,
   lowerFootballSourceFields,
@@ -54,6 +55,15 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
       : [],
     [archive, category, selected, target],
   );
+  const selectedGameContexts = useMemo(() => {
+    if (!selected || !archive) return [];
+    const seen = new Set<string>();
+    return selectedSourceRows.flatMap((sourceRow) => {
+      if (seen.has(sourceRow.game_id)) return [];
+      seen.add(sourceRow.game_id);
+      return [{ sourceRow, game: lowerFootballGameContext(archive.games, sourceRow) }];
+    });
+  }, [archive, selected, selectedSourceRows]);
   const definition = lowerFootballCategoryDefinition(category);
   const sourceFieldCoverage = useMemo(
     () => lowerFootballSourceFieldCoverage(archive?.rows || [], target),
@@ -89,6 +99,9 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
       <div className="section-heading"><div><div className="eyebrow">EXACT SOURCE ROWS · {target.toUpperCase()}</div><h3 id="lower-football-source-detail-title">{selected.athlete} · {definition.label}</h3></div><button className="button secondary" type="button" onClick={() => setSelectedKey("")}>Close detail</button></div>
       <p className="note">Every field below comes from the retained provider response for athlete <code>{selected.athlete_id}</code>, team <code>{selected.team_id}</code>, and category <code>{category}</code>. Values are displayed as supplied; blank and unavailable fields remain blank.</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Game ID</th><th>Source field</th><th>Provider label</th><th>Raw value</th></tr></thead><tbody>{selectedSourceRows.flatMap((sourceRow) => lowerFootballSourceFields(sourceRow).map((field, index) => <tr key={`${sourceRow.game_id}-${field.key}-${index}`}><td>{sourceRow.date ? new Date(sourceRow.date).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—"}</td><td><code>{sourceRow.game_id}</code></td><td><code>{field.key}</code></td><td>{field.label}</td><td>{field.value == null ? "—" : field.value}</td></tr>))}</tbody></table></div>
+      <h4 style={{ margin: "18px 0 8px" }}>Schedule context</h4>
+      <p className="note">Schedule metadata is joined by exact game ID. Team side and opponent are shown only when this row&apos;s exact team ID matches a published home or away participant.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Published game</th><th>Team side</th><th>Opponent team ID</th><th>Status</th></tr></thead><tbody>{selectedGameContexts.map(({ sourceRow, game }) => <tr key={`schedule-${sourceRow.game_id}`}><td>{game?.date ? new Date(game.date).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—"}</td><td>{game?.name || "Schedule metadata unavailable"}</td><td>{game?.team_side || "unknown"}</td><td><code>{game?.opponent_team_id || "—"}</code></td><td>{game?.status || "—"}</td></tr>)}</tbody></table></div>
       {!selectedSourceRows.length ? <p className="empty">No retained source rows match this exact identity scope.</p> : null}
     </section> : null}
   </section>;

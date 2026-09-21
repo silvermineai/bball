@@ -313,6 +313,37 @@ export function lowerFootballSourceRows(
     .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || right.game_id.localeCompare(left.game_id));
 }
 
+export type LowerFootballGameContext = {
+  game_id: string;
+  date: string | null;
+  name: string | null;
+  status: string | null;
+  team_side: "home" | "away" | "unknown";
+  opponent_team_id: string | null;
+};
+
+/**
+ * Join one retained player row to the published schedule by exact game ID.
+ * Home/away and opponent are returned only when the row's exact team ID is a
+ * published participant; an unlisted team never receives an inferred side.
+ */
+export function lowerFootballGameContext(
+  games: ReadonlyArray<LowerFootballPlayerArchive["games"][number]>,
+  row: Pick<LowerFootballRawRow, "game_id" | "team_id">,
+): LowerFootballGameContext | null {
+  const game = games.find((candidate) => candidate.game_id === row.game_id);
+  if (!game) return null;
+  const teamSide = row.team_id === game.home_team_id ? "home" : row.team_id === game.away_team_id ? "away" : "unknown";
+  return {
+    game_id: game.game_id,
+    date: game.date,
+    name: game.name,
+    status: game.status,
+    team_side: teamSide,
+    opponent_team_id: teamSide === "home" ? game.away_team_id : teamSide === "away" ? game.home_team_id : null,
+  };
+}
+
 /** Pair a retained source row's field names with its raw values for display. */
 export function lowerFootballSourceFields(row: LowerFootballRawRow): Array<{ key: string; label: string; value: string | null }> {
   return row.keys.map((key, index) => ({

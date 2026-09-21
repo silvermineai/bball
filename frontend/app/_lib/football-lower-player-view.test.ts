@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, lowerFootballGameContext, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -79,6 +79,19 @@ describe("lower football player aggregation", () => {
       row({ athlete_id: "a1", category: "rushing", game_id: "wrong-category" }),
       row({ athlete_id: "a2", game_id: "wrong-player" }),
     ], "d2", "passing", "a1", "t1")).toEqual([later, selected]);
+  });
+
+  it("joins player events to schedule context only through exact game and team IDs", () => {
+    const games = [
+      { game_id: "g1", date: "2026-09-02T00:00:00Z", name: "Away at Home", status: "STATUS_FINAL", home_team_id: "t1", away_team_id: "t2" },
+    ];
+    expect(lowerFootballGameContext(games, { game_id: "g1", team_id: "t1" })).toMatchObject({
+      game_id: "g1", team_side: "home", opponent_team_id: "t2", status: "STATUS_FINAL",
+    });
+    expect(lowerFootballGameContext(games, { game_id: "g1", team_id: "unlisted" })).toMatchObject({
+      game_id: "g1", team_side: "unknown", opponent_team_id: null,
+    });
+    expect(lowerFootballGameContext(games, { game_id: "missing", team_id: "t1" })).toBeNull();
   });
 
   it("preserves provider labels and missing values without filling them", () => {
