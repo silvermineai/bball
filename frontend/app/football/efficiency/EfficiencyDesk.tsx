@@ -236,6 +236,21 @@ export default function EfficiencyDesk({ data, model }: { data: EfficiencyIndex;
           </div>
         ) : <p className="empty">No dated transition has enough prior data for a holdout score.</p>}
         <p className="note">The challenger remains exploratory. It does not change the published football probability, interval, market ledger, or matchup recommendation.</p>
+        {model.feature_state ? <details className="forecast-factor-disclosure" style={{ marginTop: 14 }}>
+          <summary>Inspect challenger feature lineage</summary>
+          <p className="note">The current scenario state is a digest of the exact lagged team-game cohort. It is an audit key for the retained evidence, not a player-availability signal.</p>
+          <dl className="raw-stat-grid">
+            <div><dt>Feature state</dt><dd><code>{model.feature_state.id || "unavailable"}</code></dd></div>
+            <div><dt>Source dataset</dt><dd>{model.feature_state.source_dataset}</dd></div>
+            <div><dt>Feature games</dt><dd>{(model.coverage.current_feature_games ?? model.feature_state.game_ids.length).toLocaleString()}</dd></div>
+            <div><dt>Feature teams</dt><dd>{model.feature_state.team_ids.length.toLocaleString()}</dd></div>
+          </dl>
+          {model.source_receipts?.length ? <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="data-table"><thead><tr><th>Season</th><th>Dataset</th><th>Captured</th><th>SHA-256</th></tr></thead><tbody>
+              {model.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><th scope="row">{receipt.season}</th><td>{receipt.dataset}</td><td>{day(receipt.fetched_at)} UTC</td><td><code>{receipt.sha256}</code></td></tr>)}
+            </tbody></table>
+          </div> : <p className="note">Source receipt metadata is unavailable for this edition.</p>}
+        </details> : null}
       </section>
       <section aria-labelledby="efficiency-compare-title">
         <div className="section-heading">

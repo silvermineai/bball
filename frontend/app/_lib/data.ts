@@ -88,7 +88,20 @@ export type FootballEfficiencyModel = {
     holdout_rows: number;
     current_scenarios: number;
     current_teams: number;
+    current_feature_games?: number;
   };
+  feature_state?: {
+    id: string | null;
+    source_dataset: string;
+    game_ids: string[];
+    team_ids: string[];
+  };
+  source_receipts?: Array<{
+    dataset: string;
+    season: number;
+    fetched_at: string;
+    sha256: string;
+  }>;
   limitations: string[];
   scenarios: FootballEfficiencyScenario[];
 };
