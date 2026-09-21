@@ -110,6 +110,12 @@ export function sportSupportsGenderScope(sport: Sport): boolean {
 
 /** Keep the scope banner aligned with the rows actually published for each sport. */
 export function sportAvailabilityMessage(sport: Sport, division: Division): string | null {
+  if (sport === "womens-basketball") {
+    if (division === "1") {
+      return "Women's basketball coverage: D1 player, team, game, ranking and forecast tables are published. D2 and D3 remain separate intake scopes.";
+    }
+    return `Women's basketball coverage: D${division} rows are not imported yet. No D1 rows are substituted.`;
+  }
   if (sport !== "football") return null;
   if (division === "1") {
     return "Football coverage: D1 player and team tables plus model forecasts; D2 and D3 schedules and score-derived record boards are available, while lower-division player tables and forecasts are not yet published.";

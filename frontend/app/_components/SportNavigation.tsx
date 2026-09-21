@@ -117,7 +117,7 @@ export default function SportNavigation() {
         <div className="sport-availability" role="status">
           <strong>Archive status:</strong> Women's Basketball observed player, roster and schedule tables are available with a separately validated forecast model.
         </div>
-      ) : currentSport === "football" ? (
+      ) : (currentSport === "football" || currentSport === "womens-basketball") ? (
         <div className="sport-availability" role="status">
           {sportAvailabilityMessage(currentSport, division)}
         </div>
