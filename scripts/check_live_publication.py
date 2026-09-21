@@ -229,6 +229,109 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     return total, pregame, len(capabilities), len(receipts) + research_receipts
 
 
+def football_personnel_readiness_metadata(
+    payload: dict,
+    checked_at: datetime,
+    max_age_hours: float,
+    expected_season: int = 2026,
+) -> tuple[dict, float]:
+    """Validate the exact-ID personnel context published for football games.
+
+    This file is research context rather than a forecast input. It still needs
+    the same publication guarantees as a model artifact: every row must have
+    one exact game identity, coverage totals must reconcile, and both source
+    receipts must be fresh and cryptographically identified.
+    """
+    if payload.get("version") != "football-personnel-readiness-v1":
+        raise ValueError("football personnel readiness has an unknown version")
+    if payload.get("target_season") != expected_season:
+        raise ValueError("football personnel readiness has the wrong target season")
+    generated_at = payload.get("generated_at")
+    if not isinstance(generated_at, str):
+        raise ValueError("football personnel readiness has no generation clock")
+    generated_age = (checked_at - timestamp(generated_at)).total_seconds() / 3600
+    if generated_age < -24 or generated_age > max_age_hours:
+        raise ValueError(f"football personnel readiness is {max(generated_age, 0):.1f} hours old")
+
+    coverage = payload.get("coverage")
+    if not isinstance(coverage, dict):
+        raise ValueError("football personnel readiness has no coverage object")
+    count_keys = ("forecast_games", "team_sides", "complete_games", "partial_games", "conflict_games", "unavailable_games", "personnel_teams")
+    counts = {key: coverage.get(key) for key in count_keys}
+    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in counts.values()):
+        raise ValueError("football personnel readiness coverage counts are malformed")
+    forecast_games = counts["forecast_games"]
+    if forecast_games <= 0 or counts["team_sides"] != forecast_games * 2:
+        raise ValueError("football personnel readiness team-side coverage does not reconcile")
+    if sum(counts[key] for key in ("complete_games", "partial_games", "conflict_games", "unavailable_games")) != forecast_games:
+        raise ValueError("football personnel readiness status counts do not reconcile")
+    fields = payload.get("feature_fields")
+    expected_fields = {"talent_composite", "talent_rank", "blue_chip_ratio", "off_returning", "def_returning", "overall_returning"}
+    if not isinstance(fields, list) or set(fields) != expected_fields:
+        raise ValueError("football personnel readiness feature fields are malformed")
+    field_counts = coverage.get("field_side_counts")
+    if not isinstance(field_counts, dict) or any(
+        field not in field_counts or not isinstance(field_counts[field], int) or isinstance(field_counts[field], bool)
+        or field_counts[field] < 0 or field_counts[field] > counts["team_sides"]
+        for field in expected_fields
+    ):
+        raise ValueError("football personnel readiness field coverage is malformed")
+
+    receipts = payload.get("source_receipts")
+    if not isinstance(receipts, list) or {receipt.get("dataset") for receipt in receipts if isinstance(receipt, dict)} != {"team_talent", "returning_production"}:
+        raise ValueError("football personnel readiness receipts are incomplete")
+    receipt_ages = []
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("dataset"), str)
+            or not isinstance(receipt.get("season"), int)
+            or receipt["season"] != expected_season
+            or not isinstance(receipt.get("fetched_at"), str)
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+        ):
+            raise ValueError("football personnel readiness receipt is malformed")
+        age = (checked_at - timestamp(receipt["fetched_at"])).total_seconds() / 3600
+        if age < -24 or age > max_age_hours:
+            raise ValueError(f"football personnel readiness source is {max(age, 0):.1f} hours old")
+        receipt_ages.append(age)
+
+    games = payload.get("games")
+    if not isinstance(games, list) or len(games) != forecast_games:
+        raise ValueError("football personnel readiness game rows do not reconcile")
+    statuses = {"complete": 0, "partial": 0, "conflict": 0, "unavailable": 0}
+    game_ids = set()
+    for game in games:
+        if not isinstance(game, dict):
+            raise ValueError("football personnel readiness game row is malformed")
+        game_id = game.get("game_id")
+        if not isinstance(game_id, str) or not game_id or game_id in game_ids:
+            raise ValueError("football personnel readiness game identity is not unique")
+        game_ids.add(game_id)
+        status = game.get("status")
+        if status not in statuses:
+            raise ValueError("football personnel readiness game status is malformed")
+        statuses[status] += 1
+        for side in ("home", "away"):
+            context = game.get(side)
+            if not isinstance(context, dict) or not isinstance(context.get("team_id"), str) or not context["team_id"]:
+                raise ValueError("football personnel readiness team identity is malformed")
+            available = context.get("available_fields")
+            conflicts = context.get("conflicting_fields")
+            datasets = context.get("source_datasets")
+            if not isinstance(available, list) or not set(available).issubset(expected_fields) or len(set(available)) != len(available):
+                raise ValueError("football personnel readiness available fields are malformed")
+            if not isinstance(conflicts, list) or not set(conflicts).issubset(expected_fields):
+                raise ValueError("football personnel readiness conflict fields are malformed")
+            if not isinstance(datasets, list) or not set(datasets).issubset({"team_talent", "returning_production"}):
+                raise ValueError("football personnel readiness source datasets are malformed")
+    for status, count in statuses.items():
+        if count != counts[f"{status}_games"]:
+            raise ValueError("football personnel readiness game status rows do not reconcile")
+    return coverage, max(max(receipt_ages), generated_age, 0)
+
+
 def schedule_clock_metadata(payload: dict, checked_at: datetime, max_age_hours: float) -> tuple[int, int, float | None]:
     """Validate the exact-ID ESPN schedule-clock observation catalog."""
     total = payload.get("total")
@@ -1551,6 +1654,11 @@ def check_live(
     football_model_age = (checked_at - timestamp(football_last_created)).total_seconds() / 3600
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
+    football_personnel_readiness, football_personnel_readiness_age = football_personnel_readiness_metadata(
+        get_json(base_url, "/data/football/personnel-readiness-2026.json"),
+        checked_at,
+        max_age_hours,
+    )
 
     schedule_clock_total = schedule_clock_confirmed = 0
     schedule_clock_age: float | None = None
@@ -1724,6 +1832,11 @@ def check_live(
         "football_forecast_model": football_latest.get("model_id"),
         "football_forecast_rows": football_latest["forecasts"],
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
+        "football_personnel_readiness_games": football_personnel_readiness["forecast_games"],
+        "football_personnel_readiness_complete_games": football_personnel_readiness["complete_games"],
+        "football_personnel_readiness_partial_games": football_personnel_readiness["partial_games"],
+        "football_personnel_readiness_conflict_games": football_personnel_readiness["conflict_games"],
+        "football_personnel_readiness_age_hours": round(football_personnel_readiness_age, 2),
         "schedule_clock_observed_games": schedule_clock_total,
         "schedule_clock_confirmed_games": schedule_clock_confirmed,
         "schedule_clock_latest_age_hours": None if schedule_clock_age is None else round(schedule_clock_age, 2),

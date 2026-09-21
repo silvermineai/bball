@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getFootballEfficiencyModel, getOverview } from "../../_lib/data";
+import { getFootballEfficiencyModel, getFootballPersonnelReadiness, getOverview } from "../../_lib/data";
 import { getFootballBriefEvidence } from "../../_lib/football-brief-data";
 import { footballSlateIntel } from "../../_lib/football-brief";
 import MatchupBrowser from "./MatchupBrowser";
@@ -9,6 +9,7 @@ export const metadata = { title: "2026 football matchups and forecasts" };
 export default function Page() {
   const d = getOverview();
   const efficiencyModel = getFootballEfficiencyModel();
+  const personnelReadiness = getFootballPersonnelReadiness(d.season);
   const matchupIntel = footballSlateIntel(
     d.upcoming.map((game) => getFootballBriefEvidence(game)),
   );
@@ -31,6 +32,7 @@ export default function Page() {
           games={d.upcoming}
           generated={d.generated_at}
           efficiencyScenarios={efficiencyModel.scenarios}
+          personnelReadinessGames={personnelReadiness.games}
           matchupIntel={matchupIntel}
           modelId={d.model.id}
           model={d.model}

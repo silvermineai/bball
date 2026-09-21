@@ -27,10 +27,12 @@ import {
   type FootballMatchupSort,
 } from "../../_lib/football-matchup-view";
 import { footballForecastReadiness } from "../../_lib/football-forecast-readiness";
+import { personnelReadinessForGame, type FootballPersonnelReadinessGame } from "../../_lib/football-personnel-readiness";
 export default function MatchupBrowser({
   games,
   generated,
   efficiencyScenarios = [],
+  personnelReadinessGames = [],
   matchupIntel,
   marketCoverage,
   modelId,
@@ -39,6 +41,7 @@ export default function MatchupBrowser({
   games: Game[];
   generated: string;
   efficiencyScenarios?: FootballEfficiencyScenario[];
+  personnelReadinessGames?: FootballPersonnelReadinessGame[];
   matchupIntel?: FootballSlateIntel;
   marketCoverage?: {
     market_observations: number;
@@ -490,6 +493,7 @@ export default function MatchupBrowser({
                   : current;
               })()}
               efficiencyScenario={scenarioByGame.get(g.id)}
+              personnelReadiness={personnelReadinessForGame(personnelReadinessGames, g) || undefined}
               intel={matchupIntel ? {
                 playerSeason: matchupIntel.playerSeason,
                 programs: [matchupIntel.programs[g.away_id], matchupIntel.programs[g.home_id]].filter((program) => program != null),

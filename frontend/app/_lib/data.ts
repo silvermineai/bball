@@ -132,11 +132,29 @@ export type FootballPersonnelReadiness = {
     away_id: string;
     home_name: string | null;
     away_name: string | null;
+    home_division?: string | null;
+    away_division?: string | null;
+    model_id?: string | null;
     status: "complete" | "partial" | "conflict" | "unavailable";
-    home: { team_id: string; available_fields: string[]; source_datasets: string[]; conflicting_fields: string[] };
-    away: { team_id: string; available_fields: string[]; source_datasets: string[]; conflicting_fields: string[] };
+    home: FootballPersonnelReadinessTeam;
+    away: FootballPersonnelReadinessTeam;
   }>;
   id: string;
+};
+
+/** Exact-ID team context in the research-only personnel readiness release. */
+export type FootballPersonnelReadinessTeam = {
+  team_id: string;
+  team: string | null;
+  available_fields: string[];
+  source_datasets: string[];
+  conflicting_fields: string[];
+  talent_composite: number | null;
+  talent_rank: number | null;
+  blue_chip_ratio: number | null;
+  off_returning: number | null;
+  def_returning: number | null;
+  overall_returning: number | null;
 };
 export type Overview = {
   generated_at: string;

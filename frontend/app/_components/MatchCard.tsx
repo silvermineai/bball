@@ -6,6 +6,7 @@ import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
 import { footballMatchupContextRows, type FootballMatchupContextRow } from "../_lib/football-matchup-context";
+import { footballPersonnelReadinessRows, personnelReadinessStatusLabel, type FootballPersonnelReadinessGame } from "../_lib/football-personnel-readiness";
 import { footballForecastEvidence } from "../_lib/football-forecast-evidence";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
@@ -30,6 +31,7 @@ export default function MatchCard({
   efficiencyScenario,
   intel,
   recruiting,
+  personnelReadiness,
   model,
   expectedModelId,
 }: {
@@ -37,6 +39,7 @@ export default function MatchCard({
   efficiencyScenario?: FootballEfficiencyScenario;
   intel?: FootballCardIntel;
   recruiting?: { home?: FootballRecruitingTeam; away?: FootballRecruitingTeam };
+  personnelReadiness?: FootballPersonnelReadinessGame;
   model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
   expectedModelId?: string | null;
 }) {
@@ -159,6 +162,35 @@ export default function MatchCard({
             </table>
           </div>
           <small className="football-card-intel-note">Personnel context is descriptive and season-scoped; it does not alter the primary forecast or establish eligibility, availability or starting roles. Returning fields retain their reported or estimated status in the recruiting desk.</small>
+        </section>
+      )}
+      {personnelReadiness && (
+        <section className="football-card-intel" aria-label="Football personnel feature readiness">
+          <div className="football-card-intel-heading">
+            <strong>Personnel feature readiness</strong>
+            <span>{personnelReadinessStatusLabel(personnelReadiness.status)} · exact IDs</span>
+          </div>
+          <p className="note" style={{ margin: "0 0 10px" }}>
+            Source-backed team context for this forecast record. It is research evidence only and does not change the primary estimate.
+          </p>
+          <div className="table-scroll">
+            <table className="data-table matchup-context-table">
+              <thead><tr><th>Measure</th><th>{personnelReadiness.away_name || "Away"}<small>Team ID {personnelReadiness.away_id}</small></th><th>{personnelReadiness.home_name || "Home"}<small>Team ID {personnelReadiness.home_id}</small></th><th>Read</th></tr></thead>
+              <tbody>{footballPersonnelReadinessRows(personnelReadiness).map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">{row.label}<small>{row.direction === "lower" ? "Lower is stronger" : "Higher is stronger"}</small></th>
+                  <td className="numeric">{contextValue(row, row.away)}</td>
+                  <td className="numeric">{contextValue(row, row.home)}</td>
+                  <td>{row.edge === "home" ? "Home higher" : row.edge === "away" ? "Away higher" : row.edge === "even" ? "Even" : "Unavailable"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <small className="football-card-intel-note">
+            {personnelReadiness.status === "complete" ? "All six retained fields are present for both sides. " : "Missing fields remain unavailable; they are never treated as zero. "}
+            {personnelReadiness.status === "conflict" ? `Conflicting fields: ${[...new Set([...personnelReadiness.home.conflicting_fields, ...personnelReadiness.away.conflicting_fields])].join(", ") || "unreported"}. ` : ""}
+            Sources: {[...new Set([...personnelReadiness.home.source_datasets, ...personnelReadiness.away.source_datasets])].join(", ") || "unavailable"}. The release remains outside the primary model pending dated validation.
+          </small>
         </section>
       )}
       {efficiencyScenario && (
