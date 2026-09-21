@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prospectCoverageSummary } from "./LiveBasketballProspectStatus";
+import { prospectCoverageSummary, prospectReceiptSummary } from "./LiveBasketballProspectStatus";
 
 describe("prospect coverage summary", () => {
   it("distinguishes all retained rows from rows with a recorded rank", () => {
@@ -12,5 +12,21 @@ describe("prospect coverage summary", () => {
     expect(prospectCoverageSummary({ season: 2030, total: 1, ranked: 0, committed: 0 })).toBe(
       "2030 · 1 prospects (0 ranked · 0 committed)",
     );
+  });
+
+  it("reports release receipt integrity separately from prospect counts", () => {
+    expect(prospectReceiptSummary([
+      { source_receipt: { source_rows: 383, integrity: "verified" } },
+      { source_receipt: { source_rows: 383, integrity: "verified" } },
+    ])).toBe("2 of 2 release receipts verified · 766 retained rows");
+    expect(prospectReceiptSummary([
+      { source_receipt: { source_rows: 383, integrity: "verified" } },
+      { source_receipt: null },
+    ])).toBe("1 of 2 release receipts verified · 1 unavailable · 383 retained rows");
+  });
+
+  it("does not turn missing receipt rows into a zero", () => {
+    expect(prospectReceiptSummary([{ source_receipt: null }])).toBe("0 of 1 release receipts verified · 1 unavailable");
+    expect(prospectReceiptSummary([])).toBe("No release receipt available");
   });
 });

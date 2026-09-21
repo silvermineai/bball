@@ -12,6 +12,11 @@ type ProspectSnapshot = {
   committed: number;
   graded: number;
   captured_at: string | null;
+  source_receipt?: {
+    source_rows?: number;
+    sha256?: string | null;
+    integrity?: "verified" | "unavailable";
+  } | null;
   rank_movement?: {
     moved_up: number;
     moved_down: number;
@@ -26,6 +31,18 @@ export function prospectCoverageSummary(snapshot: Pick<ProspectSnapshot, "season
   return `${snapshot.season} · ${snapshot.total.toLocaleString()} prospects (${snapshot.ranked.toLocaleString()} ranked · ${snapshot.committed.toLocaleString()} committed)`;
 }
 
+/** Keep release-level integrity visible without exposing provider URLs or row payloads. */
+export function prospectReceiptSummary(snapshots: Pick<ProspectSnapshot, "source_receipt">[]) {
+  const verified = snapshots.filter((snapshot) => snapshot.source_receipt?.integrity === "verified").length;
+  const unavailable = snapshots.length - verified;
+  const sourceRows = snapshots.reduce((total, snapshot) => {
+    const rows = Number(snapshot.source_receipt?.source_rows);
+    return Number.isSafeInteger(rows) && rows > 0 ? total + rows : total;
+  }, 0);
+  if (!snapshots.length) return "No release receipt available";
+  return `${verified} of ${snapshots.length} release receipts verified${unavailable ? ` · ${unavailable} unavailable` : ""}${sourceRows ? ` · ${sourceRows.toLocaleString()} retained rows` : ""}`;
+}
+
 export default function LiveBasketballProspectStatus() {
   const requestedSeasons = [2025, 2026, 2027, 2028, 2029, 2030];
   const [snapshots, setSnapshots] = useState<ProspectSnapshot[]>([]);
@@ -36,7 +53,7 @@ export default function LiveBasketballProspectStatus() {
     const controller = new AbortController();
     setStatus("checking");
     Promise.allSettled(requestedSeasons.map(async (season) => {
-      const payload = await fetchJson<{ total?: number; captured_at?: string | null; cohort?: { ranked?: number; committed?: number; graded?: number }; rank_movement?: ProspectSnapshot["rank_movement"] }>(
+      const payload = await fetchJson<{ total?: number; captured_at?: string | null; cohort?: { ranked?: number; committed?: number; graded?: number }; rank_movement?: ProspectSnapshot["rank_movement"]; source_receipt?: ProspectSnapshot["source_receipt"] }>(
         `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
         { signal: controller.signal },
       );
@@ -47,6 +64,7 @@ export default function LiveBasketballProspectStatus() {
         committed: Number(payload.cohort?.committed || 0),
         graded: Number(payload.cohort?.graded || 0),
         captured_at: payload.captured_at || null,
+        source_receipt: payload.source_receipt || null,
         rank_movement: payload.rank_movement,
       } satisfies ProspectSnapshot;
     })).then((results) => {
@@ -65,7 +83,7 @@ export default function LiveBasketballProspectStatus() {
     <p className="note" role="status">
       {status === "live"
         ? <>
-            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
+            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}{prospectReceiptSummary(snapshots)}. Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
           </>
         : status === "fallback"
           ? <>The live prospect board is temporarily unavailable; the recruiting research file remains available. <Link href="/basketball/recruiting/">Open the recruiting board →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
