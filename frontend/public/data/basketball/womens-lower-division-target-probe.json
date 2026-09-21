@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-21T19:26:41.820720Z",
+  "target_season": "2026-27",
+  "requested_months": [
+    9,
+    10,
+    11
+  ],
+  "source": {
+    "publisher": "NCAA.com",
+    "scoreboard_urls": [
+      "https://www.ncaa.com/scoreboard/basketball-women/d2",
+      "https://www.ncaa.com/scoreboard/basketball-women/d3"
+    ],
+    "api_url": "https://sdataprod.ncaa.com",
+    "method": "Persisted NCAA scoreboard queries with sportCode=WBB and explicit division=2 or 3; response SHA-256 receipts are retained.",
+    "season_year": 2026,
+    "query_contract": {
+      "schedule": {
+        "meta": "NCAA_schedules_games_web",
+        "sha256": "c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80"
+      },
+      "contests": {
+        "meta": "GetContests_web",
+        "sha256": "4bcb5e6432fa9da365c0c19af01b1f9015cc7eb5c21e7af2dba308784a166df7"
+      }
+    },
+    "identity_limit": "Contest IDs and publisher team slugs are retained; no name-only join to another provider is performed.",
+    "probe_note": "Target-season availability probe only; zero rows are retained as evidence and never treated as a schedule."
+  },
+  "calendar": [],
+  "contests": [],
+  "receipts": [
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A2%2C%22month%22%3A9%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    },
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A3%2C%22month%22%3A9%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    },
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A2%2C%22month%22%3A10%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    },
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A3%2C%22month%22%3A10%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    },
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A2%2C%22month%22%3A11%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    },
+    {
+      "url": "https://sdataprod.ncaa.com?meta=NCAA_schedules_games_web&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22c653d0ac163b47bed513cd94aab887828c4ec7f4f9f698ea2bdcc574064e8d80%22%7D%7D&variables=%7B%22sportCode%22%3A%22WBB%22%2C%22seasonYear%22%3A2026%2C%22division%22%3A3%2C%22month%22%3A11%7D",
+      "status": 200,
+      "sha256": "66dc5cfa7868ad3107f9c4b4eccf003726164cf68a366ea78e2ade1e386f8419",
+      "bytes": 28
+    }
+  ]
+}

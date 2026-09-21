@@ -8,6 +8,7 @@ import {
   type MensLowerScheduleAsset,
   type MensLowerScheduleContest,
 } from "../_lib/mens-lower-division-schedule";
+import { summarizeLowerDivisionTargetProbe, type LowerDivisionTargetProbe, type LowerDivisionTargetProbeSummary } from "../_lib/lower-division-target-probe";
 
 const parseDate = (value?: string | null) => {
   const mmddyyyy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value || "");
@@ -33,13 +34,16 @@ const teamNames = (contest: MensLowerScheduleContest) => {
 
 export default function MensLowerDivisionScheduleArchive({ division }: { division: MensLowerDivision }) {
   const [asset, setAsset] = useState<MensLowerScheduleAsset | null>(null);
+  const [targetProbe, setTargetProbe] = useState<LowerDivisionTargetProbeSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/data/basketball/mens-lower-division-schedules.json", { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("The men’s lower-division schedule archive is unavailable.")))
-      .then((value: MensLowerScheduleAsset) => { if (!controller.signal.aborted) { setAsset(value); setLoaded(true); } })
+    Promise.all([
+      fetch("/data/basketball/mens-lower-division-schedules.json", { signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("The men’s lower-division schedule archive is unavailable."))),
+      fetch("/data/basketball/mens-lower-division-target-probe.json", { signal: controller.signal }).then((response) => response.ok ? response.json() : null).catch(() => null),
+    ])
+      .then(([value, probe]: [MensLowerScheduleAsset, LowerDivisionTargetProbe | null]) => { if (!controller.signal.aborted) { setAsset(value); setTargetProbe(summarizeLowerDivisionTargetProbe(probe)); setLoaded(true); } })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
           setError(reason instanceof Error ? reason.message : "The men’s lower-division schedule archive is unavailable.");
@@ -65,6 +69,7 @@ export default function MensLowerDivisionScheduleArchive({ division }: { divisio
     <h3>Recorded games and exact-division scope</h3>
     {!loaded ? <p className="muted">Loading the retained D{division} match archive…</p> : error ? <p className="status-error" role="alert">{error}</p> : !asset ? <p className="note">No receipt-backed men&apos;s D{division} schedule archive is published.</p> : <>
       <p className="note">This is the archived {seasonLabel} NCAA.com release. Rows were requested with sportCode=MBB and division={division}. Contest IDs, source team slugs, dates, scores, and statuses are retained. Team names are not joined to the D1 identity or prediction editions.</p>
+      {targetProbe ? <div className="notice" style={{ marginBottom: 14 }}><strong>{targetProbe.season} target-season availability probe</strong><p className="muted" style={{ margin: "4px 0 0" }}>NCAA endpoint checked for months {targetProbe.months.join(", ")}: {targetProbe.contests.toLocaleString()} contests and {targetProbe.calendarDays.toLocaleString()} calendar days returned across {targetProbe.receipts.toLocaleString()} receipt-backed responses ({new Date(targetProbe.generatedAt).toLocaleString()}). Empty responses remain unavailable data; predictions stay gated until a current exact-division schedule is published.</p></div> : null}
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} archived contests</span><strong>{completed.toLocaleString()}</strong><span>completed</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <h4 style={{ marginTop: 22 }}>Within-division team table</h4>
       <p className="muted">Derived from retained final scores only. Win percentage uses a half-win for an officially reported tie; teams with no valid finals are omitted.</p>

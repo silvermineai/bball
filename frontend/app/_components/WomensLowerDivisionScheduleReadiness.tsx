@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../_lib/csv";
+import { summarizeLowerDivisionTargetProbe, type LowerDivisionTargetProbe, type LowerDivisionTargetProbeSummary } from "../_lib/lower-division-target-probe";
 import { summarizeWomensLowerSchedule, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
 
 type ScheduleTeam = { home?: boolean; name?: string; slug?: string; score?: number | null; winner?: boolean | null };
@@ -56,13 +57,16 @@ const teamNames = (contest: ScheduleContest) => {
 
 export default function WomensLowerDivisionScheduleReadiness({ division }: { division: "2" | "3" }) {
   const [asset, setAsset] = useState<ScheduleAsset | null>(null);
+  const [targetProbe, setTargetProbe] = useState<LowerDivisionTargetProbeSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    fetch("/data/basketball/womens-lower-division-schedules.json")
-      .then((response) => response.ok ? response.json() : null)
-      .then((value: ScheduleAsset | null) => { if (active) { setAsset(value); setLoaded(true); } })
+    Promise.all([
+      fetch("/data/basketball/womens-lower-division-schedules.json").then((response) => response.ok ? response.json() : null),
+      fetch("/data/basketball/womens-lower-division-target-probe.json").then((response) => response.ok ? response.json() : null).catch(() => null),
+    ])
+      .then(([value, probe]: [ScheduleAsset | null, LowerDivisionTargetProbe | null]) => { if (active) { setAsset(value); setTargetProbe(summarizeLowerDivisionTargetProbe(probe)); setLoaded(true); } })
       .catch(() => { if (active) { setError("The schedule asset could not be read."); setLoaded(true); } });
     return () => { active = false; };
   }, []);
@@ -87,6 +91,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <div className="scope-snapshot-counts"><strong>0</strong><span>schedule rows</span><strong>—</strong><span>predictions</span></div>
     </> : <>
       <p className="note">Rows are shown only when the retained schedule carries division={division}, a contest ID, and two team records. Team names and slugs are kept as source labels; missing slugs remain missing, and no name-only join creates a prediction.</p>
+      {targetProbe ? <div className="notice" style={{ marginBottom: 14 }}><strong>{targetProbe.season} target-season availability probe</strong><p className="muted" style={{ margin: "4px 0 0" }}>NCAA endpoint checked for months {targetProbe.months.join(", ")}: {targetProbe.contests.toLocaleString()} contests and {targetProbe.calendarDays.toLocaleString()} calendar days returned across {targetProbe.receipts.toLocaleString()} receipt-backed responses ({new Date(targetProbe.generatedAt).toLocaleString()}). Empty responses remain unavailable data; predictions stay gated until a current exact-division schedule is published.</p></div> : null}
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} contests retained</span><strong>{upcoming.length.toLocaleString()}</strong><span>upcoming</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
       <div className="section-heading" style={{ marginTop: 18 }}>
