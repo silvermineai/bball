@@ -26,6 +26,16 @@ export type Release = {
   source_dataset: string;
   identity_note: string;
   source: { url?: string; fetched_at?: string; sha256?: string };
+  division_coverage?: {
+    status: "available" | "unavailable";
+    supported_divisions: string[];
+    player_rows: number;
+    rows_with_explicit_division: number;
+    source_team_keys: number;
+    team_keys_reused_across_games: number;
+    matching_team_directory_keys: number;
+    reason: string;
+  };
   categories: Category[];
   available_seasons?: number[];
 };
@@ -61,6 +71,7 @@ function format(value: number) {
 }
 
 export default function NCAALeaders({ release }: { release: Release }) {
+  const divisionCoverage = release.division_coverage;
   return (
     <>
       <div className="page-title">
@@ -186,6 +197,25 @@ export default function NCAALeaders({ release }: { release: Release }) {
           </p>
         )}
       </section>
+      {divisionCoverage && (
+        <section className="section paper-panel" aria-labelledby="ncaa-division-coverage">
+          <div className="eyebrow">Division coverage</div>
+          <h2 id="ncaa-division-coverage">
+            {divisionCoverage.status === "available"
+              ? "Exact division labels are retained."
+              : "This source edition cannot separate D1, D2 and D3."}
+          </h2>
+          <p>{divisionCoverage.reason}</p>
+          <p className="note">
+            {divisionCoverage.player_rows.toLocaleString()} eligible player rows · {divisionCoverage.source_team_keys.toLocaleString()} source team keys · {divisionCoverage.matching_team_directory_keys.toLocaleString()} keys matched to the retained team directory.
+          </p>
+          {divisionCoverage.status === "unavailable" && (
+            <p className="note">
+              These tables intentionally remain an all-source view. A division selector would imply a player-team join that this release does not provide.
+            </p>
+          )}
+        </section>
+      )}
     </>
   );
 }

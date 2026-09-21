@@ -70,6 +70,47 @@ def display_number(value: float) -> int | float:
     return int(value) if value.is_integer() else round(value, 2)
 
 
+def _division_coverage(
+    *,
+    player_rows: int,
+    rows_with_explicit_division: int,
+    source_team_keys: set[str],
+    team_keys_reused_across_games: int,
+    matching_team_directory_keys: int,
+) -> dict:
+    """Describe whether this release can support exact division filtering.
+
+    The NCAA-derived football release currently contains contest-scoped team
+    keys and no division field.  A team name or a name-only join would make a
+    D2/D3 leaderboard look more precise than the retained evidence allows, so
+    keep the limitation in the published artifact instead of silently
+    classifying rows.
+    """
+    if player_rows and rows_with_explicit_division == player_rows:
+        status = "available"
+        reason = "Every retained player row carries an explicit source division."
+        supported = ["d1", "d2", "d3"]
+    else:
+        status = "unavailable"
+        supported = []
+        reason = (
+            "The NCAA-derived player release does not carry a division field "
+            "for every player row. Its source team keys are not a stable join "
+            "to the retained football team directory, so D1, D2 and D3 rows "
+            "cannot be separated without an unverified identity or side join."
+        )
+    return {
+        "status": status,
+        "supported_divisions": supported,
+        "player_rows": player_rows,
+        "rows_with_explicit_division": rows_with_explicit_division,
+        "source_team_keys": len(source_team_keys),
+        "team_keys_reused_across_games": team_keys_reused_across_games,
+        "matching_team_directory_keys": matching_team_directory_keys,
+        "reason": reason,
+    }
+
+
 def build_leaders(
     conn: sqlite3.Connection,
     season: int,
@@ -89,8 +130,12 @@ def build_leaders(
         name = payload.get("display_name") or payload.get("name") or payload.get("team_name")
         if name and row["team_id"]:
             team_names.setdefault(str(row["team_id"]), str(name))
+    team_directory_ids = set(team_names)
 
     grouped: dict[tuple[str, str, str], dict] = {}
+    player_rows = 0
+    rows_with_explicit_division = 0
+    source_team_games: dict[str, set[str]] = defaultdict(set)
     for row in conn.execute(
         "SELECT team_id,game_id,stats_json FROM football_stats "
         "WHERE dataset='ncaa_player_stats' AND season=? ORDER BY record_key",
@@ -104,6 +149,10 @@ def build_leaders(
         spec = CATEGORIES.get(category)
         name = str(payload.get("name") or payload.get("player_name") or "").strip()
         team_id = str(row["team_id"] or payload.get("team_id") or "").strip()
+        if team_id:
+            game_id = str(row["game_id"] or payload.get("espn_game_id") or payload.get("contest_id") or "").strip()
+            if game_id:
+                source_team_games[team_id].add(game_id)
         if (
             name
             and name.upper() not in {"TEAM", "TOTAL"}
@@ -119,6 +168,9 @@ def build_leaders(
             not payload.get("position") and not payload.get("number")
         ):
             continue
+        player_rows += 1
+        if str(payload.get("division") or "").strip().lower() in {"d1", "d2", "d3", "1", "2", "3", "i", "ii", "iii"}:
+            rows_with_explicit_division += 1
         key = (category, name, team_id)
         item = grouped.setdefault(
             key,
@@ -180,6 +232,19 @@ def build_leaders(
             }
         )
 
+    matching_team_directory_keys = sum(
+        1 for team_id in source_team_games if team_id in team_directory_ids
+    )
+    coverage = _division_coverage(
+        player_rows=player_rows,
+        rows_with_explicit_division=rows_with_explicit_division,
+        source_team_keys=set(source_team_games),
+        team_keys_reused_across_games=sum(
+            1 for games in source_team_games.values() if len(games) > 1
+        ),
+        matching_team_directory_keys=matching_team_directory_keys,
+    )
+
     return {
         "schema_version": 1,
         "season": season,
@@ -190,6 +255,7 @@ def build_leaders(
             "The NCAA-derived release does not supply a stable athlete ID; repeated "
             "names are not merged across teams or seasons."
         ),
+        "division_coverage": coverage,
         "categories": categories,
     }
 

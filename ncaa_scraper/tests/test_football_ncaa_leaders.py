@@ -45,6 +45,20 @@ class FootballNCAALeaderTests(unittest.TestCase):
         self.assertEqual(len(next(item for item in result["categories"] if item["key"] == "passing")["leaders"]), 1)
         self.assertEqual(len(next(item for item in result["categories"] if item["key"] == "receiving")["leaders"]), 1)
 
+    def test_publishes_division_boundary_when_source_has_no_division_field(self):
+        self.add("1", "rushing", "source-team-1", "g1", {"name": "Runner", "position": "RB", "number": "1", "rush_yds_gained": "100", "category": "rushing"})
+        self.add("2", "rushing", "source-team-1", "g2", {"name": "Runner", "position": "RB", "number": "1", "rush_yds_gained": "100", "category": "rushing"})
+        result = build_leaders(self.conn, 2025)
+        coverage = result["division_coverage"]
+        self.assertEqual(coverage["status"], "unavailable")
+        self.assertEqual(coverage["supported_divisions"], [])
+        self.assertEqual(coverage["player_rows"], 2)
+        self.assertEqual(coverage["rows_with_explicit_division"], 0)
+        self.assertEqual(coverage["source_team_keys"], 1)
+        self.assertEqual(coverage["team_keys_reused_across_games"], 1)
+        self.assertEqual(coverage["matching_team_directory_keys"], 0)
+        self.assertIn("does not carry a division field", coverage["reason"])
+
     def test_release_exposes_only_seasons_with_supported_categories(self):
         self.conn.execute(
             "CREATE TABLE football_sources (dataset TEXT, season INTEGER, receipt_json TEXT)"
