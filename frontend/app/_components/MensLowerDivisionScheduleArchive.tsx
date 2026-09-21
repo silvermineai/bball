@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  mensLowerDivisionStandings,
   scopedMensLowerSchedule,
   type MensLowerDivision,
   type MensLowerScheduleAsset,
@@ -57,6 +58,7 @@ export default function MensLowerDivisionScheduleArchive({ division }: { divisio
     const state = `${contest.state || ""} ${contest.status || ""}`.toLowerCase();
     return state.includes("final") || state === "f";
   }).length;
+  const standings = useMemo(() => asset ? mensLowerDivisionStandings(asset, division) : [], [asset, division]);
 
   return <div className="paper-panel" style={{ marginTop: 18 }} aria-label={`Men’s D${division} match archive`}>
     <div className="eyebrow">MATCH ARCHIVE · MEN&apos;S D{division}</div>
@@ -64,6 +66,10 @@ export default function MensLowerDivisionScheduleArchive({ division }: { divisio
     {!loaded ? <p className="muted">Loading the retained D{division} match archive…</p> : error ? <p className="status-error" role="alert">{error}</p> : !asset ? <p className="note">No receipt-backed men&apos;s D{division} schedule archive is published.</p> : <>
       <p className="note">This is the archived {seasonLabel} NCAA.com release. Rows were requested with sportCode=MBB and division={division}. Contest IDs, source team slugs, dates, scores, and statuses are retained. Team names are not joined to the D1 identity or prediction editions.</p>
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} archived contests</span><strong>{completed.toLocaleString()}</strong><span>completed</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
+      <h4 style={{ marginTop: 22 }}>Within-division team table</h4>
+      <p className="muted">Derived from retained final scores only. Win percentage uses a half-win for an officially reported tie; teams with no valid finals are omitted.</p>
+      {standings.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Team</th><th className="numeric">GP</th><th className="numeric">W–L</th><th className="numeric">Win%</th><th className="numeric">PF</th><th className="numeric">PA</th><th className="numeric">Diff</th></tr></thead><tbody>{standings.slice(0, 50).map((row, index) => <tr key={row.team_key}><td className="rank-number">{index + 1}</td><th scope="row">{row.name}<small>{row.slug || "publisher name key"}{row.conference ? ` · ${row.conference}` : ""}</small></th><td className="numeric">{row.games}</td><td className="numeric">{row.wins}–{row.losses}{row.ties ? `–${row.ties}` : ""}</td><td className="numeric">{row.win_pct == null ? "—" : `${(row.win_pct * 100).toFixed(1)}%`}</td><td className="numeric">{row.points_for}</td><td className="numeric">{row.points_against}</td><td className="numeric">{row.point_diff > 0 ? "+" : ""}{row.point_diff}</td></tr>)}</tbody></table></div> : <p className="empty">No valid final scores are available for this division table.</p>}
+      {standings.length > 50 ? <p className="muted">Showing 50 of {standings.length.toLocaleString()} teams ranked by win percentage, then point differential.</p> : null}
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · 2026–27 predictions: unavailable until a current-season schedule and exact-division model history pass validation.</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th><th>Score</th></tr></thead><tbody>{contests.slice(0, 25).map((contest) => { const teams = teamNames(contest); const home = contest.teams.find((team) => team.home === true) || contest.teams[0]; const away = contest.teams.find((team) => team.home === false) || contest.teams[1]; return <tr key={contest.contest_id}><td>{displayDate(contest.contest_date)}<small>{contest.start_time || "Time pending"}</small></td><th scope="row">{teams.away}</th><td>{teams.home}</td><td>{contest.status || contest.state || "scheduled"}</td><td>{away?.score == null || home?.score == null ? "—" : `${away.score}–${home.score}`}</td></tr>; })}</tbody></table></div>
       {contests.length > 25 ? <p className="muted">Showing 25 of {contests.length.toLocaleString()} retained contests. The source archive remains complete.</p> : null}
