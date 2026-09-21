@@ -7,7 +7,6 @@ import { downloadCsv, toCsv } from "../_lib/csv";
 import { lowerDivisionTeamHref } from "../_lib/division-archive-links";
 import {
   divisionTeamArchiveExport,
-  filterDivisionTeams,
   parseDivisionTeams,
   rankDivisionTeams,
   type DivisionTeam,
