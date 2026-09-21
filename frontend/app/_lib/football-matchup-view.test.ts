@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   matchesFootballMatchupSignal,
   matchesFootballMatchupDivision,
+  filterFootballMatchupGames,
   parseFootballMatchupDivision,
   parseFootballMatchupSignal,
   parseFootballMatchupSort,
@@ -29,6 +30,11 @@ describe("football matchup signal filters", () => {
     expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d3")).toBe(true);
     expect(matchesFootballMatchupDivision({ home_division: "fbs", away_division: "fcs" }, "d1")).toBe(true);
     expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d1")).toBe(false);
+    expect(filterFootballMatchupGames([
+      { id: "d1", home_division: "fbs", away_division: "fcs" },
+      { id: "d2", home_division: "d2", away_division: "d2" },
+      { id: "d3", home_division: "d3", away_division: "d3" },
+    ], "d2").map((row) => row.id)).toEqual(["d2"]);
   });
   it("accepts supported values and fails closed", () => {
     expect(parseFootballMatchupSignal("strong")).toBe("strong");

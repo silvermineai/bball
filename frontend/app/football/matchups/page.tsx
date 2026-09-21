@@ -7,22 +7,31 @@ import { footballSlateIntel } from "../../_lib/football-brief";
 import MatchupBrowser from "./MatchupBrowser";
 import { footballModelFactors } from "../../_lib/football-model-factors";
 import LowerDivisionResults from "./LowerDivisionResults";
+import { filterFootballMatchupGames, parseFootballMatchupDivision } from "../../_lib/football-matchup-view";
 export const metadata = { title: "2026 football matchups and forecasts" };
-export default function Page() {
+type PageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
+export default async function Page({ searchParams }: PageProps) {
   const d = getOverview();
   const efficiencyModel = getFootballEfficiencyModel();
-  const forecastPreview = d.upcoming.filter((game) => game.prediction).slice(0, 20);
+  const query = searchParams ? await searchParams : {};
+  const rawDivision = Array.isArray(query.division) ? query.division[0] : query.division;
+  const division = parseFootballMatchupDivision(rawDivision || null);
+  // Keep the server-rendered preview on the same division as the hydrated
+  // matchup browser. Otherwise a D2/D3 URL briefly exposes the FBS forecast
+  // board before the client filter runs.
+  const scopedGames = filterFootballMatchupGames(d.upcoming, division);
+  const forecastPreview = scopedGames.filter((game) => game.prediction).slice(0, 20);
   const matchupIntel = footballSlateIntel(
-    d.upcoming.map((game) => getFootballBriefEvidence(game)),
+    scopedGames.map((game) => getFootballBriefEvidence(game)),
   );
+  const divisionLabel = division === "d1" ? "D1 · FBS/FCS" : division.toUpperCase();
   return (
     <>
       <div className="page-title">
-        <div className="eyebrow">The next possession starts here</div>
+        <div className="eyebrow">The next possession starts here · {divisionLabel}</div>
         <h1>The matchup desk.</h1>
         <p>
-          Every published upcoming game in the retained FBS, FCS, Division II
-          and Division III schedule. Forecasts cover known FBS opponents and
+          Every published upcoming game in the retained {divisionLabel} schedule. Forecasts cover known FBS opponents and
           validated exact-division D2/D3 games, with score estimates and an 80%
           margin range; rows without a validated model remain visible. All times Eastern; schedules
           can change.

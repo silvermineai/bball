@@ -26,6 +26,14 @@ export function matchesFootballMatchupDivision(
   return sourceDivisions.some((value) => value === "fbs" || value === "fcs" || value === "d1" || value === "i" || value === "division i");
 }
 
+/** Filter a server-rendered matchup edition to the requested source division. */
+export function filterFootballMatchupGames<T extends { home_division?: string | null; away_division?: string | null }>(
+  games: T[],
+  division: FootballMatchupDivision,
+) {
+  return games.filter((game) => matchesFootballMatchupDivision(game, division));
+}
+
 const signals = new Set<FootballMatchupSignal>([
   "all",
   "toss-up",
