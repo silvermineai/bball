@@ -17,4 +17,9 @@ describe("recorded prospect fields", () => {
     expect(fields.find((field) => field.key === "high_school")?.value).toBe("Unavailable");
     expect(fields.find((field) => field.key === "source_url")?.value).toBe("retained://prospect/42");
   });
+
+  it("withholds external receipt locators from the public field table", () => {
+    const fields = recordedProspectFields({ ...prospect, source_url: "https://example.com/prospect/42" });
+    expect(fields.find((field) => field.key === "source_url")?.value).toBe("Receipt locator withheld from public view");
+  });
 });

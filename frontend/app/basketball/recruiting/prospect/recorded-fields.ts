@@ -23,6 +23,15 @@ export type RecordedProspectField = { key: keyof RecordedProspectFields | "sourc
 
 const value = (field: unknown) => field == null || field === "" ? "Unavailable" : String(field);
 
+/** Keep external receipt locators out of the public page while retaining them in the API/archive. */
+const publicValue = (key: RecordedProspectField["key"], field: unknown) => {
+  const rendered = value(field);
+  if (key === "source_url" && /^(?:https?:)?\/\//i.test(rendered)) {
+    return "Receipt locator withheld from public view";
+  }
+  return rendered;
+};
+
 export function recordedProspectFields(prospect: RecordedProspectFields): RecordedProspectField[] {
   const rows: Array<[RecordedProspectField["key"], string, unknown]> = [
     ["athlete_id", "Athlete ID", prospect.athlete_id],
@@ -44,5 +53,5 @@ export function recordedProspectFields(prospect: RecordedProspectFields): Record
     ["captured_at", "Captured at", prospect.captured_at],
     ["source_url", "Retained record locator", prospect.source_url],
   ];
-  return rows.map(([key, label, field]) => ({ key, label, value: value(field) }));
+  return rows.map(([key, label, field]) => ({ key, label, value: publicValue(key, field) }));
 }
