@@ -3,6 +3,8 @@ import {
   recruitingShortlistEditionLabel,
   recruitingShortlistEditionState,
   recruitingShortlistKey,
+  recruitingShortlistRankChange,
+  recruitingShortlistRankChangeLabel,
   readRecruitingShortlist,
   toggleRecruitingShortlist,
   type RecruitingShortlistEntry,
@@ -32,6 +34,15 @@ describe("recruiting prospect shortlist", () => {
     expect(recruitingShortlistEditionState(saved, { season: "2026", edition: "a".repeat(64) })).toBe("different_class");
     expect(recruitingShortlistEditionState({ season: "2027", edition: null }, { season: "2027", edition: "a".repeat(64) })).toBe("unverified");
     expect(recruitingShortlistEditionLabel("changed")).toBe("Changed since save");
+  });
+
+  it("preserves and labels source-recorded rank movement", () => {
+    const rising = { rank: 12, previous_rank: 30 } as const;
+    expect(recruitingShortlistRankChange(rising)).toBe(18);
+    expect(recruitingShortlistRankChangeLabel(rising)).toBe("▲ 18");
+    expect(recruitingShortlistRankChangeLabel({ rank: 30, previous_rank: 12 })).toBe("▼ 18");
+    expect(recruitingShortlistRankChangeLabel({ rank: 12, previous_rank: 12 })).toBe("—");
+    expect(recruitingShortlistRankChangeLabel({ rank: 12, previous_rank: null })).toBe("—");
   });
 
   it("accepts valid entries, removes duplicates and rejects malformed storage", () => {

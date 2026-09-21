@@ -5,6 +5,8 @@ export type RecruitingShortlistEntry = {
   name: string;
   position: string | null;
   rank: number | null;
+  previous_rank?: number | null;
+  previous_captured_at?: string | null;
   grade: number | null;
   committed_team_id: string | null;
   committed_team_name: string | null;
@@ -40,6 +42,17 @@ export function recruitingShortlistEditionLabel(state: RecruitingShortlistEditio
         : "Edition comparison unavailable";
 }
 
+/** Positive movement means the recorded national rank number improved. */
+export function recruitingShortlistRankChange(entry: Pick<RecruitingShortlistEntry, "rank" | "previous_rank">): number | null {
+  return entry.rank != null && entry.previous_rank != null ? entry.previous_rank - entry.rank : null;
+}
+
+export function recruitingShortlistRankChangeLabel(entry: Pick<RecruitingShortlistEntry, "rank" | "previous_rank">): string {
+  const change = recruitingShortlistRankChange(entry);
+  if (change == null || change === 0) return "—";
+  return change > 0 ? `▲ ${change}` : `▼ ${Math.abs(change)}`;
+}
+
 const isString = (value: unknown): value is string => typeof value === "string";
 const nullableString = (value: unknown) => isString(value) ? value : null;
 const nullableNumber = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -59,6 +72,8 @@ export function readRecruitingShortlist(raw: string | null): RecruitingShortlist
       if (!isString(row.athlete_id) || !/^\d{1,15}$/.test(row.athlete_id)) continue;
       if (!isString(row.name) || !row.name.trim() || !isString(row.source_url)) continue;
       seen.add(row.key);
+      const previousRank = Object.prototype.hasOwnProperty.call(row, "previous_rank") ? nullableNumber(row.previous_rank) : undefined;
+      const previousCapturedAt = Object.prototype.hasOwnProperty.call(row, "previous_captured_at") ? nullableString(row.previous_captured_at) : undefined;
       entries.push({
         key: row.key,
         season: row.season,
@@ -73,6 +88,8 @@ export function readRecruitingShortlist(raw: string | null): RecruitingShortlist
         source_url: row.source_url,
         edition: nullableString(row.edition),
         captured_at: nullableString(row.captured_at),
+        ...(previousRank !== undefined ? { previous_rank: previousRank } : {}),
+        ...(previousCapturedAt !== undefined ? { previous_captured_at: previousCapturedAt } : {}),
       });
     }
     return entries.slice(0, 100);

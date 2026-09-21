@@ -12,6 +12,7 @@ import {
   recruitingShortlistEditionLabel,
   recruitingShortlistEditionState,
   recruitingShortlistKey,
+  recruitingShortlistRankChangeLabel,
   readRecruitingShortlist,
   toggleRecruitingShortlist,
   type RecruitingShortlistEntry,
@@ -785,6 +786,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     name: row.name,
     position: row.position,
     rank: row.rank,
+    previous_rank: row.previous_rank ?? null,
+    previous_captured_at: row.previous_captured_at ?? null,
     grade: row.grade,
     committed_team_id: row.committed_team_id,
     committed_team_name: row.committed_team_name,
@@ -797,7 +800,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const removeShortlist = (key: string) => setShortlist((current) => current.filter((entry) => entry.key !== key));
   const downloadShortlist = () => {
     if (!shortlist.length) return;
-    const rows = shortlist.map((row) => [row.season, row.rank, null, null, null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, null, null, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
+    const rows = shortlist.map((row) => [row.season, row.rank, row.previous_rank ?? null, row.rank == null || row.previous_rank == null ? null : row.previous_rank - row.rank, row.previous_captured_at ?? null, row.name, row.position, row.grade, null, null, null, null, null, row.committed_team_name, row.committed_team_id, null, null, null, null, row.high_school, null, row.athlete_id, row.edition, row.captured_at]);
     downloadCsv("prospect-board-shortlist.csv", toCsv(shortlistExportHeaders, rows));
     setExportMessage(`Downloaded ${shortlist.length.toLocaleString()} shortlisted prospects.`);
   };
@@ -926,12 +929,12 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           <div><strong>{shortlistCommitted.toLocaleString()}</strong><span>Recorded commitments</span></div>
         </div>
         {shortlistPositions && <p className="note" style={{ marginBottom: 12 }}>Position mix: {shortlistPositions}. Use the prospect dossiers to verify each entry after a later release.</p>}
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Capture / edition</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Capture / edition</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
           const rankGap = row.rank != null && shortlistBestRankBySeason.has(row.season) ? row.rank - shortlistBestRankBySeason.get(row.season)! : null;
           const gradeGap = row.grade != null && shortlistBestGradeBySeason.has(row.season) ? row.grade - shortlistBestGradeBySeason.get(row.season)! : null;
           const destinationFit = fitHref(row.committed_team_id);
           const editionState = recruitingShortlistEditionState(row, { season, edition: result?.edition });
-          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}{destinationFit && <small><Link href={destinationFit}>Open destination fit →</Link></small>}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className={`shortlist-edition-state is-${editionState}`}>{recruitingShortlistEditionLabel(editionState)}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
+          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{recruitingShortlistRankChangeLabel(row)}<small>{row.previous_captured_at ? `prior ${captureLabel(row.previous_captured_at)}` : "Prior rank unavailable"}</small></td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}{destinationFit && <small><Link href={destinationFit}>Open destination fit →</Link></small>}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className={`shortlist-edition-state is-${editionState}`}>{recruitingShortlistEditionLabel(editionState)}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
         })}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved class rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
