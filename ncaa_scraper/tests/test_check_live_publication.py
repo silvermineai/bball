@@ -17,6 +17,7 @@ from scripts.check_live_publication import (
     player_box_field_metadata,
     womens_forecast_metadata,
     womens_lower_division_metadata,
+    womens_lower_schedule_archive_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
     validate_reviewed_recruiting_release,
@@ -25,6 +26,43 @@ from scripts.check_live_publication import (
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    @staticmethod
+    def womens_lower_schedule_payload():
+        return {
+            "schema_version": 1,
+            "source": {
+                "publisher": "NCAA.com",
+                "season_year": 2025,
+                "identity_limit": "Contest IDs and publisher team slugs are retained.",
+            },
+            "calendar": [{"sport": "basketball", "gender": "women", "division": 2, "contest_date": "03/01/2026", "count": 1}],
+            "contests": [{
+                "sport": "basketball",
+                "gender": "women",
+                "division": 2,
+                "contest_id": 123,
+                "teams": [
+                    {"name": "Alpha", "slug": "alpha"},
+                    {"name": "Beta", "slug": None},
+                ],
+            }],
+            "receipts": [{
+                "url": "https://sdataprod.ncaa.com?meta=GetContests_web",
+                "status": 200,
+                "sha256": "a" * 64,
+                "bytes": 100,
+            }],
+        }
+
+    def test_womens_lower_schedule_metadata_validates_scope_receipts_and_null_slugs(self):
+        payload = self.womens_lower_schedule_payload()
+        summary = womens_lower_schedule_archive_metadata(payload)
+        self.assertEqual(summary["season_year"], 2025)
+        self.assertEqual(summary["d2_contests"], 1)
+        payload["contests"][0]["gender"] = "men"
+        with self.assertRaisesRegex(ValueError, "contest is malformed"):
+            womens_lower_schedule_archive_metadata(payload)
+
     @staticmethod
     def womens_lower_division_payload():
         divisions = {}
@@ -335,6 +373,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.womens_forecast_payload()
             if path == "/data/basketball/womens-lower-division-stats.json":
                 return LivePublicationCheckTest.womens_lower_division_payload()
+            if path == "/data/basketball/womens-lower-division-schedules.json":
+                return LivePublicationCheckTest.womens_lower_schedule_payload()
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),

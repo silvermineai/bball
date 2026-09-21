@@ -598,6 +598,8 @@ def womens_lower_schedule_archive_metadata(payload: dict) -> dict:
             ):
                 raise ValueError("women's lower-division schedule team identity is malformed")
         contest_counts[f"d{contest['division']}"] += 1
+    if any(contest_counts[key] > calendar_counts[key] for key in ("d2", "d3")):
+        raise ValueError("women's lower-division schedule exceeds its calendar counts")
     return {
         "season_year": source["season_year"],
         "receipt_count": len(receipts),
@@ -1173,6 +1175,9 @@ def check_live(
         checked_at,
         max_age_hours,
     )
+    womens_lower_schedule = womens_lower_schedule_archive_metadata(
+        get_json(base_url, "/data/basketball/womens-lower-division-schedules.json")
+    )
     matchup_personnel = get_json(
         base_url,
         f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
@@ -1342,6 +1347,10 @@ def check_live(
         "womens_d2_team_rows": womens_lower_division["d2"]["team_rows"],
         "womens_d3_individual_rows": womens_lower_division["d3"]["individual_rows"],
         "womens_d3_team_rows": womens_lower_division["d3"]["team_rows"],
+        "womens_lower_schedule_season": womens_lower_schedule["season_year"],
+        "womens_lower_schedule_receipts": womens_lower_schedule["receipt_count"],
+        "womens_d2_schedule_contests": womens_lower_schedule["d2_contests"],
+        "womens_d3_schedule_contests": womens_lower_schedule["d3_contests"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],
