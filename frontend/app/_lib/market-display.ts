@@ -77,6 +77,28 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
   };
 }
 
+/**
+ * Keep the compact forecast board honest about when its selected quote was
+ * updated relative to tip. A displayed gap without its timing context can be
+ * mistaken for a current or closing line, even though the scorecard only
+ * treats the retained clock as evidence.
+ */
+export function marketTimingLabel(comparisons: Comparison[], startsAt: string): string | null {
+  const valid = comparisons
+    .filter((comparison) => comparison.market === "spreads" || comparison.market === "totals"
+      ? comparison.line != null
+        && Number.isFinite(comparison.line)
+        && Number.isFinite(comparison.model_difference)
+        && (comparison.market !== "totals" || comparison.line >= 0)
+      : comparison.market_home_probability != null
+        && Number.isFinite(comparison.market_home_probability)
+        && comparison.market_home_probability >= 0
+        && comparison.market_home_probability <= 1
+        && Number.isFinite(comparison.model_difference))
+    .sort((left, right) => (right.updated_at || right.captured_at).localeCompare(left.updated_at || left.captured_at));
+  return valid[0] ? comparisonTimingLabel(valid[0], startsAt) : null;
+}
+
 export function hasQualifiedMarketComparison(summary: MarketLineSummary): boolean {
   return summary.spread != null || summary.total != null || summary.homeProbability != null;
 }

@@ -15,7 +15,7 @@ import {
   forecastSignal,
   type MatchupSignal,
 } from "../_lib/basketball-matchups";
-import { hasQualifiedMarketComparison, summarizeMarketLines } from "../_lib/market-display";
+import { hasQualifiedMarketComparison, marketTimingLabel, summarizeMarketLines } from "../_lib/market-display";
 import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-forecasts";
 import type { Comparison } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
@@ -108,7 +108,7 @@ export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "Away efficiency", "Home efficiency", "eFG edge", "TO edge", "ORB edge",
   "FTR edge", "Forecast model edition", "Forecast generated", "Forecast target season", "Four Factor model edition", "Four Factor same edition", "Four Factor generated", "Roster margin", "Market spread", "Market total", "Spread gap", "Total gap",
-  "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace", "Verified market home probability", "Moneyline probability gap",
+  "Home adj offense", "Home adj defense", "Home adj net", "Home pace", "Away adj offense", "Away adj defense", "Away adj net", "Away pace", "Verified market home probability", "Moneyline probability gap", "Market captured at",
 ];
 
 export function forecastCsvRows(
@@ -140,6 +140,7 @@ export function forecastCsvRows(
       away?.adj_off, away?.adj_def, away?.adj_net, away?.adj_tempo,
       market.homeProbability == null ? null : market.homeProbability * 100,
       market.winProbabilityGap == null ? null : market.winProbabilityGap * 100,
+      market.capturedAt,
     ];
   });
 }
@@ -295,6 +296,7 @@ export default function LiveDashboardForecastTable({
             const homeRating = ratingById.get(game.home_id);
             const awayRating = ratingById.get(game.away_id);
             const market = summarizeMarketLines(marketComparisons[game.id] || []);
+            const marketTiming = marketTimingLabel(marketComparisons[game.id] || [], game.starts_at);
             const factorEdges = matchupFactorEdges(game);
             const evidence = forecastBoardEvidence(game, rosterScenario, hasQualifiedMarketComparison(market));
             return (
@@ -314,7 +316,7 @@ export default function LiveDashboardForecastTable({
                 </td>
                 <td className="numeric">{homeRating || awayRating ? <details className="forecast-factor-details"><summary>Show ratings</summary>{homeRating ? <small>H {fmt(homeRating.adj_off)} off · {fmt(homeRating.adj_def)} def · {fmt(homeRating.adj_net)} net</small> : <small>H unavailable</small>}{awayRating ? <small>A {fmt(awayRating.adj_off)} off · {fmt(awayRating.adj_def)} def · {fmt(awayRating.adj_net)} net</small> : <small>A unavailable</small>}</details> : "—"}</td>
                 <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
-                <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
+                <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>Quote {date(market.capturedAt)}</small>}{marketTiming && <small>{marketTiming}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null && market.winProbabilityGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}{market.winProbabilityGap == null ? null : <small>{market.winProbabilityGap >= 0 ? "+" : ""}{fmt(market.winProbabilityGap * 100, 1)} pp ML</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>

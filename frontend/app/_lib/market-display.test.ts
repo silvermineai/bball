@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel, comparisonQuoteSummary, comparisonTimingLabel, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
+import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel, comparisonQuoteSummary, comparisonTimingLabel, hasQualifiedMarketComparison, marketTimingLabel, summarizeMarketLines } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -58,6 +58,13 @@ describe("market comparison display", () => {
     const empty = summarizeMarketLines([]);
     expect(empty).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
     expect(hasQualifiedMarketComparison(empty)).toBe(false);
+  });
+
+  it("keeps the compact board's selected quote timing beside the line", () => {
+    const quote = { ...comparison("spreads", 2.5), line: 4.5, updated_at: "2026-09-12T14:00:00Z" };
+    expect(marketTimingLabel([quote], "2026-09-12T16:00:00Z")).toBe("Updated 2h before tip");
+    expect(marketTimingLabel([{ ...quote, updated_at: "2026-09-12T16:01:00Z" }], "2026-09-12T16:00:00Z")).toBe("Post-tip update");
+    expect(marketTimingLabel([{ ...quote, line: null }], "2026-09-12T16:00:00Z")).toBeNull();
   });
 
   it("retains a moneyline-only comparison for compact boards", () => {
