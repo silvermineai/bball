@@ -35,6 +35,15 @@ def retryable_r2_upload(arguments: list[str]) -> bool:
     return arguments[:3] == ["r2", "object", "put"] and "--remote" in arguments
 
 
+def retryable_d1_import(arguments: list[str]) -> bool:
+    """D1 file imports can be retried when Cloudflare rejects the request upstream."""
+    return (
+        arguments[:2] == ["d1", "execute"]
+        and "--remote" in arguments
+        and "--file" in arguments
+    )
+
+
 def transient_failure(output: str) -> bool:
     """Recognize transport/origin failures without retrying auth or input errors."""
     lowered = output.lower()
@@ -48,11 +57,14 @@ def transient_failure(output: str) -> bool:
         "timeout",
         "econnreset",
         "fetch failed",
+        "code: 7009",
+        "upstream service unavailable",
     ))
 
 
 def run_wrangler(arguments: list[str]) -> subprocess.CompletedProcess[str]:
-    attempts = 4 if retryable_r2_upload(arguments) else 1
+    retryable = retryable_r2_upload(arguments) or retryable_d1_import(arguments)
+    attempts = 4 if retryable else 1
     delays = (5, 15, 30)
     for attempt in range(attempts):
         result = subprocess.run(
@@ -72,7 +84,7 @@ def run_wrangler(arguments: list[str]) -> subprocess.CompletedProcess[str]:
             return result
         delay = delays[attempt]
         print(
-            f"Cloudflare transient upload failure; retrying R2 object put in {delay}s "
+            f"Cloudflare transient remote operation failure; retrying in {delay}s "
             f"(attempt {attempt + 2}/{attempts}).",
             file=sys.stderr,
             flush=True,
