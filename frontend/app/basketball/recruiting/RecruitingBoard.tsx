@@ -163,6 +163,19 @@ export type RecruitingClassRankConcentration = {
   top100Share: number;
 };
 
+export type RecruitingDestinationRecurrence = {
+  teamId: string;
+  team: string;
+  recordedNames: string[];
+  seasons: string[];
+  classCount: number;
+  eligibleClasses: number;
+  commitments: number;
+  ranked: number;
+  top100: number;
+  sourceRankPoints: number;
+};
+
 /**
  * Keep cross-class movement tied to a complete exact-ID release. The API's
  * movement buckets must reconcile to both its reported total and the class
@@ -288,6 +301,76 @@ export function classDestinationRows(
         .map((position) => `${position.position} ${position.total}`),
     }));
   });
+}
+
+/**
+ * Summarize exact program IDs that recur in the bounded destination rows of
+ * verified class releases. The source response retains only its top
+ * destinations, so this is a recurrence view of observed top rows, never a
+ * claim that an omitted program had no commitments. Names stay attached to
+ * their source rows; they are not used to join programs across releases.
+ */
+export function classDestinationRecurrence(
+  snapshots: ClassSnapshot[],
+  limit = 12,
+): RecruitingDestinationRecurrence[] {
+  if (!Number.isSafeInteger(limit) || limit < 1) return [];
+  const verified = snapshots.filter((snapshot) => Boolean(classSnapshotReceipt(snapshot)));
+  const seasons = new Set(verified.map((snapshot) => snapshot.season));
+  if (verified.length === 0 || seasons.size !== verified.length) return [];
+  const eligibleClasses = verified.length;
+  const byTeam = new Map<string, {
+    team: string;
+    names: Set<string>;
+    seasons: Set<string>;
+    commitments: number;
+    ranked: number;
+    top100: number;
+    sourceRankPoints: number;
+  }>();
+  classDestinationRows(verified, limit).forEach((row) => {
+    const teamId = row.team_id?.trim();
+    const team = row.team.trim();
+    if (!teamId || !team
+      || !Number.isSafeInteger(row.total) || row.total < 1
+      || !Number.isSafeInteger(row.ranked_total) || row.ranked_total < 0 || row.ranked_total > row.total
+      || !Number.isSafeInteger(row.top100_total) || row.top100_total < 0 || row.top100_total > row.ranked_total
+      || !Number.isFinite(row.source_rank_points) || row.source_rank_points < 0) return;
+    const current = byTeam.get(teamId) || {
+      team,
+      names: new Set<string>(),
+      seasons: new Set<string>(),
+      commitments: 0,
+      ranked: 0,
+      top100: 0,
+      sourceRankPoints: 0,
+    };
+    current.names.add(team);
+    current.seasons.add(row.season);
+    current.commitments += row.total;
+    current.ranked += row.ranked_total;
+    current.top100 += row.top100_total;
+    current.sourceRankPoints += row.source_rank_points;
+    byTeam.set(teamId, current);
+  });
+  return Array.from(byTeam.entries())
+    .map(([teamId, value]) => ({
+      teamId,
+      team: value.team,
+      recordedNames: Array.from(value.names).sort((a, b) => a.localeCompare(b)),
+      seasons: Array.from(value.seasons).sort((a, b) => a.localeCompare(b)),
+      classCount: value.seasons.size,
+      eligibleClasses,
+      commitments: value.commitments,
+      ranked: value.ranked,
+      top100: value.top100,
+      sourceRankPoints: value.sourceRankPoints,
+    }))
+    .sort((a, b) => b.classCount - a.classCount
+      || b.top100 - a.top100
+      || b.ranked - a.ranked
+      || b.commitments - a.commitments
+      || a.teamId.localeCompare(b.teamId));
 }
 
 /**
@@ -649,6 +732,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const shortlistCommitted = shortlist.filter((entry) => Boolean(entry.committed_team_name)).length;
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   const destinationRows = classDestinationRows(classSnapshots, 5);
+  const destinationRecurrenceRows = classDestinationRecurrence(classSnapshots, 12);
   const positionMixRows = classPositionMix(classSnapshots);
   const movementRows = classMovementRows(classSnapshots);
   const rankConcentrationRows = classRankConcentration(classSnapshots);
@@ -762,6 +846,25 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           </tr>)}</tbody>
         </table></div>
         <p className="note" style={{ marginTop: 12 }}>The comparison is withheld for any class whose release receipt, rank bins or ranked-row count does not reconcile. No athlete identity is inferred from these aggregates.</p>
+      </section>}
+      {destinationRecurrenceRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-destination-recurrence-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Program destination recurrence / exact IDs</div><h3 id="recruiting-destination-recurrence-title">Which programs keep appearing in the retained destination leaders?</h3></div>
+          <span className="note">{destinationRecurrenceRows[0].eligibleClasses} verified classes</span>
+        </div>
+        <p className="note">These are derived totals across the top 12 destination rows returned for each complete, receipt-verified class release. A program is counted only when its exact source team ID is present. Because each release is bounded to its top destination rows, an absent program is not evidence of zero commitments.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Program</th><th className="numeric">Classes observed</th><th className="numeric">Recorded commitments</th><th className="numeric">Ranked</th><th className="numeric">Top 100</th><th className="numeric">Source rank points</th><th>Retained class rows</th></tr></thead>
+          <tbody>{destinationRecurrenceRows.map((row) => <tr key={`destination-recurrence-${row.teamId}`}>
+            <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(row.teamId)}/`}>{row.team}</Link><small>Exact team ID {row.teamId}</small>{row.recordedNames.length > 1 && <small>Source names: {row.recordedNames.join(" · ")}</small>}</th>
+            <td className="numeric"><strong>{row.classCount.toLocaleString()}</strong><small>of {row.eligibleClasses.toLocaleString()} verified</small></td>
+            <td className="numeric">{row.commitments.toLocaleString()}</td>
+            <td className="numeric">{row.ranked.toLocaleString()}</td>
+            <td className="numeric">{row.top100.toLocaleString()}</td>
+            <td className="numeric">{row.sourceRankPoints.toLocaleString()}</td>
+            <td>{row.seasons.join(" · ")}</td>
+          </tr>)}</tbody>
+        </table></div>
       </section>}
       {movementRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-movement-comparison-title" style={{ marginBottom: 24 }}>
         <div className="section-heading" style={{ marginBottom: 10 }}>

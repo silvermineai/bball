@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
+  classDestinationRecurrence,
   classRankConcentration,
   classMovementRows,
   classPositionMix,
@@ -220,6 +221,70 @@ describe("recruiting destination comparison", () => {
     }]);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ season: "2027", team_id: "7", committedTotal: 40, positionLabels: ["PG 7", "C 5"] });
+  });
+});
+
+describe("recruiting destination recurrence", () => {
+  const digestA = "a".repeat(64);
+  const digestB = "b".repeat(64);
+  const receipt = (digest: string, rows: number) => ({
+    dataset: "recruiting_rankings" as const,
+    captured_at: "2026-09-18T00:00:00Z",
+    source_rows: rows,
+    sha256: digest,
+    sha256_scope: "release_edition" as const,
+    integrity: "verified" as const,
+  });
+  const snapshot = (season: string, edition: string, destinations: RecruitingBoardResult["commitment_destinations"]) => ({
+    season,
+    total: 2,
+    cohort: { ranked: 2, graded: 2, committed: 2 },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition,
+    source_receipt: edition === digestA ? receipt(digestA, 2) : edition === digestB ? receipt(digestB, 2) : null,
+    position_breakdown: [],
+    commitment_destinations: destinations,
+  });
+
+  it("aggregates recurring exact team IDs across verified top destination rows", () => {
+    const rows = classDestinationRecurrence([
+      snapshot("2027", digestA, [{
+        team_id: "7", team: "North State", total: 1, ranked_total: 1, top100_total: 1,
+        source_rank_points: 100, best_rank: 1, average_rank: 1,
+      }]),
+      snapshot("2028", digestB, [{
+        team_id: "7", team: "North State University", total: 2, ranked_total: 2, top100_total: 1,
+        source_rank_points: 150, best_rank: 2, average_rank: 2,
+      }, {
+        team_id: null, team: "Name-only school", total: 1, ranked_total: 1, top100_total: 1,
+        source_rank_points: 500, best_rank: 1, average_rank: 1,
+      }]),
+      snapshot("2029", "unverified", [{
+        team_id: "7", team: "North State", total: 2, ranked_total: 2, top100_total: 2,
+        source_rank_points: 900, best_rank: 1, average_rank: 1,
+      }]),
+    ]);
+    expect(rows).toEqual([{
+      teamId: "7",
+      team: "North State",
+      recordedNames: ["North State", "North State University"],
+      seasons: ["2027", "2028"],
+      classCount: 2,
+      eligibleClasses: 2,
+      commitments: 3,
+      ranked: 3,
+      top100: 2,
+      sourceRankPoints: 250,
+    }]);
+  });
+
+  it("withholds recurrence when the release set is duplicated or the limit is invalid", () => {
+    const verified = snapshot("2027", digestA, [{
+      team_id: "7", team: "North State", total: 1, ranked_total: 1, top100_total: 1,
+      source_rank_points: 100, best_rank: 1, average_rank: 1,
+    }]);
+    expect(classDestinationRecurrence([verified, verified])).toEqual([]);
+    expect(classDestinationRecurrence([verified], 0)).toEqual([]);
   });
 });
 
