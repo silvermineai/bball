@@ -33,6 +33,15 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
+// Treat blank commitment IDs as missing.  The retained source can encode an
+// absent destination as NULL, an empty string, or whitespace; using the same
+// normalized boundary for every cohort aggregate keeps committed and
+// uncommitted counts reconciled with the recorded-school tables.
+const hasRecordedCommitmentId = (alias = "r") =>
+  `NULLIF(TRIM(CAST(${alias}.committed_team_id AS TEXT)),'') IS NOT NULL`;
+const hasNoRecordedCommitmentId = (alias = "r") =>
+  `NULLIF(TRIM(CAST(${alias}.committed_team_id AS TEXT)),'') IS NULL`;
+
 // Some source releases use rank=1 as a placeholder on rows that have no
 // grade or supporting position/state/region rank. The collector now rejects
 // that shape, but older retained editions must remain reproducible in D1.
@@ -49,9 +58,9 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
-    ? "r.committed_team_id IS NOT NULL"
+    ? hasRecordedCommitmentId()
     : committed === "no"
-      ? "r.committed_team_id IS NULL"
+      ? hasNoRecordedCommitmentId()
       : "1=1";
   const currentRank = effectiveRank("r");
   const previousRank = `(SELECT ${effectiveRank("p")} FROM bb_espn_recruiting p WHERE p.season=r.season AND p.athlete_id=r.athlete_id AND p.edition != r.edition AND p.captured_at < c.captured_at ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1)`;
@@ -93,7 +102,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
   try {
     const count = await withTimeout(db.prepare(
       `SELECT count(*) AS total,
-              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_total,
+              sum(CASE WHEN ${hasRecordedCommitmentId()} THEN 1 ELSE 0 END) AS committed_total,
               sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
               sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS grade_total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -101,7 +110,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     ).bind(...binds).first<{ total: number; committed_total: number | null; ranked_total: number | null; grade_total: number | null }>(), DB_TIMEOUT_MS);
     const classContext = athlete_id ? await withTimeout(db.prepare(
       `SELECT count(*) AS class_total,
-              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS class_committed_total,
+              sum(CASE WHEN ${hasRecordedCommitmentId()} THEN 1 ELSE 0 END) AS class_committed_total,
               sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS class_ranked_total,
               sum(CASE WHEN r.grade IS NOT NULL AND r.grade > 0 THEN 1 ELSE 0 END) AS class_grade_total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
@@ -144,7 +153,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               sum(CASE WHEN r.position_rank IS NOT NULL THEN 1 ELSE 0 END) AS position_rank,
               sum(CASE WHEN r.state_rank IS NOT NULL THEN 1 ELSE 0 END) AS state_rank,
               sum(CASE WHEN r.region_rank IS NOT NULL THEN 1 ELSE 0 END) AS region_rank,
-              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_team,
+              sum(CASE WHEN ${hasRecordedCommitmentId()} THEN 1 ELSE 0 END) AS committed_team,
               sum(CASE WHEN NULLIF(TRIM(r.high_school),'') IS NOT NULL THEN 1 ELSE 0 END) AS high_school,
               sum(CASE WHEN NULLIF(TRIM(r.hometown),'') IS NOT NULL THEN 1 ELSE 0 END) AS hometown,
               sum(CASE WHEN r.height_inches IS NOT NULL THEN 1 ELSE 0 END) AS height,
@@ -281,14 +290,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     const positions = await withTimeout(db.prepare(
       `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position,
               count(*) AS total,
-              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_total,
-              sum(CASE WHEN r.committed_team_id IS NULL THEN 1 ELSE 0 END) AS uncommitted_total,
+              sum(CASE WHEN ${hasRecordedCommitmentId()} THEN 1 ELSE 0 END) AS committed_total,
+              sum(CASE WHEN ${hasNoRecordedCommitmentId()} THEN 1 ELSE 0 END) AS uncommitted_total,
               sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
               sum(CASE WHEN ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS top100_total,
-              sum(CASE WHEN r.committed_team_id IS NULL AND ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS uncommitted_ranked_total,
-              sum(CASE WHEN r.committed_team_id IS NULL AND ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS uncommitted_top100_total,
-              min(CASE WHEN r.committed_team_id IS NULL THEN ${currentRank} END) AS best_uncommitted_rank,
-              avg(CASE WHEN r.committed_team_id IS NULL AND r.grade IS NOT NULL AND r.grade>0 THEN r.grade END) AS average_uncommitted_grade
+              sum(CASE WHEN ${hasNoRecordedCommitmentId()} AND ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS uncommitted_ranked_total,
+              sum(CASE WHEN ${hasNoRecordedCommitmentId()} AND ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS uncommitted_top100_total,
+              min(CASE WHEN ${hasNoRecordedCommitmentId()} THEN ${currentRank} END) AS best_uncommitted_rank,
+              avg(CASE WHEN ${hasNoRecordedCommitmentId()} AND r.grade IS NOT NULL AND r.grade>0 THEN r.grade END) AS average_uncommitted_grade
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}
         GROUP BY COALESCE(NULLIF(upper(r.position),''),'Unknown')

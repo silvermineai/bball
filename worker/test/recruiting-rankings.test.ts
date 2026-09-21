@@ -41,7 +41,7 @@ describe("ESPN recruiting rankings", () => {
     }]);
     const query = sqlCalls.find((sql) => sql.includes("AS uncommitted_top100_total"));
     expect(query).toContain("r.edition=c.edition");
-    expect(query).toContain("r.committed_team_id IS NULL");
+    expect(query).toContain("NULLIF(TRIM(CAST(r.committed_team_id AS TEXT)),'') IS NULL");
     expect(query).toContain("r.grade IS NOT NULL AND r.grade>0");
   });
 
@@ -369,6 +369,29 @@ describe("ESPN recruiting rankings", () => {
     expect(sqlCalls[0]).toContain("CAST(r.committed_team_id AS TEXT)=?");
     expect(sqlCalls[0]).toContain("json_each(CASE WHEN json_valid(r.school_ids_json)");
     expect(bind.mock.calls[0]).toEqual([2027, "2755", "2755"]);
+  });
+
+  it("normalizes blank commitment IDs for committed filters and cohort counts", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+
+    await recruitingRankings.request("/?season=2027&committed=yes&page=0", {}, { RESEARCH_DB: { prepare } });
+    const committedBoundary = "NULLIF(TRIM(CAST(r.committed_team_id AS TEXT)),'') IS NOT NULL";
+    const uncommittedBoundary = "NULLIF(TRIM(CAST(r.committed_team_id AS TEXT)),'') IS NULL";
+    expect(sqlCalls.some((sql) => sql.includes(committedBoundary))).toBe(true);
+
+    sqlCalls.length = 0;
+    await recruitingRankings.request("/?season=2027&committed=no&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(sqlCalls.some((sql) => sql.includes(uncommittedBoundary))).toBe(true);
+    expect(sqlCalls.some((sql) => sql.includes("r.committed_team_id IS NULL"))).toBe(false);
   });
 
   it("returns the complete retained rank history for an exact athlete lookup", async () => {
