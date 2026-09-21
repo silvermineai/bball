@@ -8,6 +8,8 @@ export type FootballProduction = {
   success_rate?: number | null;
   touchdowns: number | null;
   rank: number | null;
+  source?: string;
+  metrics?: Record<string, number>;
 };
 
 export const footballPlayerCategories = [
@@ -111,6 +113,21 @@ const footballEventCategoryMap: Partial<
   puntReturns: "specialists",
 };
 
+/** Exact-ID source-box field used for a transparent category order. */
+const sourceBoxMetricMap: Partial<Record<FootballPlayerCategory, string>> = {
+  defensive: "tackles",
+  interceptions: "interceptions",
+  fumbles: "fumbles_recovered",
+  kicking: "total_kicking_points",
+  punting: "punt_yards",
+  kickReturns: "kick_return_yards",
+  puntReturns: "punt_return_yards",
+};
+
+export function footballSourceBoxMetric(category: FootballPlayerCategory): string | null {
+  return sourceBoxMetricMap[category] ?? null;
+}
+
 /** Return the source notebook for categories that do not have stable athlete IDs. */
 export function footballEventDataset(category: FootballPlayerCategory) {
   return footballEventCategoryMap[category] ?? null;
@@ -183,6 +200,33 @@ export type FootballRankablePlayer = FootballPlayerProduction & {
 
 export function footballPlayerRankKey(playerId: string, teamId: string, category: string) {
   return `${playerId}:${teamId}:${category}`;
+}
+
+/** Rank exact-ID source-box totals within the selected FBS/FCS cohort. */
+export function computeSourceBoxRanks(
+  players: FootballRankablePlayer[],
+  category: FootballPlayerCategory,
+  division: FootballPlayerDivision = "all",
+) {
+  const metric = footballSourceBoxMetric(category);
+  if (!metric || category === "all") return new Map<string, number>();
+  const rows = players.flatMap((player) => {
+    if (player.division !== "fbs" && player.division !== "fcs") return [];
+    if (division !== "all" && player.division !== division) return [];
+    if (!player.categories.includes(category)) return [];
+    const stats = player.production[category];
+    const value = stats?.metrics?.[metric];
+    return stats && value != null && Number.isFinite(value)
+      ? [{ player, value }]
+      : [];
+  });
+  rows.sort((left, right) =>
+    right.value - left.value ||
+    left.player.name.localeCompare(right.player.name) ||
+    left.player.id.localeCompare(right.player.id) ||
+    left.player.team_id.localeCompare(right.player.team_id),
+  );
+  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, category), index + 1]));
 }
 
 /**

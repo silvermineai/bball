@@ -4,9 +4,11 @@ import {
   footballCohortPercentile,
   footballCohortPercentiles,
   computeFcsEpaRanks,
+  computeSourceBoxRanks,
   footballPlayerRankKey,
   footballPlayerFilterSearch,
   hasRankedProduction,
+  footballSourceBoxMetric,
   parseFootballPlayerFilters,
   parseFootballPlayerScope,
   productionForCategory,
@@ -58,6 +60,22 @@ describe("football player index category selection", () => {
     expect(footballEventDataset("puntReturns")).toBe("specialists");
     expect(footballEventDataset("passing")).toBeNull();
     expect(footballEventDataset("all")).toBeNull();
+  });
+  it("keeps exact-ID box totals rankable without inventing EPA", () => {
+    expect(footballSourceBoxMetric("defensive")).toBe("tackles");
+    expect(footballSourceBoxMetric("passing")).toBeNull();
+    const ranks = computeSourceBoxRanks([
+      { id: "2", team_id: "b", name: "Beta", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, source: "box", metrics: { tackles: 8 } } } },
+      { id: "1", team_id: "a", name: "Alpha", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, source: "box", metrics: { tackles: 12 } } } },
+    ], "defensive");
+    expect(ranks.get(footballPlayerRankKey("1", "a", "defensive"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "defensive"))).toBe(2);
+    const fcsRanks = computeSourceBoxRanks([
+      { id: "3", team_id: "c", name: "FCS Leader", division: "fcs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, source: "box", metrics: { tackles: 99 } } } },
+      { id: "4", team_id: "d", name: "FBS Row", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, source: "box", metrics: { tackles: 100 } } } },
+    ], "defensive", "fcs");
+    expect(fcsRanks.get(footballPlayerRankKey("3", "c", "defensive"))).toBe(1);
+    expect(fcsRanks.has(footballPlayerRankKey("4", "d", "defensive"))).toBe(false);
   });
   it("uses the best ranked category for the all-players view", () => {
     const selected = productionForCategory(row(12, 40), "all");
