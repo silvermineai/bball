@@ -16,6 +16,21 @@ const valueLabel = (row: SnapshotRow) => {
   return row.value.toFixed(2);
 };
 
+/** Keep year-over-year movement explicit when either season lacks a rank. */
+export function rankingTrendLabel(row: SnapshotRow) {
+  const trend = row.trend;
+  if (!trend) return "Prior season not queried";
+  if (trend.rankDelta == null) {
+    return trend.previousStatus === "not_qualified"
+      ? `Prior ${trend.previousSeason - 1}–${String(trend.previousSeason).slice(-2)}: sample not met`
+      : `Prior ${trend.previousSeason - 1}–${String(trend.previousSeason).slice(-2)}: no board evidence`;
+  }
+  if (trend.rankDelta === 0) return `→ unchanged at #${trend.previousRank}`;
+  return trend.rankDelta > 0
+    ? `↑ ${trend.rankDelta} rank${trend.rankDelta === 1 ? "" : "s"} from #${trend.previousRank}`
+    : `↓ ${Math.abs(trend.rankDelta)} rank${Math.abs(trend.rankDelta) === 1 ? "" : "s"} from #${trend.previousRank}`;
+}
+
 export default function PlayerRankingSnapshot({
   id,
   season,
@@ -76,6 +91,7 @@ export default function PlayerRankingSnapshot({
                 </div>
                 <strong>{qualified ? `${row.percentile!.toFixed(1)}%` : "—"}</strong>
                 <small>{qualified ? valueLabel(row) : row.note}</small>
+                <small className="ranking-profile-trend">{rankingTrendLabel(row)}</small>
               </article>;
             })}
           </div>

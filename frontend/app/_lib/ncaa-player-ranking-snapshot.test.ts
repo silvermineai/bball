@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { rankingSnapshotSearch, snapshotRow, summarizeRankingSnapshot, type SnapshotRow } from "./ncaa-player-ranking-snapshot";
+import { describe, expect, it, vi } from "vitest";
+import { loadNcaaPlayerRankingSnapshot, rankingRankDelta, rankingSnapshotSearch, snapshotRow, summarizeRankingSnapshot, type SnapshotRow } from "./ncaa-player-ranking-snapshot";
 
 const definition = { metric: "ppg" as const, label: "Points per game", note: "5 games" };
 
@@ -64,5 +64,36 @@ describe("NCAA player ranking snapshot", () => {
       playerIds: "42",
     }));
     expect(new URLSearchParams(rankingSnapshotSearch("ppg", 2026, "42")).get("minVolume")).toBe("0");
+  });
+
+  it("calculates rank movement only when both exact-ID boards qualify", () => {
+    expect(rankingRankDelta(11, 18)).toBe(7);
+    expect(rankingRankDelta(18, 11)).toBe(-7);
+    expect(rankingRankDelta(11, 11)).toBe(0);
+    expect(rankingRankDelta(null, 18)).toBeNull();
+    expect(rankingRankDelta(11, null)).toBeNull();
+  });
+
+  it("loads the same exact ID from the immediately prior season", async () => {
+    const fetchMock = vi.fn(async (input: string) => {
+      const query = new URL(input, "https://silvermine.test").searchParams;
+      const boardSeason = Number(query.get("season"));
+      return {
+        ok: true,
+        json: async () => ({
+          total: 100,
+          rows: [{ player_id: "42", value: boardSeason === 2026 ? 20 : 16, rank: boardSeason === 2026 ? 11 : 18 }],
+        }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const rows = await loadNcaaPlayerRankingSnapshot("42", 2026);
+      expect(fetchMock).toHaveBeenCalledTimes(14);
+      expect(rows).toHaveLength(7);
+      expect(rows.every((row) => row.trend?.previousSeason === 2025 && row.trend.rankDelta === 7)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

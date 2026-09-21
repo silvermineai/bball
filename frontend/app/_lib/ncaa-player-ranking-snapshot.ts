@@ -9,6 +9,19 @@ export type SnapshotRow = {
   percentile: number | null;
   status: "qualified" | "not_qualified" | "unavailable";
   note: string;
+  /** Same exact archive ID and board cutoff in the prior season, when queried. */
+  trend?: SnapshotTrend;
+};
+
+export type SnapshotTrend = {
+  previousSeason: number;
+  previousValue: number | null;
+  previousRank: number | null;
+  previousTotal: number;
+  previousPercentile: number | null;
+  previousStatus: SnapshotRow["status"];
+  /** Positive means the player's rank number improved (for example 18 → 11). */
+  rankDelta: number | null;
 };
 
 export type SnapshotSummary = {
@@ -112,6 +125,15 @@ export const snapshotRow = (
   };
 };
 
+/**
+ * Compare only qualified exact-ID rows. A missing rank stays unavailable: a
+ * player entering or leaving a qualified cohort is not assigned a fabricated
+ * movement number.
+ */
+export function rankingRankDelta(currentRank: number | null, previousRank: number | null) {
+  return currentRank != null && previousRank != null ? previousRank - currentRank : null;
+}
+
 export async function loadNcaaPlayerRankingSnapshot(
   playerId: string,
   season: number,
@@ -119,22 +141,43 @@ export async function loadNcaaPlayerRankingSnapshot(
 ): Promise<SnapshotRow[]> {
   const results = await Promise.all(
     definitions.map(async (definition) => {
-      const params = new URLSearchParams({
-        season: String(season),
-        metric: definition.metric,
-        minGames: "5",
-        minMinutes: "200",
+      const loadBoard = async (boardSeason: number) => {
+        const params = new URLSearchParams({
+          season: String(boardSeason),
+          metric: definition.metric,
+          minGames: "5",
+          minMinutes: "200",
           playerIds: playerId,
-      });
-      if (definition.minVolume != null) params.set("minVolume", String(definition.minVolume));
-      try {
-        const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params}`, { signal });
-        if (!response.ok) return snapshotRow(definition, null, playerId);
-        return snapshotRow(definition, (await response.json()) as ApiResult, playerId);
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") throw error;
-        return snapshotRow(definition, null, playerId);
-      }
+        });
+        if (definition.minVolume != null) params.set("minVolume", String(definition.minVolume));
+        try {
+          const response = await fetch(`/api/basketball/research/ncaa-player-rankings?${params}`, { signal });
+          if (!response.ok) return null;
+          return await response.json() as ApiResult;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") throw error;
+          return null;
+        }
+      };
+      const currentResult = await loadBoard(season);
+      const current = snapshotRow(definition, currentResult, playerId);
+      // The API's published ranking catalog starts at 2010. Keep the selected
+      // board useful at that boundary without requesting an invalid prior year.
+      if (season <= 2010) return current;
+      const previousResult = await loadBoard(season - 1);
+      const previous = snapshotRow(definition, previousResult, playerId);
+      return {
+        ...current,
+        trend: {
+          previousSeason: season - 1,
+          previousValue: previous.value,
+          previousRank: previous.rank,
+          previousTotal: previous.total,
+          previousPercentile: previous.percentile,
+          previousStatus: previous.status,
+          rankDelta: rankingRankDelta(current.rank, previous.rank),
+        },
+      };
     }),
   );
   return results;
