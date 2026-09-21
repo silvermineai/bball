@@ -9,6 +9,7 @@ type Dataset = (typeof DATASETS)[number];
 const querySchema = z.object({
   dataset: z.enum(["all", ...DATASETS]).default("box"),
   season: z.coerce.number().int().min(2010).max(2035).default(2025),
+  division: z.enum(["all", "fbs", "fcs", "d2", "d3", "naia", "unknown"]).default("all"),
   q: z.string().trim().max(100).default(""),
   team: z.string().regex(/^\d{1,15}$/).optional(),
   game: z.string().regex(/^\d{1,15}$/).optional(),
@@ -123,6 +124,30 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   if (q.team) {
     conditions.push("s.team_id=?");
     binds.push(q.team);
+  }
+  if (q.division !== "all") {
+    // Division is sourced only from the retained season/team directory. A
+    // missing or unrecognised directory value remains an explicit `unknown`
+    // cohort; no division is inferred from a team name or source category.
+    const divisionScope = `EXISTS (
+      SELECT 1 FROM football_stats team_scope
+       WHERE team_scope.dataset='teams'
+         AND team_scope.season=s.season
+         AND team_scope.team_id=s.team_id
+         AND lower(trim(COALESCE(json_extract(team_scope.stats_json,'$.division'),'')))=?
+    )`;
+    if (q.division === "unknown") {
+      conditions.push(`NOT EXISTS (
+        SELECT 1 FROM football_stats team_scope
+         WHERE team_scope.dataset='teams'
+           AND team_scope.season=s.season
+           AND team_scope.team_id=s.team_id
+           AND lower(trim(COALESCE(json_extract(team_scope.stats_json,'$.division'),''))) IN ('fbs','fcs','d2','d3','naia')
+      )`);
+    } else {
+      conditions.push(divisionScope);
+      binds.push(q.division);
+    }
   }
   if (q.game) {
     conditions.push("s.game_id=?");
@@ -243,7 +268,7 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
     field_catalog: fieldCatalog,
     field_catalog_scope: "returned_page",
     source_receipts: sourceReceipts,
-    filters: { q: q.q, team: q.team ?? null, game: q.game ?? null },
+    filters: { q: q.q, team: q.team ?? null, game: q.game ?? null, division: q.division },
     rows: parsedRows,
   });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

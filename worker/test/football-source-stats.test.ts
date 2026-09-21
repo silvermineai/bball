@@ -37,7 +37,7 @@ describe("football source statistics", () => {
       };
     });
     const response = await app.request(
-      "/api/football/source-stats?dataset=box&season=2025&q=Example%20Player&team=8&page=0",
+      "/api/football/source-stats?dataset=box&season=2025&q=Example%20Player&team=8&division=d3&page=0",
       {},
       { DB: { prepare } },
     );
@@ -56,6 +56,7 @@ describe("football source statistics", () => {
       dataset: "box",
       season: 2025,
       total: 1,
+      filters: { division: "d3" },
       field_catalog: [{ key: "athlete_name", observed_rows: 1, share: 1 }, { key: "yards", observed_rows: 1, share: 1 }],
       field_catalog_scope: "returned_page",
       rows: [{
@@ -65,6 +66,26 @@ describe("football source statistics", () => {
       }],
     });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("instr(lower(s.stats_json ||"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_scope.dataset='teams'") && String(sql).includes("json_extract(team_scope.stats_json,'$.division')"))).toBe(true);
+  });
+
+  it("keeps an unavailable division as an explicit team-directory cohort", async () => {
+    const prepare = vi.fn((_sql: string) => ({
+      bind: () => ({
+        first: async () => ({ total: 0 }),
+        all: async () => ({ results: [] }),
+      }),
+    }));
+    const response = await app.request("/api/football/source-stats?season=2025&division=unknown", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      season: 2025,
+      filters: { division: "unknown" },
+    });
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("NOT EXISTS");
+    expect(sql).toContain("team_scope.dataset='teams'");
+    expect(sql).toContain("IN ('fbs','fcs','d2','d3','naia')");
   });
 
   it("exposes the available seasons and dataset row counts", async () => {
