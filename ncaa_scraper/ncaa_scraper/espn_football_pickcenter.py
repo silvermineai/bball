@@ -16,7 +16,15 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from .espn_pickcenter import MAX_RESPONSE_BYTES, REQUEST_DELAY_SECONDS, parse_pickcenter, summary_capture_counts
+from .espn_pickcenter import (
+    MAX_RESPONSE_BYTES,
+    REQUEST_DELAY_SECONDS,
+    american_to_decimal,
+    numeric_line,
+    parse_pickcenter,
+    summary_capture_counts,
+    validate_identity,
+)
 from .football_sources import ROOT, utcnow
 from .odds_feed import schedules
 from .research_ledger import connect, digest, encoded, timestamp
@@ -27,6 +35,117 @@ BASE_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-f
 DOCS_URL = "https://www.espn.com/college-football/"
 CACHE = ROOT / ".local/odds"
 DEFAULT_HORIZON_DAYS = 60
+
+
+def _flattened_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: str) -> list[tuple[str, str, str, dict]]:
+    """Parse the flattened football pickcenter shape used by current ESPN summaries.
+
+    Football summaries publish one signed home spread, one total, and team
+    odds directly on each pick rather than the nested ``close`` objects used
+    by the basketball endpoint. The source has no quote-update clock, so the
+    capture clock is retained as the update boundary, as in the existing
+    collector. Every market still requires exact event, participant, and
+    pregame checks before it can enter the ledger.
+    """
+    start, event_id, source_time_valid = validate_identity(summary, game)
+    captured = timestamp(captured_at)
+    if start <= captured:
+        raise ValueError("Game already started at capture")
+    picks = summary.get("pickcenter")
+    if not isinstance(picks, list):
+        raise ValueError("Missing pickcenter")
+    rows: list[tuple[str, str, str, dict]] = []
+    for pick in picks:
+        if not isinstance(pick, dict):
+            continue
+        provider = pick.get("provider")
+        bookmaker = str(provider.get("name", "")).strip() if isinstance(provider, dict) else ""
+        home_odds = pick.get("homeTeamOdds")
+        away_odds = pick.get("awayTeamOdds")
+        if (
+            not bookmaker
+            or len(bookmaker) > 100
+            or not isinstance(home_odds, dict)
+            or not isinstance(away_odds, dict)
+            or str(home_odds.get("teamId", "")) != str(game["home_id"])
+            or str(away_odds.get("teamId", "")) != str(game["away_id"])
+        ):
+            continue
+        base = {
+            "home_id": game["home_id"],
+            "away_id": game["away_id"],
+            "starts_at": start,
+            "event_id": event_id,
+            "receipt_id": receipt_id,
+            "canonical_time_tbd": bool(game.get("time_tbd")),
+            "source_time_valid": source_time_valid,
+        }
+        # A provider can publish a spread or total while its moneyline is
+        # unavailable. Keep each complete market independently.
+        try:
+            rows.append((
+                bookmaker,
+                "h2h",
+                captured,
+                {
+                    **base,
+                    "line": None,
+                    "home_price": american_to_decimal(home_odds["moneyLine"]),
+                    "away_price": american_to_decimal(away_odds["moneyLine"]),
+                },
+            ))
+        except (KeyError, TypeError, ValueError):
+            pass
+        try:
+            spread = numeric_line(pick["spread"])
+            if abs(spread) > 1000:
+                raise ValueError("Invalid spread")
+            rows.append((
+                bookmaker,
+                "spreads",
+                captured,
+                {
+                    **base,
+                    "line": spread,
+                    "home_price": american_to_decimal(home_odds["spreadOdds"]),
+                    "away_price": american_to_decimal(away_odds["spreadOdds"]),
+                },
+            ))
+        except (KeyError, TypeError, ValueError):
+            pass
+        try:
+            total = numeric_line(pick["overUnder"])
+            if total < 0:
+                raise ValueError("Invalid total")
+            rows.append((
+                bookmaker,
+                "totals",
+                captured,
+                {
+                    **base,
+                    "line": total,
+                    "over_price": american_to_decimal(pick["overOdds"]),
+                    "under_price": american_to_decimal(pick["underOdds"]),
+                },
+            ))
+        except (KeyError, TypeError, ValueError):
+            pass
+    if not rows:
+        raise ValueError("No complete current football pickcenter markets")
+    return rows
+
+
+def parse_football_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: str) -> list[tuple[str, str, str, dict]]:
+    """Parse either the shared nested shape or ESPN's flattened football shape."""
+    try:
+        return parse_pickcenter(summary, game, captured_at, receipt_id)
+    except ValueError as nested_error:
+        try:
+            return _flattened_pickcenter(summary, game, captured_at, receipt_id)
+        except ValueError:
+            # Preserve the useful nested parser error for callers that passed
+            # a malformed response rather than a flattened football response.
+            raise nested_error
 
 
 def _future_games(games: list[dict], season: int, horizon_days: int, now: datetime) -> list[dict]:
@@ -117,7 +236,7 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
         try:
             event_id = str(item["event_id"])
             game = by_id[event_id]
-            for bookmaker, market, updated, payload in parse_pickcenter(item["summary"], game, captured, receipt_id):
+            for bookmaker, market, updated, payload in parse_football_pickcenter(item["summary"], game, captured, receipt_id):
                 # Football schedules live in the dedicated FOOTBALL_DB. Keep
                 # bounded display context in the ledger payload so the public
                 # market archive can read these rows without a cross-D1 join.
