@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from ncaa_scraper.espn_recruiting import (
     _fetch,
+    _fetch_listing,
     _listed_athlete_ids,
     _national_rank,
     _team_name,
@@ -43,6 +44,47 @@ def release(edition: str, captured_at: str):
 
 
 class EspnRecruitingTests(unittest.TestCase):
+    def test_list_fetch_reconciles_all_bounded_pages(self):
+        def page(index: int, refs: list[str]) -> dict:
+            return {
+                "count": 501,
+                "pageIndex": index,
+                "pageSize": 500,
+                "pageCount": 2,
+                "items": [{"$ref": f"https://example.test/recruits/{ref}"} for ref in refs],
+            }
+
+        first_refs = [str(value) for value in range(1, 501)]
+        second_refs = ["501"]
+        with patch(
+            "ncaa_scraper.espn_recruiting._fetch",
+            side_effect=[(page(1, first_refs), b"page-1"), (page(2, second_refs), b"page-2")],
+        ) as fetch:
+            athlete_ids, body = _fetch_listing(2027)
+        self.assertEqual(len(athlete_ids), 501)
+        self.assertEqual(athlete_ids[0], "1")
+        self.assertIn("501", athlete_ids)
+        self.assertEqual(body, b"page-1\npage-2")
+        self.assertEqual(fetch.call_args_list[1].args[0], "https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/2027/recruits?limit=500&page=2")
+
+    def test_list_fetch_rejects_duplicate_ids_across_pages(self):
+        def page(index: int, refs: list[str]) -> dict:
+            return {
+                "count": 501,
+                "pageIndex": index,
+                "pageSize": 500,
+                "pageCount": 2,
+                "items": [{"$ref": f"https://example.test/recruits/{ref}"} for ref in refs],
+            }
+
+        first_refs = [str(value) for value in range(1, 501)]
+        with patch(
+            "ncaa_scraper.espn_recruiting._fetch",
+            side_effect=[(page(1, first_refs), b"page-1"), (page(2, ["500"]), b"page-2")],
+        ):
+            with self.assertRaisesRegex(ValueError, "duplicate or missing"):
+                _fetch_listing(2027)
+
     def test_list_requires_complete_single_page_metadata(self):
         listing = {
             "count": 2,

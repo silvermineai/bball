@@ -34,6 +34,13 @@ MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 USER_AGENT = "SilvermineResearch/1.0 (bball.silvermine.dev)"
 MAX_FETCH_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 0.4
+# Keep pagination bounded so a malformed source cannot turn a refresh into an
+# unbounded crawl.  This covers 10,000 source-listed prospects while retaining
+# the fail-closed rule when the publisher reports more than the collector can
+# safely process in one release.
+LIST_PAGE_SIZE = 500
+MAX_LIST_PAGES = 20
+MAX_LISTED_PROSPECTS = LIST_PAGE_SIZE * MAX_LIST_PAGES
 
 
 def compact(value: object) -> str:
@@ -120,6 +127,59 @@ def _listed_athlete_ids(listing: dict[str, object]) -> list[str]:
     if len(unique_ids) != len(refs):
         raise ValueError("ESPN recruiting list contains duplicate athlete references")
     return unique_ids
+
+
+def _listed_page_athlete_ids(listing: dict[str, object], page: int) -> tuple[list[str], int, int]:
+    """Validate one page of a complete, bounded recruiting list."""
+    refs = listing.get("items")
+    if not isinstance(refs, list) or not refs or len(refs) > LIST_PAGE_SIZE:
+        raise ValueError("ESPN recruiting list is missing or outside the bound")
+    metadata = {key: listing.get(key) for key in ("count", "pageIndex", "pageSize", "pageCount")}
+    if any(not isinstance(value, int) or isinstance(value, bool) for value in metadata.values()):
+        raise ValueError("ESPN recruiting list pagination metadata is malformed")
+    count = metadata["count"]
+    page_index = metadata["pageIndex"]
+    page_size = metadata["pageSize"]
+    page_count = metadata["pageCount"]
+    if (
+        count <= 0 or count > MAX_LISTED_PROSPECTS
+        or page_index != page
+        or page_count < 1 or page_count > MAX_LIST_PAGES
+        or page_size != LIST_PAGE_SIZE
+        or page_count != (count + page_size - 1) // page_size
+        or page > page_count
+        or (page < page_count and len(refs) != page_size)
+        or (page == page_count and len(refs) != count - (page_count - 1) * page_size)
+    ):
+        raise ValueError("ESPN recruiting list is incomplete or outside the bound")
+    athlete_ids = [
+        _id_from_ref(item.get("$ref") if isinstance(item, dict) else None, "recruits")
+        for item in refs
+    ]
+    if any(athlete_id is None for athlete_id in athlete_ids):
+        raise ValueError("ESPN recruiting list contains an invalid athlete reference")
+    unique_ids = sorted(set(athlete_ids))
+    if len(unique_ids) != len(refs):
+        raise ValueError("ESPN recruiting list contains duplicate athlete references")
+    return unique_ids, count, page_count
+
+
+def _fetch_listing(season: int) -> tuple[list[str], bytes]:
+    """Fetch every reported list page and reconcile its source cardinality."""
+    first, first_body = _fetch(LIST_URL.format(season=season))
+    ids, count, page_count = _listed_page_athlete_ids(first, 1)
+    bodies = [first_body]
+    all_ids = list(ids)
+    for page in range(2, page_count + 1):
+        listing, body = _fetch(f"{LIST_URL.format(season=season)}&page={page}")
+        page_ids, page_count_value, page_total = _listed_page_athlete_ids(listing, page)
+        if page_count_value != count or page_total != page_count:
+            raise ValueError("ESPN recruiting list pagination metadata changed between pages")
+        bodies.append(body)
+        all_ids.extend(page_ids)
+    if len(all_ids) != count or len(set(all_ids)) != count:
+        raise ValueError("ESPN recruiting list pages contain duplicate or missing athlete references")
+    return sorted(all_ids), b"\n".join(bodies)
 
 
 def _number(value: object, *, integer: bool = False) -> float | int | None:
@@ -303,8 +363,7 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
         raise ValueError("Recruiting season must be between 2025 and 2035")
     if not 1 <= workers <= 8:
         raise ValueError("workers must be between 1 and 8")
-    listing, listing_body = _fetch(LIST_URL.format(season=season))
-    athlete_ids = _listed_athlete_ids(listing)
+    athlete_ids, listing_body = _fetch_listing(season)
     captured_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     CACHE.mkdir(parents=True, exist_ok=True)
     team_names = _team_names()
