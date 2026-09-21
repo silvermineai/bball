@@ -1305,8 +1305,8 @@ describe("bball api", () => {
 
   it("attaches only valid receipts for retained exact-ID seasons to the NCAA player card", async () => {
     const prepare = vi.fn((sql: string) => ({
-      bind: () => sql.includes("FROM bb_sources")
-        ? { all: async () => ({ results: [] }) }
+      bind: () => sql.includes("FROM bb_impact")
+        ? { all: async () => ({ results: [{ season: 2026, ncaa_player_id: "123", data_json: JSON.stringify({ player: "Example Player", team: "Example U", rapm_net: 4.5, orapm: 3.2, drapm: 1.3, off_poss: 700, def_poss: 710, qualified: true, rank: 42 }) }] }) }
         : { all: async () => ({ results: [] }) },
       all: async () => sql.includes("FROM bb_sources") ? ({ results: [
         { dataset: "ncaa_player_box", season: 2026, receipt_json: JSON.stringify({ url: "https://example.test/ncaa-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }) },
@@ -1330,6 +1330,7 @@ describe("bball api", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
+      impact: { season: 2026, player_id: "123", rapm_net: 4.5, rank: 42 },
       source_receipts: [{ dataset: "ncaa_player_box", season: 2026, sha256: "a".repeat(64) }],
       career_source_receipts: [
         { dataset: "ncaa_player_box", season: 2026, sha256: "a".repeat(64) },

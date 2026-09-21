@@ -7,6 +7,12 @@ import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
 
+type ImpactRow = {
+  season: number;
+  ncaa_player_id: string;
+  data_json: string;
+};
+
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
 });
@@ -128,11 +134,17 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
   }
   try {
     const db = researchDb(c.env);
-    const [seasons, rosters, shooting] = await withTimeout(db.batch([
-      db.prepare("SELECT season,player_id,team_id,player_name,team_name,games,stats_json FROM bb_ncaa_player_season WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
-      db.prepare("SELECT season,team_id,team_name,player_name,profile_json FROM bb_ncaa_rosters WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
-      db.prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+    const [seasonRows, impactRows] = await withTimeout(Promise.all([
+      db.batch([
+        db.prepare("SELECT season,player_id,team_id,player_name,team_name,games,stats_json FROM bb_ncaa_player_season WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+        db.prepare("SELECT season,team_id,team_name,player_name,profile_json FROM bb_ncaa_rosters WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+        db.prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
+      ]),
+      // RAPM uses the NCAA source-ID namespace. Keep this an exact ID/season
+      // lookup; the ESPN/Fox/Yahoo crosswalk is not evidence for an NCAA ID.
+      db.prepare("SELECT season,ncaa_player_id,data_json FROM bb_impact WHERE season=? AND ncaa_player_id=?").bind(season, playerId).all<ImpactRow>(),
     ]), DB_TIMEOUT_MS);
+    const [seasons, rosters, shooting] = seasonRows;
     // Read the bounded exact-ID season once. The card still renders only the
     // latest 12 rows, while the aggregate makes every retained source field
     // available without relying on the stricter season-summary row.
@@ -147,6 +159,11 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
     const rows = (seasons.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; });
     const rosterRows = (rosters.results as Array<Record<string, unknown>>).flatMap(({ profile_json, ...row }) => { const profile = parseObject(profile_json); return profile ? [{ ...row, profile }] : []; });
     const shotRows = (shooting.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; });
+    const impactSource = impactRows.results[0];
+    const impactData = impactSource ? parseObject(impactSource.data_json) : null;
+    const impact = impactData
+      ? { ...impactData, season: Number(impactSource.season), player_id: String(impactSource.ncaa_player_id) }
+      : null;
     if (!rows.length && !rosterRows.length && !shotRows.length) return c.json({ error: "NCAA player not found" }, 404);
     const retainedSeasons = new Set([
       ...rows.map((row) => Number((row as Record<string, unknown>).season)),
@@ -162,6 +179,7 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
       seasons: rows,
       rosters: rosterRows,
       shooting: shotRows,
+      impact,
       games: gameRows.slice(0, 12).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; }),
       game_stat_coverage: gameStatCoverage,
       source_receipts: careerSourceReceipts.filter((receipt) => receipt.season === season),
