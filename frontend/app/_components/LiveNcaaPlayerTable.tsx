@@ -6,7 +6,7 @@ import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
-export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
@@ -24,6 +24,7 @@ export type LiveNCAAPlayerRow = {
   assists: number | null;
   steals: number | null;
   blocks: number | null;
+  double_doubles: number | null;
   fouls: number | null;
   turnovers: number | null;
   fga: number | null;
@@ -95,6 +96,7 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "fpg", label: "Fouls", description: "fouls per game", volume: 0 },
   { key: "mpg", label: "Workload", description: "minutes per game", volume: 0 },
   { key: "topg", label: "Ball security", description: "fewer turnovers per game", volume: 0 },
+  { key: "dbl_dbl", label: "Double-doubles", description: "recorded double-double count", volume: 0 },
   { key: "ts", label: "True shooting", description: "scoring efficiency", volume: 100 },
   { key: "efg", label: "Effective FG", description: "shot efficiency", volume: 100 },
   { key: "half_ts", label: "Half-court TS", description: "half-court true shooting", volume: 100 },
@@ -138,6 +140,7 @@ const metricGuidance: Record<Metric, string> = {
   fpg: "Fouls per game is a recorded personal-foul rate; missing foul totals remain unavailable.",
   mpg: "Minutes per game uses the recorded minute total and source game count.",
   topg: "Lower turnovers per game appear first; turnover rate is available when possession data is recorded.",
+  dbl_dbl: "Double-doubles is the publisher-recorded season count; unavailable rows are not treated as zero.",
   ts: "True shooting uses points divided by twice (FGA + 0.475 × FTA); rows without attempts stay unavailable.",
   efg: "Effective field-goal percentage credits a made three as 1.5 field goals: (FGM + 0.5 × 3PM) / FGA.",
   half_ts: "Half-court true shooting is a source-provided shot-context efficiency rate.",
@@ -189,7 +192,7 @@ export const effectiveFieldGoalPercent = (
 export const playerCsvHeaders = [
   "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
-  "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Fouls", "PF/G", "Turnovers", "TO/G",
+  "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Double-doubles", "Fouls", "PF/G", "Turnovers", "TO/G",
   "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded",
 ];
 
@@ -214,7 +217,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
     return [
       row.rank, row.player_id, row.player_name, row.team_name, row.position, row.class_year,
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
-      row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.fouls, fpg,
+      row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.double_doubles, row.fouls, fpg,
       row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
       metric, row.value, `${coverage.observed}/${coverage.total}`,
     ];
@@ -348,7 +351,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       {status === "ready" && result ? (
         <div className="dashboard-table-wrap">
           <table className="data-table dashboard-table">
-            <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">DD</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
             <tbody>{result.rows.slice(0, rowLimit).map((row) => {
               const coverage = playerCoreStatCoverage(row);
               return <tr key={`${row.player_id}-${row.team_name || ""}`}>
@@ -365,6 +368,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
                 <td className="numeric">{fmt(perGame(row.assists, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.steals, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.blocks, row.games))}</td>
+                <td className="numeric">{fmt(row.double_doubles, 0)}</td>
                 <td className="numeric">{fmt(perGame(row.fouls, row.games))}</td>
                 <td className="numeric">{fmt(perGame(row.turnovers, row.games))}</td>
                 <td className="numeric">{percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null) == null ? "—" : `${fmt(percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null), 1)}%`}</td>

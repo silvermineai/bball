@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -57,6 +57,7 @@ type PublishedIndividualPlayer = {
   apg?: unknown;
   spg?: unknown;
   bpg?: unknown;
+  dbl_dbl?: unknown;
   fg_pct?: unknown;
   three_pct?: unknown;
   ft_pct?: unknown;
@@ -103,7 +104,7 @@ const publishedMinutes = (player: PublishedIndividualPlayer): number | null => {
 };
 
 const publishedSupportedMetrics = new Set<Metric>([
-  "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg",
+  "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl",
   "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "two_pct", "ft_pct", "ft_rate",
   "orb40", "drb40", "reb40", "points_poss", "ast_rate", "tov_rate", "three_rate",
 ]);
@@ -131,6 +132,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "apg": return finite(player.apg);
     case "spg": return finite(player.spg);
     case "bpg": return finite(player.bpg);
+    case "dbl_dbl": return finite(player.dbl_dbl);
     case "fpg": return games > 0 && finite(player.pf) != null ? (finite(player.pf) as number) / games : null;
     case "mpg": return finite(player.mpg) ?? (games > 0 && minutes != null ? minutes / games : null);
     case "topg": return games > 0 && turnovers != null ? turnovers / games : null;
@@ -271,6 +273,7 @@ async function publishedRankingsFallback(
         assists: finite(player.ast),
         steals: finite(player.stl),
         blocks: finite(player.blk),
+        double_doubles: finite(player.dbl_dbl),
         fouls: finite(player.pf),
         turnovers: finite(player.tov),
         fga: finite(player.fga),
@@ -315,6 +318,7 @@ const aggregate = (where: string) => `
     ${sourceSum("o_poss")} AS possessions,
     ${sourceSum("stl")} AS steals,
     ${sourceSum("blk")} AS blocks,
+    ${sourceSum("dbl_dbl")} AS double_doubles,
     ${sourceSum("pf")} AS fouls,
     ${sourceSum("fga")} AS fga,
     ${sourceSum("fgm")} AS fgm,
@@ -354,6 +358,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   apg: "assists / games",
   spg: "steals / games",
   bpg: "blocks / games",
+  dbl_dbl: "double_doubles",
   fpg: "fouls / games",
   mpg: "minutes / games",
   topg: "turnovers / games",
@@ -551,6 +556,15 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       if (fallback) return fallback;
       return c.json({ error: "The NCAA player rankings catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
+  }
+  // Double-doubles are retained as an NCAA publisher field in the checked
+  // individual release, while the live player-box season table is not
+  // guaranteed to carry the event-level category. Prefer the exact published
+  // edition for this count so a healthy D1 database cannot silently turn a
+  // legally retained player stat into an empty board.
+  if (metric === "dbl_dbl" && season === 2026) {
+    const published = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
+    if (published) return published;
   }
   const clauses = ["s.season=?"];
   const binds: Array<string | number> = [season];

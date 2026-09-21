@@ -16,6 +16,7 @@ const row: LiveNCAAPlayerRow = {
   assists: 60,
   steals: 20,
   blocks: 5,
+  double_doubles: 3,
   fouls: 40,
   turnovers: 30,
   fga: 200,
