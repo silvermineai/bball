@@ -48,6 +48,29 @@ export function parseDivisionTeams(value: unknown): DivisionTeam[] {
 
 export type DivisionTeamSort = "wins" | "win_rate" | "ppg" | "name";
 
+export const divisionTeamArchiveExportHeaders = [
+  "team_ncaa_id", "division", "name", "conference", "games", "wins", "losses", "ppg",
+];
+
+/** Export every retained team field from the already division-scoped rows. */
+export function divisionTeamArchiveExport(
+  teams: readonly DivisionTeam[],
+): { headers: string[]; rows: Array<Array<string | number | null>> } {
+  return {
+    headers: divisionTeamArchiveExportHeaders,
+    rows: teams.map((team) => [
+      team.team_ncaa_id,
+      team.division,
+      team.name,
+      team.conference,
+      team.games,
+      team.wins,
+      team.losses,
+      team.ppg,
+    ]),
+  };
+}
+
 export function filterDivisionTeams(
   teams: DivisionTeam[],
   division: "2" | "3",

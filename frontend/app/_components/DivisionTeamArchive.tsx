@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { downloadCsv, toCsv } from "../_lib/csv";
 import { lowerDivisionTeamHref } from "../_lib/division-archive-links";
 import {
+  divisionTeamArchiveExport,
   filterDivisionTeams,
   parseDivisionTeams,
   type DivisionTeam,
@@ -20,6 +22,7 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<DivisionTeamSort>("wins");
+  const [exportMessage, setExportMessage] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     fetch("/data/basketball/ncaa-individual.json", { signal: controller.signal })
@@ -30,6 +33,12 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
   }, []);
   const rows = useMemo(() => teams ? filterDivisionTeams(teams, division, query, sort) : [], [division, query, sort, teams]);
   const total = teams?.filter((team) => String(team.division) === division).length || 0;
+  const downloadAll = () => {
+    if (!rows.length) return;
+    const exportData = divisionTeamArchiveExport(rows);
+    downloadCsv(`ncaa-division-${division}-team-archive-2026.csv`, toCsv(exportData.headers, exportData.rows));
+    setExportMessage(`Downloaded ${rows.length.toLocaleString()} matching retained team rows.`);
+  };
   const selected = useMemo(
     () => teams?.find((team) => String(team.division) === division && String(team.team_ncaa_id) === selectedId) || null,
     [division, selectedId, teams],
@@ -52,7 +61,8 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
         <label htmlFor="division-team-sort">Rank by</label>
         <select id="division-team-sort" value={sort} onChange={(event) => setSort(event.target.value as DivisionTeamSort)}><option value="wins">Wins</option><option value="win_rate">Win rate</option><option value="ppg">Points per game</option><option value="name">Program name</option></select>
       </div>
-      <p className="note">{total.toLocaleString()} retained teams · {rows.length.toLocaleString()} matching rows · season 2026.</p>
+      <div className="section-heading" style={{ marginBottom: 12 }}><p>{total.toLocaleString()} retained teams · {rows.length.toLocaleString()} matching rows · season 2026.</p><button className="button secondary" type="button" onClick={downloadAll} disabled={!rows.length}>Download matching CSV ↓</button></div>
+      {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Program</th><th>Conference</th><th className="numeric">GP</th><th className="numeric">W</th><th className="numeric">L</th><th className="numeric">Win%</th><th className="numeric">PPG</th></tr></thead><tbody>{rows.map((team) => <tr key={`${division}-${team.team_ncaa_id}`}><th scope="row"><Link href={lowerDivisionTeamHref(division, team.team_ncaa_id)}>{team.name} →</Link><small>Team ID {team.team_ncaa_id}</small></th><td>{team.conference || "—"}</td><td className="numeric">{number(team.games)}</td><td className="numeric">{number(team.wins)}</td><td className="numeric">{number(team.losses)}</td><td className="numeric">{team.games && team.wins != null ? `${number(100 * team.wins / team.games, 1)}%` : "—"}</td><td className="numeric">{number(team.ppg, 1)}</td></tr>)}</tbody></table></div>
       {!rows.length ? <p className="empty">No retained teams match this filter.</p> : null}
     </>}
