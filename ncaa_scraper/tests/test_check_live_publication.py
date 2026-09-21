@@ -12,6 +12,7 @@ from scripts.check_live_publication import (
     validate_forecast_prediction,
     roster_forecast_alignment,
     market_metadata,
+    validate_market_capture,
     matchup_personnel_coverage,
     player_box_field_metadata,
     womens_forecast_metadata,
@@ -331,6 +332,14 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "pregame": 0,
                 "archive_receipts": [],
                 "research_receipts": 3,
+                "research_capture": {
+                    "captured_at": "2026-09-10T18:00:00Z",
+                    "summary_count": 20,
+                    "summary_with_pickcenter": 0,
+                    "accepted_markets": 0,
+                    "rejected_records": 0,
+                    "market_status": "no_quotes_published",
+                },
                 "provider_capabilities": [{
                     "provider": "ESPN Summary",
                     "markets": ["h2h"],
@@ -340,6 +349,46 @@ class LivePublicationCheckTest(unittest.TestCase):
             "basketball",
         )
         self.assertEqual((total, pregame, capabilities, receipts), (0, 0, 1, 3))
+
+    def test_market_capture_status_reconciles_no_quote_and_validated_states(self):
+        self.assertEqual(validate_market_capture({
+            "research_receipts": 1,
+            "research_capture": {
+                "captured_at": "2026-09-10T18:00:00Z",
+                "summary_count": 20,
+                "summary_with_pickcenter": 0,
+                "accepted_markets": 0,
+                "rejected_records": 0,
+                "market_status": "no_quotes_published",
+            },
+        }, "basketball"), "no_quotes_published")
+        self.assertEqual(validate_market_capture({
+            "research_capture": {
+                "captured_at": "2026-09-10T18:00:00Z",
+                "source_rows": 12,
+                "rows_with_lines": 4,
+                "accepted_markets": 4,
+                "rejected_records": 1,
+                "market_status": "validated_quotes",
+            },
+        }, "basketball"), "validated_quotes")
+
+    def test_market_capture_receipts_without_status_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, "receipts but no latest capture status"):
+            validate_market_capture({"research_receipts": 1}, "basketball")
+
+    def test_market_capture_rejects_inconsistent_no_quote_status(self):
+        with self.assertRaisesRegex(ValueError, "no-quote status does not reconcile"):
+            validate_market_capture({
+                "research_capture": {
+                    "captured_at": "2026-09-10T18:00:00Z",
+                    "summary_count": 20,
+                    "summary_with_pickcenter": 2,
+                    "accepted_markets": 0,
+                    "rejected_records": 0,
+                    "market_status": "no_quotes_published",
+                },
+            }, "basketball")
 
     def test_rejects_player_box_field_coverage_without_core_stat(self):
         with self.assertRaisesRegex(ValueError, "missing core stats"):

@@ -97,6 +97,71 @@ def validate_coverage_audit(payload: dict) -> tuple[dict, dict]:
     return location, possession
 
 
+def validate_market_capture(payload: dict, sport: str) -> str | None:
+    """Validate the latest capture outcome without turning it into a quote.
+
+    A receipt only proves that a capture ran.  The latest capture must also
+    explain whether it found no eligible summaries, found summaries without
+    quotes, rejected published quotes, or retained validated quotes.  Keeping
+    these states explicit prevents an incomplete connector response from
+    looking like a healthy but empty market archive.
+    """
+    capture = payload.get("research_capture")
+    if capture is None:
+        if payload.get("research_receipts", 0) > 0:
+            raise ValueError(f"{sport} market archive has receipts but no latest capture status")
+        return None
+    if not isinstance(capture, dict):
+        raise ValueError(f"{sport} market capture metadata is malformed")
+    status = capture.get("market_status")
+    allowed = {"no_eligible_summaries", "no_quotes_published", "quotes_failed_validation", "validated_quotes"}
+    if status not in allowed:
+        raise ValueError(f"{sport} market capture has an unresolved status")
+    captured_at = capture.get("captured_at")
+    if not isinstance(captured_at, str):
+        raise ValueError(f"{sport} market capture has no capture clock")
+    try:
+        timestamp(captured_at)
+    except (TypeError, ValueError):
+        raise ValueError(f"{sport} market capture has an invalid capture clock") from None
+
+    def nonnegative_int(key: str) -> int | None:
+        value = capture.get(key)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{sport} market capture field {key} is malformed")
+        return value
+
+    summary_count = nonnegative_int("summary_count")
+    source_rows = nonnegative_int("source_rows")
+    priced_rows = nonnegative_int("summary_with_pickcenter")
+    if priced_rows is None:
+        priced_rows = nonnegative_int("rows_with_lines")
+    summary_with_odds = nonnegative_int("summary_with_odds")
+    accepted = nonnegative_int("accepted_markets") or 0
+    rejected = nonnegative_int("rejected_records") or 0
+    source_count = summary_count if summary_count is not None else source_rows
+    if source_count is None:
+        raise ValueError(f"{sport} market capture has no inspected-summary count")
+    if priced_rows is not None and summary_count is not None and priced_rows > summary_count:
+        raise ValueError(f"{sport} market capture has more quote summaries than inspected summaries")
+    if summary_with_odds is not None and summary_count is not None and summary_with_odds > summary_count:
+        raise ValueError(f"{sport} market capture has more odds summaries than inspected summaries")
+    if status == "no_eligible_summaries":
+        if source_count != 0 or accepted or rejected:
+            raise ValueError(f"{sport} market capture no-eligible status does not reconcile")
+    elif status == "no_quotes_published":
+        if source_count <= 0 or (priced_rows or 0) != 0 or accepted or rejected:
+            raise ValueError(f"{sport} market capture no-quote status does not reconcile")
+    elif status == "quotes_failed_validation":
+        if source_count <= 0 or (priced_rows or 0) <= 0 or accepted or rejected <= 0:
+            raise ValueError(f"{sport} market capture rejected status does not reconcile")
+    elif accepted <= 0:
+        raise ValueError(f"{sport} market capture validated status has no accepted markets")
+    return status
+
+
 def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
     """Validate market archive metadata without requiring any quotes."""
     if payload.get("sport") != sport:
@@ -119,6 +184,7 @@ def market_metadata(payload: dict, sport: str) -> tuple[int, int, int, int]:
         or research_receipts < 0
     ):
         raise ValueError(f"{sport} market archive metadata is malformed")
+    validate_market_capture(payload, sport)
     for capability in capabilities:
         if (
             not isinstance(capability, dict)
