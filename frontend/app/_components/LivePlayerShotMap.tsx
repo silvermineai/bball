@@ -22,6 +22,11 @@ type ShootingLeadersResponse = {
   rows?: ShootingLeader[];
 };
 
+type ShotCoverageStats = {
+  attempts?: number | null;
+  located_count?: number | null;
+};
+
 type CoordinateShot = {
   contest_id?: string | null;
   x: number | null;
@@ -59,6 +64,25 @@ export function eligibleShotMapLeaders(rows: ShootingLeader[]) {
     // only a positive located_count can produce a useful map.
     .filter((row) => /^\d{1,15}$/.test(row.player_id) && Boolean(row.player_name) && (row.stats.located_count || 0) > 0)
     .slice(0, 12);
+}
+
+/**
+ * Keep coordinate coverage visible beside the map. A positive coordinate
+ * count is not interchangeable with a complete shot sample: the denominator
+ * is every retained attempt, including rows that cannot be plotted.
+ */
+export function shotMapCoverageLabel(stats: ShotCoverageStats) {
+  const attempts = typeof stats.attempts === "number" && Number.isFinite(stats.attempts) && stats.attempts >= 0
+    ? Math.trunc(stats.attempts)
+    : null;
+  const located = typeof stats.located_count === "number" && Number.isFinite(stats.located_count) && stats.located_count >= 0
+    ? Math.trunc(stats.located_count)
+    : null;
+  if (attempts === null) return "Location coverage unavailable";
+  if (located === null) return `— / ${attempts.toLocaleString()} located coordinates`;
+  if (located > attempts) return "Location coverage invalid";
+  const rate = attempts > 0 ? ` (${((located / attempts) * 100).toFixed(1)}%)` : "";
+  return `${located.toLocaleString()} / ${attempts.toLocaleString()} located coordinates${rate}`;
 }
 
 export function playerCardShotLocations(
@@ -185,6 +209,7 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
           </select>
         </label>
       </div>
+      {selected ? <p className="note" role="status">Source profile: {shotMapCoverageLabel(selected.stats)}. The map plots only validated x/y coordinates; its all-attempt total retains unlocated attempts.</p> : null}
       {error ? (
         <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retry}>Retry shot map</button></div>
       ) : loadingLeaders || loadingCard ? (
