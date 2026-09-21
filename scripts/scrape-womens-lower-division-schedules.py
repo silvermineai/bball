@@ -10,11 +10,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+
+# The scraper package lives one level below the repository root when this
+# script is invoked directly from ``python3 scripts/...``.
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 
 from ncaa_scraper.womens_lower_schedule import (
     CONTEST_HASH,
@@ -28,7 +34,6 @@ from ncaa_scraper.womens_lower_schedule import (
     schedule_query_url,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "frontend/public/data/basketball/womens-lower-division-schedules.json"
 USER_AGENT = "SilvermineResearch/1.0 (service@silvermineai.com)"
 
@@ -95,7 +100,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, str(ROOT / "ncaa_scraper"))
     main()
-
