@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "usage_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -142,6 +142,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "ast_to": return turnovers != null && turnovers > 0 && finite(player.ast) != null ? (finite(player.ast) as number) / turnovers : null;
     case "stocks40": return minutes != null && minutes > 0 && finite(player.stl) != null && finite(player.blk) != null ? 40 * ((finite(player.stl) as number) + (finite(player.blk) as number)) / minutes : null;
     case "tov_rate": return possessions != null && possessions > 0 && turnovers != null ? 100 * turnovers / possessions : null;
+    case "usage_rate": return null;
     case "three_rate": return fga != null && fga > 0 && tpa != null ? 100 * tpa / fga : null;
     case "three_pct": return finite(player.three_pct) ?? (tpa != null && tpa > 0 && tpm != null ? 100 * tpm / tpa : null);
     case "two_pct": {
@@ -326,6 +327,15 @@ const aggregate = (where: string) => `
     ${sourceSum("tpm")} AS tpm,
     ${sourceSum("fta")} AS fta,
     ${sourceSum("ftm")} AS ftm,
+    CASE WHEN COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*) AND COUNT(json_extract(s.stats_json,'$.fta')) = COUNT(*) AND COUNT(json_extract(s.stats_json,'$.tov')) = COUNT(*)
+      THEN SUM(CAST(json_extract(s.stats_json,'$.fga') AS REAL) + 0.475 * CAST(json_extract(s.stats_json,'$.fta') AS REAL) + CAST(json_extract(s.stats_json,'$.tov') AS REAL))
+      ELSE NULL END AS usage_events,
+    CASE WHEN SUM(MIN(CASE WHEN json_extract(s.stats_json,'$.fga') IS NOT NULL AND json_extract(s.stats_json,'$.fta') IS NOT NULL AND json_extract(s.stats_json,'$.tov') IS NOT NULL THEN 1 ELSE 0 END)) OVER (PARTITION BY s.season, s.team_id) = COUNT(*) OVER (PARTITION BY s.season, s.team_id)
+      THEN SUM(SUM(CAST(json_extract(s.stats_json,'$.fga') AS REAL) + 0.475 * CAST(json_extract(s.stats_json,'$.fta') AS REAL) + CAST(json_extract(s.stats_json,'$.tov') AS REAL))) OVER (PARTITION BY s.season, s.team_id)
+      ELSE NULL END AS team_usage_events,
+    CASE WHEN SUM(MIN(CASE WHEN json_extract(s.stats_json,'$.mins') IS NOT NULL THEN 1 ELSE 0 END)) OVER (PARTITION BY s.season, s.team_id) = COUNT(*) OVER (PARTITION BY s.season, s.team_id)
+      THEN SUM(SUM(CAST(json_extract(s.stats_json,'$.mins') AS REAL))) OVER (PARTITION BY s.season, s.team_id)
+      ELSE NULL END AS team_minutes,
     ${sourceSum("rima")} AS rim_attempts,
     ${sourceSum("rimm")} AS rim_makes,
     ${sourceSum("mida")} AS mid_attempts,
@@ -369,6 +379,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   ast_to: "CASE WHEN turnovers > 0 THEN assists / turnovers ELSE NULL END",
   stocks40: "CASE WHEN minutes > 0 THEN 40.0 * (steals + blocks) / minutes ELSE NULL END",
   tov_rate: "CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END",
+  usage_rate: "CASE WHEN minutes > 0 AND team_usage_events > 0 AND team_minutes > 0 THEN 100.0 * usage_events * team_minutes / (5.0 * minutes * team_usage_events) ELSE NULL END",
   three_rate: "CASE WHEN fga > 0 THEN 100.0 * tpa / fga ELSE NULL END",
   three_pct: "CASE WHEN tpa > 0 THEN 100.0 * tpm / tpa ELSE NULL END",
   two_pct: "CASE WHEN (fga - tpa) > 0 AND (fgm - tpm) >= 0 AND (fgm - tpm) <= (fga - tpa) THEN 100.0 * (fgm - tpm) / (fga - tpa) ELSE NULL END",
@@ -410,6 +421,7 @@ export const volumeColumn = (metric: Metric) => {
   if (metric === "putback_pct") return "putback_attempts";
   if (metric === "ast_to") return "turnovers";
   if (metric === "tov_rate" || metric === "ast_rate" || metric === "points_poss" || metric === "poss_share") return "possessions";
+  if (metric === "usage_rate") return "usage_events";
   if (metric === "transition_share" || metric === "unassisted_share") return "points";
   if (metric === "half_ts") return "half_fga";
   return null;

@@ -40,6 +40,34 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("half_ts")).toBe("half_fga");
   });
 
+  it("derives estimated usage from complete player and team workload denominators", () => {
+    expect(metricExpression("usage_rate")).toBe("CASE WHEN minutes > 0 AND team_usage_events > 0 AND team_minutes > 0 THEN 100.0 * usage_events * team_minutes / (5.0 * minutes * team_usage_events) ELSE NULL END");
+    expect(volumeColumn("usage_rate")).toBe("usage_events");
+  });
+
+  it("keeps estimated usage unavailable when any team workload row is incomplete", async () => {
+    const prepare = vi.fn((_query: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => ({ total: 0 })),
+        all: vi.fn(async () => ({ results: [] })),
+      })),
+    }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=usage_rate&minGames=5&minMinutes=200&minVolume=100",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
+    expect(sql).toContain("0.475 * CAST(json_extract(s.stats_json,'$.fta') AS REAL)");
+    expect(sql).toContain("SUM(MIN(CASE WHEN json_extract(s.stats_json,'$.fga') IS NOT NULL");
+    expect(sql).toContain("json_extract(s.stats_json,'$.fta') IS NOT NULL");
+    expect(sql).toContain("json_extract(s.stats_json,'$.tov') IS NOT NULL");
+    expect(sql).toContain("json_extract(s.stats_json,'$.mins') IS NOT NULL");
+    expect(sql).toContain("PARTITION BY s.season, s.team_id");
+  });
+
   it("derives two-point accuracy from all four retained shooting totals and qualifies by two-point attempts", () => {
     expect(metricExpression("two_pct")).toBe("CASE WHEN (fga - tpa) > 0 AND (fgm - tpm) >= 0 AND (fgm - tpm) <= (fga - tpa) THEN 100.0 * (fgm - tpm) / (fga - tpa) ELSE NULL END");
     expect(volumeColumn("two_pct")).toBe("(fga - tpa)");
