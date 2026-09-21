@@ -25,7 +25,41 @@ export type WomensLowerDivisionTeamSummary = {
   best_source_rank: number | null;
 };
 
+export type WomensLowerDivisionCoverage = {
+  individual_statistics: number;
+  team_statistics: number;
+  individual_rows: number;
+  team_rows: number;
+  through_games: string | null;
+};
+
 export const LOWER_DIVISION_PAGE_SIZE = 25;
+
+/**
+ * Summarize one exact-division source edition without interpreting any row.
+ * The source publishes a separate top-50 table for each statistic, so row
+ * counts describe table coverage and must not be presented as unique players
+ * or teams.
+ */
+export function summarizeWomensLowerDivisionCoverage(
+  division: {
+    individual: ReadonlyArray<{ rows: ReadonlyArray<unknown>; through_games?: string | null }>;
+    team: ReadonlyArray<{ rows: ReadonlyArray<unknown>; through_games?: string | null }>;
+    through_games?: string | null;
+  },
+): WomensLowerDivisionCoverage {
+  const throughGames = division.through_games
+    || division.individual.find((stat) => stat.through_games)?.through_games
+    || division.team.find((stat) => stat.through_games)?.through_games
+    || null;
+  return {
+    individual_statistics: division.individual.length,
+    team_statistics: division.team.length,
+    individual_rows: division.individual.reduce((count, stat) => count + stat.rows.length, 0),
+    team_rows: division.team.reduce((count, stat) => count + stat.rows.length, 0),
+    through_games: throughGames,
+  };
+}
 
 const text = (value: unknown) => value == null ? "" : String(value);
 

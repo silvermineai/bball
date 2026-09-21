@@ -4,6 +4,7 @@ import {
   lowerDivisionCellValue,
   lowerDivisionGames,
   paginateWomensLowerDivisionRows,
+  summarizeWomensLowerDivisionCoverage,
   summarizeWomensLowerDivisionTeams,
 } from "./womens-lower-division-view";
 
@@ -14,6 +15,23 @@ const rows = [
 ];
 
 describe("women's lower-division source row view", () => {
+  it("reports source table coverage without calling repeated leaderboard rows unique players", () => {
+    expect(summarizeWomensLowerDivisionCoverage({
+      through_games: "Saturday, March 28, 2026",
+      individual: [
+        { rows: [{ name: "A" }, { name: "B" }] },
+        { rows: [{ name: "A" }], through_games: "Saturday, March 28, 2026" },
+      ],
+      team: [{ rows: [{ team: "North" }] }],
+    })).toEqual({
+      individual_statistics: 2,
+      team_statistics: 1,
+      individual_rows: 3,
+      team_rows: 1,
+      through_games: "Saturday, March 28, 2026",
+    });
+  });
+
   it("searches retained source values and preserves publisher order", () => {
     expect(filterWomensLowerDivisionRows(rows, "south").map((row) => row.rank)).toEqual([2]);
     expect(filterWomensLowerDivisionRows(rows, "college").map((row) => row.rank)).toEqual([1, 2, 3]);

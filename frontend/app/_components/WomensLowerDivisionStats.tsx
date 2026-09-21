@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { parseWomensLowerDivisionEdition, type WomensLowerDivisionEdition, type WomensLowerDivisionStatistic } from "../_lib/womens-lower-division-integrity";
-import { filterWomensLowerDivisionRows, lowerDivisionCellValue, LOWER_DIVISION_PAGE_SIZE, paginateWomensLowerDivisionRows, summarizeWomensLowerDivisionTeams, type LowerDivisionRow } from "../_lib/womens-lower-division-view";
+import { filterWomensLowerDivisionRows, lowerDivisionCellValue, LOWER_DIVISION_PAGE_SIZE, paginateWomensLowerDivisionRows, summarizeWomensLowerDivisionCoverage, summarizeWomensLowerDivisionTeams, type LowerDivisionRow } from "../_lib/womens-lower-division-view";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 type Row = LowerDivisionRow & { team_source_path?: string };
@@ -38,6 +38,7 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
   const sourceKind = kind === "team-summary" ? "team" : kind;
   const options = current?.[sourceKind] || [];
   const selected = options.find((item) => item.statistic === statistic) || options[0];
+  const coverage = current ? summarizeWomensLowerDivisionCoverage(current) : null;
   const teamSummaries = useMemo(
     () => summarizeWomensLowerDivisionTeams((current?.team || []) as Statistic[], Number(minimumGames) || 0),
     [current, minimumGames],
@@ -75,6 +76,11 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
     <h2 id="wbb-lower-stats-title">D{division} leaderboards are now visible</h2>
     {!current ? <p className={integrityError ? "status-error" : "muted"}>{integrityError || "Loading the lower-division stat tables…"}</p> : <>
       <p className="note">These current-season tables are explicitly scoped by the published D{division} route. The retained rows include athlete names and team slugs but no stable athlete IDs, so they stay separate from identity-linked player and forecast editions. {current.identity_note}</p>
+      {coverage ? <div className="notice" aria-label={`Women&apos;s D${division} source coverage`}>
+        <strong>Source snapshot through {coverage.through_games || "date unavailable"}</strong>
+        <p className="muted" style={{ margin: "4px 0 0" }}>{coverage.individual_statistics.toLocaleString()} individual leaderboards · {coverage.team_statistics.toLocaleString()} team leaderboards · {coverage.individual_rows.toLocaleString()} retained individual table rows · {coverage.team_rows.toLocaleString()} retained team table rows · {edition.receipts.length.toLocaleString()} receipt-backed responses.</p>
+        <p className="muted" style={{ margin: "4px 0 0" }}>Rows repeat across separate source leaderboards; counts above are table coverage, not unique athlete or team totals. Athlete identity and cross-table ranking remain gated until the source provides stable IDs.</p>
+      </div> : null}
       <div className="division-player-controls">
         <label htmlFor="wbb-lower-kind">TABLE TYPE</label>
         <select id="wbb-lower-kind" value={kind} onChange={(event) => setKind(event.target.value as "individual" | "team" | "team-summary")}><option value="individual">Individual leaders</option><option value="team">Team metrics</option><option value="team-summary">Team coverage index</option></select>
