@@ -708,6 +708,30 @@ th,
   font: 9px "IBM Plex Mono", monospace;
   margin-top: 6px;
 }
+.womens-matchup-analysis {
+  margin: 10px 0 0;
+  min-width: 280px;
+  text-align: left;
+}
+.womens-matchup-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+  margin: 10px 0 0;
+}
+.womens-matchup-analysis-grid dt {
+  color: var(--muted);
+  font: 9px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+.womens-matchup-analysis-grid dd {
+  color: var(--ink);
+  font-size: 11px;
+  margin: 2px 0 0;
+}
+.womens-matchup-analysis-grid code {
+  font-size: 9px;
+}
 .analysis-integrity.is-review {
   color: #9b5a20;
 }
