@@ -4,7 +4,7 @@
   "sport": "basketball",
   "season": 2027,
   "observed_player_season": 2026,
-  "generated_at": "2026-09-21T05:45:45.206456Z",
+  "generated_at": "2026-09-21T21:10:57.813451Z",
   "model_status": "not_published",
   "coverage": {
     "player_season_rows": 41919,
@@ -23,7 +23,8 @@
     "player_box_played_rows": 122138,
     "player_box_dnp_rows": 46088,
     "player_box_skipped_rows": 2,
-    "player_box_teams": 663
+    "player_box_teams": 663,
+    "player_box_players_multiple_teams": 10
   },
   "players": [
     {
