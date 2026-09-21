@@ -102,6 +102,32 @@ export function divisionMetricValue(player: DivisionPlayer, metric: DivisionRank
   return finite(value) ? value : null;
 }
 
+export type DivisionMetricCoverage = {
+  divisionRows: number;
+  gameQualifiedRows: number;
+  valueRows: number;
+  missingValueRows: number;
+};
+
+/** Keep the selected metric denominator visible without treating missing source values as zero. */
+export function divisionMetricCoverage(
+  players: readonly DivisionPlayer[],
+  options: { division: "2" | "3"; metric: DivisionRankingMetric; query?: string; minGames?: number },
+): DivisionMetricCoverage {
+  const query = options.query?.trim().toLowerCase() || "";
+  const minGames = Number.isFinite(options.minGames) ? Math.max(0, options.minGames || 0) : 0;
+  const divisionRows = players.filter((player) => String(player.division) === options.division);
+  const searchedRows = divisionRows.filter((player) => !query || `${player.name} ${player.team_name || ""} ${player.conference || ""} ${player.player_id}`.toLowerCase().includes(query));
+  const gameQualifiedRows = searchedRows.filter((player) => finite(player.games) && player.games >= minGames);
+  const valueRows = gameQualifiedRows.filter((player) => divisionMetricValue(player, options.metric) != null).length;
+  return {
+    divisionRows: divisionRows.length,
+    gameQualifiedRows: gameQualifiedRows.length,
+    valueRows,
+    missingValueRows: gameQualifiedRows.length - valueRows,
+  };
+}
+
 export function divisionSourceRank(player: DivisionPlayer, metric: DivisionRankingMetric): number | null {
   const value = player[`${metric}_rank`];
   return finite(value) && value > 0 ? value : null;

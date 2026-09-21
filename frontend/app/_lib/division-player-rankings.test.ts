@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { divisionMetricLabel, divisionMetricValue, rankDivisionPlayers } from "./division-player-rankings";
+import { divisionMetricCoverage, divisionMetricLabel, divisionMetricValue, rankDivisionPlayers } from "./division-player-rankings";
 
 const players = [
   { player_id: 1, division: 2, name: "A Guard", team_name: "North", games: 20, ppg: 22, ppg_rank: 3 },
@@ -34,6 +34,24 @@ describe("division player rankings", () => {
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].name).toBe("C Center");
     expect(divisionMetricValue(players[4], "ppg")).toBeNull();
+  });
+
+  it("keeps the missing metric denominator visible for a division", () => {
+    expect(divisionMetricCoverage(players, { division: "2", metric: "ppg", minGames: 5 })).toEqual({
+      divisionRows: 4,
+      gameQualifiedRows: 3,
+      valueRows: 2,
+      missingValueRows: 1,
+    });
+    expect(divisionMetricCoverage([
+      { player_id: 1, division: 3, name: "No assists", games: 20, apg: null },
+      { player_id: 2, division: 3, name: "Other", games: 20, apg: null },
+    ], { division: "3", metric: "apg", minGames: 5 })).toEqual({
+      divisionRows: 2,
+      gameQualifiedRows: 2,
+      valueRows: 0,
+      missingValueRows: 2,
+    });
   });
 
   it("orders denominator-free source measures only when the source recorded them", () => {
