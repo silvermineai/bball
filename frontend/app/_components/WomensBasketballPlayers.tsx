@@ -10,6 +10,7 @@ import {
   paginateWomensPlayerRows,
   type WomensPlayerStats,
 } from "../_lib/womens-player-detail";
+import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
 type Player = {
   player_id: string;
@@ -165,9 +166,9 @@ export default function WomensBasketballPlayers() {
   useEffect(() => setPage(0), [metric, minimumGames, position, query]);
 
   return <section className="field-card wbb-player-card" aria-labelledby="wbb-players-title">
-    <div className="eyebrow">WOMEN&apos;S PLAYER TABLE · D1</div>
+    <div className="eyebrow">WOMEN&apos;S PLAYER TABLE · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-players-title">Browse observed player production</h2>
-    <p className="muted">A searchable table combining source-reported season rows with arithmetic aggregates from retained game-level box scores. Missing values remain unavailable.</p>
+    <p className="muted">A searchable table combining source-reported season rows with arithmetic aggregates from retained game-level box scores. Missing values remain unavailable. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     {!edition ? <p className="muted">Loading women&apos;s player table…</p> : <>
       <div className="wbb-player-controls">
         <label htmlFor="wbb-player-search">Search player or team</label>

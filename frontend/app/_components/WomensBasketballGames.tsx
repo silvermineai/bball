@@ -15,6 +15,7 @@ import {
   WOMENS_FORECAST_API_HREF,
   WOMENS_FORECAST_READINESS_HREF,
 } from "../_lib/womens-forecast-links";
+import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
 type Edition = { season: number; generated_at: string; upcoming?: WomensScheduleRow[] };
 type ForecastEdition = {
@@ -66,9 +67,9 @@ export default function WomensBasketballGames() {
   useEffect(() => setPage(0), [coverage, month, query, sort]);
 
   return <section className="field-card womens-matchup-board" aria-labelledby="womens-matchup-title">
-    <div className="eyebrow">WOMEN&apos;S BASKETBALL · D1 · 2026–27</div>
+    <div className="eyebrow">WOMEN&apos;S BASKETBALL · {WOMENS_SOURCE_SCOPE_LABEL} · 2026–27</div>
     <h2 id="womens-matchup-title">The full forecast slate</h2>
-    <p className="muted">Every retained women&apos;s D1 forecast row is searchable here. Exact game IDs keep schedule context attached; primary and cold-start estimates stay visibly separate.</p>
+    <p className="muted">Every retained women&apos;s source-native forecast row is searchable here. Exact game IDs keep schedule context attached; primary and cold-start estimates stay visibly separate. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     <div className="hero-actions" aria-label="Women&apos;s forecast resources">
       <a className="button" href={WOMENS_FORECAST_API_HREF}>Download women&apos;s forecast JSON ↗</a>
       <a className="hero-link" href={WOMENS_FORECAST_READINESS_HREF}>Open model readiness →</a>

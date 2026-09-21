@@ -70,7 +70,7 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
     <div className="eyebrow">WOMEN&apos;S DIVISION INTAKE · D{division}</div>
     <h2 id="wbb-division-readiness-title">Division {division} readiness</h2>
     {!publication || !current ? <p className="muted">Loading the women&apos;s division evidence ledger…</p> : <>
-      <p className="muted">{current.reason} The boundary is explicit so D1 production, rankings, and forecasts cannot leak into this scope.</p>
+      <p className="muted">{current.reason} The boundary is explicit so source-native women&apos;s production, rankings, and forecasts cannot leak into this scope.</p>
       <DivisionCoverageMatrix sport="basketball" gender="women" division={division} />
       <div className="scope-snapshot-counts"><strong>{current.rows.toLocaleString()}</strong><span>identity-linked D{division} rows</span><strong>{(sourceNative?.individual_rows || 0).toLocaleString()}</strong><span>source-native player rows</span><strong>{(sourceNative?.team_rows || 0).toLocaleString()}</strong><span>source-native team rows</span></div>
       {publication.asset_audit && publication.retained_assets?.length ? <div className="paper-panel" style={{ marginTop: 18 }}>

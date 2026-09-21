@@ -7,6 +7,7 @@ import {
   womensRankingSampleLabel,
   type WomensRankingRow,
 } from "../_lib/womens-rankings-view";
+import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
 type RankingRow = WomensRankingRow & { position: string; games: number; value: number; sample?: number };
 type Board = { label: string; stat: string; unit: string; description?: string; sample_field?: string; min_sample?: number; sample_unit?: string; rows: RankingRow[] };
@@ -64,9 +65,9 @@ export default function WomensBasketballRankings() {
   useEffect(() => setPage(0), [metric, query]);
 
   return <section className="field-card wbb-ranking-card" aria-labelledby="wbb-rankings-title">
-    <div className="eyebrow">WOMEN&apos;S PLAYER RANKINGS · D1</div>
+    <div className="eyebrow">WOMEN&apos;S PLAYER RANKINGS · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-rankings-title">Rank one stat at a time</h2>
-    <p className="muted">These boards keep units separate. Choose the larger game-box cohort to include players absent from the bounded player-season release.</p>
+    <p className="muted">These boards keep units separate. Choose the larger game-box cohort to include players absent from the bounded player-season release. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     {!publication ? <p className="muted">Loading women&apos;s player rankings…</p> : <>
       <div className="wbb-ranking-controls">
         <label htmlFor="wbb-ranking-source">Ranking archive</label>

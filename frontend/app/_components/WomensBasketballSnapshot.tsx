@@ -10,6 +10,7 @@ import {
   WOMENS_FORECAST_READINESS_HREF,
   WOMENS_FORECAST_SLATE_HREF,
 } from "../_lib/womens-forecast-links";
+import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
 type Leader = { player_id: string; name: string; team: string; position: string; value: number };
 type Forecast = { game_id: string; date?: string; home?: string; away?: string; prediction: { home_win_probability: number; predicted_margin: number; margin_low?: number; margin_high?: number; predicted_home_score: number; predicted_away_score: number; estimate_type: string } };
@@ -39,7 +40,7 @@ export default function WomensBasketballSnapshot() {
   if (!edition) return <p className="muted">Loading the women&apos;s source-native edition…</p>;
   return <div className="scope-snapshot">
     <div className="scope-snapshot-head">
-      <div><span className="eyebrow">WOMEN&apos;S DATA + MODEL</span><h2>Women&apos;s basketball · D1</h2><p>Player production from the 2026 season, 2027 roster and schedule context, and a separate Silvermine model for each upcoming game.</p></div>
+      <div><span className="eyebrow">WOMEN&apos;S DATA + MODEL · {WOMENS_SOURCE_SCOPE_LABEL}</span><h2>Women&apos;s basketball · source-native edition</h2><p>Player production from the 2026 season, 2027 roster and schedule context, and a separate Silvermine model for each upcoming game. {WOMENS_SOURCE_SCOPE_NOTE}</p></div>
       <div className="scope-snapshot-counts"><strong>{edition.coverage.players.toLocaleString()}</strong><span>players</span><strong>{edition.coverage.teams.toLocaleString()}</strong><span>teams</span><strong>{edition.coverage.upcoming_games}</strong><span>upcoming</span></div>
     </div>
     <div className="hero-actions" aria-label="Women&apos;s basketball model resources">

@@ -8,6 +8,7 @@ import {
   womensTeamMetrics,
   type WomensSourceTeam,
 } from "../_lib/womens-team-table";
+import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
 type Team = { rank: number; team_id: string; team: string; rating: number; points: number; allowed: number; games: number };
 type Publication = { target_season: number; coverage: { rated_teams: number }; team_ratings: Team[] };
@@ -50,9 +51,9 @@ export default function WomensBasketballTeams() {
     [edition, minimumGames, query, selectedSourceMetric],
   );
   return <section className="field-card" aria-labelledby="wbb-teams-title">
-    <div className="eyebrow">WOMEN&apos;S TEAM BOARD · D1</div>
+    <div className="eyebrow">WOMEN&apos;S TEAM BOARD · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-teams-title">Team ratings and source box-score stats</h2>
-    <p className="muted">The model board ranks multi-season net margin. The source board exposes every retained 2026 team metric so the rating can be studied beside the underlying production. A missing value remains unavailable.</p>
+    <p className="muted">The model board ranks multi-season net margin. The source board exposes every retained 2026 team metric so the rating can be studied beside the underlying production. A missing value remains unavailable. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     {!publication && !edition ? <p className="muted">Loading women&apos;s team data…</p> : <>
       <label className="control" htmlFor="wbb-team-search"><span>SEARCH TEAM</span><input id="wbb-team-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Program or source ID" /></label>
       <div className="wbb-team-views" aria-label="Women&apos;s team board views">
