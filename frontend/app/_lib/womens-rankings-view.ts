@@ -14,6 +14,13 @@ export type WomensRankingSampleRule = {
   sample_unit?: string;
 };
 
+/** Keep absent coverage distinct from a source-reported zero. */
+export function womensRankingCountLabel(value: unknown): string {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value.toLocaleString("en-US")
+    : "Unavailable";
+}
+
 /** Format only a finite denominator that clears the board's published floor. */
 export function womensRankingSampleLabel(
   row: WomensRankingSample,

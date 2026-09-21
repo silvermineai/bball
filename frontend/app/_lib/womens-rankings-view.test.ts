@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterWomensRankingRows,
   paginateWomensRankingRows,
+  womensRankingCountLabel,
   womensRankingSampleLabel,
   type WomensRankingRow,
 } from "./womens-rankings-view";
@@ -30,5 +31,13 @@ describe("women's ranking board view", () => {
     expect(womensRankingSampleLabel({ sample: 238 }, board)).toBe("238 FGA + 0.475 × FTA");
     expect(womensRankingSampleLabel({ sample: 99.9 }, board)).toBeNull();
     expect(womensRankingSampleLabel({}, board)).toBeNull();
+  });
+
+  it("keeps missing coverage distinct from a recorded zero", () => {
+    expect(womensRankingCountLabel(0)).toBe("0");
+    expect(womensRankingCountLabel(41919)).toBe("41,919");
+    expect(womensRankingCountLabel(null)).toBe("Unavailable");
+    expect(womensRankingCountLabel(undefined)).toBe("Unavailable");
+    expect(womensRankingCountLabel(-1)).toBe("Unavailable");
   });
 });
