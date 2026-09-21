@@ -17,6 +17,10 @@ export type NationalPlayerRow = {
   apg: number | null;
   spg?: number | null;
   bpg?: number | null;
+  threes_pg?: number | null;
+  mpg?: number | null;
+  ast_to?: number | null;
+  dbl_dbl?: number | null;
   fouls?: number | null;
   turnovers?: number | null;
   fg_pct: number | null;
@@ -25,7 +29,7 @@ export type NationalPlayerRow = {
   ppg_rank: number | null;
 };
 
-export type NationalLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "fg_pct" | "three_pct" | "ft_pct";
+export type NationalLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "threes_pg" | "mpg" | "ast_to" | "dbl_dbl" | "fg_pct" | "three_pct" | "ft_pct";
 export type NationalLeaderDivision = "1" | "2" | "3" | "all";
 
 const divisionName = (division: NationalLeaderDivision) => division === "all" ? "all divisions" : `Division ${["", "I", "II", "III"][Number(division)]}`;
@@ -36,6 +40,10 @@ const leaderMetrics: Array<{ key: NationalLeaderMetric; label: string; rankLabel
   { key: "apg", label: "Assists per game", rankLabel: "APG" },
   { key: "spg", label: "Steals per game", rankLabel: "SPG" },
   { key: "bpg", label: "Blocks per game", rankLabel: "BPG" },
+  { key: "threes_pg", label: "3-pointers per game", rankLabel: "3P/G" },
+  { key: "mpg", label: "Minutes per game", rankLabel: "MPG" },
+  { key: "ast_to", label: "Assist-to-turnover ratio", rankLabel: "A/TO" },
+  { key: "dbl_dbl", label: "Double-doubles", rankLabel: "D-D" },
   { key: "fg_pct", label: "Field-goal percentage", rankLabel: "FG%" },
   { key: "three_pct", label: "3-point percentage", rankLabel: "3P%" },
   { key: "ft_pct", label: "Free-throw percentage", rankLabel: "FT%" },
@@ -51,6 +59,10 @@ export type LiveLeader = {
   apg?: number | null;
   spg?: number | null;
   bpg?: number | null;
+  threes_pg?: number | null;
+  mpg?: number | null;
+  ast_to?: number | null;
+  dbl_dbl?: number | null;
   fouls?: number | null;
   turnovers?: number | null;
   pf?: number | null;
@@ -81,6 +93,10 @@ export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | nu
     apg: row.apg ?? payload.apg ?? null,
     spg: row.spg ?? payload.spg ?? null,
     bpg: row.bpg ?? payload.bpg ?? null,
+    threes_pg: row.threes_pg ?? payload.threes_pg ?? null,
+    mpg: row.mpg ?? payload.mpg ?? null,
+    ast_to: row.ast_to ?? payload.ast_to ?? null,
+    dbl_dbl: row.dbl_dbl ?? payload.dbl_dbl ?? null,
     fouls: row.fouls ?? row.pf ?? payload.fouls ?? payload.pf ?? null,
     turnovers: row.turnovers ?? row.tov ?? payload.turnovers ?? payload.tov ?? null,
     fg_pct: row.fg_pct ?? payload.fg_pct ?? null,
@@ -95,7 +111,7 @@ export function metricValue(row: NationalPlayerRow, metric: NationalLeaderMetric
 }
 
 export const nationalLeaderCsvHeaders = [
-  "Rank", "Player ID", "Player", "Team", "Conference", "GP", "PPG", "RPG", "APG", "SPG", "BPG", "PF/G", "TO/G", "FG%", "3P%", "FT%", "Division", "Selected metric", "Selected value",
+  "Rank", "Player ID", "Player", "Team", "Conference", "GP", "PPG", "RPG", "APG", "SPG", "BPG", "3P/G", "MPG", "A/TO", "Double-doubles", "PF/G", "TO/G", "FG%", "3P%", "FT%", "Division", "Selected metric", "Selected value",
 ];
 
 export function nationalLeaderCsvRows(
@@ -116,6 +132,10 @@ export function nationalLeaderCsvRows(
       player.apg,
       player.spg,
       player.bpg,
+      player.threes_pg,
+      player.mpg,
+      player.ast_to,
+      player.dbl_dbl,
       perGame(player.fouls),
       perGame(player.turnovers),
       player.fg_pct,
@@ -340,7 +360,7 @@ export default function LiveNationalPlayerTable({
       {error ? <p className={players.length ? "note" : "empty"} role="status">{error}{players.length ? "" : " Try another field or return to points per game."}</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
-          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
+          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">3P/G</th><th className="numeric">MPG</th><th className="numeric">A/TO</th><th className="numeric">D-D</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
           <tbody>{players.slice(0, rowLimit).map((player) => (
           <tr key={player.player_id}>
             <td className="rank-number">{player.leader_rank ?? "—"}</td>
@@ -353,6 +373,10 @@ export default function LiveNationalPlayerTable({
             <td className="numeric">{metric === "apg" ? <strong>{fmt(metricValue(player, "apg"))}</strong> : fmt(metricValue(player, "apg"))}</td>
             <td className="numeric">{metric === "spg" ? <strong>{fmt(metricValue(player, "spg"))}</strong> : fmt(metricValue(player, "spg"))}</td>
             <td className="numeric">{metric === "bpg" ? <strong>{fmt(metricValue(player, "bpg"))}</strong> : fmt(metricValue(player, "bpg"))}</td>
+            <td className="numeric">{metric === "threes_pg" ? <strong>{fmt(metricValue(player, "threes_pg"))}</strong> : fmt(metricValue(player, "threes_pg"))}</td>
+            <td className="numeric">{metric === "mpg" ? <strong>{fmt(metricValue(player, "mpg"))}</strong> : fmt(metricValue(player, "mpg"))}</td>
+            <td className="numeric">{metric === "ast_to" ? <strong>{fmt(metricValue(player, "ast_to"))}</strong> : fmt(metricValue(player, "ast_to"))}</td>
+            <td className="numeric">{metric === "dbl_dbl" ? <strong>{fmt(metricValue(player, "dbl_dbl"), 0)}</strong> : fmt(metricValue(player, "dbl_dbl"), 0)}</td>
             <td className="numeric">{fmt(perGame(player.fouls, player.games))}</td>
             <td className="numeric">{fmt(perGame(player.turnovers, player.games))}</td>
             <td className="numeric">{metric === "fg_pct" ? <strong>{pct(metricValue(player, "fg_pct"))}</strong> : pct(metricValue(player, "fg_pct"))}</td>

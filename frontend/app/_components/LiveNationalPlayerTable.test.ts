@@ -14,11 +14,15 @@ describe("live national player normalization", () => {
         conference: "Big Test",
         games: 30,
         rpg: 7.2,
-        apg: 4.1,
-        fg_pct: 52,
-        three_pct: 39,
-        ft_pct: 81,
-        ppg_rank: 3,
+      apg: 4.1,
+      fg_pct: 52,
+      three_pct: 39,
+      ft_pct: 81,
+      ppg_rank: 3,
+      threes_pg: null,
+      mpg: null,
+      ast_to: null,
+      dbl_dbl: null,
       },
     })).toEqual({
       player_id: "42",
@@ -32,6 +36,10 @@ describe("live national player normalization", () => {
       apg: 4.1,
       spg: null,
       bpg: null,
+      threes_pg: null,
+      mpg: null,
+      ast_to: null,
+      dbl_dbl: null,
       fouls: null,
       turnovers: null,
       fg_pct: 52,
@@ -52,6 +60,20 @@ describe("live national player normalization", () => {
     expect(metricValue(player!, "ft_pct")).toBeNull();
   });
 
+  it("retains the additional publisher leader fields for lower-division boards", () => {
+    const player = normalizeNationalLeader({
+      player_id: "8",
+      division: 3,
+      name: "A Shooter",
+      payload: { threes_pg: 3.2, mpg: 34.5, ast_to: 2.1, dbl_dbl: 7 },
+    });
+    expect(player).toEqual(expect.objectContaining({ threes_pg: 3.2, mpg: 34.5, ast_to: 2.1, dbl_dbl: 7 }));
+    expect(metricValue(player!, "threes_pg")).toBe(3.2);
+    expect(metricValue(player!, "mpg")).toBe(34.5);
+    expect(metricValue(player!, "ast_to")).toBe(2.1);
+    expect(metricValue(player!, "dbl_dbl")).toBe(7);
+  });
+
   it("exports the visible ranked rows with attached context and selected metric", () => {
     const player = normalizeNationalLeader({
       player_id: "42",
@@ -66,6 +88,7 @@ describe("live national player normalization", () => {
     const row = nationalLeaderCsvRows([{ ...player!, leader_rank: 2 }], "ppg")[0];
     expect(row.slice(0, 6)).toEqual([2, "42", "A Player", "A University", "Big Test", 30]);
     expect(row[nationalLeaderCsvHeaders.indexOf("PF/G")]).toBe(2);
+    expect(row[nationalLeaderCsvHeaders.indexOf("3P/G")]).toBeNull();
     expect(row[nationalLeaderCsvHeaders.indexOf("TO/G")]).toBe(1.5);
     expect(row[nationalLeaderCsvHeaders.indexOf("Selected metric")]).toBe("ppg");
     expect(row[nationalLeaderCsvHeaders.indexOf("Selected value")]).toBe(21.5);
