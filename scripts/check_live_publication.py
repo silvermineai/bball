@@ -611,6 +611,100 @@ def womens_lower_schedule_archive_metadata(payload: dict) -> dict:
     }
 
 
+def mens_lower_schedule_archive_metadata(payload: dict) -> dict:
+    """Validate the exact-division historical men’s schedule archive.
+
+    The archive is intentionally checked separately from the current-season
+    forecast release: completed-season contests can prove the capture and
+    identity contract even when the target-season endpoint has not published
+    any rows yet.
+    """
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("men's lower-division schedule asset is malformed")
+    source = payload.get("source")
+    if (
+        not isinstance(source, dict)
+        or source.get("publisher") != "NCAA.com"
+        or not isinstance(source.get("season_year"), int)
+        or source.get("season_year") <= 0
+        or not isinstance(source.get("identity_limit"), str)
+    ):
+        raise ValueError("men's lower-division schedule source contract is malformed")
+    receipts = payload.get("receipts")
+    if not isinstance(receipts, list) or not receipts:
+        raise ValueError("men's lower-division schedule asset has no receipts")
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("url"), str)
+            or not receipt["url"].startswith("https://sdataprod.ncaa.com?")
+            or receipt.get("status") != 200
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+            or not isinstance(receipt.get("bytes"), int)
+            or receipt["bytes"] <= 0
+        ):
+            raise ValueError("men's lower-division schedule receipt is malformed")
+    calendar = payload.get("calendar")
+    if not isinstance(calendar, list) or not calendar:
+        raise ValueError("men's lower-division schedule has no calendar rows")
+    calendar_counts = {"d2": 0, "d3": 0}
+    for day in calendar:
+        if (
+            not isinstance(day, dict)
+            or day.get("sport") != "basketball"
+            or day.get("gender") != "men"
+            or day.get("division") not in (2, 3)
+            or not isinstance(day.get("contest_date"), str)
+            or not isinstance(day.get("count"), int)
+            or isinstance(day.get("count"), bool)
+            or day["count"] < 0
+        ):
+            raise ValueError("men's lower-division schedule calendar row is malformed")
+        calendar_counts[f"d{day['division']}"] += day["count"]
+    contests = payload.get("contests")
+    if not isinstance(contests, list) or not contests:
+        raise ValueError("men's lower-division schedule has no contests")
+    seen: set[tuple[int, int]] = set()
+    contest_counts = {"d2": 0, "d3": 0}
+    for contest in contests:
+        if (
+            not isinstance(contest, dict)
+            or contest.get("sport") != "basketball"
+            or contest.get("gender") != "men"
+            or contest.get("division") not in (2, 3)
+            or not isinstance(contest.get("contest_id"), int)
+            or contest["contest_id"] <= 0
+            or not isinstance(contest.get("teams"), list)
+            or len(contest["teams"]) != 2
+        ):
+            raise ValueError("men's lower-division schedule contest is malformed")
+        key = (contest["division"], contest["contest_id"])
+        if key in seen:
+            raise ValueError("men's lower-division schedule has duplicate contest IDs")
+        seen.add(key)
+        for team in contest["teams"]:
+            if (
+                not isinstance(team, dict)
+                or not isinstance(team.get("name"), str)
+                or not team["name"].strip()
+                or (team.get("slug") is not None and not isinstance(team.get("slug"), str))
+            ):
+                raise ValueError("men's lower-division schedule team identity is malformed")
+        contest_counts[f"d{contest['division']}"] += 1
+    if any(contest_counts[key] > calendar_counts[key] for key in ("d2", "d3")):
+        raise ValueError("men's lower-division schedule exceeds its calendar counts")
+    return {
+        "season_year": source["season_year"],
+        "receipt_count": len(receipts),
+        "contests": len(contests),
+        "d2_contests": contest_counts["d2"],
+        "d3_contests": contest_counts["d3"],
+        "calendar_d2": calendar_counts["d2"],
+        "calendar_d3": calendar_counts["d3"],
+    }
+
+
 def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
     """Require the roster challenger to name the exact primary forecast edition."""
     model = payload.get("roster_model")
@@ -1178,6 +1272,9 @@ def check_live(
     womens_lower_schedule = womens_lower_schedule_archive_metadata(
         get_json(base_url, "/data/basketball/womens-lower-division-schedules.json")
     )
+    mens_lower_schedule = mens_lower_schedule_archive_metadata(
+        get_json(base_url, "/data/basketball/mens-lower-division-schedules.json")
+    )
     matchup_personnel = get_json(
         base_url,
         f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
@@ -1351,6 +1448,10 @@ def check_live(
         "womens_lower_schedule_receipts": womens_lower_schedule["receipt_count"],
         "womens_d2_schedule_contests": womens_lower_schedule["d2_contests"],
         "womens_d3_schedule_contests": womens_lower_schedule["d3_contests"],
+        "mens_lower_schedule_season": mens_lower_schedule["season_year"],
+        "mens_lower_schedule_receipts": mens_lower_schedule["receipt_count"],
+        "mens_d2_schedule_contests": mens_lower_schedule["d2_contests"],
+        "mens_d3_schedule_contests": mens_lower_schedule["d3_contests"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],

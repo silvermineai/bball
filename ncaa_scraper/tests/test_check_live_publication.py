@@ -18,6 +18,7 @@ from scripts.check_live_publication import (
     womens_forecast_metadata,
     womens_lower_division_metadata,
     womens_lower_schedule_archive_metadata,
+    mens_lower_schedule_archive_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
     validate_reviewed_recruiting_release,
@@ -54,6 +55,13 @@ class LivePublicationCheckTest(unittest.TestCase):
             }],
         }
 
+    @staticmethod
+    def mens_lower_schedule_payload():
+        payload = LivePublicationCheckTest.womens_lower_schedule_payload()
+        payload["calendar"][0]["gender"] = "men"
+        payload["contests"][0]["gender"] = "men"
+        return payload
+
     def test_womens_lower_schedule_metadata_validates_scope_receipts_and_null_slugs(self):
         payload = self.womens_lower_schedule_payload()
         summary = womens_lower_schedule_archive_metadata(payload)
@@ -62,6 +70,17 @@ class LivePublicationCheckTest(unittest.TestCase):
         payload["contests"][0]["gender"] = "men"
         with self.assertRaisesRegex(ValueError, "contest is malformed"):
             womens_lower_schedule_archive_metadata(payload)
+
+    def test_mens_lower_schedule_metadata_validates_exact_scope(self):
+        payload = self.womens_lower_schedule_payload()
+        payload["calendar"][0]["gender"] = "men"
+        payload["contests"][0]["gender"] = "men"
+        summary = mens_lower_schedule_archive_metadata(payload)
+        self.assertEqual(summary["season_year"], 2025)
+        self.assertEqual(summary["d2_contests"], 1)
+        payload["contests"][0]["gender"] = "women"
+        with self.assertRaisesRegex(ValueError, "contest is malformed"):
+            mens_lower_schedule_archive_metadata(payload)
 
     @staticmethod
     def womens_lower_division_payload():
@@ -375,6 +394,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.womens_lower_division_payload()
             if path == "/data/basketball/womens-lower-division-schedules.json":
                 return LivePublicationCheckTest.womens_lower_schedule_payload()
+            if path == "/data/basketball/mens-lower-division-schedules.json":
+                return LivePublicationCheckTest.mens_lower_schedule_payload()
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),

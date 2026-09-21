@@ -32,7 +32,7 @@ export function divisionCoverage(
   const recorded = sport === "football" && gender === "men"
     ? new Set<DivisionCoverageSurface>(["teams", "matches", "rankings", "predictions"])
     : sport === "basketball" && gender === "men"
-      ? new Set<DivisionCoverageSurface>(["players", "teams", "rankings"])
+      ? new Set<DivisionCoverageSurface>(["players", "teams", "matches", "rankings"])
       : new Set<DivisionCoverageSurface>();
   return surfaces.map(([surface, label]) => ({
     surface,

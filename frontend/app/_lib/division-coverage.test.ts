@@ -9,7 +9,7 @@ describe("division coverage matrix", () => {
     expect(states("basketball", "men", "2")).toEqual({
       players: "recorded",
       teams: "recorded",
-      matches: "unavailable",
+      matches: "recorded",
       rankings: "recorded",
       predictions: "unavailable",
       recruiting: "unavailable",
