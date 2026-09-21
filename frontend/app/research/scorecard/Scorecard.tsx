@@ -19,6 +19,15 @@ type RetrospectiveBenchmark = {
 type ForecastCatalog = {
   models?: Array<{ model_id?: string; target_season?: number | null }>;
 };
+
+function directionSummary(results: Record<string, number>) {
+  const order = ["win", "loss", "push"];
+  return order
+    .filter((key) => Number.isFinite(results[key]) && results[key] > 0)
+    .map((key) => `${key} ${results[key].toLocaleString()}`)
+    .join(" · ") || "—";
+}
+
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -544,7 +553,7 @@ export default function Scorecard() {
               <thead>
                 <tr>
                   <th>Model edition</th>
-                  <th>Market quote</th>
+                  <th>Source / bookmaker</th>
                   <th>Market</th>
                   <th>Matched games</th>
                   <th>Model MAE</th>
@@ -553,13 +562,14 @@ export default function Scorecard() {
                   <th>Market winner%</th>
                   <th>Model Brier</th>
                   <th>Market Brier</th>
+                  <th>Direction result</th>
                 </tr>
               </thead>
               <tbody>
                 {summary.market_metrics.map((r) => (
                   <tr key={`${r.model_id || "legacy"}|${r.provider}|${r.bookmaker}|${r.market}`}>
                     <th scope="row"><code>{r.model_id || "Legacy pooled"}</code></th>
-                    <td><strong>Verified line</strong><small>Captured market quote</small></td>
+                    <td><strong>{r.provider}</strong><small>{r.bookmaker}</small></td>
                     <td>{r.market}</td>
                     <td>{r.games}</td>
                     <td>{fmt(r.model_mae)}</td>
@@ -568,6 +578,7 @@ export default function Scorecard() {
                     <td>{r.market_winner_accuracy == null ? "—" : `${fmt(r.market_winner_accuracy * 100)}%`}</td>
                     <td>{fmt(r.model_brier, 4)}</td>
                     <td>{fmt(r.market_brier, 4)}</td>
+                    <td>{directionSummary(r.direction_results)}</td>
                   </tr>
                 ))}
               </tbody>
