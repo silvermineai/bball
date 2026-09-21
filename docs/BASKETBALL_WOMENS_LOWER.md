@@ -12,3 +12,9 @@ The current lower-division schedule edition is a receipt-backed 2025 season capt
 
 The source release, query contract, response receipts, and identity boundary remain visible in the readiness desk. No direct NCAA stats host crawl, name-only provider join, or Division I substitution is used.
 
+
+## Historical rating evidence
+
+`frontend/public/data/basketball/womens-lower-division-ratings.json` adds a bounded research artifact for each division. It fits a regularized score-margin rating and home-court term on the 2025 exact-division NCAA finals, then reports a chronological 80/20 within-season holdout. The artifact retains the source schedule SHA-256, all response receipts, exclusion counts, source-local team slug, and the holdout metrics. It is surfaced beside the D2/D3 schedule desk as a top-25 historical strength board.
+
+This artifact is intentionally `research_only` and emits no future-game rows or probabilities. The current source has only one completed season and no `seasonYear=2026` lower-division target schedule, so publishing a 2026–27 forecast would overstate the evidence. The next model gate is a second receipt-backed exact-division season plus the 2026–27 target schedule; player availability, transfers, injuries, and cross-provider identity joins remain outside the current fit.
