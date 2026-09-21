@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankRecruitingProduction, summarizeRecruitingDestinationProduction } from "./recruiting-production-rank";
+import { auditRecruitingDestinationRoster, rankRecruitingProduction, summarizeRecruitingDestinationProduction } from "./recruiting-production-rank";
 import type { RecruitingPerson } from "./recruiting";
 import release from "../../public/data/basketball/recruiting.json";
 
@@ -82,5 +82,32 @@ describe("recruiting production rank", () => {
     expect(rows.map((row) => row.teamId)).toEqual(["1", "3"]);
     expect(rows[0]).toMatchObject({ additions: 2, priorPrograms: 1, games: 60, weightedPpg: 14 });
     expect(rows[0].weightedTs).toBeCloseTo((0.58 * 30 + 0.44 * 30) / 60);
+  });
+
+  it("audits source-listed roster location without inferring a transfer outcome", () => {
+    const rows = [
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", ppg: 10, mpg: 18, rpg: 2, apg: 1, spg: 0.2, ts: 0.44 } }),
+      person({ key: "3-player-c", name: "C Player", team_id: "3", stats: { ...person().stats!, id: "1003", ppg: 20, mpg: 20 } }),
+      person({ key: "3-player-d", name: "D Player", team_id: "3", stats: { ...person().stats!, id: "1004", ppg: 12, mpg: 20 } }),
+    ];
+    const audits = auditRecruitingDestinationRoster(rows, {
+      season: 2027,
+      previous_season: 2026,
+      teams_observed: 2,
+      players_observed: 4,
+      prior_players_not_observed: 0,
+      status_counts: {},
+      players: [
+        { id: "1001", name: "A Player", team_id: "1", team: "A", previous_teams: [], status: "same_program", position: "G", class_year: null, height: null, weight: null, source_url: null },
+        { id: "1002", name: "B Player", team_id: "9", team: "Elsewhere", previous_teams: [], status: "same_program", position: "G", class_year: null, height: null, weight: null, source_url: null },
+        { id: "1003", name: "C Player", team_id: "3", team: "C", previous_teams: [], status: "same_program", position: "G", class_year: null, height: null, weight: null, source_url: null },
+        { id: "1003", name: "C Player", team_id: "9", team: "Elsewhere", previous_teams: [], status: "ambiguous", position: "G", class_year: null, height: null, weight: null, source_url: null },
+      ],
+    });
+    expect(audits).toEqual([
+      { teamId: "1", incomingRows: 2, exactRosterIds: 2, atDestination: 1, elsewhere: 1, multiplePrograms: 0, notObserved: 0 },
+      { teamId: "3", incomingRows: 2, exactRosterIds: 1, atDestination: 0, elsewhere: 0, multiplePrograms: 1, notObserved: 1 },
+    ]);
   });
 });

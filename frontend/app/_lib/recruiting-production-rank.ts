@@ -1,4 +1,5 @@
 import type { RecruitingPerson } from "./recruiting";
+import type { BBRosters } from "./basketball-types";
 
 /**
  * Prior production fields used by the transfer review board. These are all
@@ -42,6 +43,16 @@ export type RecruitingDestinationProductionSummary = {
   weightedRpg: number | null;
   weightedApg: number | null;
   weightedTs: number | null;
+};
+
+export type RecruitingDestinationRosterAudit = {
+  teamId: string;
+  incomingRows: number;
+  exactRosterIds: number;
+  atDestination: number;
+  elsewhere: number;
+  multiplePrograms: number;
+  notObserved: number;
 };
 
 const validSourceId = (value: string) => /^\d{1,15}$/.test(value);
@@ -152,4 +163,53 @@ export function summarizeRecruitingDestinationProduction(
       weightedTs: weighted(group, "ts"),
     }))
     .sort((left, right) => right.additions - left.additions || (right.weightedPpg ?? -Infinity) - (left.weightedPpg ?? -Infinity) || left.teamId.localeCompare(right.teamId));
+}
+
+/**
+ * Compare reviewed transfer source IDs with the retained roster release. The
+ * result describes source-listing evidence only: it does not infer that an
+ * unobserved player departed, that an observed row is eligible, or that a
+ * destination is confirmed. A duplicated recruiting source ID withholds the
+ * complete audit so a bad identity packet cannot create a false fit signal.
+ */
+export function auditRecruitingDestinationRoster(
+  people: RecruitingPerson[],
+  rosters: BBRosters,
+): RecruitingDestinationRosterAudit[] {
+  const eligible = people.filter((person) =>
+    person.category === "transfer"
+    && person.stats != null
+    && validSourceId(person.stats.id)
+    && Number.isSafeInteger(person.stats.games)
+    && person.stats.games >= 10,
+  ) as Array<RecruitingPerson & { stats: RecruitingProductionStats }>;
+  if (new Set(eligible.map((person) => person.stats.id)).size !== eligible.length) return [];
+  const byDestination = new Map<string, RecruitingDestinationRosterAudit>();
+  for (const person of eligible) {
+    const teamId = person.team_id.trim();
+    if (!teamId) return [];
+    const current = byDestination.get(teamId) || {
+      teamId,
+      incomingRows: 0,
+      exactRosterIds: 0,
+      atDestination: 0,
+      elsewhere: 0,
+      multiplePrograms: 0,
+      notObserved: 0,
+    };
+    current.incomingRows += 1;
+    const matches = rosters.players.filter((row) => row.id === person.stats.id);
+    const teamIds = new Set(matches.map((row) => row.team_id).filter(Boolean));
+    if (!matches.length) {
+      current.notObserved += 1;
+    } else {
+      current.exactRosterIds += 1;
+      const includesDestination = teamIds.has(teamId);
+      if (teamIds.size > 1) current.multiplePrograms += 1;
+      else if (includesDestination) current.atDestination += 1;
+      else current.elsewhere += 1;
+    }
+    byDestination.set(teamId, current);
+  }
+  return [...byDestination.values()].sort((left, right) => right.incomingRows - left.incomingRows || left.teamId.localeCompare(right.teamId));
 }

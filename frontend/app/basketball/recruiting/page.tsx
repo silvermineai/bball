@@ -162,7 +162,7 @@ export default function Page() {
         </div>
       </section>
       <ArchivedTeamOutlook release={archivedTeamOutlook} />
-      <TransferProductionBoard people={data.people} programs={programDirectory} edition={data.edition} reviewedAt={data.reviewed_at} />
+      <TransferProductionBoard people={data.people} programs={programDirectory} rosters={rosters} edition={data.edition} reviewedAt={data.reviewed_at} />
       <section className="section" aria-labelledby="recruiting-production">
         <div className="section-heading">
           <div>

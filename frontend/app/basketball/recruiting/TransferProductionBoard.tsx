@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { rankRecruitingProduction, summarizeRecruitingDestinationProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
+import { auditRecruitingDestinationRoster, rankRecruitingProduction, summarizeRecruitingDestinationProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 import type { RecruitingPerson } from "../../_lib/recruiting";
+import type { BBRosters } from "../../_lib/basketball-types";
 
 const number = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percent = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -28,10 +29,11 @@ function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankR
   </tr>;
 }
 
-export default function TransferProductionBoard({ people, programs, edition, reviewedAt }: { people: RecruitingPerson[]; programs: ProspectProgram[]; edition: string; reviewedAt: string }) {
+export default function TransferProductionBoard({ people, programs, rosters, edition, reviewedAt }: { people: RecruitingPerson[]; programs: ProspectProgram[]; rosters: BBRosters; edition: string; reviewedAt: string }) {
   const rows = rankRecruitingProduction(people);
   const ranked = rows.filter((row) => row.score != null).slice(0, 20);
   const destinations = summarizeRecruitingDestinationProduction(people);
+  const rosterAudits = auditRecruitingDestinationRoster(people, rosters);
   const eligible = rows.length;
   const priorSeasons = [...new Set(ranked.map((row) => row.stats.season))].sort((a, b) => a - b);
   if (!eligible) return null;
@@ -55,6 +57,12 @@ export default function TransferProductionBoard({ people, programs, edition, rev
       <div className="section-heading" style={{ marginBottom: 10 }}><div><div className="eyebrow">Destination rollup / exact source IDs</div><h3 id="transfer-destination-summary">How much recorded production is arriving at each destination?</h3></div><span className="note">Game-weighted rates</span></div>
       <p className="note">Each destination includes only reviewed transfer rows with an exact source player ID and at least 10 recorded games. Rates are weighted by games among the retained rows; they are context for the incoming class, not a lineup projection.</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Destination</th><th className="numeric">Additions</th><th className="numeric">Prior programs</th><th className="numeric">Recorded GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead><tbody>{destinations.map((row) => { const destination = destinationName(row.teamId, programs); return <tr key={row.teamId}><th scope="row">{destination ? <Link href={`/basketball/programs/${encodeURIComponent(row.teamId)}/`}>{destination}</Link> : "Destination unavailable"}<small>{destination ? "Exact program directory match" : `Team ID ${row.teamId}`}</small></th><td className="numeric"><strong>{row.additions}</strong></td><td className="numeric">{row.priorPrograms}</td><td className="numeric">{row.games}</td><td className="numeric">{number(row.weightedMpg)}</td><td className="numeric"><strong>{number(row.weightedPpg)}</strong></td><td className="numeric">{number(row.weightedRpg)}</td><td className="numeric">{number(row.weightedApg)}</td><td className="numeric">{percent(row.weightedTs)}</td></tr>; })}</tbody></table></div>
+    </section>}
+    {rosterAudits.length > 0 && <section style={{ marginTop: 24 }} aria-labelledby="transfer-roster-audit">
+      <div className="section-heading" style={{ marginBottom: 10 }}><div><div className="eyebrow">Roster handoff / exact source IDs</div><h3 id="transfer-roster-audit">Are incoming transfer IDs visible in the retained roster release?</h3></div><span className="note">Source listing audit</span></div>
+      <p className="note">This audit compares each reviewed transfer&apos;s exact prior player ID with the retained {rosters.season} roster release. “Not observed” is missing source evidence, not a departure; “elsewhere” and “multiple programs” may reflect source timing or unresolved movement and do not establish eligibility or a completed transfer.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Destination</th><th className="numeric">Incoming IDs</th><th className="numeric">Exact roster IDs</th><th className="numeric">At destination</th><th className="numeric">Elsewhere</th><th className="numeric">Multiple programs</th><th className="numeric">Not observed</th></tr></thead><tbody>{rosterAudits.map((row) => { const destination = destinationName(row.teamId, programs); return <tr key={`roster-audit-${row.teamId}`}><th scope="row">{destination ? <Link href={`/basketball/programs/${encodeURIComponent(row.teamId)}/`}>{destination}</Link> : "Destination unavailable"}<small>{destination ? "Exact program directory match" : `Team ID ${row.teamId}`}</small></th><td className="numeric">{row.incomingRows}</td><td className="numeric"><strong>{row.exactRosterIds}</strong></td><td className="numeric">{row.atDestination}</td><td className="numeric">{row.elsewhere}</td><td className="numeric">{row.multiplePrograms}</td><td className="numeric">{row.notObserved}</td></tr>; })}</tbody></table></div>
+      <p className="note" style={{ marginTop: 12 }}>Roster release season {rosters.season} · prior season {rosters.previous_season} · dataset {rosters.source?.dataset || "unavailable"} · receipt {rosters.source?.sha256 ? <code>{rosters.source.sha256}</code> : "unavailable"}.</p>
     </section>}
     <p className="note" style={{ marginTop: 12 }}>Retained release edition <code>{edition}</code>. Rows require at least 10 recorded games and four non-constant source fields. The rank is cohort-relative and should be read alongside the full player stat record.</p>
   </section>;
