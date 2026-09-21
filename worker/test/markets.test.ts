@@ -30,6 +30,21 @@ describe("market archive metadata", () => {
     expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
   });
 
+  it("counts only market connector receipts in capture metadata", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 0, pregame: 0 }] },
+      { results: [{ receipts: 2, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare, batch } });
+    expect(response.status).toBe(200);
+    const statements = (prepare.mock.calls as unknown as Array<[string]>).map(([sql]) => sql).join("\n");
+    expect(statements).toContain("provider IN ('ESPN Summary','CollegeBasketballData.com API','The Odds API')");
+    await expect(response.json()).resolves.toMatchObject({ research_receipts: 2, research_latest_capture_at: "2026-09-15T18:00:00Z" });
+  });
+
   it("surfaces the authorized basketball lines capture diagnostics", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },
