@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { forecastBoardEvidence, forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -59,6 +59,46 @@ describe("tipStatus", () => {
     expect(tipStatus(games[0])).toBe("Scheduled time");
     expect(tipStatus({ ...games[0], time_tbd: 1 })).toBe("Time TBD");
     expect(tipStatus({ ...games[0], source_time_valid: true, source_start: "2026-11-10T04:00:00Z" })).toBe("Source-confirmed start");
+  });
+});
+
+describe("forecastBoardEvidence", () => {
+  it("counts only evidence attached to the same upcoming game", () => {
+    const partial = forecastBoardEvidence(games[0], null, false);
+    expect(partial.present).toBe(1);
+    expect(partial.total).toBe(4);
+    expect(partial.missing).toEqual([
+      "confirmed tip time",
+      "same-edition Four Factors",
+      "roster continuity scenario",
+    ]);
+    expect(partial.market).toBe("unavailable");
+  });
+
+  it("does not count an older factor edition as current matchup evidence", () => {
+    const complete = forecastBoardEvidence({
+      ...games[0],
+      source_time_valid: true,
+      source_start: games[0].starts_at,
+      matchup_factors: { season: 2026, factors: {}, edges: {} },
+      matchup_factors_same_edition: false,
+    }, {
+      game_id: games[0].id,
+      home_id: games[0].home_id,
+      away_id: games[0].away_id,
+      primary_model_id: "model",
+      base_margin: 3,
+      roster_margin: 3,
+      margin_delta: 0,
+      home_predicted_net: 110,
+      away_predicted_net: 107,
+      roster_home_win_probability: 0.6,
+      roster_margin_low: -5,
+      roster_margin_high: 11,
+    }, true);
+    expect(complete.present).toBe(3);
+    expect(complete.missing).toEqual(["same-edition Four Factors"]);
+    expect(complete.market).toBe("verified");
   });
 });
 

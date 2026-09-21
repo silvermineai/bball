@@ -19,6 +19,7 @@ import { hasQualifiedMarketComparison, summarizeMarketLines } from "../_lib/mark
 import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-forecasts";
 import type { Comparison } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
+import { forecastEvidenceCoverage, forecastEvidenceLabel } from "../_lib/forecast-lab-analysis";
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 const latestTip = (game: BBGame) =>
@@ -80,6 +81,26 @@ export function matchupFactorContextLabel(game: BBGame) {
     return `Other-edition context · ${game.matchup_factors_model_id || "edition unavailable"} · ${season}`;
   }
   return `Four Factor context · ${season}`;
+}
+
+/**
+ * Summarize the evidence attached to one board row using the same gates as
+ * the expanded game card. Keeping this calculation shared prevents the slate
+ * table from implying that an estimate is ready for prep when a required
+ * join, source-confirmed clock, or same-edition context is missing.
+ */
+export function forecastBoardEvidence(
+  game: BBGame,
+  rosterScenario: BBRosterScenario | null | undefined,
+  market: boolean,
+) {
+  return forecastEvidenceCoverage({
+    primary: !!game.prediction,
+    scheduled: !!(game.source_time_valid && game.source_start),
+    factors: !!game.matchup_factors && game.matchup_factors_same_edition !== false,
+    roster: !!rosterScenario,
+    market,
+  });
 }
 
 export const forecastCsvHeaders = [
@@ -264,7 +285,7 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Efficiency</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th>Analysis packet</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Efficiency</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
@@ -274,11 +295,13 @@ export default function LiveDashboardForecastTable({
             const awayRating = ratingById.get(game.away_id);
             const market = summarizeMarketLines(marketComparisons[game.id] || []);
             const factorEdges = matchupFactorEdges(game);
+            const evidence = forecastBoardEvidence(game, rosterScenario, hasQualifiedMarketComparison(market));
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
                 <td>{date(game.starts_at)}<small>{latestTip(game)}</small><small>{tipStatus(game)}</small></td>
                 <td><span className={`model-tag ${game.prediction ? "primary" : "baseline"}`}>{modelLabel(game)}</span><small>{forecastSignal(prediction).label}</small><small>{game.forecast_model_id ? `Edition ${game.forecast_model_id}` : "Edition unavailable"}</small><small>{game.forecast_created_at && Number.isFinite(Date.parse(game.forecast_created_at)) ? `Generated ${kick(game.forecast_created_at)}` : "Forecast clock unavailable"}</small></td>
+                <td aria-label={`Analysis packet: ${forecastEvidenceLabel(evidence)}`}><strong>{evidence.present}/{evidence.total} core</strong><small>{evidence.market === "verified" ? "Verified market attached" : "Market pending"}</small>{evidence.missing.length > 0 && <small title={evidence.missing.join(", ")}>Missing: {evidence.missing.slice(0, 2).join(", ")}{evidence.missing.length > 2 ? "…" : ""}</small>}</td>
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
