@@ -479,7 +479,13 @@ def metrics(model: dict, rows: list[dict]) -> dict:
     }
 
 
-def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -> dict:
+def build(
+    conn: sqlite3.Connection,
+    primary_model: dict,
+    upcoming: list[dict],
+    *,
+    include_ncaa_replay: bool = True,
+) -> dict:
     nets = team_net_ratings(conn)
     transitions = {
         season: roster_features(conn, season, season - 1, nets)
@@ -493,12 +499,16 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
     # The NCAA source has independent roster editions back to 2010. Replaying
     # its 2024–26 transitions adds dated evidence without mixing its IDs or
     # fields into the ESPN/Box BPM production scenario.
-    ncaa_transitions = {
-        season: ncaa_roster_features(conn, season, season - 1, nets)
-        for season in (2024, 2025, 2026)
-    }
+    ncaa_transitions = (
+        {
+            season: ncaa_roster_features(conn, season, season - 1, nets)
+            for season in (2024, 2025, 2026)
+        }
+        if include_ncaa_replay
+        else {}
+    )
     ncaa_transition_evaluations = []
-    for test_season in (2025, 2026):
+    for test_season in (2025, 2026) if include_ncaa_replay else ():
         training_seasons = [season for season in (2024, 2025) if season < test_season]
         training_rows = [row for season in training_seasons for row in ncaa_transitions[season]]
         holdout_rows = ncaa_transitions[test_season]
@@ -568,11 +578,15 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
         "model": production,
         "evaluation": {"held_out_transition": 2026, **evaluation},
         "historical_evaluation": {
+            "status": "complete" if include_ncaa_replay else "omitted_bounded_rebuild",
             "source": "NCAA roster and player-season releases",
             "features": list(WORKLOAD_FEATURES),
             "transition_rows": {str(season): len(rows) for season, rows in ncaa_transitions.items()},
             "transition_evaluations": ncaa_transition_evaluations,
             "limitations": [
+                *([] if include_ncaa_replay else [
+                    "The bounded cache rebuild omits the optional NCAA roster replay because its cached cross-publisher team mapping did not meet the minimum 20-row training threshold; no NCAA IDs or name-only joins were substituted.",
+                ]),
                 "NCAA and ESPN team IDs are different namespaces; only unique season name mappings enter this replay.",
                 "The NCAA roster release has no publisher Box BPM, so this is a workload-only historical challenger and its scores are not comparable to the production feature set.",
                 "Roster listings are source snapshots and do not establish eligibility, availability, injury status or depth-chart role.",
