@@ -30,15 +30,15 @@ describe("division coverage matrix", () => {
     expect(rows.find((row) => row.surface === "players")?.note).toContain("Observed exact-ID");
   });
 
-  it("does not substitute men’s rows into women’s lower divisions", () => {
+  it("keeps women’s lower divisions source-scoped while exposing recorded schedule evidence", () => {
     expect(Object.values(states("basketball", "women", "2"))).toEqual([
-      "unavailable", "unavailable", "unavailable", "unavailable", "unavailable", "unavailable",
+      "partial", "recorded", "recorded", "partial", "unavailable", "unavailable",
     ]);
   });
 
   it("labels the women’s lower player boundary without hiding source-native leaderboards", () => {
     const row = divisionCoverage("basketball", "women", "2").find((item) => item.surface === "players");
-    expect(row?.state).toBe("unavailable");
-    expect(row?.note).toContain("Source-native leaderboard rows are displayed separately");
+    expect(row?.state).toBe("partial");
+    expect(row?.note).toContain("Source-native Division");
   });
 });

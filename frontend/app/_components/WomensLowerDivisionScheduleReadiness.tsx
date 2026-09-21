@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { downloadCsv, toCsv } from "../_lib/csv";
+import { summarizeWomensLowerSchedule, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
 
 type ScheduleTeam = { home?: boolean; name?: string; slug?: string; score?: number | null; winner?: boolean | null };
 type ScheduleContest = {
@@ -68,6 +70,14 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
   const contests = useMemo(() => asset ? scopedWomensSchedule(asset, division) : [], [asset, division]);
   const upcoming = useMemo(() => asset ? upcomingWomensSchedule(asset, division) : [], [asset, division]);
   const calendarCount = asset?.calendar?.filter((day) => day.division === Number(division)).reduce((sum, day) => sum + day.count, 0) || 0;
+  const records = useMemo(() => asset ? summarizeWomensLowerSchedule(asset.contests || [], division) : [], [asset, division]);
+  const downloadRecords = () => downloadCsv(
+    `womens-d${division}-team-records.csv`,
+    toCsv(
+      ["Rank", "Division", "Team", "Source slug", "Conference", "GP", "W", "L", "Win %", "PF", "PA", "Margin"],
+      records.map((row) => [row.rank, `D${division}`, row.team, row.slug, row.conference, row.games, row.wins, row.losses, row.win_pct * 100, row.points_for, row.points_against, row.margin]),
+    ),
+  );
 
   return <div className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} schedule readiness`}>
     <div className="eyebrow">SCHEDULE EVIDENCE · WOMEN&apos;S D{division}</div>
@@ -79,6 +89,13 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <p className="note">Rows are shown only when the retained schedule carries division={division}, a contest ID, and two team records. Team names and slugs are kept as source labels; missing slugs remain missing, and no name-only join creates a prediction.</p>
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} contests retained</span><strong>{upcoming.length.toLocaleString()}</strong><span>upcoming</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
+      <div className="section-heading" style={{ marginTop: 18 }}>
+        <div><div className="eyebrow">DESCRIPTIVE TEAM BOARD · D{division}</div><h4>Recorded records within the exact NCAA scope</h4></div>
+        <button className="button secondary" type="button" onClick={downloadRecords} disabled={!records.length}>Download team records ↓</button>
+      </div>
+      <p className="note">Ranks use recorded win percentage, then average scoring margin and points scored. This board is descriptive source evidence; it does not infer opponent strength, roster availability, or a forecast.</p>
+      {records.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Team</th><th className="numeric">GP</th><th className="numeric">W–L</th><th className="numeric">Win %</th><th className="numeric">PF</th><th className="numeric">PA</th><th className="numeric">Margin</th></tr></thead><tbody>{records.slice(0, 50).map((row: WomensLowerTeamRecord) => <tr key={row.team_key}><td className="rank-number">{row.rank}</td><th scope="row">{row.team}<small>{row.slug || "Source slug unavailable"}{row.conference ? ` · ${row.conference}` : ""}</small></th><td className="numeric">{row.games}</td><td className="numeric"><strong>{row.wins}–{row.losses}</strong></td><td className="numeric">{(row.win_pct * 100).toFixed(1)}%</td><td className="numeric">{row.points_for.toLocaleString()}</td><td className="numeric">{row.points_against.toLocaleString()}</td><td className="numeric">{row.margin.toFixed(1)}</td></tr>)}</tbody></table></div> : <p className="empty">No complete finals are available for this exact division.</p>}
+      {records.length > 50 ? <p className="muted">Showing 50 of {records.length.toLocaleString()} teams; the CSV contains the full validated cohort.</p> : null}
       {upcoming.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th></tr></thead><tbody>{upcoming.slice(0, 25).map((contest) => { const teams = teamNames(contest); return <tr key={contest.contest_id}><td>{displayDate(contest.contest_date)}<small>{contest.start_time || "Time pending"}</small></td><th scope="row">{teams.away}</th><td>{teams.home}</td><td>{contest.status || contest.state || "scheduled"}</td></tr>; })}</tbody></table></div> : <p className="empty">No upcoming D{division} contests are present in this retained schedule asset.</p>}
       {upcoming.length > 25 ? <p className="muted">Showing 25 of {upcoming.length.toLocaleString()} upcoming contests. The retained asset remains the complete export.</p> : null}
     </>}

@@ -39,10 +39,14 @@ export function divisionCoverage(
     ? new Set<DivisionCoverageSurface>(["teams", "matches", "rankings", "predictions"])
     : sport === "basketball" && gender === "men"
       ? new Set<DivisionCoverageSurface>(["players", "teams", "matches", "rankings"])
-      : new Set<DivisionCoverageSurface>();
+      : sport === "basketball" && gender === "women"
+        ? new Set<DivisionCoverageSurface>(["teams", "matches"])
+        : new Set<DivisionCoverageSurface>();
   const partial = sport === "football" && gender === "men"
     ? new Set<DivisionCoverageSurface>(["players"])
-    : new Set<DivisionCoverageSurface>();
+    : sport === "basketball" && gender === "women"
+      ? new Set<DivisionCoverageSurface>(["players", "rankings"])
+      : new Set<DivisionCoverageSurface>();
   return surfaces.map(([surface, label]) => ({
     surface,
     label,
@@ -59,10 +63,12 @@ export function divisionCoverage(
               : surface === "rankings"
               ? `Within-division recorded fields for Division ${division}.`
               : `Validated Division ${division} ${surface} archive rows.`
+      : sport === "basketball" && gender === "women" && surface === "players"
+        ? `Source-native Division ${division} leaderboard rows are published with names and team slugs; stable athlete IDs remain unavailable.`
+      : sport === "basketball" && gender === "women" && surface === "rankings"
+        ? `Descriptive within-division record rankings are derived from receipt-backed NCAA contest finals; they are not an opponent-adjusted model.`
       : partial.has(surface)
         ? `Observed exact-ID Division ${division} player production from retained game summaries is published; the canonical national player-stat edition remains separately gated and missing categories are not treated as zero.`
-      : sport === "basketball" && gender === "women" && surface === "players"
-        ? `No stable-ID Division ${division} player archive. Source-native leaderboard rows are displayed separately with names and team slugs only.`
         : `No validated Division ${division} ${surface} release.`,
   }));
 }
