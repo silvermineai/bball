@@ -16,6 +16,11 @@ const querySchema = z.object({
   rank_max: z.coerce.number().int().min(1).max(1000).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
   movement: z.enum(["all", "up", "down", "unchanged", "new", "unavailable"]).default("all"),
+  // The default keeps the national board compact. Staff can request the
+  // complete retained destination rollup (up to 200 groups) explicitly;
+  // this makes the response bound visible instead of silently dropping the
+  // long tail of source-reported commitments.
+  destination_limit: z.coerce.number().int().min(1).max(200).default(12),
   history: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   publication_check: z.string().trim().max(80).optional(),
@@ -54,7 +59,7 @@ const withheldPlaceholderRank = (alias: string) =>
   `${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL`;
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, team_id, q, position, rank_max, committed, movement, history: includeHistory, page } = c.req.valid("query");
+  const { season, athlete_id, team_id, q, position, rank_max, committed, movement, destination_limit: destinationLimit, history: includeHistory, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -311,13 +316,14 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
               sum(CASE WHEN ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS top100_total,
               sum(CASE WHEN ${currentRank} IS NOT NULL THEN MAX(1, 101-${currentRank}) ELSE 0 END) AS source_rank_points,
               min(${currentRank}) AS best_rank,
-              avg(CASE WHEN ${currentRank} IS NOT NULL THEN ${currentRank} END) AS average_rank
+              avg(CASE WHEN ${currentRank} IS NOT NULL THEN ${currentRank} END) AS average_rank,
+              count(*) OVER () AS destination_total
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters} AND r.committed_team_name IS NOT NULL AND TRIM(r.committed_team_name) <> ''
         GROUP BY CAST(r.committed_team_id AS TEXT), TRIM(r.committed_team_name)
         ORDER BY source_rank_points DESC, top100_total DESC, ranked_total DESC, total DESC, team ASC
-        LIMIT 12`,
-    ).bind(...binds).all(), DB_TIMEOUT_MS);
+        LIMIT ?`,
+    ).bind(...binds, destinationLimit).all(), DB_TIMEOUT_MS);
     const destinationPositions = await withTimeout(db.prepare(
       `SELECT CAST(r.committed_team_id AS TEXT) AS team_id,
               COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position,
@@ -327,6 +333,13 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         GROUP BY CAST(r.committed_team_id AS TEXT), COALESCE(NULLIF(upper(r.position),''),'Unknown')
         ORDER BY total DESC, position ASC`,
     ).bind(...binds).all(), DB_TIMEOUT_MS);
+    // The window count above is evaluated before LIMIT, so a caller can tell
+    // whether the returned destination list is complete without a second
+    // aggregate query. An empty result necessarily has zero groups because
+    // destinationLimit is always at least one.
+    const destinationTotal = destinations.results.length > 0
+      ? Number((destinations.results[0] as { destination_total?: number }).destination_total || destinations.results.length)
+      : 0;
     const recordedSchools = await withTimeout(db.prepare(
       `WITH school_rows AS (
         SELECT DISTINCT c.edition,r.athlete_id,CAST(school.value AS TEXT) AS school_id,
@@ -542,6 +555,12 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
         average_rank: row.average_rank == null ? null : Number(row.average_rank),
         position_breakdown: row.team_id == null ? [] : positionsByTeam.get(String(row.team_id)) || [],
       })),
+      destination_coverage: {
+        returned: destinations.results.length,
+        total: Number.isSafeInteger(destinationTotal) && destinationTotal >= 0 ? destinationTotal : destinations.results.length,
+        limit: destinationLimit,
+        complete: destinationTotal <= destinationLimit,
+      },
       recorded_school_programs: recordedSchools.results.map((row) => ({
         edition: String(row.edition || ""),
         school_id: String(row.school_id || ""),
@@ -612,6 +631,6 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
     return response;
   } catch {
-    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], commitment_destinations: [], recorded_school_programs: [], rows: [], source: "unavailable", unavailable_reason: "The recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
+    return c.json({ season, page, page_size: 50, total: 0, cohort: { committed: 0, ranked: 0, graded: 0 }, position_breakdown: [], commitment_destinations: [], destination_coverage: { returned: 0, total: 0, limit: destinationLimit, complete: false }, recorded_school_programs: [], rows: [], source: "unavailable", unavailable_reason: "The recruiting release is temporarily unavailable." }, 200, { "Cache-Control": "no-store" });
   }
 });

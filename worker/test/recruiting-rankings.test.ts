@@ -211,6 +211,30 @@ describe("ESPN recruiting rankings", () => {
     expect(destinationSql).toContain("ORDER BY source_rank_points DESC");
   });
 
+  it("exposes an explicit long-tail destination bound and completeness signal", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn((...args: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-12T00:00:00Z" }),
+          all: vi.fn(async () => sql.includes("destination_total") ? {
+            results: [{ team_id: "2755", team: "Example", total: 1, ranked_total: 1, top100_total: 1, source_rank_points: 100, best_rank: 1, average_rank: 1, destination_total: 201 }],
+          } : { results: [] }),
+          args,
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0&destination_limit=200", {}, { RESEARCH_DB: { prepare } });
+    const body = await response.json() as { destination_coverage: { returned: number; total: number; limit: number; complete: boolean } };
+    expect(response.status).toBe(200);
+    expect(body.destination_coverage).toEqual({ returned: 1, total: 201, limit: 200, complete: false });
+    const destinationSql = sqlCalls.find((sql) => sql.includes("destination_total"));
+    expect(destinationSql).toContain("LIMIT ?");
+    const destinationBind = (prepare.mock.results[sqlCalls.indexOf(destinationSql!)].value.bind as ReturnType<typeof vi.fn>);
+    expect(destinationBind.mock.calls.at(-1)).toContain(200);
+  });
+
   it("aggregates exact school-list IDs inside the current edition", async () => {
     const sqlCalls: string[] = [];
     const prepare = vi.fn((sql: string) => {

@@ -71,6 +71,7 @@ export type RecruitingBoardResult = {
   position_breakdown?: Array<{ position: string; total: number }>;
   position_opportunity?: RecruitingPositionOpportunity[];
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
+  destination_coverage?: { returned: number; total: number; limit: number; complete: boolean };
   recorded_school_programs?: RecordedSchoolProgramRow[];
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
   rank_quality?: { ranked_rows: number; tied_rank_values: number; tied_rows: number; withheld_placeholder_rows?: number };
@@ -550,6 +551,7 @@ export function recruitingBoardRequestSearch(filters: {
   query: string;
   position: string;
   rankMax: string;
+  destinationLimit?: string;
 }) {
   const params = new URLSearchParams({
     season: filters.season,
@@ -560,6 +562,7 @@ export function recruitingBoardRequestSearch(filters: {
   if (filters.query.trim()) params.set("q", filters.query.trim());
   if (filters.position) params.set("position", filters.position);
   if (filters.rankMax) params.set("rank_max", filters.rankMax);
+  if (filters.destinationLimit && filters.destinationLimit !== "12") params.set("destination_limit", filters.destinationLimit);
   return params.toString();
 }
 
@@ -647,6 +650,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [rankMax, setRankMax] = useState("");
   const [committed, setCommitted] = useState("all");
   const [movement, setMovement] = useState("all");
+  const [destinationLimit, setDestinationLimit] = useState("12");
   const [page, setPage] = useState(0);
   const [loadedResult, setLoadedResult] = useState<RecruitingBoardLoad | null>(null);
   const [loadError, setLoadError] = useState<{ request: string; message: string } | null>(null);
@@ -657,7 +661,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [exportMessage, setExportMessage] = useState("");
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [shortlistHydrated, setShortlistHydrated] = useState(false);
-  const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax });
+  const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax, destinationLimit });
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
   const evidenceGuide = result ? recruitingEvidenceGuide(result, schoolPrograms) : [];
@@ -679,6 +683,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (requestedCommitted === "yes" || requestedCommitted === "no") setCommitted(requestedCommitted);
     const requestedMovement = params.get("movement");
     if (requestedMovement && ["up", "down", "unchanged", "new", "unavailable"].includes(requestedMovement)) setMovement(requestedMovement);
+    const requestedDestinationLimit = params.get("destination_limit");
+    if (requestedDestinationLimit && ["12", "50", "200"].includes(requestedDestinationLimit)) setDestinationLimit(requestedDestinationLimit);
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0) setPage(Math.min(requestedPage, 1000));
     setHydrated(true);
@@ -704,11 +710,12 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (rankMax) params.set("rank", rankMax);
     if (committed !== "all") params.set("committed", committed);
     if (movement !== "all") params.set("movement", movement);
+    if (destinationLimit !== "12") params.set("destination_limit", destinationLimit);
     if (page > 0) params.set("page", String(page));
     const search = params.toString();
     window.history.replaceState(window.history.state, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
     setCopied("");
-  }, [committed, hydrated, movement, page, position, query, rankMax, season]);
+  }, [committed, destinationLimit, hydrated, movement, page, position, query, rankMax, season]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -868,6 +875,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All recorded ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
+        <label className="control"><span>DESTINATIONS</span><select value={destinationLimit} onChange={(event) => { setDestinationLimit(event.target.value); setPage(0); }}><option value="12">Top 12</option><option value="50">Top 50</option><option value="200">All (up to 200)</option></select></label>
         <button className="button secondary" type="button" onClick={downloadShortlist} disabled={!shortlist.length}>Download shortlist ({shortlist.length}) ↓</button>
         <button className="button secondary" type="button" onClick={share}>Copy board link</button>
       </div>
@@ -1192,7 +1200,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           {committed !== "no" && (result.commitment_destinations || []).length > 0 && <section className="paper-panel" aria-label="Recruiting commitment destinations" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
               <div><div className="eyebrow">Destination board / active cohort</div><h3>Where the commitments are landing.</h3></div>
-              <span className="note">Top 12 destinations</span>
+              <span className="note">{result.destination_coverage?.complete ? `${result.destination_coverage.total} destinations` : `Top ${result.destination_coverage?.returned ?? result.commitment_destinations?.length ?? 0} of ${result.destination_coverage?.total ?? "—"} destinations`}</span>
             </div>
             <div className="article-grid">
               {(result.commitment_destinations || []).map((destination) => <article className="article-card" key={`${destination.team_id || "unknown"}-${destination.team}`}>
@@ -1203,7 +1211,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
                 <small>{destination.team_id ? <><Link href={`/basketball/programs/${encodeURIComponent(destination.team_id)}/`}>Open program dossier →</Link>{fitHref(destination.team_id) && <> · <Link href={fitHref(destination.team_id)!}>Open roster fit →</Link></>}</> : "Program dossier unavailable for this row."} · Recorded {season} commitment{destination.total === 1 ? "" : "s"} in the active board filters.</small>
               </article>)}
             </div>
-            <p className="note" style={{ marginTop: 12 }}>Counts use the recorded committed-team field and the same season, rank, position, search and status filters as the table. Rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official class ranking or confirmation of enrollment or eligibility.</p>
+            <p className="note" style={{ marginTop: 12 }}>Counts use the recorded committed-team field and the same season, rank, position, search and status filters as the table. Use the destination control above to inspect the retained long tail; the response reports whether the list is complete. Rank points award max(1, 101 − national rank) for each ranked prospect, with unranked prospects contributing zero; they are a transparent Silvermine comparison aid, not an official class ranking or confirmation of enrollment or eligibility.</p>
           </section>}
           {schoolPrograms.length > 0 && <section className="paper-panel" aria-labelledby="recorded-school-board-title" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
