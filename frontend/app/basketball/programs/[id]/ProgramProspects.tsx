@@ -11,6 +11,8 @@ export type ProgramProspect = {
   name: string;
   position: string | null;
   rank: number | null;
+  previous_rank?: number | null;
+  previous_captured_at?: string | null;
   grade: number | null;
   status: string | null;
   committed_team_id: string | null;
@@ -94,6 +96,16 @@ export type ProgramProspectRow = ProgramProspect & {
   season: number;
   evidence: "Recorded commitment" | "Listed school" | "Committed elsewhere";
 };
+
+export function programProspectRankChange(row: Pick<ProgramProspect, "rank" | "previous_rank">): number | null {
+  return row.rank != null && row.previous_rank != null ? row.previous_rank - row.rank : null;
+}
+
+export function programProspectRankChangeLabel(row: Pick<ProgramProspect, "rank" | "previous_rank">): string {
+  const change = programProspectRankChange(row);
+  if (change == null || change === 0) return "—";
+  return change > 0 ? `▲ ${change}` : `▼ ${Math.abs(change)}`;
+}
 
 export type ProgramProspectSummary = {
   matched: number;
@@ -377,12 +389,13 @@ export default function ProgramProspects({
           </div>}
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
-              <thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Grade</th><th>Program evidence</th><th>Origin</th><th>Record</th></tr></thead>
+              <thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Program evidence</th><th>Origin</th><th>Record</th></tr></thead>
               <tbody>{rows.slice(0, 12).map((row) => (
                 <tr key={`${row.season}-${row.athlete_id}`}>
                   <td>{row.season}</td>
                   <th scope="row">{row.name}<small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th>
                   <td className="numeric">{row.rank == null ? "—" : `#${row.rank}`}</td>
+                  <td className="numeric">{programProspectRankChangeLabel(row)}<small>{row.previous_rank == null ? "Prior rank unavailable" : `prior #${row.previous_rank}`}</small></td>
                   <td className="numeric">{row.grade == null || row.grade <= 0 ? "—" : row.grade.toFixed(0)}</td>
                   <td><strong>{row.evidence}</strong>{row.evidence === "Recorded commitment" && row.committed_team_name
                     ? <small>{row.committed_team_name}</small>

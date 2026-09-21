@@ -4,6 +4,8 @@ import {
   combineProgramProspectClasses,
   isExactProgramProspect,
   loadProgramProspectClass,
+  programProspectRankChange,
+  programProspectRankChangeLabel,
   programProspectEvidence,
   PROGRAM_PROSPECT_CLASSES,
   summarizeProgramProspects,
@@ -28,6 +30,14 @@ const prospect = (overrides: Partial<ProgramProspect> = {}): ProgramProspect => 
 });
 
 describe("program prospect evidence", () => {
+  it("preserves exact prospect rank movement for program learning", () => {
+    expect(programProspectRankChange({ rank: 12, previous_rank: 30 })).toBe(18);
+    expect(programProspectRankChangeLabel({ rank: 12, previous_rank: 30 })).toBe("▲ 18");
+    expect(programProspectRankChangeLabel({ rank: 30, previous_rank: 12 })).toBe("▼ 18");
+    expect(programProspectRankChangeLabel({ rank: 12, previous_rank: 12 })).toBe("—");
+    expect(programProspectRankChangeLabel({ rank: 12, previous_rank: null })).toBe("—");
+  });
+
   it("covers every retained national recruiting class", () => {
     expect(PROGRAM_PROSPECT_CLASSES).toEqual([2025, 2026, 2027, 2028, 2029, 2030]);
   });
