@@ -16,6 +16,7 @@ import DivisionArchiveSummary from "./DivisionArchiveSummary";
 import WomensBasketballGames from "./WomensBasketballGames";
 import WomensBasketballRecruiting from "./WomensBasketballRecruiting";
 import WomensShotProfileCourt from "./WomensShotProfileCourt";
+import WomensLowerDivisionRankings from "./WomensLowerDivisionRankings";
 import { lowerFootballDivision } from "../_lib/football-division-scope";
 import { usePathname } from "next/navigation";
 
@@ -53,6 +54,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const pathname = usePathname() || "";
   const isWomen = scope.gender === "women";
   const womenRankings = isWomen && sport === "basketball" && scope.division === "1" && (pathname === "/basketball/rankings" || pathname.startsWith("/basketball/rankings/") || pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/"));
+  const womenLowerRankings = isWomen && sport === "basketball" && (scope.division === "2" || scope.division === "3") && (pathname === "/basketball/rankings" || pathname.startsWith("/basketball/rankings/") || pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/"));
   const womenTeams = isWomen && sport === "basketball" && scope.division === "1" && ["/basketball/ratings", "/basketball/teams", "/basketball/team-stats", "/basketball/standings"].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const womenPlayers = isWomen && sport === "basketball" && scope.division === "1" && ["/basketball/players", "/basketball/ncaa-player", "/basketball/player-profiles"].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const womenGames = isWomen && sport === "basketball" && scope.division === "1" && ["/basketball/games", "/basketball/matchups", "/basketball/forecast-lab"].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -71,7 +73,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const detail = isWomen
     ? scope.division === "1"
       ? "The women’s source-native edition includes observed player production, roster context, upcoming games and a separately validated women’s forecast model."
-      : "Women’s Division II and Division III source-native leaderboards are available for names and team slugs. The stable-ID player archive, rankings, and forecasts remain unavailable; no Division I rows are substituted."
+      : "Women’s Division II and Division III source-native leaderboards and within-division rankings are available for names and team slugs. The stable-ID player archive and forecasts remain unavailable; no Division I rows are substituted."
     : sport === "football"
       ? lowerFootballPlayers
         ? "The lower-division player desk aggregates exact publisher athlete and team IDs from retained D2/D3 game summaries. It is an observed 2026 event archive; the canonical national-stat release remains separately gated."
@@ -83,7 +85,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
       <div className="eyebrow">{publishedWomenDivisionOne ? "WOMEN'S D1 PUBLISHED" : divisionPlayers ? `D${scope.division} PLAYER ARCHIVE` : "SCOPE NOT PUBLISHED"}</div>
       <h1 id="scope-unavailable-title">{sportName} · {scopeLabel(scope)}</h1>
       <p>{detail}</p>
-      {womenRankings ? <WomensBasketballRankings /> : womenTeams ? <WomensBasketballTeams /> : womenPlayers ? <WomensBasketballPlayers /> : womenGames ? <WomensBasketballGames /> : womenRecruiting ? <WomensBasketballRecruiting /> : womenShooting ? <WomensShotProfileCourt /> : divisionPlayers && lowerDivision ? <DivisionPlayerArchive division={lowerDivision} /> : divisionTeams && lowerDivision ? <DivisionTeamArchive division={lowerDivision} /> : lowerBasketballSummary ? <DivisionArchiveSummary division={lowerBasketballSummary} /> : womenDivisionReadiness ? <WomensDivisionReadiness division={womenDivisionReadiness} /> : lowerFootballPlayers && lowerFootball ? <FootballLowerDivisionPlayers division={lowerFootball} /> : lowerFootball ? <FootballDivisionAvailability division={lowerFootball} /> : isWomen && sport === "basketball" && scope.division === "1" ? <WomensBasketballSnapshot /> : null}
+      {womenRankings ? <WomensBasketballRankings /> : womenLowerRankings && lowerDivision ? <WomensLowerDivisionRankings division={lowerDivision} /> : womenTeams ? <WomensBasketballTeams /> : womenPlayers ? <WomensBasketballPlayers /> : womenGames ? <WomensBasketballGames /> : womenRecruiting ? <WomensBasketballRecruiting /> : womenShooting ? <WomensShotProfileCourt /> : divisionPlayers && lowerDivision ? <DivisionPlayerArchive division={lowerDivision} /> : divisionTeams && lowerDivision ? <DivisionTeamArchive division={lowerDivision} /> : lowerBasketballSummary ? <DivisionArchiveSummary division={lowerBasketballSummary} /> : womenDivisionReadiness ? <WomensDivisionReadiness division={womenDivisionReadiness} /> : lowerFootballPlayers && lowerFootball ? <FootballLowerDivisionPlayers division={lowerFootball} /> : lowerFootball ? <FootballDivisionAvailability division={lowerFootball} /> : isWomen && sport === "basketball" && scope.division === "1" ? <WomensBasketballSnapshot /> : null}
       <div className="scope-unavailable-actions">
         {publishedWomenDivisionOne ? <Link className="button" href={fallbackArchiveHref!}>Open women’s dashboard</Link> : lowerBasketballSummary ? <><Link className="button" href={fallbackArchiveHref!}>Open D{lowerBasketballSummary} player archive</Link><Link className="hero-link" href={`/basketball/ratings/?division=${lowerBasketballSummary}`}>Open D{lowerBasketballSummary} team archive →</Link></> : fallbackArchiveHref ? <Link className="button" href={fallbackArchiveHref}>Open published archive</Link> : null}
         <Link className="hero-link" href="/research/coverage/">View coverage details →</Link>
