@@ -47,6 +47,28 @@ LOWER_RESULT_DIVISIONS = frozenset({"d2", "d3"})
 # fields as additive totals.  The separate advanced defensive/specialist
 # release remains name-only and is intentionally not joined here.
 BOX_PRODUCTION_FIELDS = {
+    # The EPA releases are FBS-scoped. These source-box summaries preserve
+    # standard offensive totals for exact-ID FCS rows instead of dropping them
+    # simply because no EPA row exists for that division. A category with an
+    # EPA production row still keeps the EPA edition below.
+    "passing": {
+        "completions": ("completions/passingAttempts", "pair_made"),
+        "pass_attempts": ("completions/passingAttempts", "pair_attempted"),
+        "passing_yards": ("passingYards", "sum"),
+        "passing_touchdowns": ("passingTouchdowns", "sum"),
+    },
+    "rushing": {
+        "rushing_attempts": ("rushingAttempts", "sum"),
+        "rushing_yards": ("rushingYards", "sum"),
+        "rushing_touchdowns": ("rushingTouchdowns", "sum"),
+        "long_rushing": ("longRushing", "max"),
+    },
+    "receiving": {
+        "receptions": ("receptions", "sum"),
+        "receiving_yards": ("receivingYards", "sum"),
+        "receiving_touchdowns": ("receivingTouchdowns", "sum"),
+        "long_reception": ("longReception", "max"),
+    },
     "defensive": {
         "tackles": ("totalTackles", "sum"),
         "solo_tackles": ("soloTackles", "sum"),
@@ -161,6 +183,43 @@ def box_category_production(rows: list[dict], category: str) -> dict | None:
         if math.isfinite(value)
     }
     return {"records": records, "games": len(games), "metrics": clean}
+
+
+def box_offensive_board_production(summary: dict, category: str) -> dict:
+    """Normalize source-box offensive totals to the player board shape.
+
+    EPA fields remain unavailable for these rows. The explicit source marker
+    lets the UI distinguish retained box totals from EPA production instead of
+    presenting a missing EPA value as a zero.
+    """
+    metrics = summary["metrics"]
+    if category == "passing":
+        plays = metrics.get("pass_attempts")
+        yards = metrics.get("passing_yards")
+        touchdowns = metrics.get("passing_touchdowns")
+    elif category == "rushing":
+        plays = metrics.get("rushing_attempts")
+        yards = metrics.get("rushing_yards")
+        touchdowns = metrics.get("rushing_touchdowns")
+    elif category == "receiving":
+        plays = metrics.get("receptions")
+        yards = metrics.get("receiving_yards")
+        touchdowns = metrics.get("receiving_touchdowns")
+    else:
+        raise ValueError(f"Unsupported offensive box category: {category}")
+    yards_per_play = yards / plays if plays else None
+    return {
+        "plays": plays,
+        "yards": yards,
+        "yards_per_play": round(yards_per_play, 6) if yards_per_play is not None else None,
+        "epa": None,
+        "epa_per_play": None,
+        "success_rate": None,
+        "touchdowns": touchdowns,
+        "games": summary["games"],
+        "rank": None,
+        "source": "box",
+    }
 
 
 def normalize_division(value):
@@ -374,7 +433,14 @@ def player_board(conn, year):
         for category in BOX_PRODUCTION_FIELDS:
             summary = box_category_production(box_by_player.get(key, []), category)
             if summary is not None:
-                p["production"][category] = summary
+                if category in ("passing", "rushing", "receiving"):
+                    # EPA rows remain authoritative where present. FCS rows
+                    # receive exact-ID source-box totals only when no EPA row
+                    # exists for the same player/team/category.
+                    if category not in p["production"]:
+                        p["production"][category] = box_offensive_board_production(summary, category)
+                else:
+                    p["production"][category] = summary
         p["categories"] = sorted(p["categories"])
         p["box_games"] = len(p.pop("games"))
     return {

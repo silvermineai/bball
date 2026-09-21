@@ -249,6 +249,57 @@ class ImportTests(unittest.TestCase):
         # The advanced name-only release is deliberately not joined or added.
         self.assertEqual(player["production"]["defensive"]["metrics"]["sacks"], 1)
 
+    def test_player_board_retains_fcs_box_offense_when_epa_release_is_unavailable(self):
+        store_rows(
+            self.conn,
+            "teams",
+            2025,
+            [{"team_id": "22", "division": "fcs", "short_display_name": "FCS State"}],
+            {"fetched_at": "2026-01-01T00:00:00Z"},
+        )
+        rows = [
+            {
+                "athlete_id": "8",
+                "athlete_name": "FCS Player",
+                "team_id": "22",
+                "game_id": "g1",
+                "category": "passing",
+                "completions/passingAttempts": "12/20",
+                "passingYards": "180",
+                "passingTouchdowns": "2",
+            },
+            {
+                "athlete_id": "8",
+                "athlete_name": "FCS Player",
+                "team_id": "22",
+                "game_id": "g1",
+                "category": "rushing",
+                "rushingAttempts": "9",
+                "rushingYards": "44",
+                "rushingTouchdowns": "1",
+            },
+            {
+                "athlete_id": "8",
+                "athlete_name": "FCS Player",
+                "team_id": "22",
+                "game_id": "g1",
+                "category": "receiving",
+                "receptions": "3",
+                "receivingYards": "29",
+                "receivingTouchdowns": "0",
+            },
+        ]
+        store_rows(self.conn, "box", 2025, rows, {"fetched_at": "2026-01-01T00:00:00Z"})
+        player = player_board(self.conn, 2025)["players"][0]
+        self.assertEqual(player["division"], "fcs")
+        self.assertEqual(player["production"]["passing"]["plays"], 20)
+        self.assertEqual(player["production"]["passing"]["yards"], 180)
+        self.assertEqual(player["production"]["passing"]["touchdowns"], 2)
+        self.assertIsNone(player["production"]["passing"]["epa"])
+        self.assertEqual(player["production"]["passing"]["source"], "box")
+        self.assertEqual(player["production"]["rushing"]["yards"], 44)
+        self.assertEqual(player["production"]["receiving"]["plays"], 3)
+
     def test_schedule_divisions_are_canonicalized_at_the_source_boundary(self):
         self.assertEqual(normalize_division("ii"), "d2")
         self.assertEqual(normalize_division("iii"), "d3")

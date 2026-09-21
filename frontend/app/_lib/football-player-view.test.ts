@@ -105,6 +105,15 @@ describe("football player division rankings", () => {
     ], "passing", { passing: 100 });
     expect(ranks.size).toBe(0);
   });
+
+  it("uses exact-ID source-box yards when an FCS EPA value is unavailable", () => {
+    const ranks = computeFcsEpaRanks([
+      { id: "1", team_id: "a", name: "Yard Leader", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 500, epa: null, epa_per_play: null, touchdowns: 4, rank: null } } },
+      { id: "2", team_id: "b", name: "Yard Two", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 400, epa: null, epa_per_play: null, touchdowns: 3, rank: null } } },
+    ], "rushing", { rushing: 50 });
+    expect(ranks.get(footballPlayerRankKey("1", "a", "rushing"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "rushing"))).toBe(2);
+  });
 });
 
 describe("football player board URL state", () => {

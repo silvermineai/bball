@@ -187,8 +187,9 @@ export function footballPlayerRankKey(playerId: string, teamId: string, category
 
 /**
  * Rank retained FCS production locally because the source board only assigns
- * publisher ranks to FBS rows. The result is deliberately a Silvermine
- * ordering, separate from the source rank and limited to the selected scope.
+ * publisher ranks to FBS rows. EPA is preferred when present; exact-ID source
+ * box yards provide a transparent fallback for FCS rows without an EPA
+ * release. The result is separate from the source rank and limited to scope.
  */
 export function computeFcsEpaRanks(
   players: FootballRankablePlayer[],
@@ -201,8 +202,9 @@ export function computeFcsEpaRanks(
     return categories.flatMap((selected) => {
       const stats = player.production[selected];
       const minimum = minimumPlays[selected];
-      return stats && minimum != null && (stats.plays ?? 0) >= minimum && stats.epa != null && Number.isFinite(stats.epa)
-        ? [{ player, category: selected, epa: stats.epa }]
+      const value = stats?.epa ?? stats?.yards;
+      return stats && minimum != null && (stats.plays ?? 0) >= minimum && value != null && Number.isFinite(value)
+        ? [{ player, category: selected, epa: value }]
         : [];
     });
   });

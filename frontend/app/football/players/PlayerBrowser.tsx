@@ -350,11 +350,11 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
               setPage(0);
             }}
           />
-          Show ranked players only ({division === "fcs" ? "FCS Silvermine EPA order" : "FBS source rank"}, at least {minimum} plays)
+          Show ranked players only ({division === "fcs" ? "FCS Silvermine production order" : "FBS source rank"}, at least {minimum} plays)
         </label>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Ordered by {division === "fcs" && sort === "rank" ? "FCS Silvermine EPA order" : sortLabels[sort].toLowerCase()} within{" "}
+        Ordered by {division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
           ? "the best available ranked category per player"
           : category}. Team
@@ -368,7 +368,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         zero. The EPA / play percentile compares observed values within the
         selected season, division and category cohort; it is a descriptive rate
         context and does not replace the source rank or create a composite grade.
-        {division === "fcs" ? " FCS rank is a Silvermine ordering of retained EPA after the same category play threshold; the publisher does not provide a source FCS rank." : " FBS rank is the retained source rank."}
+        {division === "fcs" ? " FCS rank is a Silvermine ordering of retained EPA when available, otherwise exact-ID source-box yards after the same category play threshold; the publisher does not provide a source FCS rank." : " FBS rank is the retained source rank."}
       </p>
       {eventDataset ? (
         <section className="section paper-panel">
@@ -406,7 +406,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>{division === "fcs" ? "FCS EPA rank" : "EPA rank"}</th>
+                  <th>{division === "fcs" ? "FCS rank" : "EPA rank"}</th>
                   <th>Player / team</th>
                   <th>Category</th>
                   <th className="numeric">Box games</th>
