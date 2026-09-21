@@ -28,6 +28,7 @@ import {
 } from "../../_lib/football-player-view";
 import ScopeUnavailable from "../../_components/ScopeUnavailable";
 import { footballScopeAvailable, type SportScope } from "../../_lib/sport-scope";
+import FootballLowerDivisionPlayers from "../../_components/FootballLowerDivisionPlayers";
 type Production = {
   games?: number | null;
   plays: number | null;
@@ -267,7 +268,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     });
   };
   if (!scope) return <p className="empty" role="status">Reading the requested football player scope…</p>;
-  if (!footballScopeAvailable(scope)) return <ScopeUnavailable sport="football" scope={scope} />;
+  if (!footballScopeAvailable(scope)) {
+    if (scope.gender === "men" && (scope.division === "2" || scope.division === "3")) {
+      return <FootballLowerDivisionPlayers division={scope.division} />;
+    }
+    return <ScopeUnavailable sport="football" scope={scope} />;
+  }
   const exportRow = (p: Player) => {
     const selected = productionForCategory(p, category), s = selected?.stats;
     const yardsPerPlay = s?.yards != null && s.plays ? s.yards / s.plays : null;

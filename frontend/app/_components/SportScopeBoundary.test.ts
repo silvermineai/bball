@@ -53,8 +53,9 @@ describe("sport scope boundary", () => {
     expect(isPublishedBoundary("basketball", { gender: "men", division: "3" }, "/basketball/players/")).toBe(true);
   });
 
-  it("fails closed for football D2/D3", () => {
-    expect(isPublishedBoundary("football", { gender: "men", division: "2" }, "/football/players/")).toBe(true);
+  it("publishes the exact observed football D2/D3 player archive", () => {
+    expect(isPublishedBoundary("football", { gender: "men", division: "2" }, "/football/players/")).toBe(false);
+    expect(isPublishedBoundary("football", { gender: "men", division: "3" }, "/football/players/")).toBe(false);
     expect(isPublishedBoundary("football", { gender: "men", division: "1" }, "/football/players/")).toBe(false);
   });
 

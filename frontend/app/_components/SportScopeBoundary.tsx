@@ -18,11 +18,12 @@ const BASKETBALL_DIVISION_ARCHIVES = [
   "/basketball/ncaa-team-box",
 ];
 
-// Football lower-division schedules are retained and filtered by the matchup
-// desk. Other lower-division football surfaces remain fail-closed until their
-// player/team releases are published.
+// Football lower-division schedules and the observed player archive are
+// retained as exact-scope desks. Other lower-division football surfaces remain
+// fail-closed until their corresponding releases are published.
 const FOOTBALL_DIVISION_ARCHIVES = [
   "/football/matchups",
+  "/football/players",
 ];
 
 /**
