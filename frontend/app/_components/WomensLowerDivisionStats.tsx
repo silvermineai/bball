@@ -37,10 +37,10 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
     if (options.length && !options.some((item) => item.statistic === statistic)) setStatistic(options[0].statistic);
   }, [options, statistic]);
   return <section className="field-card" aria-labelledby="wbb-lower-stats-title" style={{ marginTop: 18 }}>
-    <div className="eyebrow">NCAA.COM SOURCE NATIVE · WOMEN&apos;S D{division}</div>
+    <div className="eyebrow">SOURCE-NATIVE LOWER DIVISION · WOMEN&apos;S D{division}</div>
     <h2 id="wbb-lower-stats-title">D{division} leaderboards are now visible</h2>
-    {!current ? <p className={integrityError ? "status-error" : "muted"}>{integrityError || "Loading the NCAA.com lower-division tables…"}</p> : <>
-      <p className="note">These current-season tables are explicitly scoped by the NCAA.com D{division} route. The source publishes athlete names and team slugs but no athlete IDs, so rows stay separate from the ESPN player identity and forecast editions. {current.identity_note}</p>
+    {!current ? <p className={integrityError ? "status-error" : "muted"}>{integrityError || "Loading the lower-division stat tables…"}</p> : <>
+      <p className="note">These current-season tables are explicitly scoped by the published D{division} route. The retained rows include athlete names and team slugs but no stable athlete IDs, so they stay separate from identity-linked player and forecast editions. {current.identity_note}</p>
       <div className="division-player-controls">
         <label htmlFor="wbb-lower-kind">TABLE TYPE</label>
         <select id="wbb-lower-kind" value={kind} onChange={(event) => setKind(event.target.value as "individual" | "team")}><option value="individual">Individual leaders</option><option value="team">Team metrics</option></select>
@@ -49,7 +49,7 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
       </div>
       {selected ? <><div className="scope-snapshot-counts"><strong>{rows.length.toLocaleString()}</strong><span>retained rows</span><strong>{options.length.toLocaleString()}</strong><span>{kind} statistics</span><strong>{selected.through_games || current.through_games || "—"}</strong><span>through games</span></div>
         <div className="table-scroll"><table className="data-table"><thead><tr>{selected.headers.map((header) => <th key={header} className={header === "Rank" || ["PPG", "RPG", "APG", "SPG", "BPG", "MPG", "FG%", "3P%", "FT%"].includes(header) ? "numeric" : ""}>{header}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${selected.statistic}-${String(row.rank ?? index)}-${String(row.name ?? row.team ?? index)}`}>{selected.headers.map((header) => { const key = header.toLowerCase().replace(/[^a-z0-9]+(.)/g, (_, character) => String(character).toUpperCase()); const value = header === "Team" && row.team ? row.team : row[key]; return <td key={header} className={header === "Rank" || ["PPG", "RPG", "APG", "SPG", "BPG", "MPG", "FG%", "3P%", "FT%"].includes(header) ? "numeric" : ""}>{number(value)}</td>; })}</tr>)}</tbody></table></div>
-      </> : <p className="empty">No NCAA.com rows were retained for this table.</p>}
+      </> : <p className="empty">No lower-division rows were retained for this table.</p>}
       <p className="muted">Integrity check passed for {edition.receipts.length.toLocaleString()} source receipts and {edition.divisions[division].individual.length + edition.divisions[division].team.length} statistic tables. No player ranking, forecast, or identity join is created from a name-only row.</p>
     </>}
   </section>;
