@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
+  classMovementRows,
   classPositionMix,
   classSnapshotCoverage,
   classSnapshotReceipt,
@@ -213,6 +214,47 @@ describe("recruiting position supply comparison", () => {
     expect(classPositionMix([{ ...snapshot, position_breakdown: [{ position: "PG", total: 4 }] }])).toEqual([]);
     expect(classPositionMix([{ ...snapshot, position_breakdown: [{ position: "PG", total: 4 }, { position: "pg", total: 6 }] }])).toEqual([]);
     expect(classPositionMix([{ ...snapshot, edition: "edition-1" }])).toEqual([]);
+  });
+});
+
+describe("recruiting class movement comparison", () => {
+  const snapshot = {
+    season: "2027",
+    total: 10,
+    cohort: { ranked: 10, graded: 10, committed: 2 },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition: "edition-1",
+    rank_movement: {
+      total: 10,
+      new_to_release: 1,
+      moved_up: 2,
+      moved_down: 1,
+      unchanged: 4,
+      rank_unavailable: 2,
+    },
+    position_breakdown: [],
+    commitment_destinations: [],
+  };
+
+  it("returns reconciled movement counts and a measurable changed rate", () => {
+    expect(classMovementRows([snapshot])).toEqual([{
+      season: "2027",
+      total: 10,
+      movedUp: 2,
+      movedDown: 1,
+      unchanged: 4,
+      rankUnavailable: 2,
+      newToRelease: 1,
+      measurable: 7,
+      changed: 3,
+      changedShare: 3 / 7,
+    }]);
+  });
+
+  it("withholds movement when buckets do not reconcile to the class", () => {
+    expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, moved_up: 99 } }])).toEqual([]);
+    expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, total: 9 } }])).toEqual([]);
+    expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, new_to_release: -1 } }])).toEqual([]);
   });
 });
 

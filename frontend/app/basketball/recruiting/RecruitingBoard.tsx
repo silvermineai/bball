@@ -118,7 +118,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
 }
 type Result = RecruitingBoardResult;
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
-type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt"> & { season: string };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt" | "rank_movement"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
 
 export type RecruitingClassDestinationRow = CommitmentDestination & {
@@ -137,6 +137,48 @@ export type RecruitingClassPositionMix = {
   total: number;
   positions: Array<{ position: string; total: number; share: number }>;
 };
+
+export type RecruitingClassMovement = {
+  season: string;
+  total: number;
+  movedUp: number;
+  movedDown: number;
+  unchanged: number;
+  rankUnavailable: number;
+  newToRelease: number;
+  measurable: number;
+  changed: number;
+  changedShare: number | null;
+};
+
+/**
+ * Keep cross-class movement tied to a complete exact-ID release. The API's
+ * movement buckets must reconcile to both its reported total and the class
+ * denominator before they can be shown as a recruiting trend.
+ */
+export function classMovementRows(snapshots: ClassSnapshot[]): RecruitingClassMovement[] {
+  return snapshots.flatMap((snapshot) => {
+    const movement = snapshot.rank_movement;
+    const total = snapshot.total;
+    if (!movement || !Number.isSafeInteger(total) || total <= 0 || movement.total !== total) return [];
+    const values = [movement.moved_up, movement.moved_down, movement.unchanged, movement.rank_unavailable, movement.new_to_release];
+    if (values.some((value) => !Number.isSafeInteger(value) || value < 0) || values.reduce((sum, value) => sum + value, 0) !== total) return [];
+    const measurable = movement.moved_up + movement.moved_down + movement.unchanged;
+    const changed = movement.moved_up + movement.moved_down;
+    return [{
+      season: snapshot.season,
+      total,
+      movedUp: movement.moved_up,
+      movedDown: movement.moved_down,
+      unchanged: movement.unchanged,
+      rankUnavailable: movement.rank_unavailable,
+      newToRelease: movement.new_to_release,
+      measurable,
+      changed,
+      changedShare: measurable > 0 ? changed / measurable : null,
+    }];
+  });
+}
 
 /** Only call a class release verified when its digest covers its full table. */
 export function classSnapshotReceipt(snapshot: ClassSnapshot): RecruitingClassSnapshotReceipt | null {
@@ -523,7 +565,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
       const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
-      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt } satisfies ClassSnapshot;
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt, rank_movement: value.rank_movement } satisfies ClassSnapshot;
     })).then((settled) => {
       if (controller.signal.aborted) return;
       setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
@@ -555,6 +597,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   const destinationRows = classDestinationRows(classSnapshots, 5);
   const positionMixRows = classPositionMix(classSnapshots);
+  const movementRows = classMovementRows(classSnapshots);
   const positionColumns = Array.from(new Set(positionMixRows.flatMap((row) => row.positions.map((position) => position.position)))).sort((a, b) => {
     const order = ["PG", "SG", "SF", "PF", "C", "G", "F", "W", "UNKNOWN"];
     return (order.indexOf(a) < 0 ? order.length : order.indexOf(a)) - (order.indexOf(b) < 0 ? order.length : order.indexOf(b)) || a.localeCompare(b);
@@ -645,6 +688,27 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
             </tr>;
           })}</tbody>
+        </table></div>
+      </section>}
+      {movementRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-movement-comparison-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Rank movement / exact athlete IDs</div><h3 id="recruiting-movement-comparison-title">Which classes are actually changing?</h3></div>
+          <span className="note">{movementRows.length} reconciled classes</span>
+        </div>
+        <p className="note">Movement is calculated from the retained prior capture for the same athlete ID. “Measurable” excludes new rows and unavailable ranks; the changed rate is moved up plus moved down divided by measurable rows. A class is withheld if its source buckets do not reconcile to the full release.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Moved up</th><th className="numeric">Moved down</th><th className="numeric">Unchanged</th><th className="numeric">Rank unavailable</th><th className="numeric">New to archive</th><th className="numeric">Measurable</th><th className="numeric">Changed rate</th><th>Open</th></tr></thead>
+          <tbody>{movementRows.map((row) => <tr key={`movement-comparison-${row.season}`}>
+            <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button><small>{row.total.toLocaleString()} exact prospect rows</small></th>
+            <td className="numeric">{row.movedUp.toLocaleString()}</td>
+            <td className="numeric">{row.movedDown.toLocaleString()}</td>
+            <td className="numeric">{row.unchanged.toLocaleString()}</td>
+            <td className="numeric">{row.rankUnavailable.toLocaleString()}</td>
+            <td className="numeric">{row.newToRelease.toLocaleString()}</td>
+            <td className="numeric"><strong>{row.measurable.toLocaleString()}</strong></td>
+            <td className="numeric">{row.changedShare == null ? "—" : `${(row.changedShare * 100).toFixed(1)}%`}<small>{row.changed.toLocaleString()} changed</small></td>
+            <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(row.season)}`}>Open class →</Link></td>
+          </tr>)}</tbody>
         </table></div>
       </section>}
       {positionMixRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-position-mix-title" style={{ marginBottom: 24 }}>
