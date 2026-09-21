@@ -238,7 +238,7 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
 
   if (meta === "1") {
     const now = new Date().toISOString();
-    const [seasons, models, currentCoverage] = await db.batch([
+    const [seasons, models, currentCoverage, modelArtifacts] = await db.batch([
       db.prepare("SELECT DISTINCT season FROM football_games ORDER BY season DESC"),
       db.prepare(
         `SELECT p.model_id,count(*) AS forecasts,
@@ -267,12 +267,38 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
              ON p.game_id=g.id AND p.model_id=?
           WHERE g.season=? AND g.completed=0 AND g.kickoff>?`,
       ).bind(latestModel?.id || "__no_registered_model__", season, now),
+      // Keep the catalog useful for comparing successive prospective editions.
+      // The artifact is parsed through parseFootballModelSummary below; raw
+      // coefficients never cross this response boundary.
+      db.prepare(
+        `SELECT id,created_at,cutoff,artifact_json
+           FROM football_models
+          WHERE id IN (
+            SELECT DISTINCT p.model_id
+              FROM football_predictions p
+              JOIN football_games g ON g.id=p.game_id
+             WHERE g.season=?
+          )`,
+      ).bind(season),
     ]);
+    const artifactsById = new Map(
+      (modelArtifacts?.results || []).flatMap((row) => {
+        const item = row as Record<string, unknown>;
+        if (typeof item.id !== "string" || typeof item.artifact_json !== "string") return [];
+        return [[item.id, item] as const];
+      }),
+    );
     const metadata = models.results.map((row) => {
       const item = row as Record<string, unknown>;
       return {
         ...item,
         forecasts: Number(item.forecasts || 0),
+        model_summary: artifactsById.has(String(item.model_id))
+          ? parseFootballModelSummary(
+              artifactsById.get(String(item.model_id))!.artifact_json,
+              artifactsById.get(String(item.model_id))!.cutoff,
+            )
+          : null,
       };
     });
     const latestSummary = latestModel

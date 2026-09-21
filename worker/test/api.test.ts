@@ -360,6 +360,7 @@ describe("bball api", () => {
       { results: [{ season: 2026 }] },
       { results: [{ model_id: "ridge-team-calibrated-v2-test", forecasts: 660, first_created_at: "2026-09-09T02:00:00Z", last_created_at: "2026-09-09T02:00:00Z" }] },
       { results: [{ upcoming_games: 699, forecast_games: 658, outside_fbs_field: 41, eligible_missing_prediction: 0 }] },
+      { results: [{ id: "ridge-team-calibrated-v2-test", cutoff: "2026-09-09T02:00:00Z", artifact_json: JSON.stringify({ version: "ridge-team-calibrated-v2", target_season: 2026, evaluation: { games: 784, winner_accuracy: 0.654, margin_mae: 14.2 } }) }] },
     ]);
     const response = await app.request(
       "/api/football/research/forecasts?season=2026&meta=1",
@@ -374,6 +375,14 @@ describe("bball api", () => {
         outside_fbs_field: 41,
         eligible_missing_prediction: 0,
       },
+      models: [{
+        model_id: "ridge-team-calibrated-v2-test",
+        model_summary: {
+          version: "ridge-team-calibrated-v2",
+          target_season: 2026,
+          evaluation: { games: 784, winner_accuracy: 0.654, margin_mae: 14.2 },
+        },
+      }],
     });
     const coverageSql = prepare.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes("outside_fbs_field"));
     expect(coverageSql).toContain("g.kickoff>?");
