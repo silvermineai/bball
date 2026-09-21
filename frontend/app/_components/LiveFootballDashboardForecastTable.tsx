@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Game } from "../_lib/data";
+import type { Game, Overview } from "../_lib/data";
 import { date, fmt, kick } from "../_lib/format";
+import { signed } from "../_lib/format";
+import { footballModelFactors } from "../_lib/football-model-factors";
 import {
   dashboardFootballMarketComparisons,
   loadLiveFootballForecasts,
@@ -78,11 +80,31 @@ export function footballForecastCsvRows(
   });
 }
 
+/**
+ * Return coefficient context only when it belongs to the forecast edition on
+ * the row. A stale static page can still render the score, but it must not
+ * present an older model's team terms as an explanation for a newer live
+ * estimate.
+ */
+export function dashboardForecastModelFactors(
+  game: Pick<Game, "home_id" | "away_id" | "neutral" | "prediction">,
+  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> | undefined,
+  expectedModelId?: string | null,
+) {
+  if (!game.prediction || !model) return null;
+  if (expectedModelId && game.prediction.model_id && game.prediction.model_id !== expectedModelId) return null;
+  return footballModelFactors(model, game);
+}
+
 /** Replace the first landing-page slice with the current forecast catalog. */
 export default function LiveFootballDashboardForecastTable({
   initialGames,
+  model,
+  expectedModelId,
 }: {
   initialGames: Game[];
+  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  expectedModelId?: string | null;
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<FootballMatchupSort>("date");
@@ -159,16 +181,29 @@ export default function LiveFootballDashboardForecastTable({
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Kickoff</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Kickoff</th><th>Inputs</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = game.prediction!;
             const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
+            const factors = dashboardForecastModelFactors(game, model, expectedModelId);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
                 <td>{date(game.kickoff)}<small>{latestTip(game)}</small></td>
+                <td>
+                  <details className="forecast-factor-details">
+                    <summary>Explain estimate</summary>
+                    {factors ? <dl className="raw-stat-grid">
+                      <div><dt>Margin inputs</dt><dd>{signed(factors.margin.intercept)} intercept · {signed(factors.margin.venue)} venue · {signed(factors.margin.home_team)} home · {signed(factors.margin.away_team)} away</dd></div>
+                      <div><dt>Raw margin</dt><dd>{signed(factors.margin.estimate)} points</dd></div>
+                      <div><dt>Total inputs</dt><dd>{signed(factors.total.intercept)} intercept · {signed(factors.total.venue)} venue · {signed(factors.total.home_team)} home · {signed(factors.total.away_team)} away</dd></div>
+                      <div><dt>Raw total</dt><dd>{fmt(factors.total.estimate)} points</dd></div>
+                    </dl> : <p className="note">Registered inputs are unavailable for this forecast edition.</p>}
+                    <small className="factor-source">Team terms use the registered model coefficients for this game&apos;s home and away IDs; venue is zero at a neutral site. These inputs explain the estimate and do not add a separate forecast.</small>
+                  </details>
+                </td>
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner · {forecastSignal(game)}</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>

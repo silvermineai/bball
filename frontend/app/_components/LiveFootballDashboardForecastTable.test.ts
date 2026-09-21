@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "../_lib/data";
-import { footballForecastCsvRows } from "./LiveFootballDashboardForecastTable";
+import { dashboardForecastModelFactors, footballForecastCsvRows } from "./LiveFootballDashboardForecastTable";
 
 const game: Game = {
   id: "g1",
@@ -49,5 +49,21 @@ describe("football forecast board export", () => {
       62, 4, -8, 16, 48,
     ]);
     expect(rows[0].slice(16)).toEqual([-3.5, null, 7.5, null, "2026-09-10T12:00:00Z", null, null]);
+  });
+
+  it("only explains a forecast with coefficients from its registered edition", () => {
+    const model = {
+      teams: ["away", "home"],
+      margin_coef: [1, 2, 3, 4],
+      total_coef: [40, 2, 5, 6],
+    };
+    expect(dashboardForecastModelFactors(game, model, "edition")).toMatchObject({
+      margin: { estimate: 4 },
+      total: { estimate: 53 },
+    });
+    expect(dashboardForecastModelFactors({
+      ...game,
+      prediction: { ...game.prediction!, model_id: "new-edition" },
+    }, model, "edition")).toBeNull();
   });
 });

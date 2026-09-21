@@ -269,7 +269,7 @@ export default function FootballDashboard() {
     <section className="dashboard-section" aria-labelledby="football-games">
       <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="football-games">Upcoming games &amp; predictions</h2></div><Link href="/football/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
       <p className="dashboard-caption">Every row has a Silvermine score projection, win probability, margin, calibrated range and total. Historical market comparisons stay on the matchup desk when an eligible quote is available.</p>
-      <LiveFootballDashboardForecastTable initialGames={forecasts} />
+      <LiveFootballDashboardForecastTable initialGames={forecasts} model={overview.model} expectedModelId={overview.model.id} />
     </section>
     <div className="dashboard-two-col">
       <section className="dashboard-section" aria-labelledby="football-teams">
