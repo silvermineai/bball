@@ -91,6 +91,27 @@ export function comparisonGapDirection(comparison: Comparison): "home" | "away" 
   return comparison.model_difference > 0 ? "home" : "away";
 }
 
+/** Translate the signed gap into the market-specific comparison a reader needs. */
+export function comparisonGapDirectionLabel(comparison: Comparison): string | null {
+  const direction = comparisonGapDirection(comparison);
+  switch (direction) {
+    case "home":
+      return comparison.market === "h2h"
+        ? "Model home win probability is above the no-vig market probability"
+        : "Model home margin is above the quoted line";
+    case "away":
+      return comparison.market === "h2h"
+        ? "Model home win probability is below the no-vig market probability"
+        : "Model home margin is below the quoted line";
+    case "over":
+      return "Model total is above the quoted total";
+    case "under":
+      return "Model total is below the quoted total";
+    case "neutral":
+      return Number.isFinite(comparison.model_difference) ? "Model matches the quoted value" : null;
+  }
+}
+
 /** Compact, CSV-safe summary used when a matchup has more than one quote. */
 export function comparisonQuoteSummary(comparison: Comparison): string {
   const line = comparison.market === "h2h"

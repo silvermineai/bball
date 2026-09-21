@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparisonGapDirection, comparisonGapLabel, comparisonQuoteSummary, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
+import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel, comparisonQuoteSummary, hasQualifiedMarketComparison, summarizeMarketLines } from "./market-display";
 import type { Comparison } from "./research-types";
 
 const comparison = (market: Comparison["market"], model_difference: number): Comparison => ({
@@ -19,17 +19,21 @@ describe("market comparison display", () => {
     expect(comparisonGapLabel(comparison("totals", -1.25))).toBe("-1.3 pts model total");
     expect(comparisonGapDirection(comparison("spreads", 2.35))).toBe("home");
     expect(comparisonGapDirection(comparison("totals", -1.25))).toBe("under");
+    expect(comparisonGapDirectionLabel(comparison("spreads", 2.35))).toContain("above the quoted line");
+    expect(comparisonGapDirectionLabel(comparison("totals", -1.25))).toContain("below the quoted total");
   });
 
   it("labels moneyline gaps as probability points", () => {
     expect(comparisonGapLabel(comparison("h2h", 0.043))).toBe("+4.3 probability pts");
     expect(comparisonGapDirection(comparison("h2h", -0.043))).toBe("away");
+    expect(comparisonGapDirectionLabel(comparison("h2h", -0.043))).toContain("below the no-vig market probability");
   });
 
   it("does not invent a gap for non-finite values", () => {
     const missing = comparison("spreads", Number.NaN);
     expect(comparisonGapLabel(missing)).toBeNull();
     expect(comparisonGapDirection(missing)).toBe("neutral");
+    expect(comparisonGapDirectionLabel(missing)).toBeNull();
   });
 
   it("keeps a compact quote summary useful in exports", () => {
