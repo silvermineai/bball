@@ -246,6 +246,7 @@ def ingest(conn, sport, events, receipt, games):
         (receipt_id, captured, PROVIDER, encoded(receipt)),
     )
     accepted, rejected = 0, 0
+    rows_with_lines = 0
     for event in events:
         try:
             if not isinstance(event.get("id"), str) or not 1 <= len(event["id"]) <= 150:
@@ -255,6 +256,7 @@ def ingest(conn, sport, events, receipt, games):
             game = match_event(event, games)
             if timestamp(event["commence_time"]) <= captured:
                 raise ValueError("Event already started at capture")
+            event_has_lines = False
             for book in event.get("bookmakers", []):
                 for market in book.get("markets", []):
                     try:
@@ -287,6 +289,7 @@ def ingest(conn, sport, events, receipt, games):
                             ),
                         )
                         accepted += 1
+                        event_has_lines = True
                     except (KeyError, TypeError, ValueError) as error:
                         reject(
                             conn,
@@ -297,6 +300,8 @@ def ingest(conn, sport, events, receipt, games):
                             {"bookmaker": book.get("key"), "market": market.get("key")},
                         )
                         rejected += 1
+            if event_has_lines:
+                rows_with_lines += 1
         except (KeyError, TypeError, ValueError) as error:
             reject(
                 conn,
@@ -306,6 +311,27 @@ def ingest(conn, sport, events, receipt, games):
                 str(error) if isinstance(error, ValueError) else "Malformed event",
             )
             rejected += 1
+    # Keep the receipt self-describing so the market metadata endpoint can
+    # report a configured Odds API capture just like the ESPN and CBBD
+    # collectors. Raw provider responses remain in the private cache; these
+    # bounded counts distinguish no events, no quotes and validation failures.
+    status = (
+        "validated_quotes" if accepted > 0 else
+        "quotes_failed_validation" if rejected > 0 else
+        "no_quotes_published" if events else
+        "no_eligible_summaries"
+    )
+    conn.execute(
+        "UPDATE audit_receipts SET payload_json=? WHERE id=?",
+        (encoded({
+            **receipt,
+            "source_rows": len(events),
+            "rows_with_lines": rows_with_lines,
+            "accepted_markets": accepted,
+            "rejected_records": rejected,
+            "market_status": status,
+        }), receipt_id),
+    )
     conn.commit()
     return {"accepted_markets": accepted, "rejected_records": rejected}
 

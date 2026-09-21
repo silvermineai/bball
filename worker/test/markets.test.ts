@@ -87,6 +87,34 @@ describe("market archive metadata", () => {
     });
   });
 
+  it("surfaces a configured Odds API capture without exposing its provider identity", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 3, pregame: 3 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "The Odds API",
+        sport: "basketball",
+        source_rows: 3,
+        rows_with_lines: 2,
+        accepted_markets: 6,
+        rejected_records: 1,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    const body = await response.json() as Record<string, unknown>;
+    expect(body).toMatchObject({
+      research_capture: {
+        source_rows: 3,
+        rows_with_lines: 2,
+        accepted_markets: 6,
+        rejected_records: 1,
+        market_status: "validated_quotes",
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("The Odds API");
+  });
+
   it("does not label postgame ledger observations as pregame coverage", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },

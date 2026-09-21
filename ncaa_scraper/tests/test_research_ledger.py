@@ -287,6 +287,15 @@ class LedgerTests(unittest.TestCase):
         self.c.execute("UPDATE audit_markets SET captured_at=?", (timestamp(END),))
         self.assertEqual(self.report()["games"][0]["comparisons"], [])
 
+    def test_odds_capture_receipt_keeps_bounded_diagnostics(self):
+        receipt = {"captured_at": T1, "sport": "basketball", "provider": "The Odds API"}
+        result = ingest(self.c, "basketball", [], receipt, [])
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 0})
+        payload = json.loads(self.c.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(payload["source_rows"], 0)
+        self.assertEqual(payload["rows_with_lines"], 0)
+        self.assertEqual(payload["market_status"], "no_eligible_summaries")
+
     def test_push_and_away_cover_signs(self):
         ingest(self.c, "football", [event()], {"captured_at": T1}, [schedule()])
         observe_state(self.c, "football", "123", state(True, 23, 20), END)
