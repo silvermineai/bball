@@ -31,7 +31,11 @@ def get_json(base_url: str, path: str, attempts: int = 4) -> dict:
     # Cloudflare can cache the bounded static fallback for the audit endpoint
     # after a transient D1 timeout. A probe key forces the monitor to observe
     # the live receipt catalog instead of validating that stale fallback.
-    if path == "/api/basketball/research/coverage?audit=1":
+    # The publication monitor adds a distinct publication_check key to the
+    # audit URL. Treat that form the same as the bare audit path: without a
+    # fresh probe, an edge can hand back a cached partial D1 validation result
+    # even though the next uncached scan is complete.
+    if path.startswith("/api/basketball/research/coverage?audit=1") and "probe=" not in path:
         path = f"{path}&probe={time.time_ns()}"
     url = f"{base_url.rstrip('/')}{path}"
     last_error: Exception | None = None
