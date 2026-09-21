@@ -33,6 +33,29 @@ export type LiveNCAAPlayerRow = {
   tpm: number | null;
   fta: number | null;
   ftm: number | null;
+  /** Additional source fields retained by the player-season publisher. */
+  possessions?: number | null;
+  off_poss?: number | null;
+  def_poss?: number | null;
+  usage_events?: number | null;
+  team_usage_events?: number | null;
+  team_possessions?: number | null;
+  rim_attempts?: number | null;
+  rim_makes?: number | null;
+  mid_attempts?: number | null;
+  mid_makes?: number | null;
+  putback_attempts?: number | null;
+  putback_makes?: number | null;
+  transition_points?: number | null;
+  unassisted_total_attempts?: number | null;
+  unassisted_attempts?: number | null;
+  unassisted_points?: number | null;
+  half_points?: number | null;
+  half_fga?: number | null;
+  half_fta?: number | null;
+  rapm_net?: number | null;
+  orapm?: number | null;
+  drapm?: number | null;
   value: number | null;
   rank: number;
 };
@@ -65,6 +88,87 @@ export function playerCoreStatCoverage(row: LiveNCAAPlayerRow) {
     return typeof value === "number" && Number.isFinite(value);
   }).length;
   return { observed, total: coreStatFields.length };
+}
+
+export type RecordedPlayerDetail = {
+  label: string;
+  value: number;
+  percent?: boolean;
+  decimals?: number;
+};
+
+export type RecordedPlayerDetailGroup = {
+  key: string;
+  label: string;
+  items: RecordedPlayerDetail[];
+};
+
+const recordedNumber = (value: number | null | undefined): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const recordedPercent = (made: number | null | undefined, attempts: number | null | undefined): number | null =>
+  recordedNumber(made) && recordedNumber(attempts) && attempts > 0 ? (100 * made) / attempts : null;
+
+/**
+ * Expose the richer publisher fields behind each ranked row. The ranking
+ * table stays compact, while a reader can inspect the source-recorded shot,
+ * possession and impact context for the same exact player ID. Missing fields
+ * are omitted; no unavailable value is rendered as zero.
+ */
+export function playerRecordedDetailGroups(row: LiveNCAAPlayerRow): RecordedPlayerDetailGroup[] {
+  const production: RecordedPlayerDetail[] = [];
+  const add = (items: RecordedPlayerDetail[], label: string, value: number | null | undefined, options: Pick<RecordedPlayerDetail, "percent" | "decimals"> = {}) => {
+    if (recordedNumber(value)) items.push({ label, value, ...options });
+  };
+  add(production, "Points", row.points);
+  add(production, "Rebounds", row.rebounds);
+  add(production, "Offensive rebounds", row.offensive_rebounds);
+  add(production, "Defensive rebounds", row.defensive_rebounds);
+  add(production, "Assists", row.assists);
+  add(production, "Steals", row.steals);
+  add(production, "Blocks", row.blocks);
+  add(production, "Fouls", row.fouls);
+  add(production, "Turnovers", row.turnovers);
+  add(production, "Field goals made", row.fgm);
+  add(production, "Field goals attempted", row.fga);
+  add(production, "3-pointers made", row.tpm);
+  add(production, "3-pointers attempted", row.tpa);
+  add(production, "Free throws made", row.ftm);
+  add(production, "Free throws attempted", row.fta);
+
+  const shooting: RecordedPlayerDetail[] = [];
+  const addSplit = (label: string, makes: number | null | undefined, attempts: number | null | undefined) => {
+    add(shooting, `${label} attempts`, attempts);
+    add(shooting, `${label} makes`, makes);
+    add(shooting, `${label} accuracy`, recordedPercent(makes, attempts), { percent: true, decimals: 1 });
+  };
+  addSplit("Rim", row.rim_makes, row.rim_attempts);
+  addSplit("Midrange", row.mid_makes, row.mid_attempts);
+  addSplit("Putback", row.putback_makes, row.putback_attempts);
+  add(shooting, "Transition points", row.transition_points);
+  add(shooting, "Unassisted points", row.unassisted_points);
+  add(shooting, "Unassisted attempts", row.unassisted_attempts ?? row.unassisted_total_attempts);
+  add(shooting, "Half-court points", row.half_points);
+  add(shooting, "Half-court FGA", row.half_fga);
+  add(shooting, "Half-court FTA", row.half_fta);
+
+  const context: RecordedPlayerDetail[] = [];
+  add(context, "Offensive possessions", row.off_poss ?? row.possessions);
+  add(context, "Defensive possessions", row.def_poss);
+  add(context, "Usage events", row.usage_events);
+  add(context, "Team usage events", row.team_usage_events);
+  add(context, "Team possessions", row.team_possessions);
+  add(context, "Usage share", recordedPercent(row.usage_events, row.team_usage_events), { percent: true, decimals: 1 });
+  add(context, "Possession share", recordedPercent(row.possessions ?? row.off_poss, row.team_possessions), { percent: true, decimals: 1 });
+  add(context, "Net RAPM", row.rapm_net, { decimals: 2 });
+  add(context, "Offensive RAPM", row.orapm, { decimals: 2 });
+  add(context, "Defensive RAPM", row.drapm, { decimals: 2 });
+
+  return [
+    { key: "production", label: "Recorded production", items: production },
+    { key: "shooting", label: "Shot and play context", items: shooting },
+    { key: "impact", label: "Possession and impact context", items: context },
+  ].filter((group) => group.items.length > 0);
 }
 
 export function validatePlayerExportPage(
@@ -339,7 +443,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         <div><span className="eyebrow">LIVE PLAYER DATA</span><h3 id="live-ncaa-player-stats">Division I player production</h3></div>
         <Link href={`/basketball/ncaa-rankings/?season=${season}&metric=${metric}`}>Open full ranking table →</Link>
       </div>
-      <p className="dashboard-caption">Current archive rows with a five-game and 200-minute floor. The selected field orders the table; the surrounding production columns stay attached for context.</p>
+      <p className="dashboard-caption">Current archive rows with a five-game and 200-minute floor. The selected field orders the table; the surrounding production columns stay attached for context. Expand “More recorded stats” under any player for source-retained shot, possession and impact fields.</p>
       <div className="toolbar" style={{ marginBottom: 16 }}>
         <label className="control"><span>SEARCH PLAYER / TEAM</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or team" aria-label="Search player or team" /></label>
         <label className="control"><span>RANK BY</span><select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.label} · {candidate.description}</option>)}</select></label>
@@ -356,9 +460,10 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
             <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">MIN</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">OR/G</th><th className="numeric">DR/G</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">DD</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th className="numeric">Selected</th></tr></thead>
             <tbody>{result.rows.slice(0, rowLimit).map((row) => {
               const coverage = playerCoreStatCoverage(row);
+              const detailGroups = playerRecordedDetailGroups(row);
               return <tr key={`${row.player_id}-${row.team_name || ""}`}>
                 <td className="rank-number">{row.rank}</td>
-                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small></th>
+                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small>{detailGroups.length > 0 && <details className="ranking-recorded-details"><summary>More recorded stats</summary>{detailGroups.map((group) => <div key={group.key}><small><strong>{group.label}</strong></small><div className="ranking-recorded-grid">{group.items.map((item) => <span key={item.label}><small>{item.label}</small><b>{fmt(item.value, item.decimals ?? 0)}{item.percent ? "%" : ""}</b></span>)}</div></div>)}</details>}</th>
                 <td>{row.team_name || "—"}</td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>

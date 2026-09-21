@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveFieldGoalPercent, playerCoreStatCoverage, playerCsvHeaders, playerCsvRows, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
+import { effectiveFieldGoalPercent, playerCoreStatCoverage, playerCsvHeaders, playerCsvRows, playerRecordedDetailGroups, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
 
 const row: LiveNCAAPlayerRow = {
   player_id: "p-1",
@@ -77,5 +77,35 @@ describe("homepage NCAA player export", () => {
     const page = { total: 2, page_size: 2, rows: [row] };
     expect(validatePlayerExportPage(page, 2, 2, 0, 1)).toEqual([row]);
     expect(() => validatePlayerExportPage({ ...page, rows: [] }, 2, 2, 0, 1)).not.toThrow();
+  });
+
+  it("keeps richer source context behind the compact ranked row", () => {
+    const groups = playerRecordedDetailGroups({
+      ...row,
+      possessions: 400,
+      team_possessions: 2000,
+      usage_events: 120,
+      team_usage_events: 600,
+      rim_makes: 24,
+      rim_attempts: 40,
+      mid_makes: 12,
+      mid_attempts: 30,
+      rapm_net: 2.345,
+    });
+    expect(groups.map((group) => group.key)).toEqual(["production", "shooting", "impact"]);
+    expect(groups.find((group) => group.key === "shooting")?.items).toEqual(expect.arrayContaining([
+      { label: "Rim accuracy", value: 60, percent: true, decimals: 1 },
+    ]));
+    expect(groups.find((group) => group.key === "impact")?.items).toEqual(expect.arrayContaining([
+      { label: "Usage share", value: 20, percent: true, decimals: 1 },
+      { label: "Possession share", value: 20, percent: true, decimals: 1 },
+      { label: "Net RAPM", value: 2.345, decimals: 2 },
+    ]));
+  });
+
+  it("does not invent detail values when source denominators are missing", () => {
+    const groups = playerRecordedDetailGroups({ ...row, rim_makes: 3, rim_attempts: null, usage_events: 2, team_usage_events: null });
+    expect(groups.find((group) => group.key === "shooting")?.items.some((item) => item.label === "Rim accuracy")).toBe(false);
+    expect(groups.find((group) => group.key === "impact")?.items.some((item) => item.label === "Usage share")).toBe(false);
   });
 });
