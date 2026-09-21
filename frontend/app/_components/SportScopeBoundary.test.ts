@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isPublishedBoundary, scopeBoundaryView } from "./SportScopeBoundary";
+import { isPublishedBoundary, isWomensDivisionDesk, scopeBoundaryView } from "./SportScopeBoundary";
 
 describe("sport scope boundary", () => {
   it("does not render the default men's page before the URL scope hydrates", () => {
     expect(scopeBoundaryView(false, "basketball", { gender: "women", division: "1" }, "/basketball/rankings")).toBe("loading");
   });
 
-  it("renders the unqualified men's default for static reading routes", () => {
-    expect(scopeBoundaryView(false, "basketball", { gender: "men", division: "1" }, "/basketball/briefs/401", false)).toBe("published");
+  it("keeps the unqualified route behind the scope shell until hydration", () => {
+    expect(scopeBoundaryView(false, "basketball", { gender: "men", division: "1" }, "/basketball/briefs/401", false)).toBe("loading");
   });
 
   it.each([
@@ -26,9 +26,26 @@ describe("sport scope boundary", () => {
   });
 
   it("lets the women's Division tab render its scope readiness desk", () => {
+    expect(isWomensDivisionDesk("/basketball/wbb-readiness")).toBe(true);
+    expect(isWomensDivisionDesk("/basketball/wbb-readiness/")).toBe(true);
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/wbb-readiness/")).toBe(false);
     expect(isPublishedBoundary("basketball", { gender: "women", division: "2" }, "/basketball/wbb-readiness/")).toBe(false);
     expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "3" }, "/basketball/wbb-readiness/")).toBe("published");
+  });
+
+  it.each(["/basketball/ratings", "/basketball/teams", "/basketball/players", "/basketball/rankings", "/basketball/games"]) (
+    "keeps women's D2/D3 %s behind the readiness boundary",
+    (pathname) => {
+      for (const division of ["2", "3"] as const) {
+        expect(isPublishedBoundary("basketball", { gender: "women", division }, pathname)).toBe(true);
+        expect(scopeBoundaryView(true, "basketball", { gender: "women", division }, pathname)).toBe("unavailable");
+      }
+    },
+  );
+
+  it("does not treat similarly named routes as the women's division desk", () => {
+    expect(isWomensDivisionDesk("/basketball/wbb-readiness-preview")).toBe(false);
+    expect(isWomensDivisionDesk("/basketball/wbb-readiness-old/" )).toBe(false);
   });
 
   it("allows published men’s NCAA D2/D3 archives", () => {

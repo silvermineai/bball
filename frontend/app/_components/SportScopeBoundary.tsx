@@ -25,11 +25,22 @@ const FOOTBALL_DIVISION_ARCHIVES = [
   "/football/matchups",
 ];
 
+/**
+ * The women's division desk is the only route whose children are allowed to
+ * resolve the women's D2/D3 scope themselves. Every other route stays behind
+ * ScopeUnavailable, where the lower-division readiness ledger is rendered.
+ * Keeping this check in one place prevents a new production route from
+ * accidentally becoming a lower-division data escape hatch.
+ */
+export function isWomensDivisionDesk(pathname: string) {
+  return pathname === "/basketball/wbb-readiness" || pathname.startsWith("/basketball/wbb-readiness/");
+}
+
 export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pathname: string) {
   // The women's Division tab is itself the published scope desk. Let its
   // router render the requested D1/D2/D3 readiness surface instead of
   // replacing it with the generic unavailable snapshot.
-  if (sport === "basketball" && scope.gender === "women" && (pathname === "/basketball/wbb-readiness" || pathname.startsWith("/basketball/wbb-readiness/"))) {
+  if (sport === "basketball" && scope.gender === "women" && isWomensDivisionDesk(pathname)) {
     return false;
   }
   if (scope.gender === "women") return true;
@@ -56,11 +67,13 @@ export function scopeBoundaryView(
   pathname: string,
   explicitScope = true,
 ): ScopeBoundaryView {
-  // An unqualified URL is the published men's Division I default. It is safe
-  // to render that default on the server and keeps static reading archives
-  // capturable. Explicit gender/division URLs stay behind the loading shell
-  // until their requested scope has been resolved.
-  if (!hydrated && explicitScope) return "loading";
+  // The site is statically exported, so the server cannot see query
+  // parameters. Rendering children before hydration would put men's D1 rows
+  // into the initial HTML for a women’s D2/D3 URL, even though the client
+  // would replace them moments later. Hold every scope behind the shell until
+  // the browser has resolved the URL; data integrity is more important than
+  // capturing an unqualified route's page body in the static response.
+  if (!hydrated) return "loading";
   return isPublishedBoundary(sport, scope, pathname) ? "unavailable" : "published";
 }
 
