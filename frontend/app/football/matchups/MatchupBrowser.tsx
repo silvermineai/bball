@@ -68,7 +68,8 @@ export default function MatchupBrowser({
     [liveError, setLiveError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, LiveFootballMarketComparisonSet> | null>(null),
     [liveMarketError, setLiveMarketError] = useState(""),
-    [recruitingContext, setRecruitingContext] = useState<Map<string, FootballRecruitingTeam> | null>(null);
+    [recruitingContext, setRecruitingContext] = useState<Map<string, FootballRecruitingTeam> | null>(null),
+    [scopeHydrated, setScopeHydrated] = useState(false);
   const activeGames = liveGames || games;
   const scopedGames = activeGames.filter((game) => matchesFootballMatchupDivision(game, division));
   const filteredRows = scopedGames.filter(
@@ -147,6 +148,14 @@ export default function MatchupBrowser({
       : current.length >= 12 ? current : [...current, id]);
   };
 
+  // This app is statically exported, so the server cannot read the query
+  // string. Hold the full desk until the browser resolves division and other
+  // filters; otherwise the initial HTML can expose the D1 slate on a D2/D3
+  // URL before the client applies its scope.
+  useEffect(() => {
+    setScopeHydrated(true);
+  }, []);
+
   useEffect(() => {
     const url = new URL(window.location.href);
     if (query.trim()) url.searchParams.set("team", query.trim());
@@ -209,6 +218,10 @@ export default function MatchupBrowser({
       .catch(() => { if (!controller.signal.aborted) setRecruitingContext(null); });
     return () => controller.abort();
   }, []);
+  if (!scopeHydrated) {
+    return <section className="paper-panel" aria-busy="true"><p className="empty" role="status">Resolving the requested matchup scope…</p></section>;
+  }
+
   return (
     <>
       <div className="toolbar">
