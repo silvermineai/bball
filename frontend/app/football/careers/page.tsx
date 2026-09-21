@@ -1,4 +1,5 @@
 import CareerBrowser from "./CareerBrowser";
+import ScopedDashboard from "../../_components/ScopedDashboard";
 
 export const metadata = {
   title: "College football player careers across seasons",
@@ -7,5 +8,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <><div className="page-title"><div className="eyebrow">Football player archive / Cross-season index</div><h1>Follow the player<br /><em>through the seasons.</em></h1><p>Search the identified source archive once, then compare a player&apos;s recorded workload and category-specific production across seasons. Passing, rushing and receiving remain separate source lenses; no composite EPA is invented.</p></div><CareerBrowser /></>;
+  return <ScopedDashboard sport="football"><div className="page-title"><div className="eyebrow">Football player archive / Cross-season index</div><h1>Follow the player<br /><em>through the seasons.</em></h1><p>Search the identified source archive once, then compare a player&apos;s recorded workload and category-specific production across seasons. Passing, rushing and receiving remain separate source lenses; no composite EPA is invented.</p></div><CareerBrowser /></ScopedDashboard>;
 }

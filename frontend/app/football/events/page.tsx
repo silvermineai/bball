@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import EventBrowser from "./EventBrowser";
 import type { EventIndex } from "../../_lib/football-events";
+import ScopedDashboard from "../../_components/ScopedDashboard";
 export const metadata = {
   title: "Football defense and special-teams event notebook",
   description:
@@ -19,7 +20,7 @@ export default function Page() {
   );
   const records = index.editions.reduce((n, e) => n + e.coverage.records, 0);
   return (
-    <>
+    <ScopedDashboard sport="football">
       <div className="page-title">
         <div className="eyebrow">
           Beyond the offense / Source event notebook
@@ -74,6 +75,6 @@ export default function Page() {
           these releases.
         </p>
       </section>
-    </>
+    </ScopedDashboard>
   );
 }
