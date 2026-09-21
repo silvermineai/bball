@@ -2,7 +2,7 @@
   "schema_version": 2,
   "sport": "basketball",
   "gender": "women",
-  "generated_at": "2026-09-20T21:37:33.467058Z",
+  "generated_at": "2026-09-21T05:45:45.206456Z",
   "source": {
     "release": "SportsDataverse women’s college basketball bulk release",
     "schedule_receipt": {
@@ -340,7 +340,7 @@
       "source_url": "https://www.ncaa.com/stats/basketball-women/d2",
       "evidence": {
         "capture_present": true,
-        "rows_published": 4841,
+        "rows_published": 5241,
         "receipt_verified": true
       },
       "required": [
@@ -364,11 +364,11 @@
       "reason": "The retained release has no complete Division II player/team tables or explicit D2 label.",
       "source_native_leaderboards": {
         "status": "published_source_native",
-        "individual_rows": 1167,
-        "team_rows": 1250,
-        "individual_statistics": 24,
-        "team_statistics": 25,
-        "receipt_count": 100,
+        "individual_rows": 1267,
+        "team_rows": 1300,
+        "individual_statistics": 26,
+        "team_statistics": 26,
+        "receipt_count": 108,
         "identity_status": "source_names_and_team_slugs_only",
         "through_games": "Saturday, March 28, 2026"
       }
@@ -379,11 +379,11 @@
       "reason": "The retained release has no complete Division III player/team tables or explicit D3 label.",
       "source_native_leaderboards": {
         "status": "published_source_native",
-        "individual_rows": 1174,
-        "team_rows": 1250,
-        "individual_statistics": 24,
-        "team_statistics": 25,
-        "receipt_count": 100,
+        "individual_rows": 1274,
+        "team_rows": 1400,
+        "individual_statistics": 26,
+        "team_statistics": 28,
+        "receipt_count": 108,
         "identity_status": "source_names_and_team_slugs_only",
         "through_games": "Saturday, March 21, 2026"
       }
