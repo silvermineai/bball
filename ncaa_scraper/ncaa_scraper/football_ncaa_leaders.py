@@ -268,6 +268,14 @@ def build_leaders(
                     "records": item["records"],
                     "games": len(item["games"]),
                     "primary": display_number(primary),
+                    # This is descriptive context derived only from the
+                    # retained source rows.  Keep it separate from `rank`,
+                    # which remains ordered by the source-category total.
+                    "primary_per_game": (
+                        display_number(primary / len(item["games"]))
+                        if item["games"]
+                        else None
+                    ),
                     "metrics": metrics,
                 }
             )
@@ -280,6 +288,8 @@ def build_leaders(
                 "label": spec["label"],
                 "primary": spec["primary"],
                 "primary_label": spec["primary_label"],
+                "rank_basis": "source-category total",
+                "rate_basis": "source-category total divided by observed game IDs",
                 "leaders": rows[:limit],
             }
         )

@@ -8,6 +8,7 @@ type Leader = {
   records: number;
   games: number;
   primary: number;
+  primary_per_game?: number | null;
   rank: number;
   metrics: Record<string, number>;
 };
@@ -17,6 +18,8 @@ type Category = {
   label: string;
   primary: string;
   primary_label: string;
+  rank_basis?: string;
+  rate_basis?: string;
   leaders: Leader[];
 };
 
@@ -149,6 +152,9 @@ export default function NCAALeaders({ release }: { release: Release }) {
               <div>
                 <div className="eyebrow">{category.label}</div>
                 <h2>{category.primary_label}</h2>
+                <p className="note">
+                  Rank: {category.rank_basis || "source-category total"}. Rate context: {category.rate_basis || "unavailable"}.
+                </p>
               </div>
               <Link href={"/football/source-stats/?dataset=ncaa_player_stats&season=" + release.season}>
                 Raw rows ↗
@@ -160,7 +166,8 @@ export default function NCAALeaders({ release }: { release: Release }) {
                   <tr>
                     <th>Rank</th>
                     <th>Source name / team</th>
-                    <th className="numeric">{category.primary_label}</th>
+                    <th className="numeric">{category.primary_label} total</th>
+                    <th className="numeric">{category.primary_label} / game</th>
                     <th className="numeric">Games</th>
                     <th>Other retained fields</th>
                   </tr>
@@ -175,6 +182,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
                         <small>Team ID {leader.team_id} · <Link href={`/football/source-stats/?dataset=ncaa_player_stats&season=${release.season}&team=${encodeURIComponent(leader.team_id)}`}>Open source rows ↗</Link></small>
                       </th>
                       <td className="numeric"><strong>{format(leader.primary)}</strong></td>
+                      <td className="numeric">{leader.primary_per_game == null ? "—" : format(leader.primary_per_game)}</td>
                       <td className="numeric">{leader.games}<small>{leader.records} source rows</small></td>
                       <td>
                         {Object.entries(leader.metrics)

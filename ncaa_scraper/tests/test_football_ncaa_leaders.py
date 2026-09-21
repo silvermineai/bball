@@ -35,8 +35,19 @@ class FootballNCAALeaderTests(unittest.TestCase):
         self.assertEqual(len(rushing["leaders"]), 1)
         self.assertEqual(rushing["leaders"][0]["name"], "A. Runner")
         self.assertEqual(rushing["leaders"][0]["primary"], 200)
+        self.assertEqual(rushing["leaders"][0]["primary_per_game"], 100)
         self.assertEqual(rushing["leaders"][0]["games"], 2)
         self.assertEqual(rushing["leaders"][0]["metrics"]["rush_tds"], 3)
+        self.assertEqual(rushing["rank_basis"], "source-category total")
+        self.assertIn("observed game IDs", rushing["rate_basis"])
+
+    def test_rate_context_is_unavailable_without_a_source_game_id(self):
+        self.add("1", "rushing", "10", "", {"name": "No Game", "position": "RB", "number": "1", "rush_yds_gained": "80", "category": "rushing"})
+        result = build_leaders(self.conn, 2025)
+        rushing = next(item for item in result["categories"] if item["key"] == "rushing")
+        self.assertEqual(rushing["leaders"][0]["primary"], 80)
+        self.assertEqual(rushing["leaders"][0]["games"], 0)
+        self.assertIsNone(rushing["leaders"][0]["primary_per_game"])
 
     def test_keeps_categories_separate(self):
         self.add("1", "passing", "10", "g1", {"name": "Dual", "position": "QB", "number": "1", "pass_yards": "100", "category": "passing"})
