@@ -2,6 +2,39 @@ import { describe, expect, it, vi } from "vitest";
 import { metricExpression, ncaaPlayerRankings, volumeColumn } from "../src/ncaa-player-rankings";
 
 describe("NCAA player rankings availability", () => {
+  it("exposes the retained NCAA double-double count as a ranking metric", () => {
+    expect(metricExpression("dbl_dbl")).toBe("double_doubles");
+    expect(volumeColumn("dbl_dbl")).toBeNull();
+  });
+
+  it("uses exact published double-double values and leaves missing values out", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 unavailable"); });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { division: 1, player_id: 7, team_ncaa_id: 42, name: "Leader", team_name: "Example U", games: 20, mins: 600, dbl_dbl: 12 },
+        { division: 1, player_id: 8, team_ncaa_id: 43, name: "Missing", team_name: "Example V", games: 20, mins: 600, dbl_dbl: null },
+        { division: 1, player_id: 9, team_ncaa_id: 44, name: "Runner up", team_name: "Example W", games: 20, mins: 600, dbl_dbl: 4 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=dbl_dbl&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      source: "published_fallback",
+      metric: "dbl_dbl",
+      total: 2,
+      direction: "desc",
+      rows: [
+        { player_id: "7", value: 12, rank: 1, double_doubles: 12 },
+        { player_id: "9", value: 4, rank: 2, double_doubles: 4 },
+      ],
+    });
+  });
+
   it("defines half-court true shooting from retained context fields and qualifies by half-court FGA", () => {
     expect(metricExpression("half_ts")).toBe("CASE WHEN (half_fga + 0.475 * half_fta) > 0 THEN 100.0 * half_points / (2 * (half_fga + 0.475 * half_fta)) ELSE NULL END");
     expect(volumeColumn("half_ts")).toBe("half_fga");
