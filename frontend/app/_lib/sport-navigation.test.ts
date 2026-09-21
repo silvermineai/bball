@@ -66,7 +66,7 @@ describe("sport navigation", () => {
     expect(divisionAwareNavHref("mens-basketball", "1", rankings)).toBe("/basketball/ncaa-rankings/");
     expect(divisionAwareNavHref("mens-basketball", "2", rankings)).toBe("/basketball/ncaa-rankings/");
     expect(divisionAwareNavHref("mens-basketball", "3", rankings)).toBe("/basketball/ncaa-rankings/");
-    expect(divisionAwareNavHref("womens-basketball", "1", rankings)).toBe(rankings.href);
+    expect(divisionAwareNavHref("womens-basketball", "1", rankings)).toBe("/basketball/ncaa-rankings/");
   });
 
   it("keeps the core stat tabs consistent across each sport tab", () => {

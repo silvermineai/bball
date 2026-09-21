@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublishedBoundary, isWomensDivisionDesk, scopeBoundaryView } from "./SportScopeBoundary";
+import { isPublishedBoundary, isWomensDivisionDesk, isWomensPlayerRankingDesk, scopeBoundaryView } from "./SportScopeBoundary";
 
 describe("sport scope boundary", () => {
   it("does not render the default men's page before the URL scope hydrates", () => {
@@ -23,6 +23,14 @@ describe("sport scope boundary", () => {
   it("keeps women’s basketball isolated on every route", () => {
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/players")).toBe(true);
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/recruiting/")).toBe(true);
+    expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/ncaa-rankings/")).toBe(false);
+  });
+
+  it("publishes the women’s D1 source-native ranking desk directly", () => {
+    expect(isWomensPlayerRankingDesk("/basketball/ncaa-rankings")).toBe(true);
+    expect(isWomensPlayerRankingDesk("/basketball/ncaa-rankings/")).toBe(true);
+    expect(isWomensPlayerRankingDesk("/basketball/ncaa-rankings-preview")).toBe(false);
+    expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "1" }, "/basketball/ncaa-rankings/")).toBe("published");
   });
 
   it("lets the women's Division tab render its scope readiness desk", () => {

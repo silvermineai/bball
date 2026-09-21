@@ -354,6 +354,9 @@ export default function NcaaRankings() {
     }
   };
   if (!scope) return <p className="empty" role="status">Reading the requested ranking scope…</p>;
+  // NcaaCurrentLeaders owns the source-native women’s D1 board on this route.
+  // Do not mount the men’s advanced ranking fetch or show a second board.
+  if (scope.gender === "women") return null;
   if (!basketballScopeAvailable(scope)) return <RankingScopeBoundary scope={scope} />;
   return <>
     <div className="page-title">

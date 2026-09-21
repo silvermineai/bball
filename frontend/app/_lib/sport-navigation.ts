@@ -118,6 +118,9 @@ export function divisionAwareNavHref(sport: Sport, division: Division, item: Spo
   if (sport === "mens-basketball" && item.label === "Rankings") {
     return "/basketball/ncaa-rankings/";
   }
+  if (sport === "womens-basketball" && item.label === "Rankings") {
+    return "/basketball/ncaa-rankings/";
+  }
   return item.href;
 }
 

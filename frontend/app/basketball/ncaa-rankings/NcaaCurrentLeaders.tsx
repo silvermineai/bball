@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { parseSportScope, scopeLabel, type SportScope } from "../../_lib/sport-scope";
 import { lowerDivisionPlayerHref } from "../../_lib/division-archive-links";
+import WomensBasketballRankings from "../../_components/WomensBasketballRankings";
 
 export type IndividualPlayer = {
   player_id: number;
@@ -118,7 +119,10 @@ export default function NcaaCurrentLeaders({ players }: { players: IndividualPla
   }, []);
 
   if (!scope) return <p className="empty" role="status">Reading the requested ranking scope…</p>;
-  if (scope.gender === "women") return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">SCOPE NOT PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)}</h2><p>Women&apos;s basketball rows are not imported into this ranking edition. No men&apos;s rows are substituted.</p><Link className="button" href="/basketball/ncaa/?division=1">Open the published men&apos;s archive</Link></section>;
+  if (scope.gender === "women") {
+    if (scope.division === "1") return <WomensBasketballRankings />;
+    return <section className="scope-unavailable" aria-labelledby="ranking-scope-title"><div className="eyebrow">SCOPE NOT PUBLISHED</div><h2 id="ranking-scope-title">{scopeLabel(scope)}</h2><p>Women&apos;s Division {scope.division} source-native player rankings are not published in this edition. No Division I rows are substituted.</p><Link className="button" href={`/basketball/wbb-readiness/?division=${scope.division}`}>Open the women&apos;s division desk</Link></section>;
+  }
 
   const division = scope.division;
   const leaders = currentScoringLeaders(players, division);

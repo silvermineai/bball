@@ -37,11 +37,22 @@ export function isWomensDivisionDesk(pathname: string) {
   return pathname === "/basketball/wbb-readiness" || pathname.startsWith("/basketball/wbb-readiness/");
 }
 
+/** Women’s D1 rankings have a source-native player board of their own. */
+export function isWomensPlayerRankingDesk(pathname: string) {
+  return pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/");
+}
+
 export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pathname: string) {
   // The women's Division tab is itself the published scope desk. Let its
   // router render the requested D1/D2/D3 readiness surface instead of
   // replacing it with the generic unavailable snapshot.
   if (sport === "basketball" && scope.gender === "women" && isWomensDivisionDesk(pathname)) {
+    return false;
+  }
+  // Keep the source-native women’s D1 player board on its own route. The page
+  // component renders only the women’s release after it resolves the URL;
+  // this prevents the generic unavailable shell from hiding a valid edition.
+  if (sport === "basketball" && scope.gender === "women" && scope.division === "1" && isWomensPlayerRankingDesk(pathname)) {
     return false;
   }
   if (scope.gender === "women") return true;
