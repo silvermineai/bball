@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { rankRecruitingProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
+import { rankRecruitingProduction, summarizeRecruitingDestinationProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 import type { RecruitingPerson } from "../../_lib/recruiting";
 
@@ -31,6 +31,7 @@ function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankR
 export default function TransferProductionBoard({ people, programs, edition, reviewedAt }: { people: RecruitingPerson[]; programs: ProspectProgram[]; edition: string; reviewedAt: string }) {
   const rows = rankRecruitingProduction(people);
   const ranked = rows.filter((row) => row.score != null).slice(0, 20);
+  const destinations = summarizeRecruitingDestinationProduction(people);
   const eligible = rows.length;
   const priorSeasons = [...new Set(ranked.map((row) => row.stats.season))].sort((a, b) => a - b);
   if (!eligible) return null;
@@ -50,6 +51,11 @@ export default function TransferProductionBoard({ people, programs, edition, rev
       <thead><tr><th>Rank</th><th>Player</th><th>Recorded destination</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th><th className="numeric">Index</th></tr></thead>
       <tbody>{ranked.map((row, index) => <ProductionRow key={row.stats.id} row={row} rank={index + 1} programs={programs} />)}</tbody>
     </table></div>
+    {destinations.length > 0 && <section style={{ marginTop: 24 }} aria-labelledby="transfer-destination-summary">
+      <div className="section-heading" style={{ marginBottom: 10 }}><div><div className="eyebrow">Destination rollup / exact source IDs</div><h3 id="transfer-destination-summary">How much recorded production is arriving at each destination?</h3></div><span className="note">Game-weighted rates</span></div>
+      <p className="note">Each destination includes only reviewed transfer rows with an exact source player ID and at least 10 recorded games. Rates are weighted by games among the retained rows; they are context for the incoming class, not a lineup projection.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Destination</th><th className="numeric">Additions</th><th className="numeric">Prior programs</th><th className="numeric">Recorded GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th></tr></thead><tbody>{destinations.map((row) => { const destination = destinationName(row.teamId, programs); return <tr key={row.teamId}><th scope="row">{destination ? <Link href={`/basketball/programs/${encodeURIComponent(row.teamId)}/`}>{destination}</Link> : "Destination unavailable"}<small>{destination ? "Exact program directory match" : `Team ID ${row.teamId}`}</small></th><td className="numeric"><strong>{row.additions}</strong></td><td className="numeric">{row.priorPrograms}</td><td className="numeric">{row.games}</td><td className="numeric">{number(row.weightedMpg)}</td><td className="numeric"><strong>{number(row.weightedPpg)}</strong></td><td className="numeric">{number(row.weightedRpg)}</td><td className="numeric">{number(row.weightedApg)}</td><td className="numeric">{percent(row.weightedTs)}</td></tr>; })}</tbody></table></div>
+    </section>}
     <p className="note" style={{ marginTop: 12 }}>Retained release edition <code>{edition}</code>. Rows require at least 10 recorded games and four non-constant source fields. The rank is cohort-relative and should be read alongside the full player stat record.</p>
   </section>;
 }

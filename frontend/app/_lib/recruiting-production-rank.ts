@@ -32,6 +32,18 @@ export type RecruitingProductionRankOptions = {
   minFields?: number;
 };
 
+export type RecruitingDestinationProductionSummary = {
+  teamId: string;
+  additions: number;
+  priorPrograms: number;
+  games: number;
+  weightedMpg: number | null;
+  weightedPpg: number | null;
+  weightedRpg: number | null;
+  weightedApg: number | null;
+  weightedTs: number | null;
+};
+
 const validSourceId = (value: string) => /^\d{1,15}$/.test(value);
 const finiteNonnegative = (value: number | null | undefined): value is number =>
   value != null && Number.isFinite(value) && value >= 0;
@@ -101,3 +113,43 @@ export function rankRecruitingProduction(
     });
 }
 
+/**
+ * Roll the same exact-ID rows up to their recorded destination. Rates are
+ * weighted by recorded games, and a missing rate remains unavailable. This
+ * gives staff a destination workload view without summing incomparable
+ * per-game values or treating an absent stat as zero.
+ */
+export function summarizeRecruitingDestinationProduction(
+  people: RecruitingPerson[],
+  options: RecruitingProductionRankOptions = {},
+): RecruitingDestinationProductionSummary[] {
+  const rows = rankRecruitingProduction(people, options);
+  const groups = new Map<string, RecruitingProductionRankRow[]>();
+  for (const row of rows) {
+    const teamId = row.person.team_id.trim();
+    if (!teamId) return [];
+    const group = groups.get(teamId) || [];
+    group.push(row);
+    groups.set(teamId, group);
+  }
+  const weighted = (group: RecruitingProductionRankRow[], metric: RecruitingProductionMetric) => {
+    const values = group.filter((row) => finiteNonnegative(row.stats[metric]));
+    const denominator = values.reduce((sum, row) => sum + row.stats.games, 0);
+    return denominator > 0
+      ? values.reduce((sum, row) => sum + (row.stats[metric] as number) * row.stats.games, 0) / denominator
+      : null;
+  };
+  return [...groups.entries()]
+    .map(([teamId, group]) => ({
+      teamId,
+      additions: group.length,
+      priorPrograms: new Set(group.map((row) => row.stats.team_id).filter(Boolean)).size,
+      games: group.reduce((sum, row) => sum + row.stats.games, 0),
+      weightedMpg: weighted(group, "mpg"),
+      weightedPpg: weighted(group, "ppg"),
+      weightedRpg: weighted(group, "rpg"),
+      weightedApg: weighted(group, "apg"),
+      weightedTs: weighted(group, "ts"),
+    }))
+    .sort((left, right) => right.additions - left.additions || (right.weightedPpg ?? -Infinity) - (left.weightedPpg ?? -Infinity) || left.teamId.localeCompare(right.teamId));
+}

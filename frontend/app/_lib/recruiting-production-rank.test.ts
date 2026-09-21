@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankRecruitingProduction } from "./recruiting-production-rank";
+import { rankRecruitingProduction, summarizeRecruitingDestinationProduction } from "./recruiting-production-rank";
 import type { RecruitingPerson } from "./recruiting";
 import release from "../../public/data/basketball/recruiting.json";
 
@@ -71,5 +71,16 @@ describe("recruiting production rank", () => {
       person(),
       person({ key: "1-player-b", name: "B Player" }),
     ])).toEqual([]);
+  });
+
+  it("rolls exact-ID production up to destinations with game-weighted rates", () => {
+    const rows = summarizeRecruitingDestinationProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", ppg: 10, mpg: 18, rpg: 2, apg: 1, spg: 0.2, ts: 0.44 } }),
+      person({ key: "3-player-c", name: "C Player", team_id: "3", stats: { ...person().stats!, id: "1003", ppg: 20, mpg: 20 } }),
+    ]);
+    expect(rows.map((row) => row.teamId)).toEqual(["1", "3"]);
+    expect(rows[0]).toMatchObject({ additions: 2, priorPrograms: 1, games: 60, weightedPpg: 14 });
+    expect(rows[0].weightedTs).toBeCloseTo((0.58 * 30 + 0.44 * 30) / 60);
   });
 });
