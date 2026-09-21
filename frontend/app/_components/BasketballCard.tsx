@@ -11,6 +11,7 @@ import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel
 import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
+import RotationWatchPanel from "./RotationWatchPanel";
 
 export default function BasketballCard({
   game: g,
@@ -254,18 +255,7 @@ export default function BasketballCard({
               <small>
                 Uses prior net efficiency and exact-ID recorded continuity. The team-net pair shows the scenario&apos;s predicted efficiency levels for the away and home teams. Probability and range reuse this primary edition&apos;s held-out calibration; the scenario does not replace the prospective ledger forecast.
               </small>
-              {(rosterScenario.home_player_watch?.length || rosterScenario.away_player_watch?.length) ? (
-                <div className="match-detail muted">
-                  <span>Prior workload watch · A / H</span>
-                  <span>
-                    {[rosterScenario.away_player_watch, rosterScenario.home_player_watch].map((players, index) => (
-                      <small key={index}>
-                        {(players || []).slice(0, 3).map((player) => `${player.name} ${Math.round(player.prior_minutes)}m${player.bpm == null ? "" : ` · BPM ${player.bpm.toFixed(1)}`}`).join(" · ") || "—"}
-                      </small>
-                    ))}
-                  </span>
-                </div>
-              ) : null}
+              <RotationWatchPanel scenario={rosterScenario} awayName={g.away_name} homeName={g.home_name} />
             </div>
           )}
           {g.matchup_factors && (

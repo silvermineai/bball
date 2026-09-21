@@ -895,6 +895,15 @@ th,
   line-height: 1.5;
   margin-top: 4px;
 }
+.rotation-watch-panel { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.rotation-watch-panel > summary { cursor: pointer; color: var(--blue); font-weight: 700; }
+.rotation-watch-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+.rotation-watch-team h4 { margin: 0 0 8px; font-size: 13px; }
+.rotation-watch-table { font-size: 11px; }
+.rotation-watch-table th, .rotation-watch-table td { padding: 7px 6px; vertical-align: top; }
+.rotation-watch-table th[scope="row"] small { display: block; color: var(--muted); font: 10px "IBM Plex Mono", monospace; margin-top: 3px; }
+.rotation-watch-table th[scope="row"] a { color: inherit; }
+@media (max-width: 760px) { .rotation-watch-grid { grid-template-columns: 1fr; } }
 .rating-context small {
   display: block;
   color: var(--muted);

@@ -36,6 +36,7 @@ import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
 import { explainBasketballPrediction } from "../../../_lib/basketball-prediction-explanation";
 import { buildBriefAnalysisPacket } from "../../../_lib/brief-analysis-packet";
 import MatchupRecruitingContext from "./MatchupRecruitingContext";
+import RotationWatchPanel from "../../../_components/RotationWatchPanel";
 
 const emptySplit = () => ({
   games: 0,
@@ -484,6 +485,7 @@ export default async function Page({
             <p className="note">
               Scenario model edition: <span className="mono">{rosterScenario.primary_model_id}</span> · base margin check passed against this brief.
             </p>
+            <RotationWatchPanel scenario={rosterScenario} awayName={g.away_name} homeName={g.home_name} priorSeason={d.season - 1} />
           </>
         ) : (
           <p className="empty">
