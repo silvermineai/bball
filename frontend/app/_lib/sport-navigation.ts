@@ -96,6 +96,15 @@ export const DIVISION_OPTIONS: Array<{ value: Division; label: string }> = [
   { value: "3", label: "D3" },
 ];
 
+/** Route the shared Division tab to the most useful scope-specific desk. */
+export function divisionDeskHref(sport: Sport): string {
+  return sport === "womens-basketball"
+    ? "/basketball/wbb-readiness/"
+    : sport === "football"
+      ? "/research/coverage/?sport=football"
+      : "/research/coverage/?sport=basketball";
+}
+
 export function sportForPathname(pathname: string, gender: string | null = null, sport: string | null = null): Sport {
   if (pathname === "/football" || pathname.startsWith("/football/")) return "football";
   if (pathname === "/research/coverage" || pathname.startsWith("/research/coverage/")) {

@@ -81,15 +81,39 @@ export function filterDivisionTeams(
   const rows = teams
     .filter((team) => String(team.division) === division)
     .filter((team) => !needle || `${team.name} ${team.conference || ""} ${team.team_ncaa_id}`.toLowerCase().includes(needle))
-    .sort((left, right) => {
-      if (sort === "name") return left.name.localeCompare(right.name);
-      if (sort === "ppg") return (right.ppg ?? -Infinity) - (left.ppg ?? -Infinity) || left.name.localeCompare(right.name);
-      if (sort === "win_rate") {
-        const leftRate = left.games && left.wins != null ? left.wins / left.games : -Infinity;
-        const rightRate = right.games && right.wins != null ? right.wins / right.games : -Infinity;
-        return rightRate - leftRate || left.name.localeCompare(right.name);
-      }
-      return (right.wins ?? -Infinity) - (left.wins ?? -Infinity) || left.name.localeCompare(right.name);
-    });
+    .sort(teamComparator(sort));
   return rows;
+}
+
+function teamComparator(sort: DivisionTeamSort) {
+  return (left: DivisionTeam, right: DivisionTeam) => {
+    if (sort === "name") return left.name.localeCompare(right.name) || left.team_ncaa_id - right.team_ncaa_id;
+    if (sort === "ppg") return (right.ppg ?? -Infinity) - (left.ppg ?? -Infinity) || left.name.localeCompare(right.name) || left.team_ncaa_id - right.team_ncaa_id;
+    if (sort === "win_rate") {
+      const leftRate = left.games && left.wins != null ? left.wins / left.games : -Infinity;
+      const rightRate = right.games && right.wins != null ? right.wins / right.games : -Infinity;
+      return rightRate - leftRate || left.name.localeCompare(right.name) || left.team_ncaa_id - right.team_ncaa_id;
+    }
+    return (right.wins ?? -Infinity) - (left.wins ?? -Infinity) || left.name.localeCompare(right.name) || left.team_ncaa_id - right.team_ncaa_id;
+  };
+}
+
+export type RankedDivisionTeam = DivisionTeam & { rank: number };
+
+/**
+ * Assign a deterministic ordinal within the requested division before any
+ * search filter is applied. The rank is a view order for the selected
+ * recorded field, never an inferred strength rating or cross-division rank.
+ * Missing values sort after recorded values, preserving unavailable fields.
+ */
+export function rankDivisionTeams(
+  teams: readonly DivisionTeam[],
+  division: "2" | "3",
+  sort: DivisionTeamSort,
+): RankedDivisionTeam[] {
+  return teams
+    .filter((team) => String(team.division) === division)
+    .slice()
+    .sort(teamComparator(sort))
+    .map((team, index) => ({ ...team, rank: index + 1 }));
 }

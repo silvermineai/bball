@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
+import { buildScopeHref, divisionDeskHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -40,6 +40,12 @@ describe("sport navigation", () => {
 
   it("advertises the published women's D1 sport tab", () => {
     expect(SPORT_NAVIGATION["womens-basketball"].available).toBe(true);
+  });
+
+  it("routes each Division tab to its scope-specific desk", () => {
+    expect(divisionDeskHref("womens-basketball")).toBe("/basketball/wbb-readiness/");
+    expect(divisionDeskHref("mens-basketball")).toBe("/research/coverage/?sport=basketball");
+    expect(divisionDeskHref("football")).toBe("/research/coverage/?sport=football");
   });
 
   it("keeps the core stat tabs consistent across each sport tab", () => {

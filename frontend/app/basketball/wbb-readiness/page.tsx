@@ -1,4 +1,4 @@
-import WomensForecastReadiness from "../../_components/WomensForecastReadiness";
+import WomensReadinessRouter from "../../_components/WomensReadinessRouter";
 
 export const metadata = {
   title: "Women’s basketball forecast readiness",
@@ -17,7 +17,7 @@ export default function Page() {
       </p>
     </div>
     <section className="section">
-      <WomensForecastReadiness />
+      <WomensReadinessRouter />
     </section>
   </>;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { divisionTeamArchiveExport, filterDivisionTeams, parseDivisionTeams } from "./division-team-archive";
+import { divisionTeamArchiveExport, filterDivisionTeams, parseDivisionTeams, rankDivisionTeams } from "./division-team-archive";
 
 const release = {
   teams: [
@@ -31,5 +31,21 @@ describe("division team archive", () => {
       [2, 2, "Beta", "East", 20, 12, 8, 78],
     ]);
     expect(exported.rows.every((row) => row[1] === 2)).toBe(true);
+  });
+
+  it("assigns ranks within a division before a search filter", () => {
+    const teams = parseDivisionTeams(release);
+    expect(rankDivisionTeams(teams, "2", "wins").map((team) => [team.rank, team.name])).toEqual([
+      [1, "Alpha"],
+      [2, "Beta"],
+    ]);
+    expect(rankDivisionTeams(teams, "3", "win_rate").map((team) => team.rank)).toEqual([1]);
+    expect(rankDivisionTeams([
+      { team_ncaa_id: 8, division: 2, name: "Missing", conference: null, games: null, wins: null, losses: null, ppg: null },
+      { team_ncaa_id: 9, division: 2, name: "Recorded", conference: null, games: 20, wins: 10, losses: 10, ppg: 70 },
+    ], "2", "wins").map((team) => [team.rank, team.name])).toEqual([
+      [1, "Recorded"],
+      [2, "Missing"],
+    ]);
   });
 });

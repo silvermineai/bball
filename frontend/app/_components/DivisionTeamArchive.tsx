@@ -9,6 +9,7 @@ import {
   divisionTeamArchiveExport,
   filterDivisionTeams,
   parseDivisionTeams,
+  rankDivisionTeams,
   type DivisionTeam,
   type DivisionTeamSort,
 } from "../_lib/division-team-archive";
@@ -31,7 +32,11 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
       .catch((reason: unknown) => { if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Team archive unavailable."); });
     return () => controller.abort();
   }, []);
-  const rows = useMemo(() => teams ? filterDivisionTeams(teams, division, query, sort) : [], [division, query, sort, teams]);
+  const rankedTeams = useMemo(() => teams ? rankDivisionTeams(teams, division, sort) : [], [division, sort, teams]);
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rankedTeams.filter((team) => !needle || `${team.name} ${team.conference || ""} ${team.team_ncaa_id}`.toLowerCase().includes(needle));
+  }, [query, rankedTeams]);
   const total = teams?.filter((team) => String(team.division) === division).length || 0;
   const downloadAll = () => {
     if (!rows.length) return;
@@ -61,9 +66,9 @@ export default function DivisionTeamArchive({ division }: { division: "2" | "3" 
         <label htmlFor="division-team-sort">Rank by</label>
         <select id="division-team-sort" value={sort} onChange={(event) => setSort(event.target.value as DivisionTeamSort)}><option value="wins">Wins</option><option value="win_rate">Win rate</option><option value="ppg">Points per game</option><option value="name">Program name</option></select>
       </div>
-      <div className="section-heading" style={{ marginBottom: 12 }}><p>{total.toLocaleString()} retained teams · {rows.length.toLocaleString()} matching rows · season 2026.</p><button className="button secondary" type="button" onClick={downloadAll} disabled={!rows.length}>Download matching CSV ↓</button></div>
+      <div className="section-heading" style={{ marginBottom: 12 }}><p>{total.toLocaleString()} retained teams · {rows.length.toLocaleString()} matching rows · rank is within D{division} for the selected recorded field · season 2026.</p><button className="button secondary" type="button" onClick={downloadAll} disabled={!rows.length}>Download matching CSV ↓</button></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Program</th><th>Conference</th><th className="numeric">GP</th><th className="numeric">W</th><th className="numeric">L</th><th className="numeric">Win%</th><th className="numeric">PPG</th></tr></thead><tbody>{rows.map((team) => <tr key={`${division}-${team.team_ncaa_id}`}><th scope="row"><Link href={lowerDivisionTeamHref(division, team.team_ncaa_id)}>{team.name} →</Link><small>Team ID {team.team_ncaa_id}</small></th><td>{team.conference || "—"}</td><td className="numeric">{number(team.games)}</td><td className="numeric">{number(team.wins)}</td><td className="numeric">{number(team.losses)}</td><td className="numeric">{team.games && team.wins != null ? `${number(100 * team.wins / team.games, 1)}%` : "—"}</td><td className="numeric">{number(team.ppg, 1)}</td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Program</th><th>Conference</th><th className="numeric">GP</th><th className="numeric">W</th><th className="numeric">L</th><th className="numeric">Win%</th><th className="numeric">PPG</th></tr></thead><tbody>{rows.map((team) => <tr key={`${division}-${team.team_ncaa_id}`}><td className="rank-number">{team.rank}</td><th scope="row"><Link href={lowerDivisionTeamHref(division, team.team_ncaa_id)}>{team.name} →</Link><small>Team ID {team.team_ncaa_id}</small></th><td>{team.conference || "—"}</td><td className="numeric">{number(team.games)}</td><td className="numeric">{number(team.wins)}</td><td className="numeric">{number(team.losses)}</td><td className="numeric">{team.games && team.wins != null ? `${number(100 * team.wins / team.games, 1)}%` : "—"}</td><td className="numeric">{number(team.ppg, 1)}</td></tr>)}</tbody></table></div>
       {!rows.length ? <p className="empty">No retained teams match this filter.</p> : null}
     </>}
   </section>;

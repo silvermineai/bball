@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   buildScopeHref,
+  divisionDeskHref,
   DIVISION_OPTIONS,
   isNavItemActive,
   SPORT_NAVIGATION,
@@ -78,10 +79,11 @@ export default function SportNavigation() {
           </Link>
           {config.items.map((item) => {
             const active = isNavItemActive(pathname, item);
+            const itemHref = item.label === "Division" ? divisionDeskHref(currentSport) : item.href;
             return (
               <Link
                 key={item.label}
-                href={hrefWithScope(item.href)}
+                href={hrefWithScope(itemHref)}
                 className={`sport-tab${active ? " is-active" : ""}`}
                 aria-current={active ? "page" : undefined}
               >
