@@ -29,6 +29,134 @@ function asNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+type FootballReliabilityBin = {
+  lower: number;
+  upper: number;
+  games: number;
+  predicted: number | null;
+  observed: number | null;
+};
+
+export type FootballModelSummary = {
+  version: string | null;
+  target_season: number | null;
+  training_games: number | null;
+  training_seasons: number[];
+  latest_training_kickoff: string | null;
+  cutoff: string | null;
+  calibration: {
+    season: number | null;
+    games: number | null;
+    binary_games: number | null;
+    unscored_games: number | null;
+    margin_half_width: number | null;
+  } | null;
+  evaluation: {
+    season: number | null;
+    games: number | null;
+    binary_games: number | null;
+    unscored_games: number | null;
+    margin_mae: number | null;
+    margin_rmse: number | null;
+    total_mae: number | null;
+    baseline_margin_mae: number | null;
+    winner_accuracy: number | null;
+    margin_pick_accuracy: number | null;
+    brier: number | null;
+    log_loss: number | null;
+    interval_coverage: number | null;
+    reliability: FootballReliabilityBin[];
+  } | null;
+};
+
+function nonNegativeInteger(value: unknown) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function boundedRate(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
+}
+
+function nonNegativeNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function modelReliability(value: unknown): FootballReliabilityBin[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 12).flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const row = item as Record<string, unknown>;
+    const lower = boundedRate(row.lower);
+    const upper = boundedRate(row.upper);
+    const games = nonNegativeInteger(row.games);
+    if (lower == null || upper == null || lower > upper || games == null) return [];
+    const predicted = row.predicted == null ? null : boundedRate(row.predicted);
+    const observed = row.observed == null ? null : boundedRate(row.observed);
+    if (row.predicted != null && predicted == null) return [];
+    if (row.observed != null && observed == null) return [];
+    return [{ lower, upper, games, predicted, observed }];
+  });
+}
+
+/**
+ * Publish the model evidence needed to interpret a forecast without exposing
+ * fitted coefficients or the full training artifact. Missing or malformed
+ * fields stay null, so a partial artifact cannot become a quality claim.
+ */
+export function parseFootballModelSummary(value: unknown, fallbackCutoff?: unknown): FootballModelSummary {
+  let artifact: Record<string, unknown> = {};
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) artifact = parsed as Record<string, unknown>;
+    } catch {
+      // Keep the summary explicitly empty when the stored artifact is invalid.
+    }
+  } else if (value && typeof value === "object" && !Array.isArray(value)) {
+    artifact = value as Record<string, unknown>;
+  }
+  const calibration = artifact.calibration && typeof artifact.calibration === "object" && !Array.isArray(artifact.calibration)
+    ? artifact.calibration as Record<string, unknown>
+    : null;
+  const evaluation = artifact.evaluation && typeof artifact.evaluation === "object" && !Array.isArray(artifact.evaluation)
+    ? artifact.evaluation as Record<string, unknown>
+    : null;
+  const trainingSeasons = Array.isArray(artifact.training_seasons)
+    ? artifact.training_seasons.filter((season): season is number => typeof season === "number" && Number.isInteger(season) && season >= 1900 && season <= 2200)
+    : [];
+  return {
+    version: typeof artifact.version === "string" ? artifact.version : null,
+    target_season: nonNegativeInteger(artifact.target_season),
+    training_games: nonNegativeInteger(artifact.training_games),
+    training_seasons: trainingSeasons,
+    latest_training_kickoff: typeof artifact.latest_training_kickoff === "string" ? artifact.latest_training_kickoff : null,
+    cutoff: typeof artifact.cutoff === "string" ? artifact.cutoff : typeof fallbackCutoff === "string" ? fallbackCutoff : null,
+    calibration: calibration ? {
+      season: nonNegativeInteger(calibration.season),
+      games: nonNegativeInteger(calibration.games),
+      binary_games: nonNegativeInteger(calibration.binary_games),
+      unscored_games: nonNegativeInteger(calibration.unscored_games),
+      margin_half_width: nonNegativeNumber(calibration.margin_half_width),
+    } : null,
+    evaluation: evaluation ? {
+      season: nonNegativeInteger(evaluation.season),
+      games: nonNegativeInteger(evaluation.games),
+      binary_games: nonNegativeInteger(evaluation.binary_games),
+      unscored_games: nonNegativeInteger(evaluation.unscored_games),
+      margin_mae: nonNegativeNumber(evaluation.margin_mae),
+      margin_rmse: nonNegativeNumber(evaluation.margin_rmse),
+      total_mae: nonNegativeNumber(evaluation.total_mae),
+      baseline_margin_mae: nonNegativeNumber(evaluation.baseline_margin_mae),
+      winner_accuracy: boundedRate(evaluation.winner_accuracy),
+      margin_pick_accuracy: boundedRate(evaluation.margin_pick_accuracy),
+      brier: nonNegativeNumber(evaluation.brier),
+      log_loss: nonNegativeNumber(evaluation.log_loss),
+      interval_coverage: boundedRate(evaluation.interval_coverage),
+      reliability: modelReliability(evaluation.reliability),
+    } : null,
+  };
+}
+
 type FootballForecastIntegrity = "valid" | "invalid" | "unavailable";
 
 function forecastValues(item: Record<string, unknown>, intervalWidth: number | null) {
@@ -147,6 +275,9 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         forecasts: Number(item.forecasts || 0),
       };
     });
+    const latestSummary = latestModel
+      ? parseFootballModelSummary(latestModel.artifact_json, latestModel.cutoff)
+      : null;
     c.header("Cache-Control", "public, max-age=300");
     return c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
@@ -154,6 +285,7 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         model_id: latestModel.id,
         created_at: latestModel.created_at,
         cutoff: latestModel.cutoff,
+        model_summary: latestSummary,
       } : null,
       coverage: (() => {
         const row = (currentCoverage.results[0] || {}) as Record<string, unknown>;
@@ -218,7 +350,12 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     page,
     page_size: limit,
     total: Number(count?.total || 0),
-    latest_model: latestModel ? { model_id: latestModel.id, created_at: latestModel.created_at, cutoff: latestModel.cutoff } : null,
+    latest_model: latestModel ? {
+      model_id: latestModel.id,
+      created_at: latestModel.created_at,
+      cutoff: latestModel.cutoff,
+      model_summary: parseFootballModelSummary(latestModel.artifact_json, latestModel.cutoff),
+    } : null,
     rows: rows.results.map((row) => {
       const item = row as Record<string, unknown>;
       return {
