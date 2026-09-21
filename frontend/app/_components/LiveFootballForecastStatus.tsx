@@ -10,6 +10,20 @@ type ForecastModel = {
   last_created_at?: string | null;
 };
 
+type FootballModelSummary = {
+  training_games?: number | null;
+  training_seasons?: number[];
+  calibration?: { games?: number | null; margin_half_width?: number | null } | null;
+  evaluation?: {
+    season?: number | null;
+    games?: number | null;
+    margin_mae?: number | null;
+    winner_accuracy?: number | null;
+    brier?: number | null;
+    interval_coverage?: number | null;
+  } | null;
+};
+
 type ForecastCoverage = {
   upcoming_games?: number;
   forecast_games?: number;
@@ -17,7 +31,11 @@ type ForecastCoverage = {
   eligible_missing_prediction?: number;
 };
 
-type ForecastMeta = { models?: ForecastModel[]; coverage?: ForecastCoverage };
+type ForecastMeta = {
+  models?: ForecastModel[];
+  latest_model?: { model_summary?: FootballModelSummary | null } | null;
+  coverage?: ForecastCoverage;
+};
 
 export function formatFootballForecastCoverage(coverage?: ForecastCoverage) {
   if (!coverage) return "";
@@ -39,9 +57,24 @@ export function formatFootballForecastCoverage(coverage?: ForecastCoverage) {
   return `${forecast.toLocaleString()} of ${upcoming.toLocaleString()} upcoming games forecast${reasons}${eligible}`;
 }
 
+export function formatFootballModelEvidence(summary?: FootballModelSummary | null) {
+  const evaluation = summary?.evaluation;
+  if (!evaluation || !Number.isInteger(evaluation.games) || (evaluation.games as number) <= 0) return "";
+  const parts = [`held out ${(evaluation.games as number).toLocaleString()} games`];
+  if (Number.isFinite(evaluation.winner_accuracy)) parts.push(`${((evaluation.winner_accuracy as number) * 100).toFixed(1)}% winner accuracy`);
+  if (Number.isFinite(evaluation.margin_mae)) parts.push(`${(evaluation.margin_mae as number).toFixed(1)} pt margin MAE`);
+  if (Number.isFinite(evaluation.brier)) parts.push(`Brier ${(evaluation.brier as number).toFixed(3)}`);
+  if (Number.isFinite(evaluation.interval_coverage)) parts.push(`${((evaluation.interval_coverage as number) * 100).toFixed(1)}% range coverage`);
+  if (summary.calibration?.games && Number.isFinite(summary.calibration.margin_half_width)) {
+    parts.push(`calibrated on ${summary.calibration.games.toLocaleString()} games`);
+  }
+  return parts.join(" · ");
+}
+
 export default function LiveFootballForecastStatus() {
   const [model, setModel] = useState<ForecastModel | null>(null);
   const [coverage, setCoverage] = useState<ForecastCoverage | null>(null);
+  const [modelEvidence, setModelEvidence] = useState<FootballModelSummary | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "fallback">("checking");
   const [retryNonce, setRetryNonce] = useState(0);
 
@@ -53,6 +86,7 @@ export default function LiveFootballForecastStatus() {
         if (!controller.signal.aborted) {
           setModel(payload.models?.[0] || null);
           setCoverage(payload.coverage || null);
+          setModelEvidence(payload.latest_model?.model_summary || null);
           setStatus(payload.models?.[0] ? "live" : "fallback");
         }
       })
@@ -64,7 +98,8 @@ export default function LiveFootballForecastStatus() {
     return () => controller.abort();
   }, [retryNonce]);
 
-  return (
+  const evidence = formatFootballModelEvidence(modelEvidence);
+  return <>
     <p className="note" role="status">
       {status === "live" && model
         ? `Live D1 football forecast index: ${formatFootballForecastCoverage(coverage || undefined) || `${(model.forecasts || 0).toLocaleString()} registered rows`} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}.`
@@ -72,5 +107,6 @@ export default function LiveFootballForecastStatus() {
           ? <>Live football forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live football forecast index…"}
     </p>
-  );
+    {status === "live" && evidence ? <p className="note" aria-label="Football model evaluation">Model evidence: {evidence}. These are held-out results, separate from the upcoming forecast slate.</p> : null}
+  </>;
 }
