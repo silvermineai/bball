@@ -15,6 +15,7 @@ import {
   WOMENS_FORECAST_API_HREF,
   WOMENS_FORECAST_READINESS_HREF,
 } from "../_lib/womens-forecast-links";
+import { womensForecastValidationLabel } from "../_lib/womens-forecast-display";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 import WomensMatchupAnalysis from "./WomensMatchupAnalysis";
 
@@ -22,8 +23,8 @@ type Edition = { season: number; generated_at: string; upcoming?: WomensSchedule
 type ForecastEdition = {
   model_id: string;
   generated_at: string;
-  validation?: { games: number; margin_mae: number; win_accuracy: number; brier_score: number; interval_coverage?: number };
-  calibration?: { interval_target?: number };
+  validation?: { games: number; margin_mae: number; win_accuracy: number; brier_score: number; log_loss?: number; interval_coverage?: number };
+  calibration?: { games?: number; interval_target?: number };
   market_comparison?: { qualified_line_rows?: number; forecast_rows?: number; note?: string };
   forecasts: WomensForecastRow[];
 };
@@ -83,7 +84,7 @@ export default function WomensBasketballGames() {
         <label className="control"><span>MODEL COVERAGE</span><select value={coverage} onChange={(event) => setCoverage(event.target.value as WomensMatchupCoverage)}><option value="all">All estimates</option><option value="primary">Primary model</option><option value="cold-start">Cold-start</option><option value="unavailable">No estimate</option></select></label>
         <label className="control"><span>SORT BY</span><select value={sort} onChange={(event) => setSort(event.target.value as WomensMatchupSort)}><option value="date">Date</option><option value="confidence">Strongest signal</option><option value="uncertainty">Widest range</option><option value="margin">Largest margin</option></select></label>
       </div>
-      {forecast.validation ? <p className="note">Model {forecast.model_id} · held-out validation {forecast.validation.games.toLocaleString()} games · {pct(forecast.validation.win_accuracy)} winner accuracy · {number(forecast.validation.margin_mae)} point margin MAE · {forecast.validation.interval_coverage == null ? "range coverage unavailable" : `${pct(forecast.validation.interval_coverage)} range coverage`}.</p> : null}
+      {forecast.validation ? <p className="note">Model {forecast.model_id} · {womensForecastValidationLabel(forecast.validation, forecast.calibration)}.</p> : null}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Date</th><th>Away</th><th>Home</th><th className="numeric">Home win</th><th className="numeric">Score A–H</th><th className="numeric">Margin</th><th className="numeric">Range</th><th>Type</th><th>Game ID</th><th>Analysis</th></tr></thead><tbody>{visible.map((row) => { const p = row.prediction; return <tr key={row.game_id}><td>{date(row.date)}</td><td>{row.away || "—"}</td><td>{row.home || "—"}<small>{row.schedule?.venue || "Venue unavailable"}</small></td><td className="numeric">{pct(p?.home_win_probability)}</td><td className="numeric">{p ? `${number(p.predicted_away_score, 0)}–${number(p.predicted_home_score, 0)}` : "—"}</td><td className="numeric">{number(p?.predicted_margin)}</td><td className="numeric">{p?.margin_low == null || p?.margin_high == null ? "—" : `${number(p.margin_low)} to ${number(p.margin_high)}`}</td><td>{p?.estimate_type === "cold_start" ? "Cold-start" : p ? "Primary" : "Unavailable"}</td><td><code>{row.game_id}</code></td><td><details><summary>Open readout</summary><WomensMatchupAnalysis row={row} modelId={forecast.model_id} /></details></td></tr>; })}</tbody></table></div>
       {!visible.length ? <p className="empty">No women&apos;s games match these filters.</p> : null}
       <div className="pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil(rows.length / 25))}</span><div><button className="button secondary" type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Previous</button><button className="button secondary" type="button" disabled={(page + 1) * 25 >= rows.length} onClick={() => setPage((value) => value + 1)}>Next →</button></div></div>
