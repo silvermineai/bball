@@ -27,9 +27,10 @@ type CoordinateShot = { contest_id?: string | null; x: number | null; y: number 
 type CoordinateTuple = [string | null, number | null, number | null, number | null, string | null, string | null, boolean | number | null, number | null];
 type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: Array<CoordinateShot | CoordinateTuple>; coordinate_count?: number; located_count?: number } };
 type GameRow = { season?: number; contest_id: string; team_id: string; game_date: string | null; team_name: string | null; opponent_name: string | null; player_name: string | null; stats: Stats };
+type GameStatCoverage = { rows: number; contests: number; fields: Record<string, { observed: number; total: number | null }> };
 type GameExport = { season: number; page: number; page_size: number; total: number; rows: GameRow[] };
 type SourceReceipt = { dataset: string; season: number; url: string; fetched_at: string; sha256: string };
-type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting: ShotRow[]; games: GameRow[]; source_receipts?: SourceReceipt[]; career_source_receipts?: SourceReceipt[]; identity_note: string };
+type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting: ShotRow[]; games: GameRow[]; game_stat_coverage?: GameStatCoverage; source_receipts?: SourceReceipt[]; career_source_receipts?: SourceReceipt[]; identity_note: string };
 type Impact = { season: number; player_id: string; player: string; team: string; orapm: number | null; drapm: number | null; rapm_net: number | null; off_poss: number | null; def_poss: number | null; qualified: boolean; rank: number | null };
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const value = (stats: Stats | undefined, key: string) => stats?.[key] == null ? null : Number(stats[key]);
@@ -110,6 +111,33 @@ function StatCoveragePanel({ rows }: { rows: SeasonRow[] }) {
           </table>
         </div>
       </div>)}
+    </div>
+  </section>;
+}
+
+function GameArchiveFieldTotals({ coverage }: { coverage?: GameStatCoverage }) {
+  if (!coverage || !Object.keys(coverage.fields).length) return null;
+  const fields = Object.entries(coverage.fields).sort(([a], [b]) => a.localeCompare(b));
+  return <section className="section paper-panel" aria-label="Complete game archive stat fields">
+    <div className="section-heading">
+      <div>
+        <div className="eyebrow">Game archive / selected season</div>
+        <h2>Every retained source field.</h2>
+      </div>
+      <span className="note">{coverage.contests || coverage.rows} contests · {fields.length} fields</span>
+    </div>
+    <p className="note">
+      These values are aggregated from every valid exact-ID game row in the selected edition. Additive box fields show source totals; published percentages and shares show evidence counts only because adding rates would distort them. Missing values remain unavailable.
+    </p>
+    <div className="table-scroll" style={{ marginTop: 18 }}>
+      <table className="data-table">
+        <thead><tr><th>Source field</th><th className="numeric">Recorded games</th><th className="numeric">Source total</th></tr></thead>
+        <tbody>{fields.map(([key, field]) => <tr key={key}>
+          <td><strong>{prettySourceField(key)}</strong><small><code>{key}</code></small></td>
+          <td className="numeric">{field.observed.toLocaleString()} / {coverage.rows.toLocaleString()}</td>
+          <td className="numeric">{field.total == null ? "Rate / share —" : String(field.total)}</td>
+        </tr>)}</tbody>
+      </table>
     </div>
   </section>;
 }
@@ -292,6 +320,7 @@ export default function NcaaPlayerCard() {
       <section className="section paper-panel"><div className="eyebrow">Derived rates / selected season</div><h2>See the player&apos;s efficiency shape.</h2><p className="note">These rates use the pooled exact-ID team rows above. A missing denominator keeps only the affected rate unavailable; no zero is inferred.</p><div className="strip"><div><strong>{fmt(advancedRates.pointsPerPossession, 2)}</strong><span>Points / recorded possession</span></div><div><strong>{pct(advancedRates.threePointAttemptRate)}</strong><span>3-point attempt rate</span></div><div><strong>{pct(advancedRates.freeThrowAttemptRate)}</strong><span>Free-throw attempt rate</span></div><div><strong>{pct(advancedRates.assistRate)}</strong><span>Assists / possession</span></div><div><strong>{pct(advancedRates.turnoverRate)}</strong><span>Turnovers / possession</span></div></div><p className="note">Points per possession is a scoring-efficiency ratio. The remaining values are workload and shot-profile rates, not opponent adjustments, usage projections or eligibility findings.</p></section>
       {selected?.length ? <StatCoveragePanel rows={selected} /> : null}
       {selected?.length ? <SourceTotals rows={selected} /> : null}
+      <GameArchiveFieldTotals coverage={card.game_stat_coverage} />
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Recent form / latest retained contests</div><h2>Read the current rhythm.</h2></div><span className="note">{recentForm.window_games ? `Latest ${recentForm.window_games} of up to 12 rows` : "No recent rows"}</span></div><p className="note">This is a short retained-row window, ordered newest first by the player archive. It is descriptive context for film and preparation, not a projection. Each metric uses only contests where its required fields were recorded; missing values are not treated as zero.</p><div className="strip"><div><strong>{fmt(recentForm.points_per_game)}</strong><span>Recent points / game · {recentForm.points_games} rows</span></div><div><strong>{fmt(recentForm.minutes_per_game)}</strong><span>Recent minutes / game · {recentForm.minutes_games} rows</span></div><div><strong>{pct(recentForm.true_shooting)}</strong><span>Recent pooled TS% · {recentForm.shooting_games} rows</span></div><div><strong>{recentForm.points_delta == null ? "—" : `${recentForm.points_delta > 0 ? "+" : ""}${fmt(recentForm.points_delta)}`}</strong><span>Points / game vs prior five</span></div></div><p className="note">The comparison uses the next five retained rows when available. A blank comparison means the preceding window has no complete points sample.</p></section>
       <section className="section two-col"><div id="shot-profile" className="paper-panel"><div className="eyebrow">Shot profile / {label(season)}</div><h2>Where attempts came from.</h2>{shootingRows.length ? <><p className="note">The archive publishes {shootingRows.length} team shooting row{shootingRows.length === 1 ? "" : "s"} for this season; each stint stays visible.</p>{shotLocations.length ? <PlayerShotLocationCourt shots={shotLocations} playerName={name} title="Recorded shot locations" showEvents /> : <p className="empty">This profile has aggregate shooting totals, but no retained coordinate rows for this season.</p>}{shootingRows.map((row) => <ShotProfile key={`${row.season}-${row.team_id}`} row={row} />)}</> : <p className="empty">No shooting profile is published for this season-team record.</p>}</div><div className="paper-panel"><div className="eyebrow">Roster / recruiting context</div><h2>What the roster release says.</h2>{roster ? <><div className="raw-stat-grid">{[["Class", roster.profile.class], ["Position", roster.profile.position], ["Height", roster.profile.height], ["Hometown", roster.profile.hometown], ["High school", roster.profile.high_school]].map(([key, field]) => <div key={key}><dt>{key}</dt><dd>{field || "—"}</dd></div>)}</div><div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?q=${encodeURIComponent(name)}`}>Search dated school evidence ↗</Link>{roster.profile.high_school && <Link className="hero-link" href={`/basketball/ncaa-high-schools/?q=${encodeURIComponent(String(roster.profile.high_school))}`}>Trace high-school pipeline →</Link>}</div><p className="note">These links are text searches for review. A name or school-label match does not establish identity, commitment, transfer, eligibility or current membership.</p></> : <p className="empty">No roster row is published for {label(season)}.</p>}</div></section>
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Impact / player model</div><h2>Read the player in context.</h2></div></div>{impact ? <div className="strip"><div><strong>{fmt(impact.rapm_net, 2)}</strong><span>Net RAPM</span></div><div><strong>{fmt(impact.orapm, 2)}</strong><span>ORAPM</span></div><div><strong>{fmt(impact.drapm, 2)}</strong><span>DRAPM</span></div><div><strong>{impact.rank ? `#${impact.rank}` : "—"}</strong><span>{impact.qualified ? "Qualified league rank" : "Unqualified sample"}</span></div></div> : <p className="empty">No league-wide RAPM row matches this archive ID and season. Open the <Link href="/basketball/impact/">full impact archive</Link> for the broader impact board.</p>}</section>

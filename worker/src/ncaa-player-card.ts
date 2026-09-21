@@ -1,5 +1,6 @@
 import { ncaaBoxDb, researchDb } from "./research-db";
 import { publicReceipt } from "./public-receipts";
+import { aggregateNcaaPlayerGameStats } from "./ncaa-player-card-aggregation";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -132,7 +133,10 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
       db.prepare("SELECT season,team_id,team_name,player_name,profile_json FROM bb_ncaa_rosters WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
       db.prepare("SELECT season,team_id,team_name,player_name,stats_json FROM bb_ncaa_player_shooting WHERE player_id=? ORDER BY season DESC,team_name ASC").bind(playerId),
     ]), DB_TIMEOUT_MS);
-    const games = await withTimeout(ncaaBoxDb(c.env).prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC LIMIT 12").bind(playerId, season).all(), DB_TIMEOUT_MS);
+    // Read the bounded exact-ID season once. The card still renders only the
+    // latest 12 rows, while the aggregate makes every retained source field
+    // available without relying on the stricter season-summary row.
+    const games = await withTimeout(ncaaBoxDb(c.env).prepare("SELECT season,contest_id,team_id,game_date,team_name,opponent_name,player_name,stats_json FROM bb_ncaa_player_box WHERE player_id=? AND season=? ORDER BY game_date DESC,contest_id DESC").bind(playerId, season).all(), DB_TIMEOUT_MS);
     const receipts = await withTimeout(db.prepare(
       "SELECT dataset,season,receipt_json FROM bb_sources WHERE dataset IN ('ncaa_player_box','ncaa_shots','ncaa_team_rosters','ncaa_rapm','player_season') ORDER BY season DESC,dataset",
     ).all<{ dataset: string; season: number; receipt_json: string }>(), DB_TIMEOUT_MS);
@@ -150,13 +154,16 @@ ncaaPlayerCard.get("/:id", zValidator("query", querySchema), async (c) => {
       ...shotRows.map((row) => Number((row as Record<string, unknown>).season)),
     ].filter((value) => Number.isInteger(value)));
     const careerSourceReceipts = sourceReceipts.filter((receipt) => retainedSeasons.has(receipt.season));
+    const gameRows = games.results as Array<Record<string, unknown>>;
+    const gameStatCoverage = aggregateNcaaPlayerGameStats(gameRows);
     const response = c.json({
       player_id: playerId,
       selected_season: season,
       seasons: rows,
       rosters: rosterRows,
       shooting: shotRows,
-      games: (games.results as Array<Record<string, unknown>>).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; }),
+      games: gameRows.slice(0, 12).flatMap(({ stats_json, ...row }) => { const stats = parseObject(stats_json); return stats ? [{ ...row, stats }] : []; }),
+      game_stat_coverage: gameStatCoverage,
       source_receipts: careerSourceReceipts.filter((receipt) => receipt.season === season),
       career_source_receipts: careerSourceReceipts,
       identity_note: "NCAA source ID namespace; no name-only join to ESPN identities.",
