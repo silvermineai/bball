@@ -116,6 +116,18 @@ export function marketBookmakerKey(value: unknown): string {
   return normalized || raw;
 }
 
+/**
+ * Provider adapters use a mix of second, millisecond and microsecond ISO
+ * spellings. Normalize valid clocks before building a quote identity so two
+ * representations of the same instant cannot bypass the conflicting-price
+ * guard and make selection depend on row order.
+ */
+export function marketClockKey(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : raw;
+}
+
 /** Return a winner-pick result, leaving an exactly even probability unscored. */
 export function winnerPickCorrect(probabilityValue: number | null, homeWon: boolean): boolean | null {
   if (probabilityValue === null || probabilityValue === 0.5) return null;
@@ -226,7 +238,7 @@ export function marketQuoteIdentity(quote: { provider?: unknown; bookmaker?: unk
     String(quote.provider ?? ""),
     marketBookmakerKey(quote.bookmaker),
     String(quote.market ?? ""),
-    String(quote.captured_at ?? ""),
+    marketClockKey(quote.captured_at),
   ].join("|");
 }
 
@@ -235,7 +247,7 @@ function marketQuoteSignature(quote: Json): string {
   // Normalize numeric encodings so an API's `1.91` and `"1.91"` are the same
   // observation, while preserving every field that can change the comparison.
   return JSON.stringify([
-    String(quote.updated_at ?? ""),
+    marketClockKey(quote.updated_at),
     number(payload.line),
     number(payload.home_price),
     number(payload.away_price),

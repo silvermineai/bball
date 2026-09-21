@@ -250,6 +250,30 @@ describe("market archive metadata", () => {
     await expect(accepted.json()).resolves.toMatchObject({ research_capture: { market_status: "validated_quotes" } });
   });
 
+  it("fails closed when a capture receipt reports contradictory counters", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 0, pregame: 0 }] },
+      { results: [] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "ESPN Summary",
+        sport: "basketball",
+        summary_count: 2,
+        summary_with_pickcenter: 3,
+        accepted_markets: 1,
+        rejected_records: 0,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: {
+        market_status: "unknown",
+        summary_count: 2,
+        summary_with_pickcenter: 3,
+      },
+    });
+  });
+
   it("keeps prior validated capture evidence visible when the latest attempt has no quote", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },

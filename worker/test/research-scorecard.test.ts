@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { marketBookmakerKey, marketQuoteIdentity, researchScorecard, winnerPickCorrect } from "../src/research-scorecard";
+import { marketBookmakerKey, marketClockKey, marketQuoteIdentity, researchScorecard, winnerPickCorrect } from "../src/research-scorecard";
 
 describe("live research scorecard", () => {
   it("normalizes bookmaker presentation aliases without losing the source label", () => {
@@ -18,12 +18,13 @@ describe("live research scorecard", () => {
   });
 
   it("normalizes market identity by provider, bookmaker, market and capture clock", () => {
+    expect(marketClockKey("2027-01-01T12:00:00.000000Z")).toBe("2027-01-01T12:00:00.000Z");
     expect(marketQuoteIdentity({
       provider: "licensed-feed",
       bookmaker: "Draft Kings",
       market: "spreads",
-      captured_at: "2027-01-01T12:00:00Z",
-    })).toBe("licensed-feed|draftkings|spreads|2027-01-01T12:00:00Z");
+      captured_at: "2027-01-01T12:00:00.000000Z",
+    })).toBe("licensed-feed|draftkings|spreads|2027-01-01T12:00:00.000Z");
   });
 
   it("withholds a market when one capture clock has conflicting prices", async () => {
@@ -61,6 +62,8 @@ describe("live research scorecard", () => {
     };
     const conflicting = {
       ...quote,
+      captured_at: "2026-09-20T12:00:00Z",
+      updated_at: "2026-09-20T11:59:00Z",
       payload_json: JSON.stringify({
         home_id: "home-ambiguous", away_id: "away-ambiguous", starts_at: "2027-01-02T00:00:00.000000Z",
         line: -4.5, home_price: 1.91, away_price: 1.91,

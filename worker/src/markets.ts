@@ -115,9 +115,18 @@ type ResearchCaptureSummary = {
 function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captured_at" | "market_status">): ResearchCapture["market_status"] {
   const sourceRows = capture.summary_count ?? capture.source_rows;
   const pricedRows = capture.summary_with_pickcenter ?? capture.rows_with_lines;
+  const accepted = capture.accepted_markets ?? 0;
+  const rejected = capture.rejected_records ?? 0;
+  // A capture receipt is evidence about the connector's own counters, not a
+  // license to infer that quotes existed.  If the counters contradict one
+  // another, keep the status unresolved so publication checks and consumers
+  // cannot present an incomplete response as validated market coverage.
+  if (sourceRows === 0 && (pricedRows !== undefined && pricedRows !== 0 || accepted > 0 || rejected > 0)) return "unknown";
+  if (sourceRows !== undefined && pricedRows !== undefined && pricedRows > sourceRows) return "unknown";
+  if (pricedRows === 0 && (accepted > 0 || rejected > 0)) return "unknown";
   if (sourceRows === 0) return "no_eligible_summaries";
-  if ((capture.accepted_markets ?? 0) > 0) return "validated_quotes";
-  if ((capture.rejected_records ?? 0) > 0 && pricedRows !== 0) return "quotes_failed_validation";
+  if (accepted > 0) return "validated_quotes";
+  if (rejected > 0 && pricedRows !== 0) return "quotes_failed_validation";
   if (pricedRows === 0) return "no_quotes_published";
   return "unknown";
 }
