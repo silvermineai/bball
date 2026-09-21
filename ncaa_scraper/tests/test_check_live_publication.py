@@ -375,6 +375,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         """Allow the production cache-busting probe key in fixture lookups."""
         def lookup(_base, path):
             canonical = re.sub(r"publication_check=\d+", "publication_check=1", path)
+            if path.startswith("/api/basketball/research/coverage?"):
+                return responses.get("/api/basketball/research/coverage?audit=1", {})
             if path.startswith("/api/basketball/research/schedule-times?"):
                 value = responses.get("/api/basketball/research/schedule-times?season=2027&meta=1&publication_check=1", {
                     "season": 2027,

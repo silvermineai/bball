@@ -1213,11 +1213,15 @@ def check_live(
     max_age_hours: float = DAILY_PUBLICATION_MAX_AGE_HOURS,
 ) -> dict:
     checked_at = now or datetime.now(timezone.utc)
+    probe_key = str(int(checked_at.timestamp()))
     health = get_json(base_url, "/api/health")
     if health.get("ok") is not True:
         raise ValueError("Worker health response is not ok")
 
-    basketball = get_json(base_url, "/api/basketball/research/coverage?audit=1")
+    basketball = get_json(
+        base_url,
+        f"/api/basketball/research/coverage?audit=1&publication_check={probe_key}",
+    )
     required = {"coverage", "source_receipts", "audit_status", "location_validation", "possession_validation"}
     if not required.issubset(basketball):
         raise ValueError(f"basketball coverage is missing {sorted(required - set(basketball))}")
@@ -1288,7 +1292,6 @@ def check_live(
         raise ValueError(f"latest basketball model is {max(model_age, 0):.1f} hours old")
     # Distinct probe key prevents a monitor from validating a stale edge-cache
     # response after a publisher sync.
-    probe_key = str(int(checked_at.timestamp()))
     upcoming_forecasts = get_json(
         base_url,
         f"/api/basketball/research/forecasts?season=2027&status=upcoming&model={quote(model_id, safe='')}&roster=1&limit=1&page=0&publication_check={probe_key}",
