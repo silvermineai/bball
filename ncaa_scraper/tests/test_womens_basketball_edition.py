@@ -75,6 +75,7 @@ def test_player_box_stats_keep_played_rows_and_exclude_dnp_from_aggregates():
         "dnp_rows": 1,
         "skipped_rows": 0,
         "teams": 1,
+        "players_multiple_teams": 0,
     }
     player = players[0]
     assert player["games_played"] == 2
@@ -146,3 +147,37 @@ def test_team_stats_fail_closed_on_conflicting_duplicate_source_rows():
     row = {"team_id": "1", "team_display_name": "Example", "stat_name": "avgPoints", "value": "70"}
     with pytest.raises(ValueError, match="Conflicting team stat"):
         build_team_stats([row, {**row, "value": "71"}])
+
+
+def test_player_box_stats_preserve_multi_team_identity_context():
+    rows = [
+        {
+            "athlete_id": "7",
+            "athlete_display_name": "Transfer Guard",
+            "team_id": "11",
+            "team_display_name": "First Eagles",
+            "game_id": "g1",
+            "points": "10",
+            "did_not_play": "false",
+        },
+        {
+            "athlete_id": "7",
+            "athlete_display_name": "Transfer Guard",
+            "team_id": "22",
+            "team_display_name": "Second Hawks",
+            "game_id": "g2",
+            "points": "8",
+            "did_not_play": "false",
+        },
+    ]
+
+    players, coverage = build_player_box_stats(rows)
+
+    assert coverage["players_multiple_teams"] == 1
+    assert players[0]["team"] == "Multiple teams"
+    assert players[0]["team_id"] == ""
+    assert players[0]["teams"] == [
+        {"team_id": "11", "team": "First Eagles"},
+        {"team_id": "22", "team": "Second Hawks"},
+    ]
+    assert players[0]["totals"]["points"] == 18.0

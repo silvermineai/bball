@@ -153,8 +153,13 @@ def build_player_box_stats(rows):
                 "starts": 0,
                 "totals": {output: 0.0 for _, output in BOX_STAT_FIELDS},
                 "present_fields": set(),
+                "teams": {},
             },
         )
+        team_id = str(row.get("team_id") or "")
+        team_name = row.get("team_display_name") or team_id or "Unknown team"
+        if team_id:
+            player["teams"].setdefault(team_id, set()).add(team_name)
         player["box_rows"] += 1
         if str(row.get("did_not_play") or "").casefold() == "true":
             dnp_rows += 1
@@ -189,6 +194,16 @@ def build_player_box_stats(rows):
             for key, value in totals.items()
         } if games_played else {}
 
+        team_rows = [
+            {
+                "team_id": team_id,
+                "team": sorted(names)[0] if names else team_id,
+            }
+            for team_id, names in sorted(player["teams"].items())
+        ]
+        team_names = [row["team"] for row in team_rows]
+        single_team = len(team_rows) == 1
+
         def pct(made, attempted):
             attempts = totals.get(attempted)
             makes = totals.get(made)
@@ -197,8 +212,9 @@ def build_player_box_stats(rows):
         output.append({
             "player_id": player["player_id"],
             "name": player["name"],
-            "team": player["team"],
-            "team_id": player["team_id"],
+            "team": team_names[0] if single_team else "Multiple teams",
+            "team_id": team_rows[0]["team_id"] if single_team else "",
+            "teams": team_rows,
             "position": player["position"],
             "box_rows": player["box_rows"],
             "dnp_rows": player["dnp_rows"],
@@ -221,6 +237,7 @@ def build_player_box_stats(rows):
         "dnp_rows": dnp_rows,
         "skipped_rows": skipped_rows,
         "teams": len({player["team_id"] for player in output if player["team_id"]}),
+        "players_multiple_teams": sum(1 for player in output if len(player.get("teams", [])) > 1),
         "source_fields": source_field_coverage(rows),
     }
 
@@ -370,6 +387,7 @@ def main():
             "player_box_dnp_rows": box_player_coverage["dnp_rows"],
             "player_box_skipped_rows": box_player_coverage["skipped_rows"],
             "player_box_teams": box_player_coverage["teams"],
+            "player_box_players_multiple_teams": box_player_coverage["players_multiple_teams"],
         },
         "players": sorted(
             [
