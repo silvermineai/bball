@@ -1052,6 +1052,36 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(payload_json, '$.games')"));
   });
 
+  it("excludes rows whose selected source measure is unavailable", async () => {
+    const prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn().mockResolvedValue({
+          results: [{
+            player_id: "42",
+            division: 2,
+            name: "Recorded Scorer",
+            team_name: "Example State",
+            stat_value: 19.4,
+            publisher_rank: 4,
+            total_count: 1,
+            payload_json: JSON.stringify({ ppg: 19.4 }),
+          }],
+        }),
+      })),
+    }));
+    const response = await app.request(
+      "/api/basketball/research/ncaa-leaders?stat=ppg&division=2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 1,
+      rows: [{ ppg: 19.4 }],
+    });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("AND ppg IS NOT NULL"));
+  });
+
   it("labels D2 publisher rows without claiming that only D1 is available", async () => {
     const prepare = vi.fn(() => ({
       bind: vi.fn(() => ({

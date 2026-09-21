@@ -1129,9 +1129,16 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   // payload_json. Read publisher rank from that receipt rather than adding
   // one column per measure (the production database is at its size ceiling).
   const publisherRankColumn = stat === "apg" || stat === "ast" ? "NULL" : `json_extract(payload_json, '$.source_stats.${stat}.rank')`;
-  const order = `${value} IS NULL, ${value} DESC, name, player_id`;
+  // A leaderboard is a qualified view of an observed field.  Keeping rows
+  // whose selected value is NULL made the last pages look like ranked
+  // records even though the source never published that measure.  Filter on
+  // the selected expression before the window count so `total` and paging
+  // describe only rows with an actual source value (including legitimate
+  // recorded zeroes).
+  const statSql = ` AND ${value} IS NOT NULL`;
+  const order = `${value} DESC, name, player_id`;
   try {
-  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${gamesSql}${searchSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
+  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${gamesSql}${searchSql}${statSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
   const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
   // The NCAA snapshot has explicit publisher rows for all three divisions.
   // Only the supplemental box-score calculation is D1-scoped: the public
