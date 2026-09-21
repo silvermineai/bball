@@ -1395,7 +1395,7 @@ describe("bball api", () => {
     });
   });
 
-  it("serves the published coverage catalog when D1 is busy", async () => {
+  it("does not present the published catalog as a completed audit when D1 is busy", async () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({
       generated_at: "2026-09-17T10:00:00Z",
       coverage: {
@@ -1418,14 +1418,13 @@ describe("bball api", () => {
         ASSETS: { fetch },
       },
     );
-    expect(response.status).toBe(200);
-    const body = await response.json() as { audit_status: string; coverage: Array<{ dataset: string; rows: number }>; generated_at: string };
-    expect(body.audit_status).toBe("static_fallback");
-    expect(body.generated_at).toBe("2026-09-17T10:00:00Z");
-    expect(body.coverage.find((entry) => entry.dataset === "games")).toEqual({ dataset: "games", rows: 42 });
-    expect(body.coverage.find((entry) => entry.dataset === "ncaa_player_box")).toEqual({ dataset: "ncaa_player_box", rows: 100 });
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
-    expect(fetch).toHaveBeenCalledOnce();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Retry-After")).toBe("30");
+    await expect(response.json()).resolves.toEqual({
+      error: "The basketball coverage audit is temporarily unavailable; retry shortly.",
+    });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("rejects unknown publisher stat fields before querying D1", async () => {

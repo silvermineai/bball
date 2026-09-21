@@ -84,6 +84,11 @@ type PublishedBasketballOverview = {
 };
 
 async function publishedBasketballCoverage(c: Context<AppEnv>, audit: boolean): Promise<Response | null> {
+  // The bundled overview only contains row-count summaries. It does not
+  // carry the receipt catalog or the two live integrity scans, so it cannot
+  // satisfy an explicit audit request. Returning it for audit=1 would make a
+  // stale/static response look like verified warehouse evidence.
+  if (audit) return null;
   if (!c.env.ASSETS) return null;
   try {
     const asset = await withTimeout(
@@ -110,34 +115,7 @@ async function publishedBasketballCoverage(c: Context<AppEnv>, audit: boolean): 
       unresolved: Number(coverage.unresolved_rows || 0),
       player_season: datasetRows.get("player_season") || 0,
     };
-    const auditAliases: Record<string, string> = {
-      games: "schedule",
-      team_box: "team_box",
-      player_box: "player_box",
-      rosters: "rosters",
-      impact: "ncaa_rapm",
-      ncaa_individual_players: "player_core",
-      forecasts: "forecasts",
-      player_core: "player_core",
-      unresolved: "unresolved",
-      player_season: "player_season",
-      team_season: "team_season",
-      publisher_ratings: "publisher_ratings",
-      player_value: "publisher_player_value",
-      lineups: "ncaa_lineups",
-      ncaa_player_box: "ncaa_player_box",
-      ncaa_player_season: "ncaa_player_season",
-      ncaa_rosters: "ncaa_team_rosters",
-      ncaa_player_shooting: "ncaa_shots",
-    };
-    const datasets = audit
-      ? Object.keys(auditAliases).map((dataset) => ({
-        dataset,
-        rows: dataset === "forecasts" || dataset === "games" || dataset === "player_box" || dataset === "unresolved"
-          ? summaryRows[dataset]
-          : datasetRows.get(auditAliases[dataset]) || 0,
-      }))
-      : Object.keys(summaryRows).map((dataset) => ({ dataset, rows: summaryRows[dataset] }));
+    const datasets = Object.keys(summaryRows).map((dataset) => ({ dataset, rows: summaryRows[dataset] }));
     const response = c.json({
       coverage: datasets,
       audit_status: "static_fallback",
@@ -1042,7 +1020,10 @@ app.get("/api/basketball/research/coverage", async (c) => {
   }
   return response;
   } catch {
-    const fallback = await publishedBasketballCoverage(c, audit);
+    // A summary can use the bundled catalog while D1 is unavailable. An
+    // explicit audit must remain retryable until the live receipt and
+    // validation queries complete; the catalog has neither of those proofs.
+    const fallback = audit ? null : await publishedBasketballCoverage(c, false);
     if (fallback) {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, fallback.clone()).catch(() => undefined));
       return fallback;
