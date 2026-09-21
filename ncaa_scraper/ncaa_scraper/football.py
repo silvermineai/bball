@@ -495,8 +495,14 @@ def personnel_preview(conn, year: int, limit: int = 12) -> list[dict]:
     ]
 
 
-def lower_division_results(games: list[dict], season: int, generated_at: str) -> dict:
-    """Build a source-native D2/D3 result and forecast archive.
+def lower_division_results(
+    games: list[dict],
+    season: int,
+    generated_at: str,
+    *,
+    divisions: set[str] | frozenset[str] | None = None,
+) -> dict:
+    """Build a source-native division result and forecast archive.
 
     Player production remains outside this schedule artifact. The score model
     is independently fitted per exact division after the result archive is
@@ -506,13 +512,22 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
     team summaries only credit a team whose exact schedule label matches that
     division. Games with missing scores remain visible in coverage but cannot
     affect win/loss or points summaries.
+
+    The default remains the historical D2/D3 release contract. The football
+    publisher also uses this function with an explicit ``{"fcs", "d2", "d3"}``
+    scope so FCS-versus-FCS forecasts can be published in the D1 desk without
+    changing the primary FBS model or its live API edition.
     """
+    result_divisions = frozenset(divisions or LOWER_RESULT_DIVISIONS)
+    unsupported = result_divisions - SUPPORTED_SCHEDULE_DIVISIONS
+    if unsupported:
+        raise ValueError(f"Unsupported football result divisions: {sorted(unsupported)}")
     rows: list[dict] = []
     summaries: dict[str, dict[str, int]] = {}
-    teams: dict[str, dict[str, dict[str, object]]] = {division: {} for division in LOWER_RESULT_DIVISIONS}
-    models: dict[str, dict[str, object] | None] = {division: None for division in LOWER_RESULT_DIVISIONS}
-    forecasts: dict[str, list[dict]] = {division: [] for division in LOWER_RESULT_DIVISIONS}
-    for division in sorted(LOWER_RESULT_DIVISIONS):
+    teams: dict[str, dict[str, dict[str, object]]] = {division: {} for division in result_divisions}
+    models: dict[str, dict[str, object] | None] = {division: None for division in result_divisions}
+    forecasts: dict[str, list[dict]] = {division: [] for division in result_divisions}
+    for division in sorted(result_divisions):
         summaries[division] = {
             "games": 0,
             "score_complete": 0,
@@ -525,7 +540,7 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
             continue
         home_division = normalize_division(game.get("home_division"))
         away_division = normalize_division(game.get("away_division"))
-        involved = sorted({d for d in (home_division, away_division) if d in LOWER_RESULT_DIVISIONS})
+        involved = sorted({d for d in (home_division, away_division) if d in result_divisions})
         if not involved:
             continue
         score_complete = game.get("home_score") is not None and game.get("away_score") is not None
@@ -572,7 +587,7 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
                 team["losses"] += int(own_score < opponent_score)
                 team["points_for"] += own_score
                 team["points_against"] += opponent_score
-    for division in sorted(LOWER_RESULT_DIVISIONS):
+    for division in sorted(result_divisions):
         try:
             model = train_division_model(games, generated_at, season, division)
         except ValueError:
@@ -645,14 +660,14 @@ def lower_division_results(games: list[dict], season: int, generated_at: str) ->
             teams[division].values(),
             key=lambda row: (-int(row["wins"]), -int(row["points_for"]) + int(row["points_against"]), str(row["team"])),
         )
-        for division in sorted(LOWER_RESULT_DIVISIONS)
+        for division in sorted(result_divisions)
     }
     return {
         "schema_version": 2,
         "sport": "football",
         "season": season,
         "generated_at": generated_at,
-        "scope": "D2/D3 completed schedule results",
+        "scope": "FCS, D2 and D3 completed schedule results" if "fcs" in result_divisions else "D2/D3 completed schedule results",
         "coverage": summaries,
         "teams": team_rows,
         "rows": rows,
@@ -809,7 +824,16 @@ def build(conn, season=2026):
     # construct genuinely lagged feature states for its dated holdouts.
     all_games = [dict(r) for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")]
     efficiency_model = build_efficiency_model(conn, all_games, model, upcoming, season)
-    lower_results = lower_division_results(games, season, now)
+    # Keep FCS predictions in the receipt-backed division archive. The
+    # production/live API edition remains the validated FBS model; this exact
+    # FCS model is exposed as a separate static cohort so its lineage cannot
+    # be confused with the primary model.
+    lower_results = lower_division_results(
+        games,
+        season,
+        now,
+        divisions=frozenset({"fcs", "d2", "d3"}),
+    )
     schedule_receipt = next((source for source in sources if source.get("dataset") == "schedule" and int(source.get("season", -1)) == season), None)
     if schedule_receipt:
         lower_results["source"] = {

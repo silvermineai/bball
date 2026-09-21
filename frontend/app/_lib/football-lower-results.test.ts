@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
-const row = (division: "d2" | "d3", score_complete = true) => ({
+const row = (division: "fcs" | "d2" | "d3", score_complete = true) => ({
   game_id: `${division}-1`, kickoff: "2026-09-01T00:00:00Z", week: 1,
   scope_division: division, home_id: `${division}-home`, home_name: "Home", home_division: division,
   away_id: `${division}-away`, away_name: "Away", away_division: division,
@@ -9,7 +9,7 @@ const row = (division: "d2" | "d3", score_complete = true) => ({
   neutral: false, score_complete,
 });
 
-const forecast = (division: "d2" | "d3", game_id: string, kickoff: string, home_win_probability: number, margin_low: number, margin_high: number) => ({
+const forecast = (division: "fcs" | "d2" | "d3", game_id: string, kickoff: string, home_win_probability: number, margin_low: number, margin_high: number) => ({
   game_id, kickoff, week: 1, scope_division: division,
   home_id: `${division}-home`, home_name: `${division} Home`,
   away_id: `${division}-away`, away_name: `${division} Away`, neutral: false,
@@ -97,5 +97,16 @@ describe("lower-division football results", () => {
     expect(lowerForecastsForDivision(archive, "d3").map((item) => item.game_id)).toEqual(["d3-only"]);
     expect(lowerDivisionSelection("d3")).toBe("d3");
     expect(lowerDivisionSelection(undefined)).toBe("d2");
+  });
+
+  it("keeps the exact-FCS model cohort available beside D2 and D3", () => {
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now", rows: [row("fcs")],
+      teams: { fcs: [], d2: [], d3: [] }, limitations: [],
+      forecasts: { fcs: [forecast("fcs", "fcs-only", "2026-09-01T00:00:00Z", 0.7, -8, 12)], d2: [], d3: [] },
+    });
+    expect(lowerResultsForDivision(archive, "fcs")).toHaveLength(1);
+    expect(lowerForecastsForDivision(archive, "fcs").map((item) => item.game_id)).toEqual(["fcs-only"]);
+    expect(lowerDivisionSelection("fcs")).toBe("fcs");
   });
 });

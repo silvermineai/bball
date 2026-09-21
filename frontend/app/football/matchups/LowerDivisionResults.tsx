@@ -60,17 +60,18 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
   const forecasts = archive ? lowerForecastsForDivision(archive, division, forecastQuery, forecastSort) : [];
   const model = archive?.models[division];
   const forecastCoverage = coverage && coverage.upcoming_games ? (coverage.forecast_games || 0) / coverage.upcoming_games : null;
+  const divisionLabel = division === "fcs" ? "D1 · FCS" : `D${division.slice(1)}`;
 
   return (
     <section className="paper-panel" aria-labelledby="lower-division-results-title" style={{ marginTop: 28 }}>
       <div className="section-heading">
-        <div><div className="eyebrow">RECORDED LOWER-DIVISION RESULTS</div><h2 id="lower-division-results-title">D2 and D3 scores, with the boundary intact.</h2></div>
+        <div><div className="eyebrow">RECORDED DIVISION RESULTS</div><h2 id="lower-division-results-title">FCS, D2 and D3 scores, with the boundary intact.</h2></div>
         {archive?.generated_at ? <span className="note">Edition generated {date(archive.generated_at)}</span> : null}
       </div>
-      <p className="note">This archive keeps source scores separate from the division-isolated Silvermine model. Ratings and forecasts appear only when the retained exact-division history passes its minimum training and calibration gates; player production remains a separate source surface.</p>
+      <p className="note">This archive keeps source scores separate from the division-isolated Silvermine models. FCS, D2 and D3 ratings and forecasts appear only when each exact-division history passes its minimum training and calibration gates; player production remains a separate source surface.</p>
       {error ? <p className="status-error" role="alert">{error}</p> : !archive ? <p className="empty" role="status">Loading recorded lower-division results…</p> : <>
         <div className="strip">
-          <div><strong>{coverage?.games.toLocaleString() ?? "—"}</strong><span>D{division.slice(1)} games</span></div>
+          <div><strong>{coverage?.games.toLocaleString() ?? "—"}</strong><span>{divisionLabel} games</span></div>
           <div><strong>{coverage?.score_complete.toLocaleString() ?? "—"}</strong><span>Complete scores</span></div>
           <div><strong>{coverage?.scores_missing.toLocaleString() ?? "—"}</strong><span>Missing scores</span></div>
           <div><strong>{teams.length.toLocaleString()}</strong><span>Team records</span></div>
@@ -78,7 +79,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
         </div>
         <div className="table-scroll" style={{ marginTop: 20 }}>
           <table className="data-table">
-            <caption className="eyebrow" style={{ textAlign: "left", paddingBottom: 10 }}>Lower-division publication readiness</caption>
+            <caption className="eyebrow" style={{ textAlign: "left", paddingBottom: 10 }}>Division publication readiness</caption>
             <thead><tr><th>Division</th><th className="numeric">Schedule rows</th><th className="numeric">Complete scores</th><th className="numeric">Score coverage</th><th className="numeric">Team rows</th><th>Player stats</th><th>Predictions</th><th>Receipt</th></tr></thead>
             <tbody>{readiness.map((row) => <tr key={row.division}>
               <th scope="row">{row.division.toUpperCase()}<small>Source-native scope</small></th>
@@ -102,7 +103,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
           <p className="note">{playerReadiness.limitations.join(" ")}</p>
         </div> : null}
         <div className="toolbar" style={{ marginTop: 18 }}>
-          <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => setDivision(event.target.value as LowerFootballDivision)}><option value="d2">Division II</option><option value="d3">Division III</option></select></label>
+          <label className="control"><span>DIVISION</span><select value={division} onChange={(event) => setDivision(event.target.value as LowerFootballDivision)}><option value="fcs">D1 · FCS</option><option value="d2">Division II</option><option value="d3">Division III</option></select></label>
           <label className="control"><span>TEAM OR GAME</span><input type="search" maxLength={100} value={query} placeholder="Search a team or game ID" onChange={(event) => setQuery(event.target.value)} /></label>
         </div>
         <div className="two-col" style={{ marginTop: 20 }}>

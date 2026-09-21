@@ -15,16 +15,18 @@ const archive = (source: LowerFootballResults["source"] = {
   generated_at: "2026-09-20T12:00:00Z",
   scope: "D2/D3 completed schedule results",
   coverage: {
+    fcs: { games: 0, score_complete: 0, scores_missing: 0 },
     d2: { games: 4, score_complete: 3, scores_missing: 1 },
     d3: { games: 0, score_complete: 0, scores_missing: 0 },
   },
   teams: {
+    fcs: [],
     d2: [{ team_id: "d2-a", team: "D2 A", division: "d2", games: 3, wins: 2, losses: 1, points_for: 60, points_against: 50 }],
     d3: [],
   },
   rows: [],
   models: {},
-  forecasts: { d2: [], d3: [] },
+  forecasts: { fcs: [], d2: [], d3: [] },
   limitations: [],
   source,
 });

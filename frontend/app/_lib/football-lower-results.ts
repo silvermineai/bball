@@ -1,4 +1,4 @@
-export type LowerFootballDivision = "d2" | "d3";
+export type LowerFootballDivision = "fcs" | "d2" | "d3";
 
 export type LowerFootballResult = {
   game_id: string;
@@ -42,6 +42,7 @@ export type LowerFootballForecastExplanation = {
 };
 
 export function lowerDivisionSelection(value: LowerFootballDivision | undefined): LowerFootballDivision {
+  if (value === "fcs") return "fcs";
   return value === "d3" ? "d3" : "d2";
 }
 
@@ -93,7 +94,8 @@ export type LowerFootballResults = {
   source?: { dataset?: string; season?: number; url?: string; fetched_at?: string; sha256?: string; last_modified?: string | null };
 };
 
-const divisions = new Set<LowerFootballDivision>(["d2", "d3"]);
+const divisions = new Set<LowerFootballDivision>(["fcs", "d2", "d3"]);
+const archiveDivisions = ["fcs", "d2", "d3"] as const;
 const finite = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
 
 function validRow(value: unknown): value is LowerFootballResult {
@@ -166,8 +168,8 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
     throw new Error("Lower-division football archive has an unsupported edition.");
   }
   const rows = Array.isArray(raw.rows) ? raw.rows.filter(validRow) : [];
-  const teams = { d2: [], d3: [] } as Record<LowerFootballDivision, LowerFootballTeam[]>;
-  for (const division of ["d2", "d3"] as const) {
+  const teams = { fcs: [], d2: [], d3: [] } as Record<LowerFootballDivision, LowerFootballTeam[]>;
+  for (const division of archiveDivisions) {
     const source = raw.teams && typeof raw.teams === "object" ? (raw.teams as Record<string, unknown>)[division] : [];
     teams[division] = Array.isArray(source) ? source.filter((team): team is LowerFootballTeam => {
       if (!team || typeof team !== "object") return false;
@@ -176,14 +178,20 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
         && ["games", "wins", "losses", "points_for", "points_against"].every((key) => finite(row[key]) != null);
     }) : [];
   }
-  const coverage = { d2: { games: 0, score_complete: 0, scores_missing: 0, upcoming_games: 0, forecast_games: 0 }, d3: { games: 0, score_complete: 0, scores_missing: 0, upcoming_games: 0, forecast_games: 0 } } as LowerFootballResults["coverage"];
+  const coverage = Object.fromEntries(archiveDivisions.map((division) => [division, {
+    games: 0,
+    score_complete: 0,
+    scores_missing: 0,
+    upcoming_games: 0,
+    forecast_games: 0,
+  }])) as LowerFootballResults["coverage"];
   for (const row of rows) {
     coverage[row.scope_division].games += 1;
     coverage[row.scope_division][row.score_complete ? "score_complete" : "scores_missing"] += 1;
   }
   const models = {} as LowerFootballResults["models"];
-  const forecasts = { d2: [], d3: [] } as LowerFootballResults["forecasts"];
-  for (const division of ["d2", "d3"] as const) {
+  const forecasts = { fcs: [], d2: [], d3: [] } as LowerFootballResults["forecasts"];
+  for (const division of archiveDivisions) {
     const sourceModel = raw.models && typeof raw.models === "object" ? (raw.models as Record<string, unknown>)[division] : null;
     if (validModel(sourceModel, division)) models[division] = sourceModel;
     const sourceForecasts = raw.forecasts && typeof raw.forecasts === "object" ? (raw.forecasts as Record<string, unknown>)[division] : [];
