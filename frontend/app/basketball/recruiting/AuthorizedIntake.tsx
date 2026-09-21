@@ -17,6 +17,8 @@ type ReviewedCoverage = {
 
 type IntakeCoverage = {
   total: number;
+  authorized_rows?: number | null;
+  intake_status?: "rows_available" | "confirmed_empty" | "unavailable";
   latest_captured_at: string | null;
   providers: Array<{ provider: string; rows: number; latest_captured_at: string | null }>;
   statuses: Array<{ status: string; rows: number }>;
@@ -74,6 +76,7 @@ export default function AuthorizedIntake() {
   }, []);
   const providerFeeds = coverage?.provider_feeds ?? [];
   const providerCapabilities = coverage?.provider_capabilities ?? [];
+  const authorizedRows = coverage?.authorized_rows ?? coverage?.total ?? 0;
   const importedProviders = new Set([
     ...(coverage?.providers ?? []).map((provider) => provider.provider),
     ...providerFeeds.map((feed) => feed.provider),
@@ -118,7 +121,7 @@ export default function AuthorizedIntake() {
               <span>public prospect rows · {coverage.public_rankings.ranked_rows.toLocaleString()} ranked</span>
             </div>}
             <div className="recruiting-intake-detail">
-              {coverage.total || providerFeeds.length ? <>
+              {authorizedRows > 0 ? <>
                 {coverage.providers.map((provider, index) => <span key={provider.provider}>Licensed feed {index + 1} · {provider.rows.toLocaleString()} intake rows · {clock(provider.latest_captured_at)}</span>)}
                 {providerFeeds.map((feed, index) => <span key={`${feed.provider}-${feed.kind}`}>Licensed feed {index + 1} · {feed.kind} · {feed.rows.toLocaleString()} private rows · {clock(feed.latest_captured_at)}</span>)}
               </> : <span>No authorized transfer or eligibility export has been imported for this season. The public prospect board and reviewed school-announcement file remain separate evidence.</span>}
@@ -140,11 +143,11 @@ export default function AuthorizedIntake() {
             <div className="recruiting-intake-compare-grid">
               <div><strong>{reviewedCoverage?.coverage?.players == null ? "—" : reviewedCoverage.coverage.players.toLocaleString()}</strong><span>Reviewed additions</span><small>{reviewedCoverage?.coverage?.events == null ? "Coverage unavailable" : `${reviewedCoverage.coverage.events.toLocaleString()} dated events`}</small></div>
               <div><strong>{coverage.public_rankings?.rows == null ? "—" : coverage.public_rankings.rows.toLocaleString()}</strong><span>Public prospect rows</span><small>{coverage.public_rankings?.ranked_rows == null ? "Coverage unavailable" : `${coverage.public_rankings.ranked_rows.toLocaleString()} ranked`}</small></div>
-              <div><strong>{coverage.total.toLocaleString()}</strong><span>Authorized intake rows</span><small>{coverage.total ? `${importedProviders.size} retained feed${importedProviders.size === 1 ? "" : "s"}` : "No licensed export loaded"}</small></div>
+              <div><strong>{authorizedRows.toLocaleString()}</strong><span>Authorized intake rows</span><small>{authorizedRows ? `${importedProviders.size} retained feed${importedProviders.size === 1 ? "" : "s"}` : "No licensed export loaded"}</small></div>
             </div>
           </section>
         ) : null}
-        {coverageDisplay?.available && coverage?.total === 0 ? (
+        {coverageDisplay?.available && coverage?.intake_status === "confirmed_empty" ? (
           <section className="recruiting-intake-next" aria-label="Next authorized import fields">
             <div>
               <div className="eyebrow">Next required import / no rows loaded</div>

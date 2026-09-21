@@ -24,8 +24,10 @@ describe("authorized recruiting intake coverage", () => {
     const prepare = vi.fn().mockReturnValue({ bind });
     const response = await recruitingIntake.request("/?season=2027&publication_check=unit", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; public_rankings: { rows: number; ranked_rows: number; committed_rows: number; edition: string }; policy: string };
+    const body = await response.json() as { total: number; authorized_rows: number; intake_status: string; providers: unknown[]; statuses: unknown[]; provider_feeds: unknown[]; provider_capabilities: Array<{ provider: string; event_date_available: boolean; kinds: string[] }>; public_rankings: { rows: number; ranked_rows: number; committed_rows: number; edition: string }; policy: string };
     expect(body.total).toBe(2);
+    expect(body.authorized_rows).toBe(6);
+    expect(body.intake_status).toBe("rows_available");
     expect(body.providers).toHaveLength(1);
     expect(body.statuses).toHaveLength(1);
     expect(body.provider_feeds).toHaveLength(1);
@@ -52,6 +54,8 @@ describe("authorized recruiting intake coverage", () => {
     expect(await response.json()).toEqual(expect.objectContaining({
       season: 2027,
       total: 0,
+      authorized_rows: null,
+      intake_status: "unavailable",
       source: "unavailable",
       unavailable_reason: expect.stringContaining("did not respond"),
     }));

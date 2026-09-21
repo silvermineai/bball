@@ -86,9 +86,19 @@ recruitingIntake.get("/", async (c) => {
     const publicProviders = providers.results.map((provider) => ({ ...provider, provider: "Authorized feed" }));
     const publicProviderFeeds = providerFeeds.results.map((feed) => ({ ...feed, provider: "Authorized feed" }));
     const publicCapabilities = providerCapabilities.map(({ provider: _provider, docs_url: _docsUrl, policy: _policy, ...capability }) => capability);
+    // The generic intake table and licensed provider feeds are stored in
+    // separate tables.  Report their combined row count so a populated
+    // provider feed cannot be mistaken for an empty transfer archive.
+    const providerFeedRows = providerFeeds.results.reduce((sum, feed) => {
+      const rows = Number(feed.rows);
+      return Number.isSafeInteger(rows) && rows >= 0 ? sum + rows : sum;
+    }, 0);
+    const authorizedRows = Number(summary?.total || 0) + providerFeedRows;
     const response = c.json({
       season,
       total: summary?.total ?? 0,
+      authorized_rows: authorizedRows,
+      intake_status: authorizedRows > 0 ? "rows_available" : "confirmed_empty",
       latest_captured_at: summary?.latest_captured_at ?? null,
       providers: publicProviders,
       statuses: statuses.results,
@@ -111,6 +121,8 @@ recruitingIntake.get("/", async (c) => {
     return c.json({
       season,
       total: 0,
+      authorized_rows: null,
+      intake_status: "unavailable",
       latest_captured_at: null,
       providers: [],
       statuses: [],
