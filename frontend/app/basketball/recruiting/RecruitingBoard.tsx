@@ -121,6 +121,12 @@ export type RecruitingClassSnapshotReceipt = {
   sha256: string;
 };
 
+export type RecruitingClassPositionMix = {
+  season: string;
+  total: number;
+  positions: Array<{ position: string; total: number; share: number }>;
+};
+
 /** Only call a class release verified when its digest covers its full table. */
 export function classSnapshotReceipt(snapshot: ClassSnapshot): RecruitingClassSnapshotReceipt | null {
   const receipt = snapshot.source_receipt;
@@ -141,6 +147,35 @@ export function classSnapshotReceipt(snapshot: ClassSnapshot): RecruitingClassSn
     || receipt.source_rows !== total
   ) return null;
   return { sourceRows: receipt.source_rows, sha256 };
+}
+
+/**
+ * Keep position supply comparisons bound to complete, release-verified class
+ * rows. A malformed duplicate, negative count, or partial position aggregate
+ * is withheld instead of being presented as a recruiting trend.
+ */
+export function classPositionMix(snapshots: ClassSnapshot[]): RecruitingClassPositionMix[] {
+  return snapshots.flatMap((snapshot) => {
+    const receipt = classSnapshotReceipt(snapshot);
+    if (!receipt || !Number.isSafeInteger(snapshot.total) || snapshot.total <= 0 || !Array.isArray(snapshot.position_breakdown)) return [];
+    const positions = snapshot.position_breakdown.map((row) => ({
+      position: typeof row.position === "string" ? row.position.trim().toUpperCase() : "",
+      total: row.total,
+    }));
+    if (
+      positions.length === 0
+      || positions.some((row) => !row.position || !Number.isSafeInteger(row.total) || row.total < 0 || row.total > snapshot.total)
+      || new Set(positions.map((row) => row.position)).size !== positions.length
+      || positions.reduce((sum, row) => sum + row.total, 0) !== snapshot.total
+    ) return [];
+    return [{
+      season: snapshot.season,
+      total: snapshot.total,
+      positions: positions
+        .sort((a, b) => a.position.localeCompare(b.position))
+        .map((row) => ({ ...row, share: row.total / snapshot.total })),
+    }];
+  });
 }
 
 /**
@@ -508,6 +543,11 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const shortlistCommitted = shortlist.filter((entry) => Boolean(entry.committed_team_name)).length;
   const shortlistPositions = Array.from(new Set(shortlist.map((entry) => entry.position).filter(Boolean))).join(" · ");
   const destinationRows = classDestinationRows(classSnapshots, 5);
+  const positionMixRows = classPositionMix(classSnapshots);
+  const positionColumns = Array.from(new Set(positionMixRows.flatMap((row) => row.positions.map((position) => position.position)))).sort((a, b) => {
+    const order = ["PG", "SG", "SF", "PF", "C", "G", "F", "W", "UNKNOWN"];
+    return (order.indexOf(a) < 0 ? order.length : order.indexOf(a)) - (order.indexOf(b) < 0 ? order.length : order.indexOf(b)) || a.localeCompare(b);
+  });
   return (
     <section className="section">
       <div className="section-heading">
@@ -592,6 +632,27 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <td><small>{receipt ? "Verified" : "Unavailable"}</small><small>{receipt ? `${receipt.sourceRows.toLocaleString()} source rows` : "Full release receipt unavailable"}</small>{receipt ? <small><code title={receipt.sha256}>{receipt.sha256.slice(0, 12)}…</code></small> : null}</td>
               <td><small>{snapshot.captured_at ? `${captureLabel(snapshot.captured_at)} UTC` : "Capture date unavailable"}</small></td>
               <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
+            </tr>;
+          })}</tbody>
+        </table></div>
+      </section>}
+      {positionMixRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-position-mix-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Position supply / verified class editions</div><h3 id="recruiting-position-mix-title">See what each class actually contains.</h3></div>
+          <span className="note">{positionMixRows.length} complete classes</span>
+        </div>
+        <p className="note">Counts and shares come from each class&apos;s complete, release-verified position aggregate. They describe the recorded prospect pool; they do not project roster need, player role or talent.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Prospects</th>{positionColumns.map((position) => <th className="numeric" key={position}>{position}</th>)}</tr></thead>
+          <tbody>{positionMixRows.map((row) => {
+            const byPosition = new Map(row.positions.map((position) => [position.position, position]));
+            return <tr key={`position-mix-${row.season}`}>
+              <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button></th>
+              <td className="numeric">{row.total.toLocaleString()}</td>
+              {positionColumns.map((position) => {
+                const value = byPosition.get(position);
+                return <td className="numeric" key={`${row.season}-${position}`}>{value ? <><strong>{value.total.toLocaleString()}</strong><small>{(value.share * 100).toFixed(1)}%</small></> : "—"}</td>;
+              })}
             </tr>;
           })}</tbody>
         </table></div>

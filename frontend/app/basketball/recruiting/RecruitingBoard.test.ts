@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
+  classPositionMix,
   classSnapshotCoverage,
   classSnapshotReceipt,
   currentRecruitingBoardResult,
@@ -174,6 +175,44 @@ describe("recruiting destination comparison", () => {
     }]);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ season: "2027", team_id: "7", committedTotal: 40, positionLabels: ["PG 7", "C 5"] });
+  });
+});
+
+describe("recruiting position supply comparison", () => {
+  const digest = "a".repeat(64);
+  const snapshot = {
+    season: "2027",
+    total: 10,
+    cohort: { ranked: 10, graded: 10, committed: 2 },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition: digest,
+    source_receipt: {
+      dataset: "recruiting_rankings",
+      captured_at: "2026-09-18T00:00:00Z",
+      source_rows: 10,
+      sha256: digest,
+      sha256_scope: "release_edition" as const,
+      integrity: "verified" as const,
+    },
+    position_breakdown: [{ position: "PG", total: 4 }, { position: " C ", total: 6 }],
+    commitment_destinations: [],
+  };
+
+  it("normalizes and returns a complete verified position mix", () => {
+    expect(classPositionMix([snapshot])).toEqual([{
+      season: "2027",
+      total: 10,
+      positions: [
+        { position: "C", total: 6, share: 0.6 },
+        { position: "PG", total: 4, share: 0.4 },
+      ],
+    }]);
+  });
+
+  it("withholds partial, duplicate, or unverified aggregates", () => {
+    expect(classPositionMix([{ ...snapshot, position_breakdown: [{ position: "PG", total: 4 }] }])).toEqual([]);
+    expect(classPositionMix([{ ...snapshot, position_breakdown: [{ position: "PG", total: 4 }, { position: "pg", total: 6 }] }])).toEqual([]);
+    expect(classPositionMix([{ ...snapshot, edition: "edition-1" }])).toEqual([]);
   });
 });
 
