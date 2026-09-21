@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { prospectCoverageSummary, prospectReceiptSummary } from "./LiveBasketballProspectStatus";
+import { prospectArchiveSummary, prospectCoverageSummary, prospectReceiptSummary } from "./LiveBasketballProspectStatus";
 
 describe("prospect coverage summary", () => {
+  it("reconciles national prospect rows across unique tracked classes", () => {
+    expect(prospectArchiveSummary([
+      { season: 2027, total: 10, ranked: 8, committed: 4, graded: 7, captured_at: null },
+      { season: 2028, total: 12, ranked: 9, committed: 5, graded: 8, captured_at: null },
+      { season: 2027, total: 99, ranked: 99, committed: 99, graded: 99, captured_at: null },
+    ])).toEqual({ classes: 2, total: 22, ranked: 17, committed: 9 });
+  });
+
   it("distinguishes all retained rows from rows with a recorded rank", () => {
     expect(prospectCoverageSummary({ season: 2027, total: 383, ranked: 301, committed: 132 })).toBe(
       "2027 · 383 prospects (301 ranked · 132 committed)",

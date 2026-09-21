@@ -43,6 +43,27 @@ export function prospectReceiptSummary(snapshots: Pick<ProspectSnapshot, "source
   return `${verified} of ${snapshots.length} release receipts verified${unavailable ? ` · ${unavailable} unavailable` : ""}${sourceRows ? ` · ${sourceRows.toLocaleString()} retained rows` : ""}`;
 }
 
+/**
+ * Reconcile the visible national prospect archive across unique class
+ * releases. These are source row totals, separate from the smaller reviewed
+ * announcement evidence set shown elsewhere on the recruiting page.
+ */
+export function prospectArchiveSummary(snapshots: ProspectSnapshot[]) {
+  const bySeason = new Map<number, ProspectSnapshot>();
+  snapshots.forEach((snapshot) => {
+    if (Number.isSafeInteger(snapshot.season) && snapshot.total > 0 && !bySeason.has(snapshot.season)) {
+      bySeason.set(snapshot.season, snapshot);
+    }
+  });
+  const rows = [...bySeason.values()];
+  return {
+    classes: rows.length,
+    total: rows.reduce((sum, snapshot) => sum + snapshot.total, 0),
+    ranked: rows.reduce((sum, snapshot) => sum + snapshot.ranked, 0),
+    committed: rows.reduce((sum, snapshot) => sum + snapshot.committed, 0),
+  };
+}
+
 export default function LiveBasketballProspectStatus() {
   const requestedSeasons = [2025, 2026, 2027, 2028, 2029, 2030];
   const [snapshots, setSnapshots] = useState<ProspectSnapshot[]>([]);
@@ -79,11 +100,13 @@ export default function LiveBasketballProspectStatus() {
     return () => controller.abort();
   }, [retryNonce]);
 
+  const archive = prospectArchiveSummary(snapshots);
+
   return (
     <p className="note" role="status">
       {status === "live"
         ? <>
-            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}{prospectReceiptSummary(snapshots)}. Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
+            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {archive.classes > 0 && <>National archive summary: {archive.total.toLocaleString()} retained prospect rows · {archive.ranked.toLocaleString()} ranked · {archive.committed.toLocaleString()} with recorded destinations. </>}{snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}{prospectReceiptSummary(snapshots)}. Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
           </>
         : status === "fallback"
           ? <>The live prospect board is temporarily unavailable; the recruiting research file remains available. <Link href="/basketball/recruiting/">Open the recruiting board →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
