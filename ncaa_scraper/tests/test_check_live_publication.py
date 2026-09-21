@@ -20,6 +20,7 @@ from scripts.check_live_publication import (
     womens_lower_division_metadata,
     womens_lower_schedule_archive_metadata,
     womens_lower_ratings_metadata,
+    lower_division_target_probe_metadata,
     mens_lower_schedule_archive_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
@@ -118,6 +119,42 @@ class LivePublicationCheckTest(unittest.TestCase):
         payload["divisions"]["d2"]["target_schedule"]["status"] = "ready"
         with self.assertRaisesRegex(ValueError, "forecast gate"):
             womens_lower_ratings_metadata(payload)
+
+    @staticmethod
+    def lower_target_probe_payload(sport_code="WBB"):
+        return {
+            "schema_version": 1,
+            "generated_at": "2026-09-10T18:00:00Z",
+            "target_season": "2026-27",
+            "requested_months": [9, 10, 11],
+            "source": {
+                "publisher": "NCAA.com",
+                "season_year": 2026,
+                "method": f"Persisted NCAA scoreboard queries with sportCode={sport_code} and explicit division.",
+                "query_contract": {"schedule": {"sha256": "a" * 64}},
+                "identity_limit": "No name-only join is performed.",
+            },
+            "calendar": [],
+            "contests": [],
+            "receipts": [{
+                "url": "https://sdataprod.ncaa.com?query=probe",
+                "status": 200,
+                "sha256": "a" * 64,
+                "bytes": 28,
+            }],
+        }
+
+    def test_target_probe_requires_exact_scope_and_fresh_receipts(self):
+        summary = lower_division_target_probe_metadata(
+            self.lower_target_probe_payload(),
+            "WBB",
+            datetime(2026, 9, 10, 20, tzinfo=timezone.utc),
+            36,
+        )
+        self.assertEqual(summary["contests"], 0)
+        payload = self.lower_target_probe_payload("MBB")
+        with self.assertRaisesRegex(ValueError, "source contract"):
+            lower_division_target_probe_metadata(payload, "WBB", datetime(2026, 9, 10, 20, tzinfo=timezone.utc), 36)
 
     @staticmethod
     def womens_lower_division_payload():
@@ -479,8 +516,12 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.womens_lower_schedule_payload()
             if path == "/data/basketball/womens-lower-division-ratings.json":
                 return LivePublicationCheckTest.womens_lower_ratings_payload()
+            if path == "/data/basketball/womens-lower-division-target-probe.json":
+                return LivePublicationCheckTest.lower_target_probe_payload("WBB")
             if path == "/data/basketball/mens-lower-division-schedules.json":
                 return LivePublicationCheckTest.mens_lower_schedule_payload()
+            if path == "/data/basketball/mens-lower-division-target-probe.json":
+                return LivePublicationCheckTest.lower_target_probe_payload("MBB")
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),

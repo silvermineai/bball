@@ -759,6 +759,71 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
     return summary
 
 
+def lower_division_target_probe_metadata(
+    payload: dict,
+    expected_sport_code: str,
+    checked_at: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate the receipt-backed target-season availability probe.
+
+    An empty NCAA response is evidence that the endpoint was checked, not a
+    schedule.  The probe remains useful only while its scope, response
+    receipts, and freshness are explicit.
+    """
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("lower-division target probe is malformed")
+    generated_at = payload.get("generated_at")
+    try:
+        generated = timestamp(generated_at)
+    except (TypeError, ValueError):
+        raise ValueError("lower-division target probe has an invalid generation time") from None
+    age = (checked_at - generated).total_seconds() / 3600
+    if age < -24 or age > max_age_hours:
+        raise ValueError(f"lower-division target probe is {max(age, 0):.1f} hours old")
+    if payload.get("target_season") != "2026-27":
+        raise ValueError("lower-division target probe has the wrong target season")
+    months = payload.get("requested_months")
+    if not isinstance(months, list) or months != [9, 10, 11]:
+        raise ValueError("lower-division target probe has an incomplete month window")
+    source = payload.get("source")
+    if (
+        not isinstance(source, dict)
+        or source.get("publisher") != "NCAA.com"
+        or source.get("season_year") != 2026
+        or not isinstance(source.get("method"), str)
+        or expected_sport_code not in source["method"]
+        or not isinstance(source.get("query_contract"), dict)
+        or not isinstance(source.get("identity_limit"), str)
+        or "no name-only" not in source["identity_limit"].casefold()
+    ):
+        raise ValueError("lower-division target probe source contract is malformed")
+    calendar = payload.get("calendar")
+    contests = payload.get("contests")
+    receipts = payload.get("receipts")
+    if not isinstance(calendar, list) or not isinstance(contests, list) or not isinstance(receipts, list) or not receipts:
+        raise ValueError("lower-division target probe has incomplete response evidence")
+    for receipt in receipts:
+        if (
+            not isinstance(receipt, dict)
+            or not isinstance(receipt.get("url"), str)
+            or not receipt["url"].startswith("https://sdataprod.ncaa.com?")
+            or receipt.get("status") != 200
+            or not isinstance(receipt.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+            or not isinstance(receipt.get("bytes"), int)
+            or receipt["bytes"] <= 0
+        ):
+            raise ValueError("lower-division target probe receipt is malformed")
+    return {
+        "target_season": payload["target_season"],
+        "calendar_days": len(calendar),
+        "contests": len(contests),
+        "receipt_count": len(receipts),
+        "generated_age_hours": round(max(age, 0), 2),
+    }
+
+
 def mens_lower_schedule_archive_metadata(payload: dict) -> dict:
     """Validate the exact-division historical men’s schedule archive.
 
@@ -1439,8 +1504,20 @@ def check_live(
     womens_lower_ratings = womens_lower_ratings_metadata(
         get_json(base_url, "/data/basketball/womens-lower-division-ratings.json")
     )
+    womens_lower_target_probe = lower_division_target_probe_metadata(
+        get_json(base_url, "/data/basketball/womens-lower-division-target-probe.json"),
+        "WBB",
+        checked_at,
+        max_age_hours,
+    )
     mens_lower_schedule = mens_lower_schedule_archive_metadata(
         get_json(base_url, "/data/basketball/mens-lower-division-schedules.json")
+    )
+    mens_lower_target_probe = lower_division_target_probe_metadata(
+        get_json(base_url, "/data/basketball/mens-lower-division-target-probe.json"),
+        "MBB",
+        checked_at,
+        max_age_hours,
     )
     matchup_personnel = get_json(
         base_url,
@@ -1625,10 +1702,16 @@ def check_live(
         "womens_d3_rating_games": womens_lower_ratings["d3"]["valid_final_games"],
         "womens_d3_rating_teams": womens_lower_ratings["d3"]["teams"],
         "womens_d3_rating_model": womens_lower_ratings["d3"]["model_id"],
+        "womens_lower_target_probe_contests": womens_lower_target_probe["contests"],
+        "womens_lower_target_probe_calendar_days": womens_lower_target_probe["calendar_days"],
+        "womens_lower_target_probe_receipts": womens_lower_target_probe["receipt_count"],
         "mens_lower_schedule_season": mens_lower_schedule["season_year"],
         "mens_lower_schedule_receipts": mens_lower_schedule["receipt_count"],
         "mens_d2_schedule_contests": mens_lower_schedule["d2_contests"],
         "mens_d3_schedule_contests": mens_lower_schedule["d3_contests"],
+        "mens_lower_target_probe_contests": mens_lower_target_probe["contests"],
+        "mens_lower_target_probe_calendar_days": mens_lower_target_probe["calendar_days"],
+        "mens_lower_target_probe_receipts": mens_lower_target_probe["receipt_count"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],
