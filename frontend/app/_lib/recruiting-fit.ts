@@ -130,7 +130,27 @@ export type FitTeam = {
   name: string;
   rank: number;
   adj_net: number;
+  /** Retained prior-season team outlook fields; never treated as a current need. */
+  archivedNeeds?: string[];
+  archivedNeedsSeason?: string | null;
 };
+
+export type ArchivedNeedStatus = "match" | "not_recorded" | "unavailable";
+
+/**
+ * Compare a candidate's normalized role with source-recorded positional needs.
+ * An empty list means the archived outlook recorded no need; an omitted list
+ * means the outlook is unavailable. This is context for review, not a fit score.
+ */
+export function archivedNeedStatus(
+  role: FitRole | "unknown",
+  needs: string[] | undefined,
+): ArchivedNeedStatus {
+  if (!needs) return "unavailable";
+  if (role === "unknown") return "not_recorded";
+  const needRoles = new Set(needs.map(positionRole).filter((value): value is Exclude<FitRole, "any"> => value !== "unknown" && value !== "any"));
+  return needRoles.has(role as Exclude<FitRole, "any">) ? "match" : "not_recorded";
+}
 
 export type FitRow = {
   player: BBRoster;

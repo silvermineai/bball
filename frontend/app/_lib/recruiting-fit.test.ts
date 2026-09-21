@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecruitingFit, buildRoleSummaries, parseRecruitingFitRosterPayload, positionRole, prioritizeRoleSummaries, recruitingFitCoverage, recruitingFitSourceReceipt } from "./recruiting-fit";
+import { archivedNeedStatus, buildRecruitingFit, buildRoleSummaries, parseRecruitingFitRosterPayload, positionRole, prioritizeRoleSummaries, recruitingFitCoverage, recruitingFitSourceReceipt } from "./recruiting-fit";
 import type { BBRoster } from "./basketball-types";
 
 const player = (patch: Partial<BBRoster>): BBRoster => ({
@@ -76,6 +76,14 @@ describe("recruiting fit", () => {
     expect(positionRole("SF")).toBe("wing");
     expect(positionRole("C")).toBe("big");
     expect(positionRole(null)).toBe("unknown");
+  });
+
+  it("keeps archived positional needs as dated context instead of a fit score", () => {
+    expect(archivedNeedStatus("guard", ["G"])).toBe("match");
+    expect(archivedNeedStatus("wing", ["G"])).toBe("not_recorded");
+    expect(archivedNeedStatus("big", [])).toBe("not_recorded");
+    expect(archivedNeedStatus("guard", undefined)).toBe("unavailable");
+    expect(archivedNeedStatus("unknown", ["G"])).toBe("not_recorded");
   });
 
   it("keeps the target roster out of the candidate board and ranks qualified candidates", () => {

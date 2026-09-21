@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBasketball } from "../../../_lib/basketball-data";
+import { getArchivedRecruitingOutlook, getBasketball } from "../../../_lib/basketball-data";
 import RecruitingFit from "./RecruitingFit";
 
 export const metadata = {
@@ -9,7 +9,22 @@ export const metadata = {
 };
 
 export default function Page() {
-  const teams = getBasketball().ratings.map((team) => ({ id: team.id, name: team.name, rank: team.rank, adj_net: team.adj_net }));
+  const basketball = getBasketball();
+  // The prior-season outlook is deliberately kept separate from the live
+  // roster release so its date boundary remains visible in the fit board.
+  const archived = getArchivedRecruitingOutlook();
+  const archivedById = new Map((archived?.teams || []).map((team) => [team.id, team]));
+  const teams = basketball.ratings.map((team) => {
+    const outlook = archivedById.get(team.id);
+    return {
+      id: team.id,
+      name: team.name,
+      rank: team.rank,
+      adj_net: team.adj_net,
+      archivedNeeds: outlook?.positionalNeeds,
+      archivedNeedsSeason: outlook ? archived!.season : null,
+    };
+  });
   return (
     <>
       <div className="page-title">
