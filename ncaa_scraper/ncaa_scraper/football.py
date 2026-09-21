@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .football_model import forecast, train_and_evaluate, train_division_model
 from .football_efficiency_model import build as build_efficiency_model
+from .football_personnel_readiness import build as build_personnel_readiness
 from .football_sources import (
     ATTRIBUTION,
     DATASETS,
@@ -824,6 +825,12 @@ def build(conn, season=2026):
     # construct genuinely lagged feature states for its dated holdouts.
     all_games = [dict(r) for r in conn.execute("SELECT * FROM football_games ORDER BY kickoff,id")]
     efficiency_model = build_efficiency_model(conn, all_games, model, upcoming, season)
+    # Keep personnel context auditable and separate from the primary model.
+    # This readiness artifact measures exact-ID coverage for forecasted games;
+    # it is deliberately not a feature input or forecast registration.
+    personnel_readiness = build_personnel_readiness(
+        conn, upcoming, season, primary_model_id=model["id"]
+    )
     # Keep FCS predictions in the receipt-backed division archive. The
     # production/live API edition remains the validated FBS model; this exact
     # FCS model is exposed as a separate static cohort so its lineage cannot
@@ -840,7 +847,7 @@ def build(conn, season=2026):
             key: schedule_receipt.get(key)
             for key in ("dataset", "season", "url", "fetched_at", "sha256", "last_modified")
         }
-    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model, "lower-division-results-" + str(season): lower_results}
+    artifacts = {"overview": overview, "validation": validation, "efficiency-model": efficiency_model, "personnel-readiness-" + str(season): personnel_readiness, "lower-division-results-" + str(season): lower_results}
     for year in [season - 1, season]:
         artifacts[f"players-{year}"] = player_board(conn, year)
     artifacts[f"personnel-preview-{season}"] = personnel_preview(conn, season)

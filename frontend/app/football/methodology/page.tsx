@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getFootballEfficiencyModel, getOverview } from "../../_lib/data";
+import { getFootballEfficiencyModel, getFootballPersonnelReadiness, getOverview } from "../../_lib/data";
 import { date, fmt } from "../../_lib/format";
 export const metadata = {
   title: "Model methodology, data coverage and provenance",
@@ -8,7 +8,8 @@ export default function Page() {
   const d = getOverview(),
     e = d.model.evaluation,
     c = d.model.calibration,
-    efficiency = getFootballEfficiencyModel();
+    efficiency = getFootballEfficiencyModel(),
+    personnel = getFootballPersonnelReadiness(d.season);
   return (
     <>
       <div className="page-title">
@@ -227,6 +228,40 @@ export default function Page() {
           unknown teams shrink toward the league prior; no injuries, roster
           moves, weather or market prices enter this challenger.
         </p>
+      </section>
+      <section className="section paper-panel" aria-labelledby="personnel-readiness-title">
+        <div className="eyebrow">Feature readiness / {personnel.target_season}</div>
+        <h2 id="personnel-readiness-title">Personnel context is measured before it is modeled.</h2>
+        <p>
+          This receipt-backed research artifact joins the retained team-talent
+          and returning-production releases to exact team IDs on forecasted
+          games. It shows where future roster features are available without
+          changing the score-only primary forecast.
+        </p>
+        <div className="strip" style={{ marginBottom: 18 }}>
+          <div><strong>{personnel.coverage.forecast_games.toLocaleString()}</strong><span>Forecast games checked</span></div>
+          <div><strong>{personnel.coverage.complete_games.toLocaleString()}</strong><span>Complete context</span></div>
+          <div><strong>{personnel.coverage.partial_games.toLocaleString()}</strong><span>Partial context</span></div>
+          <div><strong>{personnel.coverage.personnel_teams.toLocaleString()}</strong><span>Exact teams retained</span></div>
+        </div>
+        <div className="table-scroll">
+          <table className="data-table">
+            <caption className="note">First 16 forecast records in the evidence file; IDs and statuses remain source-bound.</caption>
+            <thead><tr><th>Game</th><th>Status</th><th>Home team ID</th><th>Away team ID</th><th className="numeric">Home fields</th><th className="numeric">Away fields</th></tr></thead>
+            <tbody>{personnel.games.slice(0, 16).map((game) => <tr key={game.game_id}>
+              <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name || game.home_id)}`}>{game.away_name || game.away_id} at {game.home_name || game.home_id}</Link><small>{game.game_id}</small></th>
+              <td><strong>{game.status}</strong><small>{game.home.source_datasets.join(", ") || "No retained source"} / {game.away.source_datasets.join(", ") || "No retained source"}</small></td>
+              <td className="mono">{game.home_id}</td>
+              <td className="mono">{game.away_id}</td>
+              <td className="numeric">{game.home.available_fields.length} / {personnel.feature_fields.length}</td>
+              <td className="numeric">{game.away.available_fields.length} / {personnel.feature_fields.length}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="note" style={{ marginTop: 14 }}>
+          Source receipts: {personnel.source_receipts.map((receipt) => `${receipt.dataset} ${receipt.sha256.slice(0, 12)}`).join(" · ") || "unavailable"}. Conflicts stay flagged and missing rows never become zeroes. <a href={`/data/football/personnel-readiness-${personnel.target_season}.json`} download>Download the complete readiness artifact ↗</a>
+        </p>
+        <p className="note">{personnel.limitations[0]} {personnel.limitations[1]}</p>
       </section>
       <section className="section two-col">
         <div className="paper-panel" style={{ minWidth: 0 }}>

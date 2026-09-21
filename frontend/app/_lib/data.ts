@@ -105,6 +105,39 @@ export type FootballEfficiencyModel = {
   limitations: string[];
   scenarios: FootballEfficiencyScenario[];
 };
+
+export type FootballPersonnelReadiness = {
+  version: string;
+  generated_at: string;
+  target_season: number;
+  primary_model_id: string | null;
+  scope: string;
+  coverage: {
+    forecast_games: number;
+    team_sides: number;
+    complete_games: number;
+    partial_games: number;
+    conflict_games: number;
+    unavailable_games: number;
+    field_side_counts: Record<string, number>;
+    personnel_teams: number;
+  };
+  feature_fields: string[];
+  source_receipts: Array<{ dataset: string; season: number; fetched_at: string; sha256: string }>;
+  limitations: string[];
+  games: Array<{
+    game_id: string;
+    kickoff: string | null;
+    home_id: string;
+    away_id: string;
+    home_name: string | null;
+    away_name: string | null;
+    status: "complete" | "partial" | "conflict" | "unavailable";
+    home: { team_id: string; available_fields: string[]; source_datasets: string[]; conflicting_fields: string[] };
+    away: { team_id: string; available_fields: string[]; source_datasets: string[]; conflicting_fields: string[] };
+  }>;
+  id: string;
+};
 export type Overview = {
   generated_at: string;
   season: number;
@@ -193,6 +226,15 @@ export function getFootballEfficiencyModel(): FootballEfficiencyModel {
   return JSON.parse(
     fs.readFileSync(
       path.join(process.cwd(), "public/data/football/efficiency-model.json"),
+      "utf8",
+    ),
+  );
+}
+
+export function getFootballPersonnelReadiness(season = 2026): FootballPersonnelReadiness {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football", `personnel-readiness-${season}.json`),
       "utf8",
     ),
   );
