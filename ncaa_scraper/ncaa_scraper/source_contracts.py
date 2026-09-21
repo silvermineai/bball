@@ -379,6 +379,7 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
             handle_context = path.open("rt", encoding="utf-8-sig", newline="")
         team_scope, team_divisions = _cached_team_scope(year) if dataset == "box" else (None, {})
         mapped_rows: dict[str, int] = {}
+        mapped_athletes: dict[str, set[str]] = {}
         with handle_context as handle:
             reader = csv.DictReader(handle)
             fields = list(reader.fieldnames or [])
@@ -391,6 +392,9 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
                 mapped_division = team_divisions.get(str(row.get("team_id") or ""))
                 if mapped_division:
                     mapped_rows[mapped_division] = mapped_rows.get(mapped_division, 0) + 1
+                    athlete_id = str(row.get("athlete_id") or "").strip()
+                    if athlete_id:
+                        mapped_athletes.setdefault(mapped_division, set()).add(athlete_id)
         receipt_path = Path(str(path) + ".receipt.json")
         receipt: dict[str, Any] = {}
         if receipt_path.exists():
@@ -407,6 +411,10 @@ def _cached_observation(dataset: str, year: int | None) -> dict[str, Any] | None
         if team_scope is not None:
             observation["team_scope"] = team_scope
             observation["team_scope"]["player_rows_by_division"] = mapped_rows
+            observation["team_scope"]["player_athletes_by_division"] = {
+                division: len(athletes)
+                for division, athletes in mapped_athletes.items()
+            }
         return observation
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
         return {"season": year, "asset": str(path), "status": "unreadable"}

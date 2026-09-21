@@ -23,6 +23,9 @@ export type FootballLowerPlayerReadiness = {
     candidate_count: number;
     blockers: string[];
     rows_published: number;
+    source_labeled_team_rows: number;
+    box_rows_mapped_to_source_labeled_teams: number;
+    unique_athletes_mapped_to_source_labeled_teams: number;
     reason: string;
   }>;
   classification_policy: string;
@@ -78,6 +81,9 @@ export function validateFootballLowerPlayerReadiness(value: unknown): FootballLo
       || !Number.isInteger(item.candidate_count) || !Array.isArray(item.blockers)
       || !item.blockers.every((blocker) => typeof blocker === "string")
       || typeof item.rows_published !== "number" || !Number.isInteger(item.rows_published) || item.rows_published < 0
+      || typeof item.source_labeled_team_rows !== "number" || !Number.isInteger(item.source_labeled_team_rows) || item.source_labeled_team_rows < 0
+      || typeof item.box_rows_mapped_to_source_labeled_teams !== "number" || !Number.isInteger(item.box_rows_mapped_to_source_labeled_teams) || item.box_rows_mapped_to_source_labeled_teams < 0
+      || typeof item.unique_athletes_mapped_to_source_labeled_teams !== "number" || !Number.isInteger(item.unique_athletes_mapped_to_source_labeled_teams) || item.unique_athletes_mapped_to_source_labeled_teams < 0
       || typeof item.reason !== "string") {
       throw new Error(`Football lower-division player readiness has malformed D${division}.`);
     }
@@ -86,6 +92,9 @@ export function validateFootballLowerPlayerReadiness(value: unknown): FootballLo
       candidate_count: item.candidate_count as number,
       blockers: item.blockers as string[],
       rows_published: Number(item.rows_published),
+      source_labeled_team_rows: Number(item.source_labeled_team_rows),
+      box_rows_mapped_to_source_labeled_teams: Number(item.box_rows_mapped_to_source_labeled_teams),
+      unique_athletes_mapped_to_source_labeled_teams: Number(item.unique_athletes_mapped_to_source_labeled_teams),
       reason: item.reason as string,
     };
   }

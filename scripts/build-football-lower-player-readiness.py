@@ -34,6 +34,42 @@ def build_readiness(season: int = 2026) -> dict:
             seen.add(key)
             endpoint_contracts.append(contract)
 
+    divisions = {}
+    for diagnostic in diagnostics:
+        target = str(diagnostic["requested_scope"]["division"])
+        target_key = f"d{target}"
+        candidates = diagnostic["candidates"]
+        box = next(
+            (candidate for candidate in candidates if candidate.get("dataset") == "box"),
+            {},
+        )
+        box_observation = box.get("observation") or {}
+        team_scope = box_observation.get("team_scope") or {}
+        team_rows = team_scope.get("team_rows_by_division") or {}
+        mapped_rows = team_scope.get("player_rows_by_division") or {}
+        mapped_athletes = team_scope.get("player_athletes_by_division") or {}
+        divisions[target] = {
+            "status": diagnostic["status"],
+            "candidate_count": len(candidates),
+            "blockers": sorted(
+                {
+                    str(blocker["code"])
+                    for candidate in candidates
+                    for blocker in candidate["blockers"]
+                }
+            ),
+            "rows_published": 0,
+            "source_labeled_team_rows": int(team_rows.get(target_key, 0) or 0),
+            "box_rows_mapped_to_source_labeled_teams": int(mapped_rows.get(target_key, 0) or 0),
+            "unique_athletes_mapped_to_source_labeled_teams": int(mapped_athletes.get(target_key, 0) or 0),
+            "reason": (
+                "No football D2/D3 player rows are published from these "
+                "candidate endpoints. The source contract is recorded for "
+                "intake and remains blocked until every row passes the "
+                "explicit-division, identity, and receipt gates."
+            ),
+        }
+
     return {
         "schema_version": 1,
         "sport": "football",
@@ -42,27 +78,7 @@ def build_readiness(season: int = 2026) -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "status": "blocked",
         "source_contracts": endpoint_contracts,
-        "divisions": {
-            str(diagnostic["requested_scope"]["division"]): {
-                "status": diagnostic["status"],
-                "candidate_count": len(diagnostic["candidates"]),
-                "blockers": sorted(
-                    {
-                        str(blocker["code"])
-                        for candidate in diagnostic["candidates"]
-                        for blocker in candidate["blockers"]
-                    }
-                ),
-                "rows_published": 0,
-                "reason": (
-                    "No football D2/D3 player rows are published from these "
-                    "candidate endpoints. The source contract is recorded for "
-                    "intake and remains blocked until every row passes the "
-                    "explicit-division, identity, and receipt gates."
-                ),
-            }
-            for diagnostic in diagnostics
-        },
+        "divisions": divisions,
         "classification_policy": (
             "A group-35 event, school name, conference, non-D1 flag, or missing "
             "division never classifies a player as D2 or D3. Only a source row "

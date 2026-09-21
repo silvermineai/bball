@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from ncaa_scraper.source_contracts import (
     discover_lower_division_sources,
     validate_player_source_rows,
@@ -90,6 +93,8 @@ def test_football_discovery_includes_publisher_scope_evidence_and_join_audit():
     team_scope = box["observation"]["team_scope"]
     assert set(("d2", "d3")).issubset(team_scope["observed_divisions"])
     assert team_scope["player_rows_by_division"].get("d3", 0) == 0
+    assert team_scope["team_rows_by_division"]["d3"] == 238
+    assert team_scope["player_athletes_by_division"].get("d3", 0) == 0
     assert any(
         blocker["code"] == "target_division_player_rows_absent"
         for blocker in box["blockers"]
@@ -114,6 +119,19 @@ def test_football_discovery_records_public_player_endpoint_contracts_without_imp
     # Endpoint discovery is evidence for the next intake step, never a player
     # archive.  The source candidates above must not change the blocked status.
     assert result["status"] == "blocked"
+
+
+def test_lower_football_readiness_publishes_exact_join_counts_without_player_rows():
+    artifact = Path(__file__).resolve().parents[2] / "frontend" / "public" / "data" / "football" / "lower-division-player-readiness.json"
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["divisions"]["2"]["source_labeled_team_rows"] == 167
+    assert payload["divisions"]["3"]["source_labeled_team_rows"] == 238
+    for division in ("2", "3"):
+        row = payload["divisions"][division]
+        assert row["box_rows_mapped_to_source_labeled_teams"] == 0
+        assert row["unique_athletes_mapped_to_source_labeled_teams"] == 0
+        assert row["rows_published"] == 0
 
 
 def test_mbb_discovery_accepts_receipted_explicit_d2_and_d3_rows():

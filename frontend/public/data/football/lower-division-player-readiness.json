@@ -3,7 +3,7 @@
   "sport": "football",
   "gender": "men",
   "season": 2026,
-  "generated_at": "2026-09-21T06:27:25.409839Z",
+  "generated_at": "2026-09-21T06:58:57.622012Z",
   "status": "blocked",
   "source_contracts": [
     {
@@ -95,6 +95,9 @@
         "target_division_player_rows_absent"
       ],
       "rows_published": 0,
+      "source_labeled_team_rows": 167,
+      "box_rows_mapped_to_source_labeled_teams": 0,
+      "unique_athletes_mapped_to_source_labeled_teams": 0,
       "reason": "No football D2/D3 player rows are published from these candidate endpoints. The source contract is recorded for intake and remains blocked until every row passes the explicit-division, identity, and receipt gates."
     },
     "3": {
@@ -108,6 +111,9 @@
         "target_division_player_rows_absent"
       ],
       "rows_published": 0,
+      "source_labeled_team_rows": 238,
+      "box_rows_mapped_to_source_labeled_teams": 0,
+      "unique_athletes_mapped_to_source_labeled_teams": 0,
       "reason": "No football D2/D3 player rows are published from these candidate endpoints. The source contract is recorded for intake and remains blocked until every row passes the explicit-division, identity, and receipt gates."
     }
   },

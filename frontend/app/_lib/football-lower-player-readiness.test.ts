@@ -20,8 +20,8 @@ const ledger = {
     reason: "Combined group requires an exact-division join.",
   }],
   divisions: {
-    "2": { status: "blocked", candidate_count: 1, blockers: ["missing_division"], rows_published: 0, reason: "No rows." },
-    "3": { status: "blocked", candidate_count: 1, blockers: ["missing_division"], rows_published: 0, reason: "No rows." },
+    "2": { status: "blocked", candidate_count: 1, blockers: ["missing_division"], rows_published: 0, source_labeled_team_rows: 10, box_rows_mapped_to_source_labeled_teams: 0, unique_athletes_mapped_to_source_labeled_teams: 0, reason: "No rows." },
+    "3": { status: "blocked", candidate_count: 1, blockers: ["missing_division"], rows_published: 0, source_labeled_team_rows: 12, box_rows_mapped_to_source_labeled_teams: 0, unique_athletes_mapped_to_source_labeled_teams: 0, reason: "No rows." },
   },
   classification_policy: "Explicit source labels only.",
   required_before_import: ["receipt"],
@@ -34,6 +34,7 @@ describe("football lower-division player readiness", () => {
     expect(result.status).toBe("blocked");
     expect(result.source_contracts[0].discovery_url).toContain("groups=35");
     expect(result.divisions["2"].rows_published).toBe(0);
+    expect(result.divisions["2"].source_labeled_team_rows).toBe(10);
   });
 
   it("rejects a ledger with a missing division or invented rows", () => {
