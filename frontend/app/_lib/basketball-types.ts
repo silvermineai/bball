@@ -292,6 +292,17 @@ export type BBRosterScenario = {
   roster_home_win_probability: number;
   roster_margin_low: number;
   roster_margin_high: number;
+  home_player_watch?: BBRosterPlayerWatch[];
+  away_player_watch?: BBRosterPlayerWatch[];
+};
+export type BBRosterPlayerWatch = {
+  athlete_id: string;
+  name: string;
+  prior_minutes: number;
+  bpm: number | null;
+  returning: boolean;
+  represented: boolean;
+  weighted_bpm_minutes: number | null;
 };
 export type BBRosterModelTeam = {
   season: number;
@@ -315,6 +326,7 @@ export type BBRosterModelTeam = {
   prior_net: number | null;
   target_net: number | null;
   predicted_net: number | null;
+  player_watch?: BBRosterPlayerWatch[];
 };
 export type BBRosterModel = {
   version: string;

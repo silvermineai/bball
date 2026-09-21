@@ -205,6 +205,80 @@ def roster_features(
     return sorted(rows, key=lambda row: row["team"])
 
 
+def player_watch(
+    conn: sqlite3.Connection,
+    season: int,
+    prior_participation_season: int,
+    limit: int = 5,
+) -> dict[str, list[dict]]:
+    """Return exact-ID workload/value context for the current roster packet.
+
+    This is descriptive evidence attached to a roster scenario. It does not
+    change challenger coefficients. Continuity flags are set only when prior
+    and current roster records share the source athlete ID; prior workload
+    lines can remain visible for a departed player. Names are labels and
+    never a join key.
+    """
+    prior_values = _player_values(conn, prior_participation_season)
+    prior_by_team: dict[str, list[dict]] = defaultdict(list)
+    for row in conn.execute(
+        "SELECT athlete_id,team_id,name,minutes FROM bb_participation WHERE season=?",
+        (prior_participation_season,),
+    ):
+        athlete_id = str(row["athlete_id"] or "")
+        minutes = row["minutes"]
+        if (
+            not athlete_id
+            or not isinstance(minutes, (int, float))
+            or not math.isfinite(float(minutes))
+            or minutes <= 0
+        ):
+            continue
+        prior_by_team[str(row["team_id"])].append(
+            {
+                "athlete_id": athlete_id,
+                "name": str(row["name"] or "").strip() or athlete_id,
+                "prior_minutes": float(minutes),
+                "bpm": prior_values.get(athlete_id),
+            }
+        )
+
+    current_by_team: dict[str, set[str]] = defaultdict(set)
+    current_anywhere: set[str] = set()
+    for row in conn.execute(
+        "SELECT team_id,athlete_id FROM bb_rosters WHERE season=?",
+        (season,),
+    ):
+        athlete_id = str(row["athlete_id"] or "")
+        if not athlete_id:
+            continue
+        current_by_team[str(row["team_id"])].add(athlete_id)
+        current_anywhere.add(athlete_id)
+
+    result: dict[str, list[dict]] = {}
+    for team_id, players in prior_by_team.items():
+        enriched = []
+        for player in players:
+            athlete_id = player["athlete_id"]
+            bpm = player["bpm"]
+            enriched.append(
+                {
+                    **player,
+                    "returning": athlete_id in current_by_team.get(team_id, set()),
+                    "represented": athlete_id in current_anywhere,
+                    "weighted_bpm_minutes": (
+                        round(player["prior_minutes"] * bpm, 2)
+                        if bpm is not None else None
+                    ),
+                }
+            )
+        # Workload is the stable ordering; BPM remains an observed value and
+        # may be missing without dropping the player from context.
+        enriched.sort(key=lambda row: (-row["prior_minutes"], row["athlete_id"]))
+        result[team_id] = enriched[: max(0, limit)]
+    return result
+
+
 FEATURES = (
     "prior_net",
     "returning_minutes_share",
@@ -415,6 +489,7 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
     chronological = fit(transitions[2025])
     evaluation = metrics(chronological, transitions[2026])
     production = fit(historical)
+    player_watch_by_team = player_watch(conn, 2027, 2026)
     # The NCAA source has independent roster editions back to 2010. Replaying
     # its 2024–26 transitions adds dated evidence without mixing its IDs or
     # fields into the ESPN/Box BPM production scenario.
@@ -439,7 +514,11 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
         )
     current_rows = []
     for row in transitions[2027]:
-        current = {**row, "predicted_net": predict(production, row)}
+        current = {
+            **row,
+            "predicted_net": predict(production, row),
+            "player_watch": player_watch_by_team.get(row["team_id"], []),
+        }
         current_rows.append(current)
     current_by_team = {row["team_id"]: row for row in current_rows}
     scenarios = []
@@ -468,6 +547,8 @@ def build(conn: sqlite3.Connection, primary_model: dict, upcoming: list[dict]) -
                 "margin_delta": round(margin_delta, 3),
                 "home_predicted_net": round(home["predicted_net"], 3),
                 "away_predicted_net": round(away["predicted_net"], 3),
+                "home_player_watch": home.get("player_watch", []),
+                "away_player_watch": away.get("player_watch", []),
                 **scenario_forecast(primary_model, scenario_margin),
             }
         )

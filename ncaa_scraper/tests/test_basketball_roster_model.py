@@ -1,3 +1,4 @@
+import sqlite3
 import unittest
 
 from ncaa_scraper.basketball import _prior_production
@@ -6,6 +7,7 @@ from ncaa_scraper.basketball_roster_model import (
     WORKLOAD_FEATURES,
     fit,
     metrics,
+    player_watch,
     predict,
     scenario_forecast,
 )
@@ -27,6 +29,31 @@ def row(i: int, target: float | None = None) -> dict:
 
 
 class RosterModelTests(unittest.TestCase):
+    def test_player_watch_uses_exact_ids_and_keeps_missing_bpm_visible(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.executescript(
+            """
+            CREATE TABLE bb_participation (season INTEGER, team_id TEXT, athlete_id TEXT, name TEXT, minutes REAL);
+            CREATE TABLE bb_player_value (season INTEGER, player_id TEXT, team_id TEXT, player_name TEXT, stats_json TEXT);
+            CREATE TABLE bb_rosters (season INTEGER, team_id TEXT, athlete_id TEXT, profile_json TEXT);
+            INSERT INTO bb_participation VALUES (2026,'team-a','p1','Returning guard',900);
+            INSERT INTO bb_participation VALUES (2026,'team-a','p2','Transferred wing',800);
+            INSERT INTO bb_participation VALUES (2026,'team-a','p3','Unvalued center',700);
+            INSERT INTO bb_player_value VALUES (2026,'p1','team-a','Returning guard', '{"box_bpm": 4.5}');
+            INSERT INTO bb_rosters VALUES (2027,'team-a','p1','{}');
+            INSERT INTO bb_rosters VALUES (2027,'team-b','p2','{}');
+            """
+        )
+        rows = player_watch(conn, 2027, 2026, limit=5)["team-a"]
+        self.assertEqual([row["athlete_id"] for row in rows], ["p1", "p2", "p3"])
+        self.assertTrue(rows[0]["returning"])
+        self.assertFalse(rows[1]["returning"])
+        self.assertTrue(rows[1]["represented"])
+        self.assertIsNone(rows[2]["bpm"])
+        self.assertEqual(rows[0]["weighted_bpm_minutes"], 4050.0)
+        conn.close()
+
     def test_prior_production_preserves_publisher_value_and_weights_by_minutes(self):
         result = _prior_production(
             [
