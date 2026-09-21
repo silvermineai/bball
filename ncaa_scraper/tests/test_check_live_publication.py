@@ -522,6 +522,41 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.mens_lower_schedule_payload()
             if path == "/data/basketball/mens-lower-division-target-probe.json":
                 return LivePublicationCheckTest.lower_target_probe_payload("MBB")
+            if path == "/data/football/personnel-readiness-2026.json":
+                fields = ["talent_composite", "talent_rank", "blue_chip_ratio", "off_returning", "def_returning", "overall_returning"]
+                side = lambda team_id: {
+                    "team_id": team_id,
+                    "team": None,
+                    "available_fields": fields,
+                    "source_datasets": ["team_talent", "returning_production"],
+                    "conflicting_fields": [],
+                }
+                return {
+                    "version": "football-personnel-readiness-v1",
+                    "generated_at": "2026-09-10T19:00:00Z",
+                    "target_season": 2026,
+                    "coverage": {
+                        "forecast_games": 1,
+                        "team_sides": 2,
+                        "complete_games": 1,
+                        "partial_games": 0,
+                        "conflict_games": 0,
+                        "unavailable_games": 0,
+                        "field_side_counts": {field: 2 for field in fields},
+                        "personnel_teams": 2,
+                    },
+                    "feature_fields": fields,
+                    "source_receipts": [
+                        {"dataset": "team_talent", "season": 2026, "fetched_at": "2026-09-10T18:00:00Z", "sha256": "a" * 64},
+                        {"dataset": "returning_production", "season": 2026, "fetched_at": "2026-09-10T18:00:00Z", "sha256": "b" * 64},
+                    ],
+                    "games": [{
+                        "game_id": "football-readiness-1",
+                        "status": "complete",
+                        "home": side("1"),
+                        "away": side("2"),
+                    }],
+                }
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),
