@@ -83,7 +83,7 @@ export default function Scorecard() {
     const c = new AbortController();
     setRefreshing(true);
     setError("");
-    fetch("/api/research/scorecard?sport=all&limit=5000", { signal: c.signal })
+    fetch(`/api/research/scorecard?sport=${sport}&limit=5000`, { signal: c.signal })
       .then((r) => {
         if (!r.ok) throw Error("The live research ledger could not be loaded.");
         return r.json();
@@ -110,7 +110,7 @@ export default function Scorecard() {
       .finally(() => setRefreshing(false));
     return () => c.abort();
   };
-  useEffect(() => refresh(), []);
+  useEffect(() => refresh(), [sport]);
   useEffect(() => {
     if (sport !== "football") {
       setBenchmark(null);
