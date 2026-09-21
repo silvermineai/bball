@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, lowerFootballPlayerRankValue, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -86,6 +86,20 @@ describe("lower football player aggregation", () => {
       { key: "yards", label: "YDS", value: "200" },
       { key: "touchdowns", label: "TD", value: null },
       { key: "unused", label: "unused", value: "—" },
+    ]);
+  });
+
+  it("audits source fields within one exact lower-division scope", () => {
+    const fields = lowerFootballSourceFieldCoverage([
+      row({ labels: ["C/ATT", "YDS", "TD"], stats: ["10/20", "200", ""] }),
+      row({ category: "rushing", keys: ["rushingYards"], stats: ["75"] }),
+      row({ division: "d3", keys: ["passingYards"], stats: ["999"] }),
+    ], "d2");
+    expect(fields).toEqual([
+      { key: "completions/passingAttempts", label: "C/ATT", categories: ["passing"], source_rows: 1, populated_values: 1 },
+      { key: "passingTouchdowns", label: "TD", categories: ["passing"], source_rows: 1, populated_values: 0 },
+      { key: "passingYards", label: "YDS", categories: ["passing"], source_rows: 1, populated_values: 1 },
+      { key: "rushingYards", label: "rushingYards", categories: ["rushing"], source_rows: 1, populated_values: 1 },
     ]);
   });
 });

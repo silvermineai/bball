@@ -322,6 +322,45 @@ export function lowerFootballSourceFields(row: LowerFootballRawRow): Array<{ key
   }));
 }
 
+export type LowerFootballSourceFieldCoverage = {
+  key: string;
+  label: string;
+  categories: string[];
+  source_rows: number;
+  populated_values: number;
+};
+
+/**
+ * Summarize the provider fields present in one exact lower-division archive.
+ * This is a field-presence audit, not a derived statistic or cross-category
+ * player join. Blank provider cells remain visible through populated_values.
+ */
+export function lowerFootballSourceFieldCoverage(
+  rows: readonly LowerFootballRawRow[],
+  division: "d2" | "d3",
+): LowerFootballSourceFieldCoverage[] {
+  const fields = new Map<string, LowerFootballSourceFieldCoverage>();
+  for (const row of rows) {
+    if (row.division !== division) continue;
+    row.keys.forEach((key, index) => {
+      const existing = fields.get(key) || {
+        key,
+        label: row.labels?.[index] || key,
+        categories: [],
+        source_rows: 0,
+        populated_values: 0,
+      };
+      existing.source_rows += 1;
+      if (row.stats[index] != null && row.stats[index].trim() !== "") existing.populated_values += 1;
+      if (!existing.categories.includes(row.category)) existing.categories.push(row.category);
+      fields.set(key, existing);
+    });
+  }
+  return [...fields.values()]
+    .map((field) => ({ ...field, categories: [...field.categories].sort() }))
+    .sort((left, right) => left.key.localeCompare(right.key));
+}
+
 export function lowerFootballCategoryDefinition(category: LowerFootballCategory) {
   return lowerFootballCategories.find((item) => item.key === category) || lowerFootballCategories[0];
 }

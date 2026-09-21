@@ -6,6 +6,7 @@ import {
   aggregateLowerFootballPlayers,
   lowerFootballCategories,
   lowerFootballCategoryDefinition,
+  lowerFootballSourceFieldCoverage,
   lowerFootballSourceFields,
   lowerFootballSourceRows,
   type LowerFootballCategory,
@@ -53,6 +54,10 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
     [archive, category, selected, target],
   );
   const definition = lowerFootballCategoryDefinition(category);
+  const sourceFieldCoverage = useMemo(
+    () => lowerFootballSourceFieldCoverage(archive?.rows || [], target),
+    [archive, target],
+  );
   const download = () => downloadCsv(
     `football-${target}-player-${category}-2026.csv`,
     toCsv(
@@ -66,6 +71,12 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
     <p className="note">Exact publisher athlete IDs and team IDs are aggregated from {archive.coverage.games.toLocaleString()} retained D2/D3 event summaries. This is an observed 2026 game archive through {new Date(archive.generated_at).toLocaleDateString("en-US", { timeZone: "UTC" })}; it is not a claim that an unobserved game or missing category is zero.</p>
     <div className="toolbar"><label className="control"><span>STAT CATEGORY</span><select value={category} onChange={(event) => setCategory(event.target.value as LowerFootballCategory)}>{lowerFootballCategories.map((item) => <option key={item.key} value={item.key}>{item.label} · {item.unit}</option>)}</select></label><label className="control"><span>RANK BY</span><select value={rankingBasis} onChange={(event) => setRankingBasis(event.target.value as LowerFootballRankingBasis)}><option value="total">Season total</option><option value="per_game">Per game</option></select></label><label className="control"><span>MINIMUM GAMES</span><select value={minimumGames} onChange={(event) => setMinimumGames(event.target.value)}><option value="1">1+</option><option value="3">3+</option><option value="5">5+</option></select></label><label className="control"><span>SEARCH PLAYER / TEAM</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, team, or ID" /></label></div>
     <p className="note">{rows.length.toLocaleString()} qualified players · {archive.coverage.rows_by_division[target]?.toLocaleString() || 0} source rows in D{division} · ranked by {rankingBasis === "per_game" ? `average ${definition.metric} per retained game` : `summed ${definition.metric}`} with missing values excluded.</p>
+    <details className="ranking-recorded-details" style={{ marginBottom: 18 }}>
+      <summary>Source field coverage · {sourceFieldCoverage.length} fields · {archive.receipts.length.toLocaleString()} receipts</summary>
+      <p className="note">These counts audit provider fields within exact {target.toUpperCase()} rows. A populated-value count excludes blank provider cells; it does not turn an unavailable value into zero.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th>Provider label</th><th>Categories</th><th className="numeric">Rows carrying field</th><th className="numeric">Populated values</th></tr></thead><tbody>{sourceFieldCoverage.map((field) => <tr key={field.key}><th scope="row"><code>{field.key}</code></th><td>{field.label}</td><td>{field.categories.join(", ")}</td><td className="numeric">{field.source_rows.toLocaleString()}</td><td className="numeric">{field.populated_values.toLocaleString()}</td></tr>)}</tbody></table></div>
+      <p className="note">Receipt digest: <code>{archive.source.receipt_sha256}</code>. The archive contains {archive.coverage.players_by_division[target]?.toLocaleString() || 0} exact athlete IDs across {archive.coverage.teams.toLocaleString()} retained teams in the combined D2/D3 release; this table stays within D{division}.</p>
+    </details>
     <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">{definition.metric}</th><th className="numeric">Per game</th><th className="numeric">Source rows</th><th>Recorded measures</th></tr></thead><tbody>{rows.slice(0, 100).map((row, index) => { const key = `${row.athlete_id}:${row.team_id}:${row.category}`; return <tr key={key}><td className="rank-number">{index + 1}</td><th scope="row"><button className="text-link" type="button" onClick={() => setSelectedKey((current) => current === key ? "" : key)} aria-expanded={selectedKey === key} aria-controls="lower-football-source-detail">{row.athlete}</button><small>{row.athlete_id}{row.position ? ` · ${row.position}` : ""}</small></th><td>{row.team}<small>{row.team_id}</small></td><td className="numeric">{row.games}</td><td className="numeric"><strong>{number(row.primary)}</strong></td><td className="numeric">{number(row.per_game)}</td><td className="numeric">{row.source_rows}</td><td>{Object.entries(row.metrics).filter(([key]) => key !== definition.metric).slice(0, 6).map(([key, value]) => `${key}: ${number(value)}`).join(" · ") || "—"}</td></tr>; })}</tbody></table></div>
     {rows.length > 100 && <p className="note">Showing the first 100 rows; download CSV contains all {rows.length.toLocaleString()} matching players.</p>}
     {selected ? <section id="lower-football-source-detail" className="paper-panel" aria-labelledby="lower-football-source-detail-title" style={{ marginTop: 18 }}>
