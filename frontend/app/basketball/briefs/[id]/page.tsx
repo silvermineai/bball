@@ -34,6 +34,7 @@ import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
 import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
 import { explainBasketballPrediction } from "../../../_lib/basketball-prediction-explanation";
+import { buildBriefAnalysisPacket } from "../../../_lib/brief-analysis-packet";
 import MatchupRecruitingContext from "./MatchupRecruitingContext";
 
 const emptySplit = () => ({
@@ -217,6 +218,19 @@ export default async function Page({
     publisherArticles = relatedPublisherArticles(g),
     rosterReadiness = rosterEvidenceReadiness(evidence.programs),
     marginWidth = p.margin_high - p.margin_low,
+    analysisPacket = buildBriefAnalysisPacket({
+      prediction: p,
+      modelId: d.model.id,
+      forecastModelId: g.forecast_model_id,
+      coefficientReproduced: Boolean(predictionExplanation),
+      startsAt: g.starts_at,
+      timeTbd: g.time_tbd,
+      venue: g.venue,
+      neutral: g.neutral,
+      factorCount: evidence.pressures.length,
+      roster: rosterReadiness,
+      marketQuoteCount: quotes.length,
+    }),
     readiness = [
       {
         key: "forecast",
@@ -484,6 +498,60 @@ export default async function Page({
         awayId={g.away_id}
         awayName={g.away_name}
       />
+      <section className="section brief-analysis-packet" aria-labelledby="brief-analysis-packet-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Analysis packet / exact game</div>
+            <h2 id="brief-analysis-packet-title">
+              {analysisPacket.state === "ready"
+                ? "Evidence packet ready for review."
+                : analysisPacket.state === "blocked"
+                  ? "Evidence packet blocked by an integrity check."
+                  : "Evidence packet is partial; read the gaps first."}
+            </h2>
+          </div>
+          <span className="note">
+            {analysisPacket.verifiedCount}/{analysisPacket.items.length} lanes verified
+          </span>
+        </div>
+        <p className="note brief-explainer">
+          This packet separates what the published game record supports from
+          inputs that are missing or descriptive only. Missing evidence stays
+          visible, so a forecast cannot be mistaken for a current availability
+          report or a market recommendation.
+        </p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Evidence lane</th>
+                <th>Status</th>
+                <th>Observed in this brief</th>
+                <th>Missing before use</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analysisPacket.items.map((entry) => (
+                <tr key={entry.key}>
+                  <th scope="row">{entry.label}</th>
+                  <td>
+                    <span className={`readiness-state ${entry.state === "verified" ? "readiness-state-ready" : entry.state === "blocked" ? "readiness-state-blocked" : "readiness-state-missing"}`}>
+                      {entry.state === "verified" ? "Verified" : entry.state === "partial" ? "Partial" : entry.state === "blocked" ? "Blocked" : "Unavailable"}
+                    </span>
+                  </td>
+                  <td>{entry.observed}</td>
+                  <td>{entry.missing || "None recorded"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note brief-readiness-note">
+          The packet is an evidence boundary for preparation. It does not infer
+          eligibility, injuries, rotations, closing lines or player roles from
+          absent data.
+        </p>
+      </section>
       <section className="brief-readiness" aria-label="Pre-tip readiness">
         <div className="section-heading">
           <div>
