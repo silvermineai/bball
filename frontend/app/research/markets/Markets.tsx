@@ -47,7 +47,7 @@ type Meta = {
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
   };
-  source?: string;
+  source?: "partial" | "unavailable";
   unavailable_reason?: string;
   unavailable_sources?: string[];
   provider_capabilities?: Array<{
