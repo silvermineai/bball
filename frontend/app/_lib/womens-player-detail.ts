@@ -1,5 +1,15 @@
 export type WomensPlayerStat = number | null | undefined;
 export type WomensPlayerStats = Record<string, WomensPlayerStat>;
+export type WomensPlayerCsvRecord = {
+  player_id: string;
+  name: string;
+  team: string;
+  position: string;
+  source: "season" | "box";
+  box_rows?: number;
+  dnp_rows?: number;
+  stats: WomensPlayerStats;
+};
 export type WomensPlayerDetailKind = "count" | "rate" | "percentage";
 export type WomensPlayerDetailField = readonly [key: string, label: string, kind: WomensPlayerDetailKind];
 
@@ -66,6 +76,47 @@ export const womensPlayerDetailGroups: ReadonlyArray<{
     ],
   },
 ];
+
+const orderedDetailFields = womensPlayerDetailGroups.flatMap((group) => group.fields.map(([key]) => key));
+
+/**
+ * Preserve the published detail-field order, then append any fields introduced
+ * by a newer release. This keeps CSV output stable while retaining new data.
+ */
+export function orderedWomensPlayerStatFields(players: readonly WomensPlayerCsvRecord[]): string[] {
+  const present = new Set(players.flatMap((player) => Object.keys(player.stats)));
+  return [
+    ...orderedDetailFields.filter((key) => present.has(key)),
+    ...Array.from(present).filter((key) => !orderedDetailFields.includes(key)).sort(),
+  ];
+}
+
+export function womensPlayerCsvHeaders(statFields: readonly string[]): string[] {
+  return ["Player ID", "Player", "Team", "Position", "Source", "Box rows", "DNP rows", ...statFields.map(womensPlayerFieldLabel)];
+}
+
+/**
+ * Export only finite source values. Null, undefined, and non-finite values are
+ * blank cells so an unavailable stat is never represented as zero.
+ */
+export function womensPlayerCsvRows(
+  players: readonly WomensPlayerCsvRecord[],
+  statFields: readonly string[],
+): Array<Array<string | number | null>> {
+  return players.map((player) => [
+    player.player_id,
+    player.name,
+    player.team,
+    player.position,
+    player.source,
+    player.box_rows ?? null,
+    player.dnp_rows ?? null,
+    ...statFields.map((key) => {
+      const value = player.stats[key];
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    }),
+  ]);
+}
 
 const knownFields = new Set(
   womensPlayerDetailGroups.flatMap((group) => group.fields.map(([key]) => key)),

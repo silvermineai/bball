@@ -4,14 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   formatWomensPlayerStat,
+  orderedWomensPlayerStatFields,
   unlistedWomensPlayerFields,
   womensPlayerDetailCount,
   womensPlayerDetailGroups,
   womensPlayerFieldLabel,
+  womensPlayerCsvHeaders,
+  womensPlayerCsvRows,
   paginateWomensPlayerRows,
   type WomensPlayerStats,
 } from "../_lib/womens-player-detail";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
+import { downloadCsv, toCsv } from "../_lib/csv";
 
 type Player = {
   player_id: string;
@@ -168,11 +172,19 @@ export default function WomensBasketballPlayers() {
       .sort((left, right) => (Number(right.stats[metric]) || -Infinity) - (Number(left.stats[metric]) || -Infinity) || left.name.localeCompare(right.name));
   }, [displayPlayers, metric, minimumGames, position, query]);
   const visibleRows = useMemo(() => paginateWomensPlayerRows(rows, page, pageSize), [page, rows]);
+  const csvStatFields = useMemo(() => orderedWomensPlayerStatFields(rows), [rows]);
+  const download = () => downloadCsv(
+    "womens-basketball-players-" + (edition?.observed_player_season || "season") + "-filtered.csv",
+    toCsv(
+      womensPlayerCsvHeaders(csvStatFields),
+      womensPlayerCsvRows(rows, csvStatFields),
+    ),
+  );
   useEffect(() => setPage(0), [metric, minimumGames, position, query]);
 
   return <section className="field-card wbb-player-card" aria-labelledby="wbb-players-title">
-    <div className="eyebrow">WOMEN&apos;S PLAYER TABLE · {WOMENS_SOURCE_SCOPE_LABEL}</div>
-    <h2 id="wbb-players-title">Browse observed player production</h2>
+    <div className="section-heading"><div><div className="eyebrow">WOMEN&apos;S PLAYER TABLE · {WOMENS_SOURCE_SCOPE_LABEL}</div>
+    <h2 id="wbb-players-title">Browse observed player production</h2></div><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download filtered CSV ↓</button></div>
     <p className="muted">A searchable table combining source-reported season rows with arithmetic aggregates from retained game-level box scores. Missing values remain unavailable. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     {!edition ? <p className="muted">Loading women&apos;s player table…</p> : <>
       <div className="wbb-player-controls">
