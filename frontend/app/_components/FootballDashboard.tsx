@@ -9,6 +9,12 @@ import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 import DashboardExportButton from "./DashboardExportButton";
 import { footballDivisionCoverage } from "../_lib/football-coverage";
+import {
+  aggregateLowerFootballPlayers,
+  lowerFootballCategoryDefinition,
+  type LowerFootballCategory,
+  type LowerFootballRawRow,
+} from "../_lib/football-lower-player-view";
 
 type Production = {
   games?: number | null;
@@ -87,6 +93,26 @@ function getObservedLowerPlayers() {
   }
 }
 
+type LowerFootballArchive = {
+  generated_at?: string;
+  coverage?: {
+    players_by_division?: Record<string, number>;
+    rows_by_division?: Record<string, number>;
+  };
+  rows?: LowerFootballRawRow[];
+};
+
+function getLowerFootballArchive(): LowerFootballArchive | null {
+  const file = path.join(process.cwd(), "public/data/football/lower-division-player-stats-2026.json");
+  if (!fs.existsSync(file)) return null;
+  try {
+    const value = JSON.parse(fs.readFileSync(file, "utf8")) as LowerFootballArchive;
+    return Array.isArray(value.rows) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function getEventEditions(season: number) {
   const file = path.join(process.cwd(), "public/data/football/events.json");
   if (!fs.existsSync(file)) return [] as EventEdition[];
@@ -140,6 +166,38 @@ function PlayerTable({ players, season }: { players: Player[]; season: number })
   </div>;
 }
 
+const lowerLeaderCategories = ["passing", "rushing", "receiving"] as const satisfies readonly LowerFootballCategory[];
+
+function LowerDivisionPlayerTable({ archive, division }: { archive: LowerFootballArchive; division: "d2" | "d3" }) {
+  const rows = lowerLeaderCategories.flatMap((category) => {
+    const definition = lowerFootballCategoryDefinition(category);
+    return aggregateLowerFootballPlayers(archive.rows || [], division, category)
+      .slice(0, 4)
+      .map((player, rank) => ({ player, category, definition, rank: rank + 1 }));
+  });
+  return <section className="dashboard-section" aria-labelledby={`football-${division}-players`}>
+    <div className="dashboard-section-heading">
+      <div><span className="eyebrow">{division.toUpperCase()} / OBSERVED PLAYER STATS</span><h2 id={`football-${division}-players`}>Production leaders</h2></div>
+      <Link href={`/football/players/?division=${division.slice(1)}`}>Open full D{division.slice(1)} table →</Link>
+    </div>
+    <p className="dashboard-caption">Exact publisher athlete and team IDs aggregated from retained {division.toUpperCase()} game summaries. These are observed production totals; missing games and categories remain unavailable.</p>
+    <div className="dashboard-table-wrap">
+      <table className="data-table dashboard-table">
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Role</th><th className="numeric">GP</th><th className="numeric">{rows.length ? "Production" : "Value"}</th></tr></thead>
+        <tbody>{rows.map(({ player, category, definition, rank }) => <tr key={`${division}-${category}-${player.athlete_id}-${player.team_id}`}>
+          <td className="rank-number">{rank}</td>
+          <th scope="row">{player.athlete}<small>{player.athlete_id}{player.position ? ` · ${player.position}` : ""}</small></th>
+          <td>{player.team}<small>{player.team_id}</small></td>
+          <td>{definition.label}</td>
+          <td className="numeric">{player.games}</td>
+          <td className="numeric"><strong>{fmt(player.primary, 0)}</strong><small>{definition.metric}</small></td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+    {!rows.length ? <p className="empty">No observed {division.toUpperCase()} player rows are available.</p> : null}
+  </section>;
+}
+
 function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
   const rows = editions.flatMap((edition) =>
     [
@@ -171,6 +229,7 @@ function EventLeadersTable({ editions }: { editions: EventEdition[] }) {
 export default function FootballDashboard() {
   const overview = getOverview();
   const players = getPlayers(overview.season);
+  const lowerFootballArchive = getLowerFootballArchive();
   const divisionCoverage = footballDivisionCoverage(overview.upcoming, players, undefined, getObservedLowerPlayers());
   const forecasts = overview.upcoming.filter((game) => game.prediction);
   const completedPlayerSeason = overview.season - 1;
@@ -283,6 +342,10 @@ export default function FootballDashboard() {
         <PlayerTable players={players} season={completedPlayerSeason} />
       </section>
     </div>
+    {lowerFootballArchive ? <div className="dashboard-two-col">
+      <LowerDivisionPlayerTable archive={lowerFootballArchive} division="d2" />
+      <LowerDivisionPlayerTable archive={lowerFootballArchive} division="d3" />
+    </div> : null}
     <section className="dashboard-section" aria-labelledby="football-events">
       <div className="dashboard-section-heading"><div><span className="eyebrow">04 / DEFENSE &amp; SPECIALISTS</span><h2 id="football-events">Pressure and field position</h2></div><div className="button-row"><DashboardExportButton sport="football" kind="events" season={overview.season} headers={["Season", "Dataset", "Stat", "Player", "Team", "Division", "Records", "Games", "Value"]} rows={eventExportRows} /><Link href="/football/events/">Full event notebook →</Link></div></div>
       <p className="dashboard-caption">Six current {overview.season} leaders for each retained defensive and specialist event. The season is partial; records stay tied to the recorded name and team until a player identity is verified.</p>
