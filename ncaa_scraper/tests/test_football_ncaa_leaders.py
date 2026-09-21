@@ -49,6 +49,29 @@ class FootballNCAALeaderTests(unittest.TestCase):
         self.assertEqual(rushing["leaders"][0]["games"], 0)
         self.assertIsNone(rushing["leaders"][0]["primary_per_game"])
 
+    def test_missing_primary_is_not_zero_filled_into_a_leaderboard(self):
+        # The source can publish a defensive event such as a sack without a
+        # tackles value.  That row remains in the raw source archive, but it
+        # cannot support the defense board's tackles primary measure.
+        self.add(
+            "1",
+            "defense",
+            "10",
+            "g1",
+            {"name": "Sack Only", "position": "DL", "number": "1", "sacks": "1", "category": "defense"},
+        )
+        self.add(
+            "2",
+            "defense",
+            "10",
+            "g1",
+            {"name": "Zero Tackles", "position": "DB", "number": "2", "tackles": "0", "category": "defense"},
+        )
+        result = build_leaders(self.conn, 2025, limit=10)
+        defense = next(item for item in result["categories"] if item["key"] == "defense")
+        self.assertEqual([row["name"] for row in defense["leaders"]], ["Zero Tackles"])
+        self.assertEqual(defense["leaders"][0]["primary"], 0)
+
     def test_keeps_categories_separate(self):
         self.add("1", "passing", "10", "g1", {"name": "Dual", "position": "QB", "number": "1", "pass_yards": "100", "category": "passing"})
         self.add("2", "receiving", "10", "g1", {"name": "Dual", "position": "WR", "number": "1", "receiving_yards": "40", "category": "receiving"})

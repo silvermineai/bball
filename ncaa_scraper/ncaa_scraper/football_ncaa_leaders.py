@@ -137,13 +137,19 @@ def category_specs(category: str, payload: dict) -> list[tuple[str, dict]]:
     """
     base = CATEGORIES.get(category)
     if base:
-        return [(category, base)]
+        # A leaderboard value must be observed in the source row.  In
+        # particular, a defensive row can carry sacks without a tackles
+        # value; treating that absent primary as zero would create a false
+        # tackles ranking.  A literal numeric zero remains observed and is
+        # therefore retained.
+        return [(category, base)] if payload.get(base["primary"]) not in (None, "") else []
     if category != "other":
         return []
     return [
         (key, spec)
         for key, spec in DERIVED_CATEGORIES.items()
         if payload.get(spec["required"]) not in (None, "")
+        and payload.get(spec["primary"]) not in (None, "")
     ]
 
 
