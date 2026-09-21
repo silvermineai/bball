@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Comparison } from "./research-types";
-import { completeForecastLabMarketQuotes, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "./forecast-lab-market";
+import { completeForecastLabMarketQuotes, forecastLabQuoteIdentity, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "./forecast-lab-market";
 
 const quote = (overrides: Partial<Comparison> = {}): Comparison => ({
   provider: "licensed-feed",
@@ -46,5 +46,32 @@ describe("Forecast Lab market quote selection", () => {
     expect(completeForecastLabMarketQuotes([incomplete, invalidTotal, invalidMoneyline, complete])).toEqual([complete]);
     expect(hasCompleteForecastLabMarket([incomplete, invalidTotal, invalidMoneyline])).toBe(false);
     expect(hasCompleteForecastLabMarket([incomplete, complete])).toBe(true);
+  });
+
+  it("reports retained market identity without upgrading missing IDs", () => {
+    expect(forecastLabQuoteIdentity(quote({ market_observation_id: "obs-1", market_game_id: "event-1" }))).toEqual({
+      state: "exact",
+      label: "Observation + source event IDs",
+      observationId: "obs-1",
+      marketGameId: "event-1",
+    });
+    expect(forecastLabQuoteIdentity(quote({ market_game_id: " event-2 " }))).toMatchObject({
+      state: "event_only",
+      label: "Source event ID only",
+      observationId: null,
+      marketGameId: "event-2",
+    });
+    expect(forecastLabQuoteIdentity(quote({ market_observation_id: "obs-3" }))).toMatchObject({
+      state: "observation_only",
+      label: "Observation ID only",
+      observationId: "obs-3",
+      marketGameId: null,
+    });
+    expect(forecastLabQuoteIdentity(quote({ market_observation_id: "  ", market_game_id: null }))).toMatchObject({
+      state: "unavailable",
+      label: "Market IDs unavailable",
+      observationId: null,
+      marketGameId: null,
+    });
   });
 });

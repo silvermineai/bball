@@ -2,6 +2,39 @@ import type { Comparison } from "./research-types";
 
 export type ForecastLabMarket = Comparison["market"];
 
+export type ForecastLabQuoteIdentity = {
+  state: "exact" | "event_only" | "observation_only" | "unavailable";
+  label: "Observation + source event IDs" | "Source event ID only" | "Observation ID only" | "Market IDs unavailable";
+  observationId: string | null;
+  marketGameId: string | null;
+};
+
+function retainedId(value: string | null | undefined): string | null {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized || null;
+}
+
+/**
+ * Keep the quote's retained identity visible beside the derived comparison.
+ * An exact-game comparison may still be usable when an older archive row did
+ * not retain one of these optional IDs, so this reports the evidence level
+ * instead of silently upgrading a missing identifier into an exact claim.
+ */
+export function forecastLabQuoteIdentity(quote: Comparison): ForecastLabQuoteIdentity {
+  const observationId = retainedId(quote.market_observation_id);
+  const marketGameId = retainedId(quote.market_game_id);
+  if (observationId && marketGameId) {
+    return { state: "exact", label: "Observation + source event IDs", observationId, marketGameId };
+  }
+  if (marketGameId) {
+    return { state: "event_only", label: "Source event ID only", observationId, marketGameId };
+  }
+  if (observationId) {
+    return { state: "observation_only", label: "Observation ID only", observationId, marketGameId };
+  }
+  return { state: "unavailable", label: "Market IDs unavailable", observationId, marketGameId };
+}
+
 function clock(value: string | null | undefined) {
   const parsed = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
