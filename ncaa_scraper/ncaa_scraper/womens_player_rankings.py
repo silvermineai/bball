@@ -52,6 +52,23 @@ BOX_METRICS = {
     "field_goal": ("Field goal percentage", ("shooting", "field_goal_pct"), "FG%"),
     "three_point": ("Three-point percentage", ("shooting", "three_point_pct"), "3P%"),
     "free_throw": ("Free-throw percentage", ("shooting", "free_throw_pct"), "FT%"),
+    "true_shooting": ("True shooting percentage", ("derived", "true_shooting_pct"), "TS%"),
+    "effective_field_goal": ("Effective field-goal percentage", ("derived", "effective_field_goal_pct"), "eFG%"),
+    "points_per_40": ("Points per 40 minutes", ("derived", "points_per_40"), "P40"),
+    "assist_turnover": ("Assist-to-turnover ratio", ("derived", "assist_turnover"), "AST/TO"),
+}
+
+# Percentage and rate boards need a matching volume floor in addition to the
+# shared games threshold.  These denominators are retained box-score totals,
+# so qualification is auditable without estimating possessions or minutes.
+BOX_SAMPLE_RULES = {
+    "field_goal": ("field_goals_attempted", 100, "FGA"),
+    "three_point": ("three_point_field_goals_attempted", 50, "3PA"),
+    "free_throw": ("free_throws_attempted", 50, "FTA"),
+    "true_shooting": ("true_shooting_attempts", 100, "FGA + 0.475 × FTA"),
+    "effective_field_goal": ("field_goals_attempted", 100, "FGA"),
+    "points_per_40": ("minutes", 400, "minutes"),
+    "assist_turnover": ("turnovers", 25, "turnovers"),
 }
 
 BOX_METRIC_DESCRIPTIONS = {
@@ -64,6 +81,10 @@ BOX_METRIC_DESCRIPTIONS = {
     "field_goal": "Field goals made divided by field-goal attempts in played source box rows.",
     "three_point": "Three-point makes divided by three-point attempts in played source box rows.",
     "free_throw": "Free throws made divided by free-throw attempts in played source box rows.",
+    "true_shooting": "Points divided by twice (field-goal attempts + 0.475 × free-throw attempts) in played source box rows.",
+    "effective_field_goal": "Field goals made plus half of three-point makes, divided by field-goal attempts in played source box rows.",
+    "points_per_40": "Recorded points scaled to 40 minutes from played source box rows.",
+    "assist_turnover": "Recorded assists divided by turnovers in played source box rows; zero-turnover samples remain unavailable.",
 }
 
 
@@ -73,6 +94,60 @@ def _number(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return parsed if math.isfinite(parsed) else None
+
+
+def _rank_rows(rows: list[dict[str, Any]]) -> None:
+    """Assign competition ranks while retaining deterministic tie ordering."""
+
+    previous: float | None = None
+    current_rank = 0
+    for index, row in enumerate(rows, start=1):
+        value = float(row["value"])
+        if previous is None or value != previous:
+            current_rank = index
+            previous = value
+        row["rank"] = current_rank
+
+
+def _box_metric_value(player: dict[str, Any], path: tuple[str, str]) -> float | None:
+    if path[0] != "derived":
+        section = player.get(path[0]) or {}
+        return _number(section.get(path[1])) if isinstance(section, dict) else None
+    totals = player.get("totals") or {}
+    if not isinstance(totals, dict):
+        return None
+    points = _number(totals.get("points"))
+    fgm = _number(totals.get("field_goals_made"))
+    fga = _number(totals.get("field_goals_attempted"))
+    tpm = _number(totals.get("three_point_field_goals_made"))
+    fta = _number(totals.get("free_throws_attempted"))
+    minutes = _number(totals.get("minutes"))
+    assists = _number(totals.get("assists"))
+    turnovers = _number(totals.get("turnovers"))
+    if path[1] == "true_shooting_pct":
+        denominator = None if fga is None or fta is None else 2 * (fga + 0.475 * fta)
+        return 100 * points / denominator if points is not None and denominator is not None and denominator > 0 else None
+    if path[1] == "effective_field_goal_pct":
+        return 100 * (fgm + 0.5 * tpm) / fga if fgm is not None and tpm is not None and fga is not None and fga > 0 else None
+    if path[1] == "points_per_40":
+        return 40 * points / minutes if points is not None and minutes is not None and minutes > 0 else None
+    if path[1] == "assist_turnover":
+        return assists / turnovers if assists is not None and turnovers is not None and turnovers > 0 else None
+    return None
+
+
+def _box_metric_sample(player: dict[str, Any], metric: str) -> float | None:
+    rule = BOX_SAMPLE_RULES.get(metric)
+    if rule is None:
+        return None
+    totals = player.get("totals") or {}
+    if not isinstance(totals, dict):
+        return None
+    if rule[0] == "true_shooting_attempts":
+        fga = _number(totals.get("field_goals_attempted"))
+        fta = _number(totals.get("free_throws_attempted"))
+        return fga + 0.475 * fta if fga is not None and fta is not None else None
+    return _number(totals.get(rule[0]))
 
 
 def build_rankings(players: list[dict[str, Any]]) -> dict[str, Any]:
@@ -103,8 +178,7 @@ def build_rankings(players: list[dict[str, Any]]) -> dict[str, Any]:
                 }
             )
         rows.sort(key=lambda row: (-row["value"], row["name"], row["player_id"]))
-        for rank, row in enumerate(rows, start=1):
-            row["rank"] = rank
+        _rank_rows(rows)
         leaderboards[key] = {
             "label": label,
             "stat": stat,
@@ -151,35 +225,43 @@ def build_box_rankings(
         rows: list[dict[str, Any]] = []
         observed = 0
         for player in players:
-            section = player.get(path[0]) or {}
-            value = _number(section.get(path[1])) if isinstance(section, dict) else None
+            value = _box_metric_value(player, path)
             if value is None:
                 continue
             observed += 1
             games = _number(player.get("games_played"))
             if games is None or games < min_games:
                 continue
-            rows.append(
-                {
-                    "player_id": str(player.get("player_id") or ""),
-                    "name": str(player.get("name") or "Unknown player"),
-                    "team": str(player.get("team") or "Unknown team"),
-                    "team_id": str(player.get("team_id") or ""),
-                    "position": str(player.get("position") or ""),
-                    "games": int(games) if games.is_integer() else games,
-                    "value": round(value, 2),
-                    "box_rows": int(player.get("box_rows") or 0),
-                }
-            )
+            sample_rule = BOX_SAMPLE_RULES.get(key)
+            sample = _box_metric_sample(player, key)
+            if sample_rule is not None and (sample is None or sample < sample_rule[1]):
+                continue
+            row = {
+                "player_id": str(player.get("player_id") or ""),
+                "name": str(player.get("name") or "Unknown player"),
+                "team": str(player.get("team") or "Unknown team"),
+                "team_id": str(player.get("team_id") or ""),
+                "position": str(player.get("position") or ""),
+                "games": int(games) if games.is_integer() else games,
+                "value": round(value, 2),
+                "box_rows": int(player.get("box_rows") or 0),
+            }
+            if sample_rule is not None and sample is not None:
+                row["sample"] = round(sample, 2)
+            rows.append(row)
         rows.sort(key=lambda row: (-row["value"], row["name"], row["player_id"]))
-        for rank, row in enumerate(rows, start=1):
-            row["rank"] = rank
+        _rank_rows(rows)
         leaderboards[key] = {
             "label": label,
             "stat": f"{path[0]}.{path[1]}",
             "unit": unit,
             "description": BOX_METRIC_DESCRIPTIONS[key],
             "rows": rows,
+            **({
+                "sample_field": BOX_SAMPLE_RULES[key][0],
+                "min_sample": BOX_SAMPLE_RULES[key][1],
+                "sample_unit": BOX_SAMPLE_RULES[key][2],
+            } if key in BOX_SAMPLE_RULES else {}),
         }
         coverage[key] = {"observed": observed, "qualified": len(rows)}
 

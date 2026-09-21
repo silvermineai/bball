@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterWomensRankingRows,
   paginateWomensRankingRows,
+  womensRankingSampleLabel,
   type WomensRankingRow,
 } from "./womens-rankings-view";
 
@@ -22,5 +23,12 @@ describe("women's ranking board view", () => {
     expect(paginateWomensRankingRows(rows, 0, 2)).toEqual([rows[0], rows[1]]);
     expect(paginateWomensRankingRows(rows, 1, 2)).toEqual([rows[2]]);
     expect(paginateWomensRankingRows(rows, -1, 2)).toEqual([rows[0], rows[1]]);
+  });
+
+  it("shows a ranking denominator only when it clears the published floor", () => {
+    const board = { min_sample: 100, sample_unit: "FGA + 0.475 × FTA" };
+    expect(womensRankingSampleLabel({ sample: 238 }, board)).toBe("238 FGA + 0.475 × FTA");
+    expect(womensRankingSampleLabel({ sample: 99.9 }, board)).toBeNull();
+    expect(womensRankingSampleLabel({}, board)).toBeNull();
   });
 });

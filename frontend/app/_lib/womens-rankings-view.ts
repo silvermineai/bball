@@ -5,6 +5,33 @@ export type WomensRankingRow = {
   player_id: string;
 };
 
+export type WomensRankingSample = {
+  sample?: number;
+};
+
+export type WomensRankingSampleRule = {
+  min_sample?: number;
+  sample_unit?: string;
+};
+
+/** Format only a finite denominator that clears the board's published floor. */
+export function womensRankingSampleLabel(
+  row: WomensRankingSample,
+  board: WomensRankingSampleRule,
+): string | null {
+  if (
+    typeof row.sample !== "number"
+    || !Number.isFinite(row.sample)
+    || typeof board.min_sample !== "number"
+    || !Number.isFinite(board.min_sample)
+    || board.min_sample < 0
+    || row.sample < board.min_sample
+    || typeof board.sample_unit !== "string"
+    || !board.sample_unit.trim()
+  ) return null;
+  return `${row.sample.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${board.sample_unit.trim()}`;
+}
+
 /** Filter the retained board without changing its source-assigned ranks. */
 export function filterWomensRankingRows<T extends WomensRankingRow>(
   rows: T[],

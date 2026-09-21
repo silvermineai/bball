@@ -49,7 +49,23 @@ def test_scoring_volume_uses_publisher_total_and_keeps_games_context():
     assert result["coverage"]["scoring_volume"] == {"observed": 2, "qualified": 2}
 
 
-def box_player(player_id, name, games, *, points, rebounds=0, assists=0, fga=0, fgm=0):
+def box_player(
+    player_id,
+    name,
+    games,
+    *,
+    points,
+    rebounds=0,
+    assists=0,
+    turnovers=0,
+    minutes=0,
+    fga=0,
+    fgm=0,
+    tpa=0,
+    tpm=0,
+    fta=0,
+    ftm=0,
+):
     return {
         "player_id": player_id,
         "name": name,
@@ -59,7 +75,18 @@ def box_player(player_id, name, games, *, points, rebounds=0, assists=0, fga=0, 
         "games_played": games,
         "box_rows": games,
         "per_game": {"points": points, "rebounds": rebounds, "assists": assists},
-        "totals": {"points": points * games},
+        "totals": {
+            "points": points * games,
+            "assists": assists * games,
+            "turnovers": turnovers,
+            "minutes": minutes,
+            "field_goals_attempted": fga,
+            "field_goals_made": fgm,
+            "three_point_field_goals_attempted": tpa,
+            "three_point_field_goals_made": tpm,
+            "free_throws_attempted": fta,
+            "free_throws_made": ftm,
+        },
         "shooting": {
             "field_goal_pct": 100 * fgm / fga if fga else None,
             "three_point_pct": None,
@@ -85,3 +112,52 @@ def test_box_rankings_expand_cohort_and_keep_box_evidence():
 def test_box_rankings_reject_invalid_game_threshold():
     with pytest.raises(ValueError, match="positive integer"):
         build_box_rankings([], min_games=0)
+
+
+def test_box_rankings_add_volume_qualified_efficiency_and_workload_lenses():
+    result = build_box_rankings([
+        box_player(
+            "qualified", "Qualified", 20, points=15, assists=4, turnovers=40,
+            minutes=600, fga=200, fgm=100, tpa=80, tpm=30, fta=80, ftm=60,
+        ),
+        box_player(
+            "tiny", "Tiny sample", 20, points=20, assists=5, turnovers=10,
+            minutes=300, fga=20, fgm=15, tpa=10, tpm=8, fta=5, ftm=5,
+        ),
+    ])
+
+    boards = result["leaderboards"]
+    assert boards["true_shooting"]["rows"] == [{
+        "player_id": "qualified",
+        "name": "Qualified",
+        "team": "Team",
+        "team_id": "1",
+        "position": "G",
+        "games": 20,
+        "value": 63.03,
+        "box_rows": 20,
+        "sample": 238.0,
+        "rank": 1,
+    }]
+    assert boards["effective_field_goal"]["rows"][0]["value"] == 57.5
+    assert boards["points_per_40"]["rows"][0]["value"] == 20.0
+    assert boards["assist_turnover"]["rows"][0]["value"] == 2.0
+    assert boards["true_shooting"]["min_sample"] == 100
+    assert boards["true_shooting"]["sample_unit"] == "FGA + 0.475 × FTA"
+    assert result["coverage"]["true_shooting"] == {"observed": 2, "qualified": 1}
+
+
+def test_rankings_assign_the_same_rank_to_equal_values():
+    season = build_rankings([
+        player("b", "Beta", 20, avgPoints=20),
+        player("a", "Alpha", 20, avgPoints=20),
+        player("c", "Charlie", 20, avgPoints=10),
+    ])
+    assert [row["rank"] for row in season["leaderboards"]["scoring"]["rows"]] == [1, 1, 3]
+
+    boxes = build_box_rankings([
+        box_player("b", "Beta", 20, points=20),
+        box_player("a", "Alpha", 20, points=20),
+        box_player("c", "Charlie", 20, points=10),
+    ])
+    assert [row["rank"] for row in boxes["leaderboards"]["scoring"]["rows"]] == [1, 1, 3]

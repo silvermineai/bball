@@ -26,7 +26,7 @@ def main():
         raise SystemExit("women's box edition has the wrong scope")
     box_rankings = build_box_rankings(box_edition.get("players", []))
     publication = {
-        "schema_version": 2,
+        "schema_version": 3,
         "sport": "basketball",
         "gender": "women",
         "season": edition.get("observed_player_season"),
@@ -53,6 +53,7 @@ def main():
             "Players below the minimum game threshold or without a recorded value remain outside that board.",
             "Qualification uses the source-reported gamesPlayed field; this release does not independently reconcile it to a schedule-game census.",
             "The box archive boards use exact athlete IDs from played game rows and expand coverage beyond the player-season release; DNP rows remain excluded from totals and qualification.",
+            "Box efficiency and rate boards require the published denominator floor; equal displayed values share competition rank.",
         ],
         "receipts": edition.get("receipts", {}),
     }
